@@ -93,6 +93,7 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 
 | Rule | Why | Since |
 |---|---|---|
+| On a touch screen a pad (Pads and 🧸 Kids) sounds when the finger lifts after staying put (under about 10 px); a drag or scroll never sounds it. Holding still still loops. Mouse and keyboard stay instant; Live's keys are unchanged. | Ben: "dragging a finger should not trigger a sound (like when one is scrolling)"; play on lift, Kids the same. | 2026-10-13 |
 | Holding a pad toggles looping, so several pads can loop at once. | Layering sounds is the fun part. | 2026-10-10 |
 | While a beat plays, a pad set looping starts on the next bar's "1" and repeats every 1, 2, 4, 8 or 16 beats (then whole bars); loops re-sync when the beat starts or its tempo changes. | Loops lock to the groove ([ADR 0004](adr/0004-learn-music-by-doing.md)). | 2026-10-10 |
 | Slow and Fast keep pitch and have a speed slider: Slow up to 20×, Fast up to 8×. | Kids wanted "super duper" slow. | 2026-10-10 |
