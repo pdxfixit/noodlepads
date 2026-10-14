@@ -74,7 +74,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
 
-- **Release 1.0 and the clean break** (Ben, 2026-10-13, decisions.md Hosting): after the backgrounds and the settle fix land. Steps 1 and 2 are done (2026-10-13). 1) cut 1.0 (version, notes, privacy audit); 2) rename to `noodlepads` wherever reasonable, IDs to `~/.config/noodlepads/`, every Ben-run task a `just` recipe in README; 3) `~/src/noodlepads` from one commit, new repo `pdxfixit/noodlepads`, flarepress links and skill paths moved in one flarepress commit (only the three links, AGENTS.md:86 and two wrangler.toml comments), then message the "Isometric grid drawing app" session "done" (it waits on that to adopt tools/site.sh), old repo archived; 4) **ask Ben's final yes**, then make it public with a description naming https://noodlepads.com.
+- **Make the repo public** (Ben, 2026-10-13): 1.0 is cut, the code is in `~/src/noodlepads` and private `pdxfixit/noodlepads` (one commit), flarepress points here, the old repo is archived. Waiting on Ben's final yes; then `gh repo edit pdxfixit/noodlepads --visibility public --accept-visibility-change-consequences` (the description already names https://noodlepads.com).
 
 
 
