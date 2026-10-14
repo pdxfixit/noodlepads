@@ -73,6 +73,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
+- **Rewrite README.md for a public repo** (Ben, 2026-10-13: "fix the readme"): a short front page (what it is, the live link, a screenshot, run it, docs, license); the long feature walls move to a doc. In flight.
+
 
 
 
