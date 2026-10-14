@@ -12,7 +12,7 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 - **Run:** `just serve`, then http://localhost:8765/. Port 8765 is Ben's own server; agents preview on 8781 (see [Verify](#verify)).
 - **Ship:** `just ship`, from the main checkout only (deploys push its files). In a worktree, commit on your branch and report the commits; they are landed with `just land` ([docs/how-to.md](docs/how-to.md)). Every commit to `main` is deployed. `just deploy` refuses uncommitted changes, and checks the live cloud once the new version is up (`just cloud-smoke`, `just cloud-e2e`).
 - **Every change fits every screen:** check 320, 375, 700, 900 and 1100 px wide, then the wide screens 1366, 1920, 2560 and 3440, with no sideways scroll. `just look --wide` does all nine in your own headless Chrome ([Verify](#verify)).
-- **Anything that comes in is untrusted:** backups, uploaded files and `boards.json` are checked and capped (`README.md` "Limits on what comes in").
+- **Anything that comes in is untrusted:** backups, uploaded files and `boards.json` are checked and capped ([docs/guide.md](docs/guide.md) "Limits on what comes in").
 
 ## Cold start: read in this order
 
@@ -29,7 +29,9 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 
 | File | What it holds |
 |---|---|
-| [README.md](README.md) | What the app does, how to run it, the file map ("Layout"), storage, keyboard use, input limits. |
+| [README.md](README.md) | The public front page: what it is, the live link, screenshots, run and test it, every `just` recipe ("Running it yourself"), the privacy statement. |
+| [docs/guide.md](docs/guide.md) | How the app works: every screen, how things are stored, cloud profiles, keyboard use, limits on what comes in. |
+| [docs/layout.md](docs/layout.md) | The file map: one line per file in `web/`, `worker/` and `tools/`. |
 | [docs/state.md](docs/state.md) | Where things stand now. Present tense only. |
 | [docs/decisions.md](docs/decisions.md) | Current rules, by topic: Rule · Why · Since. |
 | [docs/adr/](docs/adr/README.md) | Why the biggest decisions were made. |
@@ -40,7 +42,7 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 | [TODO.md](TODO.md) | The one to-do list: "Agents do" (approved work, in order, then work offered but not approved) and "Ben does" (tries, decisions, recordings). |
 | `web/` | The app. Each module opens with a comment saying what it owns. |
 | `tests/` | `node --test` suites. `fake-dom.mjs` builds the page from `index.html` so `app.test.mjs` runs the real app. |
-| `tools/` | One line each in README.md "Layout": `doctor.sh` (`just doctor`), `serve.py` (dev server, sends the live headers), `look.mjs` (`just look`, and the live checks), `land.sh` (`just land`, `land-continue`), `resolve_todo.py`/`resolve_questions.py` (its conflict resolvers), `cloud_admin.py` and `logs.py` (the cloud database and problem reports). `just --list` says what every recipe does. |
+| `tools/` | One line each in [docs/layout.md](docs/layout.md): `doctor.sh` (`just doctor`), `serve.py` (dev server, sends the live headers), `look.mjs` (`just look`, and the live checks), `land.sh` (`just land`, `land-continue`), `resolve_todo.py`/`resolve_questions.py` (its conflict resolvers), `cloud_admin.py` and `logs.py` (the cloud database and problem reports). `just --list` says what every recipe does. |
 
 ## Verify
 
@@ -118,7 +120,7 @@ Ben: *"Optimizing the user interface for a variety of screens is very important.
 - **A replaced rule is deleted,** and the new rule takes its row. Do not add prose saying a rule changed.
 - **A significant decision also gets an ADR** in [docs/adr/](docs/adr/README.md): anything that changes what the app is, a stored or backup format, the hosting, or is costly to undo.
 - Never change a decision on your own. Recording Ben's answer, or fixing a row that does not match the code, is fine.
-- Keep `README.md` true when behavior changes.
+- Keep [docs/guide.md](docs/guide.md) true when behavior changes, [docs/layout.md](docs/layout.md) when a file is added, moved or removed, and README.md's short list when a whole part changes.
 
 ### Writing
 
