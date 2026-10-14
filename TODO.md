@@ -17,6 +17,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 ## Ben does
 
+- **Scroll a phone over the pads** (2 min): on 🔊 Pads and 🧸 Kids, scroll and swipe starting on a pad (no sound should play), tap pads quickly (does sounding on the lift feel slow?), hold one to loop it. If small nudges still sound a pad, the knob is `TAP_SLOP` in `web/finger.js` (10 px).
+
 - **Delete the old address's DNS record** (1 min): in Cloudflare, open the old address's domain → DNS and delete its `soundboard` record if it is still there (the Worker is gone and the name answers 530). The domain's apex stays. Also, if you like, delete the old address's leftover folder in `~/src/flarepress/` (only wrangler's local `.wrangler/` cache is in it).
 
 - **Check [old address removed] reaches you** (2 min): noodlepads.com mail is Google Workspace (MX checked 2026-10-11). Add `pin.reset` as an alias or group in the Admin console unless a catch-all already covers it, then send it a test. The app shows it for PIN resets.
