@@ -71,6 +71,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
+- **The pattern on the sticky bars** (Ben, 2026-10-13): the slim header, Pads' slider bar and the bottom toolbar show the page's pattern, lined up with it; still opaque. In flight.
+
 
 
 
