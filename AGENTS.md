@@ -1,7 +1,7 @@
 # Noodle Pads 🔊
 
 A family soundboard web app: tap a pad to play a sound, hold it to loop, record your own, add silly voices, and make beats. Plain HTML, CSS and ES modules, no build step and no dependencies.
-Live and **public** at https://noodlepads.com/. Repo: `github.com/pdxfixit/noodlepads`, in `~/src/noodlepads`. Release 1.0 started this repo from one commit; what 1.0 has is in [CHANGELOG.md](CHANGELOG.md). This is **v1**, a web prototype; v2 is a native Android app ([ADR 0001](docs/adr/0001-web-prototype-then-native.md)).
+Live and **public** at https://noodlepads.com/. Repo: `github.com/pdxfixit/noodlepads` (**public**: everything committed is world-readable), in `~/src/noodlepads`. Release 1.0 started this repo from one commit; what 1.0 has is in [CHANGELOG.md](CHANGELOG.md). This is **v1**, a web prototype; v2 is a native Android app ([ADR 0001](docs/adr/0001-web-prototype-then-native.md)).
 
 This file is the contract: how to start, how to verify and ship, and the rules for working here. It stays short. Detail lives in the files it points to.
 
