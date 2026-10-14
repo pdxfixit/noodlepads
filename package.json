@@ -1,6 +1,7 @@
 {
   "name": "noodlepads",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "No dependencies and no build step. This file only marks the .js files as ES modules so `node --test` can load them; web/ is what gets served and deployed."
 }
