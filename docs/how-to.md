@@ -12,13 +12,13 @@ Step by step for the common jobs, so a fresh session never has to guess. [AGENTS
 
 ## A bug fix in `web/`
 
-1. **Find the module.** README.md "Layout" lists every file; each module's opening comment says what it owns. `grep -rn` for the label the kid sees (it is in `index.html` or the module that draws it).
+1. **Find the module.** [layout.md](layout.md) lists every file; each module's opening comment says what it owns. `grep -rn` for the label the kid sees (it is in `index.html` or the module that draws it).
 2. **Write the failing test first.** Put it in the test file for that module (`tests/<module>.test.mjs`, or the nearest by name). Pure logic is tested directly. Anything on screen starts the real app on the stand-in page: `installPage({ manifest: testManifest() })` from `tests/fake-dom.mjs` and `tests/test-board.mjs`, then `await import('../web/app.js')` and `await page.settle()` (see `tests/tooltips.test.mjs`). Other helpers: `tests/new-beat.mjs` (a beat with a row; `keysOn`/`keysOff`), `tests/song-ui.mjs` (the playlist), `tests/fake-idb.mjs` (a device with data already saved), `tests/helpers.mjs` (zips, audio buffers).
 3. **Fix it.** Run one file with `node --test --test-force-exit tests/<file>`.
 4. **Prove it:** `just prove tests/<file> web/<changed files…>` must say ✅ (fails without your change, passes with it).
 5. **`just test`**, judged by its exit code. A test that times out once under the full run's load and passes alone three times is a flake: say so in your report, do not hide it.
 6. **Look at it** if a kid would see it: `just look <screen or view>` (and `--wide` for layout), then read the screenshots. `just look --help` lists the views; the `VIEWS` table in `tools/look.mjs` says what each opens.
-7. **Docs in the same commit:** README.md if behavior changed; docs/state.md if what is live changed; the ❓ Help line (`web/help.js`) if a control's label changed.
+7. **Docs in the same commit:** [guide.md](guide.md) if behavior changed ([layout.md](layout.md) for a new file); docs/state.md if what is live changed; the ❓ Help line (`web/help.js`) if a control's label changed.
 8. **Ship it** from the main checkout: `just ship "$msg" <files…>`, with the message in a `mktemp` file. From a worktree: commit on your branch and report the commits.
 
 ## Flaky tests
@@ -58,7 +58,7 @@ A stored-format change is significant: it gets an ADR ([adr/README.md](adr/READM
 | Ben decided a rule | One row in [decisions.md](decisions.md), Rule and Why under 40 words, in the right section. A replaced rule's row is rewritten, never annotated. |
 | Ben decided something big (what the app is, a stored format, hosting, costly to undo) | An ADR as well, listed in [adr/README.md](adr/README.md) and linked from the row. A changed decision rewrites its ADR in place. |
 | What is live or in flight | [state.md](state.md), present tense, lines replaced, never appended. |
-| How the app behaves | [README.md](../README.md). |
+| How the app behaves | [guide.md](guide.md); a new file goes in [layout.md](layout.md). [README.md](../README.md) is the short front page: change it only when a whole part, a requirement or a recipe changes. |
 | A question that blocks work until Ben answers | A card in [questions.md](questions.md). Smaller calls are never carded or logged: make them and name them in your report. When Ben answers, record it in decisions.md and delete the card in the same commit. |
 | A request from Ben | A line in [TODO.md](../TODO.md) "Agents do" at once; delete it when the work lands. |
 | A standing rule for agents | AGENTS.md if it is short and every session needs it; else the doc for that area, linked from AGENTS.md. |

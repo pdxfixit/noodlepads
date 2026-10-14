@@ -14,7 +14,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const docs = ['AGENTS.md', 'README.md', 'docs/how-to.md', 'docs/deploy-cloudflare.md']
+const docs = ['AGENTS.md', 'README.md', 'docs/how-to.md', 'docs/deploy-cloudflare.md', 'docs/layout.md']
   .map((f) => readFileSync(join(root, f), 'utf8')).join('\n');
 
 // The recipes as just reads them. `just test` runs this, so just is there;

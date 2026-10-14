@@ -1,0 +1,59 @@
+# Layout
+
+Where everything is: one line per file or folder. Each module in `web/` also
+opens with a comment saying what it owns. How the app behaves is in
+[guide.md](guide.md).
+
+- `web/`: the app (plain HTML, CSS and ES modules, no build step)
+  - `app.js`: starts everything; who is showing, Edit sounds, the four tabs (Pads, Beats, Song, Live) and Beats' ⌨️ Keys
+  - `dj.js`, `rhythm.js`: the keys (like a periodic table), on Live and on Beats with ⌨️ Keys, and its pure rules: keymap, default keys, layouts, the forgiving snap
+  - `dj-keys.js`, `keyset.js`: ✏️ Edit keys, and its pure rules: placing sounds, moving what was in the way, swaps, rows, the ready-made key layouts
+  - data: `store.js` (IndexedDB schema and upgrades), `state.js` (what is in memory, and saving it)
+  - the board: `model.js` (pure rules: people, clip order, edits), `board.js` (those, bound to the state)
+  - sound: `audio.js` (playing, looping, caching voiced clips), `meter.js` (the speaker grille)
+  - screens: `pads.js` (its size slider's maths in `pad-size.js`; a kid's own groups' rules in `groups.js`), `bulk.js` (Edit sounds with sounds selected: the bar, its sheets, Undo), `sheet.js` (new/edit sound), `wave.js` (the sound's wave in the sheet), `shape.js` (the sheet's Shape it cards, Advanced), `chop.js` (✂️ trim, the wave editor's fades and part edits, and 🧩 chop on the wave; the pure parts, onsets, marks, edits and fades, are in `cuts.js`), `people.js`, `backup-ui.js`, `settings-ui.js` (the ⚙️ Settings dialog; each setting's default and allowed values are declared in `settings.js`), `leftover.js` (Settings → Older sounds found on this device), `help.js` (the ❓ picture reference), `kids.js` (🧸 Kids' screens and the grown-up sum; pure parts in `kids-logic.js`), `dialogs.js`, `ui.js`
+  - `voices.js`: the voice effects (Web Audio `OfflineAudioContext`); `steps.js`: the other building blocks of a chain (echo, room, Muffled ↔ Bright…), live or rendered; `stretch.js` is Fast and Slow's pitch-keeping stretch, run off the page in `stretch-worker.js`; `tweaks.js`: the sound sheet's Knobs, as steps; `voice-knobs.js`: voices as knob settings (stacking, the line under the voices, ⤢ Turn into knobs, a kid's own voices)
+  - `sequencer.js`: the beat maker (16-step rows, scheduled on the audio clock); `grooves.js`: the 💃 Grooves library, by style; `beat-row.js`: a beat row's emoji and its 🔔 · 🔊 · 🧹 · ✕ (into a ⋯ menu where the line is short of room), shared by Beats with ⌨️ Keys off and on; `row-volume.js`: a row's speaker (tap mutes, hold or drag sets its loudness); `mixer.js`: the 🎚️ Mixer sheet, its effects and the mix graph; `notes.js`: a tune row's notes (placing, stretching, the scale lock, old melody rows); `roll.js`: 🎹 the piano roll screen
+  - `song.js`: 🎼 Song: the playlist screen, playing it, Save as a sound, cleaning a stored song; `playlist.js`: its pure rules (lanes, placing blocks without overlap, repeats, time at the song tempo, old songs' slots)
+  - `backup.js`, `zip.js`: backups to and from a zip; `merge.js`: loading one merges into the device
+  - `old-backup.js`: 💾 Save everything it left, for Older sounds found on this device; `starters.js`: the old app's starter sounds, which are presets now
+  - `util.js`, `contrast.js`, `download.js`: small shared helpers; color contrast math; handing a file to the user
+  - `backdrop.js`: the faint pattern behind the panels, one of the tiles in `bg/` picked at random each visit and drawn as a mask in the casing color; nothing remembered (`?bg=<name>` or `none` asks for one, for `just look --bg`)
+  - `tooltips.js`: a tooltip on every control, from its `aria-label` or text, unless it has a `title` of its own
+  - `update.js`: the "🆕 An update for Noodle Pads is ready." bar (when to ask `version.json`, when to show)
+  - `log.js` (the in-memory event log), `log-clean.js` (what a problem report may hold), `log-send.js` (sending it)
+  - `uses.js`: feature-use counts per person (localStorage `uses`, sent with that person's sync), mostly read from the event log, and what the device says about itself on each cloud call (version, width bucket, touch)
+  - `overflow.js`: ⋯ menus: where a line runs out of room, its less-used buttons (marked `data-more-word`) hide and a ⋯ at its end lists them; a tap there taps the real button (Beats' row header line)
+  - `lines.js`: lines of controls that stay on one line, giving way step by step as room runs out (the toolbar, the beat's bars · time signature · swing), and keys for a slider with five stops or fewer (Tone, On the beat's note lengths), falling back to the slider when they don't fit
+  - `mix.js`: ➕ Mix with another sound (pure: two sounds in, one out)
+  - `pitch.js`: 🎵 Find its note (pure: samples in, a note out)
+  - `synth.js`: ✨ Make one's sounds from nothing (pure: recipe in, samples out)
+  - `emoji-more.js`: the "…" at the end of every picture chooser (all emoji, grouped, with search); `emoji-all.js` (the list with names, loaded on the first tap of …) and `emoji-check.js` (`isListedEmoji`, for backups and the Worker) are made by `tools/make_emoji.py` (`just emoji`) from Python's Unicode data. Do not edit them by hand
+  - `names.js`: the made-up default names ("Wobbly Thunder" for a beat; "Admiral Avocado", a person's fun name; `keptName`, a kept groove's "<fun name> (<groove> version)"); `scratch.js`: the scratch beat and song's reserved ids, and 🧸 Kids' old beat becoming the scratch (ADR 0020)
+  - `reid.js`: random person ids, and the one rule that renames an old plain id everywhere on the device
+  - `cloud.js`, `cloud-sync.js`, `cloud-api.js`, `cloud-ui.js`: cloud profiles on the device (binding it to storage, the rules, the routes, the screens); `sync-timing.js`: when it syncs; `merge3.js`: the three-way merge of one record; `share-render.js`: a share's preview, recorded as it plays; `privacy.js`: "What's private"
+  - `boards.json`: the kit, its groups, the palette, and people (none today). v2 reads this format too.
+- `worker/`: the Worker script beside the static files, with one D1 database (`docs/deploy-cloudflare.md`); `schema.sql` is the full schema, `migrations/` brings the live one there (`just cloud-migrate`)
+  - `index.js`: routes `/api/log` to `reports.js`, the rest of `/api/` to `cloud.js`; every other path goes to the static files
+  - `cloud.js`: cloud profiles: the list, keys, records by rev, sounds in 1.9 MB pieces, share codes, last activity, free-plan caps
+  - `metrics.js`: player metrics (ADR 0016): each device's row, the activity log with its place and keyed IP hash (secret `IP_KEY`), the User-Agent read as families, feature-use counts, 90 days kept; skipped while its tables are missing
+  - `pin.js`: PINs (salted PBKDF2, 5 tries then a 10-minute wait) and share codes; `http.js`: shared answers, ids, daily counters
+  - `reports.js`: `POST /api/log` takes an opt-in problem report (site's Origin, JSON, 64 KB, 10 a minute per device, 1,000 a day) into D1 for 30 days
+  - `clean.js`: the Worker's copy of the report allowlist (numbers, booleans, listed values, two short free-text fields)
+  - `schema.sql`: the D1 tables
+- `tools/logs.py`: `just logs`, the problem-report archive: `--sync` copies D1's `reports` into `~/.local/state/noodlepads/logs.sqlite3` (kept forever); list, `--errors`, a device code, `--json`, `--grep`, `--sql`, and the weekly `--digest`. `~/.config/noodlepads/cloud.json` (outside the repo; template `tools/cloud.example.json`, read by `tools/cloud_config.py`) names the D1 account and database; the read-only token is in the Keychain (`noodlepads-logs`). Tests: `tools/test_logs.py`, `tools/test_cloud_config.py`
+- `tools/cloud_admin.py`: the cloud database's chores, behind `just cloud-schema`, `cloud-migrate`, `cloud-profiles`, `cloud-stats` (with the metrics archive), `cloud-prune` and `cloud-reset-pin` (dry run unless `--yes`; through `just cloud-db`). Tests: `tools/test_cloud_admin.py`
+- `tools/serve.py`: dev server with caching off; sends the same headers as the live site (`web/_headers`, the Content-Security-Policy included)
+- `tests/`: `just test` (Node's built-in runner, no install). `fake-dom.mjs` builds the page from `index.html` so `app.test.mjs` can start the real app, on `test-board.mjs`'s made-up people (`fresh-start.test.mjs` uses the real boards.json); there is no browser in the tests, so sound, recording, IndexedDB and layout are checked by hand
+- `tools/make_placeholders.py`: synthesizes the presets' clips; `just placeholders moo quack` makes only those, so the others stay byte-identical. Tests: `tools/test_make_placeholders.py`
+- `tools/cloud_config.py`: where this Mac keeps Noodle Pads' own things outside the repo: the Cloudflare ids (`~/.config/noodlepads/cloud.json`, template `tools/cloud.example.json`), the archives' folder (`~/.local/state/noodlepads`) and the Keychain token's name. Tests: `tools/test_cloud_config.py`. `tools/test_justfile.py` checks every recipe has a doc line and is named in "Running it yourself"
+- `tools/live_check.py`: `just live-check`, the daily live check GitHub runs (`.github/workflows/live.yml`): the site answers, `/api/cloud` says ok, and live serves `main`'s `web/` and `worker/` (an hour's grace for a deploy in flight). Read-only. Tests: `tools/test_live_check.py`
+- `tools/doctor.sh`: `just doctor`, a fresh session's first command: this checkout (main or a worktree), just, node, python, Chrome, flarepress, live against `main`, then the reading order
+- `tools/land.sh`: `just land` and `just land-continue`: cherry-pick agents' commits onto main in a throwaway worktree, test, move main, sync this checkout (deletions too), push, deploy; a conflict it can't resolve keeps the worktree for `land-continue`.
+- `tools/resolve_todo.py`, `tools/resolve_questions.py`: `just land`'s resolvers for cherry-pick conflicts in TODO.md, `docs/adr/README.md` and `styles.css` appends (main's lines kept, the commit's own deletions and additions applied), and in `docs/questions.md` (both sides' cards kept). Tests: `tools/test_resolve_*.py`
+- `tools/make_emoji.py`: `just emoji` (see `emoji-more.js` above). Tests: `tools/test_make_emoji.py`
+- `tools/look.mjs`: `just look`, the five-width check (nine with `--wide`, up to 3440 px) in a private headless Chrome (sideways scroll, errors, CSP, controls under 44 px tall or wide, screenshots), on any screen or named view (`settings`, `sheet`, `builder`…); `--bg NAME,…|all|none` sets the page's pattern, one shot each (a contact sheet with `all`)
+  - `tools/chrome.mjs` starts each run's private headless Chrome; `tools/look-cloud.mjs` holds the live checks `just cloud-smoke` and `just cloud-e2e`. With `look.mjs`, these are the only Node tools
+- `skills/noodlepads-logs/`: the recurrent routine's `noodlepads-logs` leg (daily `just logs --sync`, weekly `--digest`), kept here until it moves to `~/src/skills` (TODO.md); `just test` runs its tests
+- `docs/deploy-cloudflare.md`: hosting at noodlepads.com; `docs/how-to.md`: step by step for the common jobs
+- `web/_headers`, `web/.assetsignore`: response headers and upload exclusions for Cloudflare

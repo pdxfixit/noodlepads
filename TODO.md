@@ -25,7 +25,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 ### v1: prove out the interface
 
 - [ ] Attach any real sound clips in chat (5 min) 🔼
-  an agent adds them to the kit (`web/boards.json` `kit`, `web/clips/kit/`). The site is public, so no names in them. `README.md` "How sounds are stored"
+  an agent adds them to the kit (`web/boards.json` `kit`, `web/clips/kit/`). The site is public, so no names in them. `docs/guide.md` "How sounds are stored"
 - [ ] Listen to the new presets (10 min) 🔼
   open Presets on a phone: 🐵 Animals, 👽 Sci-fi, the new 🤪 Silly ones, and the new drums, notes, chords and bass, plus the sharps and flats (⚙️ Advanced on: Notes, Chords, Bass). Say which to redo or drop (each is a short recipe in `tools/make_placeholders.py`).
 - [ ] Record three one-liners and try every voice on them (10 min) 🔼
@@ -73,7 +73,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **Rewrite README.md for a public repo** (Ben, 2026-10-13: "fix the readme"): a short front page (what it is, the live link, a screenshot, run it, docs, license); the long feature walls move to a doc. In flight.
 
 
 
