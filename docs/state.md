@@ -47,7 +47,7 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 
 ## In flight
 
-- Consistent buttons, beat rows first (TODO.md "Agents do").
+- Noodle Pads 1.0 (2026-10-13): this repo, `pdxfixit/noodlepads` (private until Ben's yes), started from one commit; the old repo is archived. Live from here.
 - Player metrics (ADR 0016) are deployed: the Worker notes each device, each make/open/pull/push/share/PIN event with its place and keyed IP hash, and feature-use counts (`web/uses.js`, `worker/metrics.js`); D1 keeps 90 days; `just cloud-stats` archives and reports them. They wait on Ben: `just cloud-migrate --yes` (migration 002) and the `IP_KEY` secret (TODO "Ben does"); without either, the Worker skips that part. Not yet seen on live data.
 
 ## Waits on Ben
