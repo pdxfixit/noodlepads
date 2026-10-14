@@ -71,6 +71,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
+- **A scroll never plays a pad** (Ben, 2026-10-13, decisions.md): touch plays on lift if the finger stayed put; Pads and Kids. In flight.
+
 
 
 
