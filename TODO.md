@@ -74,7 +74,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
 
-- **Make the repo public** (Ben, 2026-10-13): 1.0 is cut, the code is in `~/src/noodlepads` and private `pdxfixit/noodlepads` (one commit), flarepress points here, the old repo is archived. Waiting on Ben's final yes; then `gh repo edit pdxfixit/noodlepads --visibility public --accept-visibility-change-consequences` (the description already names https://noodlepads.com).
 
 
 
