@@ -45,8 +45,8 @@ body {
 }
 
 /* The page's pattern (backdrop.js): a faint tile, picked at random on each
-   visit, behind everything on the casing; panels, bars and sheets stay
-   solid. The tile is a mask, so it takes the casing color lightened a
+   visit, behind everything on the casing; panels and sheets stay solid,
+   and the sticky bars carry it too (below). The tile is a mask, so it takes the casing color lightened a
    little: white text on the casing still reads across it (colors.test.mjs).
    Drawn only once the root names one (data-bg), as a mask of none would
    fill the whole page. It never moves. 🧸 Kids covers the page, so it has
@@ -63,6 +63,34 @@ body {
   -webkit-mask: var(--backdrop) repeat;
   mask: var(--backdrop) repeat;
 }
+
+/* The sticky bars carry the same pattern, lined up with the page's (Ben,
+   2026-10-13: "would be good if the bkgnd could extend to the sticky
+   panels"). Each keeps its solid casing color, so pads never show through,
+   and draws the ink over it as a fixed layer the size of the screen, the
+   same box as the page's own. clip-path cuts that layer to the bar (it clips
+   fixed descendants, where overflow would not), so the tile grid matches the
+   page's wherever the bar is: stuck at the top, at the bottom, or scrolling
+   in its place, with no measuring and no script. The Pads bar's clip reaches
+   past its sides for the Edit sounds focus ring; the page's ink is there too.
+   The toolbar's top line moves from its shadow (which the clip would cut) to
+   ::after. The slim header's band is fixed at the top of the screen like the
+   page's layer, so its ink (.top::after) needs no clip. 🧸 Kids' bars are
+   see-through over the Kids pattern already. */
+:root[data-bg] .pads-bar { clip-path: inset(0 -16px); }
+:root[data-bg] .toolbar { clip-path: inset(-2px 0 0 0); box-shadow: none; }
+:root[data-bg] .pads-bar::before,
+:root[data-bg] .toolbar::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--backdrop-ink);
+  -webkit-mask: var(--backdrop) repeat;
+  mask: var(--backdrop) repeat;
+}
+:root[data-bg] .toolbar::after { content: ""; position: absolute; inset: -2px 0 auto 0; height: 2px; background: var(--board-deep); pointer-events: none; }
 
 button, input { font: inherit; color: inherit; }
 /* Read by screen readers, not seen. */
@@ -239,7 +267,7 @@ main {
   font-weight: 800;
 }
 .pads-edit[aria-pressed="true"] { background: var(--chalk); border-color: var(--chalk); color: var(--ink); }
-/* Pad size, at the left of the bar: a slider (more at the end of the file). */
+/* Pad size, centered in the room Edit sounds leaves: a slider (more at the end of the file). */
 .pads-bar { align-items: center; gap: 8px; }
 .pads-size { display: flex; align-items: center; flex: 0 1 auto; min-width: 0; margin-right: auto; }
 .pads-size > input { width: 120px; min-height: 44px; accent-color: var(--led); }
@@ -2703,6 +2731,15 @@ dialog.np-dialog .set-buttons .quiet { justify-content: center; }
 /* Pad size: one smooth slider beside ✏️ Edit sounds, a small and a big
    square at its ends. It takes the room Edit sounds leaves, up to 240 px. */
 .pads-size { flex: 1 1 auto; gap: 6px; max-width: 240px; }
+/* It sits centered in the room left on its line (Ben, 2026-10-13: "the
+   size scroller should be centered in the available space"): equal margins
+   take what its 240 px leave. Where it stays when the header slims (from
+   560 px), that room starts after the slim header's buttons whether or not
+   they are there, so it does not jump when the bar sticks. */
+.pads-bar .pads-size { margin-inline: auto; }
+@media (min-width: 560px) {
+  .pads-bar { padding-left: calc(4 * 44px + 3 * 6px + 10px); }
+}
 .pads-size > input { flex: 1 1 auto; width: auto; min-width: 60px; }
 .pads-size::before, .pads-size::after { content: ""; flex: none; border: 2px solid currentColor; opacity: 0.85; }
 .pads-size::before { width: 8px; height: 8px; border-radius: 2px; }
@@ -2951,6 +2988,22 @@ body.head-slim .top::before {
   animation: head-slim-in 160ms ease-out;
 }
 body.head-slim.screen-pads .top::before { height: calc(var(--slim-top) + 64px); box-shadow: none; }
+/* The page's pattern on the band (see "The sticky bars carry the same
+   pattern"): fixed at the top of the screen like the page's own layer, so
+   its tiles line up with no offset. Over the band, under what sticks. */
+:root[data-bg] body.head-slim .top::after {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 6;
+  height: calc(var(--slim-top) + var(--slim-h));
+  pointer-events: none;
+  background: var(--backdrop-ink);
+  -webkit-mask: var(--backdrop) repeat;
+  mask: var(--backdrop) repeat;
+  animation: head-slim-in 160ms ease-out;
+}
+:root[data-bg] body.head-slim.screen-pads .top::after { height: calc(var(--slim-top) + 64px); }
 
 /* The buttons, at the top left, in the order Ben asked for. */
 body.head-slim .title-tools {

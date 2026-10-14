@@ -48,7 +48,7 @@ export const HELP = [
       { pic: [pad('🥁', 'Snare', '#4C8DFF'), word('👆 hold')], text: 'Hold a pad (or Shift-click it) to loop it. Hold more pads to stack loops. Tap one to stop it.' },
       { pic: [word('🔁'), pills('1.x.')], text: 'While a beat plays, a loop waits for the next 1, so it stays in time.' },
       { pic: [toolbar('Stop all')], text: 'Stops every sound and the beat.' },
-      { pic: [slider('Pad size', '')], text: 'Pad size, at the top left: slide left for smaller pads (more on a line), right for bigger ones. All the way left is the smallest this screen shows; all the way right, the biggest. The pads change as you slide.' },
+      { pic: [slider('Pad size', '')], text: 'Pad size, at the top beside ✏️ Edit sounds: slide left for smaller pads (more on a line), right for bigger ones. All the way left is the smallest this screen shows; all the way right, the biggest. The pads change as you slide.' },
       { pic: [word('▾ 🥁 Drums')], text: 'Tap a group of presets to open or close it.' },
       { adv: true, pic: [pad('🍑', 'C♯ · D♭', '#1FC7B0')], text: 'Notes, Chords and Bass get the sharps and flats, in order between the others. C♯ and D♭ are two names for the same black key, between C and D.' },
       { pic: [person('C', '#7C3AED')], text: 'Whose sounds: the round picture (or letter) at the top right. Tap it to switch to someone else’s pads, or 👥 People to add someone.' },

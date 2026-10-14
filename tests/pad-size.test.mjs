@@ -67,3 +67,18 @@ test('older copies\' sizes read as the nearest place on the slider', () => {
   assert.ok(fromOldSize('s') < fromOldSize(85) && fromOldSize(85) < fromOldSize('l'));
   for (const bad of [49, 221, 101, 102.5, 'xl', null, undefined, 0.5]) assert.equal(fromOldSize(bad), undefined, String(bad));
 });
+
+// Ben, 2026-10-13: "the size scroller should be centered in the available
+// space". Equal auto margins share the room its 240 px leave; from 560 px,
+// where it stays when the header slims, the room starts after the slim
+// buttons whether or not they show, so it does not jump when the bar sticks.
+test('the size slider sits centered in the room left on its line', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\n\.pads-bar \.pads-size \{ margin-inline: auto; \}/);
+  const slim = css.match(/body\.head-slim\.screen-pads \.pads-bar \{ padding-left: ([^;]+); \}/)[1];
+  const wide = css.match(/@media \(min-width: 560px\) \{\s*\.pads-bar \{ padding-left: ([^;]+); \}/);
+  assert.ok(wide, 'from 560 px the bar keeps the slim buttons\' room at all times');
+  assert.equal(wide[1], slim, 'the same room as when the header slims');
+  assert.match(css, /@media \(max-width: 559px\) \{\s*body\.head-slim\.screen-pads \.pads-size \{ display: none; \}/, 'under 560 px it hides when the bar sticks, so it never moves either');
+});
