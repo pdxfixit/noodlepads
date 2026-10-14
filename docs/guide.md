@@ -17,7 +17,7 @@ things in one line per control.
 ## Pads and the sound sheet
 
 A soundboard for kids: everyone gets a board of their own. Tap a
-pad, hear the sound; hold it (or Shift-click it) and it keeps repeating (tap it again to stop), so several can loop at once. Record a one-liner ("GREAT!", "YOU LOSE!"), then make it
+pad, hear the sound; hold it (or Shift-click it) and it keeps repeating (tap it again to stop), so several can loop at once. On a touch screen a pad sounds as the finger lifts, if it stayed put, so a scroll that starts on a pad never plays it (`finger.js`; 🧸 Kids pads too); a mouse plays on press. Record a one-liner ("GREAT!", "YOU LOSE!"), then make it
 silly with a voice: Loud, Chipmunk, Fast, Slow, Monster, Robot, Stadium, Walkie-talkie,
 Underwater, Alien, Clones, Stutter or Backwards. The sound sheet draws the
 sound as a wave that lights up as it plays; hold 👂 **Hold: before** to hear it
