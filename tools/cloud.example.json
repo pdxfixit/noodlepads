@@ -1,0 +1,6 @@
+{
+  "_about": "Copy to ~/.config/noodlepads/cloud.json and fill in. Where tools/logs.py reads problem reports from: the site's D1 database (table reports). The ids are printed by `just cloud-db list` (database_id) and the Cloudflare dashboard (account_id). The read-only token (D1: Read) lives in the Keychain under keychain_service.",
+  "account_id": "<Cloudflare account id>",
+  "database_id": "<D1 database id of noodle-pads>",
+  "keychain_service": "noodlepads-logs"
+}

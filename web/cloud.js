@@ -1,0 +1,586 @@
+// Cloud profiles on this device (docs/design/cloud-profiles.md): which people
+// are in the cloud here (IndexedDB `cloud`), putting everyone there by
+// themselves, when they sync, the PIN asked when a person is opened, Offline
+// (this device only), and share codes both ways. The rules are in
+// cloud-sync.js and the routes in cloud-api.js; this binds them to the app's
+// storage. The board never waits on any of it: everything works on the
+// device, and the cloud catches up.
+
+import { state, readStorage, setPersonEdit } from './state.js';
+import { db } from './store.js';
+import { audio } from './audio.js';
+import { cleanBackup } from './backup.js';
+import { followPerson, cleanPrefs } from './settings.js';
+import { createCloudApi, CloudError, cloudTrouble } from './cloud-api.js';
+import { syncProfile, shareBundle, shareDoc, uploadAudio, hasMade, CLOUD_KINDS } from './cloud-sync.js';
+import { funName, isFunName } from './names.js';
+import { isHiddenBeat, isScratchSong } from './scratch.js';
+import { people } from './board.js';
+import { newId, recall, remember } from './util.js';
+import { logEvent } from './log.js';
+import { createSyncTiming, SYNC_DELAY_MS, ACTIVE_MS } from './sync-timing.js';
+import { appMeta, pendingUses, sentUses } from './uses.js';
+
+// Given by app.js (initCloud), so this module never imports backup-ui.js,
+// which imports the People screen, which imports this.
+let storeLoaded = async () => {};
+let whatIsHere = () => ({ peopleIds: new Set(), clipIds: new Set() });
+let renderShare = async () => null;   // (kind, id) -> a Blob of it as it plays, or null
+
+// Every call says the app's version, a screen-width bucket and touch (ADR 0016).
+const deviceMeta = () => appMeta(state.version, globalThis.screen?.width, (globalThis.navigator?.maxTouchPoints ?? 0) > 0);
+export const api = createCloudApi({ fetch: (...args) => globalThis.fetch(...args), meta: deviceMeta });
+export { cloudTrouble, CloudError };
+
+export { SYNC_DELAY_MS, ACTIVE_MS };    // when it syncs: sync-timing.js
+export const PIN_ROUNDS = 20_000;      // the device's own check of a PIN (link.check)
+const SHARED_KEY = 'shared';           // localStorage: the codes this device opened (Shared with me)
+export const MAX_SHARED = 100;
+
+// ── is the cloud there? ──
+
+let there = null;       // null: not asked yet
+let askedAt = 0;
+// Whether this copy of the app has a cloud (noodlepads.com does; the dev
+// server and `just look` don't). A "no" is asked again after a minute.
+export async function cloudThere() {
+  if (there === true) return true;
+  if (there === false && Date.now() - askedAt < 60_000) return false;
+  askedAt = Date.now();
+  try {
+    await api.hello();
+    there = true;
+  } catch {
+    there = false;
+  }
+  return there;
+}
+// For tests: forget the answer.
+export function resetCloudCheck() { there = null; askedAt = 0; }
+
+// ── links and keys ──
+//
+// A link: {id, key, rev, sent, sounds, pin, remember, check}. `key` is kept
+// only when the device remembers the profile (`remember`, or a profile with
+// no PIN); otherwise it lives in `sessionKeys`, for this page's life.
+// `check` ({salt, hash}) lets the device check a PIN itself when offline.
+
+const sessionKeys = new Map();   // person id -> key, not stored
+const unlocked = new Set();      // people whose PIN was typed since they were last opened
+// People whose PIN was typed on this visit (until the page reloads), however:
+// opening them, setting it, or the profile sheet's guard. Their name, picture
+// and color can be changed without asking again (people.js, Ben 2026-10-12).
+const pinTyped = new Set();
+
+export const linkOf = (personId) => state.cloud.get(personId) ?? null;
+export const inCloud = (personId) => state.cloud.has(personId);
+export const keyOf = (personId) => linkOf(personId)?.key || sessionKeys.get(personId) || null;
+export const isOffline = (personId) => state.peopleEdits.get(personId)?.offline === true;
+// Links made before "Remember on this device" existed stay remembered.
+const remembers = (link) => !link?.pin || link.remember !== false;
+
+async function saveLink(link) {
+  const stored = remembers(link) ? link : { ...link, key: null };
+  if (!remembers(link) && link.key) sessionKeys.set(link.id, link.key);
+  state.cloud.set(link.id, stored);
+  try { await db.put('cloud', stored); } catch (err) { console.error('Saving a cloud link failed:', err); }
+}
+
+// This device stops syncing the person; the profile stays in the cloud.
+export async function dropLink(personId) {
+  state.cloud.delete(personId);
+  sessionKeys.delete(personId);
+  unlocked.delete(personId);
+  status.delete(personId);
+  try { await db.remove('cloud', personId); } catch { /* not stored */ }
+  await dropBases(personId);
+  tell();
+}
+
+// ── status, for the screens ──
+
+const status = new Map();   // person id -> {state: 'syncing' | 'ok' | 'trouble' | 'locked', text, at}
+const watchers = new Set();
+export const statusOf = (personId) => status.get(personId) ?? null;
+export function onCloud(fn) { watchers.add(fn); return () => watchers.delete(fn); }
+function tell() { for (const fn of watchers) fn(); }
+function setStatus(personId, value) { status.set(personId, { ...value, at: Date.now() }); tell(); }
+
+// ── the PIN, when a person is opened ──
+
+const hex = (bytes) => [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('');
+async function pinHash(pin, saltHex) {
+  const salt = Uint8Array.from(saltHex.match(/../g).map((h) => parseInt(h, 16)));
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']);
+  return hex(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: PIN_ROUNDS }, key, 256));
+}
+async function pinCheck(pin) {
+  const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+  return { salt, hash: await pinHash(pin, salt) };
+}
+
+// Whether opening this person on this device asks for their PIN now.
+export function needsPin(personId) {
+  const link = linkOf(personId);
+  return !!link?.pin && !remembers(link) && !unlocked.has(personId);
+}
+
+// The profile sheet's guard (people.js): whether changing this person's name,
+// picture or color asks for their PIN first. Only a person whose cloud
+// profile has a PIN, and only until it is typed once on this visit. A UI gate:
+// syncs from other devices change them as before.
+export const pinGuards = (personId) => !!linkOf(personId)?.pin && !pinTyped.has(personId);
+
+// Checks a PIN for the guard the way opening a person does (unlock: the
+// Worker, with its wrong-try count and 10-minute wait; offline, the device's
+// own check), keeping whether this device remembers them. Throws as unlock does.
+export async function checkPin(personId, pin) {
+  await unlock(personId, pin, remembers(linkOf(personId)));
+}
+
+// The person was switched away from: their PIN is asked the next time.
+export function leftPerson(personId) {
+  if (!remembers(linkOf(personId))) unlocked.delete(personId);
+}
+
+// Opens a person with their PIN. Online, the cloud checks it and gives a key
+// (kept if `remember`); offline, the device's own check lets them in, and the
+// sync waits for the next open. Throws a CloudError on a wrong PIN.
+export async function unlock(personId, pin, remember = false) {
+  const link = linkOf(personId);
+  if (!link) return;
+  try {
+    const opened = await api.open(personId, pin, remember);
+    // The key this device held before is dropped in the cloud, so each open
+    // leaves one key, not one more.
+    const before = keyOf(personId);
+    if (before && before !== opened.key) api.forget(personId, before).catch(() => {});
+    sessionKeys.delete(personId);
+    await saveLink({ ...link, key: opened.key, pin: !!opened.pin, remember, check: await pinCheck(pin) });
+    status.delete(personId);
+  } catch (err) {
+    if (!(err instanceof CloudError) || err.status !== 0 || !link.check || await pinHash(pin, link.check.salt) !== link.check.hash) throw err;
+  }
+  unlocked.add(personId);
+  pinTyped.add(personId);
+  logEvent('cloud', { unlocked: true, remember });
+  if (keyOf(personId)) syncNow(personId);
+}
+
+// "Forget on this device": the device drops its key (and the cloud deletes
+// it), so the PIN is asked every time again, and syncing waits for it.
+export async function forgetHere(personId) {
+  const link = linkOf(personId);
+  if (!link) return;
+  const key = keyOf(personId);
+  if (key) await api.forget(personId, key).catch(() => {});   // gone already, or offline: the key is dropped here anyway
+  sessionKeys.delete(personId);
+  unlocked.delete(personId);
+  await saveLink({ ...link, key: null, remember: false });
+  setStatus(personId, { state: 'locked', text: '🔒 Forgotten on this device. Its PIN opens it again.' });
+  logEvent('cloud', { forgot: true });
+}
+
+// ── sync ──
+
+// The last-synced copy of each of a person's records (IndexedDB `bases`), the
+// base of the three-way merge. Keyed "<person>|<kind>:<id>".
+const baseKey = (personId, k) => `${personId}|${k}`;
+const bases = {
+  async load(personId) {
+    const all = await db.all('bases').catch(() => []);
+    return new Map(all.filter((b) => b.personId === personId).map((b) => [b.id.slice(personId.length + 1), b.body]));
+  },
+  async save(personId, changes) {
+    await db.batch([...changes].map(([k, body]) => (body === null
+      ? { store: 'bases', del: baseKey(personId, k) }
+      : { store: 'bases', put: { id: baseKey(personId, k), personId, body } })));
+  },
+};
+async function dropBases(personId) {
+  try {
+    const mine = (await db.all('bases')).filter((b) => b.personId === personId);
+    if (mine.length) await db.batch(mine.map((b) => ({ store: 'bases', del: b.id })));
+  } catch { /* none kept */ }
+}
+
+const running = new Map();   // person id -> promise
+let applying = 0;            // while a sync stores what it pulled, those writes are not "changes"
+// Shown and focused: the 5-minute sync runs only then.
+const pageActive = () => {
+  const doc = globalThis.document;
+  if (!doc) return false;
+  return doc.visibilityState !== 'hidden' && (typeof doc.hasFocus !== 'function' || doc.hasFocus());
+};
+const timing = createSyncTiming({ run: () => syncAll(), active: pageActive });
+
+const storedLists = () => ({
+  people: [...state.peopleEdits.values()], clips: state.userClips, overrides: [...state.overrides.values()],
+  orders: [...state.orders.values()], patterns: [...state.patterns.values()], beats: state.savedBeats,
+  settings: [...state.settings].map(([key, value]) => ({ key, value })),
+  decks: [...state.decks.values()], takes: state.takes, songs: [...state.songs.values()], songbook: state.songbook,
+  // Only the settings that travel: a person's DJ keyboard from before stays behind.
+  prefs: [...state.prefs.values()].map(cleanPrefs),
+  layouts: state.layouts, voices: state.myVoices,
+});
+
+async function sha256(blob) {
+  return hex(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()));
+}
+
+const kitIds = () => (state.manifest?.kit ?? []).map((k) => k.id);
+
+function deps() {
+  return {
+    api,
+    bases,
+    uses: { pending: pendingUses, sent: sentUses },
+    lists: storedLists,
+    kitIds: kitIds(),
+    sha256,
+    clean: (doc, audioOf) => cleanBackup(doc, audioOf, whatIsHere()),
+    merge: (cleaned) => storeLoaded(cleaned),
+    put: async (store, record) => {
+      await db.put(store, record);
+      if (store === 'clips' || store === 'overrides') audio.forget(record.id);
+    },
+    remove: async (store, key) => {
+      await db.remove(store, key);
+      if (store === 'clips' || store === 'overrides') audio.forget(key);
+    },
+    // A sync's progress, without undoing what happened meanwhile: a new key
+    // (PIN changed) stays, and a link dropped while it ran stays dropped.
+    saveLink: async (l) => {
+      const now = linkOf(l.id);
+      if (now) await saveLink({ ...l, key: keyOf(l.id), pin: now.pin, remember: now.remember, check: now.check });
+    },
+  };
+}
+
+// Syncs one person now (one sync at a time each). Never throws: trouble is
+// kept as the person's status and said where the cloud is shown.
+export function syncNow(personId) {
+  if (!inCloud(personId) || !db.handle) return Promise.resolve(null);
+  if (!keyOf(personId)) {
+    setStatus(personId, { state: 'locked', text: '🔒 Waiting for the PIN: open them to sync.' });
+    return Promise.resolve(null);
+  }
+  if (running.has(personId)) return running.get(personId);
+  const run = (async () => {
+    setStatus(personId, { state: 'syncing', text: 'Syncing…' });
+    applying++;
+    const id = personId;
+    try {
+      const link = linkOf(id);
+      const report = await syncProfile({ ...link, key: keyOf(id), sent: { ...link.sent }, sounds: { ...link.sounds } }, deps());
+      await readStorage();
+      followPerson();
+      logEvent('cloud', { sync: true, pulled: report.pulled, pushed: report.pushed, deleted: report.deleted, sounds: report.sounds, merged: report.merged, clashes: report.clashes, kept: report.kept });
+      setStatus(id, { state: 'ok', text: report.tooBig
+        ? `In the cloud ✓ (${report.tooBig === 1 ? 'one sound is' : `${report.tooBig} sounds are`} too long for the cloud and stay on this device)`
+        : 'In the cloud ✓' });
+      return report;
+    } catch (err) {
+      logEvent('cloud', { sync: false, status: err?.status ?? 0, error: String(err?.error ?? err?.message ?? err) });
+      if (err instanceof CloudError && err.status === 404 && err.error === 'profile') {
+        // Taken out of the cloud elsewhere (set Offline there, or pruned):
+        // this device keeps it, and does not put it back by itself.
+        await dropLink(id);
+        await setPersonEdit(id, { offline: true });
+        setStatus(id, { state: 'trouble', text: 'Taken out of the cloud on another device. It stays here, offline. Switch Offline off to put it back.' });
+      } else if (err instanceof CloudError && err.status === 401) {
+        sessionKeys.delete(id);
+        const link = linkOf(id);
+        if (link) await saveLink({ ...link, key: null, remember: false });
+        setStatus(id, { state: 'locked', text: '🔒 Open it again on this device (its PIN changed).' });
+      } else {
+        setStatus(id, { state: 'trouble', text: cloudTrouble(err) });
+      }
+      return null;
+    } finally {
+      applying--;
+      running.delete(personId);
+    }
+  })();
+  running.set(personId, run);
+  return run;
+}
+
+// Everyone on the device is in the cloud (Ben, 2026-10-11), except people set
+// Offline, and anyone who has made nothing yet (a new device's empty "Me"
+// would otherwise fill the public list).
+export const wantsCloud = (p) => p.added && !p.hidden && !isOffline(p.id) && !inCloud(p.id)
+  && hasMade(storedLists(), p.id, kitIds());
+
+// One syncAll at a time: two at once (the start-up one, and one after a
+// change) both made a new person's profile, and the loser said "resting".
+// A call while one runs gets one more run after it, shared by every caller.
+let allRunning = null;
+let allAgain = null;
+export function syncAll() {
+  if (allAgain) return allAgain;
+  if (allRunning) {
+    allAgain = allRunning.then(() => { allAgain = null; return syncAll(); });
+    return allAgain;
+  }
+  allRunning = syncEveryone().finally(() => { allRunning = null; });
+  return allRunning;
+}
+
+async function syncEveryone() {
+  timing.ran();
+  if (!await cloudThere()) return;
+  for (const p of people({ includeHidden: true }).filter(wantsCloud)) {
+    try {
+      await putInCloud(p.id);
+    } catch (err) {
+      setStatus(p.id, { state: 'trouble', text: err instanceof CloudError ? cloudTrouble(err) : String(err?.message || err) });
+    }
+  }
+  for (const id of [...state.cloud.keys()]) await syncNow(id);
+}
+
+// After a change: sync once things have been quiet for SYNC_DELAY_MS.
+export function scheduleSync() {
+  timing.changed();
+}
+
+// ── putting someone in the cloud, and taking them out ──
+
+// Gives a person a fun name if theirs was typed, so a typed name never leaves
+// the device. Returns the person's record.
+async function funNamed(personId) {
+  const record = state.peopleEdits.get(personId);
+  if (!record?.added) throw new Error('only people added in the app can go in the cloud');
+  if (record.fun === true && isFunName(record.name)) return record;
+  const taken = people({ includeHidden: true }).filter((p) => p.id !== personId).map((p) => p.name);
+  await setPersonEdit(personId, { name: funName(taken), fun: true });
+  return state.peopleEdits.get(personId);
+}
+
+// Makes the person's profile. The same person already there (from a backup
+// on another device) is opened instead; one with a PIN waits, locked, for it.
+async function putInCloud(personId) {
+  const p = await funNamed(personId);
+  try {
+    const made = await api.create({ id: p.id, name: p.name, avatar: p.avatar ?? '', color: p.color, edited: p.edited ?? Date.now() });
+    await saveLink({ id: personId, key: made.key, rev: made.rev, sent: {}, sounds: {}, pin: false });
+    logEvent('cloud', { put: true });
+  } catch (err) {
+    if (!(err instanceof CloudError && err.status === 409)) throw err;
+    try {
+      const opened = await api.open(personId);
+      await saveLink({ id: personId, key: opened.key, rev: 0, sent: {}, sounds: {}, pin: !!opened.pin });
+    } catch (e2) {
+      if (!(e2 instanceof CloudError && e2.status === 401)) throw e2;
+      await saveLink({ id: personId, key: null, rev: 0, sent: {}, sounds: {}, pin: true, remember: false });
+      setStatus(personId, { state: 'locked', text: '🔒 Already in the cloud with a PIN. Open them to join up.' });
+    }
+  }
+}
+
+// Opens a profile from the list on this device (with its PIN, if it has one).
+// Its person arrives with the first sync.
+export async function openProfile(profileId, pin, remember = true) {
+  const opened = await api.open(profileId, pin, !pin || remember);
+  const before = linkOf(profileId);
+  await saveLink({
+    id: profileId, key: opened.key, rev: before?.rev ?? 0, sent: before?.sent ?? {}, sounds: before?.sounds ?? {},
+    pin: !!opened.pin, remember: !pin || remember, check: pin ? await pinCheck(pin) : undefined,
+  });
+  if (pin) { unlocked.add(profileId); pinTyped.add(profileId); }
+  if (isOffline(profileId)) await setPersonEdit(profileId, { offline: false });
+  logEvent('cloud', { opened: true });
+  return syncNow(profileId);
+}
+
+export async function setPin(personId, current, next) {
+  const link = linkOf(personId);
+  const res = await api.change(personId, keyOf(personId), { pin: current || undefined, newPin: next });
+  await saveLink({ ...link, key: res.key, pin: !!next, check: next ? await pinCheck(next) : undefined });
+  if (next) { unlocked.add(personId); pinTyped.add(personId); }
+  logEvent('cloud', { pin: next ? 'set' : 'removed' });
+}
+
+// Deletes the profile from the cloud (its key, and its PIN if it has one).
+// This device keeps everything.
+export async function deleteFromCloud(personId, pin) {
+  let key = keyOf(personId);
+  if (!key) key = (await api.open(personId, pin, false)).key;
+  await api.remove(personId, key, pin);
+  await dropLink(personId);
+  logEvent('cloud', { removed: true });
+}
+
+// 📴 Offline (this device only). On: the cloud copy is deleted first (it asks
+// twice, and wants the PIN), and the person is never put back by itself.
+// Off: they go to the cloud on the next sync, which starts now.
+export async function setOffline(personId, on, pin) {
+  if (on) {
+    if (inCloud(personId)) await deleteFromCloud(personId, pin);
+    await setPersonEdit(personId, { offline: true });
+    status.delete(personId);
+    tell();
+    logEvent('cloud', { offline: true });
+    return null;
+  }
+  await setPersonEdit(personId, { offline: false });
+  status.delete(personId);
+  logEvent('cloud', { offline: false });
+  return syncAll();
+}
+
+// ── sharing: a code anyone can open, read-only, until its sharer unshares it ──
+
+// What `personId` may share: their sounds, saved beats and saved songs (not
+// their scratch beat or song, ADR 0020: 💾 Keep it first).
+export function shareable(personId) {
+  return {
+    sound: state.userClips.filter((c) => c.personId === personId).map((c) => ({ id: c.id, name: c.label, emoji: c.emoji || '🔊' })),
+    beat: state.savedBeats.filter((b) => b.personId === personId && !isHiddenBeat(b)).map((b) => ({ id: b.id, name: b.name, emoji: '🥁' })),
+    song: state.songbook.filter((s) => s.personId === personId && !isScratchSong(s)).map((s) => ({ id: s.id, name: s.name, emoji: '🎼' })),
+  };
+}
+
+// A share code for one sound, beat or song: syncs first, so every sound in it
+// is in the cloud, then puts up a recording of it as it plays (the preview
+// anyone can play) and the snapshot. Returns {code, title}.
+export async function shareItem(personId, kind, itemId) {
+  if (isOffline(personId)) throw new Error('This person is offline (this device only). Switch Offline off to share.');
+  if (!inCloud(personId)) await syncAll();
+  if (!inCloud(personId) || !keyOf(personId)) throw new CloudError(0, { error: 'offline' });
+  await syncNow(personId);
+  const s = statusOf(personId);
+  if (s?.state === 'trouble' || s?.state === 'locked') throw new Error(s.text);
+  const made = shareBundle(kind, itemId, storedLists(), personId, kitIds());
+  if (!made) throw new Error("That isn't here any more.");
+  const link = linkOf(personId);
+  const key = keyOf(personId);
+  const bundle = { ...made.bundle, clips: made.bundle.clips.map((c) => ({ ...c, sound: link.sounds?.[c.id]?.sound })).filter((c) => c.sound) };
+  let preview = null;
+  try {
+    const blob = await renderShare(kind, itemId);
+    if (blob) preview = (await uploadAudio(api, personId, key, blob, 'audio/wav', sha256)).sound;
+  } catch (err) {
+    console.error('Recording the share to play failed:', err);   // shared without one: it can still be copied
+  }
+  const { code } = await api.share(personId, key, { kind: made.kind, title: made.title, bundle, preview });
+  logEvent('cloud', { shared: kind });
+  return { code, title: made.title };
+}
+
+// A share code as people write it: ABCD-2345.
+export const showCode = (code) => (code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code);
+export const plainCode = (text) => String(text || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+// The codes this device opened (Shared with me), newest first. They stay
+// until the kid removes one. `gone`: its sharer unshared it (🚫), so it only
+// waits to be removed.
+export function sharedHere() {
+  try {
+    const list = JSON.parse(recall(SHARED_KEY) || '[]');
+    return Array.isArray(list) ? list.filter((s) => typeof s?.code === 'string' && /^[A-Z2-9]{8}$/.test(s.code)) : [];
+  } catch { return []; }
+}
+function keepShared(list) { remember(SHARED_KEY, JSON.stringify(list.slice(0, MAX_SHARED))); }
+
+// Opens a code: what it is joins Shared with me. Returns the share.
+export async function openShare(text) {
+  const code = plainCode(text);
+  if (!/^[A-Z2-9]{8}$/.test(code)) throw new Error('A share code has 8 letters and numbers, like ABCD-2345.');
+  const share = await api.shared(code);
+  keepShared([{ code, kind: share.kind, title: share.title, at: Date.now() }, ...sharedHere().filter((s) => s.code !== code)]);
+  logEvent('cloud', { opened: 'share', kind: share.kind });
+  return share;
+}
+
+// Removing one from Shared with me only forgets the code on this device.
+export function forgetShare(code) {
+  keepShared(sharedHere().filter((s) => s.code !== code));
+}
+
+const unshared = (err) => err instanceof CloudError && err.status === 404 && err.error === 'share';
+function markGone(code) {
+  keepShared(sharedHere().map((s) => (s.code === code ? { ...s, gone: true } : s)));
+}
+
+// Asks the cloud about each code in Shared with me and marks the ones their
+// sharer unshared. Any other trouble (offline, resting) changes nothing.
+export async function checkShared() {
+  if (!await cloudThere()) return;
+  await Promise.all(sharedHere().filter((s) => !s.gone).map((s) => api.shared(s.code).catch((err) => {
+    if (unshared(err)) markGone(s.code);
+  })));
+}
+
+// A share from Shared with me, or a plain sentence if it was unshared.
+export async function fetchShare(code) {
+  try {
+    return await api.shared(code);
+  } catch (err) {
+    if (!unshared(err) || !sharedHere().some((s) => s.code === code)) throw err;
+    markGone(code);
+    throw new Error('This was unshared, so it no longer plays. A remix made before stays.');
+  }
+}
+
+// What `personId` has shared, newest first: [{code, kind, title, created}].
+export async function mySharesOf(personId) {
+  const key = keyOf(personId);
+  if (!inCloud(personId) || !key || !await cloudThere()) return [];
+  return (await api.myShares(personId, key)).shares;
+}
+
+// 🚫 Unshare (Ben, Q18): the code stops working for everyone. Remixes others
+// made stay theirs.
+export async function unshareItem(personId, code) {
+  const key = keyOf(personId);
+  if (!key) throw new CloudError(0, { error: 'offline' });
+  await api.unshare(personId, key, code);
+  logEvent('cloud', { unshared: true });
+}
+
+// 🎛️ Remix onto `personId`'s own board: an editable copy named "<title>
+// remix", with fresh ids, the same checks and merge as a backup. The share
+// itself never changes, and the remix stays after an unshare. Returns the
+// merge, for its summary.
+export async function remixShare(code, personId) {
+  const share = await fetchShare(code);
+  const { doc, soundOf } = shareDoc(share.bundle, personId, kitIds(), newId, { kind: share.kind, title: share.title });
+  const audioFor = new Map();
+  for (const [clipId, sound] of soundOf) {
+    const clip = doc.clips.find((c) => c.id === clipId);
+    audioFor.set(clipId, await api.fetchSound(sound, clip?.mime));
+  }
+  const cleaned = cleanBackup({ ...doc, people: [] }, (c) => audioFor.get(c.id) ?? null, whatIsHere());
+  const merged = await storeLoaded(cleaned);
+  scheduleSync();
+  logEvent('cloud', { remixed: share.kind });
+  return merged;
+}
+
+// The list of profiles anyone can see.
+export async function listProfiles() {
+  if (!await cloudThere()) throw new CloudError(0, { error: 'no cloud' });
+  return (await api.list()).profiles;
+}
+
+// ── start ──
+
+export function initCloud(hooks = {}) {
+  if (hooks.storeLoaded) storeLoaded = hooks.storeLoaded;
+  if (hooks.whatIsHere) whatIsHere = hooks.whatIsHere;
+  if (hooks.renderShare) renderShare = hooks.renderShare;
+  db.onChange = (store) => {
+    if (applying || store === 'cloud' || store === 'bases' || store === 'settings') return;
+    if (CLOUD_KINDS.includes(store) || store === 'people') scheduleSync();
+  };
+  syncAll();
+  // Every focus and blur syncs (Ben, 2026-10-11), gathered so a quick pair
+  // runs once; hiding sends a waiting change at once, as the page may close.
+  const doc = globalThis.document;
+  doc?.addEventListener?.('visibilitychange', () => timing.transition({ hidden: doc.visibilityState === 'hidden' }));
+  globalThis.addEventListener?.('focus', () => timing.transition());
+  globalThis.addEventListener?.('blur', () => timing.transition());
+  globalThis.addEventListener?.('pagehide', () => timing.transition({ hidden: true }));
+}

@@ -1,0 +1,24 @@
+# Tests on every push and pull request: just test (syntax, the Node tests, the
+# tools' and the noodlepads-logs skill's unittest). GitHub only tests and watches:
+# agents deploy from Ben's Mac after each commit (a GitHub deploy would need a
+# Cloudflare token only Ben can make). No secrets. Node and just are pinned to
+# the versions on Ben's Mac (tests/fake-d1.mjs needs node:sqlite).
+name: test
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 26.11.1
+      - name: Install just (pinned release; Ubuntu's is too old for [doc] and [positional-arguments])
+        run: curl -sSfL https://github.com/casey/just/releases/download/1.58.0/just-1.58.0-x86_64-unknown-linux-musl.tar.gz | sudo tar xz -C /usr/local/bin just && just --version
+      - name: just test
+        run: just test

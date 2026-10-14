@@ -1,0 +1,3866 @@
+/* Noodle Pads: your own sampler. The casing is the current person's
+   color, the pads sit in a dark bed tinted by it, and everything you press
+   travels: a hard edge under each key that shrinks when it goes down.
+   Flat fills and hard edges only (no blur, gradients or glass), so the
+   Android version can copy it one to one. */
+
+:root {
+  --board: #1F3FA8;                                                /* casing, set per person by app.js */
+  --board-deep: color-mix(in srgb, var(--board) 60%, black);        /* edges of casing-colored keys */
+  --bed: color-mix(in srgb, var(--board) 24%, #141318);             /* the recessed pad bed */
+  --bed-edge: color-mix(in srgb, var(--bed) 55%, black);
+  --ink: #1C1740;
+  --paper: #FFFFFF;
+  --chalk: #ECEAF2;
+  --chalk-edge: #A9A5BA;
+  --line: #D6D3E0;
+  --muted: #57527A;
+  --record: #D8261F;
+  --led: #FFE58A;
+  --font-display: "Anybody", "Arial Narrow", system-ui, sans-serif;
+  --font-ui: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif;
+  --gutter: 16px;
+  --max: 2400px;                                                   /* content stops growing here, centered beyond (Wide screens, at the end) */
+  --toolbar-h: 76px;
+  --deck: color-mix(in srgb, var(--bed) 62%, black);               /* the settings deck under a name bar */
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html {
+  background: var(--board);
+  transition: background-color 0.3s ease;
+}
+
+/* The body has no background of its own: html's casing shows through it,
+   with the page's pattern between them (below). */
+body {
+  margin: 0;
+  min-height: 100dvh;
+  color: #fff;
+  font: 400 1rem/1.4 var(--font-ui);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The page's pattern (backdrop.js): a faint tile, picked at random on each
+   visit, behind everything on the casing; panels, bars and sheets stay
+   solid. The tile is a mask, so it takes the casing color lightened a
+   little: white text on the casing still reads across it (colors.test.mjs).
+   Drawn only once the root names one (data-bg), as a mask of none would
+   fill the whole page. It never moves. 🧸 Kids covers the page, so it has
+   the same pattern behind its own screens. */
+:root { --backdrop-ink: color-mix(in srgb, var(--board) 90%, white); }
+:root[data-bg] body::before,
+:root[data-bg] .kids::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--backdrop-ink);
+  -webkit-mask: var(--backdrop) repeat;
+  mask: var(--backdrop) repeat;
+}
+
+button, input { font: inherit; color: inherit; }
+/* Read by screen readers, not seen. */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+/* ── Header: nameplate, speaker grille, bank keys ───────────────────── */
+
+.top {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top) + 18px) var(--gutter) 0;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.title-tools { flex: none; display: flex; align-items: center; gap: 8px; }
+
+/* Settings: small and up in the corner, away from where thumbs play. */
+.settings-btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: var(--bed);
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+h1 {
+  margin: 0;
+  font: 900 clamp(1.6rem, 8.4vw, 3.6rem)/1 var(--font-display);
+  font-stretch: 78%;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+/* Speaker grille: lights up column by column with the sound level. */
+.grille {
+  flex: none;
+  display: grid;
+  grid-template-rows: repeat(3, 6px);
+  grid-auto-flow: column;
+  grid-auto-columns: 6px;
+  gap: 4px;
+  padding: 8px 9px;
+  border-radius: 9px;
+  background: var(--bed);
+}
+.grille span {
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.14);
+  transition: background-color 60ms;
+}
+.grille span.lit { background: var(--led); }
+/* On a phone the title, the grille, ❓ Help and ⚙️ Settings share one line:
+   a slightly smaller title and a tighter grille let all four fit at 320 px.
+   A very long name breaks rather than push the page sideways. */
+h1 { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 420px) {
+  .title-row { gap: 8px; }
+  .title-tools { gap: 6px; }
+  h1 { font-size: clamp(1.35rem, 7vw, 3.6rem); }
+  .grille { grid-template-rows: repeat(3, 5px); grid-auto-columns: 5px; gap: 3px; padding: 7px; }
+}
+/* With the person's button in the corner too, the speaker grille makes room on a phone. */
+@media (max-width: 420px) { .title-row:has(.people:not([hidden])) .grille { display: none; } }
+
+/* Whose sounds: a round button in the top right corner, like an account
+   picture: the person's first letter on their color. It opens a list of
+   everyone, each in their color, and 👥 People. */
+.people { flex: none; }
+.person-menu { position: relative; }
+.person-menu-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--c);
+  color: #fff;
+  font: 900 1.25rem/1 var(--font-display);
+  box-shadow: 0 2px 0 rgb(0 0 0 / 0.35);
+}
+.person-menu-btn[aria-expanded="true"] { outline: 3px solid var(--led); outline-offset: 2px; }
+.person-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  gap: 6px;
+  width: max-content;
+  min-width: 200px;
+  max-width: min(80vw, 320px);
+  max-height: min(60dvh, 420px);
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+  border-radius: 14px;
+  background: var(--bed);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.45);
+  list-style: none;
+}
+.person-list[hidden] { display: none; }
+.person-item {
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--c);
+  color: #fff;
+  font: 800 1.1rem/1 var(--font-display);
+  font-stretch: 88%;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.person-item[aria-current="true"] { outline: 3px solid #fff; outline-offset: -3px; }
+.person-item[aria-current="true"]::after { content: " ✓"; }
+.person-item.person-edit { margin-top: 4px; border: 2px solid rgb(255 255 255 / 0.5); background: transparent; font-family: var(--font-ui); }
+
+/* ── Pad bed ────────────────────────────────────────────────────────── */
+
+main {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 14px var(--gutter) calc(var(--toolbar-h) + env(safe-area-inset-bottom) + 24px);
+}
+
+.notice {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--bed);
+  max-width: 60ch;
+}
+/* 🆕 An update for Noodle Pads is ready. (update.js): like a notice, with Reload
+   and ✕ on its line; on a phone the words take a line and the buttons wrap
+   under them, filling it. It stays until tapped. */
+/* Floats over the bottom, just above the toolbar (Ben, 2026-10-11: "it should be over the bottom"). */
+.update-bar { position: fixed; z-index: 30; left: 50%; transform: translateX(-50%); bottom: calc(var(--toolbar-h) + env(safe-area-inset-bottom) + 10px); width: min(60ch, calc(100vw - 2 * var(--gutter))); box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; padding: 6px 6px 6px 14px; border-radius: 12px; background: var(--bed); color: #fff; font-weight: 800; box-shadow: 0 6px 18px rgb(0 0 0 / 0.35); }
+.update-bar[hidden] { display: none; }
+.update-text { flex: 1 1 12em; min-width: 0; }
+.update-bar button { min-height: 44px; min-width: 44px; border-radius: 10px; font: inherit; cursor: pointer; }
+/* Reload and ✕ wrap together, so ✕ never sits on a line alone. */
+.update-buttons { display: flex; gap: 8px; flex: 1 0 auto; max-width: 16em; margin-left: auto; }
+@media (max-width: 559px) { .update-buttons { max-width: none; } }   /* on their own line: fill it */
+.update-reload { flex: 1 0 auto; padding: 0 18px; border: 0; background: var(--led); color: var(--ink); }
+.update-close { flex: none; padding: 0 12px; border: 2px solid rgb(255 255 255 / 0.6); background: transparent; color: #fff; }
+
+/* Edit sounds lives on the pads screen, at the top right of the pads. */
+.pads-bar { display: flex; justify-content: flex-end; }
+.pads-bar[hidden] { display: none; }
+/* ✏️ Edit sounds (✅ Done while editing) stays at the top as the sounds
+   scroll under it, on a band of the page color as tall as the gap above a
+   stuck group header (top: 64px), so no pad or ✕ badge shows between them. */
+.pads-bar { position: sticky; top: 0; z-index: 7; margin: -8px 0 2px; padding: 8px 0; background: var(--board); transition: background-color 0.3s ease; }
+.pads-edit {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 2px solid rgb(255 255 255 / 0.6);
+  border-radius: 12px;
+  background: var(--bed);   /* solid: pads scroll under it */
+  color: #fff;
+  font-weight: 800;
+}
+.pads-edit[aria-pressed="true"] { background: var(--chalk); border-color: var(--chalk); color: var(--ink); }
+/* Pad size, at the left of the bar: a slider (more at the end of the file). */
+.pads-bar { align-items: center; gap: 8px; }
+.pads-size { display: flex; align-items: center; flex: 0 1 auto; min-width: 0; margin-right: auto; }
+.pads-size > input { width: 120px; min-height: 44px; accent-color: var(--led); }
+.pads-bar .pads-edit { flex: none; min-height: 48px; white-space: nowrap; }   /* one line: the size gives way first */
+@media (max-width: 359px) { .pads-bar .pads-edit { padding: 0 12px; } }
+
+/* The version, small, in the bottom corner of the page. */
+.version { margin: 0; text-align: right; font-size: 0.75rem; opacity: 0.8; font-variant-numeric: tabular-nums; }
+/* Under the screen: its one-line how-to at the left, the version at the right. */
+.page-foot { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin: 18px 0 0; }
+/* The version keeps its one line; the how-to takes the rest and wraps beside it. */
+.screen-hint { flex: 1 1 auto; min-width: 0; margin: 0; font-size: 0.85rem; font-weight: 700; opacity: 0.85; }
+.page-foot .version { flex: none; margin-left: auto; white-space: nowrap; }
+/* A how-to on two lines or more: the version stacks, date over commit, so
+   the how-to gets the width. */
+.page-foot.stacked { gap: 12px; }
+.page-foot.stacked .version { display: flex; flex-direction: column; align-items: flex-end; }
+.page-foot.stacked .ver-sep { display: none; }
+.page-foot.stacked .ver-date { order: -1; }
+
+/* The screen's own pad columns: the medium pad size (the slider's 100 %)
+   fills the line with this many. The slider's columns are at the end. */
+.pads { --cols: 2; }
+@media (min-width: 560px) { .pads { --cols: 3; } }
+@media (min-width: 820px) { .pads { --cols: 4; } }
+.pads {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: 16px 12px;
+  padding: 14px 12px 18px;
+  border-radius: 22px;
+  background: var(--bed);
+  box-shadow: inset 0 4px 0 var(--bed-edge);
+}
+/* Section headings across the pad grid: the person's own sounds, then Presets (the kit). */
+.pad-section {
+  grid-column: 1 / -1;
+  margin: 4px 2px -6px;
+  font: 800 1.05rem/1.2 var(--font-display);
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+.pad-section:not(:first-child) { margin-top: 14px; }
+/* A kit group's header: full width, tappable, opens or closes the group. */
+.pad-group {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.08);
+  color: #fff;
+  font: 800 1.05rem/1.2 var(--font-ui);
+  text-align: left;
+  /* Sticks under ✏️ Edit sounds while its pads scroll by; the next group's
+     header slides over it. Solid, so pads never show through. */
+  position: sticky;
+  top: 64px;   /* the bar: 8 + 48 (the size keys, Edit sounds) + 8 */
+  z-index: 5;
+  /* The bed's color round its corners and out to the bed's edges, so no pad or badge shows beside it. */
+  box-shadow: 0 0 0 4px var(--bed), 12px 0 0 var(--bed), -12px 0 0 var(--bed);
+}
+.pad-group { background: color-mix(in srgb, #fff 8%, var(--bed)); }
+.pad-group[aria-expanded="true"] { background: color-mix(in srgb, #fff 14%, var(--bed)); }
+.pad-group-caret { width: 1em; }
+.pad-group-count { margin-left: auto; padding: 2px 10px; border-radius: 999px; background: rgb(255 255 255 / 0.15); font-size: 0.9rem; }
+@media (min-width: 820px) {
+  .pads { gap: 22px 18px; padding: 22px 20px 26px; }
+  .pads .pad { padding: 16px 16px 16px 18px; }
+  .pad .pad-label { font-size: 1.65rem; }
+  .pad .pad-emoji { font-size: 2.4rem; }
+  .top .grille { grid-template-rows: repeat(3, 9px); grid-auto-columns: 9px; gap: 6px; padding: 11px 12px; border-radius: 12px; }
+}
+
+/* A pad: picture top left, key number top right, legend bottom left,
+   voice bottom right. */
+.pad {
+  --pad: #FFD60A;
+  --pad-edge: color-mix(in srgb, var(--pad) 55%, black);
+  position: relative;
+  display: grid;
+  grid-template:
+    "emoji key" auto
+    ".     .  " 1fr
+    "label voice" auto / 1fr auto;
+  column-gap: 6px;
+  aspect-ratio: 1 / 0.82;
+  padding: 12px 12px 12px 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--pad);
+  color: var(--ink);
+  box-shadow: 0 6px 0 var(--pad-edge);
+  text-align: left;
+  overflow: hidden;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 50ms, box-shadow 50ms;
+}
+
+/* Playback fills the pad left to right. */
+.pad::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(255 255 255 / 0.45);
+  transform-origin: left;
+  transform: scaleX(var(--progress, 0));
+  pointer-events: none;
+}
+
+.pad:not(.pad-add):active,
+.pad.hit {
+  transform: translateY(5px);
+  box-shadow: 0 1px 0 var(--pad-edge);
+}
+
+.pad-emoji {
+  grid-area: emoji;
+  position: relative;
+  align-self: start;
+  font-size: clamp(1.6rem, 6.4vw, 2.1rem);
+  line-height: 1;
+}
+.pad-label {
+  grid-area: label;
+  position: relative;
+  align-self: end;
+  font: 800 clamp(1rem, 4.9vw, 1.4rem)/1.02 var(--font-display);
+  font-stretch: 84%;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+/* A pad's or key's name: a word too long for its line is hyphenated, not cut
+   off; small ones (chooser, beat rows, DJ keys) take up to two lines. */
+.pad-label, .dj-name { hyphens: auto; }
+.pad.pad-mini .pad-label, .dj-name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: break-word; white-space: normal; }
+.pad-voice {
+  grid-area: voice;
+  position: relative;
+  align-self: end;
+  font-size: 1.3rem;
+  line-height: 1;
+  white-space: nowrap;   /* a chain of voices shows each emoji, in a row */
+}
+.pad-key {
+  grid-area: key;
+  position: relative;
+  display: none;
+  font: 800 0.95rem/1 var(--font-display);
+}
+@media (hover: hover) and (pointer: fine) { .pad-key { display: block; } }
+
+/* Edit sounds: the corner badge (✕ delete, 🙈 hide, 👁 show), sitting on the
+   pad's outside corner so it is easy to hit. */
+.pad-x {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font: 800 1rem/1 var(--font-ui);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.4);
+  cursor: pointer;
+  animation: none;
+}
+.pad-x::before { content: ""; position: absolute; inset: -6px; }   /* a 48px target */
+.pad-x.asking { background: #D93A2B; }
+body.editing .pad { position: relative; overflow: visible; }
+.pad-badge {
+  grid-area: key;
+  position: relative;
+  align-self: start;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+/* Held down and repeating: the pad stays pressed and its edge pulses. */
+.pad.looping {
+  transform: translateY(5px);
+  box-shadow: 0 1px 0 var(--pad-edge), 0 0 0 4px #fff;
+  animation: loop-pulse 0.5s ease-in-out infinite alternate;
+}
+@keyframes loop-pulse { to { box-shadow: 0 1px 0 var(--pad-edge), 0 0 0 7px rgb(255 255 255 / 0.5); } }
+
+/* The empty slot at the end of the bed. */
+.pad-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: transparent;
+  color: #fff;
+  box-shadow: none;
+  border: 2px dashed rgb(255 255 255 / 0.4);
+  text-align: center;
+}
+.pad-add .pad-emoji { align-self: center; font: 400 2.6rem/1 var(--font-ui); }
+.pad-add .pad-label { align-self: center; font: 700 1rem/1.2 var(--font-ui); }
+.pad-add:hover { border-color: rgb(255 255 255 / 0.8); }
+
+.pad.broken {
+  --pad-edge: #8E89A3;
+  background: repeating-linear-gradient(135deg, #D9D6E3 0 12px, #C9C5D6 12px 24px);
+}
+
+/* Edit mode: pads wobble so it is obvious a tap edits instead of plays. */
+body.editing .pad:not(.pad-add) { animation: wobble 0.34s ease-in-out infinite alternate; }
+body.editing .pad:nth-child(even):not(.pad-add) { animation-delay: -0.17s; }
+body.editing .pad.hidden-clip { opacity: 0.45; }
+/* Edit sounds: a kit group with every sound hidden, dimmed like its pads.
+   Outside Edit sounds it has no heading at all. */
+body.editing :is(.pad-group, .pad-section).all-hidden { opacity: 0.6; }
+/* Tapped once in edit mode: held still and ringed, waiting for a swap. */
+body.editing .pads .pad.selected {
+  animation: none;
+  outline: 4px solid #fff;
+  outline-offset: 4px;
+  scale: 1.04;
+}
+
+/* Dragging to reorder: the held pad lifts and follows the pointer. */
+body.editing .pad:not(.pad-add) { cursor: grab; }
+body.reordering, body.reordering .pad { cursor: grabbing; }
+.pad.dragging {
+  z-index: 2;
+  animation: none !important;
+  scale: 1.06;
+  box-shadow: 0 14px 0 var(--pad-edge), 0 18px 30px rgb(0 0 0 / 0.35);
+  pointer-events: none;
+}
+@keyframes wobble {
+  from { transform: rotate(-1.2deg); }
+  to { transform: rotate(1.2deg); }
+}
+
+/* ── Beat maker ─────────────────────────────────────────────────────── */
+
+/* Same bed as the pads. Each row is a sound and its 16 pills (one bar),
+   grouped four to a beat; on a phone the four beats wrap two and two. */
+.seq {
+  padding: 14px 12px 18px;
+  border-radius: 22px;
+  background: var(--bed);
+  box-shadow: inset 0 4px 0 var(--bed-edge);
+}
+
+/* The control bar, the same on Beats and in Beat Builder (Ben, 2026-10-12):
+   .beat-go holds ▶ Play (● Record in DJ), the tempo and ⏲️; .beat-shape the
+   bars (· time signature · swing). With room they share one line, the tempo
+   giving way first (it shrinks, then turns into ⌄ ⌃, see .tempo-box), then
+   the bars line (lines.js). On a phone the bars take a line of their own. */
+.beat-deck { display: flex; flex-wrap: nowrap; align-items: center; gap: 12px; }
+.beat-go { display: flex; flex: 1 1 auto; align-items: center; gap: 12px; min-width: 0; }
+.beat-go > .seq-play, .beat-go > .dj-rec { flex: none; }
+/* Its keys start at its left edge, so an overflow runs right, where lines.js measures it. */
+.beat-shape { display: flex; flex: 0 1 auto; flex-wrap: nowrap; align-items: center; gap: 12px; min-width: 0; margin-left: auto; }
+/* The click track as one emoji key: lit while it ticks. */
+.seq-click { flex: none; width: 48px; min-height: 52px; padding: 0; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; color: #fff; font: 800 1.4rem/1 var(--font-ui); }
+.seq-click[aria-pressed="true"] { background: var(--led); border-color: var(--led); }
+/* Tap tempo on Beat Builder's ⏲️: "keep tapping…", then "👆 96", for a moment. */
+.seq-click.tapping { width: auto; padding: 0 10px; font-size: 0.95rem; white-space: nowrap; }
+@media (max-width: 899px) {
+  .beat-go > .seq-play, .beat-go > .dj-rec { min-width: 0; padding: 0 16px; }
+}
+@media (max-width: 600px) {
+  /* A phone: ▶ Play (● Record), the tempo and ⏲️ on the first line, the bars filling the next. */
+  .beat-deck { flex-wrap: wrap; }
+  .beat-go { flex: 1 1 100%; gap: 8px; }
+  .beat-shape { flex: 1 1 100%; margin-left: 0; }
+  .beat-shape .seq-barsel, .seq-shape > .seq-barsel { display: flex; flex: 1 0 auto; }
+  .beat-shape .seq-barsel button { flex: 1 0 auto; }   /* never narrower than its word */
+  .beat-go > .seq-play { width: 6.5rem; padding: 0 12px; }
+  .beat-go > .dj-rec { padding: 0 14px; }
+  /* Beat Builder has ● Record too: ▶ Play and ● Record share the first line,
+     the tempo and ⏲️ the next, in the same order (provisional, questions.md). */
+  .beat-go:has(> .seq-play:not([hidden]) + .dj-rec) { flex-wrap: wrap; }
+  .beat-go:has(> .seq-play:not([hidden]) + .dj-rec) > :is(.seq-play, .dj-rec) { flex: 1 1 40%; width: auto; }
+  .beat-go:has(> .seq-play:not([hidden]) + .dj-rec) > .beat-tempo { flex: 1 1 calc(100% - 60px); }
+}
+/* The smallest phones: Play, ⏲️ and the number squeeze so the tempo keeps room. */
+@media (max-width: 400px) {
+  .beat-go > .seq-play { width: 4.6rem; padding: 0 6px; font-size: 1rem; }
+  .beat-go > .dj-rec { padding: 0 10px; font-size: 1rem; }
+  .beat-go > .seq-click { width: 44px; font-size: 1.2rem; }
+  .beat-go .seq-bpm-num { font-size: 0.9rem; }
+}
+/* Beats keeps ▶ Play and the tempo in reach while its rows scroll (under 900 px):
+   the whole one-line bar sticks; on a phone only its first line does. */
+@media (max-width: 899px) {
+  .seq .beat-deck { position: sticky; top: 0; z-index: 6; }  /* over the playhead and a dragged row */
+}
+@media (max-width: 600px) {
+  .seq .beat-deck { display: contents; }
+  .seq .beat-go, .seq .beat-shape { margin-inline: -12px; padding: 10px 12px; background: var(--deck); }
+  .seq .beat-go { position: sticky; top: 0; z-index: 6; }
+  .seq .beat-shape { padding-top: 0; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 3px solid rgb(255 255 255 / 0.3); }
+}
+.seq-play {
+  min-height: 52px;
+  min-width: 120px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--led);
+  color: var(--ink);
+  box-shadow: 0 5px 0 color-mix(in srgb, var(--led) 50%, black);
+  font: 800 1.15rem/1 var(--font-ui);
+  transition: transform 50ms, box-shadow 50ms;
+}
+/* Nothing to play yet (an empty song): the key goes dim and flat, so it doesn't invite a tap. */
+.seq-play:disabled { opacity: 0.4; box-shadow: none; transform: translateY(4px); cursor: default; }
+.seq-play:active, .seq-play[aria-pressed="true"] { transform: translateY(4px); box-shadow: 0 1px 0 color-mix(in srgb, var(--led) 50%, black); }
+/* How many bars the beat is: 1, 2 or 4, as latching keys. */
+.seq-barsel { display: inline-flex; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; overflow: hidden; }
+.seq-barsel button { min-width: 44px; min-height: 48px; padding: 0 12px; border: 0; background: transparent; color: #fff; font-weight: 800; white-space: nowrap; }
+.seq-barsel button[aria-pressed="true"] { background: var(--led); color: var(--ink); }
+/* The keys sit inside a rounded frame that clips, so a focus ring goes
+   inside the key, not around it (outside, only its sides showed). */
+.seq-barsel button:focus-visible { outline: 3px solid currentColor; outline-offset: -6px; border-radius: 10px; }
+/* On a phone, each line of controls fills the width instead of leaving a gap. */
+@media (max-width: 600px) {
+  .seq-foot > .seq-add { flex: 1 1 auto; }
+}
+/* The beat's shape: bars · time signature · swing, always on one line
+   (lines.js). As room runs out: the keys tighten, "1 bar 2 bars" becomes
+   "1 2 4 bars", the time signature and swing turn into pickers ("4/4 ▾"),
+   then the time signature drops out, then swing. The bars always stay. */
+.seq-shape { display: contents; }
+/* A group never squeezes (its frame would clip its keys): the line overflows
+   instead, which is what tells lines.js to take the next step. */
+.beat-shape .seq-barsel { flex-shrink: 0; }
+.fit-tight { gap: 8px; }
+.fit-tight .seq-barsel button { padding: 0 7px; }
+.fit-short .bar-word { display: none; }
+.seq-pick { display: none; }
+.fit-pick :is(.seq-sigs, .seq-swing, .set-keys) > button { display: none; }
+.fit-pick .seq-pick { display: block; }
+.fit-nosig .seq-sigs, .fit-noswing .seq-swing { display: none; }
+/* A picker looks like the pressed key, with a ▾ drawn at its right. */
+.seq-pick {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 30px 0 12px;
+  border: 0;
+  border-radius: 0;
+  appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, currentColor 50%) right 16px center / 6px 6px no-repeat,
+    linear-gradient(135deg, currentColor 50%, transparent 50%) right 10px center / 6px 6px no-repeat,
+    var(--led);
+  color: var(--ink);
+  font: 800 1rem/1 var(--font-ui);
+  cursor: pointer;
+}
+.seq-pick:focus-visible { outline: 3px solid currentColor; outline-offset: -6px; }
+/* The tempo, the same on both: a slider and its number (tap it to type one),
+   filling the room between Play (or Record) and ⏲️. */
+.beat-tempo { display: flex; flex: 1 1 9.5rem; align-items: center; gap: 10px; min-width: 9.5rem; min-height: 52px; font-weight: 800; }
+.beat-tempo input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 44px; accent-color: var(--led); }
+.beat-tempo input:disabled { opacity: 0.45; }
+.beat-tempo .seq-bpm-num, .beat-tempo .seq-bpm-type { flex: none; margin-left: auto; }
+.beat-tempo .seq-bpm-num { min-width: 4.6em; text-align: right; font-weight: 800; }
+.beat-tempo .seq-bpm-num:disabled { opacity: 1; }   /* the number stays readable during the count-in */
+.dj-bar button:disabled { opacity: 0.45; }
+@media (max-width: 400px) { .beat-tempo { min-width: 0; flex-basis: 0; } }
+.seq-bpm-num {
+  justify-self: end;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  /* A dotted underline says it can be tapped to type. */
+  text-decoration: underline dotted rgb(255 255 255 / 0.6) 2px;
+  text-underline-offset: 5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.seq-bpm-type {
+  justify-self: end;
+  width: 4.5em;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 2px solid var(--led);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 800 1rem/1 var(--font-ui);
+  text-align: right;
+}
+.seq-bpm-num[hidden], .seq-bpm-type[hidden] { display: none; }
+.seq-empty { margin: 0 0 12px; font-weight: 700; }
+/* An empty place says what to do in a callout: centered, in a dashed box
+   like the add buttons it points at. */
+.seq-empty, .song-empty, .lib-empty {
+  padding: 16px; border: 2px dashed rgb(255 255 255 / 0.4); border-radius: 14px;
+  background: rgb(255 255 255 / 0.07); color: #fff; font-size: 1.05rem; font-weight: 800; text-align: center; text-wrap: balance;
+}
+dialog .lib-empty { border-color: rgb(20 19 24 / 0.25); background: var(--chalk); color: var(--ink); }
+/* Grooves: a new beat, or added to this one. */
+#grooves .groove-how { display: flex; margin: 4px 0 8px; border-color: rgb(20 19 24 / 0.3); }
+#grooves .groove-how button { flex: 1 1 0; min-width: auto; color: var(--ink); }   /* never narrower than its words, so lines.js sees the squeeze */
+/* Segmented keys with an emoji: short of room (lines.js), emoji over word. */
+.seq-barsel.fit-stack button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 6px; white-space: normal; line-height: 1.1; text-align: center; }
+.seq-barsel.fit-stack .key-icon { font-size: 1.2rem; }
+#grooves .groove-how button[aria-pressed="true"] { color: var(--ink); }
+/* Grooves by style: the emoji list's fold headings, each over its cards. */
+.groove-groups { display: grid; gap: 2px; margin-top: 8px; }
+.groove-sec .lib-list { margin: 4px 0 8px; }
+.groove-sec .lib-list[hidden] { display: none; }
+
+.seq-rows { position: relative; display: grid; gap: 14px; }
+/* A light line between rows, so a row's 2 or 4 bars of pills read as one row. */
+.seq-row + .seq-row { margin-top: 4px; padding-top: 18px; border-top: 2px solid rgb(255 255 255 / 0.5); }
+
+/* The playhead bar, drawn over the rows at the step being played. */
+.seq-playhead { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.seq-bar {
+  position: absolute;
+  width: 4px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: #fff;
+  /* The dark edge keeps it visible where it crosses the light sound pickers. */
+  box-shadow: 0 0 0 1.5px var(--ink), 0 0 12px 2px rgb(255 255 255 / 0.45);
+}
+/* A Beats row (Ben, 2026-10-12: "like a list item"): one header line, ⠿
+   grip · ▾ fold · emoji at the left and 🔊 · 🧹 · ✕ at the right
+   (beat-row.js), then the pills across the row's whole width below it. A
+   collapsed row is just the header line. With ⌨️ Keys on the compact rows
+   keep their single line (.dj-grid). */
+.seq-row {
+  --pill: var(--led);
+  display: grid;
+  row-gap: 10px;
+  min-width: 0;
+}
+.seq-head { display: flex; align-items: center; gap: 4px; min-width: 0; min-height: 44px; }
+.seq-head > .row-tools { margin-left: auto; flex: none; }
+/* The sound's name after its emoji: fills the gap, cut short with … (Ben). */
+.seq-head > .seq-name { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 800; color: rgb(255 255 255 / 0.85); cursor: pointer; }
+/* Phones: the header line's 44 px targets sit closer, so all seven
+   (⠿ ▾ emoji 🔔 🔊 🧹 ✕) fit on one line from 360 px. */
+@media (max-width: 419px) {
+  .seq-head { gap: 2px; }
+  .seq-head > .row-tools { gap: 3px; }   /* outlined squares keep a gap, so they never read as one */
+}
+/* Under 390 px the seven leave the name no room: it hides, rather than show a lone … */
+@media (max-width: 389px) {
+  .seq-head > .seq-name { display: none; }
+}
+.seq-head > .seq-fold, .seq-head > .row-emoji { flex: none; }   /* never squeezed: a line short of room overflows, and fitMore sees it */
+/* Where the line is short of room (under about 360 px, measured on the line
+   itself: overflow.js fitMore), 🔔 🧹 ✕ move into ⋯ at its end and every
+   button stays 44 px (Ben, 2026-10-12); see "⋯ menus" below. */
+.seq-head > .row-emoji { flex: none; min-width: 44px; min-height: 44px; padding: 0 4px; font-size: 1.75rem; text-align: center; }   /* a 44 px target, the emoji filling it */
+
+/* A small pad: the same look as on the board, at a size that fits a row or a
+   chooser cell. Beats the board's wide-screen pad font sizes. */
+.pad.pad-mini {
+  aspect-ratio: 1;
+  padding: 7px 7px 7px 8px;
+  border-radius: 11px;
+  box-shadow: 0 4px 0 var(--pad-edge);
+  column-gap: 3px;
+}
+.pad.pad-mini .pad-emoji { font-size: 1.35rem; }
+.pad.pad-mini .pad-label { font-size: 0.78rem; font-stretch: 75%; line-height: 1; }
+.pad.pad-mini .pad-voice { font-size: 0.95rem; }
+.pad.pad-mini:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--pad-edge); }
+.pad.pad-add.pad-mini { box-shadow: none; }
+.pad.pad-add.pad-mini .pad-emoji { font-size: 1.6rem; }
+.pad.pad-add.pad-mini .pad-label { font: 700 0.78rem/1.1 var(--font-ui); }
+
+.seq-tool {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 2px solid rgb(255 255 255 / 0.5);
+  border-radius: 10px;
+  background: transparent;
+  color: #fff;
+  font: 800 0.9rem/1 var(--font-ui);
+  white-space: nowrap;
+}
+.seq-tool[aria-pressed="true"] { background: var(--led); border-color: var(--led); color: var(--ink); }
+.seq-tool:disabled { opacity: 0.35; }
+/* A Clear? or Remove? waiting for its second tap. */
+.seq-tool.armed { background: #D93A2B; border-color: #D93A2B; }
+/* One look for a line's icon buttons (Ben, 2026-10-12: "the buttons need to
+   be consistent -- especially those on the beat rows"): a beat row's 🔔 🔊 🧹
+   ✕ and ⋯, Song's lane speakers. A 44 px outlined square like the beat
+   bar's tools (.seq-tool), one emoji size; on (aria-pressed) is the app's one
+   yellow fill, as the chosen bars; a Clear? or Remove? waiting for its second
+   tap is red. */
+.icon-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  box-sizing: border-box;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 4px;
+  border: 2px solid rgb(255 255 255 / 0.5);
+  border-radius: 10px;
+  background: transparent;
+  color: #fff;
+  font: 800 1.2rem/1 var(--font-ui);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.icon-btn:not([aria-pressed="true"], .armed, :disabled):hover { background: rgb(255 255 255 / 0.14); }
+.icon-btn[aria-pressed="true"] { background: var(--led); border-color: var(--led); color: var(--ink); }
+.icon-btn:disabled { opacity: 0.35; cursor: default; }
+.icon-btn.armed { background: #B3261E; border-color: #B3261E; color: #fff; }
+/* A speaker (row-volume.js), an .icon-btn: tap mutes (lit, 🔇), hold or drag
+   shows its loudness slider. A bar along the bottom of its square fills with
+   the level. */
+.speaker {
+  --level: 1;
+  padding-bottom: 5px;   /* the emoji sits above the level bar */
+  touch-action: none;   /* a drag on it sets the level, never scrolls */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.speaker::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 4px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--led) calc(var(--level) * 100%), rgb(255 255 255 / 0.25) 0);
+  pointer-events: none;
+}
+.speaker[aria-pressed="true"]::before { background: linear-gradient(to right, var(--ink) calc(var(--level) * 100%), rgb(20 19 24 / 0.25) 0); }
+/* The loudness popover, beside the speaker that opened it (fixed: a scroll closes it). */
+.vol-pop {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 220px;
+  box-sizing: border-box;
+  padding: 2px 12px;
+  border: 2px solid var(--led);
+  border-radius: 14px;
+  background: var(--ink);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+}
+.vol-pop[hidden] { display: none; }
+.vol-slider { flex: 1 1 auto; min-width: 0; min-height: 44px; margin: 0; accent-color: var(--led); }
+.vol-num { flex: none; min-width: 3.4em; color: #fff; font: 800 0.95rem/1 var(--font-ui); text-align: right; font-variant-numeric: tabular-nums; }
+/* The fold, after the grip on a row's header line. */
+.seq-fold {
+  flex: none;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgb(255 255 255 / 0.75);
+  font: 800 1.1rem/1 var(--font-ui);
+}
+.seq-fold:hover { background: rgb(255 255 255 / 0.08); }
+/* The grip on a row's header line: a 44 px target, its dots as narrow as before. */
+.seq-head .seq-grip { flex: none; min-width: 44px; min-height: 44px; margin-left: -8px; padding: 12px 8px; }
+/* A collapsed row: its header line, with the sound's emoji and name in a slim button. */
+.seq-slim {
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-left: 6px solid var(--pill);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.08);
+  color: #fff;
+  font: 800 1rem/1 var(--font-ui);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.seq-row.collapsed.muted .seq-slim { opacity: 0.55; }
+/* The grip: a column of dots, a tall target that only starts a drag. */
+.seq-grip {
+  width: 28px;
+  min-height: 64px;
+  padding: 14px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.55) 2.2px, transparent 2.6px) content-box;
+  background-size: 10px 10px;
+  cursor: grab;
+  touch-action: none;
+}
+.seq-grip[hidden] { display: none; }
+.seq-grip:hover { background-color: rgb(255 255 255 / 0.08); }
+.seq-row.dragging { position: relative; z-index: 5; opacity: 0.9; }
+.seq-row.dragging .seq-grip { cursor: grabbing; }
+/* A muted row keeps its pills, dimmed, so it's clear it is silent. */
+.seq-row.muted .seq-steps, .seq-row.muted .row-emoji { opacity: 0.4; }
+/* Pills past a row's length (Pills tempo mode) are hidden, not just dimmed. */
+.seq-beat[hidden], .pill[hidden] { display: none; }
+
+/* One group per beat of the time signature. A group grows with its pill
+   count (4 or 6) and needs ~30px a pill, so groups wrap onto more lines when
+   the row is narrow: two 4-pill beats a line on a phone, all of 4/4 on one
+   line when wide. */
+/* Bars stack, one block each; in a block, beat groups wrap to fit. */
+.seq-steps { display: grid; gap: 10px; }
+.seq-measure { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 10px; }   /* columns set by layoutMeasures */
+.seq-measure[hidden] { display: none; }
+.seq-measure + .seq-measure { padding-top: 10px; border-top: 2px dashed rgb(255 255 255 / 0.15); }
+.seq-beat {
+  --size: 4;
+  /* About 30px a pill at least, so a bar of 4/4 fits on one line from ~560px;
+     a group alone on a wrapped line doesn't stretch across the whole row. */
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--size), minmax(0, 1fr));
+  gap: 5px;
+  padding: 5px;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.06);
+}
+
+/* Vertical pills: dim when off, the sound's pad color when on. The playhead
+   lights the column being played; a lit pill that is on flashes white. */
+.pill {
+  height: 64px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.13);
+  transition: background-color 60ms, transform 60ms;
+}
+.pill.beat-start { background: rgb(255 255 255 / 0.19); }
+/* The "1" of every bar: brighter, with a small white dot while it is off. */
+.pill.one { background: rgb(255 255 255 / 0.26) radial-gradient(circle, rgb(255 255 255 / 0.75) 3px, transparent 3.5px) center / 100% 100% no-repeat; }
+.pill[aria-pressed="true"] { background: var(--pill); box-shadow: 0 3px 0 color-mix(in srgb, var(--pill) 55%, black); }
+/* A loud hit: the same color with a white ring inside, so on and loud read apart. */
+.pill.loud[aria-pressed="true"] { box-shadow: inset 0 0 0 4px rgb(255 255 255 / 0.9), 0 3px 0 color-mix(in srgb, var(--pill) 55%, black); }
+.pill.now { outline: 2px solid rgb(255 255 255 / 0.7); outline-offset: 1px; }
+/* A row turned down draws its hits fainter (--vol: its loudness, 0–1). */
+.seq-row .pill[aria-pressed="true"] { opacity: calc(0.35 + 0.65 * var(--vol, 1)); }
+.pill.now[aria-pressed="true"] { background: #fff; transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--pill) 55%, black); }
+
+/* A tune row (🎹, ADR 0023): its pills preview its notes, lit where one
+   starts and half lit while one lasts; its emoji wears a small 🎹. */
+.seq-tune .pill.held, .dj-grid-pills i.held { background: color-mix(in srgb, var(--pill, var(--c)) 40%, transparent); }
+.row-emoji.tune { position: relative; }
+.row-emoji.tune::after { content: "🎹"; position: absolute; right: -3px; bottom: -3px; font-size: 0.75rem; line-height: 1; }
+
+/* ── 🎹 The piano roll (roll.js) ─────────────────────────────────────
+   A screen of its own over the beat, dark like the beat panel: the name
+   and ✅ Done, a line of controls, then the roll. Note names stay at the
+   left as the bars scroll sideways inside it; a row of a note is as tall
+   as fits two octaves on the screen, within reason. */
+dialog#roll {
+  width: 100%;
+  max-width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--bed);
+  color: #fff;
+  overscroll-behavior: contain;
+}
+dialog#roll::backdrop { background: var(--bed); }
+.roll-body {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top) + 12px) var(--gutter) calc(env(safe-area-inset-bottom) + 16px);
+  display: grid;
+  gap: 10px;
+}
+.roll-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.roll-head h2 { min-width: 0; margin: 0; overflow: hidden; font: 900 1.5rem/1.1 var(--font-display); font-stretch: 80%; text-overflow: ellipsis; white-space: nowrap; }
+.roll-done { flex: none; }
+.roll-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.roll-bar > .seq-play { flex: none; min-width: 6.5rem; }
+.roll-octave { display: flex; gap: 6px; }
+.roll-octave .seq-tool { min-width: 52px; font-size: 1.1rem; }
+.roll-status { min-height: 1.2em; margin: 0; color: var(--led); font: 700 0.9rem/1.2 var(--font-ui); }
+.roll-scroll { overflow-x: auto; overscroll-behavior-x: contain; touch-action: pan-x; border-radius: 12px; background: rgb(0 0 0 / 0.28); }
+.roll-grid {
+  --name-w: 2.6rem;
+  --half-min: 10px;     /* half a pill: a pill is at least 20 px wide */
+  --row-h: clamp(22px, calc((100dvh - 300px) / var(--lines, 15)), 38px);
+  position: relative;
+  display: grid;
+  grid-template-rows: 18px;
+  gap: 0;
+  min-width: 100%;
+  width: max-content;
+}
+.roll-grid.half { --half-min: 9px; }
+.roll-name {
+  grid-column: 1;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bed) 80%, black);
+  color: rgb(255 255 255 / 0.75);
+  font: 800 0.85rem/1 var(--font-ui);
+}
+.roll-name.c { background: color-mix(in srgb, var(--bed) 55%, white); color: #fff; }
+.roll-name.black { color: rgb(255 255 255 / 0.5); font-size: 0.72rem; }
+.roll-corner { grid-row: 1; font-size: 0.75rem; }
+.roll-hit { grid-row: 1; align-self: center; justify-self: center; width: 60%; height: 4px; border-radius: 3px; background: rgb(255 255 255 / 0.08); }
+.roll-hit.on { height: calc(4px + 2px * var(--n, 1)); background: var(--c, #fff); opacity: calc(0.45 + 0.13 * var(--n, 1)); }
+.roll-grid .note-cell {
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid rgb(255 255 255 / 0.05);
+  border-top: 1px solid rgb(255 255 255 / 0.06);
+  border-radius: 0;
+  background: rgb(255 255 255 / 0.05);
+  touch-action: pan-x;
+}
+.roll-grid .note-cell.beat-start { border-left-color: rgb(255 255 255 / 0.2); }
+.roll-grid .note-cell.bar-start { border-left: 2px solid rgb(255 255 255 / 0.45); }
+.roll-grid .note-cell.c { background: rgb(255 255 255 / 0.13); }
+.roll-grid .note-cell.black { background: rgb(0 0 0 / 0.22); }
+.roll-note {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  margin: 2px 1px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--note, var(--led));
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--note, var(--led)) 50%, black);
+  touch-action: none;
+  cursor: ew-resize;
+}
+.roll-end { position: absolute; top: 25%; right: 3px; bottom: 25%; width: 3px; border-radius: 2px; background: rgb(0 0 0 / 0.4); }
+.roll-playhead { grid-row: 1 / -1; z-index: 2; border-left: 2px solid #fff; background: rgb(255 255 255 / 0.14); pointer-events: none; }
+dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
+.roll-hint { margin: 0; color: rgb(255 255 255 / 0.75); }
+/* The open document's name bar: a beat on Beats and in Beat Builder, a song
+   on 🎼 Song. It comes first on its screen, in a zone of its own a shade
+   lighter than the panel. With room it is one line: icon, name (a text
+   field: tap to rename), ✏️, 🆕 New, 🗂️ My beats (🗂️ My songs). Short of room, two balanced
+   lines: icon, name and ✏️ over New and Open, which share the width; the
+   icon and ✏️ columns are the same width, so the halves match. */
+.seq, .dj, .song { container: panel / inline-size; }
+.doc-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 8px;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 0.08);
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.06);
+}
+.beat-bar-icon { flex: none; width: 44px; font-size: 1.3rem; text-align: center; }
+.doc-bar .seq-tool { flex: none; }
+.beat-name {
+  flex: 1 1 9em;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #fff;
+  font: 800 1.1rem/1 var(--font-ui);
+  text-overflow: ellipsis;
+}
+.beat-name:hover, .beat-name:focus { border-color: rgb(255 255 255 / 0.5); background: rgb(0 0 0 / 0.2); }
+/* The scratch beat or song (ADR 0020): "Scratch beat", not a name to edit;
+   💾 Keep stands where ✏️ is (the same grid spot on a phone). */
+.beat-name.scratch { font-style: italic; cursor: default; }
+.beat-name.scratch:hover, .beat-name.scratch:focus { border-color: transparent; background: transparent; }
+/* Pattern chips under the beat bar (a music studio's pattern picker): 8
+   numbered spots, pinned beats first, then the last used, in an order a tap
+   never changes; one line that scrolls sideways inside itself when they
+   don't fit (provisional, questions.md Q56), the open one lit. A chip
+   waiting for the next bar line has a dashed edge and breathes. */
+.beat-chips {
+  display: flex;
+  gap: 8px;
+  margin: -2px 0 10px;
+  padding: 2px 2px 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+.beat-bar[hidden] + .beat-chips { display: none; }
+.beat-chip {
+  flex: none;
+  max-width: 11em;
+  min-height: 44px;
+  padding: 0 14px 0 12px;
+  overflow: hidden;
+  border: 2px solid rgb(255 255 255 / 0.35);
+  border-left: 6px solid var(--chip, rgb(255 255 255 / 0.35));
+  border-radius: 22px;
+  background: rgb(255 255 255 / 0.08);
+  color: #fff;
+  font: 800 0.95rem/1 var(--font-ui);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  scroll-snap-align: start;
+}
+.beat-chip { display: inline-flex; align-items: center; gap: 6px; }
+/* Its spot's number, small and round, before the name (then 📌 when pinned). */
+.chip-num { flex: none; min-width: 1.35em; padding: 2px 4px; border-radius: 999px; background: rgb(255 255 255 / 0.16); font-size: 0.75rem; text-align: center; }
+.beat-chip[aria-pressed="true"] .chip-num { background: rgb(20 19 24 / 0.14); }
+.chip-pin { flex: none; font-size: 0.8rem; }
+.chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.beat-chip[aria-pressed="true"] { border-color: var(--led); border-left-color: var(--chip, var(--led)); background: var(--led); color: var(--ink); }
+.beat-chip.queued { border-style: dashed; border-color: var(--led); animation: chip-wait 0.6s ease-in-out infinite alternate; }
+.beat-chip:disabled { opacity: 0.45; }
+@keyframes chip-wait { to { background: rgb(255 255 255 / 0.24); } }
+@media (prefers-reduced-motion: reduce) { .beat-chip.queued { animation: none; } }
+/* The settings deck: what applies to the whole beat or song (Play, tempo,
+   ⏲️, bars · time signature · swing; ● Record in Beat Builder; ▶ Play song),
+   on a darker band across the panel under the name bar, ending in a bright
+   rule, so its scope reads apart from the rows below. Every control on it
+   is 52 px tall. Beats builds it from two lines (the transport sticks on a
+   phone), so each line is a .deck and the last is also .deck-end. */
+.deck { margin: 0 -12px; padding: 10px 12px; background: var(--deck); }
+.deck + .deck { padding-top: 0; }
+.deck-end { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 3px solid rgb(255 255 255 / 0.3); }
+.deck .seq-tool { min-height: 52px; padding: 0 14px; border-radius: 12px; font-size: 1rem; }
+@container panel (max-width: 30rem) {
+  .doc-bar {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 44px;
+    grid-template-areas: "icon name name rename" "new new open open";
+  }
+  .doc-bar .beat-bar-icon { grid-area: icon; }
+  .doc-bar .beat-name { grid-area: name; }
+  .doc-bar .doc-rename, .doc-bar .doc-keep { grid-area: rename; }
+  .doc-bar .doc-keep::after { content: none; }
+  .doc-bar .doc-new { grid-area: new; }
+  .doc-bar .doc-open { grid-area: open; }
+  /* Nothing open (ADR 0008): no name or ✏️, so one line: the icon, then
+     🆕 New and 🗂️ My beats sharing the width. */
+  .doc-bar:has(.beat-name[hidden]) { grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "icon new open"; }
+}
+/* A beat bar (both have ⌨️ Keys beside 💃, ADR 0017) needs the two lines
+   sooner than the song bar: 🥁 name ✏️ over 💃 ⌨️ 🆕 📂, with 🆕 New and
+   🗂️ My beats matching: New's column is half of what is left after the three
+   44 px columns and gaps, Open's the rest under ✏️. 💃 and ⌨️ are emoji
+   alone here, and so is 🗂️ on a phone; New and My beats take less padding. Up to 46rem, so the
+   name keeps room beside the worded 💾 Keep and 🗂️ My beats (ADR 0020). */
+@container panel (max-width: 46rem) {
+  .doc-bar:has(.doc-keys) {
+    display: grid;
+    grid-template-columns: 44px 44px calc((100% - 112px) / 2) minmax(0, 1fr) 44px;
+    grid-template-areas: "icon name name name rename" "grooves keys new open open";
+  }
+  .doc-bar:has(.doc-keys) .beat-bar-icon { grid-area: icon; }
+  .doc-bar:has(.doc-keys) .beat-name { grid-area: name; }
+  .doc-bar:has(.doc-keys) :is(.doc-rename, .doc-keep) { grid-area: rename; }
+  .doc-bar:has(.doc-keys) .doc-grooves { grid-area: grooves; }
+  .doc-bar:has(.doc-keys) .doc-keys { grid-area: keys; }
+  .doc-bar:has(.doc-keys) .doc-new { grid-area: new; }
+  .doc-bar:has(.doc-keys) .doc-open { grid-area: open; }
+  .doc-bar:has(.doc-keys) :is(.doc-grooves, .doc-keys, .doc-keep)::after { content: none; }
+  .doc-bar:has(.doc-keys) :is(.doc-new, .doc-open) { padding: 0 4px; }
+  /* Nothing open: no room for all five on one line, so two balanced
+     lines: the icon, 💃 and ⌨️ sharing the rest, over 🆕 New and 🗂️ My beats
+     in halves. */
+  .doc-bar:has(.doc-keys):has(.beat-name[hidden]) { display: flex; flex-wrap: wrap; }
+  .doc-bar:has(.doc-keys):has(.beat-name[hidden]) :is(.doc-grooves, .doc-keys) { flex: 1 1 44px; }
+  .doc-bar:has(.doc-keys):has(.beat-name[hidden]) :is(.doc-new, .doc-open) { flex: 1 1 calc(50% - 4px); }
+}
+.seq-undo { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 8px 8px 8px 16px; border-radius: 12px; background: rgb(255 255 255 / 0.12); font-weight: 800; }
+.seq-undo[hidden] { display: none; }
+.seq-foot { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.seq-add {
+  min-height: 48px;
+  padding: 0 18px;
+  border: 2px dashed rgb(255 255 255 / 0.5);
+  border-radius: 12px;
+  background: transparent;
+  color: #fff;
+  font-weight: 800;
+}
+
+/* ── Song: a playlist of lanes (ADR 0024) ─────────────────────────── */
+/* 🎼 Song: a screen of its own, a panel like Beats. */
+.song { padding: 14px 12px 18px; border-radius: 22px; background: var(--bed); box-shadow: inset 0 4px 0 var(--bed-edge); color: #fff; }
+.song[hidden] { display: none; }
+.song-empty { margin: 0 0 10px; }
+/* ▶ Play song, the song's tempo (➖ 60–180 BPM ➕) and Save as a sound on the deck. */
+.song-deck { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.song-deck > * { flex: 1 1 auto; }
+.song-tempo { display: flex; align-items: center; gap: 6px; }
+.song-tempo .tempo-nudge { flex: none; width: 52px; padding: 0; }
+.song-tempo-field { display: flex; flex: 1 1 auto; align-items: center; justify-content: center; gap: 6px; font-weight: 800; }
+.song-tempo-field input { width: 4.2em; min-height: 52px; padding: 0 6px; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; color: #fff; font: 800 1.1rem/1 var(--font-ui); text-align: center; }
+.song-tempo-unit { font-size: 0.85rem; }
+/* The strip of your beats (the pattern chips' look): the one picked is lit. */
+.song-beats:empty, .song-beats[hidden] { display: none; }
+/* The lanes: a box that scrolls sideways (and, past four lanes on a phone,
+   down) inside itself. The ruler stays at its top, each lane's head at its
+   left. A bar is --bar-w wide; a block sits over the bars it covers. */
+.song-lanes {
+  --bar-w: 48px;
+  --head-w: 112px;
+  --lane-h: 56px;
+  --ruler-h: 44px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  max-height: calc(var(--ruler-h) + 4 * var(--lane-h) + 12px);
+  border-radius: 12px;
+  background: rgb(0 0 0 / 0.22);
+  scrollbar-width: thin;
+}
+.song-grid { position: relative; width: max-content; min-width: 100%; }
+.song-ruler, .song-lane { display: flex; }
+.song-ruler { position: sticky; top: 0; z-index: 3; height: var(--ruler-h); background: var(--deck); }
+.lane-corner, .lane-head {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  flex: none;
+  width: var(--head-w);
+  background: var(--deck);
+}
+.lane-corner { z-index: 4; display: grid; place-items: center start; padding-left: 10px; font: 700 0.8rem/1 var(--font-ui); color: rgb(255 255 255 / 0.75); }
+.ruler-track { display: flex; }
+.ruler-bar {
+  flex: none;
+  width: var(--bar-w);
+  min-height: var(--ruler-h);
+  padding: 0 0 0 6px;
+  border: 0;
+  border-left: 1px solid rgb(255 255 255 / 0.25);
+  background: transparent;
+  color: rgb(255 255 255 / 0.85);
+  font: 700 0.8rem/1 var(--font-ui);
+  text-align: left;
+}
+/* ▶ Play song starts at this bar. */
+.ruler-bar[aria-pressed="true"] { background: var(--led); color: var(--ink); }
+.ruler-bar[aria-pressed="true"]::before { content: "▶ "; }
+.song-lane { height: var(--lane-h); border-top: 1px solid rgb(255 255 255 / 0.14); }
+.lane-head { display: flex; align-items: center; gap: 2px; padding: 0 4px; }
+.lane-pick {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 48px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #fff;
+  font: 800 0.85rem/1.1 var(--font-ui);
+  text-align: left;
+}
+.lane-emoji { flex: none; font-size: 1.35rem; }
+.lane-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lane-head .speaker { flex: none; }
+.song-lane.muted .lane-track { opacity: 0.4; }
+.lane-track { position: relative; display: flex; flex: none; outline-offset: -3px; }
+.lane-cell { flex: none; width: var(--bar-w); height: 100%; border-left: 1px solid rgb(255 255 255 / 0.1); }
+.lane-cell.line { border-left-color: rgb(255 255 255 / 0.32); }
+/* Where the keyboard is on a lane, while the lane has focus. */
+.lane-track:focus-visible .lane-cell.cursor { box-shadow: inset 0 0 0 3px var(--led); }
+.song-block {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: calc(var(--at) * var(--bar-w) + 2px);
+  width: calc(var(--len) * var(--bar-w) - 4px);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 8px;
+  overflow: hidden;
+  border: 2px solid rgb(255 255 255 / 0.4);
+  border-left: 6px solid var(--chip, rgb(255 255 255 / 0.5));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--chip, #8a84b8) 30%, #2a2638);
+  color: #fff;
+  font: 800 0.85rem/1.1 var(--font-ui);
+  text-align: left;
+  white-space: nowrap;
+}
+.block-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.block-times { flex: none; margin-left: auto; padding: 1px 5px; border-radius: 999px; background: rgb(255 255 255 / 0.2); font-size: 0.75rem; }
+.song-block.gone { opacity: 0.55; font-style: italic; }
+.song-block.now { box-shadow: 0 0 0 3px var(--led); }
+.song-block.chosen { border-color: var(--led); background: color-mix(in srgb, var(--chip, #8a84b8) 45%, #2a2638); box-shadow: 0 0 0 2px var(--led); }
+/* The selected block's end: drag it to repeat the block more or less. */
+.block-grip {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: calc(var(--at) * var(--bar-w) - 22px);
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  border-radius: 10px;
+  background: var(--led);
+  color: var(--ink);
+  font: 800 1rem/1 var(--font-ui);
+  cursor: ew-resize;
+  touch-action: none;
+}
+.song-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--head-w) + var(--at, 0) * var(--bar-w));
+  z-index: 1;
+  width: 3px;
+  background: var(--led);
+  pointer-events: none;
+}
+.song-playhead[hidden] { display: none; }
+/* The selected block: what it is, ➖ ➕, 🗑️ and ✕, in one line under the lanes. */
+.song-sel { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding: 6px 6px 6px 12px; border-radius: 12px; background: rgb(255 255 255 / 0.12); }
+.song-sel[hidden] { display: none; }
+.song-sel-text { flex: 1 1 12em; min-width: 0; font-weight: 800; }
+.song-sel-tools { display: flex; flex: 1 1 auto; justify-content: flex-end; gap: 8px; }
+.song-sel-tools .seq-tool { min-width: 52px; min-height: 48px; }
+/* ➕ Add a lane and ↩️ Undo under the lanes, like + Add a row. */
+.song-foot { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.song-foot > * { min-height: 48px; }
+.song-note { margin: 8px 0 0; font-weight: 700; }
+.song-note:empty { display: none; }
+.lane-name-field { width: 100%; margin-bottom: 12px; }
+@media (max-width: 600px) {
+  .song-foot > * { flex: 1 1 auto; }
+  .song-tempo { flex-basis: 100%; }
+}
+/* A phone: a lane's picture over its name, small, beside its speaker. */
+@media (max-width: 699px) {
+  .lane-pick { flex-direction: column; justify-content: center; gap: 1px; padding: 0 2px; text-align: center; }
+  .lane-pick .lane-emoji { font-size: 1.15rem; }
+  .lane-pick .lane-name { max-width: 100%; font-size: 0.62rem; }
+}
+@media (min-width: 601px) { .song-deck > * { flex: none; } }
+/* Wider: room for every lane's name, and all eight lanes without scrolling down. */
+@media (min-width: 700px) {
+  .song-lanes { --head-w: 168px; --bar-w: 56px; max-height: none; }
+}
+
+/* ── Toolbar ────────────────────────────────────────────────────────── */
+
+.toolbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 10;  /* above everything that scrolls under it: the playhead, a dragged pad */
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px max(var(--gutter), calc((100% - var(--max)) / 2 + var(--gutter))) calc(14px + env(safe-area-inset-bottom));
+  background: var(--board);
+  box-shadow: 0 -2px 0 var(--board-deep);
+  transition: background-color 0.3s ease;
+}
+
+.tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--bed);
+  color: #fff;
+  box-shadow: 0 5px 0 var(--bed-edge);
+  font-weight: 800;
+  font-size: 1.05rem;
+  white-space: nowrap;  /* a label on two lines reads as two buttons */
+  transition: transform 50ms, box-shadow 50ms;
+}
+/* On a phone the tools share the toolbar's width, so none sits alone at an edge. */
+@media (max-width: 600px) {
+  .tool { flex: 1 1 auto; justify-content: center; }
+}
+/* The toolbar stays one line (lines.js): short of room, the tools tighten,
+   Stop all says Stop, then the screen buttons stack emoji over word. */
+.toolbar.fit-tight { gap: 8px; }
+.fit-tight .tool { padding: 0 10px; gap: 6px; font-size: 1rem; }
+.fit-short .tool-more { display: none; }
+.toolbar.fit-stack { gap: 6px; }
+@media (max-width: 360px) { .toolbar { padding-left: 10px; padding-right: 10px; } }
+.tool:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--bed-edge); }
+/* The three screens, side by side as one switch. */
+.screens { display: flex; gap: 8px; }
+@media (max-width: 600px) { .screens { flex: 3 1 auto; } .screens .tool { flex: 1 1 0; } }
+.fit-stack .screens { gap: 4px; }
+.fit-stack .screens .tool { flex-direction: column; justify-content: center; gap: 1px; padding: 0 4px; font-size: 0.8rem; line-height: 1.1; }
+.fit-stack .screens .tool span[aria-hidden] { font-size: 1.15rem; }
+.tool[aria-pressed="true"] {
+  background: var(--chalk);
+  color: var(--ink);
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--chalk-edge);
+}
+
+/* ⏹️ Stop all. On a phone it is ⏹️ alone, so four tabs fit beside it at
+   320 px (ADR 0017); screen readers still hear "Stop all". */
+@media (max-width: 559px) {
+  .tool-stop { flex: none; min-width: 52px; padding: 0 8px; }
+  .tool-stop .tool-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+
+/* ── Sheet (new / edit sound) ───────────────────────────────────────── */
+
+dialog#sheet, dialog#chooser, dialog#library, dialog#grooves, dialog#takes, dialog#pictures, dialog#people-dialog, dialog#settings-dialog {
+  width: min(560px, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: 24px;
+  background: var(--paper);
+  color: var(--ink);
+}
+dialog#sheet::backdrop, dialog#chooser::backdrop, dialog#library::backdrop, dialog#grooves::backdrop, dialog#takes::backdrop, dialog#pictures::backdrop, dialog#people-dialog::backdrop, dialog#settings-dialog::backdrop { background: rgb(20 19 24 / 0.62); }
+dialog#sheet :focus-visible, dialog#chooser :focus-visible, dialog#library :focus-visible, dialog#grooves :focus-visible, dialog#takes :focus-visible, dialog#pictures :focus-visible, dialog#people-dialog :focus-visible, dialog#settings-dialog :focus-visible { outline-color: var(--board); }
+
+@media (max-width: 600px) {
+  dialog#sheet, dialog#chooser, dialog#library, dialog#grooves, dialog#takes, dialog#pictures, dialog#people-dialog, dialog#settings-dialog {
+    width: 100%;
+    max-width: 100%;
+    margin: auto 0 0;
+    border-radius: 24px 24px 0 0;
+  }
+}
+
+#sheet-form, .chooser-body { padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); }
+
+/* The chooser shows the board's sounds on a piece of the pad bed. */
+.chooser-groups { display: grid; gap: 12px; margin-bottom: 16px; }
+/* Each section is one box in its color (the kit's dark, a person's own): the
+   name along the top, its sounds underneath. A closed group is just its name. */
+.chooser-group {
+  border-radius: 18px;
+  background: var(--c);
+  color: #fff;
+}
+.chooser-group h3 {
+  margin: 0;
+  padding: 12px 16px 0;
+  font: 800 1rem/1.2 var(--font-display);
+}
+.chooser-toggle {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  color: inherit;
+  font: 800 1rem/1.2 var(--font-display);
+  text-align: left;
+}
+.chooser-grid[hidden] { display: none; }
+.chooser-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 14px 10px;
+  padding: 12px 12px 18px;
+}
+.chooser-toggle + .chooser-grid { padding-top: 0; }
+.chooser-grid :focus-visible { outline-color: #fff; }
+.chooser-grid .pad[aria-pressed="true"] { outline: 4px solid #fff; outline-offset: 3px; }
+.chooser-grid .pad.pad-mini { padding: 10px 10px 10px 12px; }
+.chooser-grid .pad.pad-mini .pad-emoji { font-size: 1.7rem; }
+.chooser-grid .pad.pad-mini .pad-label { font-size: 0.92rem; }   /* "Tambourine" fits a phone line; longer names wrap */
+/* The bottom bar stays in view while the sounds scroll: the row's own
+   buttons, then the one that uses the marked sound. */
+#chooser .chooser-body { padding-bottom: 0; }   /* its pinned bar has its own; the other dialogs keep theirs */
+.chooser-foot {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: 12px;
+  margin: 0 -20px;
+  padding: 14px 20px calc(16px + env(safe-area-inset-bottom));
+  background: var(--paper);
+  box-shadow: 0 -8px 16px -10px rgb(20 19 24 / 0.35);
+}
+.chooser-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.chooser-tools .seq-tool { border-color: rgb(20 19 24 / 0.25); color: var(--ink); }
+.chooser-tools .seq-tool { flex: 1 1 auto; }
+/* A row's speed: ½× 1× 2× keys after the word, like bars and time signature. */
+.chooser-rate { display: flex; flex: 1 1 auto; align-items: center; gap: 8px; color: var(--ink); font-weight: 800; }
+.chooser-rate .seq-barsel { flex: 1 0 auto; border-color: rgb(20 19 24 / 0.3); }
+.chooser-rate .seq-barsel button { flex: 1 0 auto; color: var(--ink); }
+.chooser-tools[hidden] { display: none; }
+/* No sound: a real choice on the white sheet, not a ghost of the dark-screen button. */
+#chooser-ok { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#chooser-ok:disabled { opacity: 0.5; box-shadow: none; }
+
+/* 👥 People: a short list, one line per person (a button opening their
+   profile sheet) on their own color. */
+.pe-list { display: grid; gap: 8px; margin: 0 0 16px; padding: 0; list-style: none; }
+.pe-row { border-radius: 14px; background: var(--c); color: #fff; }
+.pe-open {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 12px 6px 8px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: #fff;
+  text-align: start;
+  cursor: pointer;
+}
+.pe-name { min-width: 0; color: #fff; font: 800 1.15rem/1.15 var(--font-ui); overflow-wrap: anywhere; }
+.pe-cloud { flex: none; font-size: 1.05rem; white-space: nowrap; }
+.pe-go { flex: none; font: 900 1.6rem/1 var(--font-ui); opacity: 0.85; }
+/* Deleted boards.json people, to bring back. */
+.pe-gone { margin-top: 20px; padding-top: 14px; border-top: 2px solid var(--line); }
+.pe-gone h3 { margin: 0 0 8px; font: 800 1.05rem/1.2 var(--font-ui); }
+.pe-gone-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.pe-gone-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 4px 4px 14px; border-left: 8px solid var(--c); border-radius: 10px; background: var(--chalk); font-weight: 800; }
+
+/* A person's profile sheet: picture and 🎲, every person color as a 48 px
+   swatch (the one in use ringed and ticked), ☁️, 🔒 PIN, Delete. */
+.pf-counts { margin: 0 0 10px; font-weight: 700; }
+.pf-counts:empty { display: none; }
+.pf-looks { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.pf-pic {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 4px 14px 4px 4px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: var(--chalk);
+  color: var(--ink);
+  font: 800 1rem/1 var(--font-ui);
+  cursor: pointer;
+}
+.pf-face { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; background: var(--c); color: #fff; font: 900 1.5rem/1 var(--font-display); }
+.pf-dice { flex: 1 1 10rem; min-height: 48px; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.pf-colors { display: flex; flex-wrap: wrap; gap: 8px; }
+.pf-colors button {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 2px solid rgb(20 19 24 / 0.2);
+  border-radius: 50%;
+  background: var(--sw);
+  color: #fff;
+  font: 900 1.2rem/1 var(--font-ui);
+  cursor: pointer;
+}
+.pf-colors button[aria-pressed="true"] { outline: 3px solid var(--ink); outline-offset: 2px; }
+.pf-colors button[aria-pressed="true"]::after { content: "✓"; }
+.pf-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.pf-line .pf-cloud-text { flex: 1 1 12rem; margin: 0; }
+.pf-line .chip-dark[hidden] { display: none; }
+.pf-end { margin-top: 22px; }
+#profile-delete:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Settings: one block per topic, with the Beats choice as big radio cards. */
+.set-note { min-height: 1.4em; margin: -6px 0 6px; font-weight: 700; }
+.set-section { margin: 0 0 22px; padding: 0; border: 0; min-width: 0; }
+.set-section h3, .set-section legend { margin: 0 0 4px; padding: 0; font: 800 1.15rem/1.2 var(--font-ui); }
+/* A folding section's heading (settings-ui.js): a full-width button like a
+   kit group's header on Pads, in the dialog's light colors. */
+.set-fold { margin-bottom: 10px; }
+.set-fold h3 { margin: 0; }
+.set-fold + .set-section:not(.set-fold) { margin-top: 20px; }
+.set-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--chalk);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.set-head:focus-visible { outline: 3px solid var(--board); outline-offset: 2px; }
+.set-head-caret { flex: none; width: 1em; }
+.set-head-chip { flex: none; margin-left: auto; padding: 2px 10px; border-radius: 999px; background: var(--paper); font-size: 0.9rem; font-weight: 700; }
+.set-body { padding: 10px 2px 8px; }
+/* The version ends About, centered (Ben, 2026-10-11). */
+.set-version { margin: 18px 0 0; text-align: center; font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* A pair of buttons shares the line in equal halves, or stacks full width when too narrow. */
+.set-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 10px; }
+.chip-dark { position: relative; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.chip-dark input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.chip-dark:focus-within { outline: 3px solid var(--board); outline-offset: 3px; }
+.set-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.set-radio input { flex: none; width: 24px; height: 24px; margin: 0; accent-color: var(--board); }
+.set-radio:has(input:checked) { border-color: var(--board); background: var(--chalk); }
+.set-radio:has(input:focus-visible) { outline: 3px solid var(--board); outline-offset: 2px; }
+.set-about { margin: 0; }
+.set-group { margin: 12px 0 0; padding: 0; border: 0; min-width: 0; }
+.set-group legend { margin: 0 0 6px; padding: 0; font-weight: 800; }
+.set-switch input { border-radius: 6px; }
+/* The device code is read aloud or typed, so it is spaced and fixed-width. */
+.set-code { margin: 0 0 10px; }
+.set-code b { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0.08em; }
+
+/* Saved beats: a name field, then the library, newest first. */
+.lib-note { min-height: 1.4em; margin: 8px 0 4px; font-weight: 700; }
+.lib-sound-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.lib-bars { display: inline-flex; border: 2px solid var(--line); border-radius: 12px; overflow: hidden; }
+.lib-bars button { min-height: 44px; padding: 0 12px; border: 0; background: #fff; font-weight: 700; }
+.lib-bars button[aria-pressed="true"] { background: var(--board); color: #fff; }
+.chip-dark:disabled { opacity: 0.5; }
+/* A button waiting for its second press ("Tap again"). */
+.chip-dark.armed, #lib-new.armed { padding: 0 16px; border-radius: 12px; background: #B3261E; color: #fff; text-decoration: none; }
+.lib-empty { margin: 8px 0 0; color: var(--muted); }
+.lib-list { display: grid; gap: 10px; margin: 8px 0 0; padding: 0; list-style: none; }
+.lib-beat {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--chalk);
+}
+.lib-beat.current { box-shadow: inset 0 0 0 3px var(--board); }
+/* A beat's card: the whole card opens it; 📌 pin, duplicate, save and delete at its end. */
+.lib-beat { grid-template-columns: minmax(0, 1fr) auto auto auto auto; }
+/* A phone: the beat's card keeps its whole name on top, the 📌 ⧉ ⬇️ 🗑️ keys on a line under it, at the right. */
+@media (max-width: 520px) { .lib-beat:has(> .lib-open) .lib-open { grid-column: 1 / -1; } .lib-beat:has(> .lib-open) > [data-pin] { grid-column: 2; } }
+/* 📌 lit while the beat is pinned to the chips. */
+.lib-pin[aria-pressed="true"] { border-color: var(--ink); background: var(--led); color: var(--ink); }
+.lib-open { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; min-height: 52px; padding: 0; border: 0; background: transparent; color: var(--ink); font: inherit; text-align: left; }
+.lib-beat .chip-dark { min-width: 48px; padding: 0 12px; }
+/* A groove is a whole-card button: thumbnail, name, sounds and tempo. */
+.groove { grid-template-columns: auto 1fr; width: 100%; min-height: 56px; border: 0; color: var(--ink); font: inherit; text-align: left; }
+.groove.armed { box-shadow: inset 0 0 0 3px #B3261E; }
+/* ▶ beside a groove's card: hear a bit of it without opening it (■ while it plays). */
+.groove-item { display: flex; align-items: center; gap: 8px; }
+.groove-item > .groove { flex: 1 1 auto; min-width: 0; }
+.groove-hear { flex: none; width: 52px; min-height: 52px; padding: 0; font-size: 1.2rem; }
+.groove-hear[aria-pressed="true"] { background: var(--ink); }
+.lib-text { display: grid; min-width: 0; }
+/* In every list (beats, grooves, songs), a long name wraps instead of hiding behind "…". */
+.lib-name { font-weight: 800; overflow-wrap: break-word; hyphens: auto; }
+.lib-info { color: var(--muted); font-size: 0.9rem; }
+.lib-thumb { display: grid; gap: 3px; padding: 6px; border-radius: 8px; background: var(--bed); }
+.lib-thumb div { --pill: var(--led); display: grid; grid-template-columns: repeat(16, 4px); gap: 2px; }
+.lib-thumb span { height: 6px; border-radius: 2px; background: rgb(255 255 255 / 0.15); }
+.lib-thumb span.on { background: var(--pill); opacity: calc(0.3 + 0.7 * var(--vol, 1)); }
+.chip-dark {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--board);
+  color: #fff;
+  font-weight: 800;
+}
+
+
+.sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.sheet-head h2 {
+  margin: 4px 0 0;
+  font: 900 1.75rem/1.02 var(--font-display);
+  font-stretch: 80%;
+  text-wrap: balance;
+}
+
+.close {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--chalk);
+  font-size: 1.1rem;
+}
+
+/* The recorder: a piece of the pad bed, with a real REC button. */
+.capture {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border-radius: 18px;
+  background: var(--bed);
+  color: #fff;
+}
+dialog#sheet .capture :focus-visible { outline-color: #fff; }
+
+.rec {
+  --rec-edge: color-mix(in srgb, var(--record) 55%, black);
+  flex: none;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  width: 96px;
+  height: 96px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--record);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 6px 0 var(--rec-edge);
+  transition: transform 50ms, box-shadow 50ms;
+}
+.rec:active, .rec[aria-pressed="true"] { transform: translateY(5px); box-shadow: 0 1px 0 var(--rec-edge); }
+.rec-cap { width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+.rec[aria-pressed="true"] .rec-cap { border-radius: 4px; animation: blink 1s steps(2) infinite; }
+.rec:disabled { background: #6E6A80; --rec-edge: #45424F; color: #E6E4EE; cursor: not-allowed; }
+@keyframes blink { 50% { opacity: 0.3; } }
+
+.capture-body { flex: 1; min-width: 0; }
+.grille-lg { margin: 0 0 12px; padding: 0; background: none; grid-template-rows: repeat(3, 8px); grid-auto-columns: 8px; gap: 5px; }
+/* Too loud: the recorder's grille goes red while the sound hits the top. */
+.grille.too-loud span.lit { background: #FF5A4E; }
+.capture-status { margin: 0 0 12px; font-weight: 700; }
+
+.capture-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 2px solid rgb(255 255 255 / 0.75);
+  border-radius: 12px;
+  background: transparent;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.chip:disabled { opacity: 0.45; cursor: default; }
+.chip input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.chip:focus-within { outline: 3px solid #fff; outline-offset: 3px; }
+
+/* ✨ Make one: starters on a piece of the pad bed, under the recorder. */
+.make {
+  margin: -8px 0 20px;
+  padding: 14px 16px 16px;
+  border-radius: 18px;
+  background: var(--bed);
+  color: #fff;
+}
+dialog#sheet .make :focus-visible { outline-color: #fff; }
+.make-hint { margin: 0 0 10px; font-weight: 700; }
+.make-starters { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.make-starter { gap: 8px; padding: 0 12px; }
+#make-btn { gap: 6px; }
+.make-starter span { font-size: 1.3rem; }
+.make-starter[aria-pressed="true"] { background: #fff; color: var(--ink); border-color: #fff; }
+.make-knobs { margin-top: 4px; }
+.amount.make-amount { grid-template-columns: 1fr auto; grid-template-areas: "name out" "slider slider"; gap: 0 12px; margin: 8px 0 0; padding: 6px 12px; color: var(--ink); }
+.make-amount span { grid-area: name; }
+.make-amount output { grid-area: out; }
+.make-amount input { grid-area: slider; }
+
+/* The sound's wave: bars in the board color that light up behind the line
+   sweeping across as it plays. */
+.wave-box { margin: 0 0 20px; }
+.wave {
+  --wave-head: var(--ink);
+  display: block;
+  width: 100%;
+  height: 72px;
+  padding: 0;
+  border-radius: 12px;
+  background: var(--chalk);
+  color: var(--board);
+}
+
+/* Hold: before. A key the width of the wave that stays down while held. */
+.hold-before {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--chalk);
+  box-shadow: 0 4px 0 var(--line);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 1rem;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 50ms, box-shadow 50ms;
+}
+.hold-before:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--line); background: #fff; }
+.hold-before:disabled { opacity: 0.45; cursor: default; }
+
+/* Trim and chop (Advanced, chop.js): handles over the wave, 44 px wide to
+   grab, each drawn as a line with a knob on top. The cut-off ends of a trim
+   are drawn grey by wave.js in --wave-cut. */
+.wave-box { position: relative; }
+.wave { --wave-cut: var(--chalk-edge); }
+.wave-marks {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  touch-action: none;
+  cursor: pointer;
+}
+.wave-handle {
+  position: absolute;
+  top: -6px;
+  bottom: 0;
+  left: calc(10px + var(--f) * (100% - 20px));   /* wave.js WAVE_PAD at each end */
+  width: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+  touch-action: none;
+}
+.wave-handle::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 0;
+  left: calc(50% - 1.5px);
+  width: 3px;
+  border-radius: 2px;
+  background: var(--ink);
+}
+.wave-handle::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(50% - 8px);
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--paper);
+  border-radius: 50%;
+  background: var(--ink);
+}
+.wave-handle[aria-pressed="true"]::before, .wave-handle[aria-pressed="true"]::after { background: var(--record); }
+.cut-from { margin: 8px 0 0; }
+.cut { margin-top: 10px; }
+.cut-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cut-panel .cut-tools { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cut-tools .chain-tool { padding: 4px 8px; line-height: 1.15; }
+.cut-make { grid-column: 1 / -1; }
+.cut-make:not(:disabled), #cut-done { background: var(--ink); color: #fff; }
+.cut-hint { margin: 0 0 8px; }
+
+/* The wave editor (Advanced, chop.js): three views of the trim's wave and
+   handles (Ends, Fades, Select part), and Select part's five changes in
+   pairs, Keep only this across the width, so every line is full at 320 px.
+   A fade handle's knob is a diamond, so it reads as a different handle. */
+.cut-views { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 8px; }
+.cut-views .chain-tool { padding: 4px 6px; line-height: 1.15; }
+.cut-views .chain-tool[aria-pressed="true"] { background: #fff; border-color: var(--board); box-shadow: inset 0 0 0 1px var(--board); }
+.cut-edits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 8px; }
+.cut-edits .chain-tool { padding: 4px 8px; line-height: 1.15; }
+.cut-edits .cut-keep { grid-column: 1 / -1; }
+.wave-handle[data-kind="fades"]::after { border-radius: 3px; transform: rotate(45deg); }
+
+.field { display: block; margin: 0 0 20px; padding: 0; border: 0; min-width: 0; }
+.field-name { display: block; margin: 0 0 8px; padding: 0; font-weight: 800; font-size: 1.05rem; }
+.field input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 14px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  font-size: 1.15rem;
+}
+.field input:focus-visible { outline: 3px solid var(--board); outline-offset: 0; border-color: transparent; }
+
+.field-hint { margin: 0 0 10px; color: var(--muted); }
+
+/* Voices: small keys that latch when chosen. */
+.voices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+  gap: 12px 8px;
+}
+.voices button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--chalk);
+  box-shadow: 0 4px 0 var(--line);
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1.1;
+  text-align: left;
+  transition: transform 50ms, box-shadow 50ms;
+  /* A Shift-click (what a hold does) must not select text on the page. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.voices button:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--line); }
+.voices button[aria-pressed="true"] {
+  background: var(--board);
+  color: #fff;
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--board-deep);
+}
+.voices button:disabled { opacity: 0.45; cursor: default; }
+.voice-emoji { font-size: 1.45rem; line-height: 1; }
+
+/* The slider for voices with a setting (speed or pitch), under the voice keys. */
+.amount {
+  display: grid;
+  grid-template-columns: auto 1fr minmax(7.5em, auto);
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--chalk);
+  font-weight: 800;
+}
+.amount[hidden] { display: none; }
+.amount input { width: 100%; min-height: 44px; accent-color: var(--board); }
+.amount input:disabled { opacity: 0.45; }
+.amount output { text-align: right; font-variant-numeric: tabular-nums; }
+/* A setting with a few stops (Tone, Echoes, Loudness…) shows them as keys
+   (lines.js keysForSlider), in the frame bars and time signature use. The
+   slider and its words come back only when the keys don't fit (fit-slider). */
+.amount .slider-keys { display: flex; border-color: rgb(20 19 24 / 0.3); background: #fff; }
+.amount .slider-keys button { flex: 1 0 auto; color: var(--ink); }
+.amount .slider-keys button[aria-pressed="true"] { color: var(--ink); }
+.amount .slider-keys button:disabled { opacity: 0.45; }
+dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--ink); }
+.amount.keyed:not(.fit-slider) > input, .amount.keyed:not(.fit-slider) > output { display: none; }
+.amount.keyed:not(.fit-slider) { grid-template-columns: auto 1fr; }
+.amount.fit-slider > .slider-keys { display: none; }
+.make-amount .slider-keys, .shape-amount .slider-keys { grid-area: slider; }
+.amount.keyed.make-amount:not(.fit-slider), .amount.keyed.shape-amount:not(.fit-slider) { grid-template-columns: 1fr auto; }
+/* A voice's setting fallen back to its slider (no room for keys): the name
+   and words on top, the slider full width under them, as in Make one. */
+#amount-row.keyed:not(.fit-slider) { grid-template-columns: 1fr; gap: 6px; }   /* keys under the name, full width */
+#amount-row.fit-slider { grid-template-columns: 1fr auto; grid-template-areas: "name out" "slider slider"; gap: 0 12px; }
+#amount-row.fit-slider > span { grid-area: name; }
+#amount-row.fit-slider > output { grid-area: out; }
+#amount-row.fit-slider > input { grid-area: slider; }
+
+/* The chain of voices: chips in play order with arrows between, then
+   + Then add and 🎲 Surprise me. Wraps onto more lines on a phone. */
+.chain { display: grid; gap: 8px; margin-top: 16px; }
+.chain-links { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.chain-item { display: flex; gap: 8px; }
+.chain-then { color: var(--muted); font-weight: 700; }
+.chain-tools { display: flex; gap: 8px; }
+.chain-link, .chain-remove, .chain-tool {
+  min-height: 44px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+.chain-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 0 12px; text-align: left; }
+.chain-link[aria-pressed="true"] { border-color: var(--board); box-shadow: inset 0 0 0 1px var(--board); }
+.chain-remove { min-width: 44px; padding: 0; }
+.chain-tool { flex: 1; padding: 0 10px; background: var(--chalk); border-color: transparent; }
+.chain-link:disabled, .chain-remove:disabled, .chain-tool:disabled { opacity: 0.45; cursor: default; }
+.chain-hint { margin: 8px 0 0; }
+
+
+/* ── Layers (Ben, 2026-10-11, Q42c: Knobs and Shape it merged, "an
+   interface similar to beats") ──
+   One row per layer, top to bottom as they play, with a line between rows
+   as Beats has: the emoji on a tile, the name, then 🔈 and ✕ at the right;
+   the control (keys, or a slider and its words) under them on a phone and
+   beside the name once the list is wide enough. A muted row is dimmed, as a
+   muted Beats row is. A step row has Beats' dotted grip at its left. */
+.layer-rows { container-type: inline-size; display: grid; margin: 0; padding: 0; list-style: none; }
+.layer-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  grid-template-areas: "grip tile name tools" "ctl ctl ctl ctl";
+  align-items: center;
+  column-gap: 10px;
+  padding: 10px 0;
+}
+.layer-row + .layer-row { border-top: 2px solid var(--line); }
+.layer-row > .layer-grip { grid-area: grip; }
+.layer-tile {
+  grid-area: tile;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  background: var(--chalk);
+  box-shadow: inset 0 -3px 0 var(--line);
+  font-size: 1.4rem;
+}
+.layer-step .layer-tile { background: #fff; border: 2px solid var(--line); box-shadow: none; }
+.layer-name { grid-area: name; min-width: 0; font-weight: 800; overflow-wrap: anywhere; }
+.layer-tools { grid-area: tools; display: flex; gap: 6px; }
+.layer-tool {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font: 800 1rem/1 var(--font-ui);
+  white-space: nowrap;
+}
+.layer-tool[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: #fff; }
+.layer-tool:disabled { opacity: 0.45; cursor: default; }
+/* A ✕ waiting for its second tap. */
+.layer-tool.armed { border-color: #B3261E; background: #B3261E; color: #fff; }
+.layer-ctl { grid-area: ctl; display: grid; gap: 6px; min-width: 0; margin-top: 8px; }
+.layer-row .amount { margin: 0; }
+.amount.layer-amount { grid-template-columns: minmax(0, 1fr) minmax(6.5em, auto); padding: 4px 10px; }
+.amount.layer-amount.keyed:not(.fit-slider) { grid-template-columns: minmax(0, 1fr); padding: 0; background: transparent; }
+.layer-amount .slider-keys { min-width: 0; }
+.layer-flags { display: flex; flex-wrap: wrap; gap: 6px; }
+.layer-flags .shape-flag { margin: 0; }
+.layer-row.muted .layer-tile, .layer-row.muted .layer-name, .layer-row.muted .layer-ctl { opacity: 0.4; }
+.layer-grip {
+  width: 44px;
+  min-height: 44px;
+  margin-right: -6px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: radial-gradient(circle, rgb(20 19 24 / 0.4) 2.2px, transparent 2.6px) content-box;
+  background-size: 10px 10px;
+  cursor: grab;
+  touch-action: none;
+}
+.layer-grip:disabled { opacity: 0.35; cursor: default; }
+.layer-row.dragging { opacity: 0.6; }
+.layer-row.drop-here { box-shadow: 0 -4px 0 var(--board); }
+/* Wide enough: the control sits beside the name, one line per layer. */
+@container (min-width: 560px) {
+  .layer-row { grid-template-columns: auto auto minmax(8rem, 12rem) minmax(0, 1fr) auto; grid-template-areas: "grip tile name ctl tools"; }
+  .layer-ctl { margin-top: 0; }
+}
+.layer-hint { margin: 0 0 4px; }
+.layer-add-line { margin-top: 10px; }
+.layer-palette { margin-top: 12px; }
+.layer-palette[hidden] { display: none; }
+.layer-choices { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.layer-extra[hidden] { display: none; }
+.layer-advanced { margin: 16px 0 0; }
+.field .layer-advanced input { flex: none; width: 24px; height: 24px; min-height: 0; margin: 0; padding: 0; border: 0; accent-color: var(--board); }
+.layer-advanced span { min-width: 0; }
+
+.amount.shape-amount { grid-template-columns: 1fr auto; grid-template-areas: "name out" "slider slider"; gap: 0 12px; margin: 6px 0 0; padding: 6px 10px; }
+.shape-amount span { grid-area: name; }
+.shape-amount output { grid-area: out; }
+.shape-amount input { grid-area: slider; }
+.shape-flag {
+  min-height: 44px;
+  margin: 6px 0 0;
+  padding: 0 14px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  font-weight: 800;
+}
+.shape-flag[aria-pressed="true"] { border-color: var(--board); background: var(--board); color: #fff; }
+.shape-flag::before { content: "○ "; }
+.shape-flag[aria-pressed="true"]::before { content: "● "; }
+/* 🎵 Find its note, what it heard, then Tune. */
+.note-tools { display: grid; gap: 8px; margin-top: 12px; }
+.note-out { margin: 0; font-weight: 700; }
+.note-out:empty { display: none; }
+/* ➕ Mix with another sound: which one, when it starts, the balance. */
+.mix-open { width: 100%; margin-top: 12px; }
+.mix { display: grid; gap: 8px; margin-top: 8px; }
+.mix .amount { margin: 0; }
+.mix-with { display: grid; gap: 4px; font-weight: 800; }
+.mix-with select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+}
+
+/* Advanced on a wide screen: the sheet widens into columns (Sound sheet columns, at the end). */
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+}
+.emoji-grid button {
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 10px;
+  background: var(--chalk);
+  font-size: 1.5rem;
+}
+.emoji-grid button[aria-pressed="true"] { background: #fff; box-shadow: inset 0 0 0 3px var(--board); }
+
+/* Swatches are tiny pads in each color. */
+.swatches { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 10px; }
+@media (min-width: 480px) { .swatches { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+.swatches button {
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--c);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--c) 55%, black);
+  transition: transform 50ms, box-shadow 50ms;
+}
+.swatches button[aria-pressed="true"] {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--c) 55%, black), 0 0 0 3px #fff, 0 0 0 6px var(--ink);
+}
+
+.sheet-error {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #FDE3E2;
+  color: #8A1512;
+  font-weight: 700;
+}
+
+.sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.primary {
+  min-height: 56px;
+  padding: 0 28px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--board);
+  color: #fff;
+  font-weight: 800;
+  font-size: 1.1rem;
+  box-shadow: 0 5px 0 var(--board-deep);
+  transition: transform 50ms, box-shadow 50ms;
+}
+.primary:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--board-deep); }
+.quiet {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+#remove-btn { margin-right: auto; }
+.danger { color: #B3261E; }
+.danger.armed { padding: 0 16px; border-radius: 12px; background: #B3261E; color: #fff; text-decoration: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Nothing moves on its own; presses still show by changing shape. */
+  *, ::before, ::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+  html, body, .toolbar { transition: none; }
+  body.editing .pad:not(.pad-add) { animation: none; outline: 3px dashed rgb(255 255 255 / 0.8); outline-offset: 4px; }
+  .rec[aria-pressed="true"] .rec-cap { animation: none; }
+  .pad.looping { animation: none; }
+}
+
+/* ── DJ mode: the keys, like the periodic table ───────────────────────── */
+
+/* The count-in sits over the keys, so the panel is its frame. */
+.dj { position: relative; }
+.dj {
+  --glow: #ffffff;
+  --level: 0;
+  padding: 14px 12px 18px;
+  border-radius: 22px;
+  background: var(--bed);
+  /* The light show's glow: the color of the last hit, as bright as the sound. */
+  box-shadow: inset 0 4px 0 var(--bed-edge), 0 0 calc(var(--level) * 60px) calc(var(--level) * 12px) var(--glow);
+  transition: box-shadow 80ms linear;
+}
+.dj[hidden] { display: none; }
+/* Settings' Keyboard: a key per layout on the white sheet; a picker when
+   they don't fit (lines.js). */
+.set-layout { display: flex; align-items: center; gap: 12px; color: var(--ink); font-weight: 800; }
+.set-layout .set-keys { display: flex; flex: 1 0 auto; border-color: rgb(20 19 24 / 0.3); }
+.set-layout .set-keys button { flex: 1 0 auto; color: var(--ink); }
+/* Beat Builder's beat bar: the open beat's name, ✏️, New and Open. */
+.dj-beatbar[hidden] { display: none; }
+/* Beat Builder's control bar is .beat-deck (above), with what is happening
+   (recording, a take) and 🎬 Takes after ⏲️ in Freestyle. */
+.dj-bar .dj-status:empty { display: none; }   /* takes no room until there is something to say */
+.dj-bar #dj-takes-open { flex: none; margin-left: auto; }
+/* The beat, small and still, while recording into it: pills fill as hits land. */
+.dj-grid { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 6px; margin: 0 0 12px; padding: 8px; border-radius: 12px; background: rgb(0 0 0 / 0.25); }
+.dj-grid[hidden] { display: none; }
+/* A new beat has no rows yet: no empty dark band under its line (#dj-no-rows). */
+.dj-grid:empty { display: none; }
+.dj-grid-note { margin: 4px 6px; color: rgb(255 255 255 / 0.8); font-weight: 700; }
+/* A row takes the grid's columns (subgrid), as on Beats: the emoji column is
+   as wide as the widest emoji shown, just the emoji unless two rows share
+   one ("🥁 S"), and every row's pills start at the same place. */
+.dj-grid-row { --c: var(--led); grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; }
+/* Beat Builder's speaker: as small as the ✕ and emoji beside it, so the grid keeps its height. */
+.dj-grid-row .speaker.row-vol { padding-bottom: 3px; }
+.dj-grid-row .speaker.row-vol::before { left: 4px; right: 4px; bottom: 2px; height: 2px; border-radius: 1px; }
+.dj-grid-pills { display: flex; gap: 2px; }
+.dj-grid-pills i { cursor: pointer; flex: 1 1 0; min-width: 2px; height: 14px; border-radius: 3px; background: rgb(255 255 255 / 0.13); }
+/* Four bars (up to 80 pills) on a phone: thinner gaps and pills, so the row
+   fits between its emoji and its 🔊 🧹 ✕ instead of pushing the page wide. */
+.dj-grid-pills:has(> i:nth-child(41)) { gap: 1px; }
+.dj-grid-pills:has(> i:nth-child(41)) i { min-width: 1px; border-radius: 1px; }
+.dj-grid-pills i.beat-start { background: rgb(255 255 255 / 0.22); }
+.dj-grid-pills i.on { background: var(--c); opacity: calc(0.35 + 0.65 * var(--vol, 1)); }
+.dj-grid-pills i.loud { box-shadow: inset 0 0 0 2px #fff; }
+.dj-grid-pills i.now { outline: 2px solid #fff; outline-offset: 0; }
+/* Beat Builder can still grow (recording, first pass): a dashed empty bar
+   after the last. Dropped on the narrowest phones, where pills are 2 px. */
+.dj-grid-grow { flex: 0 0 1.6rem; height: 14px; margin-left: 4px; border: 2px dashed rgb(255 255 255 / 0.45); border-radius: 4px; box-sizing: border-box; }
+@media (max-width: 359px) { .dj-grid-grow { display: none; } }
+/* The DJ bar: Record (Stop while recording), what is happening, Takes. */
+.dj-bar .dj-status { flex: 1 1 8em; }
+.dj-rec {
+  min-height: 52px;
+  min-width: 120px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--chalk);
+  color: var(--ink);
+  font: 800 1.1rem/1 var(--font-ui);
+  box-shadow: 0 5px 0 var(--chalk-edge);
+}
+.dj-rec.recording { background: #D93A2B; color: #fff; box-shadow: 0 5px 0 #8A1512; }
+.dj-status { flex: 1 1 auto; min-width: 0; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dj-done { margin: 0 0 12px; }
+.dj-done { flex-wrap: wrap; }
+.bar-close { flex: none; width: 44px; min-height: 44px; }
+.dj-take-line { display: flex; flex: 1 1 auto; align-items: center; gap: 6px; min-width: 0; font-weight: 800; }
+.dj-take-line[hidden] { display: none; }
+.take-rename { flex: 0 1 auto; width: auto; min-width: 4ch; max-width: 14em; font-size: 1rem; field-sizing: content; }   /* as wide as the name (older browsers: dj.js fitTakeName sets size) */
+.dj-done-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+/* A take's name is a text field, so tapping it renames the take. */
+.take { grid-template-columns: 1fr auto auto auto; }
+.take-name { min-height: 40px; min-width: 0; width: 100%; padding: 0 8px; border: 2px solid transparent; border-radius: 8px; background: transparent; color: var(--ink); font: 800 1rem/1 var(--font-ui); }
+.take-name:focus, .take-name:hover { border-color: var(--board); background: #fff; }
+.take .lib-info { padding-left: 10px; }
+/* "Sound saved", fading in over a take's name and away again. */
+.take .lib-text, .dj-take-line { position: relative; }
+.saved-note {
+  position: absolute; inset: 0; display: flex; align-items: center; padding: 0 10px;
+  border-radius: 8px; background: #2E7D32; color: #fff; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  pointer-events: none; animation: saved-note 2.6s ease forwards;
+}
+@keyframes saved-note { 0% { opacity: 0; } 10%, 70% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .saved-note { animation: none; } }   /* lines up with the name inside its field (2px border + 8px padding) */
+.dj-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+/* Four row tabs, each its row's first three emoji on one line. */
+.dj-tabs button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  border: 2px solid rgb(255 255 255 / 0.4);
+  border-radius: 12px;
+  background: transparent;
+  color: #fff;
+  font-size: 1.1rem;
+}
+.dj-tabs button[aria-pressed="true"] { background: var(--chalk); border-color: var(--chalk); }
+/* A container, so each staggered row's keys are sized from the whole
+   keyboard's width (100cqi), not from the row left after its indent. */
+.dj-keys { display: grid; gap: 8px; container: dj-keys / inline-size; }
+/* A phone shows one row of ten, as two lines of five big tiles. */
+.dj-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.dj-row:not(.shown) { display: none; }
+@media (min-width: 560px) {
+  .dj-tabs { display: none; }
+  .dj-row, .dj-row:not(.shown) { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; }
+}
+/* Wide enough for a stagger: the rows alternate like bricks (Ben,
+   2026-10-12), the number row and A row at the left, the Q and Z rows half
+   a key in, so every row is the same width and nothing drifts right. */
+@media (min-width: 900px) {
+  .dj-keys { --key: calc((100cqi - 9 * 6px) / 10.5); }
+  .dj-row, .dj-row:not(.shown) { grid-template-columns: repeat(10, var(--key)); }
+  .dj-row[data-row="1"], .dj-row[data-row="3"] { padding-left: calc(var(--key) * 0.5); }
+}
+/* One key: an element tile. Letter top left (like a symbol), emoji top right,
+   the sound's name, and its family small at the bottom. */
+.dj-key {
+  --c: #333040;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto 1fr auto auto;
+  grid-template-areas: "sym emoji" ". ." "name name" "fam fam";
+  aspect-ratio: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--c);
+  color: #fff;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--c) 55%, black);
+  text-align: left;
+  transition: transform 50ms, box-shadow 50ms;
+  /* A Shift-click (what a hold does) must not select text on the page. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* Lit: pressed, just hit, or looping. The whole tile brightens and glows. */
+.dj-key.down, .dj-key.hit { filter: brightness(1.45) saturate(1.2); box-shadow: 0 0 18px 4px var(--c), 0 1px 0 color-mix(in srgb, var(--c) 55%, black); }
+.dj-key.looping { animation: dj-pulse 0.9s ease-in-out infinite alternate; }
+@keyframes dj-pulse { from { filter: brightness(1.1); box-shadow: 0 0 6px 1px var(--c); } to { filter: brightness(1.5); box-shadow: 0 0 20px 5px var(--c); } }
+@media (prefers-reduced-motion: reduce) { .dj-key.looping { animation: none; filter: brightness(1.35); } }
+.dj-key:active, .dj-key.hit { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--c) 55%, black); }
+.dj-key.empty { background: transparent; box-shadow: none; outline: 2px dashed rgb(255 255 255 / 0.3); outline-offset: -2px; }
+.dj-sym { grid-area: sym; font: 800 1.35rem/1 var(--font-display); }
+.dj-sym[hidden] { display: none; }
+.dj-emoji { grid-area: emoji; font-size: 1.3rem; line-height: 1; }
+.dj-name { grid-area: name; font: 800 0.8rem/1.1 var(--font-ui); }
+/* On a phone or tablet (no keyboard in sight), the keys are a plain grid of
+   pads that fits the screen; the kid picks the pad size. */
+.dj-keys.pads-mode { --tile: 84px; grid-template-columns: repeat(auto-fill, minmax(var(--tile), 1fr)); gap: 8px; }
+.dj-keys.pads-mode[data-size="s"] { --tile: 62px; }
+.dj-keys.pads-mode[data-size="l"] { --tile: 112px; }
+.dj-keys.pads-mode .dj-row, .dj-keys.pads-mode .dj-row:not(.shown) { display: contents; }
+/* With no keyboard in sight the number row's pads come last, so the kid's own
+   sounds (the top letter row) still lead the grid. */
+.dj-keys.pads-mode .dj-row[data-row="0"] > .dj-key { order: 1; }
+.dj-keys.pads-mode .dj-key { aspect-ratio: 1; min-height: 0; padding: 6px; }
+.dj-keys.pads-mode[data-size="l"] .dj-emoji { font-size: 1.7rem; }
+.dj-keys.pads-mode[data-size="l"] .dj-name { font-size: 0.95rem; }
+.dj-tabs[hidden], .dj-size[hidden] { display: none; }
+.dj-size button { min-width: 44px; }
+/* A legend for the key colors, like the periodic table's. */
+.dj-change-row { grid-area: change; display: flex; justify-content: flex-end; }
+/* Under the keys: the pad size, then the last line: the key colors at the
+   left; ⏲️ Click track, 🔔 Overlap and ✏️ Edit keys in the corner, Edit keys
+   last (Ben, 2026-10-12). The click's tempo opens to the left of Click track,
+   in room kept for it, so no button moves when the click turns on. */
+.dj-tail { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "size size size size" "legend click overlap change"; align-items: center; gap: 16px 12px; margin-top: 16px; }
+.dj-tail #dj-overlap { grid-area: overlap; }
+#dj-overlap[hidden] { display: none; }
+.dj-foot, .dj-end { display: contents; }
+.dj-size { grid-area: size; justify-self: start; }
+.dj-legend { grid-area: legend; }
+.dj-clicktrack { grid-area: click; display: flex; flex-direction: row-reverse; align-items: center; gap: 12px; width: min(20rem, 45cqi); min-width: 0; }
+.dj-clicktrack #dj-click { flex: none; }
+.dj-click-tempo { display: flex; flex: 1 1 12rem; align-items: center; gap: 10px; min-width: 0; }
+.dj-click-tempo.off { visibility: hidden; }
+.dj-click-tempo input { flex: 1 1 auto; min-width: 0; min-height: 44px; accent-color: var(--led); }
+.dj-click-tempo output { flex: none; min-width: 4.6em; text-align: right; color: #fff; font-weight: 800; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* A tempo slider with its number (Beat Builder, the click track). Where its
+   room gets too short for a useful slider, ⌄ ⌃ chevrons stand in for it and
+   the number sits over BPM: decided by the box's own width, not the screen's. */
+.tempo-box { container: tempo / inline-size; }
+.tempo-step { display: none; flex: none; place-items: center; width: 44px; min-height: 44px; padding: 0; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 10px; background: transparent; color: #fff; font-size: 0; }
+/* Drawn, and pinned to the middle of the key, so it sits dead center
+   whatever the font or a phone's minimum text size. The button has no text
+   (its aria-label names it). The nudge centers the V's ink, not its box. */
+.tempo-step { position: relative; }
+.tempo-step::before { content: ""; position: absolute; inset: 0; width: 10px; height: 10px; margin: auto; border-right: 3px solid currentColor; border-bottom: 3px solid currentColor; box-sizing: content-box; transform: translateY(-4px) rotate(45deg); }
+.tempo-step.up::before { transform: translateY(4px) rotate(-135deg); }
+@container tempo (max-width: 15rem) {
+  .tempo-box input[type="range"] { display: none; }
+  .tempo-step { display: grid; }
+  /* ⌄ number ⌃ hug each other, the three together centered in the room. */
+  /* Snug: 4 px from the number (a container query can't change the box's own gap). */
+  .tempo-box .tempo-step.down { margin-left: auto; margin-right: -4px; }
+  .tempo-box .tempo-step.up { margin-right: auto; margin-left: -4px; }
+  .tempo-box output, .tempo-box .seq-bpm-num { flex: none; min-width: 44px; max-width: 3em; margin: 0; white-space: normal; line-height: 1.1; text-align: center; }
+}
+@container panel (max-width: 30rem) {
+  /* A phone: the colors, then Click track, Overlap and Edit keys sharing a
+     line (Edit keys at the right), then the click's tempo under them while on.
+     A label too long for its third wraps onto two lines. */
+  .dj-tail { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "legend legend legend" "click overlap change" "tempo tempo tempo"; gap: 12px 8px; }
+  .dj-tail:has(> .dj-foot > .dj-size:not([hidden])) { grid-template-areas: "size size size" "legend legend legend" "click overlap change" "tempo tempo tempo"; }
+  .dj-tail > .dj-end > .seq-tool, .dj-change-row > .seq-tool, .dj-clicktrack #dj-click { padding: 6px; white-space: normal; line-height: 1.15; }
+  .dj-clicktrack { display: contents; }
+  .dj-clicktrack #dj-click { grid-area: click; }
+  .dj-click-tempo { grid-area: tempo; }
+  .dj-click-tempo.off { display: none; }
+  .dj-change-row > .seq-tool, .dj-clicktrack #dj-click, .dj-tail #dj-overlap { flex: 1 1 auto; width: 100%; }
+}
+/* Too narrow for the four colors on one line: two and two, never three and one. */
+@container panel (max-width: 21rem) {
+  .dj-tail .dj-legend { display: grid; grid-template-columns: repeat(2, max-content); column-gap: 24px; }
+}
+.dj-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; list-style: none; font-size: 0.85rem; font-weight: 700; }
+.dj-legend li { display: flex; align-items: center; gap: 6px; }
+.dj-legend li::before { content: ""; width: 14px; height: 14px; border-radius: 4px; background: var(--c); }
+@media (max-width: 559px) {
+  .dj-fam { display: none; }
+  .dj-key { aspect-ratio: auto; min-height: 66px; padding: 5px; }
+  .dj-name { font-size: 0.76rem; font-stretch: 75%; line-height: 1.05; }
+}
+@media (max-width: 420px) { .dj-tabs button { font-size: 0.95rem; letter-spacing: -0.1em; } }
+@media (max-width: 360px) { .dj-tabs button { font-size: 0.82rem; } }
+.dj-fam { grid-area: fam; overflow: hidden; font: 700 0.62rem/1.2 var(--font-ui); text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.8; white-space: nowrap; }
+@media (min-width: 560px) and (max-width: 899px) { .dj-fam { display: none; } .dj-emoji { font-size: 1.05rem; } .dj-sym { font-size: 1.05rem; } .dj-name { font-size: 0.76rem; font-stretch: 75%; line-height: 1.05; } }
+
+/* ── Help (❓): a picture reference, one tab per part of the app ────── */
+
+/* The same paper sheet as the other dialogs: centred on wide screens, a
+   bottom sheet on phones. The title and tabs stay put while it scrolls. */
+dialog#help {
+  width: min(600px, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: 24px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--paper);
+  color: var(--ink);
+}
+dialog#help::backdrop { background: rgb(20 19 24 / 0.62); }
+dialog#help :focus-visible { outline-color: var(--board); }
+@media (max-width: 600px) {
+  dialog#help { width: 100%; max-width: 100%; margin: auto 0 0; border-radius: 24px 24px 0 0; }
+}
+.help-head { position: sticky; top: 0; z-index: 1; padding: 20px 20px 12px; background: var(--paper); box-shadow: 0 2px 0 var(--line); }
+.help-head .sheet-head { margin-bottom: 12px; }
+.help-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.help-tab {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font: 800 0.9rem/1 var(--font-ui);
+  white-space: nowrap;
+}
+/* On a phone, emoji over word (like the toolbar), so all six tabs fit one line. */
+@media (max-width: 480px) {
+  .help-tabs { flex-wrap: nowrap; gap: 4px; }
+  .help-tab { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 52px; padding: 4px 2px; font-size: 0.72rem; letter-spacing: -0.01em; }
+  .help-tab span { font-size: 1.15rem; }
+}
+/* Six tabs at 320 px: a narrower margin keeps each tab 44 px wide. */
+@media (max-width: 360px) {
+  .help-head { padding-inline: 12px; }
+}
+.help-tab[aria-pressed="true"] { border-color: var(--board); background: var(--board); color: #fff; }
+.help-body { padding: 16px 20px calc(20px + env(safe-area-inset-bottom)); }
+.help-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+/* A drawing of the control on a piece of the pad bed, its sentence beside it
+   (under it on a phone). */
+.help-item { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); align-items: center; gap: 14px; }
+/* On a phone a small drawing sits beside its sentence, a wide one above it. */
+@media (max-width: 480px) {
+  .help-item { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+  .help-text { flex: 1 1 9rem; }
+  .pad.help-pad { width: 72px; }
+}
+.help-pic { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; justify-self: start; max-width: 100%; padding: 8px; border-radius: 12px; background: var(--bed); color: #fff; }
+.help-text { margin: 0; font-weight: 600; line-height: 1.35; }
+.help-adv { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 999px; background: var(--chalk); font-size: 0.8rem; font-weight: 800; white-space: nowrap; }
+/* The app's own buttons, drawn a little smaller and not pressable. */
+.help-btn { display: inline-flex; align-items: center; min-height: 34px; min-width: 0; max-width: 100%; padding: 0 10px; font-size: 0.85rem; white-space: nowrap; cursor: default; box-shadow: none; }
+.help-lit { background: var(--led); border-color: var(--led); color: var(--ink); }
+.seq-play.help-btn { min-width: 0; box-shadow: 0 3px 0 color-mix(in srgb, var(--led) 50%, black); }
+.dj-rec.help-btn { min-width: 0; box-shadow: 0 3px 0 var(--chalk-edge); }
+.help-toolbar-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border-radius: 10px; background: var(--board); font-weight: 800; box-shadow: 0 3px 0 var(--board-deep); }
+.help-toolbar-btn::before { content: ""; width: 12px; height: 12px; border-radius: 3px; background: var(--record); }
+.help-mic { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px 0 8px; border-radius: 999px; background: var(--chalk); color: var(--ink); font-weight: 800; }
+.help-mic-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--record); }
+.pad.help-pad { width: 88px; aspect-ratio: 1 / 0.82; padding: 8px; box-shadow: 0 3px 0 var(--pad-edge); cursor: default; }
+.pad.help-pad .pad-emoji { font-size: 1.3rem; }
+.pad.help-pad .pad-label { font-size: 0.85rem; }
+.help-key { display: inline-grid; justify-items: center; width: 56px; padding: 4px 2px; border-radius: 10px; background: #C2410C; box-shadow: 0 3px 0 color-mix(in srgb, #C2410C 55%, black); line-height: 1.1; }
+.help-key b { font: 900 1rem/1 var(--font-display); }
+.help-key small { font-size: 0.7rem; font-weight: 800; }
+.help-voice { display: inline-flex; align-items: center; min-height: 34px; padding: 0 10px; border-radius: 999px; background: #fff; color: var(--ink); font-size: 0.85rem; font-weight: 800; white-space: nowrap; }
+.help-slider { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.85rem; }
+.help-track { position: relative; width: 70px; height: 6px; border-radius: 3px; background: rgb(255 255 255 / 0.3); }
+.help-track::after { content: ""; position: absolute; left: 55%; top: -6px; width: 18px; height: 18px; border-radius: 50%; background: var(--led); }
+.help-seg { font-size: 0.85rem; font-weight: 800; }
+.help-seg span { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; white-space: nowrap; }
+.help-seg .help-seg-on { background: var(--led); color: var(--ink); }
+.help-pills { --pill: #FFD60A; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 18px; gap: 4px; padding: 4px; border-radius: 10px; background: rgb(255 255 255 / 0.06); }
+.help-pill { height: 34px; border-radius: 999px; background: rgb(255 255 255 / 0.13); }
+.help-pill.one { background: rgb(255 255 255 / 0.26) radial-gradient(circle, rgb(255 255 255 / 0.75) 3px, transparent 3.5px) center / 100% 100% no-repeat; }
+.help-pill.on { background: var(--pill); box-shadow: 0 2px 0 color-mix(in srgb, var(--pill) 55%, black); }
+.help-pill.loud { box-shadow: inset 0 0 0 3px rgb(255 255 255 / 0.9), 0 2px 0 color-mix(in srgb, var(--pill) 55%, black); }
+.help-word { font-weight: 800; white-space: nowrap; }
+.person-menu-btn.help-person { width: 40px; height: 40px; font-size: 1.1rem; }
+.help-count { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--count); color: var(--ink); font: 900 1.4rem/1 var(--font-display); box-shadow: 0 0 0 3px rgb(0 0 0 / 0.25); }
+
+/* Beat Builder's count-in: a big number on a disc of its color, over the
+   keys, popping in on each beat; then a red GO!. Taps still reach the keys. */
+.dj-count {
+  position: absolute;
+  z-index: 8;
+  top: 46%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: min(42vw, 220px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--count, var(--led));
+  color: var(--ink);
+  font: 900 clamp(4rem, 18vw, 8rem)/1 var(--font-display);
+  box-shadow: 0 0 0 8px rgb(0 0 0 / 0.25), 0 0 60px var(--count, var(--led));
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.dj-count[hidden] { display: none; }
+.dj-count.go { color: #fff; font-size: clamp(2.6rem, 11vw, 5rem); }
+.dj-count.pop { animation: count-pop 0.35s ease-out; }
+@keyframes count-pop { from { transform: translate(-50%, -50%) scale(0.6); opacity: 0.4; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .dj-count.pop { animation: none; } }
+
+/* The narrowest phones: a slimmer ▶ Play, so ⌄ number ⌃ and ⏲️ fit beside it. */
+@media (max-width: 340px) { .beat-go > .seq-play { width: 4rem; padding: 0 4px; font-size: 0.95rem; } }
+
+/* Pills answer the first tap on a phone (no double-tap zoom wait), and a
+   hold makes a loud hit without the phone's text-select or callout menu. */
+.pill, .dj-grid-pills i { touch-action: manipulation; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+
+/* A beat row's emoji and its tools, 🔔 · 🔊 · 🧹 · ✕ at its right
+   (beat-row.js), on Beats with ⌨️ Keys off and on, in the order of the sound
+   sheet's layer rows (🔈 then ✕). Asked, ✕ and 🧹 go red and read ✕? and 🧹?. */
+.row-tools { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+/* Each is an .icon-btn (above): 🔔 lit while Overlap is on, 🔊 lit while
+   muted, 🧹 faded with nothing to clear. With ⌨️ Keys on the compact rows
+   keep them as small as the emoji (Ben's call over the 44 px rule): the
+   same squares, scaled down. */
+.dj-grid-row .icon-btn { min-width: 26px; height: 26px; padding: 0 2px; border-width: 1.5px; border-radius: 7px; font-size: 0.8rem; }
+.dj-grid-row .row-tools { gap: 3px; }
+/* The emoji sits right next to its pills (Ben, 2026-10-12): its column is only as wide as the widest emoji. */
+.row-emoji { padding: 0; border: 0; background: transparent; color: inherit; font: 800 0.95rem/1 var(--font-ui); text-align: right; white-space: nowrap; cursor: pointer; }
+.row-emoji:disabled { cursor: default; }
+
+/* A notice fading away by itself (ui.js fadeAway). */
+.fading { opacity: 0; transition: opacity 0.6s ease; }
+@media (prefers-reduced-motion: reduce) { .fading { transition: none; } }
+
+/* The picture chooser: a grid of emoji keys; the sound's own is lit, one
+   tapped while taken is red until tapped again. */
+dialog#pictures { width: min(520px, calc(100vw - 24px)); }
+.pictures-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); gap: 6px; margin-top: 8px; }
+.pictures-grid button { min-height: 48px; border: 2px solid transparent; border-radius: 10px; background: var(--chalk); font-size: 1.6rem; line-height: 1; cursor: pointer; }
+.pictures-grid button[aria-pressed="true"] { border-color: var(--board); }
+.pictures-grid button.armed { border-color: #B3261E; background: #fbe3e1; }
+
+
+/* ── Cloud profiles (cloud-ui.js): People rows, the ☁️ sheet, the list, the PIN pad ── */
+
+dialog.np-dialog {
+  width: min(560px, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: 24px;
+  background: var(--paper);
+  color: var(--ink);
+}
+dialog.np-dialog::backdrop { background: rgb(20 19 24 / 0.62); }
+dialog.np-dialog :focus-visible { outline-color: var(--board); }
+@media (max-width: 600px) {
+  dialog.np-dialog { width: 100%; max-width: 100%; margin: auto 0 0; border-radius: 24px 24px 0 0; }
+}
+
+/* The round picture: a person's avatar (or first letter) on their color. */
+.pe-badge, .cl-badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--c);
+  color: #fff;
+  font: 900 1.25rem/1 var(--font-display);
+}
+.pe-row .pe-badge { width: 44px; height: 44px; box-shadow: 0 0 0 2px rgb(255 255 255 / 0.85); }
+
+/* The ☁️ sheet and its lists. */
+.cl-avatar { display: inline-block; vertical-align: middle; }
+.cl-status { min-height: 1.4em; }
+.cl-wide { width: 100%; }
+.cl-head { margin: 18px 0 6px; font: 800 1.05rem/1.2 var(--font-ui); }
+.cl-list { display: grid; gap: 8px; margin: 0 0 12px; padding: 0; list-style: none; }
+.cl-item { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cl-text { flex: 1 1 10rem; min-width: 0; font-weight: 800; overflow-wrap: anywhere; }
+.cl-pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 12px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 800;
+  text-align: left;
+}
+.cl-lock { margin-left: auto; }
+.cl-what { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 12px; }
+.cl-what[hidden] { display: none; }
+.cl-kind { min-height: 48px; padding: 0 8px; border: 2px solid var(--line); border-radius: 12px; background: var(--paper); color: var(--ink); font-weight: 800; }
+.cl-kind[aria-pressed="true"] { border-color: var(--board); background: var(--board); color: #fff; }
+dialog.np-dialog .set-buttons .quiet { justify-content: center; }
+
+/* The PIN pad: four dots, then big number keys. */
+.pin-body { max-width: 360px; margin: 0 auto; }
+.pin-dots { display: flex; justify-content: center; gap: 16px; margin: 8px 0; }
+.pin-dots span { width: 22px; height: 22px; border: 3px solid var(--ink); border-radius: 50%; }
+.pin-dots span.on { background: var(--ink); }
+.pin-note { text-align: center; }
+.pin-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.pin-key {
+  min-height: 64px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--chalk);
+  color: var(--ink);
+  font: 900 1.6rem/1 var(--font-display);
+}
+.pin-key:active { background: var(--line); }
+.pin-key[data-key="0"] { grid-column: 2; }
+
+/* ⚙️ Settings → 🔓 What's private. */
+.set-private-list { margin: 4px 0 0; padding-left: 1.2em; }
+.set-private-list li { margin: 0 0 6px; }
+.set-field {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 700 1rem/1 var(--font-ui);
+}
+.set-reveal { margin: 10px 0 0; padding: 10px 14px; border: 3px dashed var(--board); border-radius: 14px; }
+.set-reveal p { margin: 0 0 6px; }
+.set-big { font: 800 1.2rem/1.3 ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0.06em; overflow-wrap: anywhere; }
+
+
+/* The footer's version and date are one button that opens ⚙️ Settings at
+   About. It looks like the plain small text it was: the padding makes a
+   44 px target and the negative margin keeps the text where it sat. */
+.page-foot .version {
+  min-height: 44px;
+  margin: -14px -10px -14px auto;
+  padding: 14px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  line-height: 16px;
+}
+.page-foot .version:hover { opacity: 1; text-decoration: underline; }
+
+/* Pad size: one smooth slider beside ✏️ Edit sounds, a small and a big
+   square at its ends. It takes the room Edit sounds leaves, up to 240 px. */
+.pads-size { flex: 1 1 auto; gap: 6px; max-width: 240px; }
+.pads-size > input { flex: 1 1 auto; width: auto; min-width: 60px; }
+.pads-size::before, .pads-size::after { content: ""; flex: none; border: 2px solid currentColor; opacity: 0.85; }
+.pads-size::before { width: 8px; height: 8px; border-radius: 2px; }
+.pads-size::after { width: 16px; height: 16px; border-radius: 4px; }
+/* pads.js sets --pad-w from the slider (pad-size.js): the bed's own
+   measure, from 76 px up to one whole line on a phone or 400 px on a wide
+   screen. As many as fit go on a line, and the room left over is shared
+   evenly between and around them (Ben, 2026-10-11: "the space appears
+   equally distributed between the tiles, instead of only at the edges"), so
+   the pads grow and shrink smoothly and the grid reflows when another fits
+   or one no longer does. Until the bed is measured, the screen's own
+   columns fill the line. */
+.pads {
+  --pad-scale: 1;
+  --gap-x: 12px;
+  --pad-w: calc((100% - (var(--cols) - 1) * var(--gap-x)) / var(--cols) - 0.1px);
+  grid-template-columns: repeat(auto-fill, min(var(--pad-w), 100%));
+  justify-content: space-evenly;
+  column-gap: var(--gap-x);
+}
+@media (min-width: 820px) { .pads { --gap-x: 18px; } }
+/* Words and pictures follow the pad's own width (cq units), so they grow
+   with it; a long word still wraps inside the pad. */
+.pads .pad { container-type: inline-size; padding: clamp(7px, calc(12px * var(--pad-scale)), 16px); padding-left: clamp(8px, calc(14px * var(--pad-scale)), 18px); }
+.pads .pad .pad-emoji { font-size: clamp(1.25rem, 17cqw, 3.2rem); }
+.pads .pad .pad-label { min-width: 0; font-size: clamp(0.8rem, 12cqw, 2rem); }
+.pads .pad .pad-voice { font-size: clamp(1rem, 10cqw, 1.6rem); }
+.pads .pad.pad-add .pad-emoji { font-size: clamp(1.6rem, 20cqw, 3.2rem); }
+.pads .pad.pad-add .pad-label { font-size: clamp(0.8rem, 10cqw, 1.3rem); }
+/* Small pads: narrower letters, so a word like "Cowbell" keeps its line. */
+@container (max-width: 112px) { .pads .pad .pad-label { font-stretch: 75%; line-height: 1; } }
+
+/* Cloud: share codes, 🔗 Shared with me, and the PIN pad's Remember switch,
+   forgotten-PIN line and 👋 Someone new (cloud-ui.js). A board whose PIN is
+   not typed yet stays hidden (app.js setPerson). */
+body[data-locked] main { visibility: hidden; }
+.cl-shared { padding: 8px 10px; border-radius: 12px; background: var(--chalk); }
+.cl-shared .cl-text { flex-basis: 100%; }
+.cl-shared > button { flex: 1 1 0; min-height: 44px; }
+.cl-code { display: block; font: 700 0.85rem/1.4 ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0.06em; opacity: 0.75; }
+#shared-code { flex: 1 1 10rem; text-transform: uppercase; }
+.pin-remember { margin: 6px 0 12px; }
+.pin-forgot { margin: 12px 0 0; text-align: center; }
+.pin-new { display: block; width: 100%; min-height: 44px; margin-top: 10px; }
+.pin-new[hidden] { display: none; }
+
+/* ── Wide screens: fill, then split ─────────────────────────────────── */
+/* Ben, 2026-10-11: "fill, then split. still reasonable to have upper/lower
+   limits". Every screen fills the width up to --max (2400 px), centered
+   beyond it; pads take more columns (pads.js), beat pills grow wider. From
+   1400 px, a screen with two natural parts puts them side by side. Limits:
+   pads stop at 400 px (pad-size.js), the DJ keys at a 1500 px keyboard,
+   and text keeps a readable line. Phones (up to 700 px) are unchanged. */
+
+/* The DJ keyboard stops growing at a size a hand still spans. */
+.dj-keys { width: 100%; max-width: 1500px; margin-inline: auto; }
+
+@media (min-width: 1400px) {
+  /* The tempo slider stops at a length a finger still travels in one go. */
+  .beat-tempo { max-width: 52rem; }
+
+  /* Beat Builder: the beat beside the keys that record into it. */
+  .dj:has(> .dj-grid:not([hidden])) { display: grid; grid-template-columns: minmax(18rem, 1fr) minmax(0, 2fr); column-gap: 20px; align-items: start; }
+  .dj:has(> .dj-grid:not([hidden])) > * { grid-column: 1 / -1; }
+  .dj:has(> .dj-grid:not([hidden])) > .dj-grid { grid-column: 1; }
+  .dj:has(> .dj-grid:not([hidden])) > .dj-keys { grid-column: 2; }
+
+  /* ❓ Help: wider, its pictures and sentences in two columns. */
+  dialog#help { width: min(1180px, calc(100vw - 2 * var(--gutter))); }
+  .help-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; }
+  .help-item { grid-template-columns: minmax(0, 13rem) minmax(0, 1fr); }
+
+  /* The sound sheet's columns: Sound sheet columns, below. */
+}
+
+/* Sound sheet columns. Its parts (index.html .sheet-col): the sound and its
+   wave (hear); its Voice with its Layers (.voice-box, controls); its name,
+   picture and color (look). One column on a phone. With Advanced from
+   900 px, and always from 1400 px: the sound and how it looks beside Voice →
+   Layers. With Advanced from 1400 px, three columns: Voice, then Layers, in
+   the same box so ⭐ Keep · ↩️ Normal still sticks. */
+.sheet-col { display: contents; }
+@media (min-width: 900px) {
+  dialog#sheet.wide { width: min(960px, calc(100vw - 2 * var(--gutter))); }
+  dialog#sheet.wide .swatches { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
+}
+@media (min-width: 900px) {
+  dialog#sheet.wide #sheet-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto 1fr;   /* the last row takes what a tall column leaves */
+    grid-template-areas: "head head" "hear controls" "look controls" ". controls";
+    column-gap: 28px;
+    align-items: start;
+  }
+  dialog#sheet.wide #sheet-form > * { grid-column: 1 / -1; }
+  dialog#sheet.wide #sheet-form > .sheet-col { display: block; }
+  dialog#sheet.wide #sheet-form > .sheet-head { grid-area: head; }
+  dialog#sheet.wide #sheet-form > .sheet-hear { grid-area: hear; }
+  dialog#sheet.wide #sheet-form > .sheet-look { grid-area: look; }
+  dialog#sheet.wide #sheet-form > .sheet-controls { grid-area: controls; }
+}
+@media (min-width: 1400px) {
+  dialog#sheet { width: min(1180px, calc(100vw - 2 * var(--gutter))); }
+  dialog#sheet.wide { width: min(1640px, calc(100vw - 2 * var(--gutter))); }
+  dialog#sheet #sheet-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto 1fr;
+    grid-template-areas: "head head" "hear controls" "look controls" ". controls";
+    column-gap: 32px;
+    align-items: start;
+  }
+  dialog#sheet #sheet-form > * { grid-column: 1 / -1; }
+  dialog#sheet #sheet-form > .sheet-col { display: block; }
+  dialog#sheet #sheet-form > .sheet-head { grid-area: head; }
+  dialog#sheet #sheet-form > .sheet-hear { grid-area: hear; }
+  dialog#sheet #sheet-form > .sheet-look { grid-area: look; }
+  dialog#sheet #sheet-form > .sheet-controls { grid-area: controls; }
+  /* Advanced: Voice, then Layers, each a column. */
+  dialog#sheet.wide #sheet-form { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+  dialog#sheet.wide .voice-box {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto auto 1fr;
+    grid-template-areas: "voice layers" "actions layers" "keep layers" ". layers";
+    column-gap: 32px;
+    align-items: start;
+  }
+  dialog#sheet.wide .voice-box > .field:first-child { grid-area: voice; }
+  dialog#sheet.wide .voice-box > .voice-actions { grid-area: actions; }
+  dialog#sheet.wide .voice-box > .keep-form { grid-area: keep; }
+  dialog#sheet.wide .voice-box > .layers { grid-area: layers; }
+}
+
+/* ── Every emoji: the "…" at the end of each picture chooser (emoji-more.js) ──
+   The full list takes the short list's place in the same sheet or dialog: a
+   search box and ⬅️ Fewer, then groups under headings that stay at the top
+   of the scrolling list. Keys are 44 px or more, like the short lists'. */
+.emoji-more { font-weight: 800; letter-spacing: 0.05em; }
+.emoji-all { margin-top: 8px; }
+.emoji-all-head { display: flex; gap: 8px; align-items: stretch; }
+.emoji-all .emoji-search {
+  flex: 1 1 8rem;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.1rem;   /* 16 px or more, so a phone doesn't zoom in */
+}
+.emoji-all .emoji-search:focus-visible { outline: 3px solid var(--board); outline-offset: 0; border-color: transparent; }
+.emoji-back {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--chalk);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.emoji-all-status { min-height: 1.4em; margin: 6px 0 2px; color: var(--muted); }
+.emoji-all-status:empty { min-height: 0; margin: 0 0 6px; }
+.emoji-all-list {
+  max-height: min(52dvh, 460px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 12px;
+  background: var(--paper);
+}
+.emoji-all-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 4px; padding-bottom: 8px; }
+.emoji-all-grid button {
+  min-height: 44px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: var(--chalk);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.emoji-all-grid button[aria-pressed="true"] { border-color: var(--board); background: #fff; }
+.emoji-all-grid button.armed { border-color: #B3261E; background: #fbe3e1; }
+
+/* ── Shares: Shared already (🚫 Unshare) and an unshared code (Q18) ── */
+.share-mine-head { margin: 20px 0 4px; font-size: 1rem; }
+.cl-shared.cl-gone .cl-text { opacity: 0.8; }
+
+/* ── Sheet headings stay in view (Ben, 2026-10-11: "the settings close
+   button should float to keep it available") ──
+   A sheet scrolls inside its dialog, so its heading row, with ✕, sticks to
+   the top there: the title and the 44 px close never scroll away, and the
+   content passes under them instead of being covered. Help has its own
+   (.help-head). */
+.chooser-body > .sheet-head:first-child,
+#sheet-form > .sheet-head:first-child {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  margin: -20px -20px 12px;
+  padding: 16px 20px 10px;
+  background: var(--paper);
+  box-shadow: 0 2px 0 var(--line);
+}
+
+/* ── The header slims once scrolled (Ben, 2026-10-11, Q26: "shrink when
+   scrolled… maybe the ? gear avatar move to the left along with a
+   Move-to-top button, so that right-side existing elements aren't messed up
+   too much") ──
+   At the top of a screen the header is the full title row. Scrolled past it
+   (body.head-slim, ui.js trackSlimHead), its buttons ride in a slim bar at
+   the top left: the round person button, ❓, ⚙️ and ⬆️ back to the top. The
+   header keeps its height in the page, so nothing below it jumps.
+   On Pads the bar is the ✏️ Edit sounds band itself: Edit sounds sticks to
+   the very top and keeps its place on the right. On Beats, DJ and Song it is
+   a band of its own, 52 px, and the Play bar sticks under it. What sticks
+   under the header reads its height from --head-h. */
+:root { --slim-h: 52px; --slim-top: env(safe-area-inset-top, 0px); }
+.title-row { min-height: 44px; }   /* holds the header's height when its buttons ride up */
+.pads-bar { top: var(--head-h, 0px); }
+.pad-group { top: calc(var(--head-h, 0px) + 64px); }
+@media (max-width: 899px) {
+  .seq .beat-deck, .seq .beat-go { top: var(--head-h, 0px); }
+}
+.to-top { display: none; }
+body.head-slim { --head-h: calc(var(--slim-top) + var(--slim-h)); }
+body.head-slim.screen-pads { --head-h: var(--slim-top); }   /* the Edit sounds band is the bar */
+
+/* The band: the page's color across the top, under what sticks (Edit
+   sounds, the Play bar) and over what scrolls (the title, pads, rows). */
+body.head-slim .top::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 6;
+  height: calc(var(--slim-top) + var(--slim-h));
+  background: var(--board);
+  box-shadow: 0 2px 0 var(--board-deep);
+  transition: background-color 0.3s ease;
+  animation: head-slim-in 160ms ease-out;
+}
+body.head-slim.screen-pads .top::before { height: calc(var(--slim-top) + 64px); box-shadow: none; }
+
+/* The buttons, at the top left, in the order Ben asked for. */
+body.head-slim .title-tools {
+  position: fixed;
+  z-index: 9;
+  top: var(--slim-top);
+  left: max(var(--gutter), calc((100% - var(--max)) / 2 + var(--gutter)));
+  height: var(--slim-h);
+  gap: 6px;
+  animation: head-slim-in 160ms ease-out;
+}
+body.head-slim.screen-pads .title-tools { height: 64px; }   /* centred on Edit sounds */
+body.head-slim .title-tools .grille { display: none; }
+body.head-slim .title-tools .people { order: -1; }
+body.head-slim .to-top { display: block; }
+body.head-slim .person-list { right: auto; left: 0; }   /* opens into the screen, not off its left edge */
+@keyframes head-slim-in { from { transform: translateY(-100%); } }
+
+/* Pads: the bar's buttons sit at the left of the Edit sounds band, so the
+   band's own things start after them. Where Pad size has no room beside
+   them, it waits at the top of the screen. */
+body.head-slim.screen-pads .pads-bar { padding-left: calc(4 * 44px + 3 * 6px + 10px); }
+@media (max-width: 559px) {
+  body.head-slim.screen-pads .pads-size { display: none; }
+}
+/* On a phone, ✏️ Edit sounds says ✏️ Edit beside them (screen readers
+   still hear "Edit sounds"), and on the narrowest the buttons sit closer. */
+@media (max-width: 429px) {
+  body.head-slim.screen-pads .edit-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+@media (max-width: 359px) {
+  body.head-slim .title-tools { gap: 4px; }
+  body.head-slim.screen-pads .pads-bar { padding-left: calc(4 * 44px + 3 * 4px + 8px); }
+}
+
+
+/* ── How much each person has, in 👥 People (Ben, 2026-10-11) ──
+   Under the name in a People row: "🔊 27 · 🥁 4 · 🎼 1", in the kinds' own
+   emoji (model.js KIND_EMOJI). It wraps under the name on a narrow phone. */
+.pe-who { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.pe-counts { font: 700 0.95rem/1.3 var(--font-ui); color: #fff; overflow-wrap: anywhere; }
+
+/* ── All emoji: group headings that fold (Ben, 2026-10-11: "can the giant
+   emoji list have collapsible sections") ──
+   Each group in the "…" list is a full-width heading like Settings' folds:
+   a caret, the name and a count chip, 44 px tall. It sticks to the top of
+   the list while its open group scrolls by; the paper band round it keeps
+   emoji from showing above or beside it. Shut, the list is a short menu. */
+.emoji-all-h {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 4px 0;
+  background: var(--paper);
+}
+.emoji-all-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--chalk);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+.emoji-all-group:focus-visible { outline: 3px solid var(--board); outline-offset: -3px; }
+.emoji-all-caret { flex: none; width: 1em; }
+.emoji-all-name { min-width: 0; overflow-wrap: anywhere; }
+.emoji-all-count { flex: none; margin-left: auto; padding: 2px 10px; border-radius: 999px; background: var(--paper); font-size: 0.9rem; font-weight: 700; }
+.emoji-all-sec.open .emoji-all-grid { padding-top: 4px; }
+
+/* ── ✏️ Edit sounds: badges, choosing several, and a kid's own groups
+   (Ben, 2026-10-11: "selection upper left, the edit / delete upper right") ──
+   In Edit sounds each pad sits in a cell with its badges (pads.js editCell):
+   the cell is the grid item and wobbles; the pad fills it. ✏️ and 🗑️ are
+   44 px buttons with a smaller disc drawn in them. On a small pad they stand
+   one above the other down the right edge, with the rows spaced so no
+   badge's 44 px reaches the next row's; on a wider pad they sit side by
+   side along the top. The select circle sits at the upper left from the
+   start, a badge like them (tapping it or the pad chooses). All the badges
+   float above the pad: a drop shadow under the disc, like the pads' own
+   raised edge, and a bold ink ring that reads on every pad color (Ben,
+   2026-10-11: "they should float above with a bolder stroke"). */
+.pads .pad-cell { position: relative; min-width: 0; container-type: inline-size; }
+.pads .pad-cell > .pad { width: 100%; }
+body.editing .pads { row-gap: 30px; }
+body.editing .pad-cell { animation: wobble 0.34s ease-in-out infinite alternate; }
+body.editing .pad-cell:nth-child(even) { animation-delay: -0.17s; }
+body.editing .pad-cell > .pad { animation: none; }
+body.editing .pad-cell:has(.pad.chosen) { animation: none; }
+body.editing .pads .pad.chosen { outline: 4px solid #fff; outline-offset: 3px; }
+
+.pad-tools {
+  position: absolute;
+  top: -10px;
+  right: -6px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+}
+@container (min-width: 132px) { .pad-tools { flex-direction: row; } }
+.pad-tools .pad-tool {
+  position: relative;
+  inset: auto;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  /* The disc: white, ringed in ink, 32 px across, so the grey 🗑️ reads on it. */
+  background: radial-gradient(circle closest-side, #fff 0 13px, var(--ink) 13.5px 16px, transparent 16.5px);
+  box-shadow: none;
+  /* Raised: the shadow follows the drawn disc, not the 44 px button. */
+  filter: drop-shadow(0 3px 0 rgb(0 0 0 / 0.45)) drop-shadow(0 4px 6px rgb(0 0 0 / 0.25));
+  color: #fff;
+  font: 400 0.95rem/1 var(--font-ui);
+  cursor: pointer;
+}
+.pad-tools .pad-tool::before { content: none; }
+.pad-tools .pad-x.asking { background: radial-gradient(circle closest-side, #F4B8B2 0 13px, #B3261E 13.5px 16px, transparent 16.5px); }
+.pad-tools .pad-tool:focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
+
+/* The select circle: the upper-left badge. Empty is a white disc; chosen
+   is filled ink with a white tick. */
+.pad-picks { right: auto; left: -6px; }
+.pad-tools .pad-check { color: #fff; font-weight: 900; }
+/* In Edit sounds a pad's picture moves aside for its circle. */
+body.editing .pads .pad-cell .pad-emoji { margin-left: 26px; }
+
+/* Dragging moves the whole cell, badges and all. */
+.pad-cell.dragging {
+  z-index: 3;
+  animation: none !important;
+  scale: 1.06;
+  pointer-events: none;
+}
+.pad-cell.dragging > .pad { box-shadow: 0 14px 0 var(--pad-edge), 0 18px 30px rgb(0 0 0 / 0.35); }
+
+/* An own group's header in Edit sounds, with its ✏️ beside it: the row
+   sticks where a header does. */
+.pad-group-row {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  position: sticky;
+  top: calc(var(--head-h, 0px) + 64px);
+  z-index: 5;
+  background: var(--bed);
+  box-shadow: 0 0 0 4px var(--bed), 12px 0 0 var(--bed), -12px 0 0 var(--bed);
+}
+.pad-group-row > .pad-group { flex: 1 1 auto; min-width: 0; position: static; box-shadow: none; }
+.pad-group-edit {
+  flex: none;
+  min-width: 48px;
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, #fff 14%, var(--bed));
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+/* The bar for what is chosen, floating above the toolbar like the update
+   bar: "2 selected · Clear", a reason when presets are in it, and the five
+   actions, icon over word on a phone and in a line from 700 px. */
+.pads-chosen {
+  position: fixed;
+  z-index: 9;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--toolbar-h) + env(safe-area-inset-bottom) + 8px);
+  width: min(760px, calc(100vw - 2 * var(--gutter)));
+  box-sizing: border-box;
+  padding: 4px 8px 8px;
+  border-radius: 16px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+}
+.pads-chosen[hidden] { display: none; }
+.chosen-top { display: flex; align-items: center; gap: 6px; padding-left: 6px; font-weight: 800; }
+.chosen-dot { opacity: 0.6; }
+.chosen-clear[hidden] { display: none; }
+.chosen-clear { min-height: 44px; padding: 0 10px; border: 0; background: none; color: var(--ink); font: 800 1rem/1 var(--font-ui); text-decoration: underline; cursor: pointer; }
+.chosen-why { margin: 0 6px 6px; color: var(--muted); font-size: 0.85rem; font-weight: 700; }
+.chosen-why[hidden] { display: none; }
+.chosen-actions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.chosen-act {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 56px;
+  padding: 4px 2px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--chalk);
+  color: var(--ink);
+  font: 800 0.75rem/1.1 var(--font-ui);
+  text-align: center;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.chosen-icon { font-size: 1.3rem; line-height: 1; }
+.chosen-act:disabled { opacity: 0.45; cursor: default; }
+.chosen-act.armed { border-color: #B3261E; background: #B3261E; color: #fff; }
+@media (min-width: 700px) {
+  .chosen-act { flex-direction: row; gap: 6px; min-height: 48px; font-size: 0.95rem; }
+}
+/* Room under the last pads, so the bar never covers them. */
+body.choosing .page-foot { margin-bottom: 180px; }
+
+/* After a delete: what went, ↩️ Undo and ✕, in the bar's place. */
+.pads-undo {
+  position: fixed;
+  z-index: 9;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--toolbar-h) + env(safe-area-inset-bottom) + 8px);
+  width: min(60ch, calc(100vw - 2 * var(--gutter)));
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 6px 6px 14px;
+  border-radius: 12px;
+  background: var(--bed);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+}
+.pads-undo[hidden] { display: none; }
+
+/* The Edit sounds sheets (bulk.js): the groups to move to, a new group's
+   name, and the button that applies. */
+/* Pick a name (people.js): two or more names a line, each a full button. */
+.names-list { grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); }
+.names-list .cl-pick { min-height: 48px; justify-content: center; text-align: center; overflow-wrap: anywhere; }
+.bulk-groups .cl-pick[aria-pressed="true"] { border-color: var(--board); box-shadow: inset 0 0 0 2px var(--board); }
+.bulk-new { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
+.bulk-new .set-field { flex: 1 1 10rem; }
+.bulk-new .chip-dark { flex: 1 0 auto; min-height: 44px; }
+.bulk-apply { width: 100%; min-height: 48px; margin-top: 12px; }
+.bulk-apply:disabled { opacity: 0.5; }
+#bulk-dialog .set-buttons .chip-dark { min-height: 44px; }
+#bulk-dialog .chip-dark.armed { background: #B3261E; color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  body.editing .pad-cell { animation: none; }
+}
+
+/* ✏️ on hover while playing (Ben, 2026-10-11: "the pad screen should
+   provide an edit badge when hovering over a sound (on browser not phone
+   obv)"): with a mouse or trackpad only, on a pad's hover or when the
+   keyboard reaches it (Tab from the pad). On touch it never shows and is
+   never reached: ✏️ Edit sounds is the way there. */
+.pad-hover { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  body:not(.editing) .pad-cell:is(:hover, :focus-within) > .pad-hover { display: flex; }
+}
+
+/* ── DJ ✏️ Edit keys (Ben, 2026-10-11: layouts above the keyboard, sounds
+   below, "individual and grouped") ──
+   A focused view over the whole screen, dark like the DJ panel: Layouts,
+   the 40 keys, then Sounds. From 1400 px the sounds sit beside the keys. */
+dialog#keys-edit {
+  width: 100%;
+  max-width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--bed);
+  color: #fff;
+  overscroll-behavior: contain;
+}
+dialog#keys-edit::backdrop { background: var(--bed); }
+.ke-body {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top) + 12px) var(--gutter) calc(env(safe-area-inset-bottom) + 24px);
+  display: grid;
+  gap: 16px;
+}
+.ke-head { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -12px calc(-1 * var(--gutter)) 0; padding: 12px var(--gutter) 10px; background: var(--bed); box-shadow: 0 2px 0 rgb(255 255 255 / 0.08); }
+.ke-head h2 { margin: 0; font: 900 1.6rem/1.05 var(--font-display); font-stretch: 80%; }
+.ke-done { flex: none; padding: 0 16px; }
+.ke-main { display: grid; gap: 16px; min-width: 0; }
+.ke-title { margin: 0 0 8px; font: 800 0.8rem/1 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: rgb(255 255 255 / 0.8); }
+
+/* Layouts: chips that wrap, the kid's own ⭐ first; the one on the keys lit. */
+.ke-layout-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.ke-layout { flex: 1 1 auto; min-height: 44px; padding: 0 12px; border: 2px solid rgb(255 255 255 / 0.5); border-radius: 12px; background: rgb(255 255 255 / 0.06); color: #fff; font: 800 0.95rem/1.1 var(--font-ui); }
+.ke-layout[aria-pressed="true"] { background: var(--led); border-color: var(--led); color: var(--ink); }
+.ke-save { border-style: dashed; }
+.ke-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.ke-line .beat-name { flex: 1 1 12em; border-color: rgb(255 255 255 / 0.5); background: rgb(0 0 0 / 0.2); }
+.ke-line .beat-name::placeholder { color: rgb(255 255 255 / 0.7); }
+
+/* The keyboard: four rows of ten (the number row on top), always ten across (smaller labels on a
+   narrow phone), each key a small tile in its sound's family color. */
+.ke-keys { display: grid; gap: 6px; container: ke-keys / inline-size; }
+.ke-row { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; border-radius: 12px; }
+.ke-key {
+  --c: #333040;
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  min-width: 0;
+  min-height: 52px;
+  padding: 3px 2px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--c);
+  color: #fff;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--c) 55%, black);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.ke-key.empty { background: transparent; box-shadow: none; outline: 2px dashed rgb(255 255 255 / 0.3); outline-offset: -2px; }
+.ke-sym { justify-self: start; font: 800 0.7rem/1 var(--font-display); }
+.ke-emoji { align-self: center; font-size: 1.05rem; line-height: 1; }
+.ke-name { display: none; max-width: 100%; overflow: hidden; font: 700 0.7rem/1.1 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
+.ke-key.empty .ke-name { display: none; }
+@container ke-keys (min-width: 520px) {
+  .ke-row { gap: 6px; }
+  .ke-key { min-height: 64px; padding: 5px; }
+  .ke-sym { font-size: 0.95rem; }
+  .ke-emoji { font-size: 1.4rem; }
+}
+@container ke-keys (min-width: 680px) {
+  .ke-key { min-height: 76px; }
+  .ke-name { display: block; }
+}
+@container ke-keys (min-width: 1000px) {
+  .ke-key { min-height: 92px; }
+  .ke-emoji { font-size: 1.8rem; }
+  .ke-name { font-size: 0.85rem; }
+}
+.ke-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 10px; }
+.ke-note { flex: 1 1 14em; min-height: 1.4em; margin: 0; font-weight: 700; }
+.ke-bar-buttons { display: flex; gap: 8px; flex: 1 1 auto; justify-content: flex-end; }
+@media (max-width: 559px) { .ke-bar-buttons .seq-tool { flex: 1 1 auto; } }
+
+/* Sounds: the groups as chips, then the open group's sounds to pick. */
+.ke-groups { display: flex; flex-wrap: wrap; gap: 8px; }
+.ke-group { flex: 1 1 auto; min-height: 44px; padding: 0 12px; border: 2px solid rgb(255 255 255 / 0.5); border-radius: 22px; background: transparent; color: #fff; font: 800 0.95rem/1.1 var(--font-ui); touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.ke-group[aria-pressed="true"] { background: #fff; border-color: #fff; color: var(--ink); }
+.ke-hint { margin: 10px 0 8px; color: rgb(255 255 255 / 0.85); font-size: 0.95rem; }
+.ke-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 8px; }
+.ke-sound {
+  --c: #333040;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 4px 10px;
+  border: 3px solid transparent;
+  border-radius: 10px;
+  background: var(--c);
+  color: #fff;
+  font: 800 0.9rem/1.1 var(--font-ui);
+  text-align: left;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.ke-sound[aria-pressed="true"] { border-color: var(--led); box-shadow: 0 0 0 2px var(--led); }
+.ke-sound-emoji { flex: none; font-size: 1.3rem; line-height: 1; }
+.ke-sound-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ke-pick-n { position: absolute; top: -8px; right: -6px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; background: var(--led); color: var(--ink); font: 900 0.8rem/22px var(--font-ui); text-align: center; }
+.ke-clear { margin-top: 10px; }
+@media (max-width: 359px) { .ke-picks { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Dragging: what is carried follows the pointer; where it would land glows. */
+.ke-ghost { position: fixed; left: 0; top: 0; z-index: 10; margin: -28px 0 0 -28px; padding: 8px 12px; border-radius: 14px; background: var(--led); color: var(--ink); font: 900 1.4rem/1 var(--font-ui); white-space: nowrap; box-shadow: 0 8px 24px rgb(0 0 0 / 0.45); pointer-events: none; }
+.ke-ghost .ke-pick-n { background: var(--ink); color: #fff; }
+.ke-lifted { opacity: 0.45; }
+.ke-key.ke-over { outline: 3px solid var(--led); outline-offset: 2px; filter: brightness(1.3); }
+.ke-row.ke-over { box-shadow: 0 0 0 3px var(--led); }
+.ke-dragging, .ke-dragging * { cursor: grabbing; }
+.ke-dragging-key .ke-board { border-radius: 14px; box-shadow: 0 0 0 2px rgb(255 255 255 / 0.25); }
+
+/* Below 1400 px the sounds are under the keys: the keyboard sticks under
+   the title while they scroll, so a sound can be dragged up onto a key (on
+   a screen tall enough to keep room for the sounds). */
+@media (max-width: 1399px) and (min-height: 600px) {
+  .ke-main { display: contents; }   /* so the keyboard sticks for as long as the sounds scroll */
+  .ke-board { position: sticky; top: 66px; z-index: 2; margin: 0 calc(-1 * var(--gutter)); padding: 8px var(--gutter) 4px; background: var(--bed); box-shadow: 0 2px 0 rgb(255 255 255 / 0.08); }
+}
+/* Wide screens: the sounds beside the keys, so a drag goes sideways. */
+@media (min-width: 1400px) {
+  .ke-body { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; column-gap: 32px; }
+  .ke-head { grid-column: 1 / -1; }
+  .ke-sounds { position: sticky; top: 76px; max-height: calc(100dvh - 96px); overflow: auto; }
+}
+
+/* ── Voices are knob settings (voice-knobs.js; Ben, 2026-10-11) ─────────
+   The sheet's voice part: emoji-only voice chips (✦ on the special ones),
+   a kid's own voices with their names, the line saying what the lit voice
+   is, ⭐ Keep as mine · ↩️ Normal stuck under the sheet's heading while the
+   knobs scroll past (--sheet-head-h, measured by sheet.js), then the knobs
+   with More knobs folded. A knob a voice moved glows for a second. */
+.voice-box { display: block; }
+.voices.voice-chips { grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 10px 8px; }
+.voice-chips .voice-chip { position: relative; justify-content: center; padding: 6px; }
+.voice-chips .voice-chip.my-voice, .voice-chips .my-voices-open { grid-column: span 2; justify-content: flex-start; gap: 6px; min-width: 0; }
+.voice-chips .voice-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.voice-special { position: absolute; top: 2px; right: 5px; font-size: 0.75rem; line-height: 1; opacity: 0.8; }
+.voice-line { min-height: 1.4em; margin: 12px 0 0; color: var(--muted); font-weight: 700; }
+.voice-actions {
+  position: sticky;
+  top: var(--sheet-head-h, 72px);
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+  margin: 10px -20px 0;
+  padding: 8px 20px;
+  background: var(--paper);
+}
+.voice-actions .chain-tool { flex: 1 1 0; min-width: 0; }
+.my-voice-list { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.my-voice-list[hidden] { display: none; }
+.my-voice-delete.armed { min-width: 88px; padding: 0 10px; border-color: #B3261E; background: #B3261E; color: #fff; }
+.keep-form { display: grid; gap: 10px; margin-top: 10px; padding: 12px; border-radius: 12px; background: var(--chalk); }
+.keep-form[hidden] { display: none; }
+.keep-form .keep-name { margin-top: 0; padding: 0; grid-template-columns: auto 1fr; }
+.keep-form .keep-name input { min-width: 0; min-height: 44px; padding: 0 10px; border: 2px solid var(--line); border-radius: 10px; font: inherit; }
+.keep-emoji { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; }
+.keep-emoji button { min-height: 44px; border: 2px solid var(--line); border-radius: 10px; background: #fff; font-size: 1.3rem; }
+.keep-emoji button[aria-pressed="true"] { border-color: var(--board); box-shadow: inset 0 0 0 1px var(--board); }
+.knob-glow { animation: knob-glow 1.2s ease-out; }
+@keyframes knob-glow {
+  0%, 40% { box-shadow: 0 0 0 3px var(--board); }
+  100% { box-shadow: 0 0 0 3px transparent; }
+}
+
+/* ── The sound sheet's name is its title; its parts fold (Ben, 2026-10-11:
+   "name can be at the top in the title bar"; "same with tweaks in the
+   sound editor") ──
+   The heading row holds a small line (New sound for…, Edit sound) over the
+   name, an input that looks like the title until tapped. It takes the
+   whole row beside ✕ (Ben, 2026-10-11: "without the pencil"): a dashed
+   underline says it can be typed in, firming up on hover and focus; a long
+   name ends in … until it is tapped. Voice, Knobs, More
+   knobs and Shape it fold under Settings-style heads (.set-head, 48 px). */
+.sheet-title-box { flex: 1; min-width: 0; display: grid; gap: 2px; }
+/* ▶︎/■ at the left of the title row: the sound as it sounds now. */
+.sheet-play {
+  flex: none;
+  align-self: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--board);
+  color: #fff;
+  font: 900 1.3rem/1 var(--font-ui);
+  box-shadow: 0 3px 0 var(--board-deep);
+}
+.sheet-play:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--board-deep); }
+.sheet-play[aria-pressed="true"] { background: var(--ink); }
+.sheet-play:disabled { opacity: 0.4; box-shadow: none; cursor: default; }
+.sheet-head h2.sheet-kicker { margin: 0; font: 700 0.95rem/1.2 var(--font-ui); color: var(--muted); }
+.sheet-name { display: block; min-width: 0; }
+.sheet-name input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 2px 6px;
+  margin-left: -6px;
+  border: 0;
+  border-bottom: 2px dashed var(--line);
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--ink);
+  font: 900 1.6rem/1.1 var(--font-display);
+  font-stretch: 80%;
+  text-overflow: ellipsis;
+}
+.sheet-name input:hover { border-bottom-color: var(--muted); background: var(--chalk); }
+.sheet-name input:focus { text-overflow: clip; }
+.sheet-name input:focus-visible { outline: 3px solid var(--board); outline-offset: 0; border-bottom-color: transparent; background: #fff; }
+dialog#sheet legend.field-name, dialog#sheet h3.field-name { width: 100%; margin-bottom: 8px; padding: 0; }
+.sheet-fold { font-weight: 800; font-size: 1.05rem; }
+.fold-body[hidden] { display: none; }
+
+/* ── Pad badges scale with the pad (Ben, 2026-10-11: "hovering edit button
+   (all badges) should scale with the tile") ──
+   ✏️, 🗑️, 👁 (in Edit sounds and on hover) and the select circle (the same
+   disc) follow the
+   pad's width (cq units of its cell, as the picture and name do): 24 px
+   discs on the smallest pads, 32 px at a phone's usual size, 52 px at most.
+   The button round a disc is never under 44 px, and grows with it. Discs
+   stay under 28 px until pads are wide enough to put them side by side, so
+   the stacked badges of small pads keep today's 44 px spacing. */
+.pads .pad-cell { --disc: clamp(24px, 21cqw, 52px); }
+.pad-tools .pad-tool {
+  width: max(44px, calc(var(--disc) + 12px));
+  min-width: max(44px, calc(var(--disc) + 12px));
+  height: max(44px, calc(var(--disc) + 12px));
+  background: radial-gradient(circle closest-side, #fff 0 calc(var(--disc) / 2 - 3px), var(--ink) calc(var(--disc) / 2 - 2.5px) calc(var(--disc) / 2), transparent calc(var(--disc) / 2 + 0.5px));
+  /* A bold 4 px ink ring round a white disc. */
+  background: radial-gradient(circle closest-side, #fff 0 calc(var(--disc) / 2 - 4.5px), var(--ink) calc(var(--disc) / 2 - 4px) calc(var(--disc) / 2), transparent calc(var(--disc) / 2 + 0.5px));
+  font-size: calc(var(--disc) * 0.47);
+}
+.pad-tools .pad-x.asking { background: radial-gradient(circle closest-side, #F4B8B2 0 calc(var(--disc) / 2 - 4.5px), #B3261E calc(var(--disc) / 2 - 4px) calc(var(--disc) / 2), transparent calc(var(--disc) / 2 + 0.5px)); }
+.pad-tools .pad-check.on { background: radial-gradient(circle closest-side, var(--ink) 0 calc(var(--disc) / 2), transparent calc(var(--disc) / 2 + 0.5px)); font-size: calc(var(--disc) * 0.55); }
+body.editing .pads .pad-cell .pad-emoji { margin-left: calc(var(--disc) * 0.8); }
+
+/* ── Beat row tools: emoji only on narrow screens ──────────────────────
+   Ben, 2026-10-11: "can clear and remove be emoji only on smaller
+   screens". The button holds the emoji; the word comes from data-word
+   from 560 px up. The aria-label always names the action. */
+.seq-tool[data-word] { min-width: 44px; }
+@media (min-width: 560px) { .seq-tool[data-word]::after { content: " " attr(data-word); } }
+@media (max-width: 559px) { .seq-tool.armed[data-word]::after { content: "?"; } }
+
+/* Bars side by side on wide screens (layoutMeasures sets the columns): the
+   dashed line between bars stands up instead of lying down. */
+.seq-steps.bars-across { column-gap: 24px; }
+.seq-steps.bars-across .seq-measure + .seq-measure { padding-top: 0; border-top: 0; }
+.seq-steps.bars-across .seq-measure:not(:first-child) { box-shadow: -13px 0 0 -11px rgb(255 255 255 / 0.15); }
+
+/* The tab you're on needs no name on a narrow screen: its emoji is enough,
+   and the room goes to the others (Ben, 2026-10-11). Screen readers still
+   hear the name. */
+@media (max-width: 559px) {
+  .screens .tool[aria-pressed="true"] .tool-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .screens .tool[aria-pressed="true"] { min-width: 52px; }
+}
+
+/* "✅ 4 notes added" floats over the beat's name and fades (Ben, 2026-10-12). */
+.dj-beatbar { position: relative; }
+.name-flash { position: absolute; top: 6px; left: 44px; right: 6px; height: 44px; box-sizing: border-box; display: flex; align-items: center; padding: 0 12px; border-radius: 10px; background: var(--led); color: var(--ink); font-weight: 800; pointer-events: none; transition: opacity 0.6s; }
+.name-flash[hidden] { display: none; }
+.name-flash.fading { opacity: 0; }
+
+/* ── 🎚️ Mixer (mixer.js) ─────────────────────────────────────────────
+   A paper sheet like the others, holding a dark desk: one column per row
+   (emoji, name, a vertical fader, its number, Mute, Solo, an effect), then
+   the Master, which stays at the right edge while the rows scroll under it.
+   On a phone the columns scroll sideways inside the desk (Ben: "let's try
+   scrolling first"), snapping to a column's edge. */
+/* As wide as its columns need, from 480 px up to 1180 px (a 16-row beat scrolls even on a wide screen). */
+dialog#mixer {
+  width: fit-content;
+  min-width: min(480px, calc(100vw - 2 * var(--gutter)));
+  max-width: min(1180px, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: 24px;
+  background: var(--paper);
+  color: var(--ink);
+}
+dialog#mixer::backdrop { background: rgb(20 19 24 / 0.62); }
+dialog#mixer :focus-visible { outline-color: var(--board); }
+@media (max-width: 600px) {
+  dialog#mixer { width: 100%; max-width: 100%; margin: auto 0 0; border-radius: 24px 24px 0 0; }
+}
+.mixer-body .field-hint { margin: 0 0 12px; }
+.mix-strips {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 10px;
+  border-radius: 18px;
+  background: var(--bed);
+  color: #fff;
+}
+.mix-strip {
+  display: grid;
+  flex: none;
+  grid-template-rows: auto auto 190px auto auto auto auto;
+  justify-items: center;
+  gap: 6px;
+  width: 96px;
+  padding: 10px 6px;
+  border-radius: 14px;
+  border-top: 5px solid var(--pill, rgb(255 255 255 / 0.4));
+  background: rgb(255 255 255 / 0.07);
+  scroll-snap-align: start;
+}
+.mix-strip.master {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  grid-template-rows: auto auto 190px auto 94px auto;
+  border-top-color: var(--led);
+  background: var(--deck);
+  box-shadow: -10px 0 12px rgb(0 0 0 / 0.35);
+}
+.mix-emoji { font-size: 1.6rem; line-height: 1; }
+.mix-name { max-width: 100%; overflow: hidden; font-weight: 800; font-size: 0.85rem; text-overflow: ellipsis; white-space: nowrap; }
+.mix-pct { font-weight: 800; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.mix-fader-box { display: flex; justify-content: center; height: 190px; }
+/* Vertical: up is louder. A horizontal swipe still scrolls the desk. */
+.mix-fader { width: 44px; height: 190px; margin: 0; writing-mode: vertical-lr; direction: rtl; accent-color: var(--led); touch-action: pan-x; cursor: ns-resize; }
+.mix-mute, .mix-solo, .mix-all {
+  width: 100%;
+  min-height: 44px;
+  border: 2px solid rgb(255 255 255 / 0.5);   /* the outline of .seq-tool and .icon-btn */
+  border-radius: 10px;
+  background: transparent;
+  color: #fff;
+  font: 800 0.95rem/1 var(--font-ui);
+}
+.mix-all { height: 94px; }
+.mix-all:disabled { opacity: 0.4; }
+/* On is the app's one yellow fill, Mute as Solo, as a beat row's muted 🔊 (Ben, 2026-10-12: "the buttons need to be consistent"). */
+.mix-mute[aria-pressed="true"], .mix-solo[aria-pressed="true"] { border-color: var(--led); background: var(--led); color: var(--ink); }
+.mix-fx { width: 100%; min-height: 44px; padding: 0 4px; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 10px; background: var(--deck); color: #fff; font: 700 0.85rem/1 var(--font-ui); }
+.mix-strip.muted .mix-fader-box, .mix-strip.muted .mix-emoji, .mix-strip.silenced .mix-fader-box, .mix-strip.silenced .mix-emoji { opacity: 0.4; }
+.mix-none { align-self: center; margin: 0 12px; font-weight: 800; }
+/* The compact rows show the mix too: a row another row's Solo silences dims
+   like a muted one; a soloed row's emoji wears a lit ring. */
+.seq-row.silenced .seq-steps, .seq-row.silenced .row-emoji, .seq-row.collapsed.silenced .seq-slim { opacity: 0.4; }
+.dj-grid-row.silenced .row-emoji { opacity: 0.4; }
+.seq-row.solo .row-emoji, .dj-grid-row.solo .row-emoji { border-radius: 12px; box-shadow: 0 0 0 3px var(--led); }
+
+/* ── 🧸 Kids (ADR 0019; kids.js) ─────────────────────────────────────────
+   The screens a person on the Kids level sees. Pictures only, big shapes,
+   bright fills, a bounce on every tap. The whole screen is one fixed frame:
+   the gear floats in its usual corner, the view fills the middle, four big
+   tabs and ⏹️ sit at the bottom. Nothing scrolls but the pad pages, sideways. */
+
+/* Kids shows; the regular app hides (the update bar and notices with it). */
+body.kids main, body.kids .toolbar, body.kids #board-title, body.kids #help-open, body.kids #people, body.kids #to-top { display: none !important; }
+body.kids { overflow: hidden; }
+body.kids .top { position: fixed; inset: 0 0 auto 0; z-index: 12; pointer-events: none; }
+body.kids .title-row { justify-content: flex-end; }
+body.kids .title-tools { pointer-events: auto; }
+body.kids .title-row .grille { display: grid; }   /* the level lights stay: they dance with the sound */
+
+.kids {
+  position: fixed;
+  inset: 0;
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top) + 74px) var(--gutter) 0;
+  background: var(--board);
+  color: #fff;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.kids-view { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: var(--max); margin: 0 auto; }
+.kids-view[hidden] { display: none; }
+
+/* The bottom bar: four tabs and ⏹️, each a big picture. */
+.kids-bar {
+  flex: none;
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 12px 0 calc(14px + env(safe-area-inset-bottom));
+}
+.kids-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 72px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--bed);
+  box-shadow: 0 6px 0 var(--bed-edge);
+  font-size: 2.2rem;
+  line-height: 1;
+  transition: transform 60ms, box-shadow 60ms;
+}
+.kids-tab[aria-pressed="true"] { background: var(--led); box-shadow: 0 6px 0 #B89A10; }
+.kids-stop { flex: 0 0 auto; width: 72px; background: var(--record); box-shadow: 0 6px 0 #7E1612; }
+.kids-tab:active, .kids-pad:active, .kids-key.down, .kids-square:active, .kids-voice:active, .kids-play:active, .kids-tempo:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--bed-edge); }
+@media (max-width: 360px) { .kids-bar { gap: 6px; } .kids-tab { height: 64px; font-size: 1.9rem; } .kids-stop { width: 60px; } }
+
+/* A bounce on a tap, and a head shake when a tap did nothing. */
+@keyframes kids-boing { 0% { scale: 1; } 35% { scale: 1.12; } 65% { scale: 0.95; } 100% { scale: 1; } }
+@keyframes kids-wiggle { 0%, 100% { rotate: 0deg; } 20% { rotate: -8deg; } 40% { rotate: 8deg; } 60% { rotate: -5deg; } 80% { rotate: 5deg; } }
+.kids .boing, .kids-sum .boing { animation: kids-boing 0.3s ease-out; }
+.kids .wiggle, .kids-sum .wiggle { animation: kids-wiggle 0.4s ease-in-out; }
+
+/* Pads: pages side by side, one screen wide, snapping as they are swiped. */
+.kids-pages {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  touch-action: pan-x;   /* a pinch is the pads' (kids.js), never the page's zoom */
+  overscroll-behavior-x: contain;
+}
+.kids-pages::-webkit-scrollbar { display: none; }
+.kids-page {
+  flex: 0 0 100%;
+  display: grid;
+  grid-template-columns: repeat(var(--kids-cols, 3), var(--kids-pad, 100px));
+  grid-auto-rows: var(--kids-pad, 100px);
+  align-content: center;
+  justify-content: space-evenly;
+  gap: 12px;
+  padding: 12px 0;
+  scroll-snap-align: start;
+}
+.kids-pad {
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 24%;
+  background: var(--pad, #FFD60A);
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--pad, #FFD60A) 55%, black);
+  font-size: calc(var(--kids-pad, 100px) * 0.5);
+  line-height: 1;
+  transition: transform 60ms, box-shadow 60ms;
+}
+.kids-turn { flex: none; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.kids-arrow { flex: none; width: 56px; height: 52px; border: 0; border-radius: 16px; background: var(--bed); box-shadow: 0 5px 0 var(--bed-edge); font-size: 1.6rem; line-height: 1; }
+.kids-arrow:disabled { opacity: 0.35; }
+.kids-dots { flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: 6px; }
+.kids-dot { flex: 0 1 12px; min-width: 4px; height: 12px; border-radius: 6px; background: rgb(255 255 255 / 0.35); transition: scale 0.15s; }
+.kids-dot.here { background: var(--led); scale: 1.4; }
+
+/* Record: the big mic (hold), the new sound's pad beside it, three voices under. */
+.kids-record-view { justify-content: center; align-items: center; gap: 28px; }
+.kids-record-top { display: flex; align-items: center; justify-content: center; gap: 28px; flex-wrap: wrap; }
+.kids-mic {
+  --kids-rec: 0;
+  width: min(62vw, 46dvh, 300px);
+  aspect-ratio: 1;
+  padding: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--led) calc(var(--kids-rec) * 360deg), transparent 0), var(--record);
+  box-shadow: 0 8px 0 #7E1612;
+  font-size: min(28vw, 22dvh, 140px);
+  line-height: 1;
+  touch-action: none;
+}
+.kids-mic span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--record); }
+.kids-mic.recording { animation: kids-throb 0.7s ease-in-out infinite alternate; box-shadow: 0 0 0 10px rgb(255 229 138 / 0.5); }
+.kids-mic:disabled { opacity: 0.45; }
+@keyframes kids-throb { from { scale: 1; } to { scale: 1.06; } }
+.kids-last {
+  width: min(30vw, 22dvh, 150px);
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 24%;
+  background: var(--pad, #FFD60A);
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--pad, #FFD60A) 55%, black);
+  font-size: min(15vw, 11dvh, 76px);
+  line-height: 1;
+}
+.kids-voices { display: flex; justify-content: center; gap: 16px; width: 100%; }
+.kids-voice {
+  width: min(26vw, 16dvh, 120px);
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bed);
+  box-shadow: 0 6px 0 var(--bed-edge);
+  font-size: min(13vw, 8dvh, 60px);
+  line-height: 1;
+}
+.kids-voice[aria-pressed="true"] { background: var(--led); box-shadow: 0 6px 0 #B89A10, 0 0 0 5px #fff; }
+
+/* Beats: ▶️ with 🐢 and 🏃 either side, then the drums and their squares
+   (kids.js places each one: across on a wide screen, down on a phone). */
+.kids-beat-bar { flex: none; display: flex; justify-content: center; gap: 16px; }
+.kids-play, .kids-tempo {
+  height: 76px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--bed);
+  box-shadow: 0 6px 0 var(--bed-edge);
+  font-size: 2.4rem;
+  line-height: 1;
+}
+.kids-play { width: 140px; background: var(--led); box-shadow: 0 6px 0 #B89A10; }
+.kids-play[aria-pressed="true"] { background: var(--record); box-shadow: 0 6px 0 #7E1612; }
+.kids-tempo { width: 88px; }
+.kids-tempo[aria-pressed="true"] { background: #fff; box-shadow: 0 6px 0 var(--chalk-edge); }
+.kids-beat { flex: 1 1 auto; min-height: 0; display: grid; gap: 8px; padding-bottom: 6px; }
+.kids-beat[data-layout="across"] { grid-template-columns: minmax(56px, 90px) repeat(8, 1fr); grid-template-rows: repeat(4, minmax(48px, 1fr)); }
+.kids-beat[data-layout="down"] { grid-template-columns: repeat(4, 1fr); grid-template-rows: minmax(48px, 64px) repeat(8, minmax(44px, 1fr)); }
+.kids-drum {
+  border: 0;
+  border-radius: 18px;
+  background: var(--pad, #4C8DFF);
+  font-size: 2.4rem;
+  line-height: 1;
+}
+.kids-square {
+  min-width: 0;
+  border: 3px solid color-mix(in srgb, var(--pad, #fff) 45%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--pad, #000) 14%, rgb(0 0 0 / 0.3));
+}
+.kids-square.on-beat { background: color-mix(in srgb, var(--pad, #000) 24%, rgb(0 0 0 / 0.3)); }
+.kids-square[aria-pressed="true"] { border-color: #fff; background: var(--pad, #FFD60A); box-shadow: inset 0 -5px 0 rgb(0 0 0 / 0.2); }
+.kids-square.now { outline: 4px solid var(--led); outline-offset: 1px; }
+.kids-square.now[aria-pressed="true"] { scale: 1.08; }
+
+/* Keys: eight colored keys, side by side like a toy keyboard; on a phone
+   they lie down like a xylophone, longest first. */
+.kids-keys { flex: 1 1 auto; min-height: 0; display: flex; gap: 8px; padding-bottom: 8px; touch-action: none; }
+.kids-key {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 0 18px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--key);
+  box-shadow: 0 8px 0 color-mix(in srgb, var(--key) 55%, black);
+  font-size: clamp(1.6rem, 4vw, 3rem);
+  line-height: 1;
+  transition: transform 50ms, box-shadow 50ms, filter 50ms;
+}
+.kids-key.down { filter: brightness(1.25); }
+@media (max-width: 599px) {
+  .kids-keys { flex-direction: column; align-items: center; }
+  .kids-key { width: calc(100% - var(--n) * 4%); align-items: center; justify-content: flex-end; padding: 0 20px; font-size: 1.8rem; box-shadow: 0 5px 0 color-mix(in srgb, var(--key) 55%, black); }
+}
+
+/* The grown-up sum: big number keys. */
+dialog.kids-sum {
+  width: min(420px, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100dvh - 32px);
+  padding: 20px;
+  border: 0;
+  border-radius: 24px;
+  background: var(--paper);
+  color: var(--ink);
+}
+dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
+.kids-sum-q { margin: 0 0 16px; text-align: center; font: 900 3rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.kids-sum-typed { display: inline-block; min-width: 1.6em; border-bottom: 4px solid var(--ink); }
+.kids-sum-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.kids-sum-keys button { min-height: 64px; border: 0; border-radius: 16px; background: var(--chalk); color: var(--ink); box-shadow: 0 5px 0 var(--chalk-edge); font: 900 2rem/1 var(--font-display); }
+.kids-sum-keys button:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--chalk-edge); }
+.kids-sum-zero { grid-column: 2; }
+
+/* Settings' Level: three keys across the dialog. */
+.set-levels { display: flex; width: 100%; margin: 8px 0; border-color: rgb(20 19 24 / 0.3); }
+.set-levels button { flex: 1 1 0; color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .kids .boing, .kids .wiggle, .kids-sum .wiggle, .kids-mic.recording { animation: none; }
+  .kids .boing { filter: brightness(1.2); }
+  .kids-dot, .kids-pad, .kids-tab, .kids-key { transition: none; }
+}
+
+/* ── ⋯ menus (overflow.js; Ben, 2026-10-12: "allow the buttons to move into a
+   sub menu where space requires it"). A line short of room gets .more-tight
+   on its box: its buttons marked data-more-word hide and ⋯ shows, 44 px like
+   the rest. The menu lists them as icon + word; a tap in it taps the real one. */
+.more-btn { display: none; font-size: 1.5rem; }   /* an .icon-btn, like the buttons it holds; ⋯ is a thin glyph, drawn larger to weigh as much as an emoji */
+.more-btn[aria-expanded="true"] { background: rgb(255 255 255 / 0.14); }
+.more-tight .more-btn { display: inline-grid; }
+.more-tight [data-more-word] { display: none; }
+.more-pop {
+  position: fixed;
+  z-index: 60;
+  display: grid;
+  gap: 2px;
+  min-width: 180px;
+  box-sizing: border-box;
+  padding: 6px;
+  border: 2px solid var(--led);
+  border-radius: 14px;
+  background: var(--ink);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.45);
+}
+.more-pop[hidden] { display: none; }
+.more-item { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: #fff; font: 800 1.05rem/1.2 var(--font-ui); text-align: left; white-space: nowrap; cursor: pointer; }
+.more-item:hover, .more-item:focus-visible { background: rgb(255 255 255 / 0.14); }
+.more-item:disabled { opacity: 0.5; cursor: default; }
+/* A toggle (🔔 Overlap) shows its on state: a ✓ after the word, as the row's lit 🔔 would. */
+.more-item[aria-checked]::after { content: ""; margin-left: auto; padding-left: 12px; }
+.more-item[aria-checked="true"]::after { content: "✓"; }
+.more-item.armed { background: #B3261E; color: #fff; }

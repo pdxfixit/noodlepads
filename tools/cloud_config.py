@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""Where this Mac keeps Noodle Pads' own things, outside the repo (the repo is
+public, so none of them belong in it):
+
+  ~/.config/noodlepads/cloud.json   the Cloudflare account and D1 database ids
+                                    ($NOODLEPADS_CONFIG); tools/cloud.example.json
+                                    is the template
+  ~/.local/state/noodlepads/        the report and metrics archives; an older
+                                    ~/.local/state/noodle-pads is moved here
+                                    the first time it is asked for
+  Keychain `noodlepads-logs`        the read-only D1 token (just logs --sync); an
+                                    item under the older `noodle-pads-logs` still
+                                    works, with a hint to rename it
+
+Stdlib only, Python 3.8+.
+"""
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+EXAMPLE = Path(__file__).resolve().parent / "cloud.example.json"
+KEYCHAIN = "noodlepads-logs"
+OLD_KEYCHAIN = "noodle-pads-logs"
+FIELDS = ("account_id", "database_id")
+
+
+class ConfigError(Exception):
+    """The cloud config is missing or not filled in; the message says how to fix it."""
+
+
+def config_path():
+    return Path(os.environ.get("NOODLEPADS_CONFIG") or "~/.config/noodlepads/cloud.json").expanduser()
+
+
+def how_to_make(path):
+    return (f"mkdir -p {path.parent} && cp tools/cloud.example.json {path}, then fill in the ids "
+            "(docs/deploy-cloudflare.md, Problem reports)")
+
+
+def load(path=None):
+    """The cloud config: account_id, database_id and keychain_service (default noodlepads-logs)."""
+    path = Path(path or config_path())
+    try:
+        cfg = json.loads(path.read_text())
+    except FileNotFoundError:
+        raise ConfigError(f"no cloud config at {path}: {how_to_make(path)}")
+    except ValueError as e:
+        raise ConfigError(f"{path} is not valid JSON: {e}")
+    for field in FIELDS:
+        value = str(cfg.get(field) or "")
+        if not value or value.startswith("<"):
+            raise ConfigError(f"{path}: fill in {field} (docs/deploy-cloudflare.md, Problem reports)")
+    cfg.setdefault("keychain_service", KEYCHAIN)
+    return cfg
+
+
+def state_dir(home=None):
+    """~/.local/state/noodlepads, moving the older noodle-pads folder there once."""
+    base = Path(home or Path.home()) / ".local/state"
+    new, old = base / "noodlepads", base / "noodle-pads"
+    if old.is_dir() and not new.exists():
+        old.rename(new)
+        print(f"📦 moved {old} to {new}", file=sys.stderr)
+    return new
+
+
+def _find(service):
+    p = subprocess.run(["security", "find-generic-password", "-s", service, "-w"],
+                       capture_output=True, text=True)
+    token = p.stdout.strip()
+    return token if p.returncode == 0 and token else None
+
+
+def keychain_token(service=KEYCHAIN, find=_find, err=sys.stderr):
+    """The token in the Keychain under `service`. The older item name still
+    works for the default service, with a one-line hint to rename it."""
+    token = find(service)
+    if token:
+        return token
+    if service == KEYCHAIN:
+        token = find(OLD_KEYCHAIN)
+        if token:
+            print(f"💡 the logs token is under the old Keychain name {OLD_KEYCHAIN}; rename it once:\n"
+                  f"   security add-generic-password -s {KEYCHAIN} -a cloudflare -w "
+                  f"\"$(security find-generic-password -s {OLD_KEYCHAIN} -w)\" "
+                  f"&& security delete-generic-password -s {OLD_KEYCHAIN}", file=err)
+            return token
+    raise ConfigError(f"no Cloudflare token in the Keychain under service {service!r} "
+                      f"(security add-generic-password -s {service} -a cloudflare -w)")
+
+
+if __name__ == "__main__":
+    # `python3 tools/cloud_config.py`: one line for just doctor; exit 1 when missing.
+    try:
+        load()
+        print(f"cloud config: {config_path()}")
+    except ConfigError as e:
+        print(e)
+        sys.exit(1)
