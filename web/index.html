@@ -1,0 +1,1038 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1F3FA8">
+  <title>Noodle Pads</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231F3FA8'/%3E%3Crect x='6' y='5' width='20' height='21' rx='4' fill='%23866F00'/%3E%3Crect x='6' y='5' width='20' height='18' rx='4' fill='%23FFD60A'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@75..100,700..900&family=Atkinson+Hyperlegible+Next:wght@400;700;800&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <noscript><p class="notice">The soundboard needs JavaScript. Turn it on for this site, then reload.</p></noscript>
+  <header class="top">
+    <div class="title-row">
+      <h1 id="board-title" tabindex="-1">Noodle Pads</h1>
+      <div class="title-tools">
+        <div class="grille" id="grille" aria-hidden="true"></div>
+        <button type="button" class="settings-btn" id="help-open" aria-label="Help" aria-haspopup="dialog">❓</button>
+        <button type="button" class="settings-btn" id="settings-open" aria-label="Settings" aria-haspopup="dialog">⚙️</button>
+        <nav class="people" id="people" aria-label="Whose sounds"></nav>
+        <button type="button" class="settings-btn to-top" id="to-top" aria-label="Back to the top">⬆️</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <p class="notice" id="notice" role="status" hidden></p>
+    <!-- A newer version is live: reload, or ✕ until the next one (update.js). It does not fade. -->
+    <div class="update-bar" id="update-bar" role="status" hidden>
+      <span class="update-text">🆕 An update for Noodle Pads is ready.</span>
+      <span class="update-buttons">
+        <button type="button" class="update-reload" id="update-reload">Reload</button>
+        <button type="button" class="update-close" id="update-close" aria-label="Not now">✕</button>
+      </span>
+    </div>
+    <div class="pads-bar" id="pads-bar">
+      <!-- Pad size: one smooth slider from this screen's smallest pads (0) to its biggest (100) (pads.js, pad-size.js). -->
+      <div class="pads-size" id="pads-size">
+        <input type="range" id="pads-size-slider" min="0" max="100" step="1" value="50" aria-label="Pad size">
+      </div>
+      <button type="button" class="pads-edit" id="edit-toggle" aria-pressed="false">✏️ Edit<span class="edit-more"> sounds</span></button>
+    </div>
+    <div class="pads" id="pads"></div>
+    <!-- ✏️ Edit sounds with sounds chosen: what to do with them all (bulk.js). -->
+    <section class="pads-chosen" id="pads-chosen" aria-label="Selected sounds" hidden>
+      <div class="chosen-top">
+        <span class="chosen-count" id="chosen-count" role="status"></span>
+        <span class="chosen-dot" aria-hidden="true">·</span>
+        <button type="button" class="chosen-clear" id="chosen-all">Select all</button>
+        <button type="button" class="chosen-clear" id="chosen-clear">Clear</button>
+      </div>
+      <p class="chosen-why" id="chosen-why" hidden></p>
+      <div class="chosen-actions">
+        <button type="button" class="chosen-act" data-bulk="move"><span class="chosen-icon" aria-hidden="true">📁</span> <span class="chosen-word">Move to group</span></button>
+        <button type="button" class="chosen-act" data-bulk="look"><span class="chosen-icon" aria-hidden="true">🎨</span> <span class="chosen-word">Color · picture</span></button>
+        <button type="button" class="chosen-act" data-bulk="voice"><span class="chosen-icon" aria-hidden="true">🪄</span> <span class="chosen-word">Voice</span></button>
+        <button type="button" class="chosen-act" data-bulk="share"><span class="chosen-icon" aria-hidden="true">🔗</span> <span class="chosen-word">Share</span></button>
+        <button type="button" class="chosen-act chosen-delete" data-bulk="delete"><span class="chosen-icon" aria-hidden="true">🗑️</span> <span class="chosen-word">Delete</span></button>
+      </div>
+    </section>
+    <div class="pads-undo" id="pads-undo" role="status" hidden>
+      <span id="pads-undo-text"></span>
+      <span class="dj-done-buttons">
+        <button type="button" class="seq-tool" id="pads-undo-button">↩️ Undo</button>
+        <button type="button" class="close bar-close" id="pads-undo-close" aria-label="Dismiss">✕</button>
+      </span>
+    </div>
+
+    <section class="seq" id="seq" aria-label="Beat maker" hidden>
+      <div class="beat-bar doc-bar">
+        <span class="beat-bar-icon" aria-hidden="true">🥁</span>
+        <input class="beat-name" data-beat-name maxlength="24" autocomplete="off" aria-label="Beat name (tap to rename)">
+        <button type="button" class="seq-tool doc-rename" data-beat-rename aria-label="Rename this beat">✏️</button>
+        <button type="button" class="seq-tool doc-keep" id="seq-keep" data-beat-keep data-word="Keep" aria-label="Keep: put this scratch beat in 🗂️ My beats, with a name" hidden>💾</button>
+        <button type="button" class="seq-tool doc-grooves" id="seq-grooves" data-beat-grooves data-word="Grooves" aria-label="Grooves: ready-made beats">💃</button>
+        <button type="button" class="seq-tool doc-keys" id="seq-keys" data-beat-keys data-word="Keys" aria-pressed="false" aria-label="Keys: play sounds under the beat, and ● Record them into it">⌨️</button>
+        <button type="button" class="seq-tool doc-new" data-beat-new>🆕 New</button>
+        <button type="button" class="seq-tool doc-open" data-beat-open data-word="My beats" aria-label="🗂️ My beats: open, pin, copy or delete your beats">🗂️</button>
+      </div>
+      <!-- Pattern chips: the last beats used, a tap opens one (at the next bar line while playing). -->
+      <div class="beat-chips" data-beat-chips role="group" aria-label="Your beats: tap one to open it" hidden></div>
+      <!-- The control bar, the same on Beats and in Beat Builder (Ben, 2026-10-12):
+           ▶ Play (● Record with ⌨️ Keys on), the tempo, ⏲️, then the bars. -->
+      <div class="beat-deck deck deck-end" id="seq-deck">
+        <div class="beat-go">
+          <button type="button" class="seq-play" id="seq-play" aria-pressed="false">▶ Play</button>
+          <div class="beat-tempo tempo-box" role="group" aria-label="Tempo">
+            <button type="button" class="tempo-step down" data-tempo-step="-1" aria-label="Slower"></button>
+            <input type="range" id="seq-bpm" step="1" aria-label="Tempo">
+            <button type="button" class="seq-bpm-num" id="seq-bpm-out"></button>
+            <input type="number" class="seq-bpm-type" id="seq-bpm-type" inputmode="numeric" aria-label="Tempo in BPM" hidden>
+            <button type="button" class="tempo-step up" data-tempo-step="1" aria-label="Faster"></button>
+          </div>
+          <button type="button" class="seq-click" id="seq-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never saved." title="Click track: a tick on every beat to keep time">⏲️</button>
+        </div>
+        <div class="beat-shape" id="seq-shape-line">
+          <div class="seq-barsel" id="seq-bars" role="group" aria-label="How many bars the beat is">
+            <button type="button" data-bars="1" aria-pressed="true" aria-label="1 bar">1<span class="bar-word"> bar</span></button>
+            <button type="button" data-bars="2" aria-pressed="false" aria-label="2 bars">2<span class="bar-word"> bars</span></button>
+            <button type="button" data-bars="4" aria-pressed="false" aria-label="4 bars">4 bars</button>
+          </div>
+          <div class="seq-shape" id="seq-shape" hidden>
+            <div class="seq-barsel seq-sigs" id="seq-sigs" role="group" aria-label="Time signature: beats in a bar">
+              <button type="button" data-sig="4/4" aria-pressed="true">4/4</button>
+              <button type="button" data-sig="3/4" aria-pressed="false">3/4</button>
+              <button type="button" data-sig="5/4" aria-pressed="false">5/4</button>
+              <button type="button" data-sig="6/8" aria-pressed="false">6/8</button>
+              <button type="button" data-sig="7/8" aria-pressed="false">7/8</button>
+              <select class="seq-pick" aria-label="Time signature"></select>
+            </div>
+            <div class="seq-barsel seq-swing" id="seq-swing" role="group" aria-label="Swing: how much the beat bounces" title="Swing: how much the beat bounces">
+              <button type="button" data-swing="0" aria-pressed="true">Straight</button>
+              <button type="button" data-swing="33" aria-pressed="false">Swing</button>
+              <button type="button" data-swing="50" aria-pressed="false">Shuffle</button>
+              <select class="seq-pick" aria-label="Swing"></select>
+            </div>
+          </div>
+          <button type="button" class="seq-click mixer-open" data-mixer aria-label="🎚️ Mixer: each row's loudness, mute, solo and effect" title="Mixer">🎚️</button>
+        </div>
+      </div>
+      <p class="seq-empty" id="seq-empty" hidden>This board has no sounds yet. Tap 🔊 Pads, then New sound.</p>
+      <p class="seq-empty" id="seq-no-rows" hidden>No rows yet. Tap + Add a row for a sound, or 💃 Grooves at the top for a ready-made beat.</p>
+      <div class="seq-rows" id="seq-rows"></div>
+      <div class="seq-undo" id="seq-undo" role="status" hidden>
+        <span id="seq-undo-text"></span>
+        <span class="dj-done-buttons">
+          <button type="button" class="seq-tool" id="seq-undo-button">↩️ Undo</button>
+          <button type="button" class="close bar-close" id="seq-undo-close" aria-label="Dismiss">✕</button>
+        </span>
+      </div>
+      <div class="seq-foot">
+        <button type="button" class="seq-add" id="seq-add">+ Add a row</button>
+        <button type="button" class="seq-add" id="seq-add-tune">🎹 Add a tune</button>
+      </div>
+    </section>
+    <!-- The keys: 🎤 Live on their own, and Beats with ⌨️ Keys on, under the
+         open beat (ADR 0017; dj.js setMode). -->
+    <section class="dj" id="dj" aria-label="Live" hidden>
+      <div class="beat-bar doc-bar dj-beatbar" id="dj-beatbar" hidden>
+        <span class="beat-bar-icon" aria-hidden="true">🥁</span>
+        <input class="beat-name" data-beat-name maxlength="24" autocomplete="off" aria-label="Beat name (tap to rename)">
+        <button type="button" class="seq-tool doc-rename" data-beat-rename aria-label="Rename this beat">✏️</button>
+        <button type="button" class="seq-tool doc-keep" id="dj-keep" data-beat-keep data-word="Keep" aria-label="Keep: put this scratch beat in 🗂️ My beats, with a name" hidden>💾</button>
+        <button type="button" class="seq-tool doc-grooves" id="dj-grooves" data-beat-grooves data-word="Grooves" aria-label="Grooves: play one behind you">💃</button>
+        <button type="button" class="seq-tool doc-keys" id="dj-keys-toggle" data-beat-keys data-word="Keys" aria-pressed="true" aria-label="Keys: play sounds under the beat, and ● Record them into it">⌨️</button>
+        <button type="button" class="seq-tool doc-new" data-beat-new>🆕 New</button>
+        <button type="button" class="seq-tool doc-open" data-beat-open data-word="My beats" aria-label="🗂️ My beats: open, pin, copy or delete your beats">🗂️</button>
+        <span class="name-flash" id="dj-name-flash" aria-hidden="true" hidden></span>
+      </div>
+      <!-- Pattern chips: the last beats used, a tap opens one (at the next bar line while playing). -->
+      <div class="beat-chips" data-beat-chips role="group" aria-label="Your beats: tap one to open it" hidden></div>
+      <!-- The same control bar as Beats': ▶ Play, ● Record, the tempo, ⏲️, the
+           bars. Freestyle shows only ● Record, what is happening and 🎬 Takes. -->
+      <div class="beat-deck deck deck-end dj-bar">
+        <div class="beat-go">
+          <button type="button" class="seq-play" id="dj-play" aria-pressed="false" hidden>▶ Play</button>
+          <button type="button" class="dj-rec" id="dj-record" aria-pressed="false">● Record</button>
+          <div class="beat-tempo tempo-box" id="dj-tempo" role="group" aria-label="Tempo" hidden>
+            <button type="button" class="tempo-step down" data-tempo-step="-1" aria-label="Slower"></button>
+            <input type="range" id="dj-bpm-slider" step="1" aria-label="Tempo">
+            <button type="button" class="seq-bpm-num" id="dj-bpm" aria-label="Tempo 100 BPM. Tap to type a tempo.">100 BPM</button>
+            <input type="number" class="seq-bpm-type" id="dj-bpm-type" inputmode="numeric" aria-label="Tempo in BPM" hidden>
+            <button type="button" class="tempo-step up" data-tempo-step="1" aria-label="Faster"></button>
+          </div>
+          <button type="button" class="seq-click" id="dj-beat-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never recorded. Tap it three times in time to set the tempo." title="Click track: a tick on every beat to keep time" hidden>⏲️</button>
+          <span class="dj-status" id="dj-status" role="status"></span>
+          <button type="button" class="seq-tool" id="dj-takes-open">🎬 Takes</button>
+        </div>
+        <div class="beat-shape" id="dj-setup" role="group" aria-label="The beat: bars and time signature" hidden>
+          <div class="seq-barsel" id="dj-bars" role="group" aria-label="How many bars the beat is">
+            <button type="button" data-bars="1" aria-pressed="true" aria-label="1 bar">1<span class="bar-word"> bar</span></button>
+            <button type="button" data-bars="2" aria-pressed="false" aria-label="2 bars">2<span class="bar-word"> bars</span></button>
+            <button type="button" data-bars="4" aria-pressed="false" aria-label="4 bars">4 bars</button>
+          </div>
+          <div class="seq-barsel seq-sigs" id="dj-sigs" role="group" aria-label="Time signature: beats in a bar" hidden>
+            <button type="button" data-sig="4/4" aria-pressed="true">4/4</button>
+            <button type="button" data-sig="3/4" aria-pressed="false">3/4</button>
+            <button type="button" data-sig="5/4" aria-pressed="false">5/4</button>
+            <button type="button" data-sig="6/8" aria-pressed="false">6/8</button>
+            <button type="button" data-sig="7/8" aria-pressed="false">7/8</button>
+            <select class="seq-pick" aria-label="Time signature"></select>
+          </div>
+          <button type="button" class="seq-click mixer-open" data-mixer aria-label="🎚️ Mixer: each row's loudness, mute, solo and effect" title="Mixer">🎚️</button>
+        </div>
+      </div>
+      <p class="seq-empty" id="dj-no-rows" hidden>No rows yet. Tap ● Record and play the keys below: each sound you play gets a row.</p>
+      <div class="seq-undo dj-done" id="dj-done" role="status" hidden>
+        <span id="dj-done-text"></span>
+        <span class="dj-take-line" id="dj-take-line" hidden>Saved <input class="beat-name take-rename" id="dj-take-name" maxlength="24" autocomplete="off" aria-label="Take name (tap to rename)"> <span id="dj-take-length"></span></span>
+        <span class="dj-done-buttons">
+          <button type="button" class="seq-tool" id="dj-done-play">▶ Play</button>
+          <button type="button" class="seq-tool" id="dj-done-sound">🔊 Make a sound</button>
+          <button type="button" class="seq-tool" id="dj-done-rename">✏️ Rename</button>
+          <button type="button" class="seq-tool" id="dj-done-undo">↩️ Undo</button>
+          <button type="button" class="close bar-close" id="dj-done-close" aria-label="Dismiss">✕</button>
+        </span>
+      </div>
+      <!-- A groove tried behind you (💃 in the beat bar): ↩️ My beat puts it away. -->
+      <div class="seq-undo dj-done dj-trying" id="dj-trying" role="status" hidden>
+        <span id="dj-trying-text"></span>
+        <span class="dj-done-buttons">
+          <button type="button" class="seq-tool" id="dj-trying-stop" aria-label="Put the groove away and bring back your beat">↩️ My beat</button>
+        </span>
+      </div>
+      <div class="dj-grid" id="dj-grid" hidden></div>
+      <div class="dj-count" id="dj-count" aria-hidden="true" hidden></div>
+      <div class="dj-tabs" id="dj-tabs" role="group" aria-label="Which keys to show">
+        <button type="button" data-row="0" aria-pressed="false"></button>
+        <button type="button" data-row="1" aria-pressed="false"></button>
+        <button type="button" data-row="2" aria-pressed="true"></button>
+        <button type="button" data-row="3" aria-pressed="false"></button>
+      </div>
+      <div class="dj-keys" id="dj-keys" role="application" aria-label="Keys"></div>
+      <div class="dj-tail">
+        <div class="dj-foot">
+          <div class="dj-size seq-barsel" id="dj-size" role="group" aria-label="Pad size" hidden>
+            <button type="button" data-size="s" aria-pressed="false" aria-label="Small pads">S</button>
+            <button type="button" data-size="m" aria-pressed="true" aria-label="Medium pads">M</button>
+            <button type="button" data-size="l" aria-pressed="false" aria-label="Large pads">L</button>
+          </div>
+        </div>
+        <div class="dj-end">
+          <ul class="dj-legend" id="dj-legend" aria-label="Key colors"></ul>
+          <div class="dj-clicktrack">
+            <button type="button" class="seq-tool" id="dj-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never recorded. Tap it three times in time to set the tempo.">⏲️ Click track</button>
+            <div class="dj-click-tempo tempo-box" id="dj-click-tempo" role="group" aria-label="Click track tempo">
+              <button type="button" class="tempo-step down" data-click-step="-1" aria-label="Click track slower"></button>
+              <input type="range" id="dj-click-bpm" step="1" aria-label="Click track tempo">
+              <output id="dj-click-bpm-out" for="dj-click-bpm">100 BPM</output>
+              <button type="button" class="tempo-step up" data-click-step="1" aria-label="Click track faster"></button>
+            </div>
+          </div>
+          <button type="button" class="seq-tool" id="dj-overlap" aria-pressed="false" title="Overlap: each hit rings over the last (this visit only)" aria-label="Overlap: each key's hits ring over each other instead of starting the sound again. For this visit only.">🔔 Overlap</button>
+          <span class="dj-change-row">
+            <button type="button" class="seq-tool" id="dj-change">✏️ Edit keys</button>
+          </span>
+        </div>
+      </div>
+    </section>
+    <section class="song" id="song" aria-labelledby="song-title" hidden>
+      <div class="song-head doc-bar">
+        <h2 class="sr-only" id="song-title">Song</h2>
+        <span class="beat-bar-icon song-icon" aria-hidden="true">🎼</span>
+        <input class="beat-name song-name" id="song-name" maxlength="24" autocomplete="off" aria-label="Song name (tap to rename)">
+        <button type="button" class="seq-tool doc-rename" id="song-rename" aria-label="Rename this song">✏️</button>
+        <button type="button" class="seq-tool doc-keep" id="song-keep" data-word="Keep" aria-label="Keep: put this scratch song in 🗂️ My songs, with a name" hidden>💾</button>
+        <button type="button" class="seq-tool doc-new" id="song-new">🆕 New</button>
+        <button type="button" class="seq-tool doc-open" id="song-open">🗂️ My songs</button>
+      </div>
+      <div class="song-deck deck deck-end">
+        <button type="button" class="seq-play song-play" id="song-play" aria-pressed="false">▶ Play song</button>
+        <div class="song-tempo" role="group" aria-label="The song's tempo: every beat in it plays this fast">
+          <button type="button" class="seq-tool tempo-nudge" id="song-tempo-down" aria-label="Slower">➖</button>
+          <label class="song-tempo-field"><input type="number" id="song-tempo" min="60" max="180" step="1" inputmode="numeric" aria-label="Song tempo in BPM"><span class="song-tempo-unit">BPM</span></label>
+          <button type="button" class="seq-tool tempo-nudge" id="song-tempo-up" aria-label="Faster">➕</button>
+        </div>
+        <button type="button" class="seq-tool" id="song-sound">🔊 Save as a sound</button>
+      </div>
+      <!-- Your beats, as the pattern chips look: pick one, then tap a spot on a lane (ADR 0024). -->
+      <div class="beat-chips song-beats" id="song-beats" role="group" aria-label="Your beats: pick one, then tap a spot on a lane"></div>
+      <p class="song-empty" id="song-empty">Pick a beat above, then tap a spot on a lane.</p>
+      <!-- The lanes: time runs across, a lane per line; on a phone the box scrolls inside itself. -->
+      <div class="song-lanes" id="song-lanes"></div>
+      <div class="song-sel" id="song-sel" role="group" aria-label="The selected block" hidden>
+        <span class="song-sel-text" id="song-sel-text"></span>
+        <span class="song-sel-tools">
+          <button type="button" class="seq-tool" id="song-less" aria-label="Play it one time fewer">➖</button>
+          <button type="button" class="seq-tool" id="song-more" aria-label="Play it one more time">➕</button>
+          <button type="button" class="seq-tool" id="song-remove">🗑️</button>
+          <button type="button" class="close bar-close" id="song-sel-close" aria-label="Done with this block">✕</button>
+        </span>
+      </div>
+      <div class="seq-undo" id="song-undo" role="status" hidden>
+        <span id="song-undo-text"></span>
+        <span class="dj-done-buttons">
+          <button type="button" class="seq-tool" id="song-undo-button">↩️ Undo</button>
+          <button type="button" class="close bar-close" id="song-undo-close" aria-label="Dismiss">✕</button>
+        </span>
+      </div>
+      <div class="song-foot">
+        <button type="button" class="seq-add" id="song-add-lane">➕ Add a lane</button>
+        <button type="button" class="seq-tool" id="song-step-undo">↩️ Undo</button>
+      </div>
+      <p class="song-note" id="song-note" role="status"></p>
+    </section>
+    <div class="page-foot">
+      <p class="screen-hint" id="screen-hint"></p>
+      <!-- The version and date: a tap opens ⚙️ Settings at About (settings-ui.js). -->
+      <button type="button" class="version" id="version" aria-label="About Noodle Pads"></button>
+    </div>
+  </main>
+
+  <p class="sr-only" id="announce" role="status"></p>
+
+  <nav class="toolbar" aria-label="Tools">
+    <div class="screens" role="group" aria-label="Screen">
+      <button type="button" class="tool" id="pads-tab" data-screen="pads" aria-pressed="true"><span aria-hidden="true">🔊</span><span class="tool-name"> Pads</span></button>
+      <button type="button" class="tool" id="beats-toggle" data-screen="beats" aria-pressed="false"><span aria-hidden="true">🥁</span><span class="tool-name"> Beats</span></button>
+      <button type="button" class="tool" id="song-tab" data-screen="song" aria-pressed="false"><span aria-hidden="true">🎼</span><span class="tool-name"> Song</span></button>
+      <button type="button" class="tool" id="live-tab" data-screen="live" aria-pressed="false"><span aria-hidden="true">🎤</span><span class="tool-name"> Live</span></button>
+    </div>
+    <button type="button" class="tool tool-stop" id="stop-all" aria-label="Stop all"><span aria-hidden="true">⏹️</span><span class="tool-name"> Stop<span class="tool-more"> all</span></span></button>
+  </nav>
+
+  <!-- 🧸 Kids (ADR 0019; kids.js): the screens a person on the Kids level sees.
+       Pictures only: four big tabs and ⏹️ at the bottom, the ⚙️ gear (with a
+       grown-up sum) in its usual corner. The regular app is hidden meanwhile. -->
+  <section class="kids" id="kids" aria-label="Kids" hidden>
+    <div class="kids-view kids-pads-view" data-kids-view="pads">
+      <div class="kids-pages" id="kids-pages"></div>
+      <!-- More pages: ◀️ ▶️ for a mouse, a dot for each page (a finger swipes). -->
+      <div class="kids-turn" id="kids-turn" hidden>
+        <button type="button" class="kids-arrow" data-turn="-1" aria-label="Back a page">◀️</button>
+        <div class="kids-dots" id="kids-dots" aria-hidden="true"></div>
+        <button type="button" class="kids-arrow" data-turn="1" aria-label="Next page">▶️</button>
+      </div>
+    </div>
+    <div class="kids-view kids-record-view" data-kids-view="record" hidden>
+      <div class="kids-record-top">
+        <button type="button" class="kids-mic" id="kids-mic" aria-pressed="false" aria-label="Hold to record, let go to stop"><span aria-hidden="true">🎙️</span></button>
+        <button type="button" class="kids-last" id="kids-last" aria-label="Play your new sound" hidden></button>
+      </div>
+      <div class="kids-voices" role="group" aria-label="Voices">
+        <button type="button" class="kids-voice" data-kids-voice="robot" aria-pressed="false" aria-label="Robot">🤖</button>
+        <button type="button" class="kids-voice" data-kids-voice="tiny" aria-pressed="false" aria-label="Tiny">🐭</button>
+        <button type="button" class="kids-voice" data-kids-voice="spooky" aria-pressed="false" aria-label="Spooky">👻</button>
+      </div>
+    </div>
+    <div class="kids-view kids-beat-view" data-kids-view="beats" hidden>
+      <div class="kids-beat-bar">
+        <button type="button" class="kids-tempo" id="kids-slow" aria-pressed="false" aria-label="Slow">🐢</button>
+        <button type="button" class="kids-play" id="kids-play" aria-pressed="false" aria-label="Play">▶️</button>
+        <button type="button" class="kids-tempo" id="kids-fast" aria-pressed="false" aria-label="Fast">🏃</button>
+      </div>
+      <div class="kids-beat" id="kids-beat" role="group" aria-label="Your beat"></div>
+    </div>
+    <div class="kids-view kids-keys-view" data-kids-view="keys" hidden>
+      <div class="kids-keys" id="kids-keys" role="group" aria-label="Keys"></div>
+    </div>
+    <nav class="kids-bar" aria-label="Kids screens">
+      <button type="button" class="kids-tab" data-kids-tab="pads" aria-pressed="true" aria-label="Pads">🔊</button>
+      <button type="button" class="kids-tab" data-kids-tab="record" aria-pressed="false" aria-label="Record">🎙️</button>
+      <button type="button" class="kids-tab" data-kids-tab="beats" aria-pressed="false" aria-label="Beats">🥁</button>
+      <button type="button" class="kids-tab" data-kids-tab="keys" aria-pressed="false" aria-label="Keys">🎹</button>
+      <button type="button" class="kids-tab kids-stop" id="kids-stop" aria-label="Stop all">⏹️</button>
+    </nav>
+  </section>
+
+  <!-- 🧸 Kids' ⚙️: a sum for a grown-up. Right opens Settings and the regular
+       app for this visit; wrong goes quietly back (kids.js). -->
+  <dialog id="kids-sum" class="kids-sum" aria-labelledby="kids-sum-title">
+    <div class="kids-sum-box" id="kids-sum-box">
+      <div class="sheet-head">
+        <h2 id="kids-sum-title">For grown-ups</h2>
+        <button type="button" class="close" data-close aria-label="Back">✕</button>
+      </div>
+      <p class="kids-sum-q" aria-live="polite"><span id="kids-sum-a"></span> + <span id="kids-sum-b"></span> = <span class="kids-sum-typed" id="kids-sum-typed"></span></p>
+      <div class="kids-sum-keys" id="kids-sum-keys" role="group" aria-label="Answer">
+        <button type="button" data-digit="1">1</button><button type="button" data-digit="2">2</button><button type="button" data-digit="3">3</button>
+        <button type="button" data-digit="4">4</button><button type="button" data-digit="5">5</button><button type="button" data-digit="6">6</button>
+        <button type="button" data-digit="7">7</button><button type="button" data-digit="8">8</button><button type="button" data-digit="9">9</button>
+        <button type="button" class="kids-sum-zero" data-digit="0">0</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="settings-title">Settings</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="set-note" id="settings-note" role="status"></p>
+
+      <!-- First, and open until this device folds it (Ben, 2026-10-11). -->
+      <section class="set-section set-fold" id="set-privacy" data-open-first aria-labelledby="privacy-title">
+        <h3><button type="button" class="set-head" aria-expanded="false" aria-controls="set-privacy-body"><span class="set-head-caret" aria-hidden="true">▸</span><span id="privacy-title"></span><span class="set-head-chip" hidden></span></button></h3>
+        <div class="set-body" id="set-privacy-body" hidden>
+          <ul class="set-private-list" id="privacy-list"></ul>
+          <p class="field-hint">Everyone on this device goes to the cloud once they make something, and opens on any device. To keep someone on this device only: 👥 People, their ☁️, then 📴 Offline.</p>
+          <p class="field-hint" id="cloud-forgot"></p>
+        </div>
+      </section>
+
+      <section class="set-section set-fold" id="set-sharing" aria-labelledby="set-sharing-title">
+        <h3><button type="button" class="set-head" aria-expanded="false" aria-controls="set-sharing-body"><span class="set-head-caret" aria-hidden="true">▸</span><span id="set-sharing-title">🔗 Sharing</span><span class="set-head-chip" hidden></span></button></h3>
+        <div class="set-body" id="set-sharing-body" hidden>
+          <p class="field-hint">Type a share code to play what someone shared, or 🎛️ Remix it onto your board. To share or 🚫 Unshare your own: 👥 People, your ☁️, then 🔗 Share….</p>
+          <div class="set-buttons">
+            <button type="button" class="chip-dark" id="shared-browse">🔗 Shared with me</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="set-section set-fold" id="set-backups" aria-labelledby="set-backups-title">
+        <h3><button type="button" class="set-head" aria-expanded="false" aria-controls="set-backups-body"><span class="set-head-caret" aria-hidden="true">▸</span><span id="set-backups-title">Backups</span><span class="set-head-chip" hidden></span></button></h3>
+        <div class="set-body" id="set-backups-body" hidden>
+          <p class="field-hint">A backup is one file with your sounds, beats and settings. Load it on another tablet or phone to move everything over. Loading adds what is new to what is there, never deletes, and never doubles.</p>
+          <p class="field-hint backup-holds" id="backup-holds"></p>
+          <div class="set-buttons">
+            <button type="button" class="chip-dark" id="backup-save">💾 Save a backup</button>
+            <label class="chip-dark">📂 Load a backup<input type="file" id="backup-file" accept=".zip,application/zip"></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="set-section set-fold" id="set-older" aria-labelledby="set-older-title" hidden>
+        <h3><button type="button" class="set-head" aria-expanded="false" aria-controls="set-older-body"><span class="set-head-caret" aria-hidden="true">▸</span><span id="set-older-title">Older sounds found on this device</span><span class="set-head-chip" hidden></span></button></h3>
+        <div class="set-body" id="set-older-body" hidden>
+          <p class="field-hint" id="older-what"></p>
+          <div class="set-buttons">
+            <button type="button" class="chip-dark" id="older-bring">📥 Bring them in</button>
+            <button type="button" class="chip-dark" id="older-save">💾 Save everything it left</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="set-section set-fold set-beats" id="set-beats" aria-labelledby="set-beats-title">
+        <h3><button type="button" class="set-head" aria-expanded="false" aria-controls="set-beats-body"><span class="set-head-caret" aria-hidden="true">▸</span><span id="set-beats-title">Level</span><span class="set-head-chip" hidden></span></button></h3>
+        <div class="set-body" id="set-beats-body" hidden>
+          <p class="field-hint">Each person has their own level.</p>
+          <div class="seq-barsel set-keys set-levels" id="level-keys" role="group" aria-label="Level">
+            <button type="button" data-level="kids" aria-pressed="false">🧸 Kids</button>
+            <button type="button" data-level="regular" aria-pressed="false">Regular</button>
+            <button type="button" data-level="advanced" aria-pressed="false">Advanced</button>
+          </div>
+          <p class="field-hint" id="level-hint"></p>
+        </div>
+      </section>
+
+      <section class="set-section set-fold" id="set-keys" aria-labelledby="set-keys-title">
+        <h3><button type="button" class="set-head" aria-expanded="false" aria-controls="set-keys-body"><span class="set-head-caret" aria-hidden="true">▸</span><span id="set-keys-title">⌨️ Keyboard</span><span class="set-head-chip" hidden></span></button></h3>
+        <div class="set-body" id="set-keys-body" hidden>
+          <p class="field-hint">Pick your keyboard so the letters on the keys (🎤 Live, and 🥁 Beats with ⌨️ Keys) match the ones you press.</p>
+          <div class="set-layout" id="dj-layout-line">
+            <span id="dj-layout-name">Keyboard</span>
+            <div class="seq-barsel set-keys" id="dj-layout-keys" role="group" aria-labelledby="dj-layout-name">
+              <select class="seq-pick" id="dj-layout" aria-label="Keyboard"></select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="set-section set-fold" id="set-reports" aria-labelledby="set-reports-title">
+        <h3><button type="button" class="set-head" aria-expanded="false" aria-controls="set-reports-body"><span class="set-head-caret" aria-hidden="true">▸</span><span id="set-reports-title">Problem reports</span><span class="set-head-chip" hidden></span></button></h3>
+        <div class="set-body" id="set-reports-body" hidden>
+          <p class="field-hint">Ask a grown-up before you turn this on.</p>
+          <label class="set-radio set-switch">
+            <input type="checkbox" role="switch" id="send-logs" aria-describedby="send-logs-privacy">
+            <span><b>📮 Send problem reports</b> — The app sends the soundboard's own website a short report of what it did, so problems can be found and fixed. Off unless you turn it on.</span>
+          </label>
+          <p class="field-hint" id="send-logs-privacy">Reports never hold sounds, recordings or anyone's names. They go only to Ben, to fix the app.</p>
+          <p class="set-code" id="send-logs-code" hidden>This device's code: <b id="send-logs-device"></b></p>
+          <p class="field-hint" id="send-logs-where" hidden>Reports send only from noodlepads.com, not from this copy.</p>
+        </div>
+      </section>
+
+      <section class="set-section" aria-labelledby="set-about-title">
+        <h3 id="set-about-title">About</h3>
+        <p class="set-about" id="about-text"></p>
+        <!-- The version, as the page footer shows it: always last (settings-ui.js). -->
+        <p class="set-version" id="about-version"></p>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="help" aria-labelledby="help-title">
+    <div class="help-head">
+      <div class="sheet-head">
+        <h2 id="help-title">Help</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <div class="help-tabs" id="help-tabs" role="group" aria-label="Which part of the app"></div>
+    </div>
+    <div class="help-body" id="help-body"></div>
+  </dialog>
+
+  <dialog id="people-dialog" aria-labelledby="people-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="people-title">People</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="field-hint">Tap someone for their name, picture, color, cloud and PIN.</p>
+      <ul class="pe-list" id="people-edit"></ul>
+      <div class="sheet-actions">
+        <button type="button" class="quiet" id="cloud-browse">☁️ Open from the cloud</button>
+        <button type="button" class="primary" id="person-add">➕ Add a person</button>
+      </div>
+      <section class="pe-gone" id="people-gone" aria-labelledby="people-gone-title" hidden>
+        <h3 id="people-gone-title">Deleted — bring back</h3>
+        <ul class="pe-gone-list" id="people-gone-list"></ul>
+      </section>
+    </div>
+  </dialog>
+
+  <!-- 👥 People → tap someone: their profile sheet (people.js). With a PIN,
+       a change to the name, picture or color asks for it once per visit. -->
+  <dialog id="profile-dialog" class="np-dialog" aria-labelledby="profile-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="profile-title"><span class="cl-avatar" id="profile-avatar"></span> <span id="profile-name"></span></h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="set-note" id="profile-note" role="status"></p>
+      <p class="pf-counts" id="profile-counts"></p>
+      <div class="pf-looks">
+        <button type="button" class="pf-pic" id="profile-picture" data-avatar>
+          <span class="pf-pic-face" id="profile-face" aria-hidden="true"></span>
+          <span class="pf-pic-word">Picture</span>
+        </button>
+        <button type="button" class="chip-dark pf-dice" id="profile-reroll" data-reroll aria-keyshortcuts="Shift+Enter">🎲 Pick a name</button>
+      </div>
+      <h3 class="cl-head" id="profile-color-title">🎨 Color</h3>
+      <div class="pf-colors" id="profile-colors" role="group" aria-labelledby="profile-color-title"></div>
+      <h3 class="cl-head">☁️ Cloud</h3>
+      <div class="pf-line">
+        <p class="field-hint pf-cloud-text" id="profile-cloud-text"></p>
+        <button type="button" class="chip-dark" id="profile-cloud" data-cloud>☁️ Cloud</button>
+      </div>
+      <h3 class="cl-head">🔒 PIN</h3>
+      <p class="field-hint" id="profile-pin-hint"></p>
+      <div class="set-buttons">
+        <button type="button" class="chip-dark" id="cloud-pin">🔒 Set a PIN</button>
+        <button type="button" class="chip-dark" id="cloud-forget" hidden>🙈 Forget on this device</button>
+        <button type="button" class="chip-dark" id="cloud-pin-off" hidden>🔓 Remove the PIN</button>
+      </div>
+      <div class="sheet-actions pf-end">
+        <button type="button" class="quiet danger" id="profile-delete" data-remove>Delete</button>
+      </div>
+      <p class="field-hint">Delete takes them, their recordings and their beats off this device only. Their cloud copy stays.</p>
+    </div>
+  </dialog>
+
+  <!-- A profile sheet's 🎲 (tap, hold, right-click or Shift+Enter): a list of names to pick from (people.js). -->
+  <dialog id="names-dialog" class="np-dialog" aria-labelledby="names-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="names-title">Pick a name</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="field-hint">Tap one to use it. 🎲 More names shows another dozen.</p>
+      <ul class="cl-list names-list" id="names-list"></ul>
+      <div class="sheet-actions">
+        <button type="button" class="quiet" id="names-more">🎲 More names</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="avatar-dialog" class="np-dialog" aria-labelledby="avatar-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="avatar-title">Pick a picture</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="field-hint">It shows in the top corner and in the cloud's list.</p>
+      <div class="pictures-grid" id="avatar-grid"></div>
+    </div>
+  </dialog>
+
+  <dialog id="cloud-dialog" class="np-dialog" aria-labelledby="cloud-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="cloud-title"><span class="cl-avatar" id="cloud-avatar"></span> <span id="cloud-name"></span></h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="set-note cl-status" id="cloud-status" role="status"></p>
+      <section class="cl-part" id="cloud-in" aria-label="In the cloud" hidden>
+        <div class="set-buttons">
+          <button type="button" class="chip-dark" id="cloud-sync">🔄 Sync now</button>
+          <button type="button" class="chip-dark" id="cloud-share">🔗 Share…</button>
+          <button type="button" class="chip-dark" id="cloud-reopen" hidden>🔓 Open again</button>
+        </div>
+      </section>
+      <section class="cl-part" aria-label="Offline">
+        <h3 class="cl-head">📴 Offline</h3>
+        <p class="field-hint" id="cloud-offline-hint"></p>
+        <div class="set-buttons">
+          <button type="button" class="quiet danger" id="cloud-offline">📴 Offline (this device only)</button>
+          <button type="button" class="chip-dark" id="cloud-online" hidden>☁️ Put back in the cloud</button>
+        </div>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="cloud-list" class="np-dialog" aria-labelledby="cloud-list-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="cloud-list-title">☁️ Open from the cloud</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="field-hint">Tap someone to put them on this device. Their sounds and beats come with them.</p>
+      <p class="set-note" id="cloud-list-note" role="status"></p>
+      <ul class="cl-list" id="cloud-list-items"></ul>
+    </div>
+  </dialog>
+
+  <dialog id="share-dialog" class="np-dialog" aria-labelledby="share-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="share-title">🔗 Share</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="field-hint">Pick a sound, beat or song. You get a code: anyone who types it on any device can play it until you unshare it, but never change yours.</p>
+      <div class="set-reveal" id="share-made" hidden>
+        <p><span id="share-title-made"></span>: <span class="set-big" id="share-code"></span></p>
+        <button type="button" class="chip-dark" id="share-copy">📋 Copy the code</button>
+      </div>
+      <p class="set-note" id="share-note" role="status"></p>
+      <div class="cl-what" id="share-what" role="group" aria-label="What to share"></div>
+      <ul class="cl-list" id="share-items"></ul>
+      <h3 class="share-mine-head">Shared already</h3>
+      <p class="field-hint">🚫 Unshare stops a code working for everyone. Remixes others made stay theirs.</p>
+      <p class="set-note" id="share-mine-note" role="status"></p>
+      <ul class="cl-list" id="share-mine"></ul>
+    </div>
+  </dialog>
+
+  <!-- ✏️ Edit sounds: Move to group, Color · picture, Voice, and a group's ✏️ (bulk.js draws the body). -->
+  <dialog id="bulk-dialog" class="np-dialog" aria-labelledby="bulk-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="bulk-title">Edit sounds</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <div class="bulk-body" id="bulk-body"></div>
+    </div>
+  </dialog>
+
+  <dialog id="shared-dialog" class="np-dialog" aria-labelledby="shared-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="shared-title">🔗 Shared with me</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="field-hint">Type a share code to play what someone shared. 🎛️ Remix puts a copy on your board to change; the original never changes, and your remix stays even if it is unshared. A code stays in this list until you remove it.</p>
+      <div class="set-buttons">
+        <input class="set-field" id="shared-code" aria-label="Share code" placeholder="ABCD-2345" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12">
+        <button type="button" class="chip-dark" id="shared-open">Open</button>
+      </div>
+      <p class="set-note" id="shared-note" role="status"></p>
+      <p class="field-hint" id="shared-none">Nothing here yet.</p>
+      <ul class="cl-list" id="shared-items"></ul>
+    </div>
+  </dialog>
+
+  <dialog id="pin-dialog" class="np-dialog" aria-labelledby="pin-title">
+    <div class="chooser-body pin-body">
+      <div class="sheet-head">
+        <h2 id="pin-title">PIN</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="field-hint" id="pin-hint"></p>
+      <div class="pin-dots" id="pin-dots" aria-live="polite"><span></span><span></span><span></span><span></span></div>
+      <p class="set-note pin-note" id="pin-note" role="status"></p>
+      <label class="set-radio set-switch pin-remember" id="pin-remember-line" hidden>
+        <input type="checkbox" role="switch" id="pin-remember">
+        <span><b>Remember on this device</b> — then it opens without the PIN here.</span>
+      </label>
+      <div class="pin-keys" id="pin-keys" role="group" aria-label="Number keys"></div>
+      <p class="field-hint pin-forgot" id="pin-forgot" hidden></p>
+      <button type="button" class="quiet pin-new" id="pin-new" hidden>👋 Someone new</button>
+    </div>
+  </dialog>
+
+  <dialog id="library" aria-labelledby="library-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="library-title">🗂️ My beats</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="field-hint">Every beat saves itself. Tap one to open it.</p>
+      <div class="lib-sound-row">
+        <button type="button" class="chip-dark" id="lib-sound">🔊 Make the open beat a sound</button>
+        <label class="chip-dark">📥 Load a beat file<input type="file" id="lib-file" accept=".json,application/json"></label>
+      </div>
+      <p class="lib-note" id="lib-note" role="status"></p>
+      <p class="lib-empty" id="lib-empty" hidden>No beats yet. Tap 🆕 New to start one.</p>
+      <ul class="lib-list" id="lib-list"></ul>
+    </div>
+  </dialog>
+
+  <dialog id="lane-sheet" aria-labelledby="lane-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="lane-title">Lane</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="field-hint"><label for="lane-name">Its name</label></p>
+      <input class="set-field lane-name-field" id="lane-name" maxlength="16" autocomplete="off">
+      <p class="field-hint">Its picture:</p>
+      <div class="pictures-grid" id="lane-grid"></div>
+    </div>
+  </dialog>
+
+  <dialog id="songs" aria-labelledby="songs-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="songs-title">🗂️ My songs</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="field-hint">Every song saves itself. Tap one to open it.</p>
+      <p class="lib-note" id="songs-note" role="status"></p>
+      <p class="lib-empty" id="songs-empty" hidden>No songs yet. Tap 🆕 New to start one.</p>
+      <ul class="lib-list" id="songs-list"></ul>
+    </div>
+  </dialog>
+
+  <dialog id="grooves" aria-labelledby="grooves-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="grooves-title">💃 Grooves</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <div class="seq-barsel groove-how" id="groove-how" role="group" aria-label="What a groove does">
+        <button type="button" data-how="load" aria-pressed="true"><span class="key-icon" aria-hidden="true">📝</span> Into my scratch</button>
+        <button type="button" data-how="add" aria-pressed="false"><span class="key-icon" aria-hidden="true">➕</span> Add to this beat</button>
+      </div>
+      <p class="field-hint" id="groove-hint">Loads the groove into your scratch beat to play with. 💾 Keep saves it in 🗂️ My beats.</p>
+      <p class="lib-note" id="groove-note" role="status"></p>
+      <div class="groove-groups" id="groove-list"></div>
+    </div>
+  </dialog>
+
+  <dialog id="mixer" class="mixer" aria-labelledby="mixer-title">
+    <div class="chooser-body mixer-body">
+      <div class="sheet-head">
+        <h2 id="mixer-title">🎚️ Mixer</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="field-hint">Slide a row louder or quieter. Mute silences it; Solo plays only the solo rows. Each row and the Master can have one effect.</p>
+      <div class="mix-strips" id="mixer-strips" role="group" aria-label="Each row, then the Master"></div>
+    </div>
+  </dialog>
+
+  <!-- 🎹 The piano roll (roll.js, ADR 0023): a tune row's own screen. -->
+  <dialog id="roll" class="roll" aria-labelledby="roll-title">
+    <div class="roll-body">
+      <div class="roll-head">
+        <h2 id="roll-title" data-roll="title">🎹 Tune</h2>
+        <button type="button" class="primary roll-done" data-roll="done">✅ Done</button>
+      </div>
+      <div class="roll-bar">
+        <button type="button" class="seq-play" data-roll="play" aria-pressed="false">▶ Play</button>
+        <button type="button" class="seq-tool" data-roll="sound">🔊 Sound</button>
+        <span class="roll-octave" role="group" aria-label="Higher or lower notes">
+          <button type="button" class="seq-tool" data-roll="up" aria-label="Higher notes">⌃</button>
+          <button type="button" class="seq-tool" data-roll="down" aria-label="Lower notes">⌄</button>
+        </span>
+        <button type="button" class="seq-tool" data-roll="scale" aria-pressed="false">♯ All notes</button>
+        <button type="button" class="seq-tool" data-roll="half" aria-pressed="false" hidden>½ Half pills</button>
+        <button type="button" class="seq-tool" data-roll="undo" disabled>↩️ Undo</button>
+      </div>
+      <p class="roll-status" data-roll="status" role="status"></p>
+      <div class="roll-scroll" data-roll="scroll">
+        <div class="roll-grid" data-roll="grid" role="group" aria-label="Notes: the note names go up the side, the beat goes across"></div>
+      </div>
+      <p class="field-hint roll-hint">Tap a square for a note. Drag a note sideways to make it longer or shorter. Tap a note to take it out. Swipe up or down, or ⌃ ⌄, for higher or lower notes.</p>
+    </div>
+  </dialog>
+
+  <dialog id="pictures" aria-labelledby="pictures-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="pictures-title">Pick a picture</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="field-hint" id="pictures-hint">It changes everywhere this sound is: its pad, its key and its beat rows.</p>
+      <p class="lib-note pictures-note" id="pictures-note" role="status"></p>
+      <div class="pictures-grid" id="pictures-grid"></div>
+    </div>
+  </dialog>
+
+  <dialog id="takes" aria-labelledby="takes-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="takes-title">Takes</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="field-hint">Everything you recorded on 🎤 Live. Tap a name to rename it.</p>
+      <p class="lib-empty" id="takes-empty" hidden>No takes yet. Tap ● Record on 🎤 Live and play something.</p>
+      <ul class="lib-list" id="takes-list"></ul>
+    </div>
+  </dialog>
+
+  <dialog id="keys-edit" aria-labelledby="keys-edit-title">
+    <div class="ke-body">
+      <div class="ke-head">
+        <h2 id="keys-edit-title">✏️ Edit keys</h2>
+        <button type="button" class="seq-tool ke-done" data-close>✅ Done</button>
+      </div>
+      <div class="ke-main">
+        <section class="ke-layouts" aria-labelledby="ke-layouts-title">
+          <h3 class="ke-title" id="ke-layouts-title">Layouts</h3>
+          <div class="ke-layout-list" id="ke-layouts" role="group" aria-labelledby="ke-layouts-title"></div>
+          <div class="ke-line" id="ke-save-line" hidden>
+            <input class="beat-name" id="ke-save-name" maxlength="24" autocomplete="off" placeholder="Name this layout" aria-label="Name this layout">
+            <button type="button" class="seq-tool" id="ke-save-ok">⭐ Save</button>
+            <button type="button" class="seq-tool" id="ke-save-cancel">Cancel</button>
+          </div>
+          <div class="ke-line" id="ke-own-line" hidden>
+            <input class="beat-name" id="ke-rename" maxlength="24" autocomplete="off" aria-label="This layout's name (type to rename it)">
+            <button type="button" class="seq-tool" id="ke-delete">🗑️ Delete</button>
+          </div>
+        </section>
+        <section class="ke-board" aria-label="The keys">
+          <div class="ke-keys" id="ke-keys"></div>
+          <div class="ke-bar">
+            <p class="ke-note" id="ke-note" role="status"></p>
+            <span class="ke-bar-buttons">
+              <button type="button" class="seq-tool" id="ke-undo" disabled>↩️ Undo</button>
+              <button type="button" class="seq-tool" id="ke-reset">↺ Reset keys</button>
+            </span>
+          </div>
+        </section>
+      </div>
+      <section class="ke-sounds" aria-labelledby="ke-sounds-title">
+        <h3 class="ke-title" id="ke-sounds-title">Sounds</h3>
+        <div class="ke-groups" id="ke-groups" role="group" aria-label="Groups of sounds"></div>
+        <p class="ke-hint" id="ke-picks-hint"></p>
+        <div class="ke-picks" id="ke-picks" role="group" aria-label="Sounds"></div>
+        <button type="button" class="seq-tool ke-clear" id="ke-clear-picks" hidden>✕ Unpick all</button>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="chooser" aria-labelledby="chooser-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="chooser-title">Pick a sound</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <div class="chooser-groups" id="chooser-grid"></div>
+      <div class="chooser-foot">
+        <div class="chooser-tools" id="chooser-tools">
+          <div class="chooser-rate">
+            <span id="chooser-rate-name">Speed</span>
+            <div class="seq-barsel" id="chooser-rate" role="group" aria-labelledby="chooser-rate-name">
+              <button type="button" data-rate="0.5" aria-pressed="false" aria-label="Half speed">½×</button>
+              <button type="button" data-rate="1" aria-pressed="true" aria-label="Normal speed">1×</button>
+              <button type="button" data-rate="2" aria-pressed="false" aria-label="Double speed">2×</button>
+            </div>
+          </div>
+          <button type="button" class="seq-tool" id="chooser-melody" aria-pressed="false">🎹 Tune</button>
+        </div>
+        <button type="button" class="primary" id="chooser-ok">Use this sound</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="sheet" aria-labelledby="sheet-title">
+    <form id="sheet-form" novalidate>
+      <div class="sheet-head">
+        <!-- The sound's name is the title (Ben, 2026-10-11: "name can be at the top in the title bar"): tap it to rename. -->
+        <!-- ▶︎/■ plays the sound as it sounds now (Ben, 2026-10-11: "edit sound should have a play/stop button at the top"): at the left, away from ✕. -->
+        <button type="button" class="sheet-play" id="sheet-play" aria-label="Play the sound" title="Play (Space)" disabled>▶︎</button>
+        <div class="sheet-title-box">
+          <h2 id="sheet-title" class="sheet-kicker">New sound</h2>
+          <label class="sheet-name"><span class="sr-only">Name</span><input id="clip-label" maxlength="24" autocomplete="off" placeholder="Airhorn"></label>
+        </div>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+
+      <!-- Parts of the sheet: the sound and its wave; its voice, then its Layers; how it looks.
+           One column on a phone (.sheet-col is display: contents); side by side on wide screens (styles.css). -->
+      <div class="sheet-col sheet-hear">
+      <section class="capture" id="capture">
+        <button type="button" class="rec" id="rec-btn" aria-pressed="false">
+          <span class="rec-cap" aria-hidden="true"></span>
+          <span id="rec-label">Record</span>
+        </button>
+        <div class="capture-body">
+          <div class="grille grille-lg" id="rec-grille" aria-hidden="true"></div>
+          <p class="capture-status" id="rec-status" aria-live="polite">Tap Record, make your sound, then tap Stop.</p>
+          <div class="capture-actions">
+            <label class="chip" id="file-chip">Choose a file<input type="file" id="file-input" accept="audio/*"></label>
+            <button type="button" class="chip" id="make-btn" aria-expanded="false" aria-controls="make"><span aria-hidden="true">✨</span> Make one</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="make" id="make" aria-label="Make a sound from nothing" hidden>
+        <p class="make-hint" id="make-hint">No microphone needed: pick one.</p>
+        <div class="make-starters" id="make-starters"></div>
+        <div class="make-knobs" id="make-knobs" hidden>
+          <div class="amount make-amount"><span id="make-tone-name">Tone</span><input type="range" id="make-tone" data-knob="tone" min="0" max="2" step="1" aria-labelledby="make-tone-name"><output id="make-tone-out" for="make-tone"></output></div>
+          <label class="amount make-amount"><span>Starts at</span><input type="range" id="make-from" data-knob="from"><output for="make-from"></output></label>
+          <label class="amount make-amount"><span>Ends at</span><input type="range" id="make-to" data-knob="to"><output for="make-to"></output></label>
+          <label class="amount make-amount"><span>Length</span><input type="range" id="make-length" data-knob="length" min="0.05" max="3" step="0.05"><output for="make-length"></output></label>
+        </div>
+      </section>
+
+      <div class="wave-box" id="wave-box" hidden>
+        <canvas class="wave" id="wave" role="img" aria-label="The sound's wave"></canvas>
+        <button type="button" class="hold-before" id="before-btn" aria-describedby="before-hint"><span aria-hidden="true">👂</span> Hold: before</button>
+        <span class="sr-only" id="before-hint">Hold to hear the sound with no voice; let go to hear the voice again.</span>
+        <div class="wave-marks" id="wave-marks" hidden></div>
+        <p class="field-hint cut-from" id="cut-from" hidden></p>
+        <div class="cut" id="cut" hidden>
+          <div class="cut-tools" id="cut-start">
+            <button type="button" class="chain-tool" id="trim-btn"><span aria-hidden="true">✂️</span> Trim and edit</button>
+            <button type="button" class="chain-tool" id="chop-btn"><span aria-hidden="true">🧩</span> Chop into pads</button>
+          </div>
+          <div class="cut-panel" id="cut-panel" hidden>
+            <div class="cut-views" id="cut-views" role="group" aria-label="What the handles do">
+              <button type="button" class="chain-tool" data-view="ends" aria-pressed="true"><span aria-hidden="true">✂️</span> Ends</button>
+              <button type="button" class="chain-tool" data-view="fades" aria-pressed="false"><span aria-hidden="true">📐</span> Fades</button>
+              <button type="button" class="chain-tool" data-view="part" aria-pressed="false"><span aria-hidden="true">👆</span> Select part</button>
+            </div>
+            <p class="field-hint cut-hint" id="cut-hint" aria-live="polite"></p>
+            <div class="cut-edits" id="cut-edits" hidden>
+              <button type="button" class="chain-tool" data-edit="reverse"><span aria-hidden="true">🔄</span> Backwards</button>
+              <button type="button" class="chain-tool" data-edit="silence"><span aria-hidden="true">🔇</span> Silence it</button>
+              <button type="button" class="chain-tool" data-edit="louder"><span aria-hidden="true">🔊</span> Louder</button>
+              <button type="button" class="chain-tool" data-edit="quieter"><span aria-hidden="true">🔉</span> Quieter</button>
+              <button type="button" class="chain-tool cut-keep" data-edit="keep"><span aria-hidden="true">✂️</span> Keep only this</button>
+            </div>
+            <div class="cut-tools">
+              <button type="button" class="chain-tool" id="cut-undo">↩️ Undo</button>
+              <button type="button" class="chain-tool" id="cut-all">All of it</button>
+              <button type="button" class="chain-tool" id="cut-nofade">No fades</button>
+              <button type="button" class="chain-tool" id="cut-add">＋ Mark</button>
+              <button type="button" class="chain-tool" id="cut-remove">✕ Mark</button>
+              <button type="button" class="chain-tool" id="cut-done">✓ Done</button>
+              <button type="button" class="chain-tool cut-make" id="cut-make">🧩 Make pads</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <div class="sheet-col sheet-controls">
+      <!-- Voices are knob settings (voice-knobs.js): the voice chips, the line
+           saying what the lit one is, ⭐ Keep as mine · ↩️ Normal (sticky while
+           the layers scroll by), then the layers. One box, so the row sticks over them. -->
+      <div class="voice-box" id="voice-box">
+      <fieldset class="field">
+        <legend class="field-name"><button type="button" class="set-head sheet-fold" data-fold="voice" aria-expanded="true" aria-controls="voice-body"><span class="set-head-caret" aria-hidden="true">▾</span>Voice</button></legend>
+        <div class="fold-body" id="voice-body">
+        <p class="field-hint" id="voice-hint">Record something first, then tap a voice to hear it.</p>
+        <div class="voices voice-chips" id="voices"></div>
+        <ul class="my-voice-list" id="my-voice-list" aria-label="My voices" hidden></ul>
+        <div class="chain" id="chain" hidden>
+          <p class="field-hint chain-hint" id="chain-hint">Made the old way: it sounds just as it did.</p>
+          <ol class="chain-links" id="chain-links" aria-label="Voices made the old way, in the order they play"></ol>
+          <div class="chain-tools">
+            <button type="button" class="chain-tool" id="chain-knobs"><span aria-hidden="true">⤢</span> Turn into knobs</button>
+            <button type="button" class="chain-tool" id="chain-undo" hidden>↩️ The old way</button>
+          </div>
+        </div>
+        <div class="amount" id="amount-row" hidden>
+          <span id="amount-name">Speed</span>
+          <input type="range" id="amount" aria-labelledby="amount-name">
+          <output id="amount-out" for="amount"></output>
+        </div>
+        <p class="voice-line" id="voice-line" aria-live="polite"></p>
+        </div>
+      </fieldset>
+      <div class="voice-actions" id="voice-actions">
+        <button type="button" class="chain-tool" id="keep-btn" aria-expanded="false" aria-controls="keep-form"><span aria-hidden="true">⭐</span> Keep as mine</button>
+        <button type="button" class="chain-tool" id="normal-btn"><span aria-hidden="true">↩️</span> Normal</button>
+      </div>
+      <div class="keep-form" id="keep-form" hidden>
+        <label class="amount make-amount keep-name"><span id="keep-title">Name it</span><input id="keep-name" maxlength="24" autocomplete="off" aria-labelledby="keep-title"></label>
+        <div class="keep-emoji" id="keep-emoji" role="group" aria-label="Its picture"></div>
+        <div class="chain-tools">
+          <button type="button" class="chain-tool" id="keep-save"><span aria-hidden="true">⭐</span> <span id="keep-save-label">Keep it</span></button>
+          <button type="button" class="chain-tool" id="keep-cancel">Cancel</button>
+        </div>
+      </div>
+      <!-- Layers (Ben, 2026-10-11, Q42c: Knobs and Shape it merged, "an interface
+           similar to beats"): one row per layer, top to bottom as they play
+           (shape.js draws them). Inside the voice box, so ⭐ Keep · ↩️ Normal sticks over them. -->
+      <section class="field layers" id="layers" aria-labelledby="layers-name">
+        <h3 class="field-name" id="layers-name"><button type="button" class="set-head sheet-fold" data-fold="layers" aria-expanded="true" aria-controls="layers-body"><span class="set-head-caret" aria-hidden="true">▾</span>Layers</button></h3>
+        <div class="fold-body" id="layers-body">
+        <p class="field-hint layer-hint" id="layer-hint">Top plays first. 🔈 mutes a layer and keeps it.</p>
+        <ol class="layer-rows" id="layer-rows" aria-labelledby="layers-name"></ol>
+        <div class="chain-tools layer-add-line">
+          <button type="button" class="chain-tool" id="layer-add" aria-expanded="false" aria-controls="layer-palette">+ Add a layer</button>
+          <button type="button" class="chain-tool" id="shape-surprise" hidden><span aria-hidden="true">🎲</span> Surprise steps</button>
+        </div>
+        <div class="layer-palette" id="layer-palette" hidden></div>
+        <!-- Advanced: the sound's note, and mixing it with another. -->
+        <div class="layer-extra" id="layer-extra" hidden>
+        <div class="note-tools">
+          <button type="button" class="chain-tool" id="note-btn"><span aria-hidden="true">🎵</span> Find its note</button>
+          <p class="note-out" id="note-out" aria-live="polite"></p>
+        </div>
+        <label class="amount make-amount" id="tune-row" hidden><span>Tune</span><input type="range" id="tune" min="-12" max="12" step="1"><output id="tune-out" for="tune"></output></label>
+        <button type="button" class="chain-tool mix-open" id="mix-btn" aria-expanded="false" aria-controls="mix"><span aria-hidden="true">➕</span> Mix with another sound</button>
+        <div class="mix" id="mix" hidden>
+          <label class="mix-with"><span>Mix in</span><select id="mix-with"></select></label>
+          <label class="amount make-amount"><span>Starts after</span><input type="range" id="mix-offset" min="0" max="2" step="0.05"><output id="mix-offset-out" for="mix-offset"></output></label>
+          <label class="amount make-amount"><span>Balance</span><input type="range" id="mix-balance" min="0" max="1" step="0.05"><output id="mix-balance-out" for="mix-balance"></output></label>
+          <div class="chain-tools">
+            <button type="button" class="chain-tool" id="mix-play"><span aria-hidden="true">▶</span> Hear the mix</button>
+            <button type="button" class="chain-tool" id="mix-make">Make it a new sound</button>
+          </div>
+        </div>
+        </div>
+        <!-- The same ⚙️ Advanced as Settings, at the bottom (Ben: "maybe have the advanced toggle at the bottom?"). -->
+        <label class="set-radio set-switch layer-advanced">
+          <input type="checkbox" role="switch" id="sheet-advanced">
+          <span><b>⚙️ Advanced</b> — your own steps, the note and mixing</span>
+        </label>
+        </div>
+      </section>
+      </div>
+      </div>
+
+      <div class="sheet-col sheet-look">
+      <fieldset class="field">
+        <legend class="field-name">Picture</legend>
+        <div class="emoji-grid" id="emoji-grid"></div>
+      </fieldset>
+
+      <fieldset class="field">
+        <legend class="field-name">Color</legend>
+        <div class="swatches" id="swatches"></div>
+      </fieldset>
+      </div>
+
+      <p class="sheet-error" id="sheet-error" role="alert" hidden></p>
+
+      <div class="sheet-actions">
+        <button type="button" class="quiet danger" id="remove-btn" hidden>Delete sound</button>
+        <a class="quiet" id="download-link" hidden>Download</a>
+        <button type="submit" class="primary" id="save-btn">Save sound</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

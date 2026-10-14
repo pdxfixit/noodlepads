@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "soundboard",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/serve.py",
+        "8765"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "soundboard-pr",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "tools/serve.py",
+        "8781"
+      ],
+      "port": 8781
+    }
+  ]
+}

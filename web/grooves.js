@@ -1,0 +1,302 @@
+// Starter grooves: classic patterns of many styles, built from the kit, to
+// play with and change (ADR 0004). Beats' 💃 Grooves opens one as a beat;
+// DJ's plays one behind you while you play the keys. Both share this list
+// (sequencer.js grooveBeat turns a groove into a beat).
+//
+// A row is [kit id, hits]: "x" is a hit, "X" a loud hit, "." a rest, and a
+// space only splits the bars for reading. A pill is a sixteenth of a quarter
+// note, as everywhere in the beat maker, so a bar of 4/4 is 16 pills, 3/4
+// and 6/8 are 12, 5/4 is 20 and 7/8 is 14. A groove is 1, 2 or 4 bars
+// (BAR_CHOICES), every row the same length.
+//
+// Two honest approximations, since a beat's pills are always sixteenths:
+// - Swing and Shuffle use 6/8 bars for a 12/8 feel: each 6-pill group is one
+//   swung beat split in three, and two 6/8 bars are one bar of four swung
+//   beats. Their tempo counts quarter notes, so 168 BPM is a swung beat of 112.
+// - Bossa nova and Salsa count in cut time: one bar here is two real bars and
+//   a pill is an eighth note, so the tempo is half what a musician would say.
+// No groove uses the beat's Swing setting: it plays only with Advanced on.
+//
+// Bass and chords use the kit's natural notes (shown with Advanced off), in
+// C major and A minor; the kit has no bass B. tests/grooves.test.mjs checks
+// every groove's shape and sounds.
+
+// The dialog's groups, in order.
+export const GROOVE_GROUPS = [
+  { id: 'dance', name: 'Dance', emoji: '💃' },
+  { id: 'hiphop', name: 'Hip hop', emoji: '🎤' },
+  { id: 'rock', name: 'Rock & pop', emoji: '🎸' },
+  { id: 'latin', name: 'Latin', emoji: '🌴' },
+  { id: 'world', name: 'World', emoji: '🌍' },
+  { id: 'swing', name: 'Swing & odd times', emoji: '🎷' },
+];
+
+export const GROOVES = [
+  { id: 'four', name: 'Four on the floor', emoji: '🪩', group: 'dance', bpm: 120, rows: [
+    ['kick', 'x...x...x...x...'],
+    ['clap', '....x.......x...'],
+    ['hihat', '..x...x...x...x.']] },
+  { id: 'house', name: 'House', emoji: '🏠', group: 'dance', bpm: 124, rows: [
+    ['kick', 'x...x...x...x... x...x...x...x...'],
+    ['clap', '....x.......x... ....x.......x...'],
+    ['open-hat', '..x...x...x...x. ..x...x...x...x.'],
+    ['hihat', 'xx.xxx.xxx.xxx.x xx.xxx.xxx.xxx.x'],
+    ['chord-am', 'x..x..x...x..... ................'],
+    ['chord-f', '................ x..x..x...x.....'],
+    ['bass-a', '..x...x...x...x. ................'],
+    ['bass-f', '................ ..x...x...x...x.']] },
+  { id: 'techno', name: 'Techno', emoji: '🤖', group: 'dance', bpm: 130, rows: [
+    ['kick', 'x...x...x...x...'],
+    ['clap', '....x.......x...'],
+    ['ride', '..x...x...x...x.'],
+    ['hihat', 'xxxxxxxxxxxxxxxx'],
+    ['bass-e', '.xxx.xxx.xxx.xxx']] },
+  { id: 'disco', name: 'Disco', emoji: '🕺', group: 'dance', bpm: 116, rows: [
+    ['kick', 'x...x...x...x... x...x...x...x...'],
+    ['snare', '....x.......x... ....x.......x...'],
+    ['open-hat', '..x...x...x...x. ..x...x...x...x.'],
+    ['tambourine', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
+    ['chord-dm', '..x...x...x...x. ................'],
+    ['chord-g', '................ ..x...x...x...x.'],
+    ['bass-d', 'x.x.x.x.x.x.x.x. ................'],
+    ['bass-g', '................ x.x.x.x.x.x.x.x.']] },
+  { id: 'dnb', name: 'Drum & bass', emoji: '⚡', group: 'dance', bpm: 172, rows: [
+    ['kick', 'x.........x..... x.........x.....'],
+    ['snare', '....x.......x... ....x.......x...'],
+    ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
+    ['chord-am', 'x............... ................'],
+    ['chord-f', '................ x...............'],
+    ['bass-a', 'x.........x..... ................'],
+    ['bass-f', '................ x.........x.....']] },
+  { id: 'dubstep', name: 'Dubstep', emoji: '🫨', group: 'dance', bpm: 140, rows: [
+    ['kick', 'x.....x.........'],
+    ['snare', '........x.......'],
+    ['hihat', 'x.x.x.x.x.x.x.x.'],
+    ['bass-e', 'x..x..x.x..x..x.']] },
+  { id: 'boombap', name: 'Boom bap', emoji: '📼', group: 'hiphop', bpm: 90, rows: [
+    ['kick', 'x......x..x..... x......x..x.....'],
+    ['snare', '....x.......x... ....x.......x...'],
+    ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
+    ['chord-am', 'x.......x....... ................'],
+    ['chord-dm', '................ x.......x.......'],
+    ['bass-a', 'x......x..x..... ................'],
+    ['bass-d', '................ x......x..x.....']] },
+  { id: 'trap', name: 'Trap', emoji: '🔥', group: 'hiphop', bpm: 140, rows: [
+    ['boom', 'x......x..x..... x.........x..x..'],
+    ['clap', '........x....... ........x.......'],
+    ['hihat', 'x.x.x.x.x.xxx.x. x.x.x.x.xxxxx.x.'],
+    ['chord-am', 'x.......x....... ................'],
+    ['chord-em', '................ x.......x.......']] },
+  { id: 'halftime', name: 'Half-time', emoji: '🐢', group: 'hiphop', bpm: 140, rows: [
+    ['kick', 'x.....x...x.....'],
+    ['clap', '........x.......'],
+    ['hihat', 'xxxxxxxxxxxxxxxx']] },
+  { id: 'lofi', name: 'Lo-fi', emoji: '☕', group: 'hiphop', bpm: 80, rows: [
+    ['kick', 'x.....x.x....... x.....x.x.......'],
+    ['rim', '....x.......x... ....x.......x...'],
+    ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
+    ['chord-f', 'x.......x....... ................'],
+    ['chord-em', '................ x.......x.......'],
+    ['bass-f', 'x.....x......... ................'],
+    ['bass-e', '................ x.....x.........']] },
+  { id: 'oldschool', name: 'Old school', emoji: '📻', group: 'hiphop', bpm: 100, rows: [
+    ['kick', 'x.....x...x..x..'],
+    ['clap', '....x.......x...'],
+    ['hihat', 'x.x.x.x.x.x.x.x.'],
+    ['cowbell', '..x.......x.....'],
+    ['bass-c', 'x.....x...x..x..']] },
+  { id: 'backbeat', name: 'Backbeat', emoji: '🥁', group: 'rock', bpm: 100, rows: [
+    ['kick', 'x.......x.x.....'],
+    ['snare', '....x.......x...'],
+    ['hihat', 'x.x.x.x.x.x.x.x.']] },
+  { id: 'pop', name: 'Pop', emoji: '🍭', group: 'rock', bpm: 110, rows: [
+    ['kick', 'x.......x.x..... x.......x.x..... x.......x.x..... x.......x.x.....'],
+    ['snare', '....x.......x... ....x.......x... ....x.......x... ....x.......x...'],
+    ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
+    ['chord-c', 'x.....x.....x... ................ ................ ................'],
+    ['chord-g', '................ x.....x.....x... ................ ................'],
+    ['chord-am', '................ ................ x.....x.....x... ................'],
+    ['chord-f', '................ ................ ................ x.....x.....x...'],
+    ['bass-c', 'x.....x.....x... ................ ................ ................'],
+    ['bass-g', '................ x.....x.....x... ................ ................'],
+    ['bass-a', '................ ................ x.....x.....x... ................'],
+    ['bass-f', '................ ................ ................ x.....x.....x...']] },
+  { id: 'motown', name: 'Motown', emoji: '🚗', group: 'rock', bpm: 120, rows: [
+    ['snare', 'x...x...x...x... x...x...x...x...'],
+    ['tambourine', '....x.......x... ....x.......x...'],
+    ['kick', 'x.....x.x.....x. x.....x.x.....x.'],
+    ['chord-c', '..x...x...x...x. ................'],
+    ['chord-f', '................ ..x...x...x...x.'],
+    ['bass-c', 'x............... ................'],
+    ['bass-e', '....x........... ................'],
+    ['bass-g', '........x....... ........x.......'],
+    ['bass-a', '............x... ....x...........'],
+    ['bass-f', '................ x...............'],
+    ['bass-d', '................ ............x...']] },
+  { id: 'punk', name: 'Punk', emoji: '🤘', group: 'rock', bpm: 172, rows: [
+    ['kick', 'x...x...x...x... x...x...x...x...'],
+    ['snare', '..x...x...x...x. ..x...x...x...x.'],
+    ['crash', 'x............... ................'],
+    ['chord-g', 'x...x...x...x... ................'],
+    ['chord-c', '................ x...x...x...x...'],
+    ['bass-g', 'x.x.x.x.x.x.x.x. ................'],
+    ['bass-c', '................ x.x.x.x.x.x.x.x.']] },
+  { id: 'funk', name: 'Funk', emoji: '🕶️', group: 'rock', bpm: 100, rows: [
+    ['kick', 'x.x.......x..x..'],
+    ['snare', '....X..x.x..X..x'],
+    ['hihat', 'xxxxxxxxxxxxxxxx'],
+    ['chord-em', '..x..x....x..x..'],
+    ['bass-e', 'x.....x.x.......'],
+    ['bass-g', '...........x....'],
+    ['bass-a', '..............x.']] },
+  { id: 'dembow', name: 'Dembow', emoji: '🍍', group: 'latin', bpm: 96, rows: [
+    ['kick', 'x...x...x...x... x...x...x...x...'],
+    ['snare', '...x..x....x..x. ...x..x....x..x.'],
+    ['shaker', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
+    ['chord-am', 'x.......x....... ................'],
+    ['chord-f', '................ x.......x.......'],
+    ['bass-a', 'x...x...x...x... ................'],
+    ['bass-f', '................ x...x...x...x...']] },
+  { id: 'bossa', name: 'Bossa nova', emoji: '🏖️', group: 'latin', bpm: 70, rows: [
+    ['kick', 'x..xx..xx..xx..x x..xx..xx..xx..x'],
+    ['rim', 'x..x..x...x..x.. x..x..x...x..x..'],
+    ['shaker', 'xxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxx'],
+    ['chord-dm', 'x..x..x......... ................'],
+    ['chord-g7', '..........x..x.. ................'],
+    ['chord-c', '................ x..x..x...x..x..'],
+    ['bass-d', 'x...........x... ................'],
+    ['bass-a', '....x........... ................'],
+    ['bass-g', '........x....... ....x.......x...'],
+    ['bass-c', '................ x.......x.......']] },
+  { id: 'samba', name: 'Samba', emoji: '🎊', group: 'latin', bpm: 100, rows: [
+    ['kick', 'x...X...x...X... x...X...x...X...'],
+    ['shaker', 'xxxXxxxXxxxXxxxX xxxXxxxXxxxXxxxX'],
+    ['rim', 'x.x..x.x..x.x... x.x..x.x..x.x...'],
+    ['chord-c', 'x.x..x.x..x.x... ................'],
+    ['chord-g7', '................ x.x..x.x..x.x...'],
+    ['bass-c', 'x.......x....... ................'],
+    ['bass-g', '....x.......x... x.......x.......'],
+    ['bass-d', '................ ....x.......x...']] },
+  { id: 'salsa', name: 'Salsa', emoji: '🌶️', group: 'latin', bpm: 90, rows: [
+    ['clave', 'x..x..x...x.x...'],
+    ['cowbell', 'x.x.x.x.x.x.x.x.'],
+    ['conga', '......xx......xx'],
+    ['chord-c', '..x..x.x........'],
+    ['chord-g7', '..........x..x.x'],
+    ['bass-g', '...x..........x.'],
+    ['bass-c', '......x.........'],
+    ['bass-d', '...........x....']] },
+  { id: 'cumbia', name: 'Cumbia', emoji: '🪗', group: 'latin', bpm: 95, rows: [
+    ['shaker', 'x.xxx.xxx.xxx.xx x.xxx.xxx.xxx.xx'],
+    ['kick', 'x.......x....... x.......x.......'],
+    ['conga', '..x...x...x...x. ..x...x...x...x.'],
+    ['chord-am', '..x...x...x...x. ................'],
+    ['chord-g', '................ ..x...x...x...x.'],
+    ['bass-a', 'x............... ................'],
+    ['bass-e', '........x....... ................'],
+    ['bass-g', '................ x...............'],
+    ['bass-d', '................ ........x.......']] },
+  { id: 'afrobeat', name: 'Afrobeat', emoji: '☀️', group: 'world', bpm: 110, rows: [
+    ['kick', 'x.....x...x..x..'],
+    ['snare', '....x..x....x.x.'],
+    ['shaker', 'xxxxxxxxxxxxxxxx'],
+    ['cowbell', 'x.x..x.x..x.x...'],
+    ['chord-am', '..x...x...x...x.'],
+    ['bass-a', 'x.....x.........'],
+    ['bass-g', '........x.......'],
+    ['bass-e', '...........x..x.']] },
+  { id: 'reggae', name: 'Reggae one-drop', emoji: '🏝️', group: 'world', bpm: 76, rows: [
+    ['kick', '........x....... ........x.......'],
+    ['rim', '........x....... ........x.......'],
+    ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
+    ['chord-am', '....x.......x... ................'],
+    ['chord-dm', '................ ....x.......x...'],
+    ['bass-a', 'x..x..x......... ................'],
+    ['bass-d', '................ x..x..x.........']] },
+  { id: 'ska', name: 'Ska', emoji: '🏁', group: 'world', bpm: 160, rows: [
+    ['kick', 'x.......x....... x.......x.......'],
+    ['snare', '....x.......x... ....x.......x...'],
+    ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
+    ['chord-c', '..x...x...x...x. ................'],
+    ['chord-g', '................ ..x...x...x...x.'],
+    ['bass-c', 'x............... ................'],
+    ['bass-e', '....x.......x... ................'],
+    ['bass-g', '........x....... x.......x.......'],
+    ['bass-a', '................ ....x...........'],
+    ['bass-d', '................ ............x...']] },
+  { id: 'secondline', name: 'Second line', emoji: '☂️', group: 'world', bpm: 104, rows: [
+    ['kick', 'x.....x.....x...'],
+    ['snare', '..x.X.x...x.X.xx'],
+    ['tambourine', '....x.......x...'],
+    ['bass-c', 'x.....x.........'],
+    ['bass-g', '........x.....x.']] },
+  { id: 'maqsum', name: 'Maqsum', emoji: '🏺', group: 'world', bpm: 100, rows: [
+    ['tom-low', 'x.......x.......'],
+    ['rim', '..x...x.....x...'],
+    ['tambourine', 'x.x.x.x.x.x.x.x.'],
+    ['chord-dm', 'x.......x.......'],
+    ['bass-d', 'x.......x.......']] },
+  { id: 'swing', name: 'Swing', emoji: '🎺', group: 'swing', bpm: 168, signature: '6/8', rows: [
+    ['ride', 'x.....x...x. x.....x...x. x.....x...x. x.....x...x.'],
+    ['hihat', '......x..... ......x..... ......x..... ......x.....'],
+    ['kick', 'x.....x..... x.....x..... x.....x..... x.....x.....'],
+    ['chord-c', 'x.........x. ............ ............ ............'],
+    ['chord-dm', '............ ............ x.........x. ............'],
+    ['chord-g7', '............ ............ ............ ......x.....'],
+    ['bass-c', 'x........... ............ ............ ............'],
+    ['bass-e', '......x..... ............ ............ ............'],
+    ['bass-g', '............ x........... ............ x.....x.....'],
+    ['bass-a', '............ ......x..... ............ ............'],
+    ['bass-d', '............ ............ x........... ............'],
+    ['bass-f', '............ ............ ......x..... ............']] },
+  { id: 'shuffle', name: 'Shuffle', emoji: '🚂', group: 'swing', bpm: 144, signature: '6/8', rows: [
+    ['hihat', 'x...x.x...x. x...x.x...x. x...x.x...x. x...x.x...x.'],
+    ['snare', '......x..... ......x..... ......x..... ......x.....'],
+    ['kick', 'x........... x........... x........... x...........'],
+    ['chord-c', '......x..... ......x..... ............ ............'],
+    ['chord-f', '............ ............ ......x..... ......x.....'],
+    ['bass-c', 'x...x....... ............ ............ x...x.......'],
+    ['bass-e', '......x...x. ............ ............ ............'],
+    ['bass-g', '............ x...x....... ............ ............'],
+    ['bass-a', '............ ......x...x. ......x...x. ............'],
+    ['bass-f', '............ ............ x...x....... ............'],
+    ['bass-d', '............ ............ ............ ......x...x.']] },
+  { id: 'waltz', name: 'Waltz', emoji: '🩰', group: 'swing', bpm: 150, signature: '3/4', rows: [
+    ['kick', 'x........... x...........'],
+    ['hihat', '....x...x... ....x...x...'],
+    ['chord-c', '....x...x... ............'],
+    ['chord-g7', '............ ....x...x...'],
+    ['bass-c', 'x........... ............'],
+    ['bass-g', '............ x...........']] },
+  { id: 'sixeight', name: 'Six-eight', emoji: '⛵', group: 'swing', bpm: 96, signature: '6/8', rows: [
+    ['hihat', 'x.x.x.x.x.x. x.x.x.x.x.x.'],
+    ['kick', 'x........... x...........'],
+    ['snare', '......x..... ......x.....'],
+    ['chord-am', 'x.....x..... ............'],
+    ['chord-f', '............ x.....x.....'],
+    ['bass-a', 'x.....x..... ............'],
+    ['bass-f', '............ x.....x.....']] },
+  { id: 'march', name: 'March', emoji: '🥾', group: 'swing', bpm: 116, rows: [
+    ['kick', 'x.......x....... x.......x.......'],
+    ['snare', 'X.xxx.x.X.xxx.x. X.xxx.x.X.xxx.x.'],
+    ['chord-c', '....x.......x... ................'],
+    ['chord-g7', '................ ....x.......x...'],
+    ['bass-c', 'x............... ................'],
+    ['bass-g', '........x....... x...............'],
+    ['bass-d', '................ ........x.......']] },
+  { id: 'five', name: 'Five', emoji: '🖐️', group: 'swing', bpm: 168, signature: '5/4', rows: [
+    ['ride', 'x...x...x...x...x...'],
+    ['kick', 'x...........x.......'],
+    ['snare', '........x.......x...'],
+    ['chord-am', 'x.....x.............'],
+    ['chord-em', '............x...x...'],
+    ['bass-a', 'x.......x...........'],
+    ['bass-e', '............x...x...']] },
+  { id: 'seven', name: 'Seven', emoji: '🎻', group: 'swing', bpm: 140, signature: '7/8', rows: [
+    ['kick', 'X.......X.....'],
+    ['rim', '....x.........'],
+    ['tambourine', 'x.x.x.x.x.x.x.'],
+    ['chord-dm', 'x...x...x.....'],
+    ['bass-d', 'x...x.........'],
+    ['bass-a', '........x.....']] },
+];

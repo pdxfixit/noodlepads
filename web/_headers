@@ -1,0 +1,18 @@
+# Response headers for the Cloudflare deploy (Workers static assets read
+# this file). The local dev server (tools/serve.py) sends them too, except
+# Cache-Control, so the Content-Security-Policy is exercised while developing.
+#
+# no-cache means "check with the server before using a stored copy", so an
+# edited app.js reaches the tablets on their next load, as with `just serve`.
+# The microphone is allowed for this site only; recording needs it.
+#
+# The policy allows exactly what the page loads: its own scripts and styles,
+# the Google Fonts stylesheet and font files, blob: URLs for downloads and
+# data: for the tab icon. No inline script or style, no framing, no plugins.
+# Adding a new origin or inline code means changing this line on purpose.
+/*
+  Cache-Control: no-cache
+  Permissions-Policy: microphone=(self), camera=(), geolocation=()
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: same-origin
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'

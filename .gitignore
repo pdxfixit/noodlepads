@@ -1,0 +1,10 @@
+# Written by `just stamp` at deploy time.
+web/version.json
+
+# Python byte code, written when the tools and their tests run.
+__pycache__/
+
+# Throwaway worktrees: just ship and just land make .worktrees/, agent
+# sessions .claude/worktrees/. A fresh clone has no global ignore for them.
+.worktrees/
+.claude/worktrees/
