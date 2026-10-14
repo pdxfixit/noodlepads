@@ -48,8 +48,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 ### Hosting at noodlepads.com
 
-- [ ] Before the deploy that brings player metrics: `just cloud-migrate --yes` (1 min) 🔼
-  applies `worker/migrations/002-player-metrics.sql` (three new tables; nothing else changes). The Worker skips metrics until it has run, so nothing breaks either way. ADR 0016
+- [x] Apply the player-metrics migration (`just cloud-migrate --yes`) ✅ 2026-10-13
 - [ ] Set the Worker secret `IP_KEY` for the scrambled IP codes (2 min) 🔼
   `cd ~/src/flarepress/noodlepads.com && openssl rand -hex 32 | npx wrangler secret put IP_KEY` (nobody sees the key; it stays through deploys). Until then the metrics keep everything but that code. Don't change it later: old and new codes stop matching. `docs/deploy-cloudflare.md`
 - [x] Move the cloud ids and the logs token to their new names ✅ 2026-10-13
