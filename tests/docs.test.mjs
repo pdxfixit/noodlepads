@@ -18,7 +18,8 @@ const docs = ['AGENTS.md', 'CLAUDE.md', 'README.md', 'TODO.md',
 // anything inside a fenced code block (the ADR template has placeholders).
 function links(markdown) {
   const prose = markdown.replace(/```[\s\S]*?```/g, '');
-  return [...prose.matchAll(/\]\(([^)\s]+)\)/g)].map((m) => m[1])
+  // README's screenshots are HTML <img src="…">, so those count as links too.
+  return [...prose.matchAll(/\]\(([^)\s]+)\)|<img[^>]*\ssrc="([^"]+)"/g)].map((m) => m[1] ?? m[2])
     .filter((t) => !/^(https?:|mailto:|#)/.test(t))
     .map((t) => t.split('#')[0]);
 }
