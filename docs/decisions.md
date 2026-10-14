@@ -215,6 +215,7 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | Rule | Why | Since |
 |---|---|---|
 | The page behind the panels has a subtle pattern, from a wide set, picked at random on each visit; the panels stay solid, and the sticky bars (slim header, Pads' slider bar, bottom toolbar) carry the same pattern, lined up with the page's. No picker. | Ben: "a wide set of bkgnds that just rotate randomly"; "would be good if the bkgnd could extend to the sticky panels". | 2026-10-13 |
+| Pads' size slider sits centered in the room left on its line, and does not move when the bar sticks. | Ben: "the size scroller should be centered in the available space". | 2026-10-13 |
 | Where a line runs out of room, its less-used buttons move into a ⋯ menu at the line's end; buttons never shrink below 44 px to fit, and names may drop out. | Ben: "no need to muck about with smaller sizes… allow the buttons to move into a sub menu where space requires it". | 2026-10-12 |
 | Nearly every control has a tooltip: its own title, else one made from its screen-reader label or text (`web/tooltips.js`), kept in step as labels change. | Ben: "make sure nearly everything has tooltips, even though on the phone that's basically useless". | 2026-10-12 |
 | A sheet's heading row, with its 44 px ✕, sticks to the top of the sheet while it scrolls (Settings, People, the sound sheet, every cloud sheet; Help already did). Content passes under it. | Ben: "the settings close button should float to keep it available". | 2026-10-11 |

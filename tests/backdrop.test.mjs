@@ -99,3 +99,41 @@ test('the app shows a pattern on each visit and remembers nothing about it', asy
   }
   assert.doesNotMatch(readFileSync(new URL('../web/backdrop.js', import.meta.url), 'utf8'), /localStorage|remember\(|indexedDB|db\./);
 });
+
+// The sticky bars carry the pattern too (Ben, 2026-10-13: "would be good if
+// the bkgnd could extend to the sticky panels"), lined up with the page's
+// and still opaque.
+const rule = (sel) => {
+  const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const m = css.match(new RegExp(`(?:^|[},/]\\s*|\\n)${esc}\\s*(?:,[^{]*)?\\{([^}]*)\\}`));
+  return m ? m[1] : '';
+};
+
+test('the Pads bar and the toolbar draw the page\'s tile over their own solid color, cut to the bar', () => {
+  for (const bar of ['.pads-bar', '.toolbar']) {
+    const ink = rule(`:root[data-bg] ${bar}::before`);
+    assert.match(ink, /position: fixed;/, `${bar}: a screen-sized layer, the page's own box, so the tiles line up`);
+    assert.match(ink, /inset: 0;/, `${bar}: from the top left of the screen`);
+    assert.match(ink, /z-index: -1;/, `${bar}: under its buttons`);
+    assert.match(ink, /background: var\(--backdrop-ink\);/, `${bar}: the page's ink`);
+    assert.match(ink, /(^|[^-])mask: var\(--backdrop\) repeat;/, `${bar}: the page's tile`);
+    assert.match(rule(`:root[data-bg] ${bar}`), /clip-path: inset\(/, `${bar}: the layer is cut to the bar`);
+  }
+  // Opaque: each bar keeps its solid casing color under the ink.
+  assert.match(css, /\.pads-bar \{[^}]*position: sticky;[^}]*background: var\(--board\);/);
+  assert.match(css, /\n\.toolbar \{[^}]*background: var\(--board\);/);
+  // The toolbar's top line is drawn above the ink, as its shadow was.
+  assert.match(rule(':root[data-bg] .toolbar::after'), /background: var\(--board-deep\);/);
+});
+
+test('the slim header\'s band draws the tile at the top of the screen, over its solid color', () => {
+  const band = rule('body.head-slim .top::before');
+  assert.match(band, /position: fixed;[\s\S]*background: var\(--board\);/, 'the band is solid');
+  const ink = rule(':root[data-bg] body.head-slim .top::after');
+  assert.match(ink, /position: fixed;/);
+  assert.match(ink, /inset: 0 0 auto 0;/, 'at the top left of the screen, like the page layer');
+  assert.match(ink, /z-index: 6;/, 'over the band (z-index 6), under what sticks');
+  assert.match(ink, /height: calc\(var\(--slim-top\) \+ var\(--slim-h\)\);/, 'as tall as the band');
+  assert.match(ink, /background: var\(--backdrop-ink\);[\s\S]*(^|[^-])mask: var\(--backdrop\) repeat;/);
+  assert.match(rule(':root[data-bg] body.head-slim.screen-pads .top::after'), /height: calc\(var\(--slim-top\) \+ 64px\);/, 'on Pads, as tall as its band');
+});
