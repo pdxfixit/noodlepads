@@ -44,7 +44,7 @@ export const HELP = [
   {
     id: 'pads', screen: 'pads', tab: '🔊 Pads', title: 'Pads',
     items: [
-      { pic: [pad('😂', 'Laugh', '#FFD60A')], text: 'Tap a pad to play it. Tap it again to start it over.' },
+      { pic: [pad('😂', 'Laugh', '#FFD60A')], text: 'Tap a pad to play it. Tap it again to start it over. On a touch screen it plays as your finger lifts, so scrolling never plays one.' },
       { pic: [pad('🥁', 'Snare', '#4C8DFF'), word('👆 hold')], text: 'Hold a pad (or Shift-click it) to loop it. Hold more pads to stack loops. Tap one to stop it.' },
       { pic: [word('🔁'), pills('1.x.')], text: 'While a beat plays, a loop waits for the next 1, so it stays in time.' },
       { pic: [toolbar('Stop all')], text: 'Stops every sound and the beat.' },

@@ -14,6 +14,7 @@ import { countUse } from './uses.js';
 import { groupOwn, cleanGroups, UNGROUPED } from './groups.js';
 import { getSetting, setSetting, onSetting } from './settings.js';
 import { padWidth, sliderAt } from './pad-size.js';
+import { fingerTaps, isFinger } from './finger.js';
 
 const HOLD_TO_LOOP_MS = 350;  // hold a pad this long and it keeps repeating; a tap stops it
 
@@ -753,31 +754,40 @@ export function initPads(hooks) {
   };
   audio.on.broken = (id) => padFor(id)?.classList.add('broken');
 
-  // Pads play on pointerdown (quicker than click). Keyboard presses arrive as
-  // clicks with detail 0; in edit mode, a click opens the editor instead.
+  // A mouse plays a pad on pointerdown (quicker than click). A finger plays
+  // it on the lift, and only if it stayed put, so a scroll that starts on a
+  // pad never sounds it (finger.js). Keyboard presses arrive as clicks with
+  // detail 0; in edit mode, a click opens the editor instead.
   // Holding a pad switches its loop on, and it keeps going after the finger
   // lets go, so several can loop at once. Tapping a looping pad stops it.
   // Shift does what a hold does: Shift-click, Shift+Enter or Shift+Space
   // starts the loop at once (and stops a looping pad, as a tap does).
-  const holds = new Map();  // pointer id -> timer that turns the loop on
+  const holds = new Map();  // mouse pointer id -> timer that turns the loop on
+  const fingers = fingerTaps({
+    onTap: (clip) => tapPad(clip),
+    onHold: (clip) => audio.loop(clip),
+    holdMs: HOLD_TO_LOOP_MS,
+  });
   el.pads.addEventListener('pointerdown', (e) => {
     if (state.editing || e.button !== 0) return;
     const pad = e.target.closest('.pad[data-id]');
     if (!pad) return;
     const clip = findClip(pad.dataset.id);
     if (!clip) return;
+    if (isFinger(e)) { fingers.down(e, clip, { hold: !audio.isLooping(clip.id) }); return; }
     if (e.shiftKey && !audio.isLooping(clip.id)) { audio.loop(clip); return; }
     if (tapPad(clip)) return;
     holds.set(e.pointerId, setTimeout(() => audio.loop(clip), HOLD_TO_LOOP_MS));
   });
-  // A finger lifted (or a touch turned into a scroll) before the hold time is
-  // just a tap.
+  // A mouse let go before the hold time is just a click.
   const release = (e) => {
     clearTimeout(holds.get(e.pointerId));
     holds.delete(e.pointerId);
   };
-  window.addEventListener('pointerup', release);
-  window.addEventListener('pointercancel', release);
+  window.addEventListener('pointermove', (e) => fingers.move(e));
+  window.addEventListener('pointerup', (e) => { release(e); fingers.up(e); });
+  // The browser cancels a touch it takes for a scroll: nothing plays.
+  window.addEventListener('pointercancel', (e) => { release(e); fingers.cancel(e); });
   el.pads.addEventListener('pointerdown', dragDown);
   window.addEventListener('pointermove', dragMove);
   window.addEventListener('pointerup', dragUp);

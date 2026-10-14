@@ -193,6 +193,39 @@ test('Pads: big picture pads, the kit and the kid\'s own; a tap plays, nothing t
   assert.ok(pads[0].classList.contains('boing'), 'a bounce');
 });
 
+// Ben, 2026-10-13: "dragging a finger should not trigger a sound (like when
+// one is scrolling)". A finger plays on the lift, if it stayed put.
+// Not tested here: a real swipe's feel and the browser's own pointercancel.
+test('Pads, a finger: it sounds on the lift with a bounce; a page swipe, a cancelled touch or a pinch stays silent', () => {
+  const pads = $('#kids-pages').querySelectorAll('.kids-pad');
+  const touch = (props) => ({ pointerType: 'touch', clientX: 100, clientY: 100, ...props });
+  played.length = 0;
+  pads[1].classList.remove('boing');
+  pads[1].dispatch('pointerdown', touch({ pointerId: 21 }));
+  assert.deepEqual(played, [], 'nothing on touch-down');
+  page.winEvent('pointerup', touch({ pointerId: 21, clientX: 104, clientY: 103 }));
+  assert.deepEqual(played, [pads[1].dataset.clip], 'a tap sounds on the lift');
+  assert.ok(pads[1].classList.contains('boing'), 'with its bounce');
+  // A swipe to the next page.
+  played.length = 0;
+  pads[1].dispatch('pointerdown', touch({ pointerId: 22 }));
+  page.winEvent('pointermove', touch({ pointerId: 22, clientX: 60 }));
+  page.winEvent('pointerup', touch({ pointerId: 22, clientX: 100 }));
+  assert.deepEqual(played, [], 'a swipe that came back is still a swipe');
+  // The browser took the touch for a scroll.
+  pads[1].dispatch('pointerdown', touch({ pointerId: 23 }));
+  page.winEvent('pointercancel', touch({ pointerId: 23 }));
+  page.winEvent('pointerup', touch({ pointerId: 23 }));
+  assert.deepEqual(played, []);
+  // A second finger lands: a pinch.
+  pads[1].dispatch('pointerdown', touch({ pointerId: 24 }));
+  const t = (x) => ({ clientX: x, clientY: 100 });
+  $('#kids-pages').dispatch('touchstart', { touches: [t(100), t(200)] });
+  $('#kids-pages').dispatch('touchend', { touches: [] });
+  page.winEvent('pointerup', touch({ pointerId: 24 }));
+  assert.deepEqual(played, [], 'a pinch never plays');
+});
+
 test('more pages: ◀️ waits on the first page, ▶️ turns to the next, a dot per page', () => {
   const pages = $('#kids-pages').querySelectorAll('.kids-page').length;
   assert.equal($('#kids-turn').hidden, false);

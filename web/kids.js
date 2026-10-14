@@ -11,6 +11,7 @@
 import { audio, makeVoice, fadeStop, trimBounds } from './audio.js';
 import { logEvent } from './log.js';
 import { countUse } from './uses.js';
+import { fingerTaps, isFinger } from './finger.js';
 import { remember, recall, newId } from './util.js';
 import { soundName } from './names.js';
 import { openDialog, setupDialog } from './dialogs.js';
@@ -134,15 +135,25 @@ function setSize(next) {
 
 function wirePads() {
   let pinch = null;   // two fingers down: {size, dist} when they landed
-  el.pages.addEventListener('pointerdown', (e) => {
-    const pad = e.target.closest?.('.kids-pad');
-    if (!pad || pinch) return;
+  const play = (pad) => {
     const clip = deps.clips().find((c) => c.id === pad.dataset.clip);
     if (!clip) return;
     audio.play(clip);   // from the start, every tap: no holding, no looping
     countUse('pad', deps.personId());
     boing(pad);
+  };
+  // A finger plays a pad when it lifts in place, so a page swipe or a pinch
+  // that starts on a pad stays silent (finger.js). A mouse plays on press.
+  const fingers = fingerTaps({ onTap: (pad) => { if (!pinch) play(pad); } });
+  el.pages.addEventListener('pointerdown', (e) => {
+    const pad = e.target.closest?.('.kids-pad');
+    if (!pad || pinch) return;
+    if (isFinger(e)) fingers.down(e, pad); else play(pad);
   });
+  // On the window: a finger may lift off the pads.
+  window.addEventListener('pointermove', (e) => fingers.move(e));
+  window.addEventListener('pointerup', (e) => fingers.up(e));
+  window.addEventListener('pointercancel', (e) => fingers.cancel(e));
   // A long press opens nothing.
   el.pages.addEventListener('contextmenu', (e) => e.preventDefault());
   el.pages.addEventListener('scroll', () => {
@@ -155,7 +166,7 @@ function wirePads() {
   // Two fingers: a pinch. The pads change size as the fingers move.
   const spread = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
   el.pages.addEventListener('touchstart', (e) => {
-    if (e.touches?.length === 2) pinch = { size, dist: spread(e.touches) };
+    if (e.touches?.length === 2) { pinch = { size, dist: spread(e.touches) }; fingers.clear(); }
   }, { passive: true });
   el.pages.addEventListener('touchmove', (e) => {
     if (!pinch || e.touches?.length !== 2) return;
