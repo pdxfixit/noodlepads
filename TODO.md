@@ -52,8 +52,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
   applies `worker/migrations/002-player-metrics.sql` (three new tables; nothing else changes). The Worker skips metrics until it has run, so nothing breaks either way. ADR 0016
 - [ ] Set the Worker secret `IP_KEY` for the scrambled IP codes (2 min) 🔼
   `cd ~/src/flarepress/noodlepads.com && openssl rand -hex 32 | npx wrangler secret put IP_KEY` (nobody sees the key; it stays through deploys). Until then the metrics keep everything but that code. Don't change it later: old and new codes stop matching. `docs/deploy-cloudflare.md`
-- [ ] Move the cloud ids and the logs token to their new names (2 min) 🔼
-  The Cloudflare ids left the repo (it goes public). Make `~/.config/noodlepads/cloud.json` from the old file: `mkdir -p ~/.config/noodlepads && git show fa93e41:tools/logs.config.json | sed 's/noodle-pads-logs/noodlepads-logs/' > ~/.config/noodlepads/cloud.json`. Then rename the Keychain item: `security add-generic-password -s noodlepads-logs -a cloudflare -w "$(security find-generic-password -s noodle-pads-logs -w)" && security delete-generic-password -s noodle-pads-logs`. `just doctor` shows ✅ for both, and `just logs --sync` works.
+- [x] Move the cloud ids and the logs token to their new names ✅ 2026-10-13
 - [x] Pick the address: noodlepads.com ✅ 2026-10-11
 - [x] Pick public or family-only: public ✅ 2026-10-10
 - [ ] Open https://noodlepads.com/ on a tablet, record a sound, play a beat (5 min) 🔼
