@@ -86,8 +86,8 @@ test('GitHub deploys only after the tests and the migration guard', () => {
   assert.ok(at('run: just test') < at('run: just deploy-migrated'));
   assert.ok(at('run: just deploy-migrated') < at('uses: pdxfixit/flarepress@'));
   assert.ok(at('uses: pdxfixit/flarepress@') < at('run: just deploy-checks'));
-  // Pinned by full commit id: a push to flarepress cannot change this deploy.
-  assert.match(wf, /uses: pdxfixit\/flarepress@[0-9a-f]{40}\b/);
-  assert.match(wf, /ref: [0-9a-f]{40}\b/);
+  // flarepress's rolling v1 tag, the action and the checkout alike (Ben, 2026-10-15).
+  assert.match(wf, /uses: pdxfixit\/flarepress@v1\b/);
+  assert.match(wf, /ref: v1\b/);
   assert.match(wf, /branches: \[main\]/);
 });

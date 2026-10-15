@@ -20,7 +20,7 @@
 - **The token is this repo's own:** Account → Workers Scripts: Edit, D1: Read; noodlepads.com → Workers Routes: Edit, DNS: Edit, Zone: Read. D1 Read, not Write: whoever can push `main` can change the workflow, so the token is the real limit, and migrating stays Ben's.
 - **Migrations first.** `just deploy-migrated` (`cloud_admin.py pending`) stops a deploy while D1 lacks any `worker/migrations/*.sql`. Ben runs `just cloud-migrate --yes`, then re-runs the deploy.
 - **Ben's fallback:** `just deploy` from the Mac, the same steps with the Keychain token, through a clone of the public flarepress at `~/src/flarepress`.
-- **flarepress is public code only** (`github.com/pdxfixit/flarepress`, pinned by full commit id in each workflow); the private repo with its history is archived as `flarepress-archive`.
+- **flarepress is public code only** (`github.com/pdxfixit/flarepress`; workflows use its rolling `v1` tag, which Ben moves to release); the private repo with its history is archived as `flarepress-archive`.
 
 ## Options turned down
 
