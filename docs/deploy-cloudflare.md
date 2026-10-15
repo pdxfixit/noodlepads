@@ -62,7 +62,7 @@ with his Keychain token and the ids from `~/.config/noodlepads/cloud.json`:
 ```
 just deploy-check     # read-only pre-flight: main, committed, pushed, migrations applied, tests pass
 just deploy-plan      # deploy-check, then wrangler's dry run: validates, lists files, sends nothing
-just deploy           # harvest, deploy-check, stamp, wrangler deploy (asks to confirm), verify, live checks
+just deploy           # deploy-check, stamp, wrangler deploy (asks to confirm), verify, live checks
 just live             # what is live now, and whether it is main's web/ and worker/ (read-only)
 just rollback         # prints the revert steps for a bad deploy (below)
 ```
@@ -133,65 +133,9 @@ The site folder is `site/` in this repo since 2026-10-15 (ADR 0025).
   ([ADR 0016](adr/0016-player-metrics.md)). If an `IP_KEY` secret was ever
   set, nothing reads it: `npx wrangler secret delete IP_KEY` from
   `~/src/flarepress/noodlepads.com` removes it.
-- **Every deploy starts with `just harvest`**: D1's metrics and Cloudflare's
-  stats (flarepress's `just harvest noodlepads.com`, its
-  `noodlepads.com/harvest.conf`) and new problem reports go into the archives
-  on this Mac first. A failed harvest warns; the deploy goes on. The token is
-  the Keychain's `noodlepads-logs`: D1 Read, Zone → Analytics: Read and
-  Account → Account Analytics: Read (add Zone: Read if the zone lookup is
-  refused).
-
-## Cloud profiles and problem reports: one D1 database (live)
-
-[ADR 0002](adr/0002-cloud-profiles-on-one-worker.md), [ADR 0009](adr/0009-opt-in-problem-reports.md),
-[the design](design/cloud-profiles.md). This repo has the Worker script
-(`worker/index.js` and the files beside it), the schema (`worker/schema.sql`)
-and the reader (`tools/logs.py`). All of it is live since 2026-10-11: the
-steps below are how it was set up, kept for rebuilding it. Without the Worker
-the site would be assets only: the app says "The cloud isn't reachable from
-here" and problem reports are not stored.
-
-The whole Cloudflare footprint is **one Worker** (the site's own) and **one
-D1 database**, on the free plan. No KV, no R2, no Cron Triggers, no
-rate-limit binding. No secrets. Nothing here asks for a card.
-
-### Ben, once (about 15 minutes; please approve each step)
-
-1. **Make the database**, from `~/src/flarepress/noodlepads.com` with your own
-   `npx wrangler login` (the flarepress token may lack D1; if `wrangler` says
-   so, that is why):
-
-   ```
-   npx wrangler d1 create noodle-pads
-   ```
-
-   It prints a `database_id`. Note it.
-2. **Make the tables**, on a new, empty database only: `just cloud-schema --yes`
-   (it refuses a database that already has tables). The live database is
-   kept up to date by `just cloud-migrate` instead, which applies the files
-   in `worker/migrations/` not yet listed in its `migrations` table (a dry
-   run unless `--yes`).
-
-   Check: `just cloud-sql "SELECT name FROM sqlite_master WHERE type = 'table'"`
-   lists profiles, keys, records, sounds, sound_chunks, shares, share_sounds, reports, counters, migrations.
-3. **A read-only token for `just logs`**: dashboard → Manage Account → API Tokens →
-   Create Custom Token: **Account → D1 → Read**, for the Sandberg Family Domains
-   account only. Nothing else.
-4. **Keep it in the Keychain** (`-w` last makes it prompt, so the token stays out of shell history):
-
-   ```
-   security add-generic-password -s noodlepads-logs -a cloudflare -w
-   ```
-
-5. **Fill `~/.config/noodlepads/cloud.json`** (on this Mac, never in the repo,
-   which is public): `mkdir -p ~/.config/noodlepads && cp tools/cloud.example.json
-   ~/.config/noodlepads/cloud.json`, then fill in `account_id` (`npx wrangler
-   whoami` lists it) and `database_id` (step 1). `just doctor` says if it is missing.
-
-### The flarepress change (an agent, after step 2; for Ben to approve)
-
-In `~/src/flarepress/noodlepads.com/`:
-
+- **Deploys do not harvest.** The telemetry runner (pdxfixit/telemetry) is the only
+  harvester: daily, flarepress's `tools/harvest.py` on `site/`, with its own
+  read-only token and the D1 id from its own secrets.
 - `ln -s ~/src/noodlepads/worker worker` (beside `public`, the same pattern).
 - `wrangler.toml` becomes (the `name`, routes and comments stay as they are):
 

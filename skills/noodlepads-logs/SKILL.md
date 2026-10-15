@@ -1,9 +1,7 @@
 ---
 name: noodlepads-logs
 description: >
-  Noodle Pads telemetry and problem reports — once a day runs `just harvest`:
-  the player metrics and Cloudflare's stats into
-  ~/.local/state/noodlepads/metrics.sqlite3, and new uploads from the
+  Noodle Pads problem reports — once a day copies new uploads from the
   soundboard's D1 reports table (14 days) into the local SQLite archive kept
   forever (~/.local/state/noodlepads/logs.sqlite3); and once a week digests
   the week's errors and files each new kind of error as an "Agents do" line in
@@ -20,14 +18,14 @@ description: >
 
 Noodle Pads (the soundboard at https://noodlepads.com/) can send
 problem reports, if a device has the switch on. Its Worker keeps each one in
-the site's D1 database for 14 days, and the player metrics 14 days too
-(ADR 0016). This leg makes sure none expires unread: `just harvest` copies
-them into SQLite archives that are kept forever, and once a week the leg
+the site's D1 database for 14 days. This leg makes sure none expires unread:
+`just logs --sync` copies them into a SQLite archive that is kept forever, and once a week the leg
 turns new kinds of error into work for agents. Design: `~/src/noodlepads/docs/design/automatic-logs.md` § 6.
 
-All the work is done by the repo's own tools: `just harvest` (flarepress's
-`just harvest noodlepads.com`, then `tools/logs.py --sync`) and `just logs`.
-This leg decides when, runs them, and records what happened.
+All the work is done by the repo's own tool, `just logs` (`tools/logs.py`).
+This leg decides when, runs it, and records what happened. The player metrics
+and Cloudflare's stats are not this leg's: the telemetry runner
+(pdxfixit/telemetry) is the only harvester (Ben, 2026-10-15).
 
 ## Capability model
 
@@ -36,7 +34,7 @@ grants nothing beyond this table.
 
 | May | Never |
 |---|---|
-| Write the archives (`just harvest`, `just logs --digest --mark`) | Change any code, test, doc or setting in the soundboard repo |
+| Write the archive (`just logs --sync`, `just logs --digest --mark`) | Change any code, test, doc or setting in the soundboard repo |
 | Write its state, only through `gate.py done` | Edit any file but `TODO.md`, or any part of `TODO.md` but the lines `--file-new` adds |
 | Add one "Agents do" line per **new kind of error** to the soundboard repo's `TODO.md`, with `just logs --digest --file-new TODO.md` | Commit anything but `TODO.md`; commit when nothing new was filed |
 | Commit just `TODO.md`, push and deploy it, with `just ship` (the repo's rule: every commit to `main` is deployed) | Force-push, rebase, switch branches, or touch a worktree it did not make |
@@ -61,14 +59,12 @@ python3 ~/src/skills/noodlepads-logs/gate.py
 ### Phase 1 — sync (when due)
 
 ```sh
-just harvest > "$TMPDIR/noodlepads-sync.txt" 2>&1; echo "exit $?"
+just logs --sync > "$TMPDIR/noodlepads-sync.txt" 2>&1; echo "exit $?"
 ```
 
-`just harvest` copies the metrics and Cloudflare's stats first, then the
-problem reports, so the reports' line is last.
 
 - the last line reads `✅ synced N new upload(s) … newest <KEY>` → the reports are in. Record it,
-  with the harvest's own problems (its ⚠️ and 🛑 lines, when the exit was not 0) as attention:
+  with its own problems (its ⚠️ and 🛑 lines, when the exit was not 0) as attention:
   `grep -E '^(⚠️|🛑)' "$TMPDIR/noodlepads-sync.txt" | python3 ~/src/skills/noodlepads-logs/gate.py done sync --status ok --newest <KEY> --attention -`
   (leave out `--newest` when the archive is still empty).
 - anything else → the reports failed: record the failing line, and skip Phase 2 this run (a digest of a stale archive misleads):

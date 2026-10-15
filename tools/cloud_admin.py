@@ -10,8 +10,8 @@
                                                  --smoke: what the deploy checks left (p-smoke-…, p-e2e-…, and their shares)
     cloud_admin.py reset-pin ID [--yes]          clear a profile's PIN (Ben, from a pin.reset@ email)
     cloud_admin.py stats    [--days N]           the players: what each made; then reports the metrics
-                                                 (ADR 0016) from the local archive that `just harvest`
-                                                 fills: devices, places, activity by day and hour,
+                                                 (ADR 0016) from the local archive
+                                                 metrics.sqlite3: devices, places, activity by day and hour,
                                                  feature use, visits, errors
 
 Everything that changes the database shows what it would do and stops,
@@ -23,9 +23,9 @@ never taken for "nothing there".
 
 The metrics archive is ~/.local/state/noodlepads/metrics.sqlite3 (or
 $NOODLE_METRICS_DB), beside the problem-report archive (tools/logs.py).
-flarepress's tools/harvest.py copies D1 into it (site/harvest.conf
-says how), and `just cloud-stats` runs that
-first. D1 keeps events, counts and visits 14 days and a device's row 90; the
+It was filled by flarepress's tools/harvest.py (site/harvest.conf says
+how); since 2026-10-15 the telemetry runner (pdxfixit/telemetry) is the only
+harvester, and the Mac reads its store with `telemetry.py pull`. D1 keeps events, counts and visits 14 days and a device's row 90; the
 archive keeps them forever.
 
 Stdlib only. The tests (tools/test_cloud_admin.py) run every command against
@@ -237,7 +237,7 @@ def stats(db, now=None, out=print, archive=None, days=14, tz=None):
     """The players in the cloud (not the deploy checks' test profiles): what
     each has made, how much sound, PIN, devices and shares; then totals. Then
     the metrics (ADR 0016), reported from the archive (`archive`: a path or
-    an open connection; default metrics_path()), which `just harvest` fills."""
+    an open connection; default metrics_path()), filled by flarepress's harvest."""
     now = now or int(time.time() * 1000)
     rows = [r for r in db.query(STATS_SQL) if not is_test(r['id'])]
     counts = {}
@@ -266,7 +266,7 @@ def stats(db, now=None, out=print, archive=None, days=14, tz=None):
 
 # ── metrics: the local archive (ADR 0016) ──
 
-# The tables as `just harvest` makes them (D1's columns), so a report runs
+# The tables as flarepress's harvest makes them (D1's columns), so a report runs
 # on an archive nothing has filled yet. activity's ip_hash is from before
 # 2026-10-15: the archive never drops a column, and it was always empty.
 ARCHIVE_SCHEMA = """
@@ -314,12 +314,12 @@ def open_archive(path=None):
 
 
 def harvest_line(conn, name):
-    """When `just harvest` last filled the archive, and how it went."""
+    """When the harvest last filled the archive, and how it went."""
     got = dict(conn.execute('SELECT key, value FROM harvest_meta'))
     if 'last_run' not in got:
-        return f'⚠️ archive {name}: nothing harvested yet; run `just harvest` (cloud-stats runs it first)'
+        return f'⚠️ archive {name}: nothing harvested yet (the telemetry runner harvests; `telemetry.py pull` reads it)'
     result = got.get('last_result', '?')
-    return f"📦 archive {name}: last harvested {got['last_run']}" + ('' if result == 'ok' else f' ({result}: see `just harvest`)')
+    return f"📦 archive {name}: last harvested {got['last_run']}" + ('' if result == 'ok' else f' ({result})')
 
 
 BARS = ' ▁▂▃▄▅▆▇█'

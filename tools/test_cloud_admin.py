@@ -189,7 +189,7 @@ def visit(db, at, pid, secs, screens='pads', level='regular', load=None, latency
 
 
 def fill(db):
-    """The same metrics, in D1 (for prune) or in the archive (as `just harvest` leaves it)."""
+    """The same metrics, in D1 (for prune) or in the archive (as the harvest leaves it)."""
     device(db, PHONE, 'p-kid')
     device(db, TABLET, 'p-kid', kind='tablet', last=NOW - DAY, syncs=9)
     device(db, 'c' * 64, 'p-smoke-1')
@@ -203,7 +203,7 @@ def fill(db):
 
 class Metrics(unittest.TestCase):
     """`just cloud-stats`: the players from D1, then the metrics reported per
-    player from the archive `just harvest` fills (ADR 0016)."""
+    player from the harvest's archive (ADR 0016)."""
 
     def setUp(self):
         self.db = Local(ROOT / 'worker' / 'schema.sql')
@@ -274,12 +274,12 @@ class Metrics(unittest.TestCase):
     def test_an_archive_nothing_has_harvested_says_so(self):
         lines, out = quiet()
         ca.stats(self.db, now=NOW, out=out, archive=ca.open_archive(':memory:'), tz=timezone.utc)
-        self.assertTrue(any('nothing harvested yet; run `just harvest`' in l for l in lines))
+        self.assertTrue(any('nothing harvested yet (the telemetry runner harvests' in l for l in lines))
         self.assertEqual(lines[-1], 'No player metrics yet.')
 
     def test_a_harvest_that_failed_in_part_is_named(self):
         self.archive.execute("UPDATE harvest_meta SET value = '1 failed' WHERE key = 'last_result'")
-        self.assertTrue(any('(1 failed: see `just harvest`)' in l for l in self.stats()))
+        self.assertTrue(any('(1 failed)' in l for l in self.stats()))
 
     def test_the_archive_lives_beside_the_report_archive_unless_told(self):
         with tempfile.TemporaryDirectory() as home:
