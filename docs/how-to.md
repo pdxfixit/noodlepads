@@ -8,7 +8,7 @@ Step by step for the common jobs, so a fresh session never has to guess. [AGENTS
 |---|---|---|
 | A worktree (`.claude/worktrees/agent-…`, or a branch of your own) | Edit, `just test`, `just prove`, `just look`, commit on your branch | `just ship`, `just land`, `just deploy`: they push the **main checkout's** files, so from a worktree they would ship the wrong copy. Report your commits; the session that started you lands them. |
 | The main checkout (`~/src/noodlepads`, on `main`) | All of the above, plus `just ship`, `just land`, `just --yes deploy` | Switch branch: flarepress serves this folder's `web/` and `worker/` as they are on disk. |
-| A cloud session (this repo only, no flarepress; `tools/cloud-setup.sh` installs just) | Edit, `just test`, `just prove`, `just look`, commit, push a branch | Deploy, the live checks. Say so in your report, and what is unchecked. |
+| A cloud session (Ben's environment runs flarepress `tools/cloud-setup.sh`: just, wrangler, the Mac paths linked) | Edit, `just test`, `just prove`, `just look`, commit, push a branch | Deploy, the live checks. Say so in your report, and what is unchecked. |
 
 ## A bug fix in `web/`
 
