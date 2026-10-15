@@ -487,9 +487,10 @@ ADR 0002.
   tools, every dialog opened) and a summary of each finished visit
   (`web/visits.js`: seconds in view, screens, level, load time, the sound's
   delay, errors as file:line). D1 keeps them 14 days (a device's row 90).
-  `just harvest` copies them, with Cloudflare's stats for the site, into
-  `~/.local/state/noodlepads/metrics.sqlite3` (kept forever; or
-  `$NOODLE_METRICS_DB`). `just cloud-stats` harvests, lists what each player
+  The telemetry runner (pdxfixit/telemetry) harvests them daily, with
+  Cloudflare's stats for the site, into an archive kept forever.
+  `just cloud-stats` reads `~/.local/state/noodlepads/metrics.sqlite3` (or
+  `$NOODLE_METRICS_DB`), lists what each player
   made, and shows per player: devices (type, browser, OS, width, app version,
   syncs, first and last seen), places (city, region, country and network),
   activity over the last 14 days (`--days N`) and by hour, feature-use counts

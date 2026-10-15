@@ -76,7 +76,7 @@ the cloud database show what they would do, or ask, before they do it.
 | Back up the cloud database | `just cloud-backup` (a `.sql` file in `~/.local/state/noodlepads/backups/`) |
 | Look in the cloud database | `just cloud-profiles`, `just cloud-stats`, `just cloud-sql "SELECT …"`, or any wrangler command with `just cloud-db …` |
 | Change the cloud database | `just cloud-migrate` (then `--yes`) before a deploy that needs it; `just cloud-prune` (then `--yes`); `just cloud-reset-pin <profile id>`; `just cloud-schema` for a new, empty database only |
-| Bring the cloud's metrics, Cloudflare's stats and problem reports home | `just harvest` (every deploy runs it first) |
+| Bring new problem reports home | `just logs --sync` (the player metrics and Cloudflare's stats are harvested by the telemetry runner, pdxfixit/telemetry) |
 | Problem reports | `just logs --sync` brings new ones in; `just logs`, `--errors`, `--digest` read them |
 | Make sounds and emoji lists | `just placeholders`, `just emoji` |
 

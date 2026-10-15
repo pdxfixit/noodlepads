@@ -76,31 +76,12 @@ cloud-profiles:
     @python3 tools/cloud_admin.py profiles
 
 # The players in the cloud: what each has made (🔊 sounds 🥁 beats 🎼 songs 🎬 takes ⭐ voices ⌨️ layouts), sound size, PIN, devices, shares;
-# then `just harvest`, and the player metrics (ADR 0016) from ~/.local/state/noodlepads/metrics.sqlite3 (kept forever): devices,
+# then the player metrics (ADR 0016) from ~/.local/state/noodlepads/metrics.sqlite3 (kept forever): devices,
 # places (⚠️ more than one), activity by day (--days N, default 14) and hour, feature use, visits, errors
-[doc("Player report: what each player made, then harvest and the metrics (ADR 0016) from ~/.local/state/noodlepads/metrics.sqlite3. --days N")]
+[doc("Player report: what each player made, then the metrics (ADR 0016) from ~/.local/state/noodlepads/metrics.sqlite3. --days N")]
 [positional-arguments]
 cloud-stats *args:
-    @just harvest || echo "⚠️ the harvest did not fully work (above); reporting from the archive as it is"
     @python3 tools/cloud_admin.py stats "$@"
-
-# D1 keeps metrics 14 days (a device's row 90) and problem reports 14 days, and
-# Cloudflare its own stats about a month: this copies all of it into the
-# archives on this Mac, kept forever. flarepress's tools/harvest.py
-# (site/harvest.conf says how) does the metrics and Cloudflare's stats into
-# ~/.local/state/noodlepads/metrics.sqlite3; `just logs --sync` the problem
-# reports. `just deploy` and `just cloud-stats` run it first, and the daily
-# noodlepads-logs leg runs it (skills/noodlepads-logs). Read-only against the
-# cloud; safe to run again. Exit 1 when any part failed (what worked is kept).
-[doc("Copy the cloud's metrics, Cloudflare's stats and new problem reports into the local archives (read-only; deploy and cloud-stats run it first)")]
-harvest:
-    #!/usr/bin/env bash
-    set -uo pipefail
-    bad=0
-    {{ids}}
-    python3 "{{flarepress}}/tools/harvest.py" "{{site}}" || bad=1
-    python3 tools/logs.py --sync || bad=1
-    exit $bad
 
 #   just cloud-prune --days 90 --empty          what would go
 #   just cloud-prune --days 90 --empty --yes    delete them (shared sounds stay: a share is forever)
@@ -258,15 +239,12 @@ stamp:
     @"{{flarepress}}/tools/site.sh" "{{site}}" stamp
 
 # Ben's fallback when GitHub cannot deploy: the same steps from this Mac, with
-# the Keychain token. Agents never run it. Each deploy starts with a harvest
-# (Ben, 2026-10-15), so nothing waiting in the cloud is lost to a change; a
-# failed harvest warns and the deploy goes on.
+# the Keychain token. Agents never run it.
 [doc("Ben's fallback: deploy main to noodlepads.com from this Mac (GitHub deploys every push by itself). Agents never run it")]
 [confirm("Deploy the soundboard to noodlepads.com (public) from this Mac? GitHub deploys every push to main by itself. (y/N)")]
 deploy:
     #!/usr/bin/env bash
     set -euo pipefail
-    just harvest || echo "⚠️ the harvest did not fully work (above); deploying anyway"
     just deploy-check
     "{{flarepress}}/tools/site.sh" "{{site}}" gate
     just stamp
