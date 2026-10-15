@@ -51,7 +51,10 @@ look *args:
 [doc("The cloud database (D1 noodle-pads), through flarepress's auth: any wrangler d1 command. Ben's; agents never touch the live database")]
 [positional-arguments]
 cloud-db *args:
-    just --justfile {{flarepress}}/Justfile --working-directory {{flarepress}} d1 noodlepads.com "$@"
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ids}}
+    "{{flarepress}}/tools/wrangler.sh" "{{site}}" d1 "$@"
 
 # A NEW, empty database only: worker/schema.sql. Refuses a database that has tables (use cloud-migrate). --yes applies
 [positional-arguments]
@@ -83,8 +86,8 @@ cloud-stats *args:
 
 # D1 keeps metrics 14 days (a device's row 90) and problem reports 14 days, and
 # Cloudflare its own stats about a month: this copies all of it into the
-# archives on this Mac, kept forever. flarepress's `just harvest noodlepads.com`
-# (its noodlepads.com/harvest.conf) does the metrics and Cloudflare's stats into
+# archives on this Mac, kept forever. flarepress's tools/harvest.py
+# (site/harvest.conf says how) does the metrics and Cloudflare's stats into
 # ~/.local/state/noodlepads/metrics.sqlite3; `just logs --sync` the problem
 # reports. `just deploy` and `just cloud-stats` run it first, and the daily
 # noodlepads-logs leg runs it (skills/noodlepads-logs). Read-only against the
@@ -94,7 +97,8 @@ harvest:
     #!/usr/bin/env bash
     set -uo pipefail
     bad=0
-    just --justfile {{flarepress}}/Justfile --working-directory {{flarepress}} harvest noodlepads.com || bad=1
+    {{ids}}
+    python3 "{{flarepress}}/tools/harvest.py" "{{site}}" || bad=1
     python3 tools/logs.py --sync || bad=1
     exit $bad
 
@@ -134,7 +138,7 @@ cloud-backup file="":
       dir="$HOME/.local/state/noodlepads/backups"; mkdir -p "$dir"
       out="$dir/d1-$(date +%Y-%m-%d-%H%M).sql"
     fi
-    # cloud-db runs in flarepress's folder, so a relative path is made whole first.
+    # cloud-db runs in site/, so a relative path is made whole first.
     case "$out" in /*) ;; *) out="{{invocation_directory()}}/$out" ;; esac
     case "$out" in "{{justfile_directory()}}"/*) echo "🛑 not inside the repo (it is public): $out" >&2; exit 1 ;; esac
     just cloud-db export noodle-pads --remote --output "$out"
@@ -209,52 +213,74 @@ emoji:
     python3 tools/make_emoji.py
 
 
-# Deploys go through ~/src/flarepress, which owns every Sandberg domain on
-# Cloudflare; its noodlepads.com/public links to this repo's web/. The steps every
-# app site shares (check, gate, stamp, verify, live, rollback) are its
-# tools/site.sh, configured by noodlepads.com/site.conf. FLAREPRESS=/path points
-# at a clone somewhere else.
+# Deploys: every push to main is deployed by GitHub (.github/workflows/deploy.yml,
+# the pdxfixit/flarepress action, this repo's own Cloudflare token). site/ is the
+# site folder: wrangler.toml, site.conf (the shared steps' settings) and
+# harvest.conf. The recipes below are the same steps from Ben's Mac, through a
+# clone of the public flarepress at ~/src/flarepress (FLAREPRESS=/path for
+# another). Agents never deploy, from anywhere (Ben, 2026-10-15).
 flarepress := env("FLAREPRESS", env("HOME") / "src/flarepress")
 export FLAREPRESS := flarepress
+site := justfile_directory() / "site"
+# site/wrangler.toml names the database id as ${D1_DATABASE_ID}: a GitHub secret
+# on CI, ~/.config/noodlepads/cloud.json on the Mac. Recipes that run wrangler
+# start with this line.
+ids := '[ -n "${D1_DATABASE_ID:-}" ] || eval "$(python3 tools/cloud_config.py --exports)"'
 
-# ship and land pass DEPLOY_TESTED=<the commit> so the tests they just ran are not run a third time.
-[doc("Read-only pre-flight: main checkout on main, web/ and worker/ committed (ALLOW_DIRTY=1 overrides), HEAD pushed, flarepress links here, tests pass")]
+[doc("Read-only pre-flight: main checkout on main, web/ worker/ site/ committed (ALLOW_DIRTY=1 overrides), HEAD pushed, every migration applied, tests pass")]
 deploy-check:
     #!/usr/bin/env bash
     set -euo pipefail
-    {{flarepress}}/tools/site.sh noodlepads.com check --from "{{justfile_directory()}}"
-    if [ "${DEPLOY_TESTED:-}" = "$(git rev-parse HEAD)" ]; then echo "✅ tests passed on this commit (ship/land)"
-    elif out=$(just test 2>&1); then echo "✅ tests pass"
+    "{{flarepress}}/tools/site.sh" "{{site}}" check --from "{{justfile_directory()}}"
+    just deploy-migrated
+    if out=$(just test 2>&1); then echo "✅ tests pass"
     else echo "$out" >&2; echo "🛑 tests fail; nothing to deploy" >&2; exit 1; fi
+
+# The Worker in a commit may need tables a migration adds, and migrating is
+# Ben's: GitHub's deploy and Ben's both stop here until D1 has every migration.
+[doc("Exit 1 while any worker/migrations/*.sql is not applied to D1 (read-only). Every deploy runs it first")]
+deploy-migrated:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ids}}
+    python3 tools/cloud_admin.py pending
 
 [doc("Dry run: deploy-check, then wrangler validates, bundles the Worker and lists the files; sends nothing")]
 deploy-plan: deploy-check
-    just --justfile {{flarepress}}/Justfile --working-directory {{flarepress}} plan noodlepads.com
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{ids}}
+    "{{flarepress}}/tools/wrangler.sh" "{{site}}" deploy --dry-run
 
 # deploy-verify reads this stamp back, so the two can never disagree about -dirty.
 [doc("Write web/version.json (shown in the app's corner): git describe, plus -dirty for uncommitted edits in web/ or worker/. just deploy runs it")]
 stamp:
-    @{{flarepress}}/tools/site.sh noodlepads.com stamp
+    @"{{flarepress}}/tools/site.sh" "{{site}}" stamp
 
-# Deploy web/ to https://noodlepads.com/ (public), stamped with the version
-# Each deploy starts with a harvest (Ben, 2026-10-15), so nothing waiting in
-# the cloud is lost to a change; a failed harvest warns and the deploy goes on.
-[confirm("Deploy the soundboard to noodlepads.com (public)? (y/N)")]
+# Ben's fallback when GitHub cannot deploy: the same steps from this Mac, with
+# the Keychain token. Agents never run it. Each deploy starts with a harvest
+# (Ben, 2026-10-15), so nothing waiting in the cloud is lost to a change; a
+# failed harvest warns and the deploy goes on.
+[doc("Ben's fallback: deploy main to noodlepads.com from this Mac (GitHub deploys every push by itself). Agents never run it")]
+[confirm("Deploy the soundboard to noodlepads.com (public) from this Mac? GitHub deploys every push to main by itself. (y/N)")]
 deploy:
-    @just harvest || echo "⚠️ the harvest did not fully work (above); deploying anyway"
-    @just deploy-check
-    @{{flarepress}}/tools/site.sh noodlepads.com gate
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just harvest || echo "⚠️ the harvest did not fully work (above); deploying anyway"
+    just deploy-check
+    "{{flarepress}}/tools/site.sh" "{{site}}" gate
     just stamp
-    just --justfile {{flarepress}}/Justfile --working-directory {{flarepress}} push noodlepads.com
+    {{ids}}
+    "{{flarepress}}/tools/wrangler.sh" "{{site}}" deploy
     just deploy-verify
     just deploy-checks
 
 # Cherry-picks in a throwaway worktree (TODO.md conflicts resolved by
 # tools/resolve_todo.py; any other conflict stops), tests the result, moves
-# main, brings this checkout's copies of the touched files up to date, pushes
-# and deploys. On 2026-10-12 a hand-run landing left this checkout's files
-# stale, so deploy refused.
-[doc("Land an agent's commits on main, then deploy: just land <sha>... Run it from the main checkout")]
+# main, brings this checkout's copies of the touched files up to date and
+# pushes; GitHub deploys the push. On 2026-10-12 a hand-run landing left this
+# checkout's files stale.
+[doc("Land an agent's commits on main and push (GitHub deploys): just land <sha>... Run it from the main checkout")]
 land +commits:
     @bash tools/land.sh start {{commits}}
 
@@ -303,7 +329,7 @@ archive-agent id:
 
 # The message comes from a file. Stops at the first failure: tests red,
 # main moved under you, or a file that changed while committing.
-[doc("Commit the named files to main through a throwaway worktree, push, deploy: just ship <message-file> <files...>. Run it from the main checkout")]
+[doc("Commit the named files to main through a throwaway worktree and push (GitHub deploys): just ship <message-file> <files...>. Run it from the main checkout")]
 ship msgfile +files:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -334,9 +360,7 @@ ship msgfile +files:
     git reset -q
     git push -q origin main
     git log --oneline -1 | cat
-    # The whole output on failure, so the reason is never cut off by tail.
-    out=$(DEPLOY_TESTED=$(git rev-parse main) just --yes deploy 2>&1) || { echo "$out" >&2; exit 1; }
-    echo "$out" | tail -1
+    echo "🚀 pushed: GitHub deploys it (.github/workflows/deploy.yml); read that run, then just live"
 
 # (The new version is live by then, so a failure says that plainly.)
 [doc("After a deploy: just cloud-smoke and just cloud-e2e against the live site; both run, even if one fails. just deploy runs it")]
@@ -364,15 +388,15 @@ deploy-checks:
 
 [doc("Wait until the live site serves the stamped web/version.json (Cloudflare's edge can lag an upload; 90 s), then check / answers. just deploy runs it")]
 deploy-verify *flags:
-    @{{flarepress}}/tools/site.sh noodlepads.com verify {{flags}}
+    @"{{flarepress}}/tools/site.sh" "{{site}}" verify {{flags}}
 
 [doc("What is live now: status, cache headers, the version, and whether it serves main's web/ and worker/ (read-only)")]
 live:
-    @{{flarepress}}/tools/site.sh noodlepads.com live
+    @"{{flarepress}}/tools/site.sh" "{{site}}" live
 
 [doc("Roll back a bad deploy: prints the revert steps (never an old checkout: the Worker must match the live D1 tables)")]
 rollback:
-    @{{flarepress}}/tools/site.sh noodlepads.com rollback
+    @"{{flarepress}}/tools/site.sh" "{{site}}" rollback
 
 [doc("The daily live check, here: /, /version.json and /api/cloud answer, and live serves main's web/ and worker/ (an hour's grace for a deploy in flight). GitHub runs it daily (.github/workflows/live.yml)")]
 live-check *args:

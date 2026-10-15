@@ -13,8 +13,8 @@ fail() { printf '❌ %s\n' "$*"; bad=1; }
 root=$(git rev-parse --show-toplevel 2>/dev/null) || { fail "not in a git checkout of this repo"; exit 1; }
 cd "$root" || exit 1
 
-# Where am I? ship, land and deploy push the main checkout's files (flarepress
-# links to its web/ and worker/), so they only make sense from there.
+# Where am I? ship and land move and push main from the main checkout, so
+# they only make sense from there.
 git_dir=$(cd "$(git rev-parse --git-dir)" && pwd)
 common=$(cd "$(git rev-parse --git-common-dir)" && pwd)
 main_checkout=$(dirname "$common")
@@ -47,16 +47,15 @@ chrome=${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}
 [ -n "${CHROME:-}" ] || [ -x "$chrome" ] || [ ! -x /opt/pw-browsers/chromium ] || chrome=/opt/pw-browsers/chromium
 [ -x "$chrome" ] && ok "Chrome for just look and cloud-e2e" || warn "no Chrome at $chrome (set CHROME=…): just look and just cloud-e2e can't run"
 
-# Deploying: flarepress and its links. Without it (a cloud session) you can
-# test and commit, never deploy.
-fp="$HOME/src/flarepress"
-if [ -d "$fp/noodlepads.com" ]; then
-  web=$(readlink "$fp/noodlepads.com/public")
-  ok "flarepress: noodlepads.com serves $web"
-  [ "$web" = "$main_checkout/web" ] || warn "that is not this repo's main checkout ($main_checkout/web)"
-  [ -x "$fp/tools/site.sh" ] && ok "flarepress has tools/site.sh (the shared deploy steps)" || warn "flarepress has no tools/site.sh: git -C $fp pull (just deploy needs it)"
+# Deploying: GitHub deploys every push to main (ADR 0025). Ben's fallback,
+# `just deploy`, needs a clone of the public flarepress; agents never deploy.
+fp="${FLAREPRESS:-$HOME/src/flarepress}"
+if [ -x "$fp/tools/wrangler.sh" ]; then
+  ok "flarepress at $fp (Ben's fallback deploy, the harvest, cloud-db)"
+elif [ -d "$fp/noodlepads.com" ]; then
+  warn "$fp is the old private flarepress (archived): clone the public one there (TODO.md \"Ben does\")"
 else
-  warn "no $fp/noodlepads.com: this machine can test and commit, not deploy (docs/deploy-cloudflare.md)"
+  warn "no flarepress at $fp: GitHub deploys; the harvest and cloud-db recipes need git clone https://github.com/pdxfixit/flarepress $fp"
 fi
 # Ben's own cloud settings live outside the repo (it is public): the
 # Cloudflare ids in ~/.config/noodlepads/cloud.json, the logs token in the Keychain.

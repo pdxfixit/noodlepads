@@ -53,8 +53,10 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 - [x] Apply the player-metrics migration (`just cloud-migrate --yes`) ✅ 2026-10-13
 - [ ] Give the `noodlepads-logs` token Cloudflare's stats (3 min) 🔼
   In the dashboard, edit the read-only token stored in the Keychain as `noodlepads-logs`: keep D1 Read, add Zone → Analytics: Read and Account → Account Analytics: Read (and Zone → Zone: Read if `just harvest` says the zone lookup was refused). Then `just harvest`: every line ✅ or 📦.
-- [ ] Deploy the telemetry: `git pull` here and in `~/src/flarepress`, then `just cloud-migrate --yes` and at once `just deploy` (3 min) 🔼
-  `main` has it but the live site does not until then (the daily live check goes red meanwhile). Migration 003 adds `visits` and drops the always-empty `ip_hash` column; events written in the minute between the two are skipped, never failed. `docs/adr/0016-player-metrics.md`
+- [ ] Deploy the telemetry: `just cloud-migrate --yes`, then re-run the waiting deploy on GitHub (Actions → deploy → Re-run) (3 min) 🔼
+  GitHub's deploy stops at `just deploy-migrated` until D1 has migration 003; the live site lacks the telemetry until then (the daily live check goes red meanwhile).
+- [ ] Re-clone flarepress on the Mac: it is public code now, and the old one is archived as `flarepress-archive` (2 min)
+  `mv ~/src/flarepress ~/src/flarepress-archive && git clone https://github.com/pdxfixit/flarepress ~/src/flarepress`. Then `just doctor`. Migration 003 adds `visits` and drops the always-empty `ip_hash` column; events written in the minute between the two are skipped, never failed. `docs/adr/0016-player-metrics.md`
 - [x] Move the cloud ids and the logs token to their new names ✅ 2026-10-13
 - [x] Pick the address: noodlepads.com ✅ 2026-10-11
 - [x] Pick public or family-only: public ✅ 2026-10-10

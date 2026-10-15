@@ -8,8 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -49,27 +48,46 @@ test('every tool is named in the docs', () => {
   assert.deepEqual(tools.filter((f) => !docs.includes(f)), []);
 });
 
-test('a deploy runs the shared flarepress check, stamp and verify', () => {
+test('a deploy runs the shared flarepress check, stamp and verify on site/', () => {
   // Until 2026-10-13 stamp marked -dirty for web/ only while deploy-verify used
   // git describe --dirty (the whole tree): an edited TODO.md made it wait for
   // a version that was never stamped, then fail. Both now come from flarepress's
   // tools/site.sh, and verify reads the stamp back.
   const just = readFileSync(join(root, 'justfile'), 'utf8');
   const body = (name) => just.split(`\n${name}`)[1].split('\n\n')[0];
-  assert.match(body('deploy-check:'), /site\.sh noodlepads\.com check --from/);
-  assert.match(body('stamp:'), /site\.sh noodlepads\.com stamp/);
-  assert.match(body('deploy-verify *flags:'), /site\.sh noodlepads\.com verify/);
+  assert.match(body('deploy-check:'), /site\.sh" "\{\{site\}\}" check --from/);
+  assert.match(body('deploy-check:'), /just deploy-migrated/);
+  assert.match(body('stamp:'), /site\.sh" "\{\{site\}\}" stamp/);
+  assert.match(body('deploy-verify *flags:'), /site\.sh" "\{\{site\}\}" verify/);
   assert.match(body('deploy:'), /just deploy-check/);
   assert.doesNotMatch(just, /describe[^\n]*--dirty/);
 });
 
-test('a deploy refuses uncommitted edits in everything it uploads', (t) => {
-  // flarepress links to web/ (the site) and worker/ (the /api Worker). The
-  // shared check reads these from site.conf. (moved/, the retired old
-  // address's page, may still be listed until flarepress drops it; a path
-  // that no longer exists checks nothing.)
-  const conf = join(process.env.FLAREPRESS || join(homedir(), 'src/flarepress'), 'noodlepads.com/site.conf');
-  if (!existsSync(conf)) return t.skip('no flarepress on this machine');
-  const committed = readFileSync(conf, 'utf8').match(/^committed=(.*)$/m)?.[1].split(/\s+/) ?? [];
-  for (const dir of ['web', 'worker']) assert.ok(committed.includes(dir), `site.conf commits ${dir}/`);
+test('a deploy refuses uncommitted edits in everything it uploads', () => {
+  // site/wrangler.toml ships web/ (the site), worker/ (the /api Worker) and
+  // itself; the shared check reads the paths from site/site.conf.
+  const committed = readFileSync(join(root, 'site/site.conf'), 'utf8').match(/^committed=(.*)$/m)?.[1].split(/\s+/) ?? [];
+  for (const dir of ['web', 'worker', 'site']) assert.ok(committed.includes(dir), `site.conf commits ${dir}/`);
+});
+
+test('site/wrangler.toml holds no ids: the public repo names them for the deploy to fill', () => {
+  // GitHub fills ${D1_DATABASE_ID} from a secret, Ben's Mac from ~/.config/noodlepads/cloud.json.
+  const toml = readFileSync(join(root, 'site/wrangler.toml'), 'utf8');
+  assert.match(toml, /^database_id = "\$\{D1_DATABASE_ID\}"$/m);
+  assert.doesNotMatch(toml, /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b|\b[0-9a-f]{32}\b/);
+  assert.match(toml, /^main = "\.\.\/worker\/index\.js"$/m);
+  assert.match(toml, /^directory = "\.\.\/web"$/m);
+});
+
+test('GitHub deploys only after the tests and the migration guard', () => {
+  // Migrating is Ben's: a Worker that needs newer tables must not go out first.
+  const wf = readFileSync(join(root, '.github/workflows/deploy.yml'), 'utf8');
+  const at = (s) => { const i = wf.indexOf(s); assert.ok(i >= 0, `deploy.yml runs ${s}`); return i; };
+  assert.ok(at('run: just test') < at('run: just deploy-migrated'));
+  assert.ok(at('run: just deploy-migrated') < at('uses: pdxfixit/flarepress@'));
+  assert.ok(at('uses: pdxfixit/flarepress@') < at('run: just deploy-checks'));
+  // Pinned by full commit id: a push to flarepress cannot change this deploy.
+  assert.match(wf, /uses: pdxfixit\/flarepress@[0-9a-f]{40}\b/);
+  assert.match(wf, /ref: [0-9a-f]{40}\b/);
+  assert.match(wf, /branches: \[main\]/);
 });

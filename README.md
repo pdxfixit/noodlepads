@@ -66,11 +66,11 @@ the cloud database show what they would do, or ask, before they do it.
 
 | Task | Recipe |
 |---|---|
-| Is this Mac ready? | `just doctor` (tools, flarepress, `~/.config/noodlepads/cloud.json`, the Keychain token) |
+| Is this Mac ready? | `just doctor` (tools, flarepress at `~/src/flarepress`, `~/.config/noodlepads/cloud.json`, the Keychain token) |
 | Run it here | `just serve`; on an Android phone `just phone <serial>`, undone by `just phone-off <serial>` |
 | Test | `just test` (judge by the exit code); `just stress` for a test that fails only sometimes |
 | Look at every screen width | `just look` (`--wide` adds the big screens; `just look --help` lists views) |
-| Deploy | `just deploy` (asks first); `just deploy-check` and `just deploy-plan` change nothing |
+| Deploy | GitHub deploys every push to `main` (`.github/workflows/deploy.yml`); from the Mac, `just deploy` (asks first). `just deploy-check`, `just deploy-plan` and `just deploy-migrated` change nothing |
 | What is live, and roll back | `just live`; `just rollback` prints the steps; `just live-check` is the daily check |
 | Check the live cloud | `just deploy-checks` runs `just cloud-smoke` and `just cloud-e2e` (each makes and deletes its own test profile) |
 | Back up the cloud database | `just cloud-backup` (a `.sql` file in `~/.local/state/noodlepads/backups/`) |
@@ -81,11 +81,11 @@ the cloud database show what they would do, or ask, before they do it.
 | Make sounds and emoji lists | `just placeholders`, `just emoji` |
 
 Agents use the rest: `just ship`, `just land`, `just land-continue`,
-`just archive-agent`, `just prove`, and the steps `just deploy` runs itself
+`just archive-agent`, `just prove`, and the steps a deploy runs itself
 (`just stamp`, `just deploy-verify`).
 
-Deploying goes through flarepress, which owns the domain:
-[docs/deploy-cloudflare.md](docs/deploy-cloudflare.md).
+Deploying uses [flarepress](https://github.com/pdxfixit/flarepress) and the site
+folder `site/`: [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md).
 
 ## Docs
 
