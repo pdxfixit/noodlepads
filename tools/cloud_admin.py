@@ -10,8 +10,8 @@
                                                  --smoke: what the deploy checks left (p-smoke-…, p-e2e-…, and their shares)
     cloud_admin.py reset-pin ID [--yes]          clear a profile's PIN (Ben, from a pin.reset@ email)
     cloud_admin.py stats    [--days N]           the players: what each made; then reports the metrics
-                                                 (ADR 0016) from the local archive
-                                                 metrics.sqlite3: devices, places, activity by day and hour,
+                                                 (ADR 0016) from the telemetry runner's pulled store
+                                                 (read only): devices, places, activity by day and hour,
                                                  feature use, visits, errors
 
 Everything that changes the database shows what it would do and stops,
@@ -237,7 +237,8 @@ def stats(db, now=None, out=print, archive=None, days=14, tz=None):
     """The players in the cloud (not the deploy checks' test profiles): what
     each has made, how much sound, PIN, devices and shares; then totals. Then
     the metrics (ADR 0016), reported from the archive (`archive`: a path or
-    an open connection; default metrics_path()), filled by flarepress's harvest."""
+    an open connection; default default_archive(): the telemetry runner's
+    pulled store, else the older metrics.sqlite3)."""
     now = now or int(time.time() * 1000)
     rows = [r for r in db.query(STATS_SQL) if not is_test(r['id'])]
     counts = {}
@@ -256,8 +257,11 @@ def stats(db, now=None, out=print, archive=None, days=14, tz=None):
             f"{'yes' if r['pin'] else 'no':>3} {r['devices']:>7} {r['shares']:>6}")
     total = sum(r['bytes'] or 0 for r in rows)
     out(f'{len(rows)} players · {week} active in the last 7 days · {size(total)} of sound')
-    conn = archive if isinstance(archive, sqlite3.Connection) else open_archive(archive)
-    conn.executescript(ARCHIVE_SCHEMA)
+    if isinstance(archive, sqlite3.Connection):
+        conn = archive
+        conn.executescript(ARCHIVE_SCHEMA)
+    else:
+        conn = open_archive(archive)   # the schema, or the store's read-only views
     out('')
     out(harvest_line(conn, archive_name(archive)))
     metrics_report(conn, now, out, days=days, tz=tz)
@@ -299,22 +303,80 @@ def metrics_path(home=None):
     return Path(os.environ.get('NOODLE_METRICS_DB') or cloud_config.state_dir(home) / 'metrics.sqlite3').expanduser()
 
 
+# The telemetry runner (pdxfixit/telemetry) is the only harvester since
+# 2026-10-15; `telemetry.py pull` copies its store to this Mac, with this
+# site's tables as noodlepads__<table> and a `_runs` log of every run.
+TELEMETRY_JOB = 'noodlepads'
+
+
+def telemetry_path(home=None):
+    return Path(os.environ.get('TELEMETRY_DB') or Path(home or Path.home()) / '.local/state/telemetry/telemetry.sqlite3').expanduser()
+
+
+def default_archive(home=None):
+    """The runner's pulled store when it is there (and NOODLE_METRICS_DB names
+    no other file); else the older harvest archive, metrics.sqlite3."""
+    if os.environ.get('NOODLE_METRICS_DB'):
+        return metrics_path(home)
+    store = telemetry_path(home)
+    return store if store.exists() else metrics_path(home)
+
+
 def archive_name(archive):
     if isinstance(archive, sqlite3.Connection):
         return '(in memory)'
-    return str(archive or metrics_path()).replace(str(Path.home()), '~')
+    return str(archive or default_archive()).replace(str(Path.home()), '~')
+
+
+def is_store(path):
+    """A telemetry runner's store: it has a `_runs` table."""
+    try:
+        conn = sqlite3.connect(f'file:{path}?mode=ro', uri=True)
+        try:
+            return bool(conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '_runs'").fetchone())
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        return False
+
+
+def open_store(path):
+    """The runner's store, read only: each noodlepads__<table> shows as <table>
+    (a temporary view), so the report reads it like the older archive; a table
+    no run has written yet is an empty temporary one. Nothing is written to it."""
+    conn = sqlite3.connect(f'file:{path}?mode=ro', uri=True)
+    prefix = TELEMETRY_JOB + '__'
+    for (name,) in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall():
+        local = name[len(prefix):] if name.startswith(prefix) else ''
+        if re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', local):
+            conn.execute(f'CREATE TEMP VIEW "{local}" AS SELECT * FROM main."{name}"')
+    temp = re.sub(r'CREATE INDEX[^;]*;', '', ARCHIVE_SCHEMA).replace('CREATE TABLE IF NOT EXISTS', 'CREATE TEMP TABLE IF NOT EXISTS')
+    conn.executescript(temp)
+    return conn
 
 
 def open_archive(path=None):
-    path = Path(path or metrics_path())
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path = Path(path or default_archive())
+    if str(path) != ':memory:' and path.exists() and is_store(path):
+        return open_store(path)
+    if str(path) != ':memory:':
+        path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(path))
     conn.executescript(ARCHIVE_SCHEMA)
     return conn
 
 
 def harvest_line(conn, name):
-    """When the harvest last filled the archive, and how it went."""
+    """When the harvest last filled the archive, and how it went: from the
+    runner's `_runs` log in its store, else the older archive's harvest_meta."""
+    if conn.execute("SELECT 1 FROM main.sqlite_master WHERE type = 'table' AND name = '_runs'").fetchone():
+        run = conn.execute('SELECT started, status, message FROM main."_runs" WHERE job = ? ORDER BY started DESC LIMIT 1',
+                           (TELEMETRY_JOB,)).fetchone()
+        if not run:
+            return f'⚠️ telemetry {name}: no {TELEMETRY_JOB} run pulled yet (`telemetry.py pull`)'
+        started, status, message = run
+        return (f'📦 telemetry {name}: last run {started}' + ('' if status == 'ok' else f' ({status}: {message})')
+                + ', as of your last `telemetry.py pull`')
     got = dict(conn.execute('SELECT key, value FROM harvest_meta'))
     if 'last_run' not in got:
         return f'⚠️ archive {name}: nothing harvested yet (the telemetry runner harvests; `telemetry.py pull` reads it)'

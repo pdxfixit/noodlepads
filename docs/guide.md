@@ -489,8 +489,9 @@ ADR 0002.
   delay, errors as file:line). D1 keeps them 14 days (a device's row 90).
   The telemetry runner (pdxfixit/telemetry) harvests them daily, with
   Cloudflare's stats for the site, into an archive kept forever.
-  `just cloud-stats` reads `~/.local/state/noodlepads/metrics.sqlite3` (or
-  `$NOODLE_METRICS_DB`), lists what each player
+  `just cloud-stats` reads that archive as `telemetry.py pull` leaves it on
+  the Mac (`~/.local/state/telemetry/telemetry.sqlite3`, read only; or
+  `$TELEMETRY_DB`), lists what each player
   made, and shows per player: devices (type, browser, OS, width, app version,
   syncs, first and last seen), places (city, region, country and network),
   activity over the last 14 days (`--days N`) and by hour, feature-use counts

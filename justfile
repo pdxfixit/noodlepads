@@ -76,9 +76,10 @@ cloud-profiles:
     @python3 tools/cloud_admin.py profiles
 
 # The players in the cloud: what each has made (🔊 sounds 🥁 beats 🎼 songs 🎬 takes ⭐ voices ⌨️ layouts), sound size, PIN, devices, shares;
-# then the player metrics (ADR 0016) from ~/.local/state/noodlepads/metrics.sqlite3 (kept forever): devices,
+# then the player metrics (ADR 0016) from the telemetry runner's store as `telemetry.py pull` left it
+# (~/.local/state/telemetry/telemetry.sqlite3, read only; else the older metrics.sqlite3): devices,
 # places (⚠️ more than one), activity by day (--days N, default 14) and hour, feature use, visits, errors
-[doc("Player report: what each player made, then the metrics (ADR 0016) from ~/.local/state/noodlepads/metrics.sqlite3. --days N")]
+[doc("Player report: what each player made, then the metrics (ADR 0016) from the telemetry store (`telemetry.py pull` first). --days N")]
 [positional-arguments]
 cloud-stats *args:
     @python3 tools/cloud_admin.py stats "$@"
