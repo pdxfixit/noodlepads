@@ -3,6 +3,8 @@
 
     cloud_admin.py schema   [--yes]              a NEW, empty database: worker/schema.sql
     cloud_admin.py migrate  [--yes]              apply worker/migrations/*.sql not yet applied
+    cloud_admin.py pending                       exit 1 while any migration is not applied (a deploy's
+                                                 guard: the Worker may need the newer tables)
     cloud_admin.py profiles                      every profile: id, name, made, last active, records, sound bytes
     cloud_admin.py prune    [--days N] [--empty] [--smoke] [--yes]   profiles idle N days (default 180) or empty, and loose sounds;
                                                  --smoke: what the deploy checks left (p-smoke-…, p-e2e-…, and their shares)
@@ -14,14 +16,15 @@
 
 Everything that changes the database shows what it would do and stops,
 unless --yes is given (reset-pin asks instead). Every statement runs through
-`just cloud-db execute noodle-pads --remote` (flarepress's login); nothing
+`just cloud-db execute noodle-pads --remote` (flarepress's tools/wrangler.sh:
+the Keychain on Ben's Mac, the repo's read-only token on GitHub); nothing
 here holds a credential. A read that fails stops the tool: an empty answer is
 never taken for "nothing there".
 
 The metrics archive is ~/.local/state/noodlepads/metrics.sqlite3 (or
 $NOODLE_METRICS_DB), beside the problem-report archive (tools/logs.py).
-flarepress's `just harvest noodlepads.com` copies D1 into it (its
-noodlepads.com/harvest.conf says how), and `just cloud-stats` runs that
+flarepress's tools/harvest.py copies D1 into it (site/harvest.conf
+says how), and `just cloud-stats` runs that
 first. D1 keeps events, counts and visits 14 days and a device's row 90; the
 archive keeps them forever.
 
@@ -145,6 +148,21 @@ def applied(db):
     if not has_table(db, 'migrations'):
         return set()
     return {r['name'] for r in db.query('SELECT name FROM migrations')}
+
+
+def pending(db, out=print):
+    """The migrations D1 has not had. A deploy stops while there are any:
+    migrating is Ben's (`just cloud-migrate --yes`), and the Worker in this
+    commit may need the newer tables."""
+    done = applied(db)
+    waiting = [p for p in migration_files() if p.stem not in done]
+    for p in waiting:
+        out(f'⏳ not applied yet: {p.relative_to(ROOT)}')
+    if waiting:
+        out('🛑 not deploying: Ben runs `just cloud-migrate --yes` first, then the deploy runs again')
+    else:
+        out('✅ every migration is applied')
+    return waiting
 
 
 def migrate(db, yes, out=print):
@@ -578,6 +596,7 @@ def main(argv=None, db=None):
     sub = ap.add_subparsers(dest='cmd', required=True)
     for name in ('schema', 'migrate'):
         sub.add_parser(name).add_argument('--yes', action='store_true')
+    sub.add_parser('pending')
     sub.add_parser('profiles')
     st = sub.add_parser('stats')
     st.add_argument('--days', type=int, default=14, help='days in the activity strip (default 14)')
@@ -596,6 +615,8 @@ def main(argv=None, db=None):
             schema(db, args.yes)
         elif args.cmd == 'migrate':
             migrate(db, args.yes)
+        elif args.cmd == 'pending':
+            return 1 if pending(db) else 0
         elif args.cmd == 'profiles':
             profiles(db)
         elif args.cmd == 'stats':

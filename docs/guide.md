@@ -532,14 +532,14 @@ file must be under 10 MB and 120 seconds. Rendered voices are cut at 180 s.
 
 ## Versions and updates
 
-The corner shows the release first (`RELEASE` in `web/util.js`, now 1.0; raise it with a CHANGELOG.md section), then the build. `just deploy` runs `just stamp`, which writes `web/version.json`
+The corner shows the release first (`RELEASE` in `web/util.js`, now 1.0; raise it with a CHANGELOG.md section), then the build. every deploy runs the stamp, which writes `web/version.json`
 (`git describe --tags --always`, plus `-dirty` for uncommitted edits in `web/`
 or `worker/`, and the time; gitignored). The app shows
 it small in the bottom corner, so the live site says which commit it is; a
 `-dirty` suffix means uncommitted edits were deployed. Without the file (the dev
 server) it shows "dev copy". Tapping the version or date opens ⚙️ Settings
-scrolled to the bottom, at About and the credits. A `just push` run straight from flarepress skips
-the stamp and leaves the previous version showing.
+scrolled to the bottom, at About and the credits. A deploy that skips the stamp (wrangler run by hand)
+leaves the previous version showing; flarepress warns when the stamp is old.
 
 **🆕 An update for Noodle Pads is ready.** A page left open keeps the code it
 loaded. The app asks `version.json` (`cache: 'no-store'`) when the page is

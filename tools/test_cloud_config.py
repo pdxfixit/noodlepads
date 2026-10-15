@@ -40,3 +40,17 @@ class Keychain(unittest.TestCase):
     def test_neither_is_an_error_never_an_empty_token(self):
         with self.assertRaises(cc.ConfigError):
             cc.keychain_token(find={}.get)
+
+
+class Exports(unittest.TestCase):
+    """site/wrangler.toml holds ${D1_DATABASE_ID}; on the Mac the ids come from
+    cloud.json, on GitHub from secrets, which must not be overwritten."""
+    cfg = {"account_id": "acct1", "database_id": "db-1"}
+
+    def test_both_ids_from_the_config(self):
+        self.assertEqual(cc.exports(self.cfg, {}),
+                         "export D1_DATABASE_ID=db-1\nexport CLOUDFLARE_ACCOUNT_ID=acct1")
+
+    def test_a_value_already_set_wins(self):
+        self.assertEqual(cc.exports(self.cfg, {"D1_DATABASE_ID": "from-secret"}),
+                         "export CLOUDFLARE_ACCOUNT_ID=acct1")

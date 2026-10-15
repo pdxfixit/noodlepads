@@ -19,30 +19,34 @@ steps below are kept as the record of how it was built, and for rebuilding it.
 
 ## How it is deployed
 
-Through **flarepress** (`~/src/flarepress`, GitHub `pdxfixit/flarepress`), the
-toolchain that owns every Sandberg domain in the "Sandberg Family Domains"
-Cloudflare account. Its `AGENTS.md` is the authority on that account; read it
-before changing anything there.
+**GitHub deploys every push to `main`** ([ADR 0025](adr/0025-github-deploys.md)),
+in `.github/workflows/deploy.yml`, one run at a time in push order:
 
-- `flarepress/noodlepads.com/public` is a symlink to this repo's `web/`, the
-  same pattern as pdxfixit.com (whose `public` links to `~/src/website/public`).
-  So a deploy always ships **the main checkout's** `web/`
-  (`~/src/noodlepads/web`) as it is on disk, whichever folder you run
-  `just deploy` from. `worker` links to its `worker/` the same way. Deploy,
-  ship and land only from the main checkout; from a worktree, commit on your
-  branch and have it landed (`docs/how-to.md`). `just deploy-check`, which
-  `just deploy` runs first, refuses uncommitted edits in `web/` or `worker/`,
-  a commit that is off `main` or not pushed, a run from any checkout
-  but the one flarepress links to, and failing tests.
-- `flarepress/noodlepads.com/site.conf` configures flarepress's shared
-  `tools/site.sh` (the same tool isogrid deploys with): `just deploy-check`,
-  `just stamp`, `just deploy-verify`, `just live` and `just rollback` call it.
-  `stamp` and `deploy-verify` agree on the version by construction: verify reads
-  the stamp back. Until 2026-10-13 they did not, and an edited `TODO.md` made a
-  deploy fail at `deploy-verify`.
-- `flarepress/noodlepads.com/wrangler.toml`: one Worker, static assets from
-  `./public`, a Custom Domain for `noodlepads.com`. The Worker's name and
-  whether `www` is added are flarepress's call.
+1. `just test`.
+2. `just deploy-migrated`: stops while D1 lacks any `worker/migrations/*.sql`.
+   Migrating is Ben's (`just cloud-migrate --yes`); then re-run the deploy
+   (Actions → deploy → Re-run all jobs).
+3. The public **flarepress** action (`pdxfixit/flarepress`, pinned by commit) on `site/`:
+   check (the run is for `main`; `web/`, `worker/` and `site/` committed;
+   `index.html` there), gate, stamp `web/version.json`, `wrangler deploy`, then
+   verify: wait until the live site serves that version.
+4. `just deploy-checks` (below).
+
+The pieces:
+
+- `site/wrangler.toml`: one Worker (`../worker/index.js`), static assets from
+  `../web`, the D1 binding `DB`, a Custom Domain for `noodlepads.com` (apex
+  only). The database id is written `${D1_DATABASE_ID}` (the repo is public);
+  flarepress fills it from the environment into a throwaway copy.
+- `site/site.conf` configures flarepress's shared `tools/site.sh`
+  (`committed=web worker site`, `rollback=revert`). `stamp` and verify agree on
+  the version by construction: verify reads the stamp back. Until 2026-10-13
+  they did not, and an edited `TODO.md` made a deploy fail at verify.
+- `site/harvest.conf`: what the harvest copies.
+- Secrets in GitHub (Settings → Secrets and variables → Actions):
+  `CLOUDFLARE_API_TOKEN` (this repo's own token: Account → Workers Scripts:
+  Edit, D1: Read; noodlepads.com → Workers Routes: Edit, DNS: Edit, Zone:
+  Read), `D1_DATABASE_ID`, `CLOUDFLARE_ACCOUNT_ID`.
 - `web/_headers`: `Cache-Control: no-cache` so devices pick up a new deploy on
   their next load, the microphone allowed for this site only, two hardening
   headers, and a Content-Security-Policy (own scripts and styles, Google Fonts,
@@ -50,21 +54,22 @@ before changing anything there.
   editing that line. `web/.assetsignore` keeps `.DS_Store` out of uploads.
   Neither file is served.
 
-From this repo:
+Agents push `main` (`just ship`, `just land`) and read the deploy run; they
+never deploy and hold no Cloudflare token. **Ben's fallback** is the same steps
+from his Mac, through a clone of the public flarepress at `~/src/flarepress`,
+with his Keychain token and the ids from `~/.config/noodlepads/cloud.json`:
 
 ```
-just deploy-check   # read-only pre-flight: main, committed, pushed, linked here, tests pass
-just deploy-plan    # deploy-check, then flarepress `plan noodlepads.com`: validates, lists files, sends nothing
-just deploy         # deploy-check, stamp, flarepress `push noodlepads.com` (asks to confirm), then waits for the live version
-just live           # what is live now, and whether it is main's web/ and worker/ (read-only)
-just rollback       # prints the revert steps for a bad deploy (below)
+just deploy-check     # read-only pre-flight: main, committed, pushed, migrations applied, tests pass
+just deploy-plan      # deploy-check, then wrangler's dry run: validates, lists files, sends nothing
+just deploy           # harvest, deploy-check, stamp, wrangler deploy (asks to confirm), verify, live checks
+just live             # what is live now, and whether it is main's web/ and worker/ (read-only)
+just rollback         # prints the revert steps for a bad deploy (below)
 ```
-
-`just deploy` then runs the checks after a deploy (below).
 
 ### Checks after a deploy
 
-`just deploy` is the pipeline. GitHub runs `just test` on every push
+GitHub's deploy is the pipeline. GitHub also runs `just test` on every push
 (`.github/workflows/test.yml`) and one daily read-only check,
 `just live-check` (`.github/workflows/live.yml`): the site answers, `/api/cloud`
 says ok, and live serves `main` (an hour's grace for a deploy in flight). Once `deploy-verify` sees
@@ -84,22 +89,29 @@ https://noodlepads.com, both even if one fails, in about 8 s together:
   same UTC day gives its place in the 50-a-day cap back (provisional, Q24), so
   the checks never use up kids' new profiles. Each smoke run leaves one share
   code (a beat with no sound: a few hundred bytes) because shares are forever.
+- On GitHub the checks' cleanup (`cloud-prune --smoke --yes`, a D1 write)
+  warns instead: the deploy token reads D1 only. Their share codes pile up until
+  Ben runs `just cloud-prune --smoke --yes` from the Mac.
 - A run killed mid-way (Ctrl-C, a crash) can leave its profile. `just
   cloud-prune --smoke` lists those (over 10 minutes old, so a running check is
   safe) and the checks' share codes; `--yes` deletes them. `just
   cloud-profiles` shows any left.
-- A failure prints ❌ with the step, and `just deploy` ends with "Deployed,
+- A failure prints ❌ with the step, and the run ends with "Deployed,
   but the live check failed". The new version is live by then: fix forward,
   or roll back below. e2e also prints each device's `/api/` calls and cloud log.
 - They run on their own too, against any copy with `--url`.
 - Over a daily D1 limit (503 "resting") both fail until 00:00 UTC: that is
   the live site's state, not a bug in the check.
 
-Auth is flarepress's: a Keychain token under service `cloudflare-www-deploy` if
-present, else wrangler's own login. When that login expires, an agent can't
-renew it; Ben runs `npx wrangler login` in a terminal.
+Auth, through flarepress's `tools/wrangler.sh`: `CLOUDFLARE_API_TOKEN` on
+GitHub; on the Mac a Keychain token under service `cloudflare-www-deploy`,
+else wrangler's own login (Ben runs `npx wrangler login` when it expires).
 
 ## How noodlepads.com was set up (flarepress)
+
+A record: these steps used the private flarepress of the time
+(`~/src/flarepress/noodlepads.com/`, now archived as `flarepress-archive`).
+The site folder is `site/` in this repo since 2026-10-15 (ADR 0025).
 
 1. **New site folder `noodlepads.com/`**, with `public` → this repo's `web/`, a
    Custom Domain for `noodlepads.com`, and the Worker script and bindings.

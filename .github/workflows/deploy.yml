@@ -1,0 +1,54 @@
+# Every push to main is deployed to https://noodlepads.com (Ben, 2026-10-15):
+# the tests, the migration guard, then the flarepress action (check, gate,
+# stamp, wrangler deploy, verify), then the live checks. GitHub holds this
+# repo's own Cloudflare token (Workers, its zone, D1 read only); no agent
+# holds one. Ben's `just deploy` on the Mac is the fallback.
+#
+# Secrets: CLOUDFLARE_API_TOKEN, D1_DATABASE_ID (site/wrangler.toml names it
+# as ${D1_DATABASE_ID}), CLOUDFLARE_ACCOUNT_ID.
+name: deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+# One deploy at a time, in push order; a newer push waits rather than cancels.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+      FLAREPRESS: ${{ github.workspace }}/.flarepress
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0   # git describe names the version from the tags
+      # The same flarepress the action is, for the recipes (cloud-db, deploy-migrated).
+      - uses: actions/checkout@v7.0.1
+        with:
+          repository: pdxfixit/flarepress
+          ref: 25285d502a77e85810626ae621520a6f23f258c6  # the same commit as the action below
+          path: .flarepress
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 26.11.1
+      - name: Install just (pinned release)
+        run: curl -sSfL https://github.com/casey/just/releases/download/1.58.0/just-1.58.0-x86_64-unknown-linux-musl.tar.gz | sudo tar xz -C /usr/local/bin just
+      - name: just test
+        run: just test
+      - name: Every migration is applied (migrating is Ben's)
+        run: just deploy-migrated
+      - uses: pdxfixit/flarepress@25285d502a77e85810626ae621520a6f23f258c6  # flarepress main, 2026-10-15; move the pin to take a newer one
+        with:
+          site: site
+      - name: Live checks (cloud-smoke, cloud-e2e)
+        env:
+          CHROME: /usr/bin/google-chrome
+        run: just deploy-checks

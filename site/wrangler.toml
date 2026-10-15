@@ -1,0 +1,24 @@
+# Noodle Pads on Cloudflare: one Worker serving web/ as static files and
+# worker/ for /api (cloud profiles, problem reports, player metrics).
+# Deployed by flarepress (github.com/pdxfixit/flarepress): on every push to
+# main by .github/workflows/deploy.yml, or by Ben's `just deploy`.
+# Apex only: a www copy would be a second origin with its own saved sounds.
+# One D1 database, nothing else (keep the free-plan footprint small).
+# This repo is public: the database id is ${D1_DATABASE_ID}, filled at deploy
+# time from a GitHub secret or ~/.config/noodlepads/cloud.json.
+name = "noodlepads-com"
+compatibility_date = "2026-10-11"
+main = "../worker/index.js"
+
+routes = [
+  { pattern = "noodlepads.com", custom_domain = true }
+]
+
+[assets]
+directory = "../web"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "noodle-pads"
+database_id = "${D1_DATABASE_ID}"

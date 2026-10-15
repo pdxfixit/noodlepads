@@ -4,7 +4,7 @@
 // (everything else under /api/, worker/cloud.js). Every other path goes to
 // the static assets.
 //
-// Bindings (flarepress noodlepads.com/wrangler.toml), and nothing else:
+// Bindings (site/wrangler.toml), and nothing else:
 //   ASSETS  the static assets (web/)
 //   DB      the D1 database `noodle-pads` (worker/schema.sql)
 // No secrets.

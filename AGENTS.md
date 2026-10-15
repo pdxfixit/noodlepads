@@ -10,7 +10,7 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 - **Start:** `just doctor`: are you in the main checkout or a worktree, are the tools there, is `main` live. Then the cold start below.
 - **Test:** `just test` (syntax check, then Node's built-in test runner; nothing to install).
 - **Run:** `just serve`, then http://localhost:8765/. Port 8765 is Ben's own server; agents preview on 8781 (see [Verify](#verify)).
-- **Ship:** `just ship`, from the main checkout only (deploys push its files). In a worktree, commit on your branch and report the commits; they are landed with `just land` ([docs/how-to.md](docs/how-to.md)). Every commit to `main` is deployed. `just deploy` refuses uncommitted changes, and checks the live cloud once the new version is up (`just cloud-smoke`, `just cloud-e2e`).
+- **Ship:** `just ship`, from the main checkout only. In a worktree, commit on your branch and report the commits; they are landed with `just land` ([docs/how-to.md](docs/how-to.md)). Every push to `main` is deployed by GitHub (`.github/workflows/deploy.yml`, [ADR 0025](docs/adr/0025-github-deploys.md)): tests, the migration guard, deploy, then the live cloud checks. Agents never deploy and hold no Cloudflare token; after a push, read the deploy run.
 - **Every change fits every screen:** check 320, 375, 700, 900 and 1100 px wide, then the wide screens 1366, 1920, 2560 and 3440, with no sideways scroll. `just look --wide` does all nine in your own headless Chrome ([Verify](#verify)).
 - **Anything that comes in is untrusted:** backups, uploaded files and `boards.json` are checked and capped ([docs/guide.md](docs/guide.md) "Limits on what comes in").
 
@@ -57,11 +57,11 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 3. **Audio needs a real tap.** A script's `click()` cannot start the AudioContext until the page has had a real user gesture. Press Play with a real click first, then drive the rest from script.
 4. **Parallel agents share the browser pane.** Always pass your own `tabId` to every browser call; a call without one acts on the fronted tab, which another agent may be using (on 2026-10-11 one agent's navigate took over another's tab mid-check). A background tab is hidden, so `ResizeObserver` and `requestAnimationFrame` may not run there: re-measure after a resize instead of trusting a resize handler fired.
 5. **The browser tool's `key` action clicks the page first.** That click can land on a button (it once pressed Play a second time). Send keys with `dispatchEvent(new KeyboardEvent(...))` instead.
-6. **The live cloud: `just cloud-smoke` and `just cloud-e2e`** (about 4 s each; `just deploy` runs both). Smoke is the API round trip from Node; e2e is two devices syncing in headless Chrome on noodlepads.com. Each makes one throwaway profile (`p-smoke-…`, `p-e2e-…`) and deletes it in a `finally`. They test what is live, so run them after a deploy, not to check a change before it ships. A ❌ in e2e prints what each device asked `/api/` and its cloud log.
+6. **The live cloud: `just cloud-smoke` and `just cloud-e2e`** (about 4 s each; every deploy runs both). Smoke is the API round trip from Node; e2e is two devices syncing in headless Chrome on noodlepads.com. Each makes one throwaway profile (`p-smoke-…`, `p-e2e-…`) and deletes it in a `finally`. They test what is live, so run them after a deploy, not to check a change before it ships. A ❌ in e2e prints what each device asked `/api/` and its cloud log.
 
 ## Ship
 
-**`just ship <message-file> <files…>`** does all of this in one go: tests, a throwaway worktree, commit, push and deploy, stopping at the first failure. Use it. What it does, for reference:
+**`just ship <message-file> <files…>`** does all of this in one go: tests, a throwaway worktree, commit and push, stopping at the first failure. GitHub deploys the push. Use it. What it does, for reference:
 
 Commit straight to `main` through a throwaway worktree, so the main checkout never switches branch:
 
@@ -72,18 +72,17 @@ git worktree add -q --detach "$WT" main
 git -C "$WT" add -A && git -C "$WT" commit -q -F <message-file>
 git update-ref refs/heads/main "$(git -C "$WT" rev-parse HEAD)" "$OLD"
 git reset -q && git worktree remove "$WT" && git push -q origin main
-just --yes deploy
 ```
 
 - **Run it under `set -e`, with the file list in an array.** In zsh, `$FILES` does not split into words. On 2026-10-10 a commit silently failed that way and the deploy still ran.
 - Write the message to a file made with `mktemp` and pass `-F`. Parallel agents share a scratchpad, and on 2026-10-11 one agent's fixed-name message file overwrote another's. A heredoc once lost a subject line (`b07fee1`; fixed by rewriting history on 2026-10-11, backup tag `backup/main-before-msgfix`).
 - Messages: `<type>: <summary>` (feat, fix, style, refactor, docs, chore, test), a bullet body at the level a user notices, and the `Co-Authored-By` trailer.
-- `just deploy` stamps `web/version.json` (gitignored), uploads through flarepress, then waits until the live site serves the new version. The app shows that version in its corner. Then it runs the live checks (`just deploy-checks`: cloud-smoke and cloud-e2e). If one fails it says "Deployed, but the live check failed": the new version is already live. Read the ❌ line, fix forward, or roll back (docs/deploy-cloudflare.md).
+- **GitHub deploys every push to `main`** (`.github/workflows/deploy.yml`): `just test`, `just deploy-migrated` (stops while a migration is not applied: migrating is Ben's), then the `pdxfixit/flarepress` action stamps `web/version.json`, uploads, and waits until the live site serves the new version (the app shows it in its corner), then `just deploy-checks` (cloud-smoke and cloud-e2e). After a push, read that run. A red run after the upload means the new version is already live: read the ❌ line, fix forward, or roll back (docs/deploy-cloudflare.md). `just deploy` is Ben's fallback from his Mac; agents never run it.
 - Never force-push `main`.
 
 **The cloud database.** A schema change is a new `worker/migrations/NNN-*.sql` plus the full `worker/schema.sql`, in the same commit; `tests/migrations.test.mjs` checks the two agree. Ben applies it with `just cloud-migrate --yes` right before the deploy that needs it (add that to TODO "Ben does"). Agents never write to the live database. They may read it without asking (`just cloud-stats`, `just logs --sync`, Ben 2026-10-12). Two write exceptions: the deploy checks use the live API with their own throwaway profiles, and `just cloud-prune --smoke --yes` removes what a killed check left (only `p-smoke-…`/`p-e2e-…` profiles over 10 minutes old, and their share codes). Migrate, prune, reset PIN and the like are Ben's.
 
-**Landing an agent's commits: `just land <sha>…`.** It cherry-picks them onto main in a throwaway worktree, resolves TODO.md, tests, moves main, updates this checkout's copies of the touched files, pushes and deploys. A conflict it can't resolve stops it with the worktree kept and says where: resolve it there, then `just land-continue <worktree>` finishes the same way (`tools/land.sh`). Never finish a landing by hand: a hand-run finish left deleted files in this checkout and the deploy refused (2026-10-13). By hand, a landing once left this checkout stale and the deploy refused (2026-10-12).
+**Landing an agent's commits: `just land <sha>…`.** It cherry-picks them onto main in a throwaway worktree, resolves TODO.md, tests, moves main, updates this checkout's copies of the touched files and pushes; GitHub deploys. A conflict it can't resolve stops it with the worktree kept and says where: resolve it there, then `just land-continue <worktree>` finishes the same way (`tools/land.sh`). Never finish a landing by hand: a hand-run finish left deleted files in this checkout (2026-10-13), and once left it stale (2026-10-12).
 
 **TODO.md conflicts on landing** are routine (each agent deletes its own line while others add theirs): `python3 tools/resolve_todo.py TODO.md` keeps main's lines and applies the commit's own deletions and additions. It also works for end-of-file appends in `styles.css`. Read the result before continuing. `docs/questions.md` has its own: `python3 tools/resolve_questions.py docs/questions.md` keeps both sides' cards; `just land` runs both.
 
@@ -153,7 +152,7 @@ Ben: *"Optimizing the user interface for a variety of screens is very important.
 - **Delegate independent work to background agents** in their own worktrees (Ben prefers it: he keeps talking while work runs). Brief each with what to read and what not to touch, then land their commits with `just land` from the main checkout and archive their branches.
 - **Record every request the moment it arrives:** a line in [TODO.md](TODO.md) "Agents do", or in [docs/state.md](docs/state.md) "In flight" if you start at once. A request said only in chat is lost when the session ends. Delete the line when the work lands.
 - When your task is done, work down "Agents do", quickest first, one commit each.
-- Commit, push and deploy without asking. Ben asked for a deploy after every commit.
+- Commit and push to `main` without asking; GitHub deploys every push. Ben asked for a deploy after every commit.
 - Make obvious non-breaking fixes (dead code, a stale comment, a missing label) rather than listing them. Propose instead when it changes what a kid sees.
 
 **Working while Ben is away**

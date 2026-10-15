@@ -2,12 +2,12 @@
 # Lands agents' commits on main (just land): cherry-picks them in a throwaway
 # worktree, resolves the lists every agent appends to, tests the result,
 # moves main, brings this checkout's copies of the touched files up to date
-# (deleting the ones the commits deleted), pushes and deploys.
+# (deleting the ones the commits deleted) and pushes; GitHub deploys the push.
 #
 # A conflict it can't resolve stops it with the worktree kept: resolve it
 # there (git add, git cherry-pick --continue), then `just land-continue <dir>`
 # finishes the same way. By hand, a finished landing once left deleted files
-# behind in this checkout and the deploy refused (2026-10-13).
+# behind in this checkout (2026-10-13).
 #
 #   tools/land.sh start <sha>…
 #   tools/land.sh continue <worktree>
@@ -39,9 +39,9 @@ pick_rest() {
   done < <(cat "$wt/.land/todo")
 }
 
-# Tests, moves main from the recorded start, syncs this checkout, pushes, deploys.
+# Tests, moves main from the recorded start, syncs this checkout, pushes (GitHub deploys).
 finish() {
-  local wt=$1 old touched f out
+  local wt=$1 old touched f
   old=$(cat "$wt/.land/old")
   touched=$(cat "$wt/.land/touched")
   [ "$(git rev-parse main)" = "$old" ] || { echo "🛑 main moved since this landing began; land again" >&2; return 1; }
@@ -55,8 +55,7 @@ finish() {
   git status --short
   git push -q origin main
   git log --oneline "$old..main" | cat
-  out=$(DEPLOY_TESTED=$(git rev-parse main) just --yes deploy 2>&1) || { echo "$out" >&2; return 1; }
-  echo "$out" | tail -1
+  echo "🚀 pushed: GitHub deploys it (.github/workflows/deploy.yml); read that run, then just live"
 }
 
 case "${1:-}" in

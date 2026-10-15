@@ -16,6 +16,7 @@ Stdlib only, Python 3.8+.
 """
 import json
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -91,11 +92,24 @@ def keychain_token(service=KEYCHAIN, find=_find, err=sys.stderr):
                       f"(security add-generic-password -s {service} -a cloudflare -w)")
 
 
+def exports(cfg, environ=None):
+    """Shell lines that give flarepress the ids site/wrangler.toml names as
+    ${NAME} (D1_DATABASE_ID) and the account. A value already in the
+    environment (a GitHub secret) wins, so nothing is printed for it."""
+    environ = os.environ if environ is None else environ
+    lines = []
+    for name, field in (("D1_DATABASE_ID", "database_id"), ("CLOUDFLARE_ACCOUNT_ID", "account_id")):
+        if not environ.get(name):
+            lines.append(f"export {name}={shlex.quote(str(cfg[field]))}")
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
     # `python3 tools/cloud_config.py`: one line for just doctor; exit 1 when missing.
+    # `--exports`: the ids as shell exports, for the recipes that run wrangler.
     try:
-        load()
-        print(f"cloud config: {config_path()}")
+        cfg = load()
+        print(exports(cfg) if sys.argv[1:] == ["--exports"] else f"cloud config: {config_path()}")
     except ConfigError as e:
-        print(e)
+        print(e, file=sys.stderr if sys.argv[1:] == ["--exports"] else sys.stdout)
         sys.exit(1)

@@ -6,9 +6,9 @@ Step by step for the common jobs, so a fresh session never has to guess. [AGENTS
 
 | You are in | You may | You may not |
 |---|---|---|
-| A worktree (`.claude/worktrees/agent-…`, or a branch of your own) | Edit, `just test`, `just prove`, `just look`, commit on your branch | `just ship`, `just land`, `just deploy`: they push the **main checkout's** files, so from a worktree they would ship the wrong copy. Report your commits; the session that started you lands them. |
-| The main checkout (`~/src/noodlepads`, on `main`) | All of the above, plus `just ship`, `just land`, `just --yes deploy` | Switch branch: flarepress serves this folder's `web/` and `worker/` as they are on disk. |
-| A cloud session (Ben's environment runs flarepress `tools/cloud-setup.sh`: just, wrangler, the Mac paths linked) | Edit, `just test`, `just prove`, `just look`, commit, push a branch | Deploy, the live checks. Say so in your report, and what is unchecked. |
+| A worktree (`.claude/worktrees/agent-…`, or a branch of your own) | Edit, `just test`, `just prove`, `just look`, commit on your branch | `just ship`, `just land`: they move and push `main` from the **main checkout**. Report your commits; the session that started you lands them. |
+| The main checkout (`~/src/noodlepads`, on `main`) | All of the above, plus `just ship`, `just land` (GitHub deploys the push) | `just deploy`: Ben's fallback from his Mac; agents never deploy. |
+| A cloud session | Edit, `just test`, `just prove`, `just look`, commit, push a branch | Deploy, the live checks (they need no token, but run them after GitHub's deploy). Say so in your report, and what is unchecked. |
 
 ## A bug fix in `web/`
 
@@ -75,9 +75,9 @@ From the main checkout:
 
 ## Deploy, live checks and rollback
 
-- **Deploy:** `just --yes deploy`, from the main checkout, after every commit to `main` (`just ship` and `just land` do it). It runs `just deploy-check` (refuses uncommitted edits in `web/` or `worker/`, a commit off `main` or not pushed, and failing tests), stamps `web/version.json`, pushes through flarepress, waits for the live version (`just deploy-verify`), then runs the live checks (`just deploy-checks`). Detail: [deploy-cloudflare.md](deploy-cloudflare.md).
+- **Deploy:** GitHub, on every push to `main` (`.github/workflows/deploy.yml`, [ADR 0025](adr/0025-github-deploys.md)): `just test`, `just deploy-migrated` (stops while D1 lacks a migration; Ben runs `just cloud-migrate --yes`, then re-runs the deploy), the `pdxfixit/flarepress` action (check, gate, stamp `web/version.json`, upload, wait for the live version), then `just deploy-checks`. After `just ship` or `just land`, read the run on GitHub, then `just live`. Ben's fallback is `just deploy` from his Mac (same steps, Keychain token). Detail: [deploy-cloudflare.md](deploy-cloudflare.md).
 - **Live checks:** `just cloud-smoke` (the API) and `just cloud-e2e` (two devices syncing in headless Chrome); each uses and deletes a throwaway `p-smoke-…`/`p-e2e-…` profile. A killed run's leftovers: `just cloud-prune --smoke --yes`.
-- **Roll back a bad deploy:** the live site is always a commit on `main`, so roll back by reverting: in the main checkout, `git revert --no-edit <sha>…`, `just test`, `git push origin main`, `just --yes deploy`; `just rollback` prints those steps for the previous release. Never force-push `main` or deploy an old checkout. A schema migration is not undone by a revert: the Worker must cope with the newer tables.
+- **Roll back a bad deploy:** the live site is always a commit on `main`, so roll back by reverting: in the main checkout, `git revert --no-edit <sha>…`, `just test`, `git push origin main` (GitHub deploys it); `just rollback` prints those steps for the previous release. Never force-push `main` or deploy an old checkout. A schema migration is not undone by a revert: the Worker must cope with the newer tables.
 - **Dry run:** `just deploy-plan` runs `just deploy-check`, then validates and lists files, sending nothing.
 - **What is live:** `just live`: status, cache headers, the live version, and whether it is main's `web/` and `worker/`.
 
@@ -88,7 +88,7 @@ Agents may read the live database without asking (`just harvest`, `just cloud-st
 | Job | Command | Notes |
 |---|---|---|
 | Read problem reports | `just logs`, `--errors`, `<device code>`, `--json <key>`, `--grep`, `--sql` | Reads the local archive `~/.local/state/noodlepads/logs.sqlite3` (`tools/logs.py`); safe for agents. |
-| Bring everything in | `just harvest` | flarepress's `just harvest noodlepads.com` (D1's metrics and Cloudflare's stats into `metrics.sqlite3`), then `just logs --sync` (new problem reports). Read-only, with the Keychain token `noodlepads-logs`. `just deploy` and `just cloud-stats` run it first; the `noodlepads-logs` recurrent leg (`skills/noodlepads-logs/`) runs it daily and `just logs --digest` weekly, filing new errors in TODO.md. D1 keeps 14 days, so a missed fortnight loses data. |
+| Bring everything in | `just harvest` | flarepress's `tools/harvest.py site` (D1's metrics and Cloudflare's stats into `metrics.sqlite3`, as `site/harvest.conf` says), then `just logs --sync` (new problem reports). Read-only, with the Keychain token `noodlepads-logs`. `just deploy` and `just cloud-stats` run it first; the `noodlepads-logs` recurrent leg (`skills/noodlepads-logs/`) runs it daily and `just logs --digest` weekly, filing new errors in TODO.md. D1 keeps 14 days, so a missed fortnight loses data. |
 | Player metrics | `just cloud-stats [--days N]` | Harvests, then reports per player from `metrics.sqlite3` (ADR 0016): devices, places, activity, feature use, visits, and every visit's errors. Ask anything else with `sqlite3 ~/.local/state/noodlepads/metrics.sqlite3` (tables `activity`, `devices`, `uses`, `visits`, `players`, `cf_*`). |
 | Profiles | `just cloud-profiles`, `just cloud-prune [--days N] [--empty] [--yes]` | Prune is a dry run without `--yes`. |
 | A forgotten PIN | `just cloud-reset-pin <id>` | From an email to [old address removed]; it asks before it changes anything. |
@@ -96,7 +96,7 @@ Agents may read the live database without asking (`just harvest`, `just cloud-st
 | Back up the database | `just cloud-backup [file]` | A whole-database `.sql` export (reads only), by default in `~/.local/state/noodlepads/backups/`; it refuses a path inside the repo. |
 | Anything else | `just cloud-sql "…"`, `just cloud-db …` | Ben's. |
 
-flarepress (`~/src/flarepress`, its own AGENTS.md) owns the domains and deploy auth. Never set up wrangler here.
+flarepress (public, `github.com/pdxfixit/flarepress`; on the Mac at `~/src/flarepress`) holds the deploy code; this repo's `site/` is its site folder. Deploy auth is a GitHub secret (this repo's own token) or Ben's Keychain. Never put a token or an ID in this repo.
 
 ## Working with Ben
 

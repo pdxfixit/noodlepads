@@ -8,3 +8,8 @@ __pycache__/
 # sessions .claude/worktrees/. A fresh clone has no global ignore for them.
 .worktrees/
 .claude/worktrees/
+
+# wrangler's cache, and the filled copy of site/wrangler.toml a deploy writes (flarepress).
+.wrangler/
+site/.wrangler.deploy.toml
+.flarepress/
