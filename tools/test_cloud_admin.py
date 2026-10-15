@@ -4,10 +4,12 @@ current one (worker/schema.sql)."""
 
 import re
 import json
+import os
 import sqlite3
 import tempfile
 import unittest
 from datetime import timezone
+from unittest import mock
 from pathlib import Path
 
 import cloud_admin as ca
@@ -280,6 +282,60 @@ class Metrics(unittest.TestCase):
     def test_a_harvest_that_failed_in_part_is_named(self):
         self.archive.execute("UPDATE harvest_meta SET value = '1 failed' WHERE key = 'last_result'")
         self.assertTrue(any('(1 failed)' in l for l in self.stats()))
+
+    def store(self, folder, runs=(('2027-01-15T07:00:00Z', 'ok', 'fine'),)):
+        """A telemetry runner's pulled store: this archive's tables as
+        noodlepads__<table>, each with the runner's _changed column, and _runs."""
+        path = os.path.join(folder, 'telemetry.sqlite3')
+        out = sqlite3.connect(path)
+        for (t,) in self.archive.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall():
+            if t == 'harvest_meta':
+                continue
+            cols = [r[1] for r in self.archive.execute(f'PRAGMA table_info({t})')]
+            out.execute(f'CREATE TABLE "noodlepads__{t}" ({", ".join(cols)}, _changed TEXT)')
+            out.executemany(f'INSERT INTO "noodlepads__{t}" VALUES ({", ".join("?" * (len(cols) + 1))})',
+                            [tuple(r) + ('2027-01-15',) for r in self.archive.execute(f'SELECT * FROM {t}')])
+        out.execute('CREATE TABLE "_runs" (job TEXT, started TEXT, finished TEXT, status TEXT, exit_code INTEGER, '
+                    'rows_written INTEGER, message TEXT, _changed TEXT, PRIMARY KEY (job, started))')
+        out.executemany("INSERT INTO _runs VALUES ('noodlepads', ?, '', ?, 0, 0, ?, '')", runs)
+        out.commit()
+        out.close()
+        return path
+
+    def test_reports_from_the_runners_pulled_store_without_writing_to_it(self):
+        # The telemetry runner is the only harvester (Ben, 2026-10-15): cloud-stats
+        # reads its store's noodlepads__ tables, read only.
+        with tempfile.TemporaryDirectory() as folder:
+            path = self.store(folder)
+            before = open(path, 'rb').read()
+            lines, out = quiet()
+            ca.stats(self.db, now=NOW, out=out, archive=path, tz=timezone.utc)
+            text = '\n'.join(lines)
+            self.assertIn('📦 telemetry', text)
+            self.assertIn('last run 2027-01-15T07:00:00Z, as of your last `telemetry.py pull`', text)
+            head = next(l for l in lines if 'p-kid' in l and '🐙' in l)
+            self.assertIn('⚠️ seen from 2 places', head)
+            self.assertEqual(open(path, 'rb').read(), before, 'the store is never written')
+
+    def test_a_store_names_a_failed_run_and_a_store_with_no_run_yet(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = self.store(folder, runs=(('2027-01-15T07:00:00Z', 'unreachable', 'Cloudflare 503'),))
+            lines, out = quiet()
+            ca.stats(self.db, now=NOW, out=out, archive=path, tz=timezone.utc)
+            self.assertTrue(any('(unreachable: Cloudflare 503)' in l for l in lines))
+        with tempfile.TemporaryDirectory() as folder:
+            path = self.store(folder, runs=())
+            lines, out = quiet()
+            ca.stats(self.db, now=NOW, out=out, archive=path, tz=timezone.utc)
+            self.assertTrue(any('no noodlepads run pulled yet' in l for l in lines))
+
+    def test_the_default_is_the_pulled_store_when_it_is_there(self):
+        with tempfile.TemporaryDirectory() as home, mock.patch.dict(os.environ, {'NOODLE_METRICS_DB': '', 'TELEMETRY_DB': ''}):
+            self.assertEqual(ca.default_archive(home).name, 'metrics.sqlite3')
+            store = ca.telemetry_path(home)
+            store.parent.mkdir(parents=True)
+            store.write_bytes(b'')
+            self.assertEqual(ca.default_archive(home), store)
 
     def test_the_archive_lives_beside_the_report_archive_unless_told(self):
         with tempfile.TemporaryDirectory() as home:
