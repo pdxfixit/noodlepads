@@ -42,7 +42,9 @@ else fail "node is missing: just test needs it"; fi
 if command -v python3 > /dev/null && python3 -c 'import sys; sys.exit(sys.version_info < (3, 8))'; then
   ok "python3 $(python3 -c 'import platform; print(platform.python_version())')"
 else fail "python3 3.8 or newer is missing: the tools and just serve need it"; fi
+# The same Chrome tools/chrome.mjs picks: $CHROME, the Mac's, or a cloud session's Chromium.
 chrome=${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}
+[ -n "${CHROME:-}" ] || [ -x "$chrome" ] || [ ! -x /opt/pw-browsers/chromium ] || chrome=/opt/pw-browsers/chromium
 [ -x "$chrome" ] && ok "Chrome for just look and cloud-e2e" || warn "no Chrome at $chrome (set CHROME=…): just look and just cloud-e2e can't run"
 
 # Deploying: flarepress and its links. Without it (a cloud session) you can
