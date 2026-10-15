@@ -51,12 +51,10 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 ### Hosting at noodlepads.com
 
 - [x] Apply the player-metrics migration (`just cloud-migrate --yes`) ✅ 2026-10-13
-- [ ] Land the telemetry harvest in flarepress (2 min) 🔼
-  `cd ~/src/flarepress && git fetch && git merge --ff-only origin/claude/harvest && git push` (`just harvest`, `tools/harvest.py`, `noodlepads.com/harvest.conf`, `isopix.app/harvest.conf`). Noodle Pads' `just harvest` and `just deploy` call it. `docs/adr/0016-player-metrics.md`
 - [ ] Give the `noodlepads-logs` token Cloudflare's stats (3 min) 🔼
   In the dashboard, edit the read-only token stored in the Keychain as `noodlepads-logs`: keep D1 Read, add Zone → Analytics: Read and Account → Account Analytics: Read (and Zone → Zone: Read if `just harvest` says the zone lookup was refused). Then `just harvest`: every line ✅ or 📦.
-- [ ] Apply migration 003 (`just cloud-migrate --yes`) right before the deploy that lands the telemetry (1 min) 🔼
-  It adds `visits` and drops the always-empty `ip_hash` column. Events written in the minute between the two are skipped, never failed.
+- [ ] Deploy the telemetry: `git pull` here and in `~/src/flarepress`, then `just cloud-migrate --yes` and at once `just deploy` (3 min) 🔼
+  `main` has it but the live site does not until then (the daily live check goes red meanwhile). Migration 003 adds `visits` and drops the always-empty `ip_hash` column; events written in the minute between the two are skipped, never failed. `docs/adr/0016-player-metrics.md`
 - [x] Move the cloud ids and the logs token to their new names ✅ 2026-10-13
 - [x] Pick the address: noodlepads.com ✅ 2026-10-11
 - [x] Pick public or family-only: public ✅ 2026-10-10
