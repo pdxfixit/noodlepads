@@ -26,7 +26,7 @@ in `.github/workflows/deploy.yml`, one run at a time in push order:
 2. `just deploy-migrated`: stops while D1 lacks any `worker/migrations/*.sql`.
    Migrating is Ben's (`just cloud-migrate --yes`); then re-run the deploy
    (Actions → deploy → Re-run all jobs).
-3. The public **flarepress** action (`pdxfixit/flarepress`, pinned by commit) on `site/`:
+3. The public **flarepress** action (`pdxfixit/flarepress@v1`, its rolling tag) on `site/`:
    check (the run is for `main`; `web/`, `worker/` and `site/` committed;
    `index.html` there), gate, stamp `web/version.json`, `wrangler deploy`, then
    verify: wait until the live site serves that version.
