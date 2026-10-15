@@ -19,7 +19,7 @@ while Ben was away are marked **provisional** here and carded in
 
 One Cloudflare Worker and one D1 database, on the free plan. Nothing else: no
 KV, no R2 (it needs a card on file), no Cron Triggers, no rate-limit binding.
-One secret, `IP_KEY`, keys the IP hash in the player metrics
+No secrets. The player metrics keep nothing of the IP
 ([ADR 0016](../adr/0016-player-metrics.md)).
 
 - The Worker is `worker/index.js`, the same script that serves the static
@@ -82,7 +82,7 @@ it will catch up."
 | `sound_chunks` | 1.9 MB piece | BLOB |
 | `shares` | share code | the snapshot (`bundle`), its preview sound, who shared it |
 | `share_sounds` | sound a share uses | keeps it when its clip or profile is deleted |
-| `reports` | problem report | 30 days |
+| `reports` | problem report | 14 days |
 | `counters` | name × UTC day | the daily caps |
 | `migrations` | migration applied | `worker/migrations/`, `just cloud-migrate` |
 
@@ -418,7 +418,7 @@ README ("Privacy"). `web/privacy.js` holds the text once; tests tie its key
 claims to the code (`tests/privacy.test.mjs`): that everyone who made
 something is in the public list unless Offline, that the list and sound links
 need nothing, that a share code is forever, that a PIN is not security, that
-nobody types a name, that reports are deleted from the cloud after 30 days,
+nobody types a name, that reports are deleted from the cloud after 14 days,
 and how to delete a profile.
 
 ## 12. Profile sprawl

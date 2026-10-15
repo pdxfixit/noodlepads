@@ -39,7 +39,7 @@ function post(body, headers = {}) {
   });
 }
 
-test('a good report is cleaned and kept in D1 for 30 days, keyed by time and device', async () => {
+test('a good report is cleaned and kept in D1 for 14 days, keyed by time and device', async () => {
   const env = fakeEnv();
   const now = Date.parse('2026-10-11T19:42:08.123Z');
   const res = await handleLog(post(upload()), env, now);
@@ -49,7 +49,7 @@ test('a good report is cleaned and kept in D1 for 30 days, keyed by time and dev
   assert.equal(rest.length, 0);
   assert.match(row.key, /^2026-10-11T19:42:08\.123Z_K7Q4-M2XD_[a-z2-7]{8}$/);
   assert.equal(row.expires - row.created, TTL_MS);
-  assert.equal(TTL_MS, 30 * 86400000);
+  assert.equal(TTL_MS, 14 * 86400000);
   assert.deepEqual([row.app, row.device, row.errors], ['3e7f681 2026-10-11', 'K7Q4-M2XD', 1]);
   const value = JSON.parse(row.body);
   assert.equal(value.entries.length, 2);
@@ -67,9 +67,9 @@ test('a report deletes the expired ones first: no scheduled job', async () => {
   const day = 86400000;
   const t0 = Date.parse('2026-10-01T00:00:00Z');
   await handleLog(post(upload()), env, t0);
-  await handleLog(post(upload({ device: 'AAAA-BBBB' })), env, t0 + 29 * day);
+  await handleLog(post(upload({ device: 'AAAA-BBBB' })), env, t0 + 13 * day);
   assert.equal(reports(env).length, 2);
-  await handleLog(post(upload({ device: 'CCCC-DDDD' })), env, t0 + 31 * day);
+  await handleLog(post(upload({ device: 'CCCC-DDDD' })), env, t0 + 15 * day);
   assert.deepEqual(reports(env).map((r) => r.device), ['AAAA-BBBB', 'CCCC-DDDD']);
 });
 

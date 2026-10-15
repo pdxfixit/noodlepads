@@ -73,12 +73,30 @@ cloud-profiles:
     @python3 tools/cloud_admin.py profiles
 
 # The players in the cloud: what each has made (🔊 sounds 🥁 beats 🎼 songs 🎬 takes ⭐ voices ⌨️ layouts), sound size, PIN, devices, shares;
-# then the player metrics (ADR 0016), copied into ~/.local/state/noodlepads/metrics.sqlite3 (kept forever): devices, places (⚠️ more than one),
-# activity by day (--days N, default 14) and hour, feature use
-[doc("Player report: what each player made, then the metrics (ADR 0016), archived in ~/.local/state/noodlepads/metrics.sqlite3. --days N")]
+# then `just harvest`, and the player metrics (ADR 0016) from ~/.local/state/noodlepads/metrics.sqlite3 (kept forever): devices,
+# places (⚠️ more than one), activity by day (--days N, default 14) and hour, feature use, visits, errors
+[doc("Player report: what each player made, then harvest and the metrics (ADR 0016) from ~/.local/state/noodlepads/metrics.sqlite3. --days N")]
 [positional-arguments]
 cloud-stats *args:
+    @just harvest || echo "⚠️ the harvest did not fully work (above); reporting from the archive as it is"
     @python3 tools/cloud_admin.py stats "$@"
+
+# D1 keeps metrics 14 days (a device's row 90) and problem reports 14 days, and
+# Cloudflare its own stats about a month: this copies all of it into the
+# archives on this Mac, kept forever. flarepress's `just harvest noodlepads.com`
+# (its noodlepads.com/harvest.conf) does the metrics and Cloudflare's stats into
+# ~/.local/state/noodlepads/metrics.sqlite3; `just logs --sync` the problem
+# reports. `just deploy` and `just cloud-stats` run it first, and the daily
+# noodlepads-logs leg runs it (skills/noodlepads-logs). Read-only against the
+# cloud; safe to run again. Exit 1 when any part failed (what worked is kept).
+[doc("Copy the cloud's metrics, Cloudflare's stats and new problem reports into the local archives (read-only; deploy and cloud-stats run it first)")]
+harvest:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    bad=0
+    just --justfile {{flarepress}}/Justfile --working-directory {{flarepress}} harvest noodlepads.com || bad=1
+    python3 tools/logs.py --sync || bad=1
+    exit $bad
 
 #   just cloud-prune --days 90 --empty          what would go
 #   just cloud-prune --days 90 --empty --yes    delete them (shared sounds stay: a share is forever)
@@ -219,8 +237,11 @@ stamp:
     @{{flarepress}}/tools/site.sh noodlepads.com stamp
 
 # Deploy web/ to https://noodlepads.com/ (public), stamped with the version
+# Each deploy starts with a harvest (Ben, 2026-10-15), so nothing waiting in
+# the cloud is lost to a change; a failed harvest warns and the deploy goes on.
 [confirm("Deploy the soundboard to noodlepads.com (public)? (y/N)")]
 deploy:
+    @just harvest || echo "⚠️ the harvest did not fully work (above); deploying anyway"
     @just deploy-check
     @{{flarepress}}/tools/site.sh noodlepads.com gate
     just stamp

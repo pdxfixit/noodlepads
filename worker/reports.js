@@ -1,5 +1,5 @@
 // POST /api/log: an opt-in problem report (ADR 0009), checked, cleaned again
-// and kept in D1's `reports` table for 30 days. Each report first deletes the
+// and kept in D1's `reports` table for 14 days. Each report first deletes the
 // ones past their expiry, so nothing scheduled is needed. The IP is never
 // used or stored: a device may send 10 a minute, the whole site 1,000 a day.
 
@@ -7,7 +7,7 @@ import { cleanUpload, errorCount } from './clean.js';
 import { ORIGIN, reply, readCapped, randomId, withinDaily } from './http.js';
 
 export const MAX_BYTES = 64 * 1024;
-export const TTL_MS = 30 * 24 * 60 * 60 * 1000;
+export const TTL_MS = 14 * 24 * 60 * 60 * 1000;
 export const PER_DEVICE_MINUTE = 10;
 export const PER_DAY = 1000;
 

@@ -2,7 +2,7 @@
 """Noodle Pads problem reports: copy them from the site's D1 database (table
 `reports`, ADR 0009) into a local SQLite archive, and read that archive.
 
-D1 holds each upload for 30 days. `--sync` copies new ones into the archive,
+D1 holds each upload for 14 days. `--sync` copies new ones into the archive,
 which keeps them forever. Everything else reads only the archive.
 
   logs.py                       the last 20 uploads, newest first

@@ -7,9 +7,7 @@
 // Bindings (flarepress noodlepads.com/wrangler.toml), and nothing else:
 //   ASSETS  the static assets (web/)
 //   DB      the D1 database `noodle-pads` (worker/schema.sql)
-// and one secret (`wrangler secret put IP_KEY`, docs/deploy-cloudflare.md):
-//   IP_KEY  the key for the IP's hash in the metrics (worker/metrics.js);
-//           without it no hash is kept
+// No secrets.
 
 import { handleLog } from './reports.js';
 import { handleCloud } from './cloud.js';

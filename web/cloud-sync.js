@@ -280,6 +280,8 @@ export function shareDoc(bundle, toId, kitIds, newId, { kind, title } = {}) {
 //   saveLink(link)           keep the link (IndexedDB `cloud`)
 //   uses                     optional: {pending(personId) -> {feature: n} | null,
 //                            sent(personId, counts)}, feature-use counts (uses.js)
+//   visits                   optional: {pending(personId) -> [visit] | null,
+//                            sent(personId, visits)}, finished visits (visits.js)
 //   bases                    optional: {load(personId) -> Map "kind:id" -> record,
 //                            save(personId, Map "kind:id" -> record | null)}, the
 //                            last-synced copy of each record (IndexedDB `bases`)
@@ -332,15 +334,17 @@ export async function syncProfile(link, deps) {
   return report;
 }
 
-// Feature-use counts waiting for this person go up after the records. A
-// failure is not the sync's: the counts wait for the next one (a Worker
-// without the route, or without its table, says no).
+// Feature-use counts and finished visits waiting for this person go up after
+// the records, in one call. A failure is not the sync's: they wait for the
+// next one (a Worker without the route, or without its tables, says no).
 async function sendUses(link, deps) {
-  const counts = deps.uses?.pending(link.id);
-  if (!counts) return;
+  const counts = deps.uses?.pending(link.id) ?? null;
+  const visits = deps.visits?.pending(link.id) ?? null;
+  if (!counts && !visits) return;
   try {
-    await deps.api.uses(link.id, link.key, counts);
-    deps.uses.sent(link.id, counts);
+    await deps.api.uses(link.id, link.key, counts, visits);
+    if (counts) deps.uses.sent(link.id, counts);
+    if (visits) deps.visits.sent(link.id, visits);
   } catch { /* kept for the next sync */ }
 }
 

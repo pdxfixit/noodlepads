@@ -28,7 +28,8 @@ from pathlib import Path
 
 SYNC_EVERY = dt.timedelta(hours=20)
 DIGEST_EVERY = dt.timedelta(days=7)
-# D1 keeps an upload 30 days; say so well before a gap in syncing loses any.
+# D1 keeps an upload, and the player metrics, 14 days; say so well before a
+# gap in syncing loses any.
 SYNC_WARN = dt.timedelta(days=3)
 JOBS = ("sync", "digest")
 
@@ -123,7 +124,7 @@ def attention_lines(state, t, configured=True):
         last = state["jobs"].get("sync", {}).get("last_success")
         a = age(last, t)
         if a is not None and a >= SYNC_WARN:
-            lines.append(f"sync: last good sync {human(a)}; D1 deletes uploads after 30 days")
+            lines.append(f"sync: last good sync {human(a)}; D1 deletes uploads and metrics after 14 days")
     return lines
 
 

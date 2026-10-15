@@ -482,15 +482,19 @@ ADR 0002.
   throwaway profile of its own (`just cloud-smoke`, `just cloud-e2e`), made
   and deleted in seconds; `just cloud-prune --smoke` clears one a killed check
   left.
-- **Player metrics** (Ben, ADR 0016): `just cloud-stats` lists what each
-  player made, then copies the metrics from D1 (kept there 90 days) into
+- **Player metrics** (Ben, ADR 0016), for people in the cloud only: each
+  sync also sends the person's feature-use counts (`web/uses.js`: screens,
+  tools, every dialog opened) and a summary of each finished visit
+  (`web/visits.js`: seconds in view, screens, level, load time, the sound's
+  delay, errors as file:line). D1 keeps them 14 days (a device's row 90).
+  `just harvest` copies them, with Cloudflare's stats for the site, into
   `~/.local/state/noodlepads/metrics.sqlite3` (kept forever; or
-  `$NOODLE_METRICS_DB`) and shows, per player: devices (type, browser, OS,
-  width, app version, syncs, first and last seen), places (city, region,
-  country and network, with how many scrambled IP codes), activity over the
-  last 14 days (`--days N`) and by hour, and feature-use counts. A player seen
-  from more than one place is flagged ⚠️. Test profiles are left out. The
-  archive is SQLite: `sqlite3 ~/.local/state/noodlepads/metrics.sqlite3`.
+  `$NOODLE_METRICS_DB`). `just cloud-stats` harvests, lists what each player
+  made, and shows per player: devices (type, browser, OS, width, app version,
+  syncs, first and last seen), places (city, region, country and network),
+  activity over the last 14 days (`--days N`) and by hour, feature-use counts
+  and visits; then every visit's errors by where they came from. A player
+  seen from more than one place is flagged ⚠️. Test profiles are left out.
   Deleting a profile deletes its metrics in D1, not in the archive.
 
 ## Keyboard and screen readers
