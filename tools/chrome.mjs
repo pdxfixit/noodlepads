@@ -1,15 +1,19 @@
 // A private headless Chrome and the DevTools protocol, for tools/look.mjs
 // (`just look`) and its cloud checks (look-cloud.mjs). Node with no
 // dependencies: Node's own WebSocket and fetch. Chrome comes from $CHROME,
-// else the usual macOS path. Each run gets its own throwaway profile, removed
-// on exit, so agents never share a browser.
+// else the usual macOS path, else a cloud session's Playwright Chromium. Each
+// run gets its own throwaway profile, removed on exit, so agents never share a
+// browser.
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
-export const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const MAC_CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CLOUD_CHROME = '/opt/pw-browsers/chromium';
+export const CHROME = process.env.CHROME
+  || (!fs.existsSync(MAC_CHROME) && fs.existsSync(CLOUD_CHROME) ? CLOUD_CHROME : MAC_CHROME);
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -37,7 +41,10 @@ export async function launchChrome() {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'look-chrome-'));
   const proc = spawn(CHROME, [
     '--headless', '--no-first-run', '--no-default-browser-check', '--hide-scrollbars',
-    '--mute-audio', `--user-data-dir=${profile}`, '--remote-debugging-port=0', 'about:blank',
+    '--mute-audio', `--user-data-dir=${profile}`, '--remote-debugging-port=0',
+    // A cloud session runs as root, and Chrome will not start sandboxed as root.
+    ...(process.getuid?.() === 0 ? ['--no-sandbox'] : []),
+    'about:blank',
   ], { stdio: 'ignore' });
   process.on('exit', () => {
     try { proc.kill('SIGKILL'); } catch { /* already gone */ }
