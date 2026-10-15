@@ -83,13 +83,13 @@ From the main checkout:
 
 ## Problem reports, metrics and the cloud database
 
-Agents may read the live database without asking (`just cloud-stats`, `just logs --sync`). They never write to it, except the deploy checks and `just cloud-prune --smoke --yes`; every other write is Ben's.
+Agents may read the live database without asking (`just harvest`, `just cloud-stats`, `just logs --sync`). They never write to it, except the deploy checks and `just cloud-prune --smoke --yes`; every other write is Ben's.
 
 | Job | Command | Notes |
 |---|---|---|
 | Read problem reports | `just logs`, `--errors`, `<device code>`, `--json <key>`, `--grep`, `--sql` | Reads the local archive `~/.local/state/noodlepads/logs.sqlite3` (`tools/logs.py`); safe for agents. |
-| Bring new reports in | `just logs --sync` | Reads D1 with the read-only Keychain token. The `noodlepads-logs` recurrent leg (`skills/noodlepads-logs/`) runs it daily and `--digest` weekly, filing new errors in TODO.md. |
-| Player metrics | `just cloud-stats [--days N]` | Reads D1 through flarepress (ADR 0016); archives into `metrics.sqlite3`. |
+| Bring everything in | `just harvest` | flarepress's `just harvest noodlepads.com` (D1's metrics and Cloudflare's stats into `metrics.sqlite3`), then `just logs --sync` (new problem reports). Read-only, with the Keychain token `noodlepads-logs`. `just deploy` and `just cloud-stats` run it first; the `noodlepads-logs` recurrent leg (`skills/noodlepads-logs/`) runs it daily and `just logs --digest` weekly, filing new errors in TODO.md. D1 keeps 14 days, so a missed fortnight loses data. |
+| Player metrics | `just cloud-stats [--days N]` | Harvests, then reports per player from `metrics.sqlite3` (ADR 0016): devices, places, activity, feature use, visits, and every visit's errors. Ask anything else with `sqlite3 ~/.local/state/noodlepads/metrics.sqlite3` (tables `activity`, `devices`, `uses`, `visits`, `players`, `cf_*`). |
 | Profiles | `just cloud-profiles`, `just cloud-prune [--days N] [--empty] [--yes]` | Prune is a dry run without `--yes`. |
 | A forgotten PIN | `just cloud-reset-pin <id>` | From an email to [old address removed]; it asks before it changes anything. |
 | Schema | `just cloud-migrate [--yes]`; `just cloud-schema` (a new, empty database only) | Ben runs migrate right before the deploy that needs it. |

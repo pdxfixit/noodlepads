@@ -51,8 +51,12 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 ### Hosting at noodlepads.com
 
 - [x] Apply the player-metrics migration (`just cloud-migrate --yes`) ✅ 2026-10-13
-- [ ] Set the Worker secret `IP_KEY` for the scrambled IP codes (2 min) 🔼
-  `cd ~/src/flarepress/noodlepads.com && openssl rand -hex 32 | npx wrangler secret put IP_KEY` (nobody sees the key; it stays through deploys). Until then the metrics keep everything but that code. Don't change it later: old and new codes stop matching. `docs/deploy-cloudflare.md`
+- [ ] Land the telemetry harvest in flarepress (2 min) 🔼
+  `cd ~/src/flarepress && git fetch && git merge --ff-only origin/claude/harvest && git push` (`just harvest`, `tools/harvest.py`, `noodlepads.com/harvest.conf`, `isopix.app/harvest.conf`). Noodle Pads' `just harvest` and `just deploy` call it. `docs/adr/0016-player-metrics.md`
+- [ ] Give the `noodlepads-logs` token Cloudflare's stats (3 min) 🔼
+  In the dashboard, edit the read-only token stored in the Keychain as `noodlepads-logs`: keep D1 Read, add Zone → Analytics: Read and Account → Account Analytics: Read (and Zone → Zone: Read if `just harvest` says the zone lookup was refused). Then `just harvest`: every line ✅ or 📦.
+- [ ] Apply migration 003 (`just cloud-migrate --yes`) right before the deploy that lands the telemetry (1 min) 🔼
+  It adds `visits` and drops the always-empty `ip_hash` column. Events written in the minute between the two are skipped, never failed.
 - [x] Move the cloud ids and the logs token to their new names ✅ 2026-10-13
 - [x] Pick the address: noodlepads.com ✅ 2026-10-11
 - [x] Pick public or family-only: public ✅ 2026-10-10
@@ -94,5 +98,5 @@ Other work:
 
 Agents suggested these; nothing happens until Ben says yes.
 
-- **A `just secret <domain> NAME` recipe in flarepress** (10 min): `wrangler secret put` with flarepress's own Keychain auth, so a Worker secret (like `IP_KEY`) is set the same way every site's D1 is, not by a hand-typed `npx wrangler` line.
+- **A `just secret <domain> NAME` recipe in flarepress** (10 min): `wrangler secret put` with flarepress's own Keychain auth, so a Worker secret is set the same way every site's D1 is, not by a hand-typed `npx wrangler` line.
 

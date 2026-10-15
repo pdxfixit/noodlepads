@@ -1,6 +1,6 @@
 # Automatic logs: design
 
-**Where reports are stored now:** the site's one D1 database, table `reports`, 30 days, deleted on the next insert, with a per-device and a daily cap instead of a rate-limit binding ([ADR 0009](../adr/0009-opt-in-problem-reports.md), [cloud profiles](cloud-profiles.md) § 1). `tools/logs.py --sync` reads it through D1's query API. Where this plan says KV, read D1; the rest (cleaning, the archive, the digest) stands.
+**Where reports are stored now:** the site's one D1 database, table `reports`, 14 days (Ben, 2026-10-15), deleted on the next insert, with a per-device and a daily cap instead of a rate-limit binding ([ADR 0009](../adr/0009-opt-in-problem-reports.md), [cloud profiles](cloud-profiles.md) § 1). `tools/logs.py --sync` reads it through D1's query API. Where this plan says KV, read D1; the rest (cleaning, the archive, the digest) stands.
 
 **Status (2026-10-11):** Ben lifted the hold and answered Q2–Q5 and Q8 (§ 11). The app side, steps 1–3 of § 10, is built: `web/log-clean.js`, the switch in ⚙️ Settings, `web/log-send.js`. The Worker (step 4) and the Cloudflare setup are separate work.
 

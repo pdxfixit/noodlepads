@@ -76,6 +76,7 @@ the cloud database show what they would do, or ask, before they do it.
 | Back up the cloud database | `just cloud-backup` (a `.sql` file in `~/.local/state/noodlepads/backups/`) |
 | Look in the cloud database | `just cloud-profiles`, `just cloud-stats`, `just cloud-sql "SELECT …"`, or any wrangler command with `just cloud-db …` |
 | Change the cloud database | `just cloud-migrate` (then `--yes`) before a deploy that needs it; `just cloud-prune` (then `--yes`); `just cloud-reset-pin <profile id>`; `just cloud-schema` for a new, empty database only |
+| Bring the cloud's metrics, Cloudflare's stats and problem reports home | `just harvest` (every deploy runs it first) |
 | Problem reports | `just logs --sync` brings new ones in; `just logs`, `--errors`, `--digest` read them |
 | Make sounds and emoji lists | `just placeholders`, `just emoji` |
 
@@ -113,9 +114,9 @@ the claims to the code).
 - Anyone with a share code can see and play what was shared, even after its profile is deleted, until the sharer taps 🚫 Unshare. Remixes others made of it stay theirs. Removing it from Shared with me only takes it off your list.
 - A PIN is not security. It only stops someone opening or changing a profile in the app.
 - The app collects no real names, emails or accounts. Profile names are made up by the app; nobody types one.
-- To see how the app is used, the cloud also keeps for 90 days: each device's type, browser and app version; when and how often each profile is opened and synced; how often each part of the app is used (counts only); and where each visit came from: the city, region, country and internet provider, with a scrambled code made from the internet address. The address itself is not kept.
+- To see how the app is used, the cloud also keeps for 14 days, for people in the cloud: when and how often each profile is opened and synced; how often each part of the app is used (counts only); how long each visit lasts, which screens it shows, how fast the app loaded, the sound's delay, and where in the app any error happened; and where each visit came from: the city, region, country and internet provider. Each device's type, browser and app version are kept 90 days. The internet address is not kept. All of it is copied to the app maker's own computer first, and kept there.
 - People set 📴 Offline stay on this device only.
-- Problem reports, if you turn them on, send this device's cleaned event log: no sounds and no names. They are deleted from the cloud after 30 days.
+- Problem reports, if you turn them on, send this device's cleaned event log: no sounds and no names. They are deleted from the cloud after 14 days.
 - To delete a profile and everything in it: 👥 People, tap them, ☁️ Cloud, then 📴 Offline (this device only), and its PIN if it has one. It is gone from the cloud at once, except what it shared; this device keeps its own copy.
 
 ## License

@@ -29,6 +29,7 @@ const remembered = new Map(Object.entries({
   'log-device': 'K7Q4-M2XD',
   'settings-open': '["set-keys","set-reports","!set-privacy","gone"]',
   uses: '{"juno":{"pad":3,"nope":1},"toby":"junk"}',
+  visits: '[{"person":"juno","visit":{"at":1791000000000,"secs":40,"screens":["pads","nope"]}},"junk",{"person":"toby","visit":{"at":"x","secs":5}}]',
   'kids-tab': 'beats',
   'kids-size': '9',
   'dj-overlap': '1',   // a key nothing reads: 🎤 Live's 🔔 Overlap is for the visit (Ben, 2026-10-12)
@@ -82,6 +83,14 @@ test('feature-use counts left from before stay, junk goes, and the screens shown
   assert.equal(mine.nope, undefined);
   assert.equal(state.personId, 'juno');
   assert.equal(mine.pad, 3, 'the remembered count stays');
+});
+
+test('visits left from before stay for their person, junk goes (visits.js)', async () => {
+  const { pendingVisits } = await import('../web/visits.js');
+  const juno = pendingVisits('juno');
+  assert.equal(juno.length, 1);
+  assert.deepEqual([juno[0].secs, juno[0].screens], [40, ['pads']]);
+  assert.equal(pendingVisits('toby'), null, 'a broken one is dropped');
 });
 
 test('🧸 Kids opens on the remembered tab; a junk pad size reads as the middle one', async () => {

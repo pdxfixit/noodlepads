@@ -29,10 +29,20 @@ export function setupDialog(dialog) {
   });
 }
 
+// Who hears of every dialog opened (app.js counts them, uses.js
+// DIALOG_USES). A watcher's trouble never stops a dialog opening.
+const openWatchers = [];
+export function onDialogOpen(fn) {
+  const safe = (d) => { try { fn(d); } catch { /* counting is never in the way */ } };
+  openWatchers.push(safe);
+  return () => openWatchers.splice(openWatchers.indexOf(safe), 1);
+}
+
 // Opens `dialog` as a modal. `focus` is the element to focus first (the
 // dialog's own first control otherwise); `returnTo()` finds where focus goes
 // on close if the opening element is gone by then.
 export function openDialog(dialog, { focus, returnTo } = {}) {
+  for (const fn of openWatchers) fn(dialog);
   openers.set(dialog, document.activeElement);
   if (returnTo) returns.set(dialog, returnTo);
   dialog.showModal();

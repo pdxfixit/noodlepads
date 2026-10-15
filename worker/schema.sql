@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS share_sounds (
 );
 CREATE INDEX IF NOT EXISTS share_sounds_sound ON share_sounds (sound_id);
 
--- Opt-in problem reports (ADR 0009): kept 30 days, then deleted by the next
+-- Opt-in problem reports (ADR 0009): kept 14 days, then deleted by the next
 -- report that arrives. No IP is stored.
 CREATE TABLE IF NOT EXISTS reports (
   key     TEXT PRIMARY KEY,   -- <ISO time>_<device>_<random>
@@ -130,9 +130,10 @@ CREATE TABLE IF NOT EXISTS counters (
 );
 
 -- Player metrics (ADR 0016): which devices use each profile, from where
--- (city and network, never the IP), when, and which parts of the app. Kept
--- 90 days: the Worker deletes older rows as it goes (worker/metrics.js), and
--- `just cloud-stats` copies them into a local archive first. Every write is
+-- (city and network, never the IP), when, which parts of the app, and how
+-- each visit went. Events, counts and visits are kept 14 days and a device's
+-- row 90: the Worker deletes older rows as it goes (worker/metrics.js), and
+-- `just harvest` copies them into a local archive first. Every write is
 -- skipped, never a failure, while these tables are missing.
 
 -- One row per device on a profile: a device is a key (keys.hash), so a
@@ -155,9 +156,7 @@ CREATE INDEX IF NOT EXISTS devices_profile ON devices (profile_id);
 CREATE INDEX IF NOT EXISTS devices_seen ON devices (last_seen);
 
 -- One row per make, open, pull, push, share, PIN change or wrong PIN, with
--- where it came from (Cloudflare's request.cf). `ip_hash` is an HMAC of the
--- IP with the Worker secret IP_KEY, so the same address matches without the
--- address being kept; NULL when the secret is not set.
+-- where it came from (Cloudflare's request.cf). Nothing of the IP.
 CREATE TABLE IF NOT EXISTS activity (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,  -- never reused, so the archive copies by id
   at         INTEGER NOT NULL,
@@ -168,8 +167,7 @@ CREATE TABLE IF NOT EXISTS activity (
   region     TEXT,
   country    TEXT,                      -- two letters
   network    TEXT,                      -- the network's name (asOrganization)
-  asn        INTEGER,
-  ip_hash    TEXT                       -- 16 hex characters
+  asn        INTEGER
 );
 CREATE INDEX IF NOT EXISTS activity_at ON activity (at);
 CREATE INDEX IF NOT EXISTS activity_profile ON activity (profile_id, at);
@@ -185,6 +183,28 @@ CREATE TABLE IF NOT EXISTS uses (
 );
 CREATE INDEX IF NOT EXISTS uses_day ON uses (day);
 
+-- One row per visit (the page in view, from showing to hiding), sent with a
+-- sync (POST /api/profiles/:id/uses, web/visits.js): how long, which screens,
+-- the level, the page's load time, the sound's delay, and where errors came
+-- from as file:line. Never what was made, said or typed.
+CREATE TABLE IF NOT EXISTS visits (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,  -- never reused, so the archive copies by id
+  at         INTEGER NOT NULL,          -- when it started
+  profile_id TEXT NOT NULL,
+  device     TEXT,                      -- devices.hash
+  app        TEXT,                      -- the app version that sent it
+  secs       INTEGER NOT NULL,          -- seconds in view
+  first      TEXT,                      -- the first screen shown (web/visits.js VISIT_SCREENS)
+  screens    TEXT,                      -- every screen shown, comma-separated
+  level      TEXT,                      -- kids regular advanced
+  load_ms    INTEGER,                   -- the page's load time, first visit of a page only
+  latency_ms INTEGER,                   -- the sound's delay, when a sound played
+  errors     INTEGER NOT NULL DEFAULT 0,-- errors in the visit
+  error_sigs TEXT                       -- JSON {"file.js:line": n}
+);
+CREATE INDEX IF NOT EXISTS visits_at ON visits (at);
+CREATE INDEX IF NOT EXISTS visits_profile ON visits (profile_id, at);
+
 -- Migrations applied (worker/migrations/, `just cloud-migrate`). A database
 -- made from this file already has every change they make, so each is listed
 -- as applied; `applied` 0 means "made from schema.sql".
@@ -192,4 +212,4 @@ CREATE TABLE IF NOT EXISTS migrations (
   name    TEXT PRIMARY KEY,   -- the file's name, without .sql
   applied INTEGER NOT NULL
 );
-INSERT OR IGNORE INTO migrations (name, applied) VALUES ('001-shares-not-gifts-or-families', 0), ('002-player-metrics', 0);
+INSERT OR IGNORE INTO migrations (name, applied) VALUES ('001-shares-not-gifts-or-families', 0), ('002-player-metrics', 0), ('003-visits-no-ip-hash', 0);

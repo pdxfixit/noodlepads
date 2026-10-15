@@ -20,6 +20,7 @@ import { newId, recall, remember } from './util.js';
 import { logEvent } from './log.js';
 import { createSyncTiming, SYNC_DELAY_MS, ACTIVE_MS } from './sync-timing.js';
 import { appMeta, pendingUses, sentUses } from './uses.js';
+import { pendingVisits, sentVisits } from './visits.js';
 
 // Given by app.js (initCloud), so this module never imports backup-ui.js,
 // which imports the People screen, which imports this.
@@ -235,6 +236,7 @@ function deps() {
     api,
     bases,
     uses: { pending: pendingUses, sent: sentUses },
+    visits: { pending: pendingVisits, sent: sentVisits },
     lists: storedLists,
     kitIds: kitIds(),
     sha256,

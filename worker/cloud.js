@@ -9,7 +9,7 @@ import { isFunName } from '../web/names.js';
 import { CLOUD_ID } from '../web/reid.js';
 import { ORIGIN, json, fail, Refuse, readJson, readBytes, randomId, sha256Hex, toBytes, withinDaily, utcDay } from './http.js';
 import { isPin, newSalt, hashSecret, checkSecret, shareCode, isShareCode, plainCode } from './pin.js';
-import { noteEvent, cleanUses, addUses, forgetProfile } from './metrics.js';
+import { noteEvent, cleanUses, cleanVisits, addUses, forgetProfile } from './metrics.js';
 
 // A D1 row holds at most 2,000,000 bytes; audio goes in pieces a little smaller.
 export const CHUNK_BYTES = 1_900_000;
@@ -525,16 +525,20 @@ async function unshare(request, env, id, raw) {
 
 // ── feature-use counts ──
 
-// {uses: {feature: n}} from the device's sync (web/uses.js), added to today's.
-// 503 while the table is missing, so the device keeps them for later.
+// {uses: {feature: n}, visits: [...]} from the device's sync (web/uses.js,
+// web/visits.js): counts added to today's, visits stored. Either may be
+// missing; bad counts refuse the call, a bad visit is dropped. 503 while the
+// tables are missing, so the device keeps them for later.
 async function takeUses(request, env, id, now) {
-  const body = await readJson(request, 4096);
+  const body = await readJson(request, 32_768);
   await needKey(request, env, id);
-  const uses = cleanUses(body);
-  if (!uses) throw new Refuse(400, 'uses');
+  const uses = body?.uses === undefined ? null : cleanUses(body);
+  if (body?.uses !== undefined && !uses) throw new Refuse(400, 'uses');
+  const visits = cleanVisits(body, now);
+  if (!uses && !visits.length && !Array.isArray(body?.visits)) throw new Refuse(400, 'uses');
   if (!await withinDaily(env, 'uses', LIMITS.usesPerDay, now)) throw new Refuse(429, 'busy');
   const device = await sha256Hex(bearer(request));
-  if (!await addUses(env, request, id, device, uses, now)) throw new Refuse(503, 'cloud');
+  if (!await addUses(env, request, id, device, uses, now, visits)) throw new Refuse(503, 'cloud');
   return json(200, { ok: true });
 }
 

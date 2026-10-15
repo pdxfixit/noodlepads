@@ -50,8 +50,77 @@ export const USES = [
   'row-overlap',   // 🔔 Overlap turned on for a beat row (sequencer.js toggleRing)
   'live-overlap',  // 🔔 Overlap turned on, on 🎤 Live (dj.js)
   'more',          // a row's ⋯ menu opened (overflow.js moreMenu)
+  // Dialogs opened (dialogs.js openDialog, by DIALOG_USES below).
+  'settings',      // ⚙️ Settings
+  'help',          // ❓ Help
+  'people',        // 👥 People
+  'profile',       // a person's profile sheet
+  'names',         // 🎲 Pick a name
+  'avatar',        // a person's picture
+  'cloud-sheet',   // ☁️ Cloud
+  'cloud-list',    // the cloud's list of people
+  'share-sheet',   // the share dialog
+  'bulk',          // ✏️ Edit sounds' chosen sounds (Move to group, Color · picture, …)
+  'shared-list',   // what this person shares
+  'pin',           // 🔒 PIN
+  'my-beats',      // 🗂️ My beats
+  'lane-sheet',    // 🎼 a song lane's sheet
+  'my-songs',      // 🗂️ My songs
+  'pictures',      // the picture chooser
+  'takes',         // 🎤 Live's takes
+  'keys-edit',     // ✏️ Edit keys
+  'chooser',       // a sound chooser
+  'sound-sheet',   // a pad's sound sheet (new sound or edit)
+  // From the log (useOfLog below).
+  'beat-new',      // 🆕 New beat
+  'groove-load',   // 💃 a groove loaded
+  'groove-sample', // 💃 a groove's ▶ sample
+  'beat-grow',     // ● Record grew the beat (1 → 2 → 4 bars)
+  'song-new',      // 🆕 New song
+  'song-sound',    // a song saved as a sound
+  'backup-load',   // 📂 a backup loaded
+  'voice',         // a voice rendered onto a sound (a preview counts too)
+  'setting',       // any setting changed
+  'level-kids',    // the level set to 🧸 Kids
+  'level-regular', // the level set to Regular
+  'level-advanced',// the level set to Advanced
+  'person-add',    // a person added
+  'person-delete', // a person deleted
+  'cloud-put',     // a person put in the cloud
+  'cloud-open',    // a profile opened from the cloud
+  'offline',       // 📴 Offline turned on
+  'pin-set',       // a PIN set
+  'unshare',       // a share taken back
+  'kids-voice',    // 🧸 Kids: a voice picked
 ];
 const KNOWN = new Set(USES);
+
+// The feature each dialog counts when it opens, by the <dialog>'s id in
+// index.html. Grooves, the mixer, the roll and the Kids sum are counted where
+// they open (and by what they do), so they are not here.
+export const DIALOG_USES = {
+  'settings-dialog': 'settings',
+  help: 'help',
+  'people-dialog': 'people',
+  'profile-dialog': 'profile',
+  'names-dialog': 'names',
+  'avatar-dialog': 'avatar',
+  'cloud-dialog': 'cloud-sheet',
+  'cloud-list': 'cloud-list',
+  'share-dialog': 'share-sheet',
+  'bulk-dialog': 'bulk',
+  'shared-dialog': 'shared-list',
+  'pin-dialog': 'pin',
+  library: 'my-beats',
+  'lane-sheet': 'lane-sheet',
+  songs: 'my-songs',
+  pictures: 'pictures',
+  takes: 'takes',
+  'keys-edit': 'keys-edit',
+  chooser: 'chooser',
+  sheet: 'sound-sheet',
+};
+export const useOfDialog = (dialog) => DIALOG_USES[dialog?.id] ?? null;
 
 // Screen-width buckets, in CSS pixels: a width is sent as the biggest bucket
 // at or below it.
@@ -131,15 +200,29 @@ export function sentUses(personId, sent) {
 export function useOfLog(entry) {
   const d = entry?.data ?? {};
   switch (entry?.kind) {
-    case 'beat': return { play: 'beat-play', keep: 'beat-keep' }[d.action] ?? null;
-    case 'dj': return d.rec === 'start' ? 'beat-record' : null;
-    case 'song': return { play: 'song-play', keep: 'song-keep' }[d.action] ?? null;
+    case 'beat': return { play: 'beat-play', keep: 'beat-keep', new: 'beat-new', groove: 'groove-load', sample: 'groove-sample' }[d.action] ?? null;
+    case 'dj': return { start: 'beat-record', grow: 'beat-grow' }[d.rec] ?? null;
+    case 'song': return { play: 'song-play', keep: 'song-keep', new: 'song-new', sound: 'song-sound' }[d.action] ?? null;
     case 'chop': return d.made ? 'chop' : null;
-    case 'backup': return d.saved === true ? 'backup' : null;
+    case 'backup': return d.saved === true ? 'backup' : d.loaded === true ? 'backup-load' : null;
+    case 'render': return 'voice';
+    case 'setting':
+      if (d.key === 'level') return { kids: 'level-kids', regular: 'level-regular', advanced: 'level-advanced' }[d.value] ?? 'setting';
+      return 'setting';
+    case 'person':
+      if (d.added) return 'person-add';
+      if (d.deleted) return 'person-delete';
+      return null;
+    case 'kids': return d.voice && d.recorded === undefined ? 'kids-voice' : null;
     case 'cloud':
       if (d.shared) return 'share';
       if (d.remixed) return 'remix';
       if (d.opened === 'share') return 'share-open';
+      if (d.opened === true) return 'cloud-open';
+      if (d.put) return 'cloud-put';
+      if (d.offline === true) return 'offline';
+      if (d.pin === 'set') return 'pin-set';
+      if (d.unshared) return 'unshare';
       return null;
     default: return null;
   }

@@ -40,7 +40,9 @@ import { initHelp } from './help.js';
 import { initLogSend } from './log-send.js';
 import { initLeftover } from './leftover.js';
 import { installErrorLog, logEvent, onLog } from './log.js';
-import { countUse, watchUses } from './uses.js';
+import { countUse, watchUses, useOfDialog } from './uses.js';
+import { onDialogOpen } from './dialogs.js';
+import { trackVisits } from './visits.js';
 import { $, showNotice, announce, fadeAway, trackSlimHead } from './ui.js';
 import { db } from './store.js';
 import { newId, versionLabel, footStacks, remember, recall } from './util.js';
@@ -136,6 +138,7 @@ function applyKids() {
   }
   document.body.classList.toggle('kids', on);
   showKids(on);
+  visits?.screen(on ? 'kids' : state.screen);
   if (!on) refitLines();
 }
 
@@ -229,6 +232,7 @@ function setScreen(name) {
   el.padsBar.hidden = name !== 'pads';
   remember('screen', name);
   countUse(name, state.personId);
+  visits?.screen(name);
 }
 
 // What Beats and Live show: Beats' rows (⌨️ Keys off), or the keys panel,
@@ -662,8 +666,25 @@ function followRenames(pairs) {
 // counted in setScreen, ⌨️ Keys in setKeys, pads in pads.js tapPad,
 // recordings in sheet.js; 🎹 the roll, 🎚️ the Mixer, chips, a row's 🔔 and
 // ⋯ in sequencer.js, 🔔 on Live in dj.js and a song's blocks in song.js.
+// Every dialog counts as it opens (uses.js DIALOG_USES). Visits are followed
+// from here too (visits.js): sent only for people in the cloud.
+let visits = null;
 function countUses() {
+  visits = trackVisits({
+    now: () => Date.now(),
+    who: () => state.personId,
+    level: () => getSetting('level'),
+    load: () => Math.round(performance.getEntriesByType?.('navigation')?.[0]?.loadEventEnd || 0) || null,
+    latency: () => (audio.ctx ? ((audio.ctx.outputLatency || 0) + (audio.ctx.baseLatency || 0)) * 1000 : null),
+    onLog,
+    doc: document,
+    win: globalThis,
+  });
   watchUses(onLog, () => state.personId);
+  onDialogOpen((dialog) => {
+    const f = useOfDialog(dialog);
+    if (f) countUse(f, state.personId);
+  });
   // 💃 Grooves in both beat bars (⌨️ Keys off and on).
   for (const b of document.querySelectorAll('[data-beat-grooves]')) b.addEventListener('click', () => countUse('grooves', state.personId));
 }

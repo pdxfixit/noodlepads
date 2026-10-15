@@ -5,8 +5,10 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  USES, WIDTHS, MAX_COUNT, countUse, pendingUses, sentUses, useOfLog, watchUses, widthBucket, appMeta,
+  USES, WIDTHS, MAX_COUNT, DIALOG_USES, countUse, pendingUses, sentUses, useOfLog, useOfDialog, watchUses, widthBucket, appMeta,
 } from '../web/uses.js';
+import { readFileSync } from 'node:fs';
+import { LEVELS } from '../web/settings.js';
 import { cleanUses, readMeta } from '../worker/metrics.js';
 import { logEvent, onLog } from '../web/log.js';
 import { createCloudApi } from '../web/cloud-api.js';
@@ -72,7 +74,8 @@ test('the log shows what was used: plays, records, 💾 Keep, shares, backups', 
     [{ kind: 'beat', data: { action: 'play' } }, 'beat-play'],
     [{ kind: 'beat', data: { action: 'stop' } }, null],
     [{ kind: 'dj', data: { rec: 'start' } }, 'beat-record'],
-    [{ kind: 'dj', data: { rec: 'grow' } }, null],
+    [{ kind: 'dj', data: { rec: 'grow' } }, 'beat-grow'],
+    [{ kind: 'dj', data: { rec: 'stop' } }, null],
     [{ kind: 'song', data: { action: 'play' } }, 'song-play'],
     [{ kind: 'beat', data: { action: 'keep', groove: false } }, 'beat-keep'],
     [{ kind: 'song', data: { action: 'keep' } }, 'song-keep'],
@@ -84,7 +87,32 @@ test('the log shows what was used: plays, records, 💾 Keep, shares, backups', 
     [{ kind: 'cloud', data: { shared: 'beat' } }, 'share'],
     [{ kind: 'cloud', data: { remixed: 'sound' } }, 'remix'],
     [{ kind: 'cloud', data: { opened: 'share', kind: 'song' } }, 'share-open'],
-    [{ kind: 'cloud', data: { opened: true } }, null],
+    [{ kind: 'cloud', data: { opened: true } }, 'cloud-open'],
+    [{ kind: 'cloud', data: { put: true } }, 'cloud-put'],
+    [{ kind: 'cloud', data: { offline: true } }, 'offline'],
+    [{ kind: 'cloud', data: { offline: false } }, null],
+    [{ kind: 'cloud', data: { pin: 'set' } }, 'pin-set'],
+    [{ kind: 'cloud', data: { pin: 'removed' } }, null],
+    [{ kind: 'cloud', data: { unshared: true } }, 'unshare'],
+    [{ kind: 'cloud', data: { sync: true, pulled: 3 } }, null],
+    [{ kind: 'beat', data: { action: 'new' } }, 'beat-new'],
+    [{ kind: 'beat', data: { action: 'groove' } }, 'groove-load'],
+    [{ kind: 'beat', data: { action: 'sample' } }, 'groove-sample'],
+    [{ kind: 'beat', data: { action: 'switch' } }, null],
+    [{ kind: 'song', data: { action: 'new' } }, 'song-new'],
+    [{ kind: 'song', data: { action: 'sound' } }, 'song-sound'],
+    [{ kind: 'backup', data: { loaded: true } }, 'backup-load'],
+    [{ kind: 'backup', data: { loaded: false } }, null],
+    [{ kind: 'render', data: { voice: 'robot' } }, 'voice'],
+    [{ kind: 'setting', data: { key: 'padSize', value: 'auto' } }, 'setting'],
+    [{ kind: 'setting', data: { key: 'level', value: 'kids' } }, 'level-kids'],
+    [{ kind: 'setting', data: { key: 'level', value: 'regular' } }, 'level-regular'],
+    [{ kind: 'setting', data: { key: 'level', value: 'advanced' } }, 'level-advanced'],
+    [{ kind: 'person', data: { added: 'p-a' } }, 'person-add'],
+    [{ kind: 'person', data: { deleted: 'p-a' } }, 'person-delete'],
+    [{ kind: 'person', data: { newIds: 2 } }, null],
+    [{ kind: 'kids', data: { voice: 'robot' } }, 'kids-voice'],
+    [{ kind: 'kids', data: { recorded: 2.5, voice: 'robot' } }, null],
     [{ kind: 'error', data: { message: 'x' } }, null],
   ];
   for (const [entry, want] of cases) assert.equal(useOfLog(entry), want, JSON.stringify(entry));
@@ -129,4 +157,22 @@ test('every cloud call carries the header, and a broken meta never stops one', a
   await createCloudApi({ fetch, meta: () => { throw new Error('no screen'); } }).hello();
   await createCloudApi({ fetch }).list();
   assert.deepEqual(seen, ['v=abc&w=1024&t=0', undefined, undefined]);
+});
+
+test('every dialog the app has counts as it opens, under a name on the list', () => {
+  const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
+  const ids = [...html.matchAll(/<dialog[^>]*\bid="([^"]+)"/g)].map((m) => m[1]);
+  // Counted where they open, or by what they do (uses.js DIALOG_USES).
+  const elsewhere = new Set(['kids-sum', 'grooves', 'mixer', 'roll']);
+  for (const id of ids) {
+    if (elsewhere.has(id)) assert.equal(useOfDialog({ id }), null, id);
+    else assert.ok(USES.includes(useOfDialog({ id })), `#${id} counts`);
+  }
+  for (const id of Object.keys(DIALOG_USES)) assert.ok(ids.includes(id), `#${id} is still in index.html`);
+  assert.equal(useOfDialog(null), null);
+  assert.equal(new Set(USES).size, USES.length, 'no name twice');
+});
+
+test('each level has its own count', () => {
+  for (const l of LEVELS) assert.ok(USES.includes(`level-${l}`), l);
 });

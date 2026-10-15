@@ -117,14 +117,17 @@ renew it; Ben runs `npx wrangler login` in a terminal.
   below); everyone else stays on their device.
 - **Before real voice recordings go into `web/clips/`**, remember they become
   public on the next deploy.
-- **The Worker has one secret, `IP_KEY`** ([ADR 0016](adr/0016-player-metrics.md)):
-  the key for the scrambled IP code in the player metrics. Without it the
-  metrics keep everything but that code. Set it once, from flarepress's site
-  folder, so nobody ever sees it:
-  `cd ~/src/flarepress/noodlepads.com && openssl rand -hex 32 | npx wrangler secret put IP_KEY`
-  (wrangler's own login, or `CLOUDFLARE_API_TOKEN` from the Keychain as
-  flarepress's recipes set it). A secret stays through every deploy. Changing
-  it later starts every IP code over: visits before and after no longer match.
+- **The Worker has no secrets.** The player metrics keep nothing of the IP
+  ([ADR 0016](adr/0016-player-metrics.md)). If an `IP_KEY` secret was ever
+  set, nothing reads it: `npx wrangler secret delete IP_KEY` from
+  `~/src/flarepress/noodlepads.com` removes it.
+- **Every deploy starts with `just harvest`**: D1's metrics and Cloudflare's
+  stats (flarepress's `just harvest noodlepads.com`, its
+  `noodlepads.com/harvest.conf`) and new problem reports go into the archives
+  on this Mac first. A failed harvest warns; the deploy goes on. The token is
+  the Keychain's `noodlepads-logs`: D1 Read, Zone → Analytics: Read and
+  Account → Account Analytics: Read (add Zone: Read if the zone lookup is
+  refused).
 
 ## Cloud profiles and problem reports: one D1 database (live)
 
@@ -138,7 +141,7 @@ here" and problem reports are not stored.
 
 The whole Cloudflare footprint is **one Worker** (the site's own) and **one
 D1 database**, on the free plan. No KV, no R2, no Cron Triggers, no
-rate-limit binding. One secret, `IP_KEY` (below). Nothing here asks for a card.
+rate-limit binding. No secrets. Nothing here asks for a card.
 
 ### Ben, once (about 15 minutes; please approve each step)
 

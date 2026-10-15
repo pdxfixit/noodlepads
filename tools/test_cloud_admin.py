@@ -3,6 +3,7 @@ sends to D1, run on the live schema (tests/schema-before-001.sql) or the
 current one (worker/schema.sql)."""
 
 import re
+import json
 import sqlite3
 import tempfile
 import unittest
@@ -63,7 +64,7 @@ class Migrate(unittest.TestCase):
         db = Local(ROOT / 'tests' / 'schema-before-001.sql')
         lines, out = quiet()
         pending = ca.migrate(db, False, out)
-        self.assertEqual([p.name for p in pending], ['001-shares-not-gifts-or-families.sql', '002-player-metrics.sql'])
+        self.assertEqual([p.name for p in pending], ['001-shares-not-gifts-or-families.sql', '002-player-metrics.sql', '003-visits-no-ip-hash.sql'])
         self.assertEqual(db.ran, [], 'a dry run changes nothing')
         ca.migrate(db, True, out)
         self.assertIn('active', [c['name'] for c in db.query('PRAGMA table_info(profiles)')])
@@ -158,10 +159,10 @@ PHONE = 'a' * 64
 TABLET = 'b' * 64
 
 
-def event(db, at, pid, kind, device=PHONE, city='Portland', network='Comcast Cable', ip='1111222233334444'):
+def event(db, at, pid, kind, device=PHONE, city='Portland', network='Comcast Cable'):
     dev = "'" + device + "'" if device else 'NULL'
-    db.execute(f"INSERT INTO activity (at, profile_id, device, kind, city, region, country, network, asn, ip_hash) "
-               f"VALUES ({at}, '{pid}', {dev}, '{kind}', '{city}', 'Oregon', 'US', '{network}', 7922, '{ip}');")
+    db.execute(f"INSERT INTO activity (at, profile_id, device, kind, city, region, country, network, asn) "
+               f"VALUES ({at}, '{pid}', {dev}, '{kind}', '{city}', 'Oregon', 'US', '{network}', 7922);")
 
 
 def device(db, h, pid, kind='phone', last=NOW, syncs=3):
@@ -169,48 +170,45 @@ def device(db, h, pid, kind='phone', last=NOW, syncs=3):
                f"VALUES ('{h}', '{pid}', {NOW - 5 * DAY}, {last}, {syncs}, '7b5fc5e', 'Safari', 'iOS', '{kind}', 360);")
 
 
+def visit(db, at, pid, secs, screens='pads', level='regular', load=None, latency=None, sigs=None):
+    errors = sum(json.loads(sigs).values()) if sigs else 0
+    db.execute("INSERT INTO visits (at, profile_id, device, app, secs, first, screens, level, load_ms, latency_ms, errors, error_sigs) "
+               "VALUES (?, ?, ?, '7b5fc5e', ?, ?, ?, ?, ?, ?, ?, ?)",
+               (at, pid, PHONE, secs, screens.split(',')[0], screens, level, load, latency, errors, sigs))
+
+
+def fill(db):
+    """The same metrics, in D1 (for prune) or in the archive (as `just harvest` leaves it)."""
+    device(db, PHONE, 'p-kid')
+    device(db, TABLET, 'p-kid', kind='tablet', last=NOW - DAY, syncs=9)
+    device(db, 'c' * 64, 'p-smoke-1')
+    event(db, NOW - 2 * DAY, 'p-kid', 'open')
+    event(db, NOW - 2 * DAY + HOUR, 'p-kid', 'pull')
+    event(db, NOW - DAY, 'p-kid', 'pull', device=TABLET, city='Seattle', network='T-Mobile USA')
+    event(db, NOW - HOUR, 'p-kid', 'pin-wrong', device=None, city='Seattle', network='T-Mobile USA')
+    event(db, NOW - HOUR, 'p-smoke-1', 'make', device='c' * 64)
+    db.execute("INSERT INTO uses (profile_id, feature, day, n) VALUES ('p-kid', 'pad', '2027-01-14', 40), ('p-kid', 'beats', '2027-01-14', 2), ('p-smoke-1', 'pad', '2027-01-14', 1);")
+
+
 class Metrics(unittest.TestCase):
-    """`just cloud-stats`: D1's metrics copied into the local archive, kept
-    there after D1 lets them go, and reported per player (ADR 0016)."""
+    """`just cloud-stats`: the players from D1, then the metrics reported per
+    player from the archive `just harvest` fills (ADR 0016)."""
 
     def setUp(self):
         self.db = Local(ROOT / 'worker' / 'schema.sql')
         profile(self.db, 'p-kid', NOW - 10 * DAY, NOW)
         profile(self.db, 'p-smoke-1', NOW - DAY, NOW)
         self.db.execute("UPDATE profiles SET avatar = '🐙' WHERE id = 'p-kid';")
-        device(self.db, PHONE, 'p-kid')
-        device(self.db, TABLET, 'p-kid', kind='tablet', last=NOW - DAY, syncs=9)
-        device(self.db, 'c' * 64, 'p-smoke-1')
-        event(self.db, NOW - 2 * DAY, 'p-kid', 'open')
-        event(self.db, NOW - 2 * DAY + HOUR, 'p-kid', 'pull')
-        event(self.db, NOW - DAY, 'p-kid', 'pull', device=TABLET, city='Seattle', network='T-Mobile USA', ip='5555666677778888')
-        event(self.db, NOW - HOUR, 'p-kid', 'pin-wrong', device=None, city='Seattle', network='T-Mobile USA', ip='9999000011112222')
-        event(self.db, NOW - HOUR, 'p-smoke-1', 'make', device='c' * 64)
-        self.db.execute(f"INSERT INTO uses (profile_id, feature, day, n) VALUES ('p-kid', 'pad', '2027-01-14', 40), ('p-kid', 'beats', '2027-01-14', 2), ('p-smoke-1', 'pad', '2027-01-14', 1);")
-        self.archive = sqlite3.connect(':memory:')
+        fill(self.db)
+        self.archive = ca.open_archive(':memory:')
+        fill(self.archive)
+        self.archive.execute("INSERT INTO players VALUES ('p-kid', 'Sir Squid', '🐙', ?)", (NOW - 10 * DAY,))
+        self.archive.execute("INSERT INTO harvest_meta VALUES ('last_run', '2027-01-15T07:00:00Z'), ('last_result', 'ok')")
 
     def stats(self):
         lines, out = quiet()
         ca.stats(self.db, now=NOW, out=out, archive=self.archive, tz=timezone.utc)
         return lines
-
-    def test_copies_every_row_once_and_keeps_them_after_d1_forgets(self):
-        ca.archive_metrics(self.db, ca.open_archive(':memory:'), NOW)   # an archive of its own changes nothing here
-        self.assertEqual(ca.archive_metrics(self.db, self.archive, NOW), {'activity': 5, 'devices': 3, 'uses': 3})
-        again = ca.archive_metrics(self.db, self.archive, NOW)
-        self.assertEqual(again['activity'], 0, 'activity is copied once, by id')
-        self.assertEqual(self.archive.execute('SELECT COUNT(*) FROM activity').fetchone()[0], 5)
-        # D1 lets old rows go (90 days); a day's count grows; a device syncs again.
-        self.db.execute(f"DELETE FROM activity; DELETE FROM devices WHERE hash = '{TABLET}';"
-                        f"UPDATE uses SET n = 41 WHERE feature = 'pad' AND profile_id = 'p-kid'; UPDATE devices SET syncs = 4 WHERE hash = '{PHONE}';")
-        event(self.db, NOW, 'p-kid', 'push')
-        self.assertEqual(ca.archive_metrics(self.db, self.archive, NOW)['activity'], 1)
-        a = self.archive
-        self.assertEqual(a.execute('SELECT COUNT(*) FROM activity').fetchone()[0], 6, 'nothing lost')
-        self.assertEqual(a.execute('SELECT COUNT(*) FROM devices').fetchone()[0], 3)
-        self.assertEqual(a.execute(f"SELECT syncs FROM devices WHERE hash = '{PHONE}'").fetchone()[0], 4)
-        self.assertEqual(a.execute("SELECT n FROM uses WHERE feature = 'pad' AND profile_id = 'p-kid'").fetchone()[0], 41)
-        self.assertEqual(a.execute("SELECT name, avatar FROM players WHERE id = 'p-kid'").fetchone(), ('Sir Squid', '🐙'))
 
     def test_a_long_feature_list_wraps_without_splitting_a_name(self):
         names = [f'feature-{i} {i * 7}' for i in range(34)]
@@ -225,15 +223,16 @@ class Metrics(unittest.TestCase):
     def test_reports_devices_places_activity_and_uses_and_flags_two_places(self):
         lines = self.stats()
         text = '\n'.join(lines)
-        self.assertIn('📦 archive (in memory): +5 events, 3 devices, 3 day counts copied', text)
+        self.assertIn('📦 archive (in memory): last harvested 2027-01-15T07:00:00Z', text)
         head = next(l for l in lines if 'p-kid' in l and '🐙' in l)
         self.assertIn('⚠️ seen from 2 places', head)
         self.assertNotIn('p-smoke', text, 'test profiles are left out')
         self.assertIn('📱 devices: 2', text)
         self.assertRegex(text, r'aaaaaa  phone   Safari   iOS      w360   app 7b5fc5e\s+3 syncs')
         self.assertRegex(text, r'bbbbbb  tablet')
-        self.assertIn('Portland, Oregon, US · Comcast Cable (AS7922) · 1 IP · 2 events', text)
-        self.assertIn('Seattle, Oregon, US · T-Mobile USA (AS7922) · 2 IPs · 2 events', text)
+        self.assertIn('Portland, Oregon, US · Comcast Cable (AS7922) · 2 events', text)
+        self.assertIn('Seattle, Oregon, US · T-Mobile USA (AS7922) · 2 events', text)
+        self.assertNotIn('IP', text, 'nothing of the IP is kept, so none is reported')
         day_line = next(l for l in lines if l.startswith('  📅'))
         self.assertIn('4 events; 3 days with any', day_line)
         hour_line = next(l for l in lines if l.startswith('  🕐'))
@@ -241,21 +240,35 @@ class Metrics(unittest.TestCase):
         self.assertEqual(len(hour_line.split('|')[1]), 24)
         self.assertIn('🔁 pull 2 · open 1 · pin-wrong 1', text)
         self.assertIn('🧩 pad 40 · beats 2', text)
+        self.assertNotIn('👀', text, 'no visits, no visits line')
         self.assertEqual(lines[-1], '1 players with metrics · 1 seen from more than one place')
 
+    def test_visits_and_their_errors_are_reported(self):
+        visit(self.archive, NOW - DAY, 'p-kid', 120, 'pads,beats', load=900, latency=20, sigs='{"app.js:9": 2}')
+        visit(self.archive, NOW - HOUR, 'p-kid', 60, 'kids', level='kids', load=700)
+        visit(self.archive, NOW - 2 * HOUR, 'p-kid', 30, 'pads', sigs='{"app.js:9": 1, "storage": 1}')
+        visit(self.archive, NOW - HOUR, 'p-smoke-1', 5, 'pads', sigs='{"smoke.js:1": 9}')
+        text = '\n'.join(self.stats())
+        self.assertIn('👀 3 visits · 4 min in all · median 60 s · loads in 900 ms · sound delay 20 ms · 2 with errors', text)
+        self.assertIn('screens: pads 2 · beats 1 · kids 1', text)
+        self.assertIn('levels: regular 2 · kids 1', text)
+        self.assertIn('🐞 errors in visits: smoke.js:1 9 · app.js:9 3 · storage 1', text)
+
     def test_one_place_is_not_flagged(self):
-        self.db.execute("DELETE FROM activity WHERE city = 'Seattle';")
+        self.archive.execute("DELETE FROM activity WHERE city = 'Seattle';")
         lines = self.stats()
         self.assertNotIn('⚠️', '\n'.join(lines))
         self.assertEqual(lines[-1], '1 players with metrics · 0 seen from more than one place')
 
-    def test_before_the_migration_it_says_so_and_reads_the_archive(self):
-        ca.archive_metrics(self.db, self.archive, NOW)
-        for t in ('activity', 'devices', 'uses'):
-            self.db.execute(f'DROP TABLE {t};')
-        lines = self.stats()
-        self.assertTrue(any('run `just cloud-migrate --yes`' in l for l in lines))
-        self.assertTrue(any('⚠️ seen from 2 places' in l for l in lines), 'the archive still reports')
+    def test_an_archive_nothing_has_harvested_says_so(self):
+        lines, out = quiet()
+        ca.stats(self.db, now=NOW, out=out, archive=ca.open_archive(':memory:'), tz=timezone.utc)
+        self.assertTrue(any('nothing harvested yet; run `just harvest`' in l for l in lines))
+        self.assertEqual(lines[-1], 'No player metrics yet.')
+
+    def test_a_harvest_that_failed_in_part_is_named(self):
+        self.archive.execute("UPDATE harvest_meta SET value = '1 failed' WHERE key = 'last_result'")
+        self.assertTrue(any('(1 failed: see `just harvest`)' in l for l in self.stats()))
 
     def test_the_archive_lives_beside_the_report_archive_unless_told(self):
         with tempfile.TemporaryDirectory() as home:

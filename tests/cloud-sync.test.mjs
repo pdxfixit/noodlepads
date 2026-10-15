@@ -593,3 +593,31 @@ test('a sync sends the person\'s feature-use counts, and keeps them when the clo
   assert.equal(sent.length, 1, 'the counts wait for the next sync');
   assert.deepEqual(waiting, { pad: 2 });
 });
+
+// Finished visits (web/visits.js) go up in the same call as the counts, or
+// alone; only what the cloud took is taken off.
+test('a sync sends the person\'s finished visits, with the counts or alone, and keeps them when the cloud says no', async () => {
+  const { api, env } = server();
+  const { a, link } = await startA(api);
+  const v = { at: Date.now() - 60_000, secs: 42, first: 'beats', screens: ['beats'], level: 'advanced', load: null, latency: 12, errors: { 'app.js:9': 1 } };
+  let waitingUses = { pad: 1 };
+  let waitingVisits = [v];
+  const took = [];
+  const uses = { pending: () => (waitingUses ? { ...waitingUses } : null), sent: () => { waitingUses = null; } };
+  const visits = { pending: (id) => (id === 'p-a' && waitingVisits ? [...waitingVisits] : null), sent: (id, vs) => { took.push(vs.length); waitingVisits = null; } };
+  await syncProfile(link, { ...a.deps(api), uses, visits });
+  assert.deepEqual(took, [1]);
+  assert.equal(waitingUses, null, 'the counts went in the same call');
+  assert.deepEqual(env.DB.rows('SELECT secs, first, level, latency_ms, errors FROM visits'), [{ secs: 42, first: 'beats', level: 'advanced', latency_ms: 12, errors: 1 }]);
+
+  waitingVisits = [{ ...v, at: v.at + 1000 }];
+  await syncProfile(link, { ...a.deps(api), uses, visits });
+  assert.deepEqual(took, [1, 1], 'visits alone are sent');
+  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM visits')[0].n, 2);
+
+  waitingVisits = [{ ...v, at: v.at + 2000 }];
+  env.DB.db.exec('DROP TABLE visits');   // a Worker whose migration has not run
+  await syncProfile(link, { ...a.deps(api), uses, visits });
+  assert.deepEqual(took, [1, 1], 'they wait for the next sync');
+  assert.equal(waitingVisits.length, 1);
+});

@@ -7,9 +7,10 @@
     cloud_admin.py prune    [--days N] [--empty] [--smoke] [--yes]   profiles idle N days (default 180) or empty, and loose sounds;
                                                  --smoke: what the deploy checks left (p-smoke-…, p-e2e-…, and their shares)
     cloud_admin.py reset-pin ID [--yes]          clear a profile's PIN (Ben, from a pin.reset@ email)
-    cloud_admin.py stats    [--days N]           the players: what each made; then copies the metrics
-                                                 (ADR 0016) into the local archive and reports from it:
-                                                 devices, places, activity by day and hour, feature use
+    cloud_admin.py stats    [--days N]           the players: what each made; then reports the metrics
+                                                 (ADR 0016) from the local archive that `just harvest`
+                                                 fills: devices, places, activity by day and hour,
+                                                 feature use, visits, errors
 
 Everything that changes the database shows what it would do and stops,
 unless --yes is given (reset-pin asks instead). Every statement runs through
@@ -18,8 +19,11 @@ here holds a credential. A read that fails stops the tool: an empty answer is
 never taken for "nothing there".
 
 The metrics archive is ~/.local/state/noodlepads/metrics.sqlite3 (or
-$NOODLE_METRICS_DB), beside the problem-report archive (tools/logs.py). D1
-keeps metrics 90 days; the archive keeps them forever.
+$NOODLE_METRICS_DB), beside the problem-report archive (tools/logs.py).
+flarepress's `just harvest noodlepads.com` copies D1 into it (its
+noodlepads.com/harvest.conf says how), and `just cloud-stats` runs that
+first. D1 keeps events, counts and visits 14 days and a device's row 90; the
+archive keeps them forever.
 
 Stdlib only. The tests (tools/test_cloud_admin.py) run every command against
 a local SQLite database with the same schema.
@@ -214,8 +218,8 @@ KIND_SQL = "SELECT profile_id, kind, COUNT(*) AS n FROM records GROUP BY profile
 def stats(db, now=None, out=print, archive=None, days=14, tz=None):
     """The players in the cloud (not the deploy checks' test profiles): what
     each has made, how much sound, PIN, devices and shares; then totals. Then
-    the metrics (ADR 0016): copied into the archive (`archive`: a path or an
-    open connection; default metrics_path()), and reported from it."""
+    the metrics (ADR 0016), reported from the archive (`archive`: a path or
+    an open connection; default metrics_path()), which `just harvest` fills."""
     now = now or int(time.time() * 1000)
     rows = [r for r in db.query(STATS_SQL) if not is_test(r['id'])]
     counts = {}
@@ -235,18 +239,18 @@ def stats(db, now=None, out=print, archive=None, days=14, tz=None):
     total = sum(r['bytes'] or 0 for r in rows)
     out(f'{len(rows)} players · {week} active in the last 7 days · {size(total)} of sound')
     conn = archive if isinstance(archive, sqlite3.Connection) else open_archive(archive)
+    conn.executescript(ARCHIVE_SCHEMA)
     out('')
-    copied = archive_metrics(db, conn, now)
-    if copied is None:
-        out('⚠️ The cloud has no metrics tables yet: run `just cloud-migrate --yes`. Showing the archive only.')
-    else:
-        out(f"📦 archive {archive_name(archive)}: +{copied['activity']} events, {copied['devices']} devices, {copied['uses']} day counts copied")
+    out(harvest_line(conn, archive_name(archive)))
     metrics_report(conn, now, out, days=days, tz=tz)
     return rows
 
 
 # ── metrics: the local archive (ADR 0016) ──
 
+# The tables as `just harvest` makes them (D1's columns), so a report runs
+# on an archive nothing has filled yet. activity's ip_hash is from before
+# 2026-10-15: the archive never drops a column, and it was always empty.
 ARCHIVE_SCHEMA = """
 CREATE TABLE IF NOT EXISTS players (     -- each profile's look, kept after the cloud forgets it
   id TEXT PRIMARY KEY, name TEXT, avatar TEXT, created INTEGER
@@ -263,11 +267,14 @@ CREATE INDEX IF NOT EXISTS activity_profile ON activity (profile_id, at);
 CREATE TABLE IF NOT EXISTS uses (        -- as D1's uses: one day's count
   profile_id TEXT, feature TEXT, day TEXT, n INTEGER, PRIMARY KEY (profile_id, feature, day)
 );
-CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);   -- last_copy
+CREATE TABLE IF NOT EXISTS visits (      -- as D1's visits, by its never-reused id
+  id INTEGER PRIMARY KEY, at INTEGER, profile_id TEXT, device TEXT, app TEXT, secs INTEGER, first TEXT,
+  screens TEXT, level TEXT, load_ms INTEGER, latency_ms INTEGER, errors INTEGER, error_sigs TEXT
+);
+CREATE TABLE IF NOT EXISTS harvest_meta (key TEXT PRIMARY KEY, value TEXT);   -- last_run, last_result (flarepress)
 """
 DEVICE_COLUMNS = ('hash', 'profile_id', 'first_seen', 'last_seen', 'syncs', 'app', 'browser', 'os', 'type', 'width')
-ACTIVITY_COLUMNS = ('id', 'at', 'profile_id', 'device', 'kind', 'city', 'region', 'country', 'network', 'asn', 'ip_hash')
-PAGE = 5000
+ACTIVITY_COLUMNS = ('id', 'at', 'profile_id', 'device', 'kind', 'city', 'region', 'country', 'network', 'asn')
 
 
 def metrics_path(home=None):
@@ -288,38 +295,13 @@ def open_archive(path=None):
     return conn
 
 
-def archive_metrics(db, conn, now):
-    """Copies what D1 has that the archive lacks: new activity rows, every
-    device row and day count (the latest wins; a day's count only grows), and
-    each player's look. One transaction. None when D1 has no metrics tables yet."""
-    conn.executescript(ARCHIVE_SCHEMA)
-    if not has_table(db, 'activity'):
-        return None
-    last = conn.execute('SELECT COALESCE(MAX(id), 0) FROM activity').fetchone()[0]
-    activity = []
-    while True:
-        page = db.query(f'SELECT {", ".join(ACTIVITY_COLUMNS)} FROM activity WHERE id > {int(last)} ORDER BY id LIMIT {PAGE}')
-        activity += page
-        if len(page) < PAGE:
-            break
-        last = page[-1]['id']
-    devices = db.query(f'SELECT {", ".join(DEVICE_COLUMNS)} FROM devices')
-    uses = db.query('SELECT profile_id, feature, day, n FROM uses')
-    players = db.query('SELECT id, name, avatar, created FROM profiles')
-    with conn:
-        conn.executemany(f'INSERT OR IGNORE INTO activity VALUES ({", ".join("?" * len(ACTIVITY_COLUMNS))})',
-                         [tuple(r.get(c) for c in ACTIVITY_COLUMNS) for r in activity])
-        conn.executemany(f"""INSERT INTO devices VALUES ({", ".join("?" * len(DEVICE_COLUMNS))})
-            ON CONFLICT (hash) DO UPDATE SET profile_id = excluded.profile_id, first_seen = MIN(first_seen, excluded.first_seen),
-              last_seen = excluded.last_seen, syncs = excluded.syncs, app = excluded.app, browser = excluded.browser,
-              os = excluded.os, type = excluded.type, width = excluded.width""",
-                         [tuple(r.get(c) for c in DEVICE_COLUMNS) for r in devices])
-        conn.executemany('INSERT INTO uses VALUES (?, ?, ?, ?) ON CONFLICT (profile_id, feature, day) DO UPDATE SET n = MAX(n, excluded.n)',
-                         [(r['profile_id'], r['feature'], r['day'], r['n']) for r in uses])
-        conn.executemany('INSERT INTO players VALUES (?, ?, ?, ?) ON CONFLICT (id) DO UPDATE SET name = excluded.name, avatar = excluded.avatar',
-                         [(r['id'], r['name'], r.get('avatar') or '', r['created']) for r in players])
-        conn.execute("INSERT INTO meta VALUES ('last_copy', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value", (str(int(now)),))
-    return {'activity': len(activity), 'devices': len(devices), 'uses': len(uses)}
+def harvest_line(conn, name):
+    """When `just harvest` last filled the archive, and how it went."""
+    got = dict(conn.execute('SELECT key, value FROM harvest_meta'))
+    if 'last_run' not in got:
+        return f'⚠️ archive {name}: nothing harvested yet; run `just harvest` (cloud-stats runs it first)'
+    result = got.get('last_result', '?')
+    return f"📦 archive {name}: last harvested {got['last_run']}" + ('' if result == 'ok' else f' ({result}: see `just harvest`)')
 
 
 BARS = ' ▁▂▃▄▅▆▇█'
@@ -352,10 +334,11 @@ def place_of(a):
 
 def metrics_report(conn, now, out=print, days=14, tz=None):
     """Per player (test profiles left out), newest activity first: devices,
-    places (city, region, country and network, with how many IP hashes),
-    activity by day and by hour of the day (this Mac's time, or `tz`), what
-    each event was, and feature use. A player seen from more than one place
-    is flagged ⚠️. Returns {profile_id: number of places}."""
+    places (city, region, country and network), activity by day and by hour
+    of the day (this Mac's time, or `tz`), what each event was, feature use,
+    and visits. A player seen from more than one place is flagged ⚠️. Then
+    the errors visits saw, everyone's, by where they came from. Returns
+    {profile_id: number of places}."""
     tz = tz or datetime.now().astimezone().tzinfo
 
     def q(sql, *a):
@@ -374,11 +357,9 @@ def metrics_report(conn, now, out=print, days=14, tz=None):
         acts = [dict(zip(ACTIVITY_COLUMNS, r)) for r in q(f'SELECT {", ".join(ACTIVITY_COLUMNS)} FROM activity WHERE profile_id = ? ORDER BY at', pid)]
         places = {}
         for a in acts:
-            p = places.setdefault(place_of(a), {'events': 0, 'ips': set(), 'last': 0})
+            p = places.setdefault(place_of(a), {'events': 0, 'last': 0})
             p['events'] += 1
             p['last'] = max(p['last'], a['at'])
-            if a['ip_hash']:
-                p['ips'].add(a['ip_hash'])
         places_of[pid] = len(places)
         flag = f'  ⚠️ seen from {len(places)} places' if len(places) > 1 else ''
         out(f"{names.get(pid, '(gone)')}  {pid}{flag}")
@@ -390,8 +371,7 @@ def metrics_report(conn, now, out=print, days=14, tz=None):
                 f"app {d['app'] or '?':<14} {d['syncs'] or 0:>5} syncs  {when(d['first_seen'])} → {when(d['last_seen'])}")
         out(f'  📍 places: {len(places)}')
         for name, p in sorted(places.items(), key=lambda kv: -kv[1]['events']):
-            ips = len(p['ips'])
-            out(f"     {name} · {ips} IP{'' if ips == 1 else 's'} · {p['events']} events · last {when(p['last'])}")
+            out(f"     {name} · {p['events']} events · last {when(p['last'])}")
         if acts:
             by_day, hours, kinds = {}, [0] * 24, {}
             for a in acts:
@@ -409,10 +389,54 @@ def metrics_report(conn, now, out=print, days=14, tz=None):
         if uses:
             for line in wrapped('  🧩 ', [f'{f} {n}' for f, n in uses]):
                 out(line)
+        visit_lines(q('SELECT secs, screens, level, load_ms, latency_ms, errors FROM visits WHERE profile_id = ? ORDER BY at', pid), out)
         out('')
     many = sum(1 for n in places_of.values() if n > 1)
+    errors = {}
+    for (sigs,) in q('SELECT error_sigs FROM visits WHERE error_sigs IS NOT NULL'):
+        try:
+            for sig, n in json.loads(sigs).items():
+                errors[sig] = errors.get(sig, 0) + int(n)
+        except (ValueError, TypeError, AttributeError):
+            continue
+    if errors:
+        for line in wrapped('🐞 errors in visits: ', [f'{s} {n}' for s, n in sorted(errors.items(), key=lambda kv: (-kv[1], kv[0]))]):
+            out(line)
     out(f'{len(ids)} players with metrics · {many} seen from more than one place')
     return places_of
+
+
+def median(values):
+    v = sorted(values)
+    return v[len(v) // 2] if v else None
+
+
+def visit_lines(rows, out):
+    """A player's visits: how many, how long, which screens, levels, the load
+    time and sound delay (medians), and how many had errors."""
+    if not rows:
+        return
+    secs = [r[0] for r in rows]
+    screens, levels = {}, {}
+    for r in rows:
+        for s in (r[1] or '').split(','):
+            if s:
+                screens[s] = screens.get(s, 0) + 1
+        if r[2]:
+            levels[r[2]] = levels.get(r[2], 0) + 1
+    loads = [r[3] for r in rows if r[3] is not None]
+    delays = [r[4] for r in rows if r[4] is not None]
+    bits = [f'{len(rows)} visits', f'{round(sum(secs) / 60)} min in all', f'median {median(secs)} s']
+    if loads:
+        bits.append(f'loads in {median(loads)} ms')
+    if delays:
+        bits.append(f'sound delay {median(delays)} ms')
+    bits.append(f'{sum(1 for r in rows if r[5])} with errors')
+    out('  👀 ' + ' · '.join(bits))
+    if screens:
+        out('     screens: ' + ' · '.join(f'{s} {n}' for s, n in sorted(screens.items(), key=lambda kv: (-kv[1], kv[0]))))
+    if levels:
+        out('     levels: ' + ' · '.join(f'{s} {n}' for s, n in sorted(levels.items(), key=lambda kv: (-kv[1], kv[0]))))
 
 
 # ── prune ──
@@ -462,15 +486,15 @@ def loose_sounds(db, now):
       AND {UNSHARED} AND created < {int(now - DAY_MS)}""")
 
 
-METRICS_TABLES = ('activity', 'devices', 'uses')
+METRICS_TABLES = ('activity', 'devices', 'uses', 'visits')
 
 
-def delete_profile_sql(pid, metrics=True):
+def delete_profile_sql(pid, metrics=METRICS_TABLES):
     """Deleting a profile, as worker/cloud.js deleteProfile does: its sounds go,
     except those a share uses, which stay owned by no profile; its metrics go
-    too (`metrics`: the database has their tables)."""
+    too (`metrics`: the metrics tables the database has)."""
     q = quoted(pid, PROFILE_ID)
-    return [f'DELETE FROM {t} WHERE profile_id = {q}' for t in (METRICS_TABLES if metrics else ())] + [
+    return [f'DELETE FROM {t} WHERE profile_id = {q}' for t in metrics] + [
         f'DELETE FROM sound_chunks WHERE sound_id IN (SELECT id FROM sounds WHERE profile_id = {q} AND {UNSHARED})',
         f'DELETE FROM sounds WHERE profile_id = {q} AND {UNSHARED}',
         f"UPDATE sounds SET profile_id = '' WHERE profile_id = {q}",
@@ -514,7 +538,7 @@ def prune(db, days=None, empty=False, yes=False, now=None, out=print, smoke=Fals
     if not yes:
         out('Nothing deleted. Run again with --yes to delete these.')
         return plan, loose
-    metrics = has_table(db, 'activity') if plan else False
+    metrics = [t for t in METRICS_TABLES if has_table(db, t)] if plan else []
     statements = ([s for p, _ in plan for s in delete_profile_sql(p['id'], metrics)] + [s for x in loose for s in delete_sound_sql(x['id'])]
                   + [s for x in shares for s in delete_share_sql(x['code'])])
     for i in range(0, len(statements), 60):

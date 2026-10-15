@@ -132,7 +132,7 @@ class Attention(Scratch):
         self.assertEqual(code, 0)
         self.assertEqual(text.splitlines(), [
             "sync: D1 query: HTTP 403", "digest: TODO.md busy",
-            "sync: last good sync 4d ago; D1 deletes uploads after 30 days"])
+            "sync: last good sync 4d ago; D1 deletes uploads and metrics after 14 days"])
 
     def test_quiet_when_all_is_well_or_not_set_up(self):
         self.write_state(sync_ago=dt.timedelta(hours=1), digest_ago=dt.timedelta(days=1))

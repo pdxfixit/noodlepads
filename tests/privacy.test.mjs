@@ -9,8 +9,9 @@ import { readFileSync } from 'node:fs';
 import worker from '../worker/index.js';
 import { ORIGIN } from '../worker/http.js';
 import { TTL_MS } from '../worker/reports.js';
-import { KEEP_MS } from '../worker/metrics.js';
+import { KEEP_MS, DEVICE_KEEP_MS } from '../worker/metrics.js';
 import { USES } from '../web/uses.js';
+import { VISIT_SCREENS } from '../web/visits.js';
 import { FakeD1 } from './fake-d1.mjs';
 import { PRIVACY, PRIVACY_TITLE } from '../web/privacy.js';
 import { HELP } from '../web/help.js';
@@ -87,9 +88,9 @@ test('"Profile names are made up by the app; nobody types one": the Worker refus
   assert.ok(!/createElement\('input'\)/.test(js));
 });
 
-test('"They are deleted from the cloud after 30 days": the report table keeps 30 days', () => {
-  assert.match(claim('Problem reports'), /deleted from the cloud after 30 days/);
-  assert.equal(TTL_MS, 30 * 24 * 60 * 60 * 1000);
+test('"They are deleted from the cloud after 14 days": the report table keeps 14 days', () => {
+  assert.match(claim('Problem reports'), /deleted from the cloud after 14 days/);
+  assert.equal(TTL_MS, 14 * 24 * 60 * 60 * 1000);
 });
 
 test('"To delete a profile": the steps name real buttons, and Offline deletes the cloud copy', async () => {
@@ -146,14 +147,20 @@ test('"Anyone with a share code can see and play what was shared, even after its
   assert.equal(seen.status, 200, 'no key, no PIN, and the profile is gone');
 });
 
-// ADR 0016 (Ben, 2026-10-12): the player metrics, said plainly.
-test('"the cloud also keeps for 90 days … The address itself is not kept": metrics last 90 days and hold no IP', async () => {
-  const line = claim('The address itself is not kept');
-  assert.match(line, /for 90 days/);
-  assert.equal(KEEP_MS, 90 * 24 * 60 * 60 * 1000);
+// ADR 0016 (Ben, 2026-10-12; 14 days and no IP hash, 2026-10-15): the player
+// metrics, said plainly.
+test('"the cloud also keeps for 14 days … The internet address is not kept": metrics last 14 days, devices 90, and hold no IP', async () => {
+  const line = claim('The internet address is not kept');
+  assert.match(line, /for 14 days, for people in the cloud/);
+  assert.equal(KEEP_MS, 14 * 24 * 60 * 60 * 1000);
+  assert.match(line, /kept 90 days/);
+  assert.equal(DEVICE_KEEP_MS, 90 * 24 * 60 * 60 * 1000);
   assert.match(line, /counts only/);
   assert.ok(USES.every((f) => /^[a-z-]+$/.test(f)), 'feature names, nothing a kid made');
-  const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('') }, IP_KEY: 'x'.repeat(32) };
+  const visits = readFileSync(new URL('../web/visits.js', import.meta.url), 'utf8');
+  assert.match(visits, /Never what was made, said or typed/);
+  assert.ok(VISIT_SCREENS.every((f) => /^[a-z-]+$/.test(f)), 'screen names only');
+  const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('') } };
   const req = new Request('https://noodlepads.com/api/profiles', {
     method: 'POST',
     headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'CF-Connecting-IP': '192.0.2.44', 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)' },
