@@ -2740,6 +2740,8 @@ dialog.np-dialog .set-buttons .quiet { justify-content: center; }
 .set-check { display: flex; align-items: center; gap: 12px; min-height: 44px; margin: 8px 0 0; font-weight: 700; cursor: pointer; }
 .set-check input { flex: none; width: 24px; height: 24px; margin: 0; accent-color: var(--board); }
 .set-check:has(input:focus-visible) { outline: 3px solid var(--board); outline-offset: 2px; border-radius: 8px; }
+.set-check + .set-check { margin-top: 0; }
+.set-check-hint { margin: -6px 0 6px 36px; }
 
 /* Pad size: one smooth slider beside ✏️ Edit sounds, a small and a big
    square at its ends. It takes the room Edit sounds leaves, up to 240 px. */

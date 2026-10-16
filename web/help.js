@@ -211,7 +211,7 @@ export const HELP = [
       { pic: [word('🧸 Kids')], text: 'For small kids: big picture pads (swipe for more, pinch to make them bigger or smaller), a mic to hold while you talk, a little beat of four drums and toy keys. Nothing to delete or edit, and no words to read.' },
       { pic: [tool('⚙️'), word('7 + 8 = ?')], text: 'In 🧸 Kids the gear asks a sum for a grown-up. The right answer opens Settings and the regular app until the page reloads. Choose 🧸 Kids again to hand it back.' },
       { pic: [word('⌨️ Keyboard')], text: 'Pick your keyboard so the letters on the keys match yours.' },
-      { pic: [word('📮 Send problem reports')], text: "Ask a grown-up first. When it is on, the app tells the soundboard's website what it did, so problems get fixed. It never sends sounds or names." },
+      { pic: [word('📮 Send problem reports')], text: 'At the bottom of ⚙️ Settings, under 📊 Share play data. Ask a grown-up first. Off unless you turn it on; it helps find and fix problems. What a report holds is in the Privacy policy.' },
       { pic: [word('fd576a9 · 2026-10-11')], text: 'The version and date, at the bottom of every screen. Tap them to open Settings at About.' },
       { pic: [word('🆕 An update for Noodle Pads is ready.'), chip('Reload')], text: 'When a newer copy of the app is live, this floats at the bottom. Reload gets it; nothing you made is lost. ✕ hides it until the app checks again. It waits while you record, play or have a sound open.' },
     ],

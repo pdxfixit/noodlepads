@@ -73,7 +73,7 @@ test('with every remembered choice set, the app starts on the remembered screen'
   assert.equal($('#dj-overlap').getAttribute('aria-pressed'), 'false', '🔔 Overlap starts off on every visit');
   $('#pads-tab').dispatch('click');
   const open = $('#settings-dialog').querySelectorAll('.set-fold').filter((f) => !f.querySelector('.set-body').hidden).map((f) => f.id);
-  assert.deepEqual(open, ['set-keys', 'set-reports'], 'the Settings sections left open');
+  assert.deepEqual(open, ['set-keys'], 'the Settings sections left open (set-reports is gone)');
 });
 
 test('feature-use counts left from before stay, junk goes, and the screens shown are counted (uses.js)', async () => {

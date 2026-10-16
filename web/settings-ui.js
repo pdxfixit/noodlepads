@@ -1,7 +1,8 @@
 // The ⚙️ Settings dialog: Backups (its buttons live here, its code is in
 // backup-ui.js; people are managed from the corner avatar, people.js), the
 // person's Level (🧸 Kids · Regular · Advanced, ADR 0019),
-// 📮 Problem reports (sending is log-send.js) and About. The button sits in the top corner, small and away from the pads and
+// and About, which ends with the 📊 Share play data and 📮 Send problem reports
+// checkboxes (sending is log-send.js), then the version. The button sits in the top corner, small and away from the pads and
 // the toolbar where thumbs play, so it isn't pressed by accident.
 //
 // Every section but About folds under its heading (Ben, 2026-10-11: "each
@@ -81,11 +82,9 @@ export const LEVEL_HINTS = {
 
 // A heading's chip says the section's state at a glance, where there is one.
 function chips() {
-  const on = (v) => (v ? 'On' : 'Off');
   const words = {
     'set-beats': LEVEL_NAMES[getSetting('level')],
     'set-keys': LAYOUT_NAMES[getSetting('djLayout')] ?? '',
-    'set-reports': on(getSetting('sendLogs') === true),
   };
   for (const section of sections()) {
     const chip = section.querySelector('.set-head-chip');
