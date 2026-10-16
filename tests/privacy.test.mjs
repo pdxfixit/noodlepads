@@ -163,7 +163,7 @@ test('"the cloud also keeps for 14 days … The internet address is not kept": m
   const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('') } };
   const req = new Request('https://noodlepads.com/api/profiles', {
     method: 'POST',
-    headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'CF-Connecting-IP': '192.0.2.44', 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)' },
+    headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'CF-Connecting-IP': '192.0.2.44', 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)', 'X-Noodle-App': 'v=abc&w=400&t=1' },
     body: JSON.stringify({ id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8' }),
   });
   Object.defineProperty(req, 'cf', { value: { city: 'Portland', asOrganization: 'Comcast Cable' } });

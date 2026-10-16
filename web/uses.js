@@ -9,7 +9,8 @@
 // The Worker imports USES and WIDTHS to check what it is sent, so this
 // module imports nothing that needs a page.
 
-import { remember, recall } from './util.js';
+import { remember, recall, forget } from './util.js';
+import { usageOn } from './usage.js';
 
 // Every feature counted. A new one goes at the end; the Worker refuses any
 // name not here. A name the app no longer sends stays, so a device still on
@@ -137,7 +138,10 @@ export const widthBucket = (w) => {
 
 // The header every cloud call carries (X-Noodle-App), as a query string:
 // "v=7b5fc5e&w=400&t=1". The Worker reads each part only if it is valid.
+// With the usage switch off there is no header (null), and the Worker then
+// keeps no metrics for the call (worker/metrics.js optedIn).
 export function appMeta(version, width, touch) {
+  if (!usageOn()) return null;
   const v = String(version ?? 'dev').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 40) || 'dev';
   return `v=${v}&w=${widthBucket(width)}&t=${touch ? 1 : 0}`;
 }
@@ -163,8 +167,9 @@ const write = (all) => remember(KEY, JSON.stringify(all));
 
 // One more use of `feature` by `personId`. Unknown features and no person
 // count nothing.
+// Nothing is counted while the usage switch is off (usage.js).
 export function countUse(feature, personId) {
-  if (!KNOWN.has(feature) || typeof personId !== 'string' || !personId) return;
+  if (!usageOn() || !KNOWN.has(feature) || typeof personId !== 'string' || !personId) return;
   const all = read();
   if (!all[personId] && Object.keys(all).length >= MAX_PEOPLE) return;
   const mine = all[personId] ?? (all[personId] = {});
@@ -172,8 +177,10 @@ export function countUse(feature, personId) {
   write(all);
 }
 
-// The counts waiting for `personId`, or null when there are none.
+// The counts waiting for `personId`, or null when there are none (always
+// null while the usage switch is off).
 export function pendingUses(personId) {
+  if (!usageOn()) return null;
   const mine = read()[personId];
   return mine && Object.keys(mine).length ? { ...mine } : null;
 }
@@ -193,6 +200,9 @@ export function sentUses(personId, sent) {
   if (!Object.keys(mine).length) delete all[personId];
   write(all);
 }
+
+// The usage switch went off: every count waiting on this device goes.
+export const clearUses = () => forget(KEY);
 
 // The feature a log entry (log.js) shows was used, or null. Most features are
 // counted this way, from events the app logs already, so the screens that

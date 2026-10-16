@@ -40,9 +40,12 @@ import { initHelp } from './help.js';
 import { initLogSend } from './log-send.js';
 import { initLeftover } from './leftover.js';
 import { installErrorLog, logEvent, onLog } from './log.js';
-import { countUse, watchUses, useOfDialog } from './uses.js';
+import { countUse, watchUses, useOfDialog, clearUses } from './uses.js';
 import { onDialogOpen } from './dialogs.js';
-import { trackVisits } from './visits.js';
+import { trackVisits, clearVisits } from './visits.js';
+import { createTelemetry, useTelemetry } from './telemetry.js';
+import { trackPage, learnLabels } from './track-page.js';
+import { setUsage } from './usage.js';
 import { $, showNotice, announce, fadeAway, trackSlimHead } from './ui.js';
 import { db } from './store.js';
 import { newId, versionLabel, footStacks, remember, recall } from './util.js';
@@ -139,6 +142,7 @@ function applyKids() {
   document.body.classList.toggle('kids', on);
   showKids(on);
   visits?.screen(on ? 'kids' : state.screen);
+  page?.screen(on ? 'kids' : state.screen);
   if (!on) refitLines();
 }
 
@@ -233,6 +237,7 @@ function setScreen(name) {
   remember('screen', name);
   countUse(name, state.personId);
   visits?.screen(name);
+  if (!kidsShowing()) page?.screen(name);
 }
 
 // What Beats and Live show: Beats' rows (⌨️ Keys off), or the keys panel,
@@ -290,6 +295,7 @@ async function loadVersion() {
   } catch { /* no version file: a dev copy */ }
   const label = versionLabel(found);
   state.version = label.version;
+  telemetry?.setVersion(label.version);
   // "1.0 · fd576a9 · 2026-10-11 13:45 PDT" on one line; stacked, the date
   // sits above the release and commit (fitFoot).
   const part = (cls, text) => Object.assign(document.createElement('span'), { className: cls, textContent: text });
@@ -669,7 +675,15 @@ function followRenames(pairs) {
 // Every dialog counts as it opens (uses.js DIALOG_USES). Visits are followed
 // from here too (visits.js): sent only for people in the cloud.
 let visits = null;
+let telemetry = null;   // usage events in the shared standard (telemetry.js)
+let page = null;        // where they come from (track-page.js)
 function countUses() {
+  telemetry = useTelemetry(createTelemetry({
+    screen: () => page?.current(),
+    size: () => ({ width: globalThis.screen?.width, height: globalThis.screen?.height, touch: (globalThis.navigator?.maxTouchPoints ?? 0) > 0 }),
+  }));
+  learnLabels(document.body);   // before anyone's sounds or names are drawn
+  page = trackPage({ telemetry, onLog, onDialogOpen, root: document.body, doc: document, win: globalThis });
   visits = trackVisits({
     now: () => Date.now(),
     who: () => state.personId,
@@ -687,6 +701,20 @@ function countUses() {
   });
   // 💃 Grooves in both beat bars (⌨️ Keys off and on).
   for (const b of document.querySelectorAll('[data-beat-grooves]')) b.addEventListener('click', () => countUse('grooves', state.personId));
+}
+
+// The usage switch (settings.js sendUsage), from storage and whenever it
+// changes. Off: nothing is counted, kept or sent, and what waited goes.
+function followUsage() {
+  const apply = (on) => {
+    setUsage(on);
+    if (on) return;
+    telemetry?.clear();
+    clearUses();
+    clearVisits();
+  };
+  apply(getSetting('sendUsage'));
+  onSetting('sendUsage', apply);
 }
 
 async function start() {
@@ -727,6 +755,7 @@ async function start() {
     },
   });
   await settlePeople();
+  followUsage();
 
   meter.grille = el.grille;
   meter.setProgress = setProgress;

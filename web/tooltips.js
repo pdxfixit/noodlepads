@@ -3,7 +3,8 @@
 // in step when that label changes ("✕" becoming "✕?"). A title someone wrote
 // by hand is left alone. On a phone nobody hovers, so this is for mice.
 
-const CONTROLS = 'button, [role="button"], [role="switch"], [role="tab"], a[href], input, select, summary, output[for]';
+// Every control on the page, as tooltips and usage events (track-page.js) see them.
+export const CONTROLS ='button, [role="button"], [role="switch"], [role="tab"], a[href], input, select, summary, output[for]';
 
 // The tooltip a control should have, or '' for none. Pure, for the tests.
 export function tipFor(el) {

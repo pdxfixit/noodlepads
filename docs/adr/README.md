@@ -50,6 +50,7 @@ A small rule (a label, a color, a layout) needs only its row in `decisions.md`.
 | [0023](0023-piano-roll-notes.md) | A tune row stores notes (pitch, start, length) for 🎹 the piano roll; old melody rows are read as notes, and older copies still play them roughly | Accepted |
 | [0024](0024-playlist-lanes.md) | Song is a playlist: up to 8 lanes of beat blocks at one song tempo; pick a beat, tap a spot | Accepted, built |
 | [0025](0025-github-deploys.md) | GitHub deploys every push to main with this repo's own token; agents hold no Cloudflare credentials; the site folder and its ID placeholders live in this repo | Accepted |
+| [0026](0026-telemetry-standard.md) | Usage events in the shared telemetry standard: one `track()` call, hooks per category, on by default with the `sendUsage` switch, which also gates the older metrics | Accepted |
 
 ## Template
 

@@ -32,6 +32,8 @@ const remembered = new Map(Object.entries({
   visits: '[{"person":"juno","visit":{"at":1791000000000,"secs":40,"screens":["pads","nope"]}},"junk",{"person":"toby","visit":{"at":"x","secs":5}}]',
   'kids-tab': 'beats',
   'kids-size': '9',
+  'telemetry-player': 'not-a-random-id',   // replaced by a random one (telemetry.js playerId)
+  'telemetry-queue': '[{"app":"noodlepads","session":"s-1","seq":0,"at":1791000000000,"event":"app.open","version":"abc","details":{}},"junk",{"event":"no.such"}]',
   'dj-overlap': '1',   // a key nothing reads: 🎤 Live's 🔔 Overlap is for the visit (Ben, 2026-10-12)
 }));
 const storage = {
@@ -91,6 +93,16 @@ test('visits left from before stay for their person, junk goes (visits.js)', asy
   assert.equal(juno.length, 1);
   assert.deepEqual([juno[0].secs, juno[0].screens], [40, ['pads']]);
   assert.equal(pendingVisits('toby'), null, 'a broken one is dropped');
+});
+
+test('usage events left from before stay, junk goes, and a player id that is not a random one is replaced (telemetry.js)', async () => {
+  const { currentTelemetry } = await import('../web/telemetry.js');
+  const t = currentTelemetry();
+  const left = t.queued().filter((r) => r.session === 's-1');
+  assert.deepEqual(left.map((r) => r.event), ['app.open']);
+  assert.ok(t.queued().every((r) => r.event !== 'no.such'));
+  assert.match(t.player, /^[0-9a-f-]{36}$/);
+  assert.equal(remembered.get('telemetry-player'), t.player);
 });
 
 test('🧸 Kids opens on the remembered tab; a junk pad size reads as the middle one', async () => {

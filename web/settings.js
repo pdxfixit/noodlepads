@@ -67,6 +67,11 @@ export const SETTINGS = {
   // brings the family's choice along. The device code (log-send.js,
   // localStorage `log-device`) is never in a backup.
   sendLogs: { default: false, values: [false, true], scope: 'device' },
+  // Usage events and counts (telemetry.js, uses.js, visits.js; Ben,
+  // 2026-10-16: on by default, a switch turns it off, and off sends nothing,
+  // ever). The device's, as the device is what sends. No control shows it
+  // yet: the switch waits for Ben's OK on its mockup.
+  sendUsage: { default: true, values: [false, true], scope: 'device' },
 };
 
 // A stored value as this copy reads it: allowed as it is, or upgraded from an

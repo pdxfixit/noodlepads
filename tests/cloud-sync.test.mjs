@@ -15,6 +15,7 @@ import {
 import { cleanBackup } from '../web/backup.js';
 import { mergeLoaded } from '../web/merge.js';
 import { newId } from '../web/util.js';
+import { appMeta } from '../web/uses.js';
 
 const KIT = ['kick', 'snare'];
 const KEYS = { clips: 'id', overrides: 'id', orders: 'personId', patterns: 'personId', beats: 'id', people: 'id',
@@ -25,7 +26,8 @@ function server() {
   const fetch = (url, init = {}) => worker.fetch(new Request(`https://noodlepads.com${url}`, {
     ...init, headers: { ...init.headers, Origin: ORIGIN }, duplex: 'half',
   }), env);
-  return { env, api: createCloudApi({ fetch }) };
+  // The device's header, as with the usage switch on (the Worker keeps no metrics without it).
+  return { env, api: createCloudApi({ fetch, meta: () => appMeta('test', 400, true) }) };
 }
 
 class Device {

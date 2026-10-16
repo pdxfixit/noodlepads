@@ -8,8 +8,9 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   VISIT_LEVELS, VISIT_SCREENS, MIN_SECS, MAX_ERRORS, MAX_WAITING, MAX_SEND,
-  cleanVisit, errorSig, keepVisit, pendingVisits, sentVisits, trackVisits,
+  cleanVisit, errorSig, keepVisit, pendingVisits, sentVisits, trackVisits, clearVisits,
 } from '../web/visits.js';
+import { setUsage } from '../web/usage.js';
 import { LEVELS } from '../web/settings.js';
 import { cleanVisits } from '../worker/metrics.js';
 
@@ -53,6 +54,22 @@ function page({ hidden = false } = {}) {
   });
   return ctl;
 }
+
+// Ben, 2026-10-16: the usage switch off sends nothing, ever.
+test('with the usage switch off no visit is kept or waiting, and clearVisits empties the store', () => {
+  const v = { at: Date.now() - 60_000, secs: 30, screens: ['pads'] };
+  assert.equal(keepVisit('p-a', v), true);
+  setUsage(false);
+  try {
+    assert.equal(keepVisit('p-a', { ...v, at: v.at + 1 }), false);
+    assert.equal(pendingVisits('p-a'), null);
+  } finally {
+    setUsage(true);
+  }
+  assert.equal(pendingVisits('p-a').length, 1);
+  clearVisits();
+  assert.equal(pendingVisits('p-a'), null);
+});
 
 test('the lists match the app: levels as settings.js has them, screen names only', () => {
   assert.deepEqual(VISIT_LEVELS, LEVELS);

@@ -24,6 +24,9 @@ opens with a comment saying what it owns. How the app behaves is in
   - `log.js` (the in-memory event log), `log-clean.js` (what a problem report may hold), `log-send.js` (sending it)
   - `uses.js`: feature-use counts per person (localStorage `uses`, sent with that person's sync), mostly read from the event log and from dialogs opening (`DIALOG_USES`), and what the device says about itself on each cloud call (version, width bucket, touch)
   - `visits.js`: one summary per visit (the page in view: seconds, screens, level, load time, the sound's delay, errors as file:line), kept in localStorage `visits` under the person and sent with their sync; the Worker checks them with its `cleanVisit`
+  - `telemetry.js`: usage events in the shared standard (ADR 0026): `track(event, details)` builds a record (player, session, form, version, screen…) and queues it in localStorage `telemetry-queue`; the player id (`telemetry-player`); `shouldSend` and question #425's flag
+  - `track-page.js`: where the events come from: lifecycle, screens, dialogs, one click listener for every control (named without a kid's words), content, settings, errors and speed
+  - `usage.js`: the usage switch (`sendUsage`) as the counting modules read it; imports nothing, so the Worker can import them
   - `overflow.js`: ⋯ menus: where a line runs out of room, its less-used buttons (marked `data-more-word`) hide and a ⋯ at its end lists them; a tap there taps the real button (Beats' row header line)
   - `lines.js`: lines of controls that stay on one line, giving way step by step as room runs out (the toolbar, the beat's bars · time signature · swing), and keys for a slider with five stops or fewer (Tone, On the beat's note lengths), falling back to the slider when they don't fit
   - `mix.js`: ➕ Mix with another sound (pure: two sounds in, one out)
