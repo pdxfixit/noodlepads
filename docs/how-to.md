@@ -83,19 +83,42 @@ From the main checkout:
 
 ## Problem reports, metrics and the cloud database
 
-Agents may read the live database without asking (`just cloud-stats`, `just logs --sync`). They never write to it, except the deploy checks and `just cloud-prune --smoke --yes`; every other write is Ben's.
+Agents may read the live database without asking (`just cloud-sql`, `just cloud-profiles`). They never write to it, except the deploy checks and `just cloud-prune --smoke --yes`; every other write is Ben's.
 
 | Job | Command | Notes |
 |---|---|---|
-| Read problem reports | `just logs`, `--errors`, `<device code>`, `--json <key>`, `--grep`, `--sql` | Reads the local archive `~/.local/state/noodlepads/logs.sqlite3` (`tools/logs.py`); safe for agents. |
-| Problem reports | `just logs --sync` | New problem reports into `logs.sqlite3`. Read-only, with the Keychain token `noodlepads-logs`. The `noodlepads-logs` recurrent leg (`skills/noodlepads-logs/`) runs it daily and `just logs --digest` weekly, filing new errors in TODO.md. D1 keeps 14 days, so a missed fortnight loses reports. |
-| Metrics harvest | none here | The telemetry runner (pdxfixit/telemetry) is the only harvester: daily, flarepress's `tools/harvest.py` on `site/`; the Mac reads it with its `telemetry.py pull` (into `~/.local/state/telemetry/telemetry.sqlite3`). |
-| Player metrics | `just cloud-stats [--days N]` | Run `telemetry.py pull` first (pdxfixit/telemetry). Reports per player from its store, `~/.local/state/telemetry/telemetry.sqlite3` (read only; the `noodlepads__` tables; else the older `metrics.sqlite3`; ADR 0016): devices, places, activity, feature use, visits, and every visit's errors. Ask anything else with `sqlite3 ~/.local/state/telemetry/telemetry.sqlite3` (tables `noodlepads__activity`, `__devices`, `__uses`, `__visits`, `__players`, `__cf_*`). |
+| Bring it home | `python3 ~/src/telemetry/telemetry.py pull` | The telemetry runner (pdxfixit/telemetry) is the only harvester: daily, flarepress's `tools/harvest.py` on `site/`. `pull` copies its store to `~/.local/state/telemetry/telemetry.sqlite3`, this Mac's one mirror of every app's data (ids a year at most). Nothing in this repo copies from D1. |
+| Read problem reports | `just logs`, `--errors`, `<device code>`, `--json <key>`, `--grep`, `--sql` | Reads `noodlepads__reports` in the mirror, read only, as the views `uploads` and `events` (`tools/logs.py`); safe for agents. Until `site/harvest.conf` names reports (`docs/state.md`, To do), it says ⏳ and exits 0. |
+| Weekly digest | `just logs --digest [--file-new TODO.md] [--mark]` | The `noodlepads-logs` recurrent leg (`skills/noodlepads-logs/`) runs it weekly, filing new errors in TODO.md; `--mark` records the date in `~/.local/state/noodlepads/logs-digest.json`. |
+| Player metrics | `just cloud-stats [--days N]` | Run `telemetry.py pull` first (pdxfixit/telemetry). Reports per player from its store, `~/.local/state/telemetry/telemetry.sqlite3` (read only; the `noodlepads__` tables, and nothing else; ADR 0016): devices, places, activity, feature use, visits, and every visit's errors. Ask anything else with `sqlite3 ~/.local/state/telemetry/telemetry.sqlite3` (tables `noodlepads__activity`, `__devices`, `__uses`, `__visits`, `__players`, `__cf_*`). |
 | Profiles | `just cloud-profiles`, `just cloud-prune [--days N] [--empty] [--yes]` | Prune is a dry run without `--yes`. |
 | A forgotten PIN | `just cloud-reset-pin <id>` | From an email to the PIN-reset address; it asks before it changes anything. |
 | Schema | `just cloud-migrate [--yes]`; `just cloud-schema` (a new, empty database only) | Ben runs migrate right before the deploy that needs it. |
 | Back up the database | `just cloud-backup [file]` | A whole-database `.sql` export (reads only), by default in `~/.local/state/noodlepads/backups/`; it refuses a path inside the repo. |
 | Anything else | `just cloud-sql "…"`, `just cloud-db …` | Ben's. |
+
+### Retire the old Mac archives (once, on Ben's Mac)
+
+Before 2026-10-16 this repo kept its own copies: `~/.local/state/noodlepads/logs.sqlite3` (problem reports, from `just logs --sync`) and `metrics.sqlite3` (the old harvest). Ben: "the telemetry tooling needs to take this over". These steps move both into the runner as history, then delete them. A Mac session or Ben runs them; a cloud session has neither file. About 10 minutes.
+
+1. **Up to date:** `git -C ~/src/noodlepads pull` and `git -C ~/src/telemetry pull`.
+2. **The runner names the reports' ids.** `~/src/telemetry/telemetry.toml` `[jobs.noodlepads.ids]` must have a `reports` line before any import, since a report's key and `device` hold its device code: `reports = { columns = ["key", "device"], time = "created", unit = "ms", drop = true }`. If it is missing, stop: an agent adds it in pdxfixit/telemetry first.
+3. **Export**, outside the repo (each prints its row counts; write them down):
+   ```sh
+   mkdir -p ~/.local/state/noodlepads/export
+   just runner-export reports ~/.local/state/noodlepads/logs.sqlite3 ~/.local/state/noodlepads/export/reports.sqlite3
+   just runner-export metrics ~/.local/state/noodlepads/metrics.sqlite3 ~/.local/state/noodlepads/export/metrics.sqlite3
+   ```
+   The reports keep no raw User-Agent; the metrics keep no city, region, network, ASN, name or avatar. Each ends `✅ … is in the harvest's shape`. A `❌` line stops here.
+4. **Import, dry run first, then for real:**
+   ```sh
+   python3 ~/src/telemetry/telemetry.py import noodlepads ~/.local/state/noodlepads/export/reports.sqlite3
+   python3 ~/src/telemetry/telemetry.py import noodlepads ~/.local/state/noodlepads/export/reports.sqlite3 --apply
+   python3 ~/src/telemetry/telemetry.py import noodlepads ~/.local/state/noodlepads/export/metrics.sqlite3
+   python3 ~/src/telemetry/telemetry.py import noodlepads ~/.local/state/noodlepads/export/metrics.sqlite3 --apply
+   ```
+5. **Verify:** `python3 ~/src/telemetry/telemetry.py pull`, then `python3 ~/src/telemetry/telemetry.py check`. Each count is at least step 3's (the runner may hold newer rows): `sqlite3 ~/.local/state/telemetry/telemetry.sqlite3 "SELECT 'reports', count(*) FROM noodlepads__reports UNION ALL SELECT 'activity', count(*) FROM noodlepads__activity UNION ALL SELECT 'visits', count(*) FROM noodlepads__visits UNION ALL SELECT 'devices', count(*) FROM noodlepads__devices UNION ALL SELECT 'uses', count(*) FROM noodlepads__uses UNION ALL SELECT 'players', count(*) FROM noodlepads__players"`. Then `just logs` lists reports and `just cloud-stats` reports players.
+6. **Delete the old files**, only when step 5 matched: `rm ~/.local/state/noodlepads/logs.sqlite3 ~/.local/state/noodlepads/metrics.sqlite3` and `rm -r ~/.local/state/noodlepads/export`. `just doctor` stops naming them.
 
 flarepress (public, `github.com/pdxfixit/flarepress`; on the Mac at `~/src/flarepress`) holds the deploy code; this repo's `site/` is its site folder. Deploy auth is a GitHub secret (this repo's own token) or Ben's Keychain. Never put a token or an ID in this repo.
 

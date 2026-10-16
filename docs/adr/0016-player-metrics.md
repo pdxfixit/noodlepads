@@ -1,10 +1,10 @@
-# 0016. Player metrics: devices, places, activity, feature use and visits, 14 days in D1 and an archive kept forever
+# 0016. Player metrics: devices, places, activity, feature use and visits, 14 days in D1 and the telemetry runner's mirror
 
 - **Status:** Accepted
-- **Date:** 2026-10-12, 2026-10-15
-- **Decided by:** Ben, 2026-10-12: "all the metrics we relatively can, so we can try to understand if a player profile is being used from multiple locations, or any other statistic"; 2026-10-15: "add a bunch of telemetry … store it in D1, and harvest it back to an sqlite db", for people in the cloud only, "strip out what's not really needed. I want the local data to keep forever, but the D1 data to be pruned frequently", and a shared flarepress harvest tool. Rows in [decisions.md](../decisions.md) (Hosting and data).
+- **Date:** 2026-10-12, 2026-10-15, 2026-10-16
+- **Decided by:** Ben, 2026-10-12: "all the metrics we relatively can, so we can try to understand if a player profile is being used from multiple locations, or any other statistic"; 2026-10-15: "add a bunch of telemetry … store it in D1, and harvest it back to an sqlite db", for people in the cloud only, "strip out what's not really needed. I want the local data to keep forever, but the D1 data to be pruned frequently", and a shared flarepress harvest tool; 2026-10-16: "i want consistent local storage mirror of this data", "the telemetry tooling needs to take this over". Rows in [decisions.md](../decisions.md) (Hosting and data).
 
-**In short.** For people in the cloud, the Worker notes each device that uses a profile, each make, open, pull, push, share and PIN change with the country it came from, the feature-use counts each device sends, and a short summary of each visit. D1 keeps events, counts and visits 14 days and a device's row 90. flarepress's `just harvest` copies it all, with Cloudflare's own stats for the site, into a SQLite archive on Ben's Mac, kept forever: at the start of every deploy, daily from the `noodlepads-logs` leg, and before `just cloud-stats` reports per player.
+**In short.** For people in the cloud, the Worker notes each device that uses a profile, each make, open, pull, push, share and PIN change with the country it came from, the feature-use counts each device sends, and a short summary of each visit. D1 keeps events, counts and visits 14 days and a device's row 90. The telemetry runner (pdxfixit/telemetry) harvests it all daily, with Cloudflare's own stats for the site, and keeps it for good (ids a year at most); `telemetry.py pull` mirrors it on Ben's Mac, and `just cloud-stats` reports per player from that mirror only.
 
 ## Context
 
@@ -25,7 +25,7 @@
 - **Visits.** `web/visits.js` keeps one summary per visit (the page in view, from showing to hiding): when, seconds in view, the screens shown, the level, the page's load time, the sound's delay, and errors as `file.js:line` with counts. Never a message, a name or anything typed. They wait in localStorage `visits` and go up in the same call as the counts; the Worker checks each as the app does, drops a bad one, and stores the rest in `visits`.
 - **14 days in D1, a device 90.** Opens, makes, pushes, shares and PIN changes delete events, counts and visits past 14 days, and devices not seen in 90, as reports delete theirs: nothing scheduled. A device's row keeps its first-seen and sync count, which a 14-day cut would reset each time a device came back. Deleting a profile deletes its metrics too.
 - **Never in the way.** Metrics run after the answer (`waitUntil`) and every error is caught. While the tables are missing (a migration not run yet), they are skipped without a word, so the deploy and `just cloud-migrate` can come in either order.
-- **An archive kept forever, filled by one shared tool.** flarepress's `just harvest noodlepads.com` (configured by `noodlepads.com/harvest.conf`) copies new `activity` and `visits` rows by their never-reused ids, every `devices` row (the earliest first-seen wins) and day count (the biggest wins), each player's id and created time (never the name, avatar or PIN hash: the shared privacy policy, 2026-10-16), and Cloudflare's daily request, country, status, browser and Worker stats into `~/.local/state/noodlepads/metrics.sqlite3`. This repo's `just harvest` runs it and then `just logs --sync`. `just cloud-stats` reports from the archive.
+- **One mirror, filled by one shared tool.** flarepress's `tools/harvest.py` (configured by `site/harvest.conf`) copies new `activity` and `visits` rows by their never-reused ids, every `devices` row (the earliest first-seen wins) and day count (the biggest wins), each player's id and created time (never the name, avatar or PIN hash: the shared privacy policy, 2026-10-16), and Cloudflare's daily request, country, status, browser and Worker stats into the runner's store as `noodlepads__<table>`. `telemetry.py pull` copies the store to `~/.local/state/telemetry/telemetry.sqlite3`, where `just cloud-stats` reads it. The older Mac archive, `metrics.sqlite3`, is retired: `just runner-export metrics` moves it into the runner once.
 - **When it harvests.** Daily, from the telemetry runner (pdxfixit/telemetry), the only harvester since 2026-10-15 (Ben): flarepress's `tools/harvest.py` on `site/` in a cloud container, with its own read-only token; the Mac reads its store with `telemetry.py pull`. Deploys, `just cloud-stats` and the `noodlepads-logs` leg no longer harvest. Cloudflare keeps its stats at least 31 days on the free plan (2026-10-02) and D1 keeps 14, so a daily run leaves room for a missed week.
 
 ## Options turned down
@@ -42,7 +42,7 @@
 
 - Each sync writes about two more rows (the device and the event), plus one per finished visit: well inside the free plan's daily writes.
 - A device that does not remember its profile shows as many devices; places still tie them together.
-- A harvest missed for more than 14 days loses events, counts and visits that D1 has let go. The `noodlepads-logs` leg warns after 3 days without one.
+- A harvest missed for more than 14 days loses events, counts and visits that D1 has let go. The runner alarms when a job's last good run is too old.
 - The harvest token (Keychain `noodlepads-logs`) needs D1 Read, Zone → Analytics: Read and Account → Account Analytics: Read.
 - "🔓 What's private" says what is kept; `tests/privacy.test.mjs` ties the 14 and 90 days and "the internet address is not kept" to the code.
 - Revisit if the app gets accounts, or if a metric is wanted that needs anything a person typed.

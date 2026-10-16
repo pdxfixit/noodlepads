@@ -52,6 +52,7 @@ test('the automatic-logs design summary matches the code: D1, its keep time and 
   const days = TTL_MS / 86400000;
   assert.match(row('Where'), /D1/);
   assert.match(row('How long'), new RegExp(`^${days} days in D1`));
+  assert.doesNotMatch(row('How long') + row('How it is read'), /forever in the local|logs\.sqlite3/, 'the Mac reads the runner\'s mirror (2026-10-16)');
   assert.match(row('Abuse limits'), new RegExp(`${PER_DEVICE_MINUTE} uploads a minute per device code`));
   assert.match(row('Abuse limits'), new RegExp(`${PER_DAY.toLocaleString('en-US')} a day`));
   assert.doesNotMatch(doc, /30 days in KV|KV for 30 days|stores it in Workers KV/);

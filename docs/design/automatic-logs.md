@@ -2,6 +2,8 @@
 
 **Where reports are stored now:** the site's one D1 database, table `reports`, 14 days (Ben, 2026-10-15), deleted on the next insert, with a per-device and a daily cap instead of a rate-limit binding ([ADR 0009](../adr/0009-opt-in-problem-reports.md), [cloud profiles](cloud-profiles.md) § 1). `tools/logs.py --sync` reads it through D1's query API. Where this plan says KV, read D1; the rest (cleaning, the archive, the digest) stands.
 
+**How they reach the Mac now (Ben, 2026-10-16: "the telemetry tooling needs to take this over"):** the telemetry runner (pdxfixit/telemetry) harvests `reports` with every app's data, and `telemetry.py pull` mirrors it as `noodlepads__reports` in `~/.local/state/telemetry/telemetry.sqlite3`. `just logs` reads only that mirror; `--sync` and the local `logs.sqlite3` archive are retired (ADR 0009). Where § 6 says sync or archive, read the runner and its mirror; the digest stands.
+
 **Status (2026-10-11):** Ben lifted the hold and answered Q2–Q5 and Q8 (§ 11). The app side, steps 1–3 of § 10, is built: `web/log-clean.js`, the switch in ⚙️ Settings, `web/log-send.js`. The Worker (step 4) and the Cloudflare setup are separate work.
 
 **Ben's flow decision (2026-10-11, the inbox now D1 for 14 days):** the cloud is a short inbox; a **`noodlepads-logs` leg of the recurrent routine** (`~/src/routines/recurrent`), due once a day, pulls new uploads into a **SQLite archive at `~/.local/state/noodlepads/logs.sqlite3`, kept forever**, and once a week files the week's new errors in `TODO.md`. No launchd (Ben: "it should be part of the recurrent skill, but only running 1/day"). Agents are the main readers ("I'll probably never do so manually"). See § 6. Backing up `~/.local/state` as a whole is a separate, later job.
@@ -15,8 +17,8 @@ Written 2026-10-11 for `TODO.md` "Agents do" → Automatic logs, within the deci
 | What is sent | The event log since the last send, cleaned by an allowlist on the device, then checked again by the Worker |
 | When | When the page is hidden (tab closed, app switched, screen locked), and 10 s after an error; at most once a minute |
 | Where | The site's one D1 database, table `reports` (`worker/reports.js`) |
-| How long | 14 days in D1 (each new report first deletes the expired ones; nothing scheduled); forever in the local SQLite archive |
-| How it is read | The `noodlepads-logs` recurrent leg (once a day) copies new uploads into `~/.local/state/noodlepads/logs.sqlite3`, and once a week files new errors in `TODO.md`; agents query the archive with SQL |
+| How long | 14 days in D1 (each new report first deletes the expired ones; nothing scheduled); then the telemetry runner keeps it, its device code a year at most |
+| How it is read | The telemetry runner harvests it daily; `telemetry.py pull` brings it to the Mac's mirror; `just logs` reads it there, and the `noodlepads-logs` recurrent leg files new errors in `TODO.md` once a week |
 | Abuse limits | 64 KB a body, 10 uploads a minute per device code, 1,000 a day for the whole site, the Worker re-checks every field, the site's Origin only; the IP is never used or stored |
 | CSP | No change: `connect-src 'self'` already allows it |
 
