@@ -31,7 +31,8 @@ test:
 [private]
 test-quiet:
     #!/usr/bin/env bash
-    log=$(mktemp -t noodlepads-test)
+    # A full template: GNU mktemp (Linux, CI) wants the X's that BSD's -t adds itself.
+    log=$(mktemp "${TMPDIR:-/tmp}/noodlepads-test.XXXXXX")
     if just test > "$log" 2>&1; then rm -f "$log"; exit 0; fi
     grep -E '^✖|^(FAIL|ERROR): |AssertionError' "$log" | grep -v '^✖ failing tests:' | sort -u | head -20 >&2
     echo "📄 full output: $log" >&2
