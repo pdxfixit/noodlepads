@@ -31,10 +31,10 @@ export const APP = 'noodlepads';
 // Every event this app sends, with the details keys each may carry. The
 // standard's names first (events.toml), then this app's own (`noodlepads.`).
 export const EVENTS = {
-  'app.open': ['first_run', 'vw', 'vh', 'density', 'font_scale', 'dark', 'reduced_motion', 'lang', 'os', 'input', 'pwa'],
+  'app.open': ['first_run', 'vw', 'vh', 'density', 'font_scale', 'dark', 'reduced_motion', 'lang', 'os', 'input', 'pwa', 'browser'],
   'app.foreground': ['away_ms'],
   'app.background': ['shown_ms'],
-  'screen.view': ['from'],
+  'screen.view': ['from', 'to'],
   'dialog.open': ['dialog'],
   'dialog.close': ['dialog', 'answer', 'ms'],
   'control.use': ['control', 'group', 'layout', 'vw', 'vh', 'input'],
@@ -46,7 +46,7 @@ export const EVENTS = {
   'perf.load': ['ms', 'cold'],
   'perf.longtask': ['n', 'ms'],
   // The sound's delay (the output and base latency of the audio context),
-  // once a visit, when a sound has played. Not in events.toml yet (asked for).
+  // once a visit, when a sound has played.
   'perf.latency': ['ms'],
   // 💾 Keep: a scratch beat or song kept in 🗂️ My beats or My songs.
   'noodlepads.keep': ['kind'],
@@ -56,8 +56,11 @@ export const EVENTS = {
   // opened, remixed or taken back, a PIN set.
   'noodlepads.cloud': ['action'],
   // Pads, keys, roll notes and song blocks played in a visit, one count each
-  // (play-count.js), sent as the page hides. Not in events.toml yet (asked for).
+  // (play-count.js), sent as the page hides, and not when all are zero.
   'noodlepads.play': ['pads', 'keys', 'notes', 'blocks', 'kids'],
+  // The person's level (kids, regular or advanced), once a page load, right
+  // after app.open: setting.change shows only a change, this shows everyone.
+  'noodlepads.level': ['level'],
 };
 
 export const MAX_TEXT = 60;        // a string value's length

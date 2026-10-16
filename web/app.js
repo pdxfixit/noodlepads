@@ -900,6 +900,7 @@ async function start() {
   if (first.keys) { keysOn = true; remember('beat-keys', '1'); }
   setScreen(first.screen);
   applyKids();
+  page?.level(getSetting('level'));   // the level this load starts at, for the usage events
   initLeftover();   // sounds an older copy saved on this address, under the old database name
   // Everyone in the cloud syncs now, and after changes (cloud.js); a share's
   // preview is recorded by the beat maker, as Save as a sound does.

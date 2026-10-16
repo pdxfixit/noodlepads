@@ -7,7 +7,7 @@ import { FakeElement } from './fake-dom.mjs';
 import { createTelemetry } from '../web/telemetry.js';
 import { setUsage } from '../web/usage.js';
 import {
-  controlName, groupOf, layoutOf, contentOf, appEventOf, errorOf, environment, learnLabels, trackPage, PLAY,
+  controlName, groupOf, layoutOf, contentOf, appEventOf, errorOf, environment, browserOf, learnLabels, trackPage, PLAY,
 } from '../web/track-page.js';
 
 beforeEach(() => {
@@ -109,15 +109,36 @@ test('an error keeps its kind and file:line, never its message', () => {
 test('app.open carries the environment once: viewport, density, font scale, dark, motion, language, OS, input, installed', () => {
   const win = {
     innerWidth: 390, innerHeight: 844, devicePixelRatio: 3,
-    navigator: { language: 'en-US', userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)', maxTouchPoints: 5 },
+    navigator: { language: 'en-US', userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1', maxTouchPoints: 5 },
     matchMedia: (q) => ({ matches: q.includes('dark') }),
     getComputedStyle: () => ({ fontSize: '20px' }),
     document: { documentElement: {} },
   };
   assert.deepEqual(environment(win, true), {
-    first_run: true, vw: 390, vh: 844, density: 3, font_scale: 1.25, dark: true, reduced_motion: false, lang: 'en', os: 'iOS', input: 'touch', pwa: false,
+    first_run: true, vw: 390, vh: 844, density: 3, font_scale: 1.25, dark: true, reduced_motion: false, lang: 'en', os: 'iOS', input: 'touch', pwa: false, browser: 'safari',
   });
   assert.equal(environment({ navigator: { userAgent: 'X11; Linux x86_64' } }, false).os, 'Linux');
+});
+
+test('the browser family from the user agent: the Chrome-built ones are told apart from Chrome, and Safari from them all', () => {
+  const ua = {
+    chrome: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+    chromeIos: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.0.0 Mobile/15E148 Safari/604.1',
+    safari: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+    firefox: 'Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0',
+    firefoxIos: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/131.0 Mobile/15E148 Safari/605.1.15',
+    edge: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0',
+    edgeAndroid: 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36 EdgA/130.0.0.0',
+    samsung: 'Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/26.0 Chrome/122.0.0.0 Mobile Safari/537.36',
+    opera: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 OPR/115.0.0.0',
+  };
+  assert.deepEqual(Object.fromEntries(Object.entries(ua).map(([k, v]) => [k, browserOf(v)])), {
+    chrome: 'chrome', chromeIos: 'chrome', safari: 'safari', firefox: 'firefox', firefoxIos: 'firefox',
+    edge: 'edge', edgeAndroid: 'edge', samsung: 'samsung', opera: 'opera',
+  });
+  assert.equal(browserOf('Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 Mobile/15E148'), 'other', 'a web view with no browser name');
+  assert.equal(browserOf(''), 'other');
+  assert.equal(browserOf(undefined), 'other');
 });
 
 test('the hooks: open, screens, dialogs, controls (not play), settings, content, errors, hiding and showing', () => {
@@ -139,6 +160,7 @@ test('the hooks: open, screens, dialogs, controls (not play), settings, content,
   page.screen('pads');
   page.screen('beats');
   assert.deepEqual(tel.queued().slice(1).map((r) => [r.event, r.details.from ?? null]), [['screen.view', null], ['screen.view', 'pads']], 'once per change, with where from');
+  assert.deepEqual(tel.queued().slice(1).map((r) => r.details.to), ['pads', 'beats'], 'and the screen reached');
 
   settings.dispatch('click', { pointerType: 'touch' });
   const use = tel.queued().at(-1);
@@ -183,6 +205,21 @@ test('the hooks: open, screens, dialogs, controls (not play), settings, content,
   doc.visibilityState = 'visible';
   doc.fire('visibilitychange');
   assert.deepEqual(tel.queued().slice(-2).map((r) => [r.event, r.details]), [['app.background', { shown_ms: 10_000 }], ['app.foreground', { away_ms: 60_000 }]]);
+});
+
+test('the level goes once a page load, right after app.open, and only a real level', () => {
+  const tel = telemetry();
+  const page = trackPage({ telemetry: tel, root: null, doc: emitter({ visibilityState: 'visible' }), win: emitter({ navigator: {} }), now: () => 0 });
+  page.level('typo');
+  page.level(undefined);
+  assert.deepEqual(tel.queued().map((r) => r.event), ['app.open'], 'not a level, not sent');
+  page.level('kids');
+  page.level('advanced');
+  assert.deepEqual(tel.queued().map((r) => [r.event, r.details.level ?? null]), [['app.open', null], ['noodlepads.level', 'kids']], 'once, whatever it is later');
+  setUsage(false);
+  const off = telemetry();
+  trackPage({ telemetry: off, root: null, doc: emitter({}), win: emitter({ navigator: {} }), now: () => 0 }).level('regular');
+  assert.deepEqual(off.queued(), [], 'with the usage switch off, nothing');
 });
 
 test('perf.load once the page has loaded, with whether it came over the network', async () => {

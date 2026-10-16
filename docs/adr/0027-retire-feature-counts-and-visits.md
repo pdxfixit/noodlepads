@@ -17,8 +17,8 @@
 - **Kept:** `devices` and `activity` (country only, 14 days and 90), `players` (a profile's id and created time) and the problem reports. The `X-Noodle-App` header stays (`web/device-meta.js`), and so does the `sendUsage` gate on it.
 - **The old `POST /api/profiles/:id/uses` route** answers 200 and stores nothing for four weeks (until about 2026-11-16), so a device still on an older copy drops what it holds instead of retrying. It then goes.
 - **Left in a device's storage** by older copies (`uses`, `visits` in localStorage) is removed once at start.
-- **What the events now carry in their place.** `perf.latency` (the sound's delay, once a visit) and `noodlepads.play` (pads, keys, roll notes, song blocks and Kids pads played in a visit, one count each, sent as the page hides) are new; a sound recorded, sounds chopped and a voice rendered are `content.finish`; a PIN the cloud refuses is `noodlepads.cloud` with action `pin-wrong`. The three new event names are not in the shared `events.toml` yet (asked for): the runner stores and counts an event it does not list.
-- **Not carried over (asked for in `events.toml`):** the visit's `level` and the device's browser family on `app.open`, and a per-screen count in `screen.view`'s daily summary.
+- **What the events now carry in their place.** `perf.latency` (the sound's delay, once a visit) and `noodlepads.play` (pads, keys, roll notes, song blocks and Kids pads played in a visit, one count each, sent as the page hides) are new; a sound recorded, sounds chopped and a voice rendered are `content.finish`; a PIN the cloud refuses is `noodlepads.cloud` with action `pin-wrong`. Both are in the shared `events.toml`, and `tests/telemetry.test.mjs` checks them against it when pdxfixit/telemetry sits beside the checkout.
+- **Carried over after all (2026-10-16, ADR 0026):** the person's level as `noodlepads.level`, the browser family as `app.open`'s `browser`, and a per-screen count from `screen.view`'s `to`.
 
 ## Options turned down
 

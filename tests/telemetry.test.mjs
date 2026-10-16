@@ -168,16 +168,10 @@ test('the queue this app kept before the shared client is dropped', () => {
 
 // The standard's list lives in pdxfixit/telemetry; checked when it sits beside this repo.
 const list = new URL('../../telemetry/events.toml', import.meta.url);
-test('every standard event and key this app sends is in the standard\'s events.toml', { skip: !existsSync(list) && 'pdxfixit/telemetry is not beside this checkout' }, () => {
+test('every event and key this app sends, its own included, is in the standard\'s events.toml', { skip: !existsSync(list) && 'pdxfixit/telemetry is not beside this checkout' }, () => {
   const toml = readFileSync(list, 'utf8');
-  // Asked of the list's owner (ADR 0027, TODO.md): sent already, not listed yet.
-  // The runner stores and counts an event it does not list. Delete a name here
-  // once the list has it; until then a listed one is checked like the rest.
-  const asked = ['perf.latency'];
   for (const [event, keys] of Object.entries(EVENTS)) {
-    if (event.startsWith('noodlepads.')) continue;   // this app's own: the list's owner adds them
     const block = toml.split(`[events."${event}"]`)[1]?.split('\n[')[0];
-    if (!block && asked.includes(event)) continue;
     assert.ok(block, `${event} is in events.toml`);
     const listed = JSON.parse(block.match(/^details = (\[.*\])$/m)[1]);
     for (const k of keys) assert.ok(listed.includes(k), `${event}.${k} is listed`);
