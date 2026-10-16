@@ -76,8 +76,9 @@ the cloud database show what they would do, or ask, before they do it.
 | Back up the cloud database | `just cloud-backup` (a `.sql` file in `~/.local/state/noodlepads/backups/`) |
 | Look in the cloud database | `just cloud-profiles`, `just cloud-stats`, `just cloud-sql "SELECT …"`, or any wrangler command with `just cloud-db …` |
 | Change the cloud database | `just cloud-migrate` (then `--yes`) before a deploy that needs it; `just cloud-prune` (then `--yes`); `just cloud-reset-pin <profile id>`; `just cloud-schema` for a new, empty database only |
-| Bring new problem reports home | `just logs --sync` (the player metrics and Cloudflare's stats are harvested by the telemetry runner, pdxfixit/telemetry) |
-| Problem reports | `just logs --sync` brings new ones in; `just logs`, `--errors`, `--digest` read them |
+| Bring problem reports and metrics home | `python3 ~/src/telemetry/telemetry.py pull`: the telemetry runner (pdxfixit/telemetry) harvests them, and this copies its store to `~/.local/state/telemetry/telemetry.sqlite3` |
+| Problem reports | `just logs`, `--errors`, `--digest` read them from that copy |
+| Move the old Mac archives into the runner (once) | `just runner-export reports OLD OUT`, `just runner-export metrics OLD OUT`, `just runner-export check FILE` (docs/how-to.md, "Retire the old Mac archives") |
 | Make sounds and emoji lists | `just placeholders`, `just emoji` |
 
 Agents use the rest: `just ship`, `just land`, `just land-continue`,

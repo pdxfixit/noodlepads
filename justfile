@@ -141,6 +141,17 @@ cloud-backup file="":
 logs *args:
     @python3 tools/logs.py "$@"
 
+# Once, on Ben's Mac: the old archives (logs.sqlite3, metrics.sqlite3) written in the
+# harvest's own shape for `telemetry.py import noodlepads FILE` (docs/how-to.md,
+# "Retire the old Mac archives"); no raw User-Agent, no place finer than the country, no names.
+#   just runner-export reports ~/.local/state/noodlepads/logs.sqlite3 OUT
+#   just runner-export metrics ~/.local/state/noodlepads/metrics.sqlite3 OUT
+#   just runner-export check FILE
+[doc("Once: the old Mac archives in the harvest's shape, for telemetry.py import (reports|metrics OLD OUT, or check FILE)")]
+[positional-arguments]
+runner-export *args:
+    @python3 tools/runner_export.py "$@"
+
 # (--test-force-exit, as in `just test`: app.test.mjs otherwise never exits and the proof hangs)
 [doc("Prove a test needs your change: it must fail on the committed copies of the files and pass on yours (PROVE_BASE=main for a branch's commits). A tools/test_*.py runs under unittest")]
 prove test +files:
