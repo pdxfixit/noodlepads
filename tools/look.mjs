@@ -85,9 +85,18 @@ const CHOOSE = (i) => q(`#pads .pad[data-id="user-look-${i}"]`);
 // (faked: the look server has no /api), for the profile-pin views.
 const PIN_LINK = `const { state } = await import('/state.js'); const pinId = [...state.peopleEdits.keys()][0];
   state.cloud.set(pinId, { id: pinId, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true, remember: true });`;
+// A long notice in the banner over the top of the screen (ui.js showNotice),
+// after its slide-in, for the notice views.
+const NOTICE = `const { showNotice } = await import('/ui.js');
+  showNotice('Saved a backup: Noodle Pads 2026-10-16.zip (3 sounds, 2 beats, 1 song). Keep it somewhere safe.');
+  await new Promise((r) => setTimeout(r, 500));`;
 const VIEWS = {
   edit: { screen: 'pads', js: q('#edit-toggle') },
   settings: { screen: 'pads', js: q('#settings-open') },
+  // The banner with a notice, on Pads and over ⚙️ Settings. The Undo banner
+  // shows in edit-undo (Pads), new-full (Beats), keys-new-full and song-new-full.
+  notice: { screen: 'pads', js: NOTICE },
+  'settings-notice': { screen: 'pads', js: q('#settings-open') + NOTICE },
   people: { screen: 'pads', js: q('#people-open') },
   // A person's profile sheet (👥 People → tap them): name, picture, color, ☁️, PIN, Delete.
   profile: { screen: 'pads', js: `${q('#people-open')} ${q('#people-edit [data-profile]')}` },
