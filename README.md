@@ -22,6 +22,7 @@ Nothing to install, no accounts.
 - **🧸 Kids:** four picture screens for a five-year-old: big pads, a hold-to-record mic, a simple beat and toy keys.
 - **☁️ The cloud:** each person's board follows them to any device, with an optional PIN. Share a sound, beat or song with a code.
 - **💾 Backups:** save everything to one file and load it on any device.
+- **📲 Install it:** add it to the home screen (Android: Install app; iPhone and iPad: Share → Add to Home Screen). After one visit it opens with no network.
 
 Every part in detail: [docs/guide.md](docs/guide.md). What each release added: [CHANGELOG.md](CHANGELOG.md).
 

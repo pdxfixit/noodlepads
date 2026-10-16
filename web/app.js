@@ -29,6 +29,7 @@ import { initPads, renderPads, renderPeople, makePad, makeAddPad, padFor, setPro
 import { initBulk } from './bulk.js';
 import { initSheet, openSheet, setBeatTempo, isRecording } from './sheet.js';
 import { initUpdate } from './update.js';
+import { registerOffline } from './offline.js';
 import { initPeople, refreshPeople, addPerson } from './people.js';
 import { initCloud, needsPin, leftPerson } from './cloud.js';
 import { initCloudUI, askToOpen, shareSounds } from './cloud-ui.js';
@@ -864,6 +865,7 @@ async function start() {
   setPerson(person(wanted) ? wanted : people()[0].id);
   started = true;
   loadVersion();
+  registerOffline();   // opens with no network after one visit, and installs as an app (sw.js)
   // "🆕 An update for Noodle Pads is ready.": waits while anything records, plays or
   // is open, so a reload never loses an unsaved sheet or a take (update.js).
   initUpdate({

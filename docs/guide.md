@@ -14,6 +14,7 @@ things in one line per control.
 - [Keyboard and screen readers](#keyboard-and-screen-readers)
 - [Limits on what comes in](#limits-on-what-comes-in)
 - [Versions and updates](#versions-and-updates)
+- [Installing it](#installing-it), and opening it with no network
 ## Pads and the sound sheet
 
 A soundboard for kids: everyone gets a board of their own. Tap a
@@ -625,3 +626,32 @@ a pad loops, or any sheet or dialog is open (the sound sheet keeps its edits
 until Save), and catches up after. Everything else is already saved in
 IndexedDB, and cloud sync runs again on start, so Reload loses nothing. A dev
 copy never asks (`web/update.js`).
+
+## Installing it
+
+Noodle Pads installs like an app, from the browser's own menu; the app has
+no install button.
+
+- **Android (Chrome):** Chrome offers "Install app" (or menu ⋮ → Add to
+  Home screen). It opens full screen, with its own icon.
+- **iPhone and iPad (Safari):** Share → Add to Home Screen.
+
+**With no network.** After one visit, the app opens with no network,
+installed or not: the service worker (`web/sw.js`, registered by
+`web/offline.js` once the page has loaded) keeps a copy of the whole app,
+the ready-made sounds (about 4.5 MB of the 6 MB) and the fonts and
+patterns included. Online it changes nothing: every file comes from the
+network first, and the kept copy is used only when that fails, so a new
+version shows on the next load as before. Each file that comes in refreshes
+the kept copy, and a page load that finds a new `version.json` fetches the
+whole app again in the background, so the copy offline is one version, not
+a mix.
+
+Offline, the corner names the version the device holds. The 🆕 update
+check ignores that answer (the worker marks it `X-Noodle-Offline`), so it
+never offers an update it cannot know about.
+
+What still needs the network: ☁️ the cloud (syncing, PINs, 👥 the profile
+list), 🔗 share codes, 📮 problem reports and 📊 play data. Sounds a kid
+records are on the device already and play offline. `/api/` never goes
+through the kept copy.

@@ -23,6 +23,8 @@ opens with a comment saying what it owns. How the app behaves is in
   - `tooltips.js`: a tooltip on every control, from its `aria-label` or text, unless it has a `title` of its own
   - `contact.js`: the PIN-reset address, built from an encoded constant so it is never written out in a served or tracked file
   - `update.js`: the "🆕 An update for Noodle Pads is ready." bar (when to ask `version.json`, when to show)
+  - `sw.js`: the service worker: the whole app kept for opening with no network (`SHELL`, every file the app can load; `tests/offline.test.mjs` fails when one is missing), network first, `/api/` untouched, `version.json` network only; `offline.js` registers it once the page has loaded
+  - `manifest.webmanifest`, `app-icons/`: installing it as an app (name, colors, the 192 and 512 px icons, a maskable 512 and the 180 px `apple-touch-icon`, drawn from the tab icon). Not `icons/`: the global git ignore's `Icon?` (macOS folder icons) matches it on a Mac's case-insensitive disk, and its files would silently stay out of a commit
   - `log.js` (the in-memory event log), `log-clean.js` (what a problem report may hold), `log-send.js` (sending it), `agent.js` (a User-Agent read as browser, OS and device-type families; a report sends only these, and the Worker's `metrics.js` uses it too)
   - `device-meta.js`: what the device says about itself on each cloud call (`X-Noodle-App`: version, width bucket, touch), for the Worker's `devices` and `activity` (ADR 0016); the Worker imports `WIDTHS` from it
   - `play-count.js`: pads, keys, roll notes, song blocks and Kids pads played this visit, one count each, in memory; `track-page.js` sends them as `noodlepads.play` as the page hides

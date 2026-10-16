@@ -39,6 +39,13 @@ def site_headers():
 
 
 class NoStore(http.server.SimpleHTTPRequestHandler):
+    # The web app manifest's own type, as Cloudflare sends it; an older
+    # Python's mimetypes does not know .webmanifest.
+    extensions_map = {
+        **http.server.SimpleHTTPRequestHandler.extensions_map,
+        ".webmanifest": "application/manifest+json",
+    }
+
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
         for name, value in site_headers().items():
