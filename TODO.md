@@ -78,7 +78,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **A welcome for new people** (Ben, 2026-10-16, ADR 0028): Who's playing?, Pick your stage name, one-time tips, hint dots, 🧸 Kids' 👆 hand, then the level-up nudge. Mockups shown 2026-10-16; waits on Ben's picks.
+- **A welcome for new people** (Ben, 2026-10-16, ADR 0028): Who's playing?, Pick your stage name, one-time tips, hint dots, 🧸 Kids' 👆 hand, then the level-up nudge. Ben picked from the mockups 2026-10-16; an agent is building it.
 
 
 
