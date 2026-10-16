@@ -1,6 +1,6 @@
 # 0028. New people get a welcome, a stage name and one-time tips
 
-- **Status:** Accepted (2026-10-16), to build; the screens wait on Ben's picks from the mockups
+- **Status:** Accepted (2026-10-16), to build; Ben picked from the mockups the same day
 - **Date:** 2026-10-16
 - **Decided by:** Ben, 2026-10-16, on the new-user brainstorm: one-time tips and hint dots "yes"; "this dialog will directly countermand" the no-tutorials rules; "Include a 'Pick your Stage Name' chooser for the rest of the profile"; level-up nudges "yes, as a notification in the upgrade space, but maybe it fades after awhile". Rows in [decisions.md](../decisions.md) (Product).
 
@@ -14,16 +14,17 @@
 
 ## Decision
 
-1. **Who's playing?** On a device's first open and for every new person (👋 Someone new, ➕ in 👥 People): three big picture cards, 🧸 Kids · Regular · Advanced. Each card is a pad, so the first tap makes a sound. Skipping keeps Regular. Choosing Kids is the grown-up's moment; leaving Kids still needs the sum.
-2. **Pick your stage name.** Then the rest of the profile: a fun name (the Pick a name list, 🎲 for more), a picture and a color. Skipping keeps the ones the app gave.
+1. **Who's playing?** On a device's first open and for every new person (👋 Someone new, ➕ in 👥 People): three big picture cards, 🧸 Kids · Regular · Advanced, with no ages on them. Each card is a pad, so the first tap makes a sound. A grown-up picks; the kid sees pictures. Skipping keeps Regular. Choosing Kids is the grown-up's moment; leaving Kids still needs the sum.
+2. **Pick your stage name.** Then the rest of the profile: a fun name (the Pick a name list, 🎲 for more), a picture and a color. 🧸 Kids picks only the picture and color and keeps the name it was given (a grown-up can 🎲 it in 👥 People). Skipping keeps the ones the app gave.
 3. **One-time tips.** Regular and Advanced: one short tip at a time, the first time a thing matters (a few pad taps → hold to loop; first visit to Beats → tap squares, then ▶︎ Play, or 💃 a groove). Each shows once per person, in the floating banner. ❓ Help offers to show them again.
 4. **Hint dots.** A small dot on a control the person has never tapped (⌨️ Keys, 💃 Grooves, 🎚️ Mixer); the first tap clears it.
 5. **🧸 Kids gets no words.** A 👆 hand pulses over the first pad until it is tapped; the mic wiggles until the first recording.
-6. **Level-up nudge.** When a Regular person keeps reaching for what Advanced adds, an offer floats in the bottom bar where 🆕 update shows, and fades after a while.
+6. **Level-up nudge.** Regular only: when a Regular person keeps reaching for what Advanced adds, an offer floats in the bottom bar where 🆕 update shows, and fades after a while. 🧸 Kids gets none: a kid can't read it, and leaving Kids is the grown-up sum.
 
 ## Options turned down
 
 - **A tour of several screens up front.** Kids skip it and remember none of it.
+- **Ages on the cards** ("about 3 to 6"). Ben: drop them.
 - **Challenges or creative prompts** ("a beat with only animal sounds"). Ben: no.
 - **A grown-up note about 📊 Share play data on first open.** Ben: leave it unmentioned.
 
