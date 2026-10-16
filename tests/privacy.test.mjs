@@ -148,15 +148,19 @@ test('"Anyone with a share code can see and play what was shared, even after its
   assert.equal(seen.status, 200, 'no key, no PIN, and the profile is gone');
 });
 
-// ADR 0016 (Ben, 2026-10-12; 14 days and no IP hash, 2026-10-15): the player
-// metrics, said plainly.
-test('"the cloud also keeps for 14 days … The internet address is not kept": metrics last 14 days, devices 90, and hold no IP', async () => {
-  const line = claim('The internet address is not kept');
-  assert.match(line, /for 14 days, for people in the cloud/);
+// Usage data is described only in the shared policy (Ben, 2026-10-16: "have it
+// in the privacy policy so that all apps are consistent"), so no line here names it.
+test('"What\'s private" says nothing about usage data: the shared policy does', () => {
+  for (const line of PRIVACY) {
+    assert.doesNotMatch(line, /how the app is used|Share play data|for 14 days|kept 90 days|internet address/, `usage words in: ${line}`);
+  }
+});
+
+// ADR 0016 (Ben, 2026-10-12; 14 days and no IP hash, 2026-10-15): what the shared
+// policy says of the player metrics, tied to the code.
+test('player metrics last 14 days, devices 90, and hold no IP, city or User-Agent', async () => {
   assert.equal(KEEP_MS, 14 * 24 * 60 * 60 * 1000);
-  assert.match(line, /kept 90 days/);
   assert.equal(DEVICE_KEEP_MS, 90 * 24 * 60 * 60 * 1000);
-  assert.match(line, /counts only/);
   assert.ok(USES.every((f) => /^[a-z-]+$/.test(f)), 'feature names, nothing a kid made');
   const visits = readFileSync(new URL('../web/visits.js', import.meta.url), 'utf8');
   assert.match(visits, /Never what was made, said or typed/);
@@ -170,19 +174,14 @@ test('"the cloud also keeps for 14 days … The internet address is not kept": m
   Object.defineProperty(req, 'cf', { value: { city: 'Portland', region: 'Oregon', country: 'US', asOrganization: 'Comcast Cable', asn: 7922 } });
   assert.equal((await worker.fetch(req, env)).status, 201);
   const kept = JSON.stringify([env.DB.rows('SELECT * FROM activity'), env.DB.rows('SELECT * FROM devices')]);
-  assert.match(line, /the country each visit came from, and no finer place/);
   assert.ok(kept.includes('"US"'), 'the country is kept');
   assert.ok(!kept.includes('Portland') && !kept.includes('Oregon') && !kept.includes('Comcast Cable'), 'the city, region and network are not (worker/schema.sql has no column for them)');
   assert.ok(!kept.includes('192.0.2.44') && !kept.includes('iPhone OS'), 'the IP and User-Agent are not');
 });
 
-// ADR 0026 (Ben, 2026-10-16): usage events, said plainly and tied to the code.
-test('"also sends noodlepads.com how the app is used … Never sounds, names or anything typed": events go to the site only, from every device, with fixed keys', async () => {
-  const line = claim('also sends noodlepads.com how the app is used');
-  assert.match(line, /Every device, in the cloud or not/);
-  assert.match(line, /a random number for this device \(not a profile\)/);
-  assert.match(line, /⚙️ Settings → 📊 Play data → 📊 Share play data turns it off/);
-  assert.match(html, /<b>📊 Share play data<\/b>/, 'the switch it names is in Settings');
+// ADR 0026 (Ben, 2026-10-16): what the shared policy says of usage events, tied to the code.
+test('usage events go to the site only, from every device while Share play data is on, with fixed keys', async () => {
+  assert.match(html, /<b>📊 Share play data<\/b>/, 'the switch the policy names is in Settings');
   const { EVENTS, shouldSend } = await import('../web/telemetry.js');
   assert.equal(shouldSend({ enabled: true }), true, 'every device, in the cloud or not (question #425)');
   assert.equal(shouldSend({ enabled: false }), false);
