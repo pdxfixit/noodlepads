@@ -144,10 +144,11 @@ logs *args:
 # Once, on Ben's Mac: the old archives (logs.sqlite3, metrics.sqlite3) written in the
 # harvest's own shape for `telemetry.py import noodlepads FILE` (docs/how-to.md,
 # "Retire the old Mac archives"); no raw User-Agent, no place finer than the country, no names.
-#   just runner-export reports ~/.local/state/noodlepads/logs.sqlite3 OUT
-#   just runner-export metrics ~/.local/state/noodlepads/metrics.sqlite3 OUT
+#   just runner-export all ~/.local/state/noodlepads/logs.sqlite3 ~/.local/state/noodlepads/metrics.sqlite3 OUT
+#                                 both in one file: the one to import (import runs once per job)
+#   just runner-export reports|metrics OLD OUT    one archive alone
 #   just runner-export check FILE
-[doc("Once: the old Mac archives in the harvest's shape, for telemetry.py import (reports|metrics OLD OUT, or check FILE)")]
+[doc("Once: the old Mac archives in the harvest's shape, for one telemetry.py import (all LOGS METRICS OUT; reports|metrics OLD OUT; check FILE)")]
 [positional-arguments]
 runner-export *args:
     @python3 tools/runner_export.py "$@"

@@ -78,7 +78,7 @@ the cloud database show what they would do, or ask, before they do it.
 | Change the cloud database | `just cloud-migrate` (then `--yes`) before a deploy that needs it; `just cloud-prune` (then `--yes`); `just cloud-reset-pin <profile id>`; `just cloud-schema` for a new, empty database only |
 | Bring problem reports and metrics home | `python3 ~/src/telemetry/telemetry.py pull`: the telemetry runner (pdxfixit/telemetry) harvests them, and this copies its store to `~/.local/state/telemetry/telemetry.sqlite3` |
 | Problem reports | `just logs`, `--errors`, `--digest` read them from that copy |
-| Move the old Mac archives into the runner (once) | `just runner-export reports OLD OUT`, `just runner-export metrics OLD OUT`, `just runner-export check FILE` (docs/how-to.md, "Retire the old Mac archives") |
+| Move the old Mac archives into the runner (once) | `just runner-export all LOGS METRICS OUT` (both in the one file to import), `just runner-export check FILE` (docs/how-to.md, "Retire the old Mac archives") |
 | Make sounds and emoji lists | `just placeholders`, `just emoji` |
 
 Agents use the rest: `just ship`, `just land`, `just land-continue`,
