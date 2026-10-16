@@ -54,6 +54,10 @@ test('with reports on, hiding the page sends what happened since, with no names 
   assert.equal(opts.keepalive, true);
   assert.match(body.device, /^[0-9A-Z]{4}-[0-9A-Z]{4}$/);
   assert.equal(body.settings.sendLogs, true);
+  // The browser, OS and device type only: the User-Agent string never leaves.
+  assert.equal(Object.hasOwn(body.env, 'ua'), false);
+  for (const k of ['browser', 'os', 'type']) assert.equal(typeof body.env[k], 'string', k);
+  if (globalThis.navigator?.userAgent) assert.ok(!opts.body.includes(globalThis.navigator.userAgent));
   assert.ok(body.counts.people >= 1);
   // Only what came after the switch (the stand-in page can't save, so a notice says so first).
   assert.ok(!body.entries.some((e) => e.kind === 'setting'));

@@ -38,7 +38,8 @@ test('no outside origin at all: the fonts are served from this site', () => {
   assert.deepEqual(csp['style-src'], ["'self'"]);
   assert.deepEqual(csp['font-src'], ["'self'"]);
   assert.doesNotMatch(headers, /googleapis|gstatic/);
-  const origins = new Set([...html.matchAll(/(?:href|src)="(https?:\/\/[^/"]+)/g)].map((m) => m[1]));
+  // What the page loads: <link href> and src. A plain <a href> (the privacy policy) loads nothing.
+  const origins = new Set([...html.matchAll(/(?:<link\b[^>]*\bhref|\bsrc)="(https?:\/\/[^/"]+)/g)].map((m) => m[1]));
   assert.deepEqual([...origins], []);
 });
 

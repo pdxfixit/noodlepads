@@ -160,16 +160,31 @@ test('cleanPayload refuses what is not a report and checks every field', () => {
   assert.equal(cleanPayload({ format: 1, device: 'Juno' }), null);
   const out = cleanPayload({
     format: 1, app: '<script>', device: 'K7Q4-M2XD', session: 'Juno', sent: 'yesterday',
-    env: { ua: 'Mozilla/5.0\nX', screen: [800, 1280, 3], dpr: 1.5, tz: 'America/Los_Angeles', audio: { sampleRate: 48000, baseLatencyMs: 10.7, state: 'Juno' } },
+    env: { browser: 'Chrome', os: 'Juno', type: 'Toby', screen: [800, 1280, 3], dpr: 1.5, tz: 'America/Los_Angeles', audio: { sampleRate: 48000, baseLatencyMs: 10.7, state: 'Juno' } },
     settings: { advancedBeats: true, timeSignature: 'Toby', name: 'Juno' },
     counts: { people: 3, sounds: 41, secret: 1 },
     dropped: 2, entries: [], extra: 'Juno',
   });
   assert.deepEqual(out, {
     format: 1, app: 'unknown', device: 'K7Q4-M2XD', session: null, sent: null,
-    env: { ua: 'Mozilla/5.0 X', screen: [800, 1280], dpr: 1.5, tz: 'America/Los_Angeles', audio: { sampleRate: 48000, baseLatencyMs: 10.7, state: null } },
+    env: { browser: 'Chrome', os: null, type: null, screen: [800, 1280], dpr: 1.5, tz: 'America/Los_Angeles', audio: { sampleRate: 48000, baseLatencyMs: 10.7, state: null } },
     settings: { advancedBeats: true },
     counts: { people: 3, sounds: 41 },
     dropped: 2, entries: [],
   });
+});
+
+test('a report names the browser, OS and device type, never the User-Agent string', () => {
+  const ua = 'Mozilla/5.0 (Linux; Android 13; SM-X200) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/25.0 Chrome/121.0 Safari/537.36';
+  // An app from before 2026-10-16 still sends the raw string: only its families are kept.
+  const old = cleanPayload({ format: 1, device: 'K7Q4-M2XD', env: { ua }, entries: [] });
+  assert.deepEqual([old.env.browser, old.env.os, old.env.type], ['Samsung', 'Android', 'tablet']);
+  assert.equal(Object.hasOwn(old.env, 'ua'), false);
+  assert.doesNotMatch(JSON.stringify(old), /Mozilla|SM-X200|AppleWebKit/);
+  // The app sends the families itself; one off the list is dropped.
+  const now = cleanPayload({ format: 1, device: 'K7Q4-M2XD', env: { browser: 'Firefox', os: 'Linux', type: 'desktop', ua }, entries: [] });
+  assert.deepEqual([now.env.browser, now.env.os, now.env.type], ['Firefox', 'Linux', 'desktop']);
+  assert.doesNotMatch(JSON.stringify(now), /Mozilla|SM-X200/);
+  const none = cleanPayload({ format: 1, device: 'K7Q4-M2XD', env: {}, entries: [] });
+  assert.deepEqual([none.env.browser, none.env.os, none.env.type], [null, null, null]);
 });

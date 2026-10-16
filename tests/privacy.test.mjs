@@ -13,7 +13,8 @@ import { KEEP_MS, DEVICE_KEEP_MS } from '../worker/metrics.js';
 import { USES } from '../web/uses.js';
 import { VISIT_SCREENS } from '../web/visits.js';
 import { FakeD1 } from './fake-d1.mjs';
-import { PRIVACY, PRIVACY_TITLE } from '../web/privacy.js';
+import { PRIVACY, PRIVACY_TITLE, PRIVACY_URL } from '../web/privacy.js';
+import { cleanPayload } from '../web/log-clean.js';
 import { HELP } from '../web/help.js';
 import { hasMade } from '../web/cloud-sync.js';
 
@@ -189,4 +190,31 @@ test('"also sends noodlepads.com how the app is used … Never sounds, names or 
   assert.match(client, /endpoint = opts\.endpoint \?\? "\/api\/events"/, 'sent to the site itself');
   const telemetry = readFileSync(new URL('../web/telemetry.js', import.meta.url), 'utf8');
   assert.ok(!/endpoint:\s*['"]http/.test(telemetry), 'never another origin');
+});
+
+test('"Problem reports … send": the statement names everything a report holds, and no User-Agent string', () => {
+  const line = claim('Problem reports');
+  for (const words of ['event log', 'no sounds and no names', 'its settings', 'how many sounds, beats and songs',
+    'browser, system and device type', 'never the full browser string', 'screen size', 'time zone', 'sound timing', 'random code']) {
+    assert.ok(line.includes(words), `the report line names: ${words}`);
+  }
+  const report = cleanPayload({
+    format: 1, device: 'K7Q4-M2XD', entries: [],
+    env: { ua: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/129.0 Mobile Safari/537.36', screen: [412, 915], dpr: 2, tz: 'UTC', audio: null },
+  });
+  // Each part of a report, and the words above that name it.
+  assert.deepEqual(Object.keys(report).sort(), ['app', 'counts', 'device', 'dropped', 'entries', 'env', 'format', 'sent', 'session', 'settings']);
+  assert.deepEqual(Object.keys(report.env).sort(), ['audio', 'browser', 'dpr', 'os', 'screen', 'type', 'tz']);
+  assert.doesNotMatch(JSON.stringify(report), /Mozilla|Pixel/);
+});
+
+test('Settings links the full privacy policy under the statement, and README does too', () => {
+  assert.equal(PRIVACY_URL, 'https://privacy.pdxfixit.com/noodlepads/');
+  const body = html.slice(html.indexOf('id="set-privacy-body"'), html.indexOf('</section>', html.indexOf('id="set-privacy-body"')));
+  const link = body.match(/<a id="privacy-policy" href="([^"]+)" target="_blank" rel="noopener">([^<]+)<\/a>/);
+  assert.ok(link, 'a link in the privacy section, opening in a new tab');
+  assert.equal(link[1], PRIVACY_URL);
+  assert.match(link[2], /Privacy policy/);
+  assert.ok(body.indexOf('privacy-list') < body.indexOf('privacy-policy'), 'under the list');
+  assert.ok(readme.includes(`(${PRIVACY_URL})`), 'README links it');
 });

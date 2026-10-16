@@ -16,6 +16,7 @@ import { people, clipsFor } from './board.js';
 import { SETTINGS, getSetting, onSetting } from './settings.js';
 import { getLog, onLog } from './log.js';
 import { cleanPayload } from './log-clean.js';
+import { parseAgent } from './agent.js';
 
 // The only host that sends. A dev copy (localhost, the Wi-Fi address) never does.
 export const LIVE_HOST = 'noodlepads.com';
@@ -161,8 +162,9 @@ function buildPayload(entries) {
     device: deviceCode(),
     session,
     sent: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
+    // The browser, OS and device type only, never the User-Agent itself.
     env: {
-      ua: globalThis.navigator?.userAgent,
+      ...parseAgent(globalThis.navigator?.userAgent, (globalThis.navigator?.maxTouchPoints ?? 0) > 0),
       screen: [globalThis.screen?.width, globalThis.screen?.height],
       dpr: globalThis.devicePixelRatio,
       tz: globalThis.Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone,

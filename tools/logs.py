@@ -48,7 +48,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS uploads (    -- one row per upload, never deleted
   key TEXT PRIMARY KEY,                 -- the report's key: <ISO time>_<device>_<random>
   received TEXT NOT NULL,               -- ISO time the Worker stored it
-  device TEXT, app TEXT, ua TEXT,       -- device code, app version, browser
+  device TEXT, app TEXT, ua TEXT,       -- device code, app version, "browser · OS · type" (families only)
   errors INTEGER NOT NULL,
   payload TEXT NOT NULL                 -- the cleaned upload, as JSON
 );
@@ -189,6 +189,16 @@ def parse_key(key):
     return received, device
 
 
+def device_families(env):
+    """The device as a report names it: "Chrome · Android · phone". Reports carry only
+    the browser, OS and device-type families (web/agent.js), never the User-Agent string.
+    A report from before 2026-10-16 had the raw string in env.ua: it is not copied."""
+    if not isinstance(env, dict):
+        return None
+    parts = [env.get(k) for k in ("browser", "os", "type")]
+    return " · ".join(p for p in parts if isinstance(p, str) and p) or None
+
+
 def insert_upload(conn, key, raw, metadata=None):
     """Adds one upload and its events. Returns False when the value was not JSON
     (kept as text, with no events, so it is still there to look at)."""
@@ -205,7 +215,7 @@ def insert_upload(conn, key, raw, metadata=None):
         return False
     entries = [e for e in payload.get("entries") or [] if isinstance(e, dict)]
     errors = sum(1 for e in entries if e.get("kind") == "error")
-    ua = (payload.get("env") or {}).get("ua") if isinstance(payload.get("env"), dict) else None
+    ua = device_families(payload.get("env"))
     conn.execute("INSERT INTO uploads VALUES (?, ?, ?, ?, ?, ?, ?)",
                  (key, received, payload.get("device") or device, payload.get("app"), ua, errors,
                   json.dumps(payload, ensure_ascii=False, sort_keys=True)))
