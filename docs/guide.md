@@ -168,6 +168,13 @@ it is never logged, and a sync merges both devices' lists, so a tip never
 repeats on another device. ❓ Help's 💡 Show tips again clears the tips (and
 hint dots) for the person showing.
 
+**Hint dots** (Regular and Advanced): a small red dot in the corner of ⌨️
+Keys, 💃 Grooves and 🎚️ Mixer (every copy, ⌨️ Keys off and on) until this
+person first taps each. They are the page's `data-hints`, drawn by
+`styles.css` as a `::before` on the buttons: no text to read aloud, and the
+buttons keep their size. They follow the same `seen` list (`dot-keys`,
+`dot-grooves`, `dot-mixer`), so 💡 Show tips again brings them back.
+
 Only the two places that make a person from nothing mark them as new, in
 memory (`web/welcome.js`). Anyone stored before, pulled from the cloud or
 loaded from a backup is never asked, and a reload before it shows skips it.
@@ -175,7 +182,7 @@ loaded from a backup is never asked, and a reload before it shows skips it.
 For the tests and `just look`, the app's test hook `noodleFirstSteps = false`
 (`web/firsts.js`) turns every first step off, so a fresh device there opens on
 the app as before. The `welcome`, `welcome-stage` and `welcome-kids-stage` look
-views turn them on, and `tip-beats` shows a tip.
+views turn them on, `tip-beats` shows a tip and `hint-dots` the dots.
 
 ## Help
 

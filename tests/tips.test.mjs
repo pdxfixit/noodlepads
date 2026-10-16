@@ -100,3 +100,30 @@ test('❓ Help → 💡 Show tips again clears the tips, and they come back one 
   await tab('#live-tab');
   assert.equal(banner(), TIPS['tip-live']);
 });
+
+// Hint dots (ADR 0028): on ⌨️ Keys, 💃 Grooves and 🎚️ Mixer until this
+// person first taps each; the page's data-hints draws them (styles.css), so
+// they never touch the buttons themselves. `just look hint-dots` shows them.
+test('hint dots: on Keys, Grooves and Mixer until the first tap of each; Show tips again brings them back', async () => {
+  const hints = () => (document.body.dataset.hints ?? '').split(' ').filter(Boolean);
+  await setSetting('seen', '');
+  assert.deepEqual(hints(), ['keys', 'grooves', 'mixer']);
+  const keysLabel = $('#seq-keys').textContent;
+  await tab('#beats-toggle');
+  $('#seq-grooves').dispatch('click');
+  await page.settle();
+  if ($('#grooves').open) $('#grooves').close();
+  assert.deepEqual(hints(), ['keys', 'mixer']);
+  assert.ok(seen().includes('dot-grooves'));
+  assert.equal($('#seq-keys').textContent, keysLabel, 'the button itself is untouched');
+  assert.equal($('#seq-keys').children.length, 0);
+  await setSetting('level', 'kids');
+  assert.deepEqual(hints(), [], 'none on 🧸 Kids');
+  await setSetting('level', 'regular');
+  assert.deepEqual(hints(), ['keys', 'mixer']);
+  $('#help-open').dispatch('click');
+  $('#help-tips').dispatch('click');
+  await page.settle();
+  $('#help').close();
+  assert.deepEqual(hints(), ['keys', 'grooves', 'mixer']);
+});

@@ -767,7 +767,6 @@ async function start() {
   });
   // One-time tips (ADR 0028): Beats' needs to know the open beat is empty.
   initTips({
-    kids: () => kidsShowing(),
     keysOn: () => keysOn,
     beatHasHits: () => beatHasHits(seq?.beat()),
   });

@@ -4233,6 +4233,27 @@ dialog.welcome { width: min(640px, calc(100vw - 2 * var(--gutter))); }
 }
 .wl-go:active { transform: translateY(4px); box-shadow: 0 1px 0 #B89A10; }
 
+/* Hint dots (tips.js, ADR 0028): a small red dot in the corner of ⌨️ Keys,
+   💃 Grooves and 🎚️ Mixer until this person first taps each. Absolute, so
+   the button keeps its size; no text, so nothing is read aloud. */
+body[data-hints~="keys"] [data-beat-keys],
+body[data-hints~="grooves"] [data-beat-grooves],
+body[data-hints~="mixer"] [data-mixer] { position: relative; }
+body[data-hints~="keys"] [data-beat-keys]::before,
+body[data-hints~="grooves"] [data-beat-grooves]::before,
+body[data-hints~="mixer"] [data-mixer]::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--record);
+  box-shadow: 0 0 0 2px #fff;
+  pointer-events: none;
+}
+
 /* ── Pad skins (skins.js; Ben, 2026-10-16) ──
    How every pad looks, the person's choice in ⚙️ Settings → 🎨 Look:
    Tiles (everything above), Slam buttons, Lit pads, Switch, Spinner, Jelly
