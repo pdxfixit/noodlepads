@@ -33,6 +33,7 @@ export const SETTING_VALUES = {
   padSize: ['auto', ...Array.from({ length: 101 }, (_, i) => i / 100)],   // 'auto', or 0 to 1 between the screen's smallest and biggest pads
   djLayout: ['auto', 'qwerty', 'dvorak'],
   sendLogs: [false, true],
+  sendUsage: [false, true],
 };
 // What a sound that is not from the kit is sent as: a person's sound from
 // boards.json, one made with ✨ Make one, or anything else made on the device
@@ -120,6 +121,8 @@ export const RULES = {
     rec: oneOf(['start', 'grow', 'round', 'stop']), why: oneOf(['button', 'escape', 'leave', 'stopped']),
     started: bool, growing: bool, bars: num, bpm: num, added: num, seconds: num,
   },
+  // ● Record a take on 🎤 Live: started, and stopped (`made`: a take was kept).
+  take: { rec: oneOf(['start', 'stop']), made: bool, seconds: num },
   chop: { found: num, seconds: num, made: num },
   // 🧸 Kids (kids.js): a tab shown, a recording kept (its length) and its
   // voice, the beat played, the grown-up sum answered.

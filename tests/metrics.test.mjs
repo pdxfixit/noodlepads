@@ -24,7 +24,7 @@ function cloud() {
   let now = T0;
   const realNow = Date.now;
   const call = async (method, path, { body, key, cf = PORTLAND, ip = IP, ua = IPHONE, meta = appMeta('7b5fc5e', 390, true) } = {}) => {
-    const headers = { Origin: ORIGIN, 'CF-Connecting-IP': ip, 'User-Agent': ua, 'X-Noodle-App': meta };
+    const headers = { Origin: ORIGIN, 'CF-Connecting-IP': ip, 'User-Agent': ua, ...(meta ? { 'X-Noodle-App': meta } : {}) };
     if (key) headers.Authorization = `Bearer ${key}`;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     const req = new Request(`https://noodlepads.com/api/${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -267,11 +267,31 @@ test('another D1 trouble in the metrics is logged, and the answer is still the r
   assert.match(errors[0], /metrics \(pull\)/);
 });
 
+// Ben, 2026-10-16: off means nothing is sent, ever. A device with its usage
+// switch off sends no X-Noodle-App (web/uses.js appMeta), and the Worker then
+// keeps no metrics for the call; old rows still go on time.
+test('a call without X-Noodle-App (the usage switch off) leaves no device, event, count or visit', async () => {
+  const { env, call, at } = cloud();
+  await make(call, 'p-a');
+  const old = env.DB.rows('SELECT COUNT(*) AS n FROM activity')[0].n;
+  assert.equal(old, 1, 'with the header, the make is noted');
+  at(T0 + 20 * DAY);
+  const off = { meta: null };
+  const key2 = (await (await call('POST', 'profiles', { ...off, body: { id: 'p-b', name: 'Sir Squid', avatar: '', color: '#1F3FA8' } })).json()).key;
+  assert.equal((await call('GET', 'profiles/p-b/records?since=0', { ...off, key: key2 })).status, 200);
+  assert.equal((await call('POST', 'profiles/p-b/uses', { ...off, key: key2, body: { uses: { pad: 2 }, visits: [visit({ at: T0 + 20 * DAY - 60_000 })] } })).status, 200, 'the device is told it went');
+  assert.deepEqual(env.DB.rows("SELECT * FROM activity WHERE profile_id = 'p-b'"), []);
+  assert.deepEqual(env.DB.rows("SELECT * FROM devices WHERE profile_id = 'p-b'"), []);
+  assert.deepEqual(env.DB.rows("SELECT * FROM uses WHERE profile_id = 'p-b'"), []);
+  assert.deepEqual(env.DB.rows("SELECT * FROM visits WHERE profile_id = 'p-b'"), []);
+  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM activity')[0].n, 0, "p-a's 20-day-old event went with the sweep all the same");
+});
+
 test('with a ctx, the metrics run after the answer (waitUntil)', async () => {
   const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('') } };
   const waiting = [];
   const req = new Request('https://noodlepads.com/api/profiles', {
-    method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
+    method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'X-Noodle-App': appMeta('abc', 400, true) },
     body: JSON.stringify({ id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8' }),
   });
   const res = await worker.fetch(req, env, { waitUntil: (p) => waiting.push(p) });

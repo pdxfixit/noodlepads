@@ -377,6 +377,7 @@ export function createDJ({ el, deps }) {
     rec = { started: false, events: [] };
     lastTake = null;
     el.done.hidden = true;
+    logEvent('take', { rec: 'start' });
     recTimer = setInterval(() => {
       if (rec?.started && deps.now() - rec.from >= MAX_TAKE_SECONDS) stopRec();
       else showRec();
@@ -389,6 +390,7 @@ export function createDJ({ el, deps }) {
     const made = takeFrom(rec.events, deps.now());
     rec = null;
     showRec();
+    logEvent('take', { rec: 'stop', made: !!made, seconds: made?.duration ?? 0 });
     if (!made) return;
     const pid = deps.personId();
     lastTake = {

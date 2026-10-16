@@ -1291,6 +1291,9 @@ test('🎤 Live: Record waits for the first hit, Stop saves a named take, Takes 
   $('#dj-record').dispatch('click');
   assert.equal($('#dj-record').textContent, '● Record');
   assert.equal($('#dj-done').hidden, false);
+  // Logged, for problem reports and the usage events (track-page.js content).
+  const { getLog } = await import('../web/log.js');
+  assert.deepEqual(getLog().filter((e) => e.kind === 'take').slice(-2).map((e) => [e.data.rec, e.data.made ?? null]), [['start', null], ['stop', true]]);
   // The done bar names the take in a field: renaming it there renames the take.
   assert.equal($('#dj-take-line').hidden, false);
   assert.ok($('#dj-take-name').value.length > 2);

@@ -5,13 +5,14 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  USES, WIDTHS, MAX_COUNT, DIALOG_USES, countUse, pendingUses, sentUses, useOfLog, useOfDialog, watchUses, widthBucket, appMeta,
+  USES, WIDTHS, MAX_COUNT, DIALOG_USES, countUse, pendingUses, sentUses, useOfLog, useOfDialog, watchUses, widthBucket, appMeta, clearUses,
 } from '../web/uses.js';
 import { readFileSync } from 'node:fs';
 import { LEVELS } from '../web/settings.js';
 import { cleanUses, readMeta } from '../worker/metrics.js';
 import { logEvent, onLog } from '../web/log.js';
 import { createCloudApi } from '../web/cloud-api.js';
+import { setUsage } from '../web/usage.js';
 
 const store = new Map();
 globalThis.localStorage = {
@@ -157,6 +158,26 @@ test('every cloud call carries the header, and a broken meta never stops one', a
   await createCloudApi({ fetch, meta: () => { throw new Error('no screen'); } }).hello();
   await createCloudApi({ fetch }).list();
   assert.deepEqual(seen, ['v=abc&w=1024&t=0', undefined, undefined]);
+});
+
+// Ben, 2026-10-16: the usage switch off sends nothing, ever.
+test('with the usage switch off nothing is counted or waiting, clearUses empties the store, and cloud calls carry no header', async () => {
+  countUse('pad', 'p-a');
+  setUsage(false);
+  try {
+    countUse('pad', 'p-a');
+    assert.equal(pendingUses('p-a'), null, 'nothing waits to be sent');
+    assert.equal(appMeta('abc', 1024, false), null);
+    const seen = [];
+    const fetch = async (url, init) => { seen.push(Object.hasOwn(init.headers, 'X-Noodle-App')); return new Response('{"ok":true}', { headers: { 'Content-Type': 'application/json' } }); };
+    await createCloudApi({ fetch, meta: () => appMeta('abc', 1024, false) }).hello();
+    assert.deepEqual(seen, [false], 'no header at all');
+  } finally {
+    setUsage(true);
+  }
+  assert.deepEqual(pendingUses('p-a'), { pad: 1 }, 'the count made while off never happened');
+  clearUses();
+  assert.equal(pendingUses('p-a'), null);
 });
 
 test('every dialog the app has counts as it opens, under a name on the list', () => {

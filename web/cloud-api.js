@@ -24,7 +24,8 @@ export function createCloudApi({ fetch, base = '/api', meta = null }) {
     const headers = {};
     if (key) headers.Authorization = `Bearer ${key}`;
     if (meta) {
-      try { headers['X-Noodle-App'] = meta(); } catch { /* never stops a call */ }
+      // No header at all when meta() says nothing (the usage switch is off).
+      try { const m = meta(); if (m) headers['X-Noodle-App'] = m; } catch { /* never stops a call */ }
     }
     let payload;
     if (raw !== undefined) { payload = raw; headers['Content-Type'] = type || 'application/octet-stream'; }

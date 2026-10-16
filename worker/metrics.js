@@ -9,6 +9,10 @@
 // only the browser, OS and device-type families. Of the device's own header
 // (X-Noodle-App, web/uses.js appMeta): the app version, a width bucket, touch.
 //
+// A call without that header (the device's usage switch is off, Ben
+// 2026-10-16: off sends nothing) leaves no metrics at all: no device row, no
+// event, no counts, no visit (`optedIn`).
+//
 // Metrics never fail a request: every write is caught. While the tables are
 // missing (the migration not yet run), it skips them without a word.
 
@@ -69,6 +73,9 @@ export function parseAgent(ua, touch = false) {
   return { browser, os, type };
 }
 
+// Whether the device's usage switch is on: it sends X-Noodle-App only then.
+export const optedIn = (request) => !!request.headers.get('X-Noodle-App');
+
 // The device's own header (web/uses.js appMeta), each part only if valid.
 export function readMeta(request) {
   const raw = request.headers.get('X-Noodle-App') ?? '';
@@ -99,6 +106,8 @@ async function quietly(env, statements, why) {
 // key before a new PIN gave it another, so it stays one device.
 export async function noteEvent(env, request, seen, now) {
   if (!KINDS.includes(seen?.kind) || typeof seen.profile !== 'string') return false;
+  // Switched off: nothing noted, but old rows still go on time.
+  if (!optedIn(request)) return SWEEPS.has(seen.kind) ? quietly(env, () => sweep(env, now), 'sweep') : false;
   const place = placeOf(request);
   const meta = readMeta(request);
   const agent = parseAgent(request.headers.get('User-Agent'), meta.touch);
@@ -167,8 +176,10 @@ export function cleanVisits(body, now) {
 // Adds a device's counts to today's (UTC) for the profile, stores its
 // finished visits, and brings the device's row up to date. Whether they were
 // stored: false while the tables are missing, so the device keeps them for
-// later. `uses` may be null when only visits came.
+// later. `uses` may be null when only visits came. Without X-Noodle-App
+// (the switch off) nothing is stored, and the device is told it went.
 export async function addUses(env, request, profile, device, uses, now, visits = []) {
+  if (!optedIn(request)) return true;
   const meta = readMeta(request);
   const agent = parseAgent(request.headers.get('User-Agent'), meta.touch);
   return quietly(env, () => [

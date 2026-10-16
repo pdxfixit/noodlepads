@@ -13,7 +13,8 @@
 // The Worker imports the lists and `cleanVisit` to check what it is sent, so
 // this module imports nothing that needs a page.
 
-import { remember, recall } from './util.js';
+import { remember, recall, forget } from './util.js';
+import { usageOn } from './usage.js';
 
 // What a visit can name. A new screen goes at the end.
 export const VISIT_SCREENS = ['pads', 'beats', 'song', 'live', 'kids'];
@@ -78,8 +79,10 @@ function read() {
 }
 const write = (all) => remember(KEY, JSON.stringify(all.slice(-MAX_WAITING)));
 
-// Keeps a finished visit for `personId`. No person: nothing kept.
+// Keeps a finished visit for `personId`. No person, or the usage switch off
+// (usage.js): nothing kept.
 export function keepVisit(personId, visit) {
+  if (!usageOn()) return false;
   const clean = cleanVisit(visit);
   if (!clean || typeof personId !== 'string' || !personId) return false;
   write([...read(), { person: personId, visit: clean }]);
@@ -88,9 +91,13 @@ export function keepVisit(personId, visit) {
 
 // The visits waiting for `personId`, oldest first, or null when none.
 export function pendingVisits(personId) {
+  if (!usageOn()) return null;
   const mine = read().filter((w) => w.person === personId).map((w) => w.visit).slice(0, MAX_SEND);
   return mine.length ? mine : null;
 }
+
+// The usage switch went off: every visit waiting on this device goes.
+export const clearVisits = () => forget(KEY);
 
 // The cloud has `sent`: take those off (by start time; a visit kept while it
 // was sending stays).
