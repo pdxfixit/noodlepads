@@ -17,7 +17,7 @@
 //              (never in backups: it is this device's link)
 //   prefs      a person's own settings, {personId, values}         key personId
 //   layouts    DJ mode: a person's saved key layouts (keyset.js)   key id
-//   voices     a kid's own voices (⭐ Keep as mine): {id, personId,   key id
+//   voices     a kid's own voices (⭐ Save voice): {id, personId,   key id
 //              name, emoji, knobs, created, used} (voice-knobs.js)
 //   bases      cloud sync: each synced record as it was at the last  key id
 //              sync, the base of the three-way merge (merge3.js):

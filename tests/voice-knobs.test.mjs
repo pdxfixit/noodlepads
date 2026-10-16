@@ -15,7 +15,7 @@ import { NO_TWEAKS, TWEAKS, cleanTweaks, fullTweaks } from '../web/tweaks.js';
 import { VOICES, chainOf, renderPlan, cleanChain, voiceStep } from '../web/voices.js';
 import { cleanStep, kindById } from '../web/steps.js';
 
-test('every voice but Normal is a chip; Normal is only ↩️ Normal', () => {
+test('every voice but Normal is a chip; the way back is only ↩️ Reset voice', () => {
   assert.deepEqual(PRESETS.map((p) => p.id), VOICES.filter((v) => v.id !== 'normal').map((v) => v.id));
   assert.equal(presetById('normal'), null);
   for (const p of PRESETS) {
@@ -71,7 +71,7 @@ test('the line under the voices: what the lit voice is, else your own, else a ti
   assert.equal(voiceLine([chip, presetById('stadium')], NO_TWEAKS), 'Chipmunk is: higher +9, faster 1.74× · Stadium is: echoes');
   assert.equal(voiceLine([presetById('walkie')], NO_TWEAKS), 'Walkie-talkie is: bright, lots of crunch, ✦ static and a beep');
   assert.equal(voiceLine([presetById('monster')], NO_TWEAKS), 'Monster is: deeper −8, slower 1.62×, ✦ boom');
-  assert.equal(voiceLine([], { ...NO_TWEAKS, echo: 1 }), '✏️ Your own voice. ⭐ Keep as mine saves it.');
+  assert.equal(voiceLine([], { ...NO_TWEAKS, echo: 1 }), '✏️ Your own voice. ⭐ Save voice saves it.');
   assert.equal(voiceLine([], NO_TWEAKS), 'Tap a voice to see which knobs make it.');
   for (const text of [voiceLine([], NO_TWEAKS), voiceLine([chip], NO_TWEAKS)]) assert.doesNotMatch(text, /middle/);
   assert.equal(presetText({ stutter: 3, backwards: true, robot: 2 }), 'backwards, metal, stutter ×4', 'in the knobs\' order');

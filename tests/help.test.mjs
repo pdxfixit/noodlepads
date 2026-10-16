@@ -43,7 +43,7 @@ const MUST_MENTION = [
   // Pads
   '✏️ Edit sounds', '✅ Done', 'Stop all', '👥 People', '⬆️',
   // Making a sound
-  'New sound', 'Record', 'Choose a file', '✨ Make one', '🎲 Surprise me', '👂 Plain', 'Save sound', 'All emoji', 'Layers', 'Deeper ↔ higher', 'Slower ↔ faster', '+ Add a layer', '🔈', 'Backwards', 'Warble', '⭐ Keep as mine', 'My voices ▾', '↩️ Normal', '⤢ Turn into knobs', '↩️ The old way', 'Muffled ↔ Bright', 'Crunch', 'Stutter',
+  'New sound', 'Record', 'Choose a file', '✨ Make one', '🎲 Surprise me', '👂 Plain', 'Save sound', 'All emoji', 'Layers', 'Deeper ↔ higher', 'Slower ↔ faster', '+ Add a layer', '🔈', 'Backwards', 'Warble', '⭐ Save voice', 'My voices ▾', '↩️ Reset voice', '⤢ Turn into knobs', '↩️ The old way', 'Muffled ↔ Bright', 'Crunch', 'Stutter',
   '🎲 Surprise steps', '⚙️ Advanced', '⤢', '🥁 On the beat', 'Smooth', 'Buzzy', 'Hiss', '🎵 Find its note', '➕ Mix with another sound', '✂️ Trim and edit', '✂️ Ends', '📐 Fades',
   '👆 Select part', '🔄 Backwards', '🔇 Silence it', '🔊 Louder', '🔉 Quieter', '✂️ Keep only this', '🧩 Chop into pads', '🧩 Make pads',
   // Beats

@@ -67,7 +67,7 @@ test('with reports on, hiding the page sends what happened since, with no names 
   for (const n of ['Airhorn', 'Pip', 'pip']) assert.ok(!opts.body.includes(n), n);
 });
 
-test('a kid\'s own voice names (⭐ Keep as mine) are blanked from reports too', async () => {
+test('a kid\'s own voice names (⭐ Save voice) are blanked from reports too', async () => {
   const { state } = await import('../web/state.js');
   state.myVoices = [{ id: 'voice-x', personId: 'p-x', name: 'Squeaky Wren', emoji: '🦄', knobs: { pitch: 3 }, created: 1, used: 1 }];
   assert.ok(namesOnDevice().includes('Squeaky Wren'));

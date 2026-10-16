@@ -927,7 +927,7 @@
 
       <div class="sheet-col sheet-controls">
       <!-- Voices are knob settings (voice-knobs.js): the voice chips, the line
-           saying what the lit one is, ⭐ Keep as mine · ↩️ Normal (sticky while
+           saying what the lit one is, ⭐ Save voice · ↩️ Reset voice (sticky while
            the layers scroll by), then the layers. One box, so the row sticks over them. -->
       <div class="voice-box" id="voice-box">
       <fieldset class="field">
@@ -953,20 +953,20 @@
         </div>
       </fieldset>
       <div class="voice-actions" id="voice-actions">
-        <button type="button" class="chain-tool" id="keep-btn" aria-expanded="false" aria-controls="keep-form"><span aria-hidden="true">⭐</span> Keep as mine</button>
-        <button type="button" class="chain-tool" id="normal-btn"><span aria-hidden="true">↩️</span> Normal</button>
+        <button type="button" class="chain-tool" id="keep-btn" aria-expanded="false" aria-controls="keep-form"><span aria-hidden="true">⭐</span> Save voice</button>
+        <button type="button" class="chain-tool" id="normal-btn"><span aria-hidden="true">↩️</span> Reset voice</button>
       </div>
       <div class="keep-form" id="keep-form" hidden>
         <label class="amount make-amount keep-name"><span id="keep-title">Name it</span><input id="keep-name" maxlength="24" autocomplete="off" aria-labelledby="keep-title"></label>
         <div class="keep-emoji" id="keep-emoji" role="group" aria-label="Its picture"></div>
         <div class="chain-tools">
-          <button type="button" class="chain-tool" id="keep-save"><span aria-hidden="true">⭐</span> <span id="keep-save-label">Keep it</span></button>
+          <button type="button" class="chain-tool" id="keep-save"><span aria-hidden="true">⭐</span> <span id="keep-save-label">Save it</span></button>
           <button type="button" class="chain-tool" id="keep-cancel">Cancel</button>
         </div>
       </div>
       <!-- Layers (Ben, 2026-10-11, Q42c: Knobs and Shape it merged, "an interface
            similar to beats"): one row per layer, top to bottom as they play
-           (shape.js draws them). Inside the voice box, so ⭐ Keep · ↩️ Normal sticks over them. -->
+           (shape.js draws them). Inside the voice box, so ⭐ Save voice · ↩️ Reset voice sticks over them. -->
       <section class="field layers" id="layers" aria-labelledby="layers-name">
         <h3 class="field-name" id="layers-name"><button type="button" class="set-head sheet-fold" data-fold="layers" aria-expanded="true" aria-controls="layers-body"><span class="set-head-caret" aria-hidden="true">▾</span>Layers</button></h3>
         <div class="fold-body" id="layers-body">

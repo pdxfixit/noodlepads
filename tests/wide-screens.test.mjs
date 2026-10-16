@@ -22,7 +22,7 @@ test('content fills the screen up to 2400 px, centered beyond it', () => {
 
 // Ben: "perhaps moving the tweaks above the shape it section"; "name can be
 // at the top in the title bar". The knobs sit
-// under the voices, in one box with the sticky ⭐ Keep as mine · ↩️ Normal row.
+// under the voices, in one box with the sticky ⭐ Save voice · ↩️ Reset voice row.
 test('the sound sheet: its name in the title bar; then Voice and its Layers, then Picture and Color', () => {
   const form = html.slice(html.indexOf('id="sheet-form"'), html.indexOf('</form>', html.indexOf('id="sheet-form"')));
   const at = (s) => { const i = form.indexOf(s); assert.ok(i >= 0, s); return i; };

@@ -241,7 +241,7 @@ export function tweaksKey(raw) {
 // bottom in the order they play (Q42a). The five main knobs are always rows;
 // another knob is a row once it is set, once it was added (+ Add a layer) or
 // moved by hand while the sheet is open (`shown`: a knob moved back to normal
-// keeps its row until a voice, 🎲 or ↩️ Normal moves the knobs, Q42b). A ✦
+// keeps its row until a voice, 🎲 or ↩️ Reset voice moves the knobs, Q42b). A ✦
 // special part is a row where it plays. Returns knob keys, with 'special'.
 export const LAYER_ORDER = ['pitch', 'speed', 'stutter', 'backwards', 'tone', 'robot', 'crunch', 'warble', 'volume', 'echo'];
 

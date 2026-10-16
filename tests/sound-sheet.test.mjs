@@ -123,7 +123,7 @@ async function openClip(fields) {
   return clip;
 }
 
-test('the voice chips are emoji only, named by their label and title; ✦ marks the special ones; Normal is only a button', async () => {
+test('the voice chips are emoji only, named by their label and title; ✦ marks the special ones; Reset voice is only a button', async () => {
   await openEditor();
   const voices = $('#voices').children.filter((b) => b.dataset.preset);
   assert.equal(voices.length, 13);
@@ -135,7 +135,7 @@ test('the voice chips are emoji only, named by their label and title; ✦ marks 
   assert.equal(chip('clones').getAttribute('aria-label'), 'Clones (special)');
   assert.equal(chip('clones').querySelector('.voice-special').textContent, '✦');
   assert.equal($('#voices').children.at(-1).getAttribute('aria-label'), 'Surprise me', '🎲 ends the row');
-  assert.match($('#normal-btn').textContent, /Normal/);
+  assert.match($('#normal-btn').textContent, /Reset voice/);
   assert.equal($('#voice-line').textContent, 'Tap a voice to see which knobs make it.');
   assert.equal($('#chain').hidden, true, 'a plain sound has nothing made the old way');
   $('#sheet').close();
@@ -188,7 +188,7 @@ test('a knob off normal is drawn as changed and stays marked, by voice or by han
   $('#sheet').close();
 });
 
-test('moving a knob by hand makes it your own; ↩️ Normal puts every knob back', async () => {
+test('moving a knob by hand makes it your own; ↩️ Reset voice puts every knob back', async () => {
   await openEditor();
   chip('stadium').dispatch('click');
   const pitch = knob('pitch');
@@ -197,7 +197,7 @@ test('moving a knob by hand makes it your own; ↩️ Normal puts every knob bac
   assert.equal(pitch.parentElement.querySelector('output').textContent, '5 notes deeper');
   pitch.dispatch('change');
   assert.deepEqual(lit(), [], 'Your own now');
-  assert.equal($('#voice-line').textContent, '✏️ Your own voice. ⭐ Keep as mine saves it.');
+  assert.equal($('#voice-line').textContent, '✏️ Your own voice. ⭐ Save voice saves it.');
   assert.equal($('#keep-btn').disabled, false);
   calls.length = 0;
   $('#normal-btn').dispatch('click');
@@ -257,7 +257,7 @@ test('a voice that uses another knob adds its row, in play order; Backwards is O
   $('#sheet').close();
 });
 
-test('⭐ Keep as mine and ↩️ Normal are one row, kept in view while the knobs scroll (sticky, in one box with them)', () => {
+test('⭐ Save voice and ↩️ Reset voice are one row, kept in view while the knobs scroll (sticky, in one box with them)', () => {
   const row = $('#voice-actions');
   assert.deepEqual(row.children.map((b) => b.id), ['keep-btn', 'normal-btn']);
   assert.equal(row.parent, $('#voice-box'));
@@ -268,7 +268,7 @@ test('⭐ Keep as mine and ↩️ Normal are one row, kept in view while the kno
   assert.match(rule, /top: var\(--sheet-head-h/);
 });
 
-test('⭐ Keep as mine saves the knobs as the kid\'s own voice on this device, with a fun name offered, and shows it as a chip', async () => {
+test('⭐ Save voice saves the knobs as the kid\'s own voice on this device, with a fun name offered, and shows it as a chip', async () => {
   const { state } = await import('../web/state.js');
   const { currentPerson } = await import('../web/board.js');
   const { isFunName } = await import('../web/names.js');
@@ -881,7 +881,7 @@ test('the knobs: Deeper and Slower are sliders; the rest are keys (Ben: five or 
   }
 });
 
-test('a knob plays the sound with it; saving stores only what moved; it comes back; ↩️ Normal clears it', async () => {
+test('a knob plays the sound with it; saving stores only what moved; it comes back; ↩️ Reset voice clears it', async () => {
   const { state } = await import('../web/state.js');
   await openEditor();
   const id = pads()[0].dataset.id;
@@ -921,7 +921,7 @@ test('a knob plays the sound with it; saving stores only what moved; it comes ba
   $('#normal-btn').dispatch('click');
   await page.settle();
   assert.equal(tweakInput('pitch').value, '0');
-  assert.equal(layerRow('backwards'), undefined, '↩️ Normal: its row goes');
+  assert.equal(layerRow('backwards'), undefined, '↩️ Reset voice: its row goes');
   $('#sheet-form').dispatch('submit');
   await page.settle();
   assert.ok(!('tweaks' in (state.overrides.get(id) ?? {})), 'no knobs stores none');
@@ -987,7 +987,7 @@ test('Voice and Layers fold under their headings; open to start; the Keep · Nor
   head('layers').dispatch('click');
   assert.equal(head('layers').getAttribute('aria-expanded'), 'false');
   assert.equal($('#layers-body').hidden, true);
-  assert.equal($('#voice-actions').closest('.fold-body'), null, 'Keep as mine and Normal never fold away');
+  assert.equal($('#voice-actions').closest('.fold-body'), null, 'Save voice and Reset voice never fold away');
   $('#sheet').close();
   await openEditor();
   assert.equal($('#layers-body').hidden, true, 'kept while the page is open');
@@ -1013,7 +1013,7 @@ test('Layers run top to bottom in play order: knob rows, then the kid’s own st
   await advanced(false);
 });
 
-test('a knob moved back to normal by hand keeps its row; a voice, 🎲 or ↩️ Normal moves the knobs and it goes (Q42b)', async () => {
+test('a knob moved back to normal by hand keeps its row; a voice, 🎲 or ↩️ Reset voice moves the knobs and it goes (Q42b)', async () => {
   await openEditor();
   if (!$('#normal-btn').disabled) $('#normal-btn').dispatch('click');
   chip('robot').dispatch('click');
