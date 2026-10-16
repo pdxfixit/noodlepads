@@ -9,9 +9,35 @@
 # finishes the same way. By hand, a finished landing once left deleted files
 # behind in this checkout (2026-10-13).
 #
-#   tools/land.sh start <sha>…
+# With --wait it first waits for another session to commit its edits to the
+# files the commits touch (LAND_WAIT_SECONDS, default an hour; LAND_WAIT_POLL,
+# default 10 s), instead of stopping. A hand-written wait loop once passed
+# that file list as one word in zsh and landed early (2026-10-16).
+#
+#   tools/land.sh start [--wait] <sha>…
 #   tools/land.sh continue <worktree>
 set -euo pipefail
+
+# The files among $@ with uncommitted edits in this checkout, one a line.
+held() {
+  local f
+  for f in "$@"; do
+    if [ -e "$f" ] && ! git diff --quiet HEAD -- "$f"; then echo "$f"; fi
+  done
+}
+
+# Waits until held() is empty, saying which files it waits on whenever they change.
+wait_free() {
+  local limit=${LAND_WAIT_SECONDS:-3600} poll=${LAND_WAIT_POLL:-10} start now busy last=
+  start=$(date +%s)
+  while busy=$(held "$@"); [ -n "$busy" ]; do
+    if [ "$busy" != "$last" ]; then echo "⏳ waiting for uncommitted edits here: $(echo $busy)"; last=$busy; fi
+    now=$(date +%s)
+    if [ $((now - start)) -ge "$limit" ]; then echo "🛑 still uncommitted after ${limit}s: $(echo $busy); nothing landed" >&2; return 1; fi
+    sleep "$poll"
+  done
+  [ -z "$last" ] || echo "✅ committed; landing on $(git log --oneline -1 main)"
+}
 
 # Removes the lines of a todo file up to and including commit $2. Portable:
 # GNU sed (Linux, cloud sessions) and BSD sed (macOS) disagree on in-place
@@ -70,13 +96,21 @@ finish() {
 case "${1:-}" in
   start)
     shift
-    old=$(git rev-parse main)
+    wait=0
+    if [ "${1:-}" = --wait ]; then wait=1; shift; fi
+    [ $# -gt 0 ] || { echo "usage: tools/land.sh start [--wait] <sha>…" >&2; exit 2; }
     # One commit at a time: given two, diff-tree compares them to each other.
     touched=$(for c in "$@"; do git diff-tree --no-commit-id --name-only -r "$c"; done | sort -u)
     # This checkout must hold nothing unsaved in those files: they are replaced.
-    for f in $touched; do
-      if [ -e "$f" ] && ! git diff --quiet "$old" -- "$f"; then echo "🛑 $f has uncommitted edits here; nothing landed" >&2; exit 1; fi
-    done
+    # Another session may be editing them: --wait waits for its commit.
+    if [ $wait -eq 1 ]; then
+      wait_free $touched || exit 1
+    else
+      busy=$(held $touched)
+      if [ -n "$busy" ]; then echo "🛑 uncommitted edits here in: $(echo $busy); nothing landed (just land --wait waits for them)" >&2; exit 1; fi
+    fi
+    # Read only now: what landed while it waited is the base.
+    old=$(git rev-parse main)
     wt=.worktrees/land-$(date +%s)-$$
     git worktree add -q --detach "$wt" main
     mkdir "$wt/.land"
@@ -100,5 +134,5 @@ case "${1:-}" in
     [ $rc -eq 0 ] || exit 1
     finish "$wt"
     ;;
-  *) echo "usage: tools/land.sh start <sha>… | continue <worktree>" >&2; exit 2 ;;
+  *) echo "usage: tools/land.sh start [--wait] <sha>… | continue <worktree>" >&2; exit 2 ;;
 esac
