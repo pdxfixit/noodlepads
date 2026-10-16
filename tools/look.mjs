@@ -11,6 +11,7 @@
 //   console.log() in --js prints under the table (📝), to measure as well as look.
 //   --bg NAME[,NAME…]|all|none: the page's pattern (backdrop.js) instead of a random one; one shot per pattern.
 //   --skin ID[,ID…]|all: the pad skin (skins.js), set as the person's padSkin before the view runs; one shot per skin.
+//   --reduced-motion: the device asks for less motion (prefers-reduced-motion: reduce).
 //   node tools/look.mjs cloud-smoke|cloud-e2e [--url URL]   the live cloud checks (look-cloud.mjs)
 //
 // Node with no dependencies: the DevTools protocol over Node's own WebSocket
@@ -258,12 +259,12 @@ const MIN_TAP = 44;
 function usage(msg) {
   if (msg) console.error(`🛑 ${msg}`);
   console.error(`views: ${Object.keys(VIEWS).join(' ')}`);
-  console.error('usage: just look [pads|beats|keys-on|song|live|VIEW ...] [--advanced] [--top PX] [--scroll PX | --scroll-to SELECTOR] [--js CODE | --js-file PATH] [--url URL] [--out DIR] [--widths 320,375,...] [--wide] [--bg NAME,...|all|none] [--skin ID,...|all]');
+  console.error('usage: just look [pads|beats|keys-on|song|live|VIEW ...] [--advanced] [--top PX] [--scroll PX | --scroll-to SELECTOR] [--js CODE | --js-file PATH] [--url URL] [--out DIR] [--widths 320,375,...] [--wide] [--bg NAME,...|all|none] [--skin ID,...|all] [--reduced-motion]');
   console.error(`skins: ${SKIN_IDS.join(' ')}`);
   process.exit(2);
 }
 
-const opts = { screens: [], js: '', url: '', out: '', advanced: false, top: 0, scroll: null, scrollTo: '', widths: [320, 375, 700, 900, 1100], bgs: [''], skins: [''] };
+const opts = { screens: [], js: '', url: '', out: '', advanced: false, reduced: false, top: 0, scroll: null, scrollTo: '', widths: [320, 375, 700, 900, 1100], bgs: [''], skins: [''] };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
@@ -276,6 +277,8 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === '--widths') opts.widths = val().split(',').map(Number);
   else if (a === '--wide') opts.widths = [320, 375, 700, 900, 1100, 1366, 1920, 2560, 3440];   // phones to ultrawide
   else if (a === '--advanced') opts.advanced = true;
+  // The device asks for less motion (prefers-reduced-motion: reduce): what still moves, and what shows instead.
+  else if (a === '--reduced-motion') opts.reduced = true;
   else if (a === '--top') opts.top = Number(val());
   else if (a === '--scroll') opts.scroll = Number(val());
   // An 800 px window with this element 200 px from the top (clear of the
@@ -347,6 +350,7 @@ listeners.push((m) => {
 await send('Page.enable');
 await send('Runtime.enable');
 await send('Log.enable');
+if (opts.reduced) await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
 
 // Controls a finger can see and reach that are under 44 px tall or wide:
 // buttons, summaries, selects, sliders, checkboxes and radios. A checkbox or
