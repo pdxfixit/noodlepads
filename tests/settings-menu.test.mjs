@@ -158,9 +158,9 @@ test('every Settings section but About folds under its heading, and the device r
   try {
     const dialog = $('#settings-dialog');
     const folds = dialog.querySelectorAll('.set-fold');
-    assert.deepEqual(folds.map((s) => s.id), ['set-privacy', 'set-usage', 'set-sharing', 'set-backups', 'set-older', 'set-beats', 'set-keys', 'set-reports']);
+    assert.deepEqual(folds.map((s) => s.id), ['set-usage', 'set-sharing', 'set-backups', 'set-older', 'set-beats', 'set-keys', 'set-reports']);
     assert.equal($('#about-text').closest('.set-fold'), null, 'About is always open');
-    for (const s of folds.slice(1)) {
+    for (const s of folds) {
       const head = s.querySelector('.set-head');
       assert.equal(head.tagName.toLowerCase(), 'button', s.id);
       assert.equal(head.getAttribute('aria-expanded'), 'false', `${s.id} starts closed`);
@@ -189,35 +189,21 @@ test('every Settings section but About folds under its heading, and the device r
   }
 });
 
-// Ben, 2026-10-11: "cloud details go into a Privacy Disclaimer or similar, as
-// the first section, starts open by default. then the shared with me can go
-// into a Sharing section". 🔓 Privacy stays open until this device folds it.
-test('🔓 Privacy comes first and starts open until the device folds it; 🔗 Sharing holds Shared with me', async () => {
+// Ben, 2026-10-16: "take the what's-private section out of the settings now
+// that we have the privacy policy". 📊 Play data comes first; 🔗 Sharing holds
+// Shared with me. A section marked data-open-first would start open until
+// folded; none is now, but startsOpen keeps that rule.
+test('🔓 What\'s private is gone from Settings; 📊 Play data is first; 🔗 Sharing holds Shared with me', async () => {
   const { startsOpen } = await import('../web/settings-ui.js');
-  const privacy = $('#set-privacy');
-  assert.equal($('#settings-dialog').querySelectorAll('.set-fold')[0], privacy, 'first');
-  assert.ok(privacy.contains($('#privacy-list')), 'the statement is in it');
-  assert.ok(privacy.contains($('#cloud-forgot')), 'and the forgotten-PIN line');
+  assert.equal($('#set-privacy'), null, 'no 🔓 What\'s private');
+  assert.equal($('#settings-dialog').querySelectorAll('.set-fold')[0], $('#set-usage'), '📊 Play data is first');
+  assert.equal($('#settings-dialog').querySelectorAll('[data-open-first]').length, 0, 'nothing starts open');
   assert.ok($('#set-sharing').contains($('#shared-browse')), '🔗 Shared with me is under Sharing');
   assert.equal($('#set-cloud'), null, 'no ☁️ Cloud section is left');
-  assert.equal(privacy.querySelector('.set-head').getAttribute('aria-expanded'), 'true', 'open on a device that never folded it');
-  assert.equal(startsOpen('set-privacy', true, new Set()), true);
-  assert.equal(startsOpen('set-privacy', true, new Set(['set-keys'])), true, 'other sections remembered do not fold it');
-  assert.equal(startsOpen('set-privacy', true, new Set(['!set-privacy'])), false, 'folded here, it stays folded');
+  assert.equal(startsOpen('set-x', true, new Set()), true);
+  assert.equal(startsOpen('set-x', true, new Set(['!set-x'])), false, 'folded here, it stays folded');
   assert.equal(startsOpen('set-keys', false, new Set(['set-keys'])), true);
   assert.equal(startsOpen('set-keys', false, new Set()), false, 'the others start closed (Q22)');
-
-  const stored = new Map();
-  globalThis.localStorage = { getItem: (k) => stored.get(k) ?? null, setItem: (k, v) => stored.set(k, String(v)), removeItem: (k) => stored.delete(k) };
-  try {
-    privacy.querySelector('.set-head').dispatch('click', { bubbles: true });
-    assert.equal(privacy.querySelector('.set-body').hidden, true);
-    assert.deepEqual(JSON.parse(stored.get('settings-open')), ['!set-privacy']);
-    privacy.querySelector('.set-head').dispatch('click', { bubbles: true });
-    assert.deepEqual(JSON.parse(stored.get('settings-open')), []);
-  } finally {
-    delete globalThis.localStorage;
-  }
 });
 
 test('a remembered list of open sections reads junk as none', async () => {
@@ -295,11 +281,11 @@ test('Send problem reports is a switch, off by default, with a grown-up line and
   $('#settings-dialog').close();
 });
 
-// Ben, 2026-10-16: "use B and 'Share play data' everywhere": its own fold
-// right after 🔓 What's private, on by default; off sends nothing.
-test('📊 Play data comes right after 🔓 What\'s private: 📊 Share play data, on by default, sets sendUsage', async () => {
+// Ben, 2026-10-16: "use B and 'Share play data' everywhere": its own fold,
+// first in Settings, on by default; off sends nothing.
+test('📊 Play data comes first: 📊 Share play data, on by default, sets sendUsage', async () => {
   const folds = $('#settings-dialog').querySelectorAll('.set-fold').map((f) => f.id);
-  assert.equal(folds[folds.indexOf('set-privacy') + 1], 'set-usage');
+  assert.equal(folds[0], 'set-usage');
   const sw = $('#share-usage');
   assert.equal(sw.getAttribute('role'), 'switch');
   assert.equal(sw.parent.querySelector('b').textContent, '📊 Share play data');

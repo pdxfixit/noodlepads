@@ -2697,9 +2697,7 @@ dialog.np-dialog .set-buttons .quiet { justify-content: center; }
 .pin-key:active { background: var(--line); }
 .pin-key[data-key="0"] { grid-column: 2; }
 
-/* ⚙️ Settings → 🔓 What's private. */
-.set-private-list { margin: 4px 0 0; padding-left: 1.2em; }
-.set-private-list li { margin: 0 0 6px; }
+/* Text fields in sheets and Settings (share code, names). */
 .set-field {
   min-width: 0;
   min-height: 44px;

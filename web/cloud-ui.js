@@ -2,8 +2,7 @@
 // avatar picker, the PIN part of a person's profile sheet (set, change,
 // remove, Forget on this device; the guard on their name, picture and color),
 // a person's ☁️ sheet (sync, 🔗 Share with 🚫 Unshare, 📴 Offline), ☁️ Open from the cloud, 🔗 Shared
-// with me (▶ Play, 🎛️ Remix, ✕ Remove), and
-// ⚙️ Settings → 🔓 What's private. The work is in cloud.js.
+// with me (▶ Play, 🎛️ Remix, ✕ Remove). The work is in cloud.js.
 
 import { state, setPersonEdit } from './state.js';
 import { person, people } from './board.js';
@@ -15,7 +14,6 @@ import { emojiMore, withCurrent } from './emoji-more.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { announce } from './ui.js';
 import { audio } from './audio.js';
-import { PRIVACY_TITLE, renderPrivacy } from './privacy.js';
 import { PIN_RESET_EMAIL } from './contact.js';
 import {
   api, CloudError, cloudTrouble, cloudThere, inCloud, linkOf, keyOf, isOffline, statusOf, onCloud, syncNow, syncAll,
@@ -646,7 +644,6 @@ export function initCloudUI(hooks) {
     shareMade: $('#share-made'), shareCode: $('#share-code'), shareTitle: $('#share-title-made'), shareCopy: $('#share-copy'),
     sharedDialog: $('#shared-dialog'), sharedCode: $('#shared-code'), sharedOpen: $('#shared-open'), sharedNote: $('#shared-note'),
     sharedItems: $('#shared-items'), sharedNone: $('#shared-none'),
-    privacyTitle: $('#privacy-title'), privacyList: $('#privacy-list'), forgotLine: $('#cloud-forgot'),
     browse: $('#cloud-browse'), sharedBtn: $('#shared-browse'),
   });
   for (const d of [el.pin, el.avatar, el.sheet, el.list, el.shareDialog, el.sharedDialog]) setupDialog(d);
@@ -685,10 +682,6 @@ export function initCloudUI(hooks) {
   el.browse.addEventListener('click', openCloudList);
   el.sharedBtn.addEventListener('click', openSharedDialog);
   onCloud(() => { if (sheetFor) renderSheet(); });
-
-  el.privacyTitle.textContent = PRIVACY_TITLE;
-  renderPrivacy(el.privacyList);
-  el.forgotLine.textContent = `A forgotten PIN: a grown-up emails ${PIN_RESET_EMAIL} with the profile's fun name, and it is cleared by hand. Then each device opens it again once.`;
 }
 
 // For the People rows: what the ☁️ button says.

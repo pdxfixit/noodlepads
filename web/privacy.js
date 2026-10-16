@@ -1,8 +1,9 @@
-// "🔓 What's private (not much)": the one copy of the app's privacy
-// statement. ⚙️ Settings shows it, Help shows it, and README carries the same
-// lines (tests/privacy.test.mjs checks all three, and ties the claims to the
-// code: the Worker, the names, the report expiry). Change it in the same
-// commit as anything that changes what the cloud stores or shows.
+// "🔓 What's private (not much)": README's privacy statement, word for word
+// (tests/privacy.test.mjs checks that, and ties each claim to the code: the
+// Worker, the names, the report expiry). The app no longer shows it: ⚙️
+// Settings and Help link the shared privacy policy instead (Ben, 2026-10-16).
+// Change it in the same commit as anything that changes what the cloud
+// stores or shows, and tell the policy (pdxfixit/privacy) too.
 
 export const PRIVACY_TITLE = "🔓 What's private (not much)";
 

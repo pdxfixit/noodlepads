@@ -15,7 +15,6 @@ import { ORIGIN } from '../worker/http.js';
 import { FakeD1 } from './fake-d1.mjs';
 import { readFileSync } from 'node:fs';
 import { isFunName, funName } from '../web/names.js';
-import { PRIVACY, PRIVACY_TITLE } from '../web/privacy.js';
 
 let page;
 let $;
@@ -458,12 +457,12 @@ test('PIN pad keys are big enough, and ⌫ takes a digit back', async () => {
   assert.equal(await asked, '1345');
 });
 
-test('Settings shows what is private, word for word, and where a forgotten PIN goes', () => {
-  $('#settings-open').dispatch('click');
-  assert.equal($('#privacy-title').textContent, PRIVACY_TITLE);
-  assert.deepEqual($('#privacy-list').children.map((li) => li.textContent), PRIVACY);
-  assert.match($('#cloud-forgot').textContent, /pin\.reset@noodlepads\.com/);
-  $('#settings-dialog').close();
+// Ben, 2026-10-16: 🔓 What's private left Settings; the shared privacy policy says it.
+test('Settings has no 🔓 What\'s private; the PIN pad still says where a forgotten PIN goes', async () => {
+  assert.equal($('#set-privacy'), null);
+  assert.equal($('#privacy-list'), null);
+  const { FORGOT_PIN } = await import('../web/cloud-ui.js');
+  assert.match(FORGOT_PIN, /pin\.reset@noodlepads\.com/);
 });
 
 // Found by `just cloud-e2e` (2026-10-11): the start-up sync and one right

@@ -102,9 +102,9 @@ folder `site/`: [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md).
 
 ## Privacy
 
-The same words are first in ⚙️ Settings and in Help
-(`web/privacy.js`; `tests/privacy.test.mjs` keeps all three the same and ties
-the claims to the code).
+The app links the full policy from ⚙️ Settings and Help. Here are the
+plain words on the cloud (`web/privacy.js`; `tests/privacy.test.mjs` keeps
+this copy the same and ties the claims to the code).
 
 **🔓 What's private (not much)**
 

@@ -59,7 +59,7 @@ const MUST_MENTION = [
   '💾 Save a backup', '📂 Load a backup', 'Advanced', '🧸 Kids', 'Regular', '📮 Send problem reports',
   // The cloud
   '☁️ Open from the cloud', '☁️ Cloud', '🎲 Pick a name', '🔒 Set a PIN', 'Remember on this device', '🙈 Forget on this device', '🔄 Sync now',
-  '🔗 Share…', '🔗 Shared with me', '📴 Offline (this device only)', '☁️ Put back in the cloud', "🔓 What's private (not much)",
+  '🔗 Share…', '🔗 Shared with me', '📴 Offline (this device only)', '☁️ Put back in the cloud', 'Privacy policy',
 ];
 
 const appText = () => {

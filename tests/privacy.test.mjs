@@ -1,6 +1,7 @@
 // "🔓 What's private (not much)" must say exactly what is true (Ben,
-// 2026-10-11). The same lines are in Settings (web/privacy.js), Help and
-// README, and each key claim is checked against the code that makes it true:
+// 2026-10-11). README carries the lines of web/privacy.js (the app no longer
+// shows them: Settings and Help link the shared policy, Ben 2026-10-16), and
+// each key claim is checked against the code that makes it true:
 // the Worker, the name generator, the report expiry.
 
 import { test } from 'node:test';
@@ -39,11 +40,12 @@ function cloud() {
   };
 }
 
-test('README carries every line of the statement, word for word, and Help names it', () => {
+test('README carries every line of the statement, word for word; Help points at the Privacy policy, not at it', () => {
   assert.ok(readme.includes(PRIVACY_TITLE));
   for (const line of PRIVACY) assert.ok(readme.includes(line), `README is missing: ${line}`);
   const help = JSON.stringify(HELP);
-  assert.ok(help.includes(PRIVACY_TITLE), 'Help points at it');
+  assert.ok(!help.includes("What's private"), 'Help no longer names a section that is gone');
+  assert.ok(help.includes('Privacy policy'), 'Help points at the policy');
 });
 
 test('"Anyone who opens noodlepads.com sees the list": the list needs no key, no PIN, no Origin', async () => {
@@ -224,7 +226,6 @@ test('the privacy policy is linked beside the version, in the footer and in Abou
     assert.equal(l[1], PRIVACY_URL);
     assert.equal(l[2], 'Privacy policy');
   }
-  const priv = html.slice(html.indexOf('id="set-privacy-body"'), html.indexOf('</section>', html.indexOf('id="set-privacy-body"')));
-  assert.doesNotMatch(priv, /privacy\.pdxfixit\.com/, 'no longer under "What\'s private"');
+  assert.doesNotMatch(html, /id="set-privacy"/, 'no "What\'s private" section in Settings');
   assert.ok(readme.includes(`(${PRIVACY_URL})`), 'README links it');
 });
