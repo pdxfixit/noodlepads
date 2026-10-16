@@ -29,9 +29,15 @@ export function padFor(id) {
   return el.pads.querySelector(`[data-id="${CSS.escape(id)}"]`);
 }
 
+// How far through its sound a pad is, 0 to 1 (meter.js, each frame), and
+// `playing` while it is part way: the skins that show playing (Switch, Lit
+// pads; styles.css "Pad skins") key on it. A stop or the end sets 0, which
+// clears it.
 export function setProgress(id, p) {
   const pad = padFor(id);
-  if (pad) pad.style.setProperty('--progress', p);
+  if (!pad) return;
+  pad.style.setProperty('--progress', p);
+  pad.classList.toggle('playing', p > 0 && p < 1);
 }
 
 // Whose sounds: a round button in the top right corner, like an account

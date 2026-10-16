@@ -19,6 +19,7 @@ opens with a comment saying what it owns. How the app behaves is in
   - `old-backup.js`: 💾 Save everything it left, for Older sounds found on this device; `starters.js`: the old app's starter sounds, which are presets now
   - `util.js`, `contrast.js`, `download.js`: small shared helpers; color contrast math; handing a file to the user
   - `backdrop.js`: the faint pattern behind the panels, one of the tiles in `bg/` picked at random each visit and drawn as a mask in the casing color; nothing remembered (`?bg=<name>` or `none` asks for one, for `just look --bg`)
+  - `skins.js`: the pad skins (Tiles, Slam buttons, Lit pads, Switch, Spinner, Jelly, Googly eyes): the list, the next one round, and `showSkin`, which puts the person's `padSkin` on the page's root as `data-skin`; `styles.css` ("Pad skins") draws them
   - `tooltips.js`: a tooltip on every control, from its `aria-label` or text, unless it has a `title` of its own
   - `contact.js`: the PIN-reset address, built from an encoded constant so it is never written out in a served or tracked file
   - `update.js`: the "🆕 An update for Noodle Pads is ready." bar (when to ask `version.json`, when to show)

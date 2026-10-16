@@ -54,6 +54,7 @@ import { onSetting, followPerson, getSetting } from './settings.js';
 import { fitLine, pickerFor, refitLines } from './lines.js';
 import { watchTips } from './tooltips.js';
 import { pickBackdrop, showBackdrop } from './backdrop.js';
+import { showSkin } from './skins.js';
 
 const GRILLE_DOTS = 15;
 const GRILLE_DOTS_LG = 24;
@@ -853,6 +854,10 @@ async function start() {
     grownUp: () => { grownUp = true; applyKids(); showSettings(); },
   });
   onSetting('level', () => applyKids());
+  // The person's pad skin on every pad (skins.js): it follows a switch of
+  // person, a loaded backup and the cloud, as every setting does.
+  showSkin(el.root, getSetting('padSkin'));
+  onSetting('padSkin', (id) => showSkin(el.root, id));
   bindEvents();
   watchTips(document.body);   // a tooltip on nearly every control (Ben)
 
