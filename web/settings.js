@@ -17,6 +17,7 @@ import { recall } from './util.js';
 import { logEvent } from './log.js';
 import { LAYOUT_NAMES } from './rhythm.js';
 import { PAD_STOPS, fromOldSize } from './pad-size.js';
+import { SKIN_IDS } from './skins.js';
 
 // A person's level (ADR 0019): 🧸 Kids, Regular or Advanced.
 export const LEVELS = ['kids', 'regular', 'advanced'];
@@ -55,6 +56,10 @@ export const SETTINGS = {
   // (50 to 220) or S M L; `upgrade` reads those as the nearest size, from
   // storage and from backups alike.
   padSize: { default: 'auto', values: PAD_STOPS, upgrade: fromOldSize, scope: 'person' },
+  // How every pad looks (skins.js; Ben, 2026-10-16): Tiles, Slam buttons,
+  // Lit pads, Switch, Spinner, Jelly or Googly eyes. ⚙️ Settings → 🎨 Look,
+  // and 🧸 Kids' skin button. Each person their own, at every level.
+  padSkin: { default: 'tiles', values: SKIN_IDS, scope: 'person' },
   // The keyboard the DJ keys' letters follow (dj.js, rhythm.js). The device's
   // own keyboard, so it stays with the device (Ben, Q17); a person's from
   // when it travelled is ignored, and dropped when their settings are next

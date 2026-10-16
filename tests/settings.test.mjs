@@ -100,3 +100,26 @@ test('the DJ keyboard stays with the device; a person\'s old one is ignored and 
   state.prefs = new Map();
   state.settings = new Map();
 });
+
+// Ben, 2026-10-16: pad skins, chosen per person in ⚙️ Settings → 🎨 Look.
+test('the pad skin is the person\'s: Tiles to begin with, one of seven, anything else reads as Tiles', async () => {
+  assert.deepEqual(SETTINGS.padSkin.values, ['tiles', 'slam', 'lit', 'switch', 'spinner', 'jelly', 'googly']);
+  assert.equal(SETTINGS.padSkin.scope, 'person');
+  state.personId = 'p';
+  state.settings = new Map();
+  state.prefs = new Map();
+  assert.equal(getSetting('padSkin'), 'tiles');
+  for (const bad of ['glitter', 'Slam', '', null, 3]) {
+    state.prefs = new Map([['p', { personId: 'p', values: { padSkin: bad } }]]);
+    assert.equal(getSetting('padSkin'), 'tiles', String(bad));
+  }
+  await assert.rejects(setSetting('padSkin', 'glitter'), /isn't a value/);
+  state.prefs = new Map();
+  await setSetting('padSkin', 'googly');
+  assert.equal(state.prefs.get('p').values.padSkin, 'googly', 'kept with the person');
+  assert.equal(getSetting('padSkin'), 'googly');
+  assert.deepEqual(cleanPrefs({ personId: 'p', values: { padSkin: 'slam' } }), { personId: 'p', values: { padSkin: 'slam' } });
+  assert.deepEqual(cleanPrefs({ personId: 'p', values: { padSkin: 'glitter' } }), { personId: 'p', values: {} });
+  state.personId = null;
+  state.prefs = new Map();
+});

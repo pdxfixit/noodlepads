@@ -688,3 +688,13 @@ test("a kid's own voices round-trip in a backup, cleaned; strangers' and broken 
   assert.equal(out.skipped, 3);
   assert.deepEqual((await read({})).voices, [], 'a backup from before own voices loads');
 });
+
+// Ben, 2026-10-16: a person's pad skin travels with them, in backups too.
+test('a person\'s pad skin round-trips in a backup; one this copy does not know is dropped', async () => {
+  const state = {
+    people: [], clips: [], overrides: [], orders: [], patterns: [], beats: [],
+    prefs: [{ personId: 'pip', values: { padSkin: 'slam' } }, { personId: 'juno', values: { padSkin: 'glitter', timeSignature: '3/4' } }],
+  };
+  const out = await readBackup(await makeBackup(state), bundled());
+  assert.deepEqual(out.prefs, [{ personId: 'pip', values: { padSkin: 'slam' } }, { personId: 'juno', values: { timeSignature: '3/4' } }]);
+});

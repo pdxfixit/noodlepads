@@ -80,6 +80,7 @@ export class FakeElement {
     // dataset.fooBar <-> data-foo-bar, like the real thing.
     this.dataset = new Proxy(dataset, {
       set: (t, k, v) => { t[k] = String(v); this.attributes.set(`data-${k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`, String(v)); return true; },
+      deleteProperty: (t, k) => { delete t[k]; this.attributes.delete(`data-${k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`); return true; },
     });
   }
 
@@ -104,7 +105,10 @@ export class FakeElement {
   }
   getAttribute(k) { return this.attributes.has(k) ? this.attributes.get(k) : null; }
   hasAttribute(k) { return this.attributes.has(k); }
-  removeAttribute(k) { this.attributes.delete(k); }
+  removeAttribute(k) {
+    if (k.startsWith('data-')) delete this.dataset[camel(k.slice(5))];
+    this.attributes.delete(k);
+  }
 
   append(...nodes) { for (const n of nodes) this.#adopt(n); }
   replaceChildren(...nodes) {
