@@ -141,3 +141,39 @@ test('a pad says playing while its sound is part way, and not once it ends or is
   audio.ctx = ctxWas;
   assert.equal(pad.classList.contains('playing'), false, 'stopped part way');
 });
+
+// ⚙️ Settings → 🎨 Look: a radio per skin, each with a sample pad in that skin.
+test('🎨 Look: seven choices, each a sample in its own skin; choosing one skins the page and the heading says which', async () => {
+  people()[0].dispatch('click');
+  await settings.setSetting('padSkin', 'tiles');
+  $('#settings-open').dispatch('click');
+  const picks = $('#skin-picks').querySelectorAll('.set-skin');
+  assert.deepEqual(picks.map((p) => p.dataset.skin), SKIN_IDS, 'each sample carries its own skin, Tiles too (so the page\'s never shows there)');
+  assert.deepEqual(picks.map((p) => p.querySelector('.set-skin-name').textContent), SKINS.map((s) => s.label));
+  const radios = picks.map((p) => p.querySelector('input'));
+  assert.ok(radios.every((r) => r.getAttribute('type') === 'radio' && r.getAttribute('name') === 'padSkin'), 'one radio group: arrow keys move the choice');
+  assert.deepEqual(radios.map((r) => r.getAttribute('aria-label')), SKINS.map((s) => s.label), 'a tooltip and a name for each');
+  assert.ok(picks.every((p) => p.querySelector('.skin-sample.pad')), 'a sample pad in each');
+  assert.equal(radios[0].checked, true);
+  const chip = () => $('#set-look').querySelector('.set-head-chip');
+  assert.equal(chip().textContent, 'Tiles');
+  radios[3].checked = true;
+  radios[3].dispatch('change');
+  await page.settle();
+  assert.equal(settings.getSetting('padSkin'), 'switch');
+  assert.equal(root().getAttribute('data-skin'), 'switch');
+  assert.equal(chip().textContent, 'Switch');
+  assert.ok(picks[3].querySelector('.skin-sample').classList.contains('playing'), 'the chosen sample shows itself playing');
+  assert.equal(picks[0].querySelector('.skin-sample').classList.contains('playing'), false);
+  // Another person's skin shows in the dialog when they are showing.
+  $('#settings-dialog').close();
+  people()[1].dispatch('click');
+  await page.settle();
+  $('#settings-open').dispatch('click');
+  const now = $('#skin-picks').querySelectorAll('input').find((r) => r.checked);
+  assert.equal(now.dataset.value, settings.getSetting('padSkin'));
+  $('#settings-dialog').close();
+  people()[0].dispatch('click');
+  await settings.setSetting('padSkin', 'tiles');
+  await page.settle();
+});

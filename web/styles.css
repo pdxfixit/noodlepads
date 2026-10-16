@@ -4172,6 +4172,7 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
   }
   .pad.pad.pad.playing::after, .pad.pad.pad.looping::after { animation: googly-dart 1.1s step-end infinite; }
   .pad.pad.pad.help-pad::after { content: none; }
+  .pad.pad.pad.pad-mini::after { top: 58%; width: 42%; }
 }
 @container (max-width: 96px) {
   @scope ([data-skin="googly"]) to (:scope [data-skin]) {
@@ -4262,6 +4263,34 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
   }
   .kids-pad.kids-pad.boing::after { animation: googly-dart 0.6s step-end; }
 }
+
+/* ⚙️ Settings → 🎨 Look: a sample pad per skin on a piece of pad bed, its
+   name under it; the chosen one ringed and shown playing (settings-ui.js).
+   The radio itself is hidden: the whole tile takes the tap, arrow keys move
+   the choice, and the tile shows the keyboard's focus. */
+#set-look-body { container-type: inline-size; }
+.set-skins { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 8px 0 4px; }
+@container (min-width: 300px) { .set-skins { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.set-skin {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 8px 6px;
+  border: 3px solid transparent;
+  border-radius: 16px;
+  background: var(--bed);
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+}
+.set-skin input { position: absolute; top: 8px; left: 8px; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+.set-skin:has(input:checked) { border-color: var(--led); }
+.set-skin:has(input:focus-visible) { outline: 3px solid var(--board); outline-offset: 2px; }
+.set-skin .skin-sample { width: 100%; }
+.set-skin-name { font: 800 0.85rem/1.1 var(--font-ui); overflow-wrap: break-word; hyphens: auto; }
 
 /* Nothing moves on its own: Jelly and Googly eyes hold still and Spinner
    stops turning; playing shows as a glow instead. */

@@ -59,6 +59,22 @@ whole-width pad on a phone (400 px on a wide screen). It is kept as the
 way from smallest to biggest, so it means the same on every screen
 (`pad-size.js`).
 
+**Pad skins** change how every pad looks, each person their own, at every
+level (⚙️ Settings → 🎨 Look; the `padSkin` setting, `skins.js`): **Tiles**
+(the plain look), **Slam buttons** (a round arcade dome on a dark plate, the
+name on the plate under it; the ring round the dome fills as the sound plays,
+and pressing sinks it), **Lit pads** (dark rubber with a rim in the pad's
+color that lights up full color while pressed or playing), **Switch** (a lever
+that flips down, with a light on, while the sound plays), **Spinner** (a dial
+that turns once over the sound), **Jelly** (a blob that squishes and wobbles)
+and **Googly eyes** (a tile whose eyes dart about while it plays). Every pad
+takes it: Pads, the sound chooser, ❓ Help's small pads and 🧸 Kids' picture
+pads (Slam there is just the dome). Held to loop, a pad stays pressed in every
+skin. With reduced motion, Jelly, Googly eyes and Spinner hold still and glow
+instead. `skins.js` puts the skin on the page's root as `data-skin`, and
+`styles.css` ("Pad skins") draws each under the nearest `data-skin`, so 🎨
+Look's samples show their own skin; a browser without CSS `@scope` shows Tiles.
+
 ## Wide screens
 
 or desktop, up to 2400 px of content (centered beyond that). From 1400 px a
@@ -115,7 +131,7 @@ describe features still being built and stay hidden until their mark is removed.
 ## Settings
 
 The ⚙️ button in the top corner (small, and away from the pads and toolbar so
-it isn't pressed by accident) opens Settings: 🔗 Sharing (🔗 Shared with me), 💾 Backups, 🎚️ Level (🧸 Kids · Regular · Advanced, each person's own, ADR 0019; stored as `level` with `advancedBeats` beside it, true only for Advanced, so an older copy still reads Advanced right; Advanced shows the extra beat and sound tools: each beat row's sound picker gets Speed, beats get Swing, and each beat can have its own time signature), ⌨️ Keyboard, 📊 Data sharing (📊 Share play data and 📮 Send problem reports) and About. Every section but About folds under its heading (all closed at first; the device remembers which are open, in `localStorage` `settings-open`), with a chip saying its state where there is one (how many people, the level, the keyboard, which of play data and reports are on). About is always open: a line on what the app is, then the version and the Privacy policy, centered. The pad size (`padSize`, `auto` or 0 to 1; an older percent, 50 to 220, or S M L reads as the nearest place) is a setting too, though its slider sits on the Pads screen.
+it isn't pressed by accident) opens Settings: 🔗 Sharing (🔗 Shared with me), 💾 Backups, 🎚️ Level (🧸 Kids · Regular · Advanced, each person's own, ADR 0019; stored as `level` with `advancedBeats` beside it, true only for Advanced, so an older copy still reads Advanced right; Advanced shows the extra beat and sound tools: each beat row's sound picker gets Speed, beats get Swing, and each beat can have its own time signature), 🎨 Look (the person's pad skin: a sample pad in each of the seven, the chosen one shown playing; arrow keys move the choice), ⌨️ Keyboard, 📊 Data sharing (📊 Share play data and 📮 Send problem reports) and About. Every section but About folds under its heading (all closed at first; the device remembers which are open, in `localStorage` `settings-open`), with a chip saying its state where there is one (how many people, the level, the look, the keyboard, which of play data and reports are on). About is always open: a line on what the app is, then the version and the Privacy policy, centered. The pad size (`padSize`, `auto` or 0 to 1; an older percent, 50 to 220, or S M L reads as the nearest place) is a setting too, though its slider sits on the Pads screen.
 **📮 Send problem reports** (a checkbox in 📊 Data sharing, off by default, per device) sends the event log,
 cleaned by `log-clean.js` so it holds no names and no audio, to the site's own
 `/api/log` when the page is hidden and 10 s after an error (`log-send.js`; plan
@@ -451,7 +467,7 @@ ADR 0002.
   (its key, how far it has synced, what it sent) is IndexedDB `cloud`; it
   and `bases` are never in backups.
 - **Settings travel with the person** (IndexedDB `prefs`, `settings.js`
-  `scope: 'person'`): Advanced, the time signature, pad size. The
+  `scope: 'person'`): Advanced, the time signature, pad size, pad skin. The
   keyboard, problem reports and the device code stay with the device.
 - **PIN:** optional, 4 digits, in a person's profile sheet (once they are in
   the cloud). It is asked each time that person is opened, unless the PIN
