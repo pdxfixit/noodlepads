@@ -70,7 +70,7 @@ const sheet = {
   base: { ...NO_TWEAKS },     // the knobs before the first of them was tapped
   knobsFirst: true,     // the knobs play before the chain (new sounds) or after it (sounds saved with old voices and tweaks)
   undo: null,           // ⤢ Turn into knobs, for ↩️ The old way: {chain, tweaks, knobsFirst} before it
-  keep: null,           // ⭐ Keep as mine's form: {id} renames that voice; {} keeps a new one; null closed
+  keep: null,           // ⭐ Save voice's form: {id} renames that voice; {} keeps a new one; null closed
   keepEmoji: '',        // the picture picked in that form
   shown: new Set(),     // knobs that are rows though at normal: added, or moved by hand since the knobs last jumped (Q42b)
   muted: new Set(),     // knob layers muted (🔈): keys, and 'special'; a step's mute is its own `off`
@@ -329,7 +329,7 @@ function litFromKnobs() {
   for (const p of sheet.lit) for (const k of Object.keys(p.knobs)) sheet.base[k] = NO_TWEAKS[k];
 }
 
-// The knobs moved (a voice, Normal, 🎲, Turn into knobs): ⭐ Keep as mine's
+// The knobs moved (a voice, Normal, 🎲, Turn into knobs): ⭐ Save voice's
 // form closes and ↩️ The old way is forgotten.
 function knobsChanged() {
   sheet.undo = null;
@@ -379,7 +379,7 @@ function moveKnobs(from, keys) {
 
 const knobRow = (k) => el.layerRows.querySelector(`[data-layer="${k}"]`);
 
-// ↩️ Normal: every knob back to the middle, no voices, nothing from the old way.
+// ↩️ Reset voice: every knob back to the middle, no voices, nothing from the old way.
 function backToNormal() {
   const from = { ...sheet.tweaks };
   const moved = Object.keys(sheet.tweaks).filter((k) => sheet.tweaks[k] !== NO_TWEAKS[k]);
@@ -436,10 +436,10 @@ function oldWayBack() {
   previewVoice();
 }
 
-// The knobs as they play: a muted one counts as normal (⭐ Keep as mine keeps what is heard).
+// The knobs as they play: a muted one counts as normal (⭐ Save voice keeps what is heard).
 const playingKnobs = () => fullTweaks(Object.fromEntries(Object.entries(sheet.tweaks).map(([k, v]) => [k, sheet.muted.has(k) ? NO_TWEAKS[k] : v])));
 
-// ⭐ Keep as mine: a name (a fun one offered, never a person's) and a
+// ⭐ Save voice: a name (a fun one offered, never a person's) and a
 // picture, then the knobs as they are now become the person's own voice.
 const KEEP_EMOJI = ['⭐', '🎤', '🦄', '🐉', '👾', '🎃', '🧙', '🐙', '🌈', '🔥'];
 
@@ -449,7 +449,7 @@ function openKeep(edit = null) {
   el.keepTitle.textContent = edit ? 'New name' : 'Name it';
   el.keepName.value = edit ? edit.name : '';
   el.keepName.placeholder = funName(myVoices().map((v) => v.name));
-  el.keepSaveLabel.textContent = edit ? 'Rename it' : 'Keep it';
+  el.keepSaveLabel.textContent = edit ? 'Rename it' : 'Save it';
   renderKeepEmoji();
   el.keepForm.hidden = false;
   el.keepBtn.setAttribute('aria-expanded', 'true');
@@ -584,8 +584,8 @@ function wireVoices() {
 
 // The sheet's folding sections (Ben, 2026-10-11: "same with tweaks in the
 // sound editor"): Voice and Layers fold under headings like Settings'. Open to start; a fold is kept while the page is open (not
-// remembered on the device: provisional, docs/questions.md). ⭐ Keep as mine
-// and ↩️ Normal sit outside the folds, so they are always there.
+// remembered on the device: provisional, docs/questions.md). ⭐ Save voice
+// and ↩️ Reset voice sit outside the folds, so they are always there.
 const folds = { voice: true, layers: true };
 
 function renderFolds() {
@@ -854,7 +854,7 @@ function setTune(n) {
 const plainChain = () => sheet.chain.length === 1 && sheet.chain[0].type === 'voice' && sheet.chain[0].voice === 'normal';
 
 // After the chain or the chosen link changed: the slider, the old-way chips
-// and Shape it follow (and ↩️ Normal, which also clears the chain).
+// and Shape it follow (and ↩️ Reset voice, which also clears the chain).
 function showLink() {
   renderAmount();
   renderVoices();

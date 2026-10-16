@@ -2827,7 +2827,7 @@ body[data-locked] main { visibility: hidden; }
    picture and color (look). One column on a phone. With Advanced from
    900 px, and always from 1400 px: the sound and how it looks beside Voice →
    Layers. With Advanced from 1400 px, three columns: Voice, then Layers, in
-   the same box so ⭐ Keep · ↩️ Normal still sticks. */
+   the same box so ⭐ Save voice · ↩️ Reset voice still sticks. */
 .sheet-col { display: contents; }
 @media (min-width: 900px) {
   dialog#sheet.wide { width: min(960px, calc(100vw - 2 * var(--gutter))); }
@@ -3432,7 +3432,7 @@ dialog#keys-edit::backdrop { background: var(--bed); }
 /* ── Voices are knob settings (voice-knobs.js; Ben, 2026-10-11) ─────────
    The sheet's voice part: emoji-only voice chips (✦ on the special ones),
    a kid's own voices with their names, the line saying what the lit voice
-   is, ⭐ Keep as mine · ↩️ Normal stuck under the sheet's heading while the
+   is, ⭐ Save voice · ↩️ Reset voice stuck under the sheet's heading while the
    knobs scroll past (--sheet-head-h, measured by sheet.js), then the knobs
    with More knobs folded. A knob a voice moved glows for a second. */
 .voice-box { display: block; }

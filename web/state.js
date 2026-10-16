@@ -327,7 +327,7 @@ export async function deleteUserClip(clip) {
   }
 }
 
-// A kid's own voice (⭐ Keep as mine, voice-knobs.js), made or changed.
+// A kid's own voice (⭐ Save voice, voice-knobs.js), made or changed.
 export async function saveMyVoice(record) {
   state.myVoices = [...state.myVoices.filter((v) => v.id !== record.id), record];
   await persist('voices', record);

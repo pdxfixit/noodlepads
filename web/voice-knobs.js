@@ -35,7 +35,7 @@ const MADE = {
   backwards: () => ({ backwards: true }),
 };
 
-// The voice chips, in the order they show: every voice but Normal (↩️ Normal
+// The voice chips, in the order they show: every voice but Normal (↩️ Reset voice
 // is the one way back). `special` marks the ✦ ones.
 export const PRESETS = VOICES.filter((v) => MADE[v.id]).map((v) => {
   const knobs = presetOf(v.id);
@@ -84,7 +84,7 @@ export function presetText(preset) {
 // middle".
 export function voiceLine(lit, knobs) {
   if (lit.length) return lit.map((p) => `${p.name || p.emoji} is: ${presetText(p.knobs)}`).join(' · ');
-  if (cleanTweaks(knobs)) return '✏️ Your own voice. ⭐ Keep as mine saves it.';
+  if (cleanTweaks(knobs)) return '✏️ Your own voice. ⭐ Save voice saves it.';
   return 'Tap a voice to see which knobs make it.';
 }
 
@@ -133,7 +133,7 @@ export function surpriseVoices(random = Math.random, max = 3) {
   return out;
 }
 
-// ── A kid's own voices (⭐ Keep as mine) ──
+// ── A kid's own voices (⭐ Save voice) ──
 // Stored in IndexedDB "voices" (store.js): {id, personId, name, emoji, knobs,
 // created, used, edited}. Name and emoji are free text, like a sound's name; either
 // may be empty, not both. `knobs` is what a sound would store as `tweaks`

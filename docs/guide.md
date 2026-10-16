@@ -37,10 +37,10 @@ steps (echo, room, fade…), which play after the knobs and drag into order. A
 ⚙️ Advanced switch sits at the bottom of Layers.
 A second voice adds its knobs on top (the last tap wins a knob both use), 🎲
 **Surprise me** stacks one to three, and moving a knob makes it your own.
-⭐ **Keep as mine** saves the knobs as a kid's own voice, with a name and/or
+⭐ **Save voice** saves the knobs as a kid's own voice, with a name and/or
 an emoji; they go with the person to every device (the cloud) and in backups,
 and ⭐ My voices ▾ renames or deletes them.
-↩️ **Normal** puts every knob back. Clones, Walkie-talkie and Monster carry
+↩️ **Reset voice** puts every knob back. Clones, Walkie-talkie and Monster carry
 a ✦ special part no knob makes. A sound saved with an older voice plays it
 exactly as before; ⤢ **Turn into knobs** is the kid's choice. The sound's
 name is the sheet's title (tap it to rename), and Voice and Layers
