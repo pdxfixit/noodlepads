@@ -167,6 +167,9 @@ comma-separated list of ids, `web/firsts.js`): it syncs and rides in backups,
 it is never logged, and a sync merges both devices' lists, so a tip never
 repeats on another device. ❓ Help's 💡 Show tips again clears the tips (and
 hint dots) for the person showing.
+⚙️ Settings → About ends with 👋 Show the welcome again (a quiet link above the
+version): Settings closes, Who's playing? opens for the person showing, and
+their tips and dots come back, as isopix's link does.
 
 **Hint dots** (Regular and Advanced): a small red dot in the corner of ⌨️
 Keys, 💃 Grooves and 🎚️ Mixer (every copy, ⌨️ Keys off and on) until this
