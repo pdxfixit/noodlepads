@@ -181,6 +181,8 @@ test('"also sends noodlepads.com how the app is used … Never sounds, names or 
   const line = claim('also sends noodlepads.com how the app is used');
   assert.match(line, /Each device where someone is in the cloud/);
   assert.match(line, /a random number for this device \(not a profile\)/);
+  assert.match(line, /⚙️ Settings → 📊 Play data → 📊 Share play data turns it off/);
+  assert.match(html, /<b>📊 Share play data<\/b>/, 'the switch it names is in Settings');
   const { EVENTS, SEND_WITHOUT_CLOUD, shouldSend } = await import('../web/telemetry.js');
   assert.equal(SEND_WITHOUT_CLOUD, false, 'only devices where someone is in the cloud (question #425)');
   assert.equal(shouldSend({ enabled: true, cloud: false }), false);
