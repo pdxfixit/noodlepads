@@ -4,20 +4,20 @@
 
 **Status (2026-10-11):** Ben lifted the hold and answered Q2–Q5 and Q8 (§ 11). The app side, steps 1–3 of § 10, is built: `web/log-clean.js`, the switch in ⚙️ Settings, `web/log-send.js`. The Worker (step 4) and the Cloudflare setup are separate work.
 
-**Ben's flow decision (2026-10-11):** KV is a 30-day inbox; a **`noodlepads-logs` leg of the recurrent routine** (`~/src/routines/recurrent`), due once a day, pulls new uploads into a **SQLite archive at `~/.local/state/noodlepads/logs.sqlite3`, kept forever**, and once a week files the week's new errors in `TODO.md`. No launchd (Ben: "it should be part of the recurrent skill, but only running 1/day"). Agents are the main readers ("I'll probably never do so manually"). See § 6. Backing up `~/.local/state` as a whole is a separate, later job.
+**Ben's flow decision (2026-10-11, the inbox now D1 for 14 days):** the cloud is a short inbox; a **`noodlepads-logs` leg of the recurrent routine** (`~/src/routines/recurrent`), due once a day, pulls new uploads into a **SQLite archive at `~/.local/state/noodlepads/logs.sqlite3`, kept forever**, and once a week files the week's new errors in `TODO.md`. No launchd (Ben: "it should be part of the recurrent skill, but only running 1/day"). Agents are the main readers ("I'll probably never do so manually"). See § 6. Backing up `~/.local/state` as a whole is a separate, later job.
 
 Written 2026-10-11 for `TODO.md` "Agents do" → Automatic logs, within the decisions.md row "Automatic logs: an opt-in Settings switch, off by default …". Questions for Ben are in § 11.
 
-**In short.** A new Settings switch, off by default, lets a device send its event log to `https://noodlepads.com/api/log`. The app sends only what an agent needs to find a bug: event kinds, numbers, settings, kit sound ids, the app version and the device type. It never sends audio, and it never sends any text a person typed: no people's names, no sound names, no beat or song names. The soundboard's existing Worker gains one small route that checks each upload, rate-limits it and stores it in Workers KV for 30 days. Ben (or an agent) reads it with `just logs`. No CSP change is needed. About 5 hours to build, plus about 15 minutes of Ben's time in Cloudflare.
+**In short.** A new Settings switch, off by default, lets a device send its event log to `https://noodlepads.com/api/log`. The app sends only what an agent needs to find a bug: event kinds, numbers, settings, kit sound ids, the app version and the browser, OS and device-type families (never the User-Agent string). It never sends audio, and it never sends any text a person typed: no people's names, no sound names, no beat or song names. The site's Worker has one small route (`worker/reports.js`) that checks each upload, caps it and stores it in D1's `reports` table for 14 days. Ben (or an agent) reads it with `just logs`. No CSP change is needed. About 5 hours to build, plus about 15 minutes of Ben's time in Cloudflare.
 
 | | Recommendation |
 |---|---|
 | What is sent | The event log since the last send, cleaned by an allowlist on the device, then checked again by the Worker |
 | When | When the page is hidden (tab closed, app switched, screen locked), and 10 s after an error; at most once a minute |
-| Where | Workers KV namespace `soundboard-logs`, bound to the site's Worker (flarepress) |
-| How long | 30 days in KV (its own expiry, no clean-up job); forever in the local SQLite archive |
+| Where | The site's one D1 database, table `reports` (`worker/reports.js`) |
+| How long | 14 days in D1 (each new report first deletes the expired ones; nothing scheduled); forever in the local SQLite archive |
 | How it is read | The `noodlepads-logs` recurrent leg (once a day) copies new uploads into `~/.local/state/noodlepads/logs.sqlite3`, and once a week files new errors in `TODO.md`; agents query the archive with SQL |
-| Abuse limits | 64 KB a body, 10 uploads a minute per IP, the Worker re-checks every field, the site's Origin only |
+| Abuse limits | 64 KB a body, 10 uploads a minute per device code, 1,000 a day for the whole site, the Worker re-checks every field, the site's Origin only; the IP is never used or stored |
 | CSP | No change: `connect-src 'self'` already allows it |
 
 ---
@@ -65,7 +65,9 @@ One upload is one JSON object, at most 64 KB (the app keeps it under 60,000 byte
 | `device` | string | `^[0-9A-Z]{4}-[0-9A-Z]{4}$` (the app uses no 0, O, 1 or I). Missing or bad: not a report (reject) |
 | `session` | string \| null | `^s-[a-z0-9]{1,12}$`, new each page load |
 | `sent` | string \| null | ISO time, UTC, `…Z` |
-| `env.ua` | string \| null | User-Agent, control characters removed, at most 300 characters |
+| `env.browser` | string \| null | The browser family (`web/agent.js` `BROWSERS`: Edge, Samsung, Opera, Firefox, Chrome, Safari, Other). The raw User-Agent is never sent; one from an older app is read into families and dropped |
+| `env.os` | string \| null | The OS family (`SYSTEMS`: iOS, Android, ChromeOS, Windows, macOS, Linux, Other) |
+| `env.type` | string \| null | `phone`, `tablet` or `desktop` (`TYPES`) |
 | `env.screen` | `[w, h]` \| null | numbers |
 | `env.dpr` | number \| null | |
 | `env.tz` | string \| null | `^[A-Za-z0-9_+\-/]{1,40}$` |
@@ -87,7 +89,7 @@ Example: Example (a tablet, after a beat cut out):
   "session": "s-9f3a",
   "sent": "2026-10-11T19:42:07Z",
   "env": {
-    "ua": "Mozilla/5.0 (Linux; Android 14; SM-X200) AppleWebKit/537.36 Chrome/141.0 Safari/537.36",
+    "browser": "Chrome", "os": "Android", "type": "tablet",
     "screen": [800, 1280], "dpr": 1.5, "tz": "America/Los_Angeles",
     "audio": { "sampleRate": 48000, "baseLatencyMs": 10.7, "state": "running" }
   },
@@ -153,6 +155,8 @@ The setting is `sendLogs: {default: false, values: [false, true]}` in `settings.
 
 ### The change to the Worker
 
+*The plan as written on 2026-10-11. As built, the store is D1, not KV, and the limits are per device code and per day, not per IP (`worker/reports.js`, ADR 0009).*
+
 Add a Worker script beside the assets. Requests that match a file still go straight to the assets and never run the script; only `/api/log` (no such file) reaches it.
 
 ```toml
@@ -179,7 +183,7 @@ The script (about 80 lines, in this repo at `worker/index.js` so `just test` cov
 2. `Origin` must be `https://noodlepads.com`, `Content-Type` must be `application/json`, the body at most 64 KB. Else 400/413.
 3. Rate limit by IP: 10 a minute. Else 429.
 4. Parse, then run **the same allowlist as the app** (one shared module, `web/log-clean.js`, imported by both). A spammer's text in a field without a fixed list becomes `«text»`, so the store cannot be used to host arbitrary content.
-5. Store: key `<ISO time>_<device>_<random>`, value the cleaned JSON, `expirationTtl` 30 days. Metadata `{app, device, errors: n}` so a list shows errors without reading every value.
+5. Store: key `<ISO time>_<device>_<random>`, value the cleaned JSON, `expirationTtl` 30 days. Metadata `{app, device, errors: n}` so a list shows errors without reading every value. (As built: a row in D1's `reports` with `app`, `device` and `errors` columns, kept 14 days; see the note at the top.)
 6. Reply 204, with `Cache-Control: no-store`. (`_headers` covers assets only, so the script sets its own headers.)
 
 ### Options compared
@@ -195,7 +199,7 @@ KV wins on parts to set up and own: no schema, no cron, retention is one argumen
 
 ## 6. How the logs are read: KV inbox → daily SQLite archive → weekly digest, as a recurrent leg
 
-Ben, 2026-10-11 (option 2): uploads wait in KV for up to 30 days; once a day they are copied into a local SQLite archive kept forever; once a week the new errors are filed. All of it runs as a leg of his `recurrent` routine, not launchd. Mostly agents read the logs; Ben rarely will.
+Ben, 2026-10-11 (option 2): uploads wait in the cloud (D1, 14 days since 2026-10-15); once a day they are copied into a local SQLite archive kept forever; once a week the new errors are filed. All of it runs as a leg of his `recurrent` routine, not launchd. Mostly agents read the logs; Ben rarely will.
 
 **The archive.** `~/.local/state/noodlepads/logs.sqlite3` (the XDG state folder this Mac's other tools use). Stdlib `sqlite3`, so agents and tools can query it directly. Two tables:
 
@@ -203,7 +207,7 @@ Ben, 2026-10-11 (option 2): uploads wait in KV for up to 30 days; once a day the
 CREATE TABLE uploads (            -- one row per KV upload, never deleted
   key TEXT PRIMARY KEY,           -- the KV key: <ISO time>_<device>_<random>
   received TEXT NOT NULL,         -- ISO time the Worker stored it
-  device TEXT, app TEXT, ua TEXT, -- device code, app version, browser
+  device TEXT, app TEXT, ua TEXT, -- device code, app version, "browser · OS · type" (families only)
   errors INTEGER NOT NULL,
   payload TEXT NOT NULL           -- the cleaned upload, as JSON
 );
@@ -219,7 +223,7 @@ CREATE INDEX events_kind ON events(kind);
 
 - `gate.py` answers in about a second and never writes: **due** (exit 10) when the last good sync is over 20 hours old, so three runs a day sync once; or when the last digest is over 7 days old. Otherwise exit 0. `gate.py attention` prints its open items (a failing sync, new errors not yet filed).
 - State in `~/.local/state/skills/noodlepads-logs.state.json`: last sync time and newest key copied, last digest time.
-- The protocol: `just logs --sync` in this repo (copy new KV uploads into the archive in one transaction; a key already there is skipped, so a re-run or a missed day loses nothing while under 30 days); when the digest is due, `just logs --digest` (errors and notices since the last digest, grouped by message and app version, with counts and device counts). It finishes with `leg.py finish noodlepads-logs --status … --attention …`, so a failing sync reaches Ben's CURRENT.md digest the same run.
+- The protocol: `just logs --sync` in this repo (copy new KV uploads into the archive in one transaction; a key already there is skipped, so a re-run or a missed day loses nothing while under 14 days); when the digest is due, `just logs --digest` (errors and notices since the last digest, grouped by message and app version, with counts and device counts). It finishes with `leg.py finish noodlepads-logs --status … --attention …`, so a failing sync reaches Ben's CURRENT.md digest the same run.
 - Its capability model (its own, as each leg's is): may write the archive and its state; for each **new kind** of error, may add an "Agents do" line to this repo's `TODO.md` naming the query that shows it, commit just that file, and push and deploy as every commit here is (the repo's deploy rule). Nothing new: no commit. It never changes code.
 
 **Reading by hand** (rare) and for agents, `tools/logs.py` (stdlib Python) behind these recipes:
@@ -230,7 +234,7 @@ CREATE INDEX events_kind ON events(kind);
 | `just logs --errors` | Only uploads with errors |
 | `just logs K7Q4-M2XD` | One device's uploads, each printed like the diagnostics report's "Event log" section |
 | `just logs --json <key>` | One upload as raw JSON, for an agent |
-| `just logs --sync` | Copy new uploads from KV into the archive (the leg, daily) |
+| `just logs --sync` | Copy new uploads from D1 into the archive (the leg, daily) |
 | `just logs --digest` | The week's errors, grouped (the leg, weekly) |
 | `just logs --sql '…'` | A query against the archive |
 
@@ -242,8 +246,8 @@ The endpoint is public; anyone can POST to it, not only the app.
 
 | Threat | Limit |
 |---|---|
-| Flood from one address | 10 uploads a minute per IP (rate-limit binding). Client side, once a minute |
-| Flood from many addresses | Free plan: KV's 1,000 writes a day stops storage at no cost. Paid: KV writes cost about $5 a million (unverified), so a flood of a million costs about $5. A Cloudflare WAF rate-limit rule is the next step if it ever happens |
+| Flood from one device | 10 uploads a minute per device code (`PER_DEVICE_MINUTE`). Client side, once a minute |
+| Flood from many devices | 1,000 reports a day for the whole site (`PER_DAY`), then 429 until the next day, at no cost. A Cloudflare WAF rate-limit rule is the next step if it ever happens |
 | Huge bodies | 64 KB cap, checked before parsing |
 | Using the store to host text or links | The Worker re-runs the allowlist: free text only in two fields, 200 characters each |
 | Cross-site pages posting from a visitor's browser | `Origin` must be the soundboard's. (A script can fake `Origin`; this only stops other web pages) |
@@ -257,12 +261,12 @@ The endpoint is public; anyone can POST to it, not only the app.
 
 For `README.md`, `AGENTS.md` § Privacy and the Help tab, once built:
 
-> Problem reports are off unless someone turns them on, per device. When on, the app sends the soundboard's own website a record of what it did: buttons and features used, settings, errors, the browser and screen size. It never sends sounds or recordings, and never sends any name: not people's, not sounds', not beats'. Names inside error messages are blanked before sending. Reports wait on the website for up to 30 days, then are copied to Ben's own computer. Only Ben can read them. The website does not keep your IP address.
+> Problem reports are off unless someone turns them on, per device. When on, the app sends the soundboard's own website a record of what it did: buttons and features used, settings, errors, the browser, system and device type, and the screen size. It never sends sounds or recordings, and never sends any name: not people's, not sounds', not beats'. Names inside error messages are blanked before sending. Reports wait on the website for up to 14 days, and are copied to Ben's own computer. Only Ben can read them. The website does not keep your IP address.
 
 Things Ben should know (not a legal review):
 
 - The device code is a persistent random identifier. Under COPPA (US, children under 13), persistent identifiers count as personal information unless used only for "support for internal operations", such as fixing bugs. This design uses it only for that. **Unverified as legal advice**; Ben's call (Q4). Dropping the code removes the question at the cost of not telling devices apart.
-- The User-Agent string names the device model on Android (`SM-X200`). Useful for audio bugs; it is not personal, but it is fingerprint-ish. Q5.
+- The User-Agent string names the device model on Android (`SM-X200`), which is fingerprint-ish. Since 2026-10-16 a report sends only its browser, OS and device-type families (the shared privacy policy, Q5).
 - Cloudflare itself sees each request's IP, as it does for every page load today.
 
 ## 10. Build steps
@@ -288,7 +292,7 @@ Rollback: remove `main` and the bindings from `wrangler.toml` and redeploy (the 
 
 ## 11. Decisions for Ben
 
-**Q1. Where the logs are stored.** Answered 2026-10-11: KV as a 30-day inbox, plus the local SQLite archive kept forever (§ 6).
+**Q1. Where the logs are stored.** Answered 2026-10-11: KV as a 30-day inbox, plus the local SQLite archive kept forever (§ 6). Since 2026-10-15 the inbox is D1's `reports` table, 14 days (ADR 0009).
 - A. Workers KV, 30-day expiry. Simplest; read one upload at a time. **Recommended.**
 - B. D1. Can query across uploads ("every error this week"); needs a nightly clean-up job. About 1 h more.
 - C. Analytics Engine. Good for counts, poor for reading what one session did.
@@ -306,11 +310,11 @@ Rollback: remove `main` and the bindings from `wrangler.toml` and redeploy (the 
 - A. Yes, random, shown in Settings, deleted when switched off. Ben can find "the tablet's" logs. **Recommended.**
 - B. No code. Each upload stands alone; nothing persistent is sent. Uploads from one device cannot be grouped.
 
-**Q5. How much device detail?** Answered 2026-10-11: A, full.
+**Q5. How much device detail?** Answered 2026-10-11: A, full; then 2026-10-16, with the shared privacy policy: the browser, OS and device-type families instead of the full User-Agent.
 - A. Full User-Agent, screen size, time zone, audio latency. Most useful for audio bugs. **Recommended.**
 - B. Browser name and version and OS only (`Chrome 141, Android 14`), no model, no time zone.
 
-**Q6. How long to keep them?**
+**Q6. How long to keep them?** As built: 14 days in D1 (Ben, 2026-10-15).
 - A. 30 days. **Recommended**: long enough to notice and fix, short enough not to pile up.
 - B. 7 days.
 - C. 90 days.

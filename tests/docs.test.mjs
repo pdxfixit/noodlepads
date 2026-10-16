@@ -41,3 +41,20 @@ test('every ADR is listed in the ADR index', () => {
 test('CLAUDE.md only imports AGENTS.md, so the two never drift', () => {
   assert.match(readFileSync(join(root, 'CLAUDE.md'), 'utf8'), /^@AGENTS\.md\n/);
 });
+
+// The problem-report design's summary must match worker/reports.js and the
+// payload log-clean.js builds: it once said "30 days in KV" long after reports
+// moved to D1 for 14 days, and named the raw User-Agent.
+test('the automatic-logs design summary matches the code: D1, its keep time and limits, no User-Agent', async () => {
+  const { TTL_MS, PER_DEVICE_MINUTE, PER_DAY } = await import('../worker/reports.js');
+  const doc = readFileSync(join(root, 'docs/design/automatic-logs.md'), 'utf8');
+  const row = (name) => doc.match(new RegExp(`^\\| ${name} \\| (.+) \\|$`, 'm'))?.[1] ?? '';
+  const days = TTL_MS / 86400000;
+  assert.match(row('Where'), /D1/);
+  assert.match(row('How long'), new RegExp(`^${days} days in D1`));
+  assert.match(row('Abuse limits'), new RegExp(`${PER_DEVICE_MINUTE} uploads a minute per device code`));
+  assert.match(row('Abuse limits'), new RegExp(`${PER_DAY.toLocaleString('en-US')} a day`));
+  assert.doesNotMatch(doc, /30 days in KV|KV for 30 days|stores it in Workers KV/);
+  assert.doesNotMatch(doc, /\| `env\.ua` \|/, 'the payload table names no User-Agent field');
+  for (const f of ['env.browser', 'env.os', 'env.type']) assert.match(doc, new RegExp(`\\| \`${f.replace('.', '\\.')}\` \\|`));
+});
