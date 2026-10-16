@@ -1,7 +1,7 @@
 // The ⚙️ Settings dialog: Backups (its buttons live here, its code is in
 // backup-ui.js; people are managed from the corner avatar, people.js), the
 // person's Level (🧸 Kids · Regular · Advanced, ADR 0019),
-// 📊 Play data & reports (the Share play data and Send problem reports
+// 📊 Data sharing (the Share play data and Send problem reports
 // checkboxes; sending is log-send.js) and About. The button sits in the top corner, small and away from the pads and
 // the toolbar where thumbs play, so it isn't pressed by accident.
 //
@@ -80,7 +80,7 @@ export const LEVEL_HINTS = {
   advanced: "Advanced: the extra tools too. In the beat maker: Overlap, each row's speed (½×, 1×, 2×), swing and a time signature for each beat; the sharps and flats in the presets.",
 };
 
-// 📊 Play data & reports' chip: the emoji of each one that is on, or Off.
+// 📊 Data sharing' chip: the emoji of each one that is on, or Off.
 export const dataChip = (usage, reports) => (usage || reports ? `${usage ? '📊' : ''}${reports ? '📮' : ''} On` : 'Off');
 
 // A heading's chip says the section's state at a glance, where there is one.

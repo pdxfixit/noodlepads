@@ -252,7 +252,7 @@ test('Send problem reports is a checkbox under Share play data, off by default, 
   const sw = $('#send-logs');
   assert.equal($('#set-reports'), null, 'no Problem reports fold');
   assert.equal(sw.getAttribute('role'), null, 'a checkbox, not a switch');
-  assert.equal(sw.closest('.set-fold'), $('#set-data'), 'in 📊 Play data & reports');
+  assert.equal(sw.closest('.set-fold'), $('#set-data'), 'in 📊 Data sharing');
   const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
   assert.match(html, /id="share-usage"> 📊 Share play data<\/label>\s*<label class="set-check"><input type="checkbox" id="send-logs" aria-describedby="send-logs-grownup"> 📮 Send problem reports<\/label>\s*<p class="field-hint set-check-hint" id="send-logs-grownup">Ask a grown-up before you turn this on\.<\/p>/);
   assert.doesNotMatch(html, /never hold sounds|go only to Ben/, 'what a report holds is in the policy');
@@ -285,13 +285,14 @@ test('Send problem reports is a checkbox under Share play data, off by default, 
 });
 
 // Ben, 2026-10-16: "use B and 'Share play data' everywhere"; then "put the
-// choices in a collapsing pane": 📊 Play data & reports, the last fold before
-// About, holds both checkboxes and the Privacy policy link under them.
-test('📊 Share play data is a checkbox in 📊 Play data & reports, the last fold, on by default', async () => {
+// choices in a collapsing pane": 📊 Data sharing, the last fold before
+// About, holds both checkboxes; then "drop privacy policy link from the
+// collapsing section" (the version line in About keeps one).
+test('📊 Share play data is a checkbox in 📊 Data sharing, the last fold, on by default', async () => {
   const fold = $('#set-data');
   const folds = $('#settings-dialog').querySelectorAll('.set-fold');
   assert.equal(folds[folds.length - 1], fold, 'the last fold, right above About');
-  assert.equal($('#set-data-title').textContent, '📊 Play data & reports');
+  assert.equal($('#set-data-title').textContent, '📊 Data sharing');
   const sw = $('#share-usage');
   assert.equal(sw.getAttribute('type'), 'checkbox');
   assert.equal(sw.getAttribute('role'), null, 'a checkbox, not a switch');
@@ -301,8 +302,8 @@ test('📊 Share play data is a checkbox in 📊 Play data & reports, the last f
   assert.match(html, /<label class="set-check"><input type="checkbox" id="share-usage"> 📊 Share play data<\/label>/, 'its name only');
   const body = html.slice(html.indexOf('id="set-data-body"'), html.indexOf('</section>', html.indexOf('id="set-data-body"')));
   const at = (s) => body.indexOf(s);
-  assert.ok(at('id="share-usage"') >= 0 && at('id="share-usage"') < at('id="send-logs"') && at('id="send-logs"') < at('id="data-policy"'), 'then 📮 Send problem reports, then the Privacy policy');
-  assert.match(body, /<a class="privacy-link" id="data-policy" href="https:\/\/privacy\.pdxfixit\.com\/noodlepads\/" target="_blank" rel="noopener">Privacy policy<\/a>/);
+  assert.ok(at('id="share-usage"') >= 0 && at('id="share-usage"') < at('id="send-logs"'), 'then 📮 Send problem reports');
+  assert.doesNotMatch(body, /privacy-link|Privacy policy/, 'no Privacy policy link in the fold');
   assert.equal(getSetting('sendUsage'), true);
   $('#settings-open').dispatch('click');
   assert.equal(sw.checked, true);
