@@ -18,7 +18,7 @@ test('a report the app builds passes the Worker unchanged', () => {
   const kitIds = new Set(KIT_IDS);
   const raw = {
     format: 1, app: '14229ec 2026-10-11 11:43', device: 'K7Q4-M2XD', session: 's-9f3a', sent: '2026-10-11T19:42:07Z',
-    env: { ua: 'Mozilla/5.0 (Linux; Android 14)', screen: [412, 915], dpr: 2.625, tz: 'America/Los_Angeles', audio: { sampleRate: 48000, baseLatencyMs: 10, state: 'running' } },
+    env: { browser: 'Chrome', os: 'Android', type: 'phone', screen: [412, 915], dpr: 2.625, tz: 'America/Los_Angeles', audio: { sampleRate: 48000, baseLatencyMs: 10, state: 'running' } },
     settings: { advancedBeats: true, timeSignature: '4/4', sendLogs: true },
     counts: { people: 4, sounds: 30, recorded: 2, beats: 3, takes: 1, songs: 0 },
     dropped: 0,

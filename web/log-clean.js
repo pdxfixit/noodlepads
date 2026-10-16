@@ -1,7 +1,7 @@
 // What a problem report may hold: the event log (log.js) cleaned by an
 // allowlist, so nothing a person typed or recorded leaves the device. The
 // Worker that receives reports runs the same cleanPayload again, so this file
-// imports nothing and touches no page or storage.
+// imports only agent.js (pure) and touches no page or storage.
 //
 // The rules (docs/design/automatic-logs.md § 2):
 // - Each kind of entry lists the fields it may send. An unknown kind is
@@ -12,6 +12,10 @@
 //   device, and every quoted phrase, blanked, then cut to 200 characters.
 // - A sound is sent as its kit id (`kick`) or its kind, never its name.
 // - A person is sent as true/false and counts, never an id (ids are names).
+// - The device is its browser, OS and device-type families (agent.js), never
+//   the raw User-Agent string.
+
+import { parseAgent, BROWSERS, SYSTEMS, TYPES } from './agent.js';
 
 export const TEXT_MAX = 200;
 export const ENTRIES_MAX = 400;
@@ -229,6 +233,10 @@ export function cleanPayload(p, known = {}) {
   const audio = env.audio && typeof env.audio === 'object' ? env.audio : null;
   const screen = Array.isArray(env.screen) ? env.screen.slice(0, 2).map((n) => num(n) ?? null) : null;
   const { entries, dropped } = cleanEntries(p.entries, known);
+  // Families from a fixed list. An app from before 2026-10-16 sends the raw
+  // `ua`: only its families are kept.
+  const fromUa = typeof env.ua === 'string' ? parseAgent(env.ua) : null;
+  const family = (key, list) => (list.includes(env[key]) ? env[key] : fromUa ? fromUa[key] : null);
   const settings = fields(p.settings, Object.fromEntries(Object.keys(SETTING_VALUES).map((k) => [k, (v) => (SETTING_VALUES[k].includes(v) ? v : undefined)])), known);
   return {
     format: 1,
@@ -237,7 +245,9 @@ export function cleanPayload(p, known = {}) {
     session: typeof p.session === 'string' && SESSION.test(p.session) ? p.session : null,
     sent: typeof p.sent === 'string' && ISO.test(p.sent) ? p.sent : null,
     env: {
-      ua: typeof env.ua === 'string' ? env.ua.replace(/[\u0000-\u001f\u007f]+/g, ' ').slice(0, 300) : null,
+      browser: family('browser', BROWSERS),
+      os: family('os', SYSTEMS),
+      type: family('type', TYPES),
       screen: screen && screen.length === 2 ? screen : null,
       dpr: num(env.dpr) ?? null,
       tz: typeof env.tz === 'string' && ZONE.test(env.tz) ? env.tz : null,

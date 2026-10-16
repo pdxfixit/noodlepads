@@ -22,7 +22,7 @@ URL = "https://api.cloudflare.com/client/v4/accounts/acct/d1/database/db/query"
 
 
 def upload(device="K7Q4-M2XD", app="3e7f681 2026-10-11", entries=()):
-    return {"format": 1, "app": app, "device": device, "env": {"ua": "Mozilla/5.0 Android"},
+    return {"format": 1, "app": app, "device": device, "env": {"browser": "Chrome", "os": "Android", "type": "tablet"},
             "entries": list(entries)}
 
 
@@ -32,6 +32,13 @@ def err(message, t=1):
 
 def notice(text, t=2):
     return {"t": t, "kind": "notice", "data": {"text": text}}
+
+
+class DeviceFamilies(unittest.TestCase):
+    def test_only_the_families_are_kept_never_a_raw_user_agent(self):
+        self.assertEqual(logs.device_families({"browser": "Safari", "os": "iOS", "type": "phone"}), "Safari · iOS · phone")
+        self.assertIsNone(logs.device_families({"ua": "Mozilla/5.0 (Linux; Android 14; SM-X200)"}))
+        self.assertIsNone(logs.device_families(None))
 
 
 class FakeD1:
@@ -125,7 +132,7 @@ class Sync(Archive):
         self.assertEqual(stats["newest"], "2026-10-11T10:00:00.000Z_AAAA-BBBB_03")
         rows = self.conn.execute("SELECT key, received, device, app, ua, errors FROM uploads ORDER BY key").fetchall()
         self.assertEqual(rows[0], ("2026-10-10T08:00:00.000Z_AAAA-BBBB_01", "2026-10-10T08:00:00.000Z",
-                                   "K7Q4-M2XD", "3e7f681 2026-10-11", "Mozilla/5.0 Android", 1))
+                                   "K7Q4-M2XD", "3e7f681 2026-10-11", "Chrome · Android · tablet", 1))
         ev = self.conn.execute("SELECT seq, kind, json_extract(data, '$.message') FROM events "
                                "WHERE upload LIKE '%_01' ORDER BY seq").fetchall()
         self.assertEqual(ev, [(0, "error", "Failed to decode audio data"), (1, "notice", None)])

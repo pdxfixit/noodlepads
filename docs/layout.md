@@ -21,7 +21,7 @@ opens with a comment saying what it owns. How the app behaves is in
   - `backdrop.js`: the faint pattern behind the panels, one of the tiles in `bg/` picked at random each visit and drawn as a mask in the casing color; nothing remembered (`?bg=<name>` or `none` asks for one, for `just look --bg`)
   - `tooltips.js`: a tooltip on every control, from its `aria-label` or text, unless it has a `title` of its own
   - `update.js`: the "🆕 An update for Noodle Pads is ready." bar (when to ask `version.json`, when to show)
-  - `log.js` (the in-memory event log), `log-clean.js` (what a problem report may hold), `log-send.js` (sending it)
+  - `log.js` (the in-memory event log), `log-clean.js` (what a problem report may hold), `log-send.js` (sending it), `agent.js` (a User-Agent read as browser, OS and device-type families; a report sends only these)
   - `uses.js`: feature-use counts per person (localStorage `uses`, sent with that person's sync), mostly read from the event log and from dialogs opening (`DIALOG_USES`), and what the device says about itself on each cloud call (version, width bucket, touch)
   - `visits.js`: one summary per visit (the page in view: seconds, screens, level, load time, the sound's delay, errors as file:line), kept in localStorage `visits` under the person and sent with their sync; the Worker checks them with its `cleanVisit`
   - `telemetry.js`: usage events in the shared standard (ADR 0026): `track(event, details)` checks each event against `EVENTS` and hands it to `events-client.js`; the player id (`telemetry-player`); `shouldSend` and question #425's flag
