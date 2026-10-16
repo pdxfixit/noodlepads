@@ -42,9 +42,12 @@ wait_free() {
 # Removes the lines of a todo file up to and including commit $2. Portable:
 # GNU sed (Linux, cloud sessions) and BSD sed (macOS) disagree on in-place
 # editing, and the BSD form stopped every landing on Linux (2026-10-16).
+#
+# Not sed's `1,/re/`: it looks for the end from line 2, so a commit on line 1
+# wiped the whole list and land-continue landed nothing after it (2026-10-16).
 drop_done() {
   local file=$1 c=$2 rest
-  rest=$(sed "1,/^$c\$/d" "$file")
+  rest=$(awk -v c="$c" 'seen { print } $0 == c { seen = 1 }' "$file")
   printf '%s\n' "$rest" > "$file"
 }
 
