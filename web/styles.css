@@ -4100,18 +4100,25 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
    hand pulsing over the first pad until a pad is tapped, and the mic
    wiggling now and then until the first recording. Still under reduced
    motion: the hand stays, the mic sits still. */
-.kids-pad:has(> .kids-hand) { position: relative; }
+/* The hand is big and hangs off the pad's lower right, over the gap and the
+   next pads, its fingertip on the pad's lower right: small and inside the pad,
+   it read as part of the pad's picture (Ben, 2026-10-16). A white edge sets
+   it apart from any pad's emoji. */
+.kids-pad:has(> .kids-hand) { position: relative; z-index: 2; }
 .kids-hand {
   position: absolute;
-  right: 4%;
-  bottom: 2%;
-  font-size: calc(var(--kids-pad, 100px) * 0.34);
+  z-index: 3;
+  left: 62%;
+  top: 56%;
+  font-size: calc(var(--kids-pad, 100px) * 0.66);
   line-height: 1;
   pointer-events: none;
-  filter: drop-shadow(0 3px 2px rgb(0 0 0 / 0.45));
+  transform: translate(-30%, 0);
+  transform-origin: 30% 0;
+  filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 5px 4px rgb(0 0 0 / 0.5));
   animation: kids-hand 1.2s ease-in-out infinite;
 }
-@keyframes kids-hand { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-10%, -14%) scale(1.15); } }
+@keyframes kids-hand { 0%, 100% { transform: translate(-30%, 0) scale(1); } 50% { transform: translate(-30%, -14%) scale(1.1); } }
 .kids-mic.kids-nudge:not(.recording) { animation: kids-nudge 2.4s ease-in-out infinite; }
 @keyframes kids-nudge { 0%, 70%, 100% { rotate: 0deg; } 76% { rotate: -9deg; } 82% { rotate: 9deg; } 88% { rotate: -6deg; } 94% { rotate: 5deg; } }
 @media (prefers-reduced-motion: reduce) { .kids-hand, .kids-mic.kids-nudge:not(.recording) { animation: none; } }
