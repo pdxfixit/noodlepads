@@ -204,9 +204,14 @@ const VIEWS = {
   'builder-grown': { screen: 'beats', keys: true, js: q('#dj-beatbar [data-beat-new]') + BUILDER_REC + 'await new Promise((r) => setTimeout(r, 1700));' },
   takes: { screen: 'live', js: q('#dj-takes-open') },
   // ✏️ Edit keys: as it opens, with a ready-made layout loaded, and with sounds picked.
-  keys: { screen: 'live', js: q('#dj-change') },
-  'keys-layout': { screen: 'live', js: q('#dj-change') + q('[data-layout="ready-space-band"]') + q('#ke-save') },
-  'keys-picked': { screen: 'live', js: `${q('#dj-change')} ${q('[data-group="kit-animals"]')} for (let i = 0; i < 3; i++) document.querySelectorAll('#ke-picks [data-sound]')[i].click();` },
+  keys: { screen: 'live', js: q('#dj-input [data-input="keys"]') + q('#dj-change') },
+  // ⌨️ / 👆 (ADR 0028): 🎤 Live on the touch layout or on the keys (a phone's
+  // default is 👆), and Beats with ⌨️ Keys on the touch layout.
+  touch: { screen: 'live', js: q('#dj-input [data-input="touch"]') },
+  'live-keys': { screen: 'live', js: q('#dj-input [data-input="keys"]') },
+  'touch-beats': { screen: 'beats', keys: true, js: q('#dj-input [data-input="touch"]') },
+  'keys-layout': { screen: 'live', js: q('#dj-input [data-input="keys"]') + q('#dj-change') + q('[data-layout="ready-space-band"]') + q('#ke-save') },
+  'keys-picked': { screen: 'live', js: `${q('#dj-input [data-input="keys"]')} ${q('#dj-change')} ${q('[data-group="kit-animals"]')} for (let i = 0; i < 3; i++) document.querySelectorAll('#ke-picks [data-sound]')[i].click();` },
   'song-new': { screen: 'song', js: q('#song-new') },
   songs: { screen: 'song', js: q('#song-open') },
   // 🎼 Song's playlist (ADR 0024), PLAYLIST: as arranged; with a beat picked in the strip;

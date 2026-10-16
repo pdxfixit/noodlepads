@@ -182,13 +182,15 @@ export function startScreen(screen, djMode) {
 // Each screen's one-line how-to, in the page footer opposite the version.
 // Worded for the device: a touch screen taps and holds; a mouse and keyboard
 // clicks, holds or Shift-clicks, and the keys are real keys. `keys` is Beats
-// with ⌨️ Keys on.
+// with ⌨️ Keys on; `tiles-keys` and `tiles-live` the same with 👆 (ADR 0028).
 const SCREEN_HINTS = {
   touch: {
     pads: 'Tap a pad to play it. Hold one to keep it going.',
     beats: 'Tap a pill to turn it on or off; hold it for a loud hit. ▶ Play to hear it.',
     keys: 'Tap a key: its sound gets a row. ● Record and play along to fill the beat.',
     live: 'Tap a key to play it. Hold one to keep it going. Tap ⏲️ in time to set the speed.',
+    'tiles-keys': 'Tap a tile: its sound gets a row. ● Record and play along to fill the beat.',
+    'tiles-live': 'Tap a tile to play it. Hold one to keep it going. Tap ⏲️ in time to set the speed.',
     song: 'Pick a beat, then tap a spot on a lane. Tap a block to repeat it or take it off.',
     editing: 'Editing: ✏️ changes a sound, 🗑️ deletes it. Tap sounds to select them, then act on them all. Hold and drag one to move it. ✅ Done to play.',
   },
@@ -197,6 +199,8 @@ const SCREEN_HINTS = {
     beats: 'Click a pill to turn it on or off; hold it or Shift-click for a loud hit. ▶ Play to hear it.',
     keys: 'Click a key or press it: its sound gets a row. ● Record and play along to fill the beat.',
     live: 'Click a key, or press it on the keyboard. Hold one or Shift-click it to keep it going. Click ⏲️ in time to set the speed.',
+    'tiles-keys': 'Click a tile: its sound gets a row. ● Record and play along to fill the beat.',
+    'tiles-live': 'Click a tile to play it. Hold one or Shift-click it to keep it going. Click ⏲️ in time to set the speed.',
     song: 'Click a beat, then a spot on a lane. Click a block to repeat it or take it off.',
     editing: 'Editing: ✏️ changes a sound, 🗑️ deletes it. Click sounds to select them, then act on them all. Drag one, or Alt+← →, to move it. ✅ Done to play.',
   },
@@ -206,7 +210,8 @@ const pointerFine = () => globalThis.matchMedia?.('(hover: hover) and (pointer: 
 export const screenHint = (screen, editing, fine = pointerFine()) => SCREEN_HINTS[fine ? 'mouse' : 'touch'][editing ? 'editing' : screen];
 // The footer how-to: the screen's, or Edit sounds' while editing.
 function showHint() {
-  el.screenHint.textContent = screenHint(state.screen === 'beats' && keysOn ? 'keys' : state.screen, state.editing);
+  const name = state.screen === 'beats' && keysOn ? 'keys' : state.screen;
+  el.screenHint.textContent = screenHint(keysShow() && dj?.touching() ? `tiles-${name}` : name, state.editing);
   fitFoot();
 }
 
@@ -761,7 +766,7 @@ async function start() {
   // Pads that loop while a beat plays start on its bars and keep its time.
   audio.grid = () => seq.grid();
   dj = createDJ({
-    el: { keys: $('#dj-keys'), tabs: $('#dj-tabs'), layout: $('#dj-layout-keys'), legend: $('#dj-legend'), panel: $('#dj'),
+    el: { keys: $('#dj-keys'), touch: $('#dj-touch'), input: $('#dj-input'), tabs: $('#dj-tabs'), layout: $('#dj-layout-keys'), legend: $('#dj-legend'), panel: $('#dj'),
       change: $('#dj-change'),
       keysEdit: { dialog: $('#keys-edit'), layouts: $('#ke-layouts'), saveLine: $('#ke-save-line'), saveName: $('#ke-save-name'), saveOk: $('#ke-save-ok'), saveCancel: $('#ke-save-cancel'),
         ownLine: $('#ke-own-line'), rename: $('#ke-rename'), remove: $('#ke-delete'), keys: $('#ke-keys'), note: $('#ke-note'), undo: $('#ke-undo'), reset: $('#ke-reset'),
@@ -818,6 +823,7 @@ async function start() {
         db.remove('layouts', id).catch((err) => console.error('Deleting a key layout failed:', err));
       },
       kitGroups: () => state.manifest.kitGroups ?? [],
+      inputChanged: () => showHint(),   // ⌨️ / 👆: the footer's how-to follows
       // The kid's own groups of their sounds (groups.js), for the Edit keys picker.
       ownGroups: (pid) => groupOwn(clipsFor(pid).filter((c) => !c.kit), state.orders.get(pid)?.groups)
         .filter((g) => g.id !== UNGROUPED),

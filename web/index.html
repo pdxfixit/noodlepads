@@ -180,7 +180,7 @@
           <button type="button" class="seq-click mixer-open" data-mixer aria-label="🎚️ Mixer: each row's loudness, mute, solo and effect" title="Mixer">🎚️</button>
         </div>
       </div>
-      <p class="seq-empty" id="dj-no-rows" hidden>No rows yet. Tap ● Record and play the keys below: each sound you play gets a row.</p>
+      <p class="seq-empty" id="dj-no-rows" hidden>No rows yet. Tap ● Record and play the sounds below: each one you play gets a row.</p>
       <div class="seq-undo dj-done" id="dj-done" role="status" hidden>
         <span class="dj-take-line" id="dj-take-line" hidden>Saved <input class="beat-name take-rename" id="dj-take-name" maxlength="24" autocomplete="off" aria-label="Take name (tap to rename)"> <span id="dj-take-length"></span></span>
         <span class="dj-done-buttons">
@@ -200,6 +200,14 @@
       </div>
       <div class="dj-grid" id="dj-grid" hidden></div>
       <div class="dj-count" id="dj-count" aria-hidden="true" hidden></div>
+      <!-- ⌨️ / 👆: the keys, or the touch layout's bands of tiles (ADR 0028), remembered on the device. -->
+      <div class="dj-input" id="dj-input-line">
+        <div class="seq-barsel dj-input-switch" id="dj-input" role="group" aria-label="Play with">
+          <button type="button" data-input="keys" aria-pressed="true" aria-label="⌨️ Keys: laid out like a keyboard" title="⌨️ Keys: laid out like a keyboard">⌨️</button>
+          <button type="button" data-input="touch" aria-pressed="false" aria-label="👆 Touch: big tiles in groups, no keyboard needed" title="👆 Touch: big tiles in groups, no keyboard needed">👆</button>
+        </div>
+      </div>
+      <div class="dj-touch" id="dj-touch" aria-label="Touch layout" hidden></div>
       <div class="dj-tabs" id="dj-tabs" role="group" aria-label="Which keys to show">
         <button type="button" data-row="0" aria-pressed="false"></button>
         <button type="button" data-row="1" aria-pressed="false"></button>

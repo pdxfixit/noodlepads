@@ -4,6 +4,10 @@
 // the real keys play them; on a phone they are big pads, one row at a time.
 // The rules (default keys, labels, snapping) are in rhythm.js.
 //
+// Two ways to play them, picked on the device with ⌨️ / 👆 (ADR 0028): the
+// keys, or a touch layout of bands of big tiles (dj-touch.js, touch.js).
+// Both play through the same path (hit), so takes, rows and loops agree.
+//
 // One panel, two places (ADR 0017): 🎤 Live (mode 'free': takes and the
 // click track) and 🥁 Beats with ⌨️ Keys on (mode 'beat': the open beat
 // above the keys, ● Record into it). app.js picks the mode with setMode.
@@ -24,6 +28,8 @@ import { logEvent } from './log.js';
 import { countPlay } from './play-count.js';
 import { makeVoice, fadeStop } from './audio.js';
 import { fingerTaps, isFinger } from './finger.js';
+import { soundsOf, defaultTouch, touchOrder, touchSounds } from './touch.js';
+import { drawBands } from './dj-touch.js';
 
 const STOPS = tempoStops();   // the click track slider's positions (see sequencer.js)
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
@@ -92,6 +98,18 @@ export function createDJ({ el, deps }) {
   const SIZES = { s: 'Small', m: 'Medium', l: 'Large' };
   let size = Object.hasOwn(SIZES, recall('dj-size')) ? recall('dj-size') : 'm';
 
+  // ⌨️ or 👆, remembered on this device (Ben, 2026-10-16: "a switch
+  // everywhere"). Until the kid picks, 👆 on a phone-sized screen.
+  const INPUTS = ['keys', 'touch'];
+  let input = INPUTS.includes(recall('dj-input')) ? recall('dj-input') : null;
+  const narrow = () => globalThis.matchMedia?.('(max-width: 699px)')?.matches === true;
+  const inputNow = () => input ?? (narrow() ? 'touch' : 'keys');
+  const touching = () => inputNow() === 'touch';
+  // The person's touch layout: the one they made, else the default (🎸 Band
+  // under their newest sounds), worked out afresh so new sounds show.
+  const soundsNow = () => soundsOf(deps.clipsFor(deps.personId()), deps.personId());
+  const touchNow = () => deps.savedDeck(deps.personId())?.touch ?? defaultTouch(soundsNow());
+
   function family(clip) {
     if (!clip.kit) return { name: 'mine', color: deps.personColor() };
     return { name: FAMILY_NAMES[clip.group] || clip.group || 'presets', color: FAMILY_COLORS[clip.group] || '#333040' };
@@ -101,10 +119,15 @@ export function createDJ({ el, deps }) {
     const keys = deck();
     const letters = showLetters();
     const pads = !keyboardish();
+    const touch = touching();
     el.keys.classList.toggle('pads-mode', pads);
     el.keys.dataset.size = size;
-    el.tabs.hidden = pads;
-    el.size.hidden = !pads;
+    el.tabs.hidden = pads || touch;
+    el.size.hidden = !pads || touch;
+    el.keys.hidden = touch;
+    el.touch.hidden = !touch;
+    for (const b of el.input.querySelectorAll('[data-input]')) b.setAttribute('aria-pressed', String(b.dataset.input === inputNow()));
+    if (touch) drawBands(el.touch, touchNow(), { clipById: deps.clipById, family, kitGroups: () => deps.kitGroups?.() ?? [], isLooping: deps.isLooping });
     for (const b of el.size.querySelectorAll('[data-size]')) b.setAttribute('aria-pressed', String(b.dataset.size === size));
     el.keys.replaceChildren(...KEY_ROWS.map((codes, r) => {
       const line = document.createElement('div');
@@ -146,9 +169,9 @@ export function createDJ({ el, deps }) {
       return line;
     }));
     renderGrid?.();
-    // The legend: each family on the keys, once, in its color.
+    // The legend: each family on the keys (or the tiles), once, in its color.
     const families = new Map();
-    for (const id of Object.values(keys)) {
+    for (const id of touch ? touchSounds(touchNow()) : Object.values(keys)) {
       const clip = id && deps.clipById(id);
       if (clip) { const f = family(clip); if (!families.has(f.name)) families.set(f.name, f.color); }
     }
@@ -178,6 +201,7 @@ export function createDJ({ el, deps }) {
   }
 
   function keyEl(code) { return el.keys.querySelector(`[data-code="${code}"]`); }
+  const tilesOf = (clipId) => (el.touch.hidden ? [] : [...el.touch.querySelectorAll('[data-clip]')].filter((t) => t.dataset.clip === clipId));
 
   // ── The light show (a kid's idea): a hit lights its key, ripples its
   // color out across the keys around it, and tints the panel's glow, which
@@ -203,6 +227,14 @@ export function createDJ({ el, deps }) {
       ], { duration: 360, delay: d * 70, easing: 'ease-out' });
     }
   }
+  // A tile's hit lights it and tints the panel's glow (no ripple: bands are not a keyboard).
+  function lightTiles(clipId) {
+    for (const t of tilesOf(clipId)) {
+      t.classList.add('hit');
+      setTimeout(() => t.classList.remove('hit'), 120);
+      el.panel?.style.setProperty('--glow', t.style.getPropertyValue?.('--c')?.trim() || '#ffffff');
+    }
+  }
   // The panel's glow follows how loud the sound is now (0 to 1).
   function level(l) {
     el.panel?.style.setProperty('--level', calm() ? Math.min(l, 0.3).toFixed(2) : l.toFixed(2));
@@ -212,16 +244,33 @@ export function createDJ({ el, deps }) {
   function flashClip(clipId, ms = 0) {
     record(clipId, 'beat', deps.now() + Math.max(0, ms) / 1000);
     const codes = Object.entries(deck()).filter(([, id]) => id === clipId).map(([c]) => c);
-    if (!codes.length) return;
-    setTimeout(() => codes.forEach((c) => light(c, { ripple: false })), Math.max(0, ms));
+    setTimeout(() => { codes.forEach((c) => light(c, { ripple: false })); lightTiles(clipId); }, Math.max(0, ms));
   }
-  // A sound started or stopped looping: its keys glow while it loops.
+  // A sound started or stopped looping: its keys and tiles glow while it loops.
   function looping(clipId, on) {
     for (const [code, id] of Object.entries(deck())) if (id === clipId) keyEl(code)?.classList.toggle('looping', on);
+    for (const t of tilesOf(clipId)) t.classList.toggle('looping', on);
   }
 
-  function play(code, { earlier = false } = {}) {
-    const clip = deps.clipById(deck()[code]);
+  // A key: its sound, and its tile lit with a ripple.
+  function play(code, opts) {
+    const clip = hit(deck()[code], opts);
+    if (clip) light(code);
+    return clip;
+  }
+  // A touch tile: the same, for the sound on it.
+  function playTile(clipId, opts) {
+    const clip = hit(clipId, opts);
+    if (clip) lightTiles(clipId);
+    return clip;
+  }
+  // What a key or a tile is: {code} or {clip}.
+  const soundOf = (t) => (t.code ? deck()[t.code] : t.clip);
+  const playTarget = (t, opts) => (t.code ? play(t.code, opts) : playTile(t.clip, opts));
+  // A sound played from the keys or a tile: tapped (a looping one stops),
+  // recorded into a take, given a row and a hit on the beat.
+  function hit(id, { earlier = false } = {}) {
+    const clip = deps.clipById(id);
     if (!clip) return null;
     // 🔔 Overlap on Live: a key's repeated hits ring over each other.
     const ring = ringing();
@@ -230,7 +279,6 @@ export function createDJ({ el, deps }) {
     record(clip.id, stopped ? 'stop' : 'hit', deps.now(), ring);
     showRow(clip);
     if (!stopped) intoBeat(clip, earlier);
-    light(code);
     return clip;
   }
   function loopIt(clip) {
@@ -240,16 +288,16 @@ export function createDJ({ el, deps }) {
 
   // A touch or click: plays now, and loops if still held after the hold time.
   // With Shift it loops at once (a looping sound stops, as a tap does).
-  function pointerDown(code, id, shift = false) {
-    if (shift) { shiftPlay(code); return; }
-    const clip = play(code);
+  function pointerDown(target, id, shift = false) {
+    if (shift) { shiftPlay(target); return; }
+    const clip = playTarget(target);
     if (!clip) return;
     clearTimeout(holds.get(id));
     holds.set(id, setTimeout(() => { holds.delete(id); loopIt(clip); }, HOLD_TO_LOOP_MS));
   }
-  function shiftPlay(code) {
-    const wasLooping = deps.isLooping?.(deck()[code]);
-    const clip = play(code);
+  function shiftPlay(target) {
+    const wasLooping = deps.isLooping?.(soundOf(target));
+    const clip = playTarget(target);
     if (clip && !wasLooping) loopIt(clip);
   }
   function pointerUp(id) {
@@ -263,7 +311,7 @@ export function createDJ({ el, deps }) {
     holds.clear();
     fingers.clear();
     held.clear();
-    for (const k of el.keys.querySelectorAll('.down')) k.classList.remove('down');
+    for (const k of [...el.keys.querySelectorAll('.down'), ...el.touch.querySelectorAll('.down')]) k.classList.remove('down');
   }
 
   // From the page's keydown: a DJ key plays (once per press, held keys loop).
@@ -310,36 +358,42 @@ export function createDJ({ el, deps }) {
   // A finger plays a key when it lifts where it landed, as on the pads, so a
   // scroll that starts on the keys stays silent (Ben, 2026-10-16; finger.js).
   // Held still, it plays and loops. A mouse still plays on press.
+  // A touch tile is the same as a key (Ben, 2026-10-16): lift to play, hold to loop.
   const fingers = fingerTaps({
-    onTap: (code) => play(code),
-    onHold: (code) => { const clip = play(code); if (clip) loopIt(clip); },
+    onTap: (t) => playTarget(t),
+    onHold: (t) => { const clip = playTarget(t); if (clip) loopIt(clip); },
     holdMs: HOLD_TO_LOOP_MS,
   });
-  el.keys.addEventListener('pointerdown', (e) => {
-    const k = e.target.closest('[data-code]');
-    if (!k || e.button > 0) return;
-    k.classList.add('down');
-    const code = k.dataset.code;
-    if (isFinger(e)) { fingers.down(e, code, { hold: !deps.isLooping?.(deck()[code]) }); return; }
-    pointerDown(code, `p${e.pointerId}`, e.shiftKey);
-  });
-  for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
-    el.keys.addEventListener(type, (e) => {
-      pointerUp(`p${e.pointerId}`);
-      e.target.closest?.('[data-code]')?.classList.remove('down');
+  // `sel` finds what was pressed in `box`; `targetOf` says which sound it is.
+  function listen(box, sel, targetOf) {
+    box.addEventListener('pointerdown', (e) => {
+      const k = e.target.closest(sel);
+      if (!k || e.button > 0) return;
+      k.classList.add('down');
+      const target = targetOf(k);
+      if (isFinger(e)) { fingers.down(e, target, { hold: !deps.isLooping?.(soundOf(target)) }); return; }
+      pointerDown(target, `p${e.pointerId}`, e.shiftKey);
+    });
+    for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
+      box.addEventListener(type, (e) => {
+        pointerUp(`p${e.pointerId}`);
+        e.target.closest?.(sel)?.classList.remove('down');
+      });
+    }
+    // Enter or Space on a focused key or tile plays it (pointer taps are
+    // handled above); Shift+Enter or Shift+Space loops it, as a hold does.
+    box.addEventListener('click', (e) => {
+      const k = e.target.closest(sel);
+      if (!k || e.detail !== 0) return;
+      if (e.shiftKey) shiftPlay(targetOf(k)); else playTarget(targetOf(k));
     });
   }
+  listen(el.keys, '[data-code]', (k) => ({ code: k.dataset.code }));
+  listen(el.touch, '[data-clip]', (k) => ({ clip: k.dataset.clip }));
   // On the window: a finger may lift off the key, or the browser may take it for a scroll.
   window.addEventListener('pointermove', (e) => fingers.move(e));
   window.addEventListener('pointerup', (e) => fingers.up(e));
   window.addEventListener('pointercancel', (e) => fingers.cancel(e));
-  // Enter or Space on a focused key plays it (pointer taps are handled above);
-  // Shift+Enter or Shift+Space loops it, as a hold does.
-  el.keys.addEventListener('click', (e) => {
-    const k = e.target.closest('[data-code]');
-    if (!k) return;
-    if (e.detail === 0) { if (e.shiftKey) shiftPlay(k.dataset.code); else play(k.dataset.code); }
-  });
 
   // ── ✏️ Edit keys: a focused view of its own (dj-keys.js) ──
   const editor = createKeysEditor({
@@ -491,7 +545,7 @@ export function createDJ({ el, deps }) {
         else if (e.kind === 'stop') deps.stopClip(clip);
         else deps.playOnce(clip, { ring: e.ring === true });   // a hit rings over the last as it did (🔔 Overlap)
         replayed.add(clip);
-        if (e.kind !== 'beat') for (const [code, id] of Object.entries(deck())) if (id === clip.id) light(code, { ripple: e.kind === 'hit' });
+        if (e.kind !== 'beat') { for (const [code, id] of Object.entries(deck())) if (id === clip.id) light(code, { ripple: e.kind === 'hit' }); lightTiles(clip.id); }
       }, e.t * 1000));
     }
     // Done when the take is: a moment after its last event, for the last sound to ring.
@@ -875,9 +929,12 @@ export function createDJ({ el, deps }) {
     const bar = groups.reduce((a, b) => a + b, 0);
     const starts = new Set(groups.map((_, g) => groups.slice(0, g).reduce((a, b) => a + b, 0)));
     showSetup();
-    // In keyboard order; each line's data-row is its row's index in the beat.
+    // In keyboard order (or the touch layout's, band by band, with 👆);
+    // each line's data-row is its row's index in the beat.
     const twins = twinRows(beat.rows.map((r) => deps.clipById(r.clipId)?.emoji || '🔊'));
-    el.grid.replaceChildren(...keyboardOrder(beat.rows, keys).map((at) => beat.rows[at]).map((r) => {
+    const touch = touching();
+    const order = touch ? touchOrder(beat.rows, touchNow()) : keyboardOrder(beat.rows, keys);
+    el.grid.replaceChildren(...order.map((at) => beat.rows[at]).map((r) => {
       const line = document.createElement('div');
       line.className = 'dj-grid-row beat-row';
       line.dataset.row = beat.rows.indexOf(r);
@@ -891,7 +948,7 @@ export function createDJ({ el, deps }) {
       // chooser for this sound; if two rows share an emoji, its key's letter
       // (or its name's first) tells them apart.
       const e = clip?.emoji || '🔊';
-      const code = twins.has(at) && Object.entries(keys).find(([, id]) => id === r.clipId)?.[0];
+      const code = twins.has(at) && !touch && Object.entries(keys).find(([, id]) => id === r.clipId)?.[0];
       const letter = code ? letterFor(code) : [...(clip?.label ?? '')][0]?.toUpperCase() ?? '';
       const name = clip?.label ?? 'empty';
       const level = deps.seq.levelState(at);
@@ -1359,6 +1416,22 @@ export function createDJ({ el, deps }) {
   globalThis.addEventListener?.('blur', letGo);
   globalThis.document?.addEventListener?.('visibilitychange', () => { if (document.hidden) letGo(); });
 
+  // ⌨️ / 👆: the keys or the touch layout, remembered on this device. The
+  // beat's rows follow the one showing, so they redraw too.
+  el.input.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-input]');
+    if (!b || !INPUTS.includes(b.dataset.input)) return;
+    letGo();
+    input = b.dataset.input;
+    remember('dj-input', input);
+    render();
+    if (mode === 'beat') renderGrid();
+    deps.inputChanged?.();
+    deps.announce?.(input === 'touch' ? 'Touch: big tiles in groups.' : 'Keys: laid out like a keyboard.');
+  });
+  // A phone turned or a window resized past 700 px: the default follows, until the kid picks.
+  globalThis.matchMedia?.('(max-width: 699px)')?.addEventListener?.('change', () => { if (!input) { render(); if (mode === 'beat') renderGrid(); deps.inputChanged?.(); } });
+
   // Tile size on the pads grid: more sounds on screen, or bigger targets.
   el.size.addEventListener('click', (e) => {
     const b = e.target.closest('[data-size]');
@@ -1400,5 +1473,5 @@ export function createDJ({ el, deps }) {
   showMode();
   // Recording a take, or playing one back: the update bar waits (update.js).
   const busy = () => recording() || !!replaying;
-  return { render, keydown, keyup, deck, letGo, level, flashClip, looping, escape, stopReplay, steps, renderGrid, showSetup, shown, leave, beatStopped, busy, setMode, recording, offerUndo };
+  return { render, keydown, keyup, deck, touchNow, touching, letGo, level, flashClip, looping, escape, stopReplay, steps, renderGrid, showSetup, shown, leave, beatStopped, busy, setMode, recording, offerUndo };
 }
