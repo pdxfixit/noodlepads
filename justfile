@@ -261,7 +261,7 @@ deploy:
 # main, brings this checkout's copies of the touched files up to date and
 # pushes; GitHub deploys the push. On 2026-10-12 a hand-run landing left this
 # checkout's files stale.
-[doc("Land an agent's commits on main and push (GitHub deploys): just land <sha>... Run it from the main checkout")]
+[doc("Land an agent's commits on main and push (GitHub deploys): just land [--wait] <sha>... Run it from the main checkout. --wait waits (up to an hour) for another session's uncommitted edits to the same files")]
 land +commits:
     @bash tools/land.sh start {{commits}}
 
