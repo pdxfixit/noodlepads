@@ -225,6 +225,22 @@ async function passGuard(id) {
   return ok;
 }
 
+// A change to someone's name, picture or color: past their PIN guard, saved
+// (state.js setPersonEdit, so it syncs), then everyone redrawn. The profile
+// sheet and the welcome's Pick your stage name (welcome.js) both change a
+// person's looks through here and openPictures. False when the guard said no.
+export async function editLook(id, changes) {
+  if (pinGuards(id) && !await passGuard(id)) return false;
+  await setPersonEdit(id, changes);
+  refreshPeople();
+  return true;
+}
+
+// The full picture chooser for `id` (cloud-ui.js), past the guard.
+export async function openPictures(id) {
+  if (!pinGuards(id) || await passGuard(id)) openAvatar(id);
+}
+
 // ── Pick a name: 🎲 ──
 // A tap on 🎲, a hold (HOLD_MS), a right-click or Shift+Enter lists a dozen
 // fresh fun names and the special names nobody has (names.js nameChoices).
@@ -276,10 +292,7 @@ async function onProfileClick(e) {
   if (t !== el.profileDelete) disarmDelete();
   const swatch = t.closest('[data-color]');
   if (swatch) {
-    if (pinGuards(id) && !await passGuard(id)) return;
-    await setPersonEdit(id, { color: swatch.dataset.color });
-    refreshPeople();
-    swatch.focus({ preventScroll: true });
+    if (await editLook(id, { color: swatch.dataset.color })) swatch.focus({ preventScroll: true });
     return;
   }
   // One tap opens Pick a name, so a kid can look, change their mind, or
@@ -291,7 +304,7 @@ async function onProfileClick(e) {
     return;
   }
   if (t === el.profilePicture) {
-    if (!pinGuards(id) || await passGuard(id)) openAvatar(id);
+    openPictures(id);
     return;
   }
   if (t === el.profileCloud) { openCloudSheet(id); return; }
