@@ -85,8 +85,12 @@ test('the footer\'s version is a button that opens Settings scrolled to About', 
   // Ben, 2026-10-11: the version sits at the very bottom of About, centered.
   const about = $('#about-version');
   assert.equal(about.textContent, $('#version').textContent || 'dev copy');
-  assert.equal(about.parent.children.at(-1), about, 'last in About');
-  assert.equal(dialog.querySelectorAll('section').at(-1), about.parent, 'and About is the last section');
+  // Its line also links the privacy policy (Ben, 2026-10-16: "next to the version").
+  const line = about.parent;
+  assert.equal(line.className, 'set-version');
+  assert.equal(line.children.at(-1).className, 'privacy-link', 'the privacy policy beside it');
+  assert.equal(line.parent.children.at(-1), line, 'last in About');
+  assert.equal(dialog.querySelectorAll('section').at(-1), line.parent, 'and About is the last section');
   dialog.close();
   // ⚙️ opens it at the top, as before.
   dialog.scrollTop = 0;

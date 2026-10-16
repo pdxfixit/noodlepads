@@ -208,13 +208,22 @@ test('"Problem reports … send": the statement names everything a report holds,
   assert.doesNotMatch(JSON.stringify(report), /Mozilla|Pixel/);
 });
 
-test('Settings links the full privacy policy under the statement, and README does too', () => {
+test('the privacy policy is linked beside the version, in the footer and in About, and not in "What\'s private"', () => {
   assert.equal(PRIVACY_URL, 'https://privacy.pdxfixit.com/noodlepads/');
-  const body = html.slice(html.indexOf('id="set-privacy-body"'), html.indexOf('</section>', html.indexOf('id="set-privacy-body"')));
-  const link = body.match(/<a id="privacy-policy" href="([^"]+)" target="_blank" rel="noopener">([^<]+)<\/a>/);
-  assert.ok(link, 'a link in the privacy section, opening in a new tab');
-  assert.equal(link[1], PRIVACY_URL);
-  assert.match(link[2], /Privacy policy/);
-  assert.ok(body.indexOf('privacy-list') < body.indexOf('privacy-policy'), 'under the list');
+  const link = (where) => where.match(/<a class="privacy-link"(?: id="privacy-policy")? href="([^"]+)" target="_blank" rel="noopener">([^<]+)<\/a>/);
+  const foot = html.slice(html.indexOf('<div class="page-foot">'), html.indexOf('</div>', html.indexOf('<div class="page-foot">')));
+  const inFoot = link(foot);
+  assert.ok(inFoot, 'a link in the page footer, opening in a new tab');
+  assert.ok(foot.indexOf('id="version"') < foot.indexOf('privacy-policy'), 'right after the version');
+  const about = html.match(/<p class="set-version">[\s\S]*?<\/p>/)?.[0] ?? '';
+  assert.match(about, /<span id="about-version"><\/span>/, 'About keeps its version');
+  const inAbout = link(about);
+  assert.ok(inAbout, 'a link beside the version in Settings → About');
+  for (const l of [inFoot, inAbout]) {
+    assert.equal(l[1], PRIVACY_URL);
+    assert.equal(l[2], 'Privacy policy');
+  }
+  const priv = html.slice(html.indexOf('id="set-privacy-body"'), html.indexOf('</section>', html.indexOf('id="set-privacy-body"')));
+  assert.doesNotMatch(priv, /privacy\.pdxfixit\.com/, 'no longer under "What\'s private"');
   assert.ok(readme.includes(`(${PRIVACY_URL})`), 'README links it');
 });
