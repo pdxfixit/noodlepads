@@ -3,20 +3,20 @@
 
   gate.py                      exit 0 nothing due / 10 due / 2 error (one line)
   gate.py attention            print the leg's outstanding attention items
-  gate.py done sync|digest --status ok|error [--attention FILE|-] [--newest KEY]
-                               record a job's outcome; attention replaces that job's
+  gate.py done digest --status ok|error [--attention FILE|-]
+                               record the digest's outcome; attention replaces its
                                outstanding items (pass none to clear them)
 
-The gate never writes, and reads only two small files: the state, and the
-cloud config, ~/.config/noodlepads/cloud.json ($NOODLEPADS_CONFIG). Two jobs:
-  sync    due when the last good sync is over 20 hours old (three recurrent runs
-          a day sync once)
-  digest  due when the last good digest is over 7 days old
-Until the config holds real ids (Ben has not made the D1 database yet), nothing
-is due: there is nothing to read.
+One job, the weekly digest: due when the last good digest is over 7 days old.
+The leg copies nothing: the telemetry runner (pdxfixit/telemetry) brings the
+problem reports to this Mac (Ben, 2026-10-16: "the telemetry tooling needs to
+take this over"), and `just logs --digest` reads its mirror. Until that mirror
+is on this Mac (~/.local/state/telemetry/telemetry.sqlite3, $TELEMETRY_DB),
+nothing is due: there is nothing to read.
 
+The gate never writes, and reads only the state and whether the mirror exists.
 State: ~/.local/state/skills/noodlepads-logs.state.json ($NOODLE_LOGS_STATE).
-Repo:  ~/src/noodlepads, else the repo's older folder ($NOODLE_LOGS_REPO).
+Repo:  ~/src/noodlepads ($NOODLE_LOGS_REPO).
 Stdlib only, Python 3.8+.
 """
 import argparse
@@ -26,12 +26,8 @@ import os
 import sys
 from pathlib import Path
 
-SYNC_EVERY = dt.timedelta(hours=20)
 DIGEST_EVERY = dt.timedelta(days=7)
-# D1 keeps an upload, and the player metrics, 14 days; say so well before a
-# gap in syncing loses any.
-SYNC_WARN = dt.timedelta(days=3)
-JOBS = ("sync", "digest")
+JOBS = ("digest",)
 
 
 def state_path():
@@ -45,8 +41,8 @@ def repo_path():
     return Path("~/src/noodlepads").expanduser()
 
 
-def config_path():
-    return Path(os.environ.get("NOODLEPADS_CONFIG") or "~/.config/noodlepads/cloud.json").expanduser()
+def mirror_path():
+    return Path(os.environ.get("TELEMETRY_DB") or "~/.local/state/telemetry/telemetry.sqlite3").expanduser()
 
 
 def now():
@@ -62,18 +58,13 @@ def load_state(path=None):
 
 
 def set_up(repo=None):
-    """None when the cloud config holds real ids, else why not. A missing repo is an error."""
+    """None when the telemetry mirror is on this Mac, else why not. A missing repo is an error."""
     repo = repo or repo_path()
     if not repo.is_dir():
         raise RuntimeError(f"no Noodle Pads repo at {repo}")
-    cfg_path = config_path()
-    if not cfg_path.exists():
-        return f"no {cfg_path} (just doctor says how to make it)"
-    cfg = json.loads(cfg_path.read_text())
-    for field in ("account_id", "database_id"):
-        value = str(cfg.get(field) or "")
-        if not value or value.startswith("<"):
-            return f"{field} not filled in {cfg_path}"
+    mirror = mirror_path()
+    if not mirror.exists():
+        return f"no telemetry mirror at {mirror} (python3 ~/src/telemetry/telemetry.py pull)"
     return None
 
 
@@ -89,7 +80,7 @@ def human(delta):
 def due_jobs(state, t):
     """[(job, reason)] for each job that is due."""
     out = []
-    for job, every in (("sync", SYNC_EVERY), ("digest", DIGEST_EVERY)):
+    for job, every in (("digest", DIGEST_EVERY),):
         last = state["jobs"].get(job, {}).get("last_success")
         a = age(last, t)
         if a is None:
@@ -108,30 +99,22 @@ def cmd_gate(t=None):
     state = load_state()
     due = due_jobs(state, t)
     if not due:
-        sync = age(state["jobs"]["sync"]["last_success"], t)
         digest = age(state["jobs"]["digest"]["last_success"], t)
-        print(f"NOTHING-DUE (last sync {human(sync)}, last digest {human(digest)})")
+        print(f"NOTHING-DUE (last digest {human(digest)})")
         return 0
     print("DUE " + ", ".join(f"{job} ({reason})" for job, reason in due))
     return 10
 
 
-def attention_lines(state, t, configured=True):
+def attention_lines(state):
     lines = []
     for job in JOBS:
         lines += [f"{job}: {a}" for a in state["jobs"].get(job, {}).get("attention") or []]
-    if configured:
-        last = state["jobs"].get("sync", {}).get("last_success")
-        a = age(last, t)
-        if a is not None and a >= SYNC_WARN:
-            lines.append(f"sync: last good sync {human(a)}; D1 deletes uploads and metrics after 14 days")
     return lines
 
 
 def cmd_attention(t=None):
-    t = t or now()
-    configured = set_up() is None
-    for line in attention_lines(load_state(), t, configured):
+    for line in attention_lines(load_state()):
         print(line)
     return 0
 
@@ -145,8 +128,6 @@ def cmd_done(args, t=None):
     js["status"] = args.status
     if args.status == "ok":
         js["last_success"] = t
-    if args.newest:
-        js["newest"] = args.newest
     text = sys.stdin.read() if args.attention == "-" else (
         Path(args.attention).expanduser().read_text() if args.attention else "")
     js["attention"] = [l.strip() for l in text.splitlines() if l.strip()]
@@ -165,7 +146,6 @@ def main(argv=None):
     d.add_argument("job", choices=JOBS)
     d.add_argument("--status", required=True, choices=["ok", "error"])
     d.add_argument("--attention", help="one line per item: a file, or - for stdin")
-    d.add_argument("--newest", help="sync: the newest report key now in the archive")
     sub.add_parser("attention")
     args = ap.parse_args(argv)
     try:

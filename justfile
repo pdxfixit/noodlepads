@@ -127,16 +127,16 @@ cloud-backup file="":
     [ -s "$out" ] || { echo "🛑 nothing was written to $out" >&2; exit 1; }
     echo "✅ cloud database saved: $out ($(wc -c < "$out" | tr -d ' ') bytes)"
 
-# Problem reports (docs/design/automatic-logs.md § 6), from the local archive
+# Problem reports (docs/design/automatic-logs.md § 6), from the telemetry runner's mirror
+# (~/.local/state/telemetry/telemetry.sqlite3, table noodlepads__reports; `telemetry.py pull` first)
 #   just logs                     the last 20 uploads, newest first
 #   just logs --errors            only uploads with errors
 #   just logs K7Q4-M2XD           one device's uploads, each with its event log
 #   just logs --json <key>        one upload as raw JSON
 #   just logs --grep 'text'       errors and notices containing the text
-#   just logs --sql 'SELECT …'    a query (read-only); tables uploads, events
-#   just logs --sync              copy new uploads from D1 into the archive
+#   just logs --sql 'SELECT …'    a query (read only); views uploads, events
 #   just logs --digest            errors and notices since the last marked digest
-[doc("Problem reports from the local archive: just logs, --errors, <device code>, --json, --grep, --sql, --sync (from D1), --digest")]
+[doc("Problem reports from the telemetry runner's mirror (`telemetry.py pull` first): just logs, --errors, <device code>, --json, --grep, --sql, --digest")]
 [positional-arguments]
 logs *args:
     @python3 tools/logs.py "$@"

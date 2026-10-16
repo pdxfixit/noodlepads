@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Tests for gate.py: when sync and digest are due, what attention says, and
-that `done` is the only writer. Scratch state and a scratch repo only.
+"""Tests for gate.py: when the digest is due, what attention says, and that
+`done` is the only writer. The leg copies nothing (Ben, 2026-10-16: the
+telemetry runner takes the copying over). Scratch state, repo and mirror only.
 
   python3 test_gate.py
 """
@@ -21,7 +22,6 @@ sys.path.insert(0, str(HERE))
 import gate  # noqa: E402
 
 T = dt.datetime(2026, 10, 11, 12, 0, tzinfo=dt.timezone.utc)
-REAL = {"account_id": "acct", "database_id": "db", "keychain_service": "noodlepads-logs"}
 
 
 class Scratch(unittest.TestCase):
@@ -30,13 +30,14 @@ class Scratch(unittest.TestCase):
         self.dir = Path(self._tmp.name)
         self.state = self.dir / "state" / "noodlepads-logs.state.json"
         self.repo = self.dir / "repo"
-        self.cloud = self.dir / "config" / "cloud.json"
+        self.mirror = self.dir / "telemetry" / "telemetry.sqlite3"
         (self.repo / "tools").mkdir(parents=True)
-        self.config(REAL)
-        self._env = {k: os.environ.get(k) for k in ("NOODLE_LOGS_STATE", "NOODLE_LOGS_REPO", "NOODLEPADS_CONFIG")}
+        self.mirror.parent.mkdir()
+        self.mirror.write_bytes(b"")
+        self._env = {k: os.environ.get(k) for k in ("NOODLE_LOGS_STATE", "NOODLE_LOGS_REPO", "TELEMETRY_DB")}
         os.environ["NOODLE_LOGS_STATE"] = str(self.state)
         os.environ["NOODLE_LOGS_REPO"] = str(self.repo)
-        os.environ["NOODLEPADS_CONFIG"] = str(self.cloud)
+        os.environ["TELEMETRY_DB"] = str(self.mirror)
 
     def tearDown(self):
         for k, v in self._env.items():
@@ -46,13 +47,9 @@ class Scratch(unittest.TestCase):
                 os.environ[k] = v
         self._tmp.cleanup()
 
-    def config(self, cfg):
-        self.cloud.parent.mkdir(parents=True, exist_ok=True)
-        self.cloud.write_text(json.dumps(cfg))
-
-    def write_state(self, sync_ago=None, digest_ago=None, **extra):
+    def write_state(self, digest_ago=None, **extra):
         jobs = {}
-        for job, ago in (("sync", sync_ago), ("digest", digest_ago)):
+        for job, ago in (("digest", digest_ago),):
             if ago is not None:
                 jobs[job] = {"last_success": (T - ago).isoformat(timespec="seconds"), "status": "ok",
                              **extra.get(job, {})}
@@ -72,44 +69,37 @@ class Scratch(unittest.TestCase):
 
 
 class Due(Scratch):
-    def test_first_run_is_due_for_both(self):
-        code, line = self.gate()
-        self.assertEqual(code, 10)
-        self.assertEqual(line, "DUE sync (never succeeded), digest (never succeeded)")
+    def test_first_run_is_due_for_the_digest_only(self):
+        self.assertEqual(self.gate(), (10, "DUE digest (never succeeded)"))
 
-    def test_sync_is_due_after_20_hours_not_before(self):
-        self.write_state(sync_ago=dt.timedelta(hours=19, minutes=59), digest_ago=dt.timedelta(days=1))
-        self.assertEqual(self.gate()[0], 0)
-        self.write_state(sync_ago=dt.timedelta(hours=20), digest_ago=dt.timedelta(days=1))
-        code, line = self.gate()
-        self.assertEqual(code, 10)
-        self.assertEqual(line, "DUE sync (last good sync 20h ago)")
-
-    def test_digest_is_due_after_7_days(self):
-        self.write_state(sync_ago=dt.timedelta(hours=1), digest_ago=dt.timedelta(days=7))
-        code, line = self.gate()
-        self.assertEqual((code, line), (10, "DUE digest (last good digest 7d ago)"))
+    def test_digest_is_due_after_7_days_not_before(self):
+        self.write_state(digest_ago=dt.timedelta(days=6, hours=23))
+        self.assertEqual(self.gate(), (0, "NOTHING-DUE (last digest 7d ago)"))
+        self.write_state(digest_ago=dt.timedelta(days=7))
+        self.assertEqual(self.gate(), (10, "DUE digest (last good digest 7d ago)"))
 
     def test_quiet_says_how_long_ago(self):
-        self.write_state(sync_ago=dt.timedelta(hours=3), digest_ago=dt.timedelta(days=2))
-        self.assertEqual(self.gate(), (0, "NOTHING-DUE (last sync 3h ago, last digest 2d ago)"))
+        self.write_state(digest_ago=dt.timedelta(days=2))
+        self.assertEqual(self.gate(), (0, "NOTHING-DUE (last digest 2d ago)"))
 
-    def test_a_failed_sync_stays_due(self):
-        self.write_state(sync_ago=dt.timedelta(hours=30), digest_ago=dt.timedelta(days=1))
+    def test_a_failed_digest_stays_due(self):
+        self.write_state(digest_ago=dt.timedelta(days=8))
         state = json.loads(self.state.read_text())
-        state["jobs"]["sync"]["status"] = "error"
+        state["jobs"]["digest"]["status"] = "error"
         self.state.write_text(json.dumps(state))
         self.assertEqual(self.gate()[0], 10)
 
-    def test_not_set_up_is_nothing_due(self):
-        self.config({**REAL, "database_id": "<id printed by wrangler>"})
+    def test_no_mirror_on_this_mac_is_not_set_up(self):
+        self.mirror.unlink()
         code, line = self.gate()
         self.assertEqual(code, 0)
-        self.assertIn("not set up: database_id", line)
+        self.assertIn(f"not set up: no telemetry mirror at {self.mirror}", line)
+        self.assertIn("telemetry.py pull", line)
 
-    def test_no_config_file_yet_is_not_set_up(self):
-        self.cloud.unlink()
-        self.assertEqual(self.gate(), (0, f"NOTHING-DUE (not set up: no {self.cloud} (just doctor says how to make it))"))
+    def test_there_is_no_sync_job_any_more(self):
+        self.assertEqual(gate.JOBS, ("digest",))
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            gate.main(["done", "sync", "--status", "ok"])
 
     def test_a_missing_repo_or_bad_state_is_a_gate_error_not_nothing_due(self):
         os.environ["NOODLE_LOGS_REPO"] = str(self.dir / "nope")
@@ -125,44 +115,34 @@ class Due(Scratch):
 
 
 class Attention(Scratch):
-    def test_lists_each_jobs_items_and_a_stale_sync(self):
-        self.write_state(sync_ago=dt.timedelta(days=4), digest_ago=dt.timedelta(days=1),
-                         sync={"attention": ["D1 query: HTTP 403"]}, digest={"attention": ["TODO.md busy"]})
-        code, text = self.gate("attention")
-        self.assertEqual(code, 0)
-        self.assertEqual(text.splitlines(), [
-            "sync: D1 query: HTTP 403", "digest: TODO.md busy",
-            "sync: last good sync 4d ago; D1 deletes uploads and metrics after 14 days"])
+    def test_lists_the_digests_items(self):
+        self.write_state(digest_ago=dt.timedelta(days=1), digest={"attention": ["TODO.md busy"]})
+        self.assertEqual(self.gate("attention"), (0, "digest: TODO.md busy"))
 
-    def test_quiet_when_all_is_well_or_not_set_up(self):
-        self.write_state(sync_ago=dt.timedelta(hours=1), digest_ago=dt.timedelta(days=1))
-        self.assertEqual(self.gate("attention"), (0, ""))
-        self.config({**REAL, "account_id": "<fill>"})
-        self.write_state(sync_ago=dt.timedelta(days=9), digest_ago=dt.timedelta(days=1))
+    def test_quiet_when_all_is_well(self):
+        self.write_state(digest_ago=dt.timedelta(days=1))
         self.assertEqual(self.gate("attention"), (0, ""))
 
 
 class Done(Scratch):
-    def test_done_records_success_newest_key_and_replaces_attention(self):
+    def test_done_records_success_and_replaces_attention(self):
         notes = self.dir / "att.txt"
         notes.write_text("one\n\n two \n")
-        self.assertEqual(self.gate("done", "sync", "--status", "error", "--attention", str(notes))[0], 0)
-        s = json.loads(self.state.read_text())["jobs"]["sync"]
+        self.assertEqual(self.gate("done", "digest", "--status", "error", "--attention", str(notes))[0], 0)
+        s = json.loads(self.state.read_text())["jobs"]["digest"]
         self.assertEqual((s["status"], s["attention"], s.get("last_success")), ("error", ["one", "two"], None))
-        self.gate("done", "sync", "--status", "ok", "--newest", "2026-10-11T00:00:00.000Z_AAAA-BBBB_01")
-        s = json.loads(self.state.read_text())["jobs"]["sync"]
+        self.gate("done", "digest", "--status", "ok")
+        s = json.loads(self.state.read_text())["jobs"]["digest"]
         self.assertEqual(s["attention"], [])
-        self.assertEqual(s["newest"], "2026-10-11T00:00:00.000Z_AAAA-BBBB_01")
         self.assertTrue(s["last_success"])
 
     def test_done_then_gate_is_quiet(self):
-        self.gate("done", "sync", "--status", "ok")
         self.gate("done", "digest", "--status", "ok")
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(gate.cmd_gate(), 0)
 
     def test_the_gate_and_attention_never_write(self):
-        self.write_state(sync_ago=dt.timedelta(days=4), digest_ago=dt.timedelta(days=9))
+        self.write_state(digest_ago=dt.timedelta(days=9))
         before = (self.state.read_bytes(), self.state.stat().st_mtime_ns)
         self.gate()
         self.gate("attention")
@@ -190,6 +170,12 @@ class Skill(unittest.TestCase):
         self.assertIn("leg of the recurrent routine", " ".join(front.split()))
         self.assertIn("leg.py finish noodlepads-logs", text)
         self.assertIn("~/.local/state/skills/noodlepads-logs.state.json", text)
+
+    def test_skill_md_copies_nothing(self):
+        text = (HERE / "SKILL.md").read_text()
+        self.assertNotIn("--sync", text)
+        self.assertNotIn("logs.sqlite3", text)
+        self.assertIn("telemetry.py pull", text)
 
 
 if __name__ == "__main__":

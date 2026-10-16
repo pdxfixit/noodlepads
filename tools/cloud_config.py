@@ -5,10 +5,14 @@ public, so none of them belong in it):
   ~/.config/noodlepads/cloud.json   the Cloudflare account and D1 database ids
                                     ($NOODLEPADS_CONFIG); tools/cloud.example.json
                                     is the template
-  ~/.local/state/noodlepads/        the report and metrics archives; an older
+  ~/.local/state/noodlepads/        the last marked problem-report digest
+                                    (logs-digest.json); an older
                                     ~/.local/state/noodle-pads is moved here
-                                    the first time it is asked for
-  Keychain `noodlepads-logs`        the read-only D1 token (just logs --sync); an
+                                    the first time it is asked for. Reports and
+                                    metrics are read from the telemetry runner's
+                                    mirror, not from here (Ben, 2026-10-16)
+  Keychain `noodlepads-logs`        a read-only Cloudflare token, for a harvest
+                                    run by hand (site/harvest.conf keychain=); an
                                     item under the older `noodle-pads-logs` still
                                     works, with a hint to rename it
 
