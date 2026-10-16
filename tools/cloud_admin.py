@@ -264,7 +264,9 @@ def stats(db, now=None, out=print, archive=None, days=14, tz=None):
         conn = open_archive(archive)   # the schema, or the store's read-only views
     out('')
     out(harvest_line(conn, archive_name(archive)))
-    metrics_report(conn, now, out, days=days, tz=tz)
+    # Names come from the live cloud only: the harvest keeps no names (site/harvest.conf).
+    names = {r['id']: f"{r.get('avatar') or ''} {r['name']}".strip() for r in rows}
+    metrics_report(conn, now, out, days=days, tz=tz, names=names)
     return rows
 
 
@@ -274,8 +276,8 @@ def stats(db, now=None, out=print, archive=None, days=14, tz=None):
 # on an archive nothing has filled yet. activity's ip_hash is from before
 # 2026-10-15: the archive never drops a column, and it was always empty.
 ARCHIVE_SCHEMA = """
-CREATE TABLE IF NOT EXISTS players (     -- each profile's look, kept after the cloud forgets it
-  id TEXT PRIMARY KEY, name TEXT, avatar TEXT, created INTEGER
+CREATE TABLE IF NOT EXISTS players (     -- each profile's id and when it was made; never its name or avatar
+  id TEXT PRIMARY KEY, created INTEGER
 );
 CREATE TABLE IF NOT EXISTS devices (     -- as D1's devices (worker/schema.sql), the latest copy wins
   hash TEXT PRIMARY KEY, profile_id TEXT, first_seen INTEGER, last_seen INTEGER, syncs INTEGER,
@@ -412,19 +414,20 @@ def place_of(a):
     return a['country'] or 'unknown country'
 
 
-def metrics_report(conn, now, out=print, days=14, tz=None):
+def metrics_report(conn, now, out=print, days=14, tz=None, names=None):
     """Per player (test profiles left out), newest activity first: devices,
     places (the country), activity by day and by hour
     of the day (this Mac's time, or `tz`), what each event was, feature use,
     and visits. A player seen from more than one place is flagged ⚠️. Then
     the errors visits saw, everyone's, by where they came from. Returns
-    {profile_id: number of places}."""
+    {profile_id: number of places}. `names`: {profile_id: shown name}, from
+    the live cloud; a player no longer there shows as (gone)."""
     tz = tz or datetime.now().astimezone().tzinfo
 
     def q(sql, *a):
         return conn.execute(sql, a).fetchall()
 
-    names = {r[0]: f"{r[2] or ''} {r[1]}".strip() for r in q('SELECT id, name, avatar FROM players')}
+    names = names or {}
     ids = [r[0] for r in q('SELECT profile_id FROM activity GROUP BY profile_id ORDER BY MAX(at) DESC')]
     ids += [r[0] for r in q('SELECT DISTINCT profile_id FROM devices') if r[0] not in ids]
     ids = [i for i in ids if not is_test(i)]
