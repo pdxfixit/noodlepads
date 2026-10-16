@@ -95,12 +95,10 @@ test('visits left from before stay for their person, junk goes (visits.js)', asy
   assert.equal(pendingVisits('toby'), null, 'a broken one is dropped');
 });
 
-test('usage events left from before stay, junk goes, and a player id that is not a random one is replaced (telemetry.js)', async () => {
+test('the usage queue this app kept before the shared client is dropped, and a player id that is not a random one is replaced (telemetry.js)', async () => {
   const { currentTelemetry } = await import('../web/telemetry.js');
   const t = currentTelemetry();
-  const left = t.queued().filter((r) => r.session === 's-1');
-  assert.deepEqual(left.map((r) => r.event), ['app.open']);
-  assert.ok(t.queued().every((r) => r.event !== 'no.such'));
+  assert.equal(remembered.has('telemetry-queue'), false);
   assert.match(t.player, /^[0-9a-f-]{36}$/);
   assert.equal(remembered.get('telemetry-player'), t.player);
 });

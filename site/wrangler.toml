@@ -1,9 +1,10 @@
 # Noodle Pads on Cloudflare: one Worker serving web/ as static files and
-# worker/ for /api (cloud profiles, problem reports, player metrics).
+# worker/ for /api (cloud profiles, problem reports, player metrics, usage events).
 # Deployed by flarepress (github.com/pdxfixit/flarepress): on every push to
 # main by .github/workflows/deploy.yml, or by Ben's `just deploy`.
 # Apex only: a www copy would be a second origin with its own saved sounds.
-# One D1 database, nothing else (keep the free-plan footprint small).
+# One D1 database and one R2 bucket for usage events, nothing else (keep the
+# free-plan footprint small).
 # This repo is public: the database id is ${D1_DATABASE_ID}, filled at deploy
 # time from a GitHub secret or ~/.config/noodlepads/cloud.json.
 name = "noodlepads-com"
@@ -22,3 +23,9 @@ binding = "ASSETS"
 binding = "DB"
 database_name = "noodle-pads"
 database_id = "${D1_DATABASE_ID}"
+
+# Usage events (POST /api/events, worker/events-worker.js from flarepress):
+# each batch stored as sent; the telemetry runner's job reads and deletes them.
+[[r2_buckets]]
+binding = "EVENTS"
+bucket_name = "noodlepads-telemetry"

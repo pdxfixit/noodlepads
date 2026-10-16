@@ -188,14 +188,14 @@ export function trackPage(deps) {
       hiddenAt = now();
       if (long.n) track('perf.longtask', long);
       long = { n: 0, ms: 0 };
+      // Heard before the shared client's own listener (it starts later), so
+      // this record is in the batch it sends as the page hides.
       track('app.background', { shown_ms: hiddenAt - shownAt });
-      t.flush();
     } else {
       shownAt = now();
       track('app.foreground', { away_ms: hiddenAt ? shownAt - hiddenAt : null });
     }
   });
-  win.addEventListener?.('pagehide', () => t.flush());
   try {
     new win.PerformanceObserver((list) => {
       for (const e of list.getEntries()) { long.n += 1; long.ms += Math.round(e.duration); }
