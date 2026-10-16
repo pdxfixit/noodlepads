@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { state } from '../web/state.js';
-import { SETTINGS, getSetting, setSetting, onSetting, cleanPrefs, allowedValue } from '../web/settings.js';
+import { SETTINGS, getSetting, setSetting, onSetting, cleanPrefs, allowedValue, deviceChoice } from '../web/settings.js';
 import { stubBanner } from './banner.mjs';
 
 // Storage is closed in these tests, so a save fails and shows a notice; this
@@ -44,17 +44,23 @@ test('the beat maker starts simple: advanced beats off, 4/4', () => {
   assert.equal(getSetting('timeSignature'), '4/4');
 });
 
-// Ben, 2026-10-11: AZERTY and Colemak left the DJ keyboard choices. One
-// stored on the device or in a person's settings (from a backup or the
-// cloud) reads as Auto, never as an error or a lost record.
-test('a stored AZERTY or Colemak DJ keyboard reads as Auto', async () => {
-  assert.deepEqual(SETTINGS.djLayout.values, ['auto', 'qwerty', 'dvorak']);
-  for (const old of ['azerty', 'colemak']) {
+// Ben, 2026-10-11: AZERTY and Colemak left the DJ keyboard choices;
+// 2026-10-16: Auto too, for the Q / D keycaps. One stored on the device (or
+// from a backup or the cloud) reads as never picked, never as an error: the
+// keyboard the browser sees decides (dj.js).
+test('the DJ keyboard is QWERTY or Dvorak; a stored Auto, AZERTY or Colemak reads as never picked', async () => {
+  assert.deepEqual(SETTINGS.djLayout.values, ['qwerty', 'dvorak']);
+  for (const old of ['auto', 'azerty', 'colemak']) {
     state.settings = new Map([['djLayout', old]]);
-    assert.equal(getSetting('djLayout'), 'auto', old);
+    assert.equal(getSetting('djLayout'), 'qwerty', old);
+    assert.equal(deviceChoice('djLayout'), undefined, `${old}: not picked`);
   }
-  await assert.rejects(setSetting('djLayout', 'azerty'), /isn't a value/);
+  state.settings = new Map([['djLayout', 'dvorak']]);
+  assert.equal(deviceChoice('djLayout'), 'dvorak');
   state.settings = new Map();
+  assert.equal(deviceChoice('djLayout'), undefined, 'never picked');
+  assert.equal(deviceChoice('padSize'), undefined, 'only a device setting is the device\'s choice');
+  await assert.rejects(setSetting('djLayout', 'auto'), /isn't a value/);
 });
 
 // Ben, 2026-10-11: the pad size became a smooth slider, then its ends became

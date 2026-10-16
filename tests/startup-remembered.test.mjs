@@ -23,12 +23,11 @@ const remembered = new Map(Object.entries({
   'dj-input': 'touch',   // ⌨️ / 👆: the touch layout (ADR 0029)
   'beat-click': '1',
   'dj-layout': 'dvorak',
-  'dj-labels': '{"KeyQ":"\'"}',
   'kit-open': '["drums","notes"]',
   'groups-closed': '["g-farm","","not-a-group"]',
   'chooser-closed': '["person:toby"]',
   'log-device': 'K7Q4-M2XD',
-  'settings-open': '["set-keys","set-reports","!set-privacy","gone"]',
+  'settings-open': '["set-look","set-reports","!set-privacy","gone"]',
   uses: '{"juno":{"pad":3,"nope":1},"toby":"junk"}',
   visits: '[{"person":"juno","visit":{"at":1791000000000,"secs":40,"screens":["pads","nope"]}},"junk",{"person":"toby","visit":{"at":"x","secs":5}}]',
   'kids-tab': 'beats',
@@ -75,7 +74,7 @@ test('with every remembered choice set, the app starts on the remembered screen'
   assert.equal($('#dj-overlap').getAttribute('aria-pressed'), 'false', '🔔 Overlap starts off on every visit');
   $('#pads-tab').dispatch('click');
   const open = $('#settings-dialog').querySelectorAll('.set-fold').filter((f) => !f.querySelector('.set-body').hidden).map((f) => f.id);
-  assert.deepEqual(open, ['set-keys'], 'the Settings sections left open (set-reports is gone)');
+  assert.deepEqual(open, ['set-look'], 'the Settings sections left open (set-reports is gone)');
 });
 
 // ADR 0027: nothing counts or sends these any more, so a device that still

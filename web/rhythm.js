@@ -37,31 +37,36 @@ export function fallbackLabel(code) {
   return PUNCTUATION[code] ?? (/^Key[A-Z]$/.test(code) ? code.slice(3) : '');
 }
 
-// The layouts a kid can pick in Settings, for browsers that won't say
-// (Safari, Firefox): what each of the 40 keys prints, row by row, in
-// KEY_ROWS order (the digits are the same on both); "auto" asks the browser and learns from presses. Only
-// QWERTY and Dvorak (Ben, 2026-10-11: AZERTY and Colemak dropped; a stored
-// one reads as Auto, settings.js).
+// The two keyboards a kid can pick (the Q / D keycaps under ⌨️ / 👆, dj.js):
+// what each of the 40 keys prints, row by row, in KEY_ROWS order (the digits
+// are the same on both). Only QWERTY and Dvorak (Ben, 2026-10-11: AZERTY and
+// Colemak dropped; 2026-10-16: Auto dropped too; a stored one of those reads
+// as not picked, and the browser's own layout decides, settings.js).
 export const LAYOUTS = {
   qwerty: ['1234567890', 'QWERTYUIOP', 'ASDFGHJKL;', 'ZXCVBNM,./'],
   dvorak: ['1234567890', "',.PYFGCRL", 'AOEUIDHTNS', ';QJKXBMWVZ'],
 };
-export const LAYOUT_NAMES = { auto: 'Auto', qwerty: 'QWERTY', dvorak: 'Dvorak' };
-// Which key a keypress is. With a layout picked, by the character typed,
-// found in that layout's picture: right whether the computer or the keyboard
-// itself does the layout (a Kinesis or other keyboard that remaps in its own
-// firmware sends the letter's code, not the key's place). With "auto", by
-// the key's place (KeyboardEvent.code), which the computer's own layout
-// setting never changes. Null when it is none of the 40. A number key with
-// Shift types "!" or "@", which no layout's picture has: it is still its
-// number key, by place (Shift+key is "a pill earlier" while recording).
+export const LAYOUT_NAMES = { qwerty: 'QWERTY', dvorak: 'Dvorak' };
+// The keyboard the browser says this is, from its layout map (Chrome, Edge:
+// navigator.keyboard.getLayoutMap): Dvorak when the top-left letter key
+// prints an apostrophe, else QWERTY. Null when there is no map to ask.
+export function detectLayout(map) {
+  if (!map || typeof map.get !== 'function') return null;
+  return map.get('KeyQ') === "'" ? 'dvorak' : 'qwerty';
+}
+// Which key a keypress is: by the character typed, found in the layout's
+// picture, so it is right whether the computer or the keyboard itself does
+// the layout (a Kinesis or other keyboard that remaps in its own firmware
+// sends the letter's code, not the key's place). A character not on the
+// picture (Shift+1 types "!", a Cyrillic or Greek layout, a dead key) is
+// its key by place (KeyboardEvent.code): Shift+key is "a pill earlier"
+// while recording, and a keyboard of other letters still plays. With no
+// layout, by place. Null when it is none of the 40.
 export function keyFor(e, layout) {
-  if (layout && layout !== 'auto' && LAYOUTS[layout]) {
+  if (LAYOUTS[layout]) {
     const ch = typeof e.key === 'string' && e.key.length === 1 ? e.key.toUpperCase() : null;
-    if (!ch) return null;
-    const found = KEY_CODES.find((code) => layoutLabel(code, layout) === ch);
+    const found = ch && KEY_CODES.find((code) => layoutLabel(code, layout) === ch);
     if (found) return found;
-    return e.shiftKey && /^Digit\d$/.test(e.code) ? e.code : null;
   }
   return KEY_CODES.includes(e.code) ? e.code : null;
 }

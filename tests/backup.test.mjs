@@ -448,10 +448,10 @@ test('a backup from before the pad size slider loads its S M L, or its percent, 
   assert.equal(out.skipped, 1);
 });
 
-test('a backup with a dropped DJ keyboard (AZERTY, Colemak) loads it as Auto', async () => {
-  const out = await read({ settings: [{ key: 'djLayout', value: 'colemak' }, { key: 'djLayout', value: 'dvorak' }] });
-  assert.deepEqual(out.settings, [{ key: 'djLayout', value: 'auto' }, { key: 'djLayout', value: 'dvorak' }]);
-  assert.equal(out.skipped, 0);
+test('a backup with a dropped DJ keyboard (Auto, AZERTY, Colemak) leaves it out, so this device keeps its own', async () => {
+  const out = await read({ settings: [{ key: 'djLayout', value: 'colemak' }, { key: 'djLayout', value: 'auto' }, { key: 'djLayout', value: 'dvorak' }] });
+  assert.deepEqual(out.settings, [{ key: 'djLayout', value: 'dvorak' }]);
+  assert.equal(out.skipped, 2);
 });
 
 test('DJ decks and takes travel in a backup, cleaned; a backup without them loads', async () => {

@@ -1133,18 +1133,28 @@ test('🎤 Live: 40 keys like the number row and the letter rows, drums on the h
   assert.equal(page.key('a', { code: 'KeyA', target: field }).defaultPrevented, false);
   // Other keys are left alone.
   assert.equal(page.key('Enter', { code: 'Enter' }).defaultPrevented, false);
-  assert.ok($('#settings-dialog').contains($('#dj-layout')), 'the Keyboard chooser lives in Settings');
   assert.match($('#screen-hint').textContent, /^Tap a key/, 'the DJ how-to is in the page footer');
-  // The Keyboard chooser relabels the same physical keys (a Dvorak home row).
-  $('#dj-layout').value = 'dvorak';
-  $('#dj-layout').dispatch('change');
-  assert.equal($('#dj-keys').querySelector('[data-code="KeyS"]').getAttribute('aria-label'), 'O: Snare');
-  // It is a key per layout, with the picker as their fallback; a key does the same.
+  // Q / D hang under ⌨️ / 👆 while the keys show letters (Ben, 2026-10-16),
+  // and Settings has no Keyboard section any more.
+  assert.equal($('#set-keys'), null, 'no ⌨️ Keyboard in Settings');
+  assert.equal($('#dj-input-line').contains($('#dj-layout-keys')), true, 'Q / D sit with ⌨️ / 👆');
+  assert.equal($('#dj-layout-keys').hidden, false, 'a keyboard was pressed: Q / D show');
   const layoutKeys = $('#dj-layout-keys').querySelectorAll('[data-layout]');
-  assert.deepEqual(layoutKeys.map((b) => b.textContent), ['Auto', 'QWERTY', 'Dvorak']);
-  assert.deepEqual(layoutKeys.filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.layout), ['dvorak'], 'the picker presses its key');
-  layoutKeys.find((b) => b.dataset.layout === 'auto').click();
+  assert.deepEqual(layoutKeys.map((b) => b.dataset.layout), ['qwerty', 'dvorak'], 'no Auto');
+  assert.deepEqual(layoutKeys.map((b) => b.getAttribute('aria-label')), ['QWERTY keyboard', 'Dvorak keyboard']);
+  assert.deepEqual(layoutKeys.filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.layout), ['qwerty'], 'never picked, and the browser says nothing: QWERTY');
+  // D relabels the same physical keys (a Dvorak home row), and is kept as the device's.
+  layoutKeys.find((b) => b.dataset.layout === 'dvorak').click();
+  assert.equal($('#dj-keys').querySelector('[data-code="KeyS"]').getAttribute('aria-label'), 'O: Snare');
+  assert.deepEqual(layoutKeys.filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.layout), ['dvorak']);
+  assert.equal(state.settings.get('djLayout'), 'dvorak', 'kept as this device\'s');
+  layoutKeys.find((b) => b.dataset.layout === 'qwerty').click();
   assert.equal($('#dj-keys').querySelector('[data-code="KeyS"]').getAttribute('aria-label'), 'S: Snare');
+  // With 👆 there are no letters, so no Q / D.
+  $('#dj-input').querySelector('[data-input="touch"]').click();
+  assert.equal($('#dj-layout-keys').hidden, true, 'gone with 👆');
+  $('#dj-input').querySelector('[data-input="keys"]').click();
+  assert.equal($('#dj-layout-keys').hidden, false, 'back with ⌨️');
   $('#pads-tab').dispatch('click');
   assert.equal($('#dj').hidden, true);
   assert.equal(page.key('a', { code: 'KeyA' }).defaultPrevented, false, 'the keys play only where they show');
