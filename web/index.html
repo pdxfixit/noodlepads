@@ -856,12 +856,6 @@
           <label class="sheet-name"><span class="sr-only">Name</span><input id="clip-label" maxlength="24" autocomplete="off" placeholder="Airhorn"></label>
         </div>
         <button type="button" class="close" data-close aria-label="Close">✕</button>
-        <!-- Closing with unsaved work asks first (Ben, 2026-10-16): in the heading, so it is in view however far the sheet has scrolled. -->
-        <div class="sheet-warn" id="sheet-warn" role="alert" hidden>
-          <p class="sheet-warn-text" id="sheet-warn-text">Throw away your changes?</p>
-          <button type="button" class="chain-tool" id="sheet-warn-keep">Keep editing</button>
-          <button type="button" class="chain-tool sheet-warn-drop" id="sheet-warn-drop">Throw away</button>
-        </div>
       </div>
 
       <!-- Parts of the sheet: the sound and its wave; its voice, then its Layers; how it looks.
@@ -1031,6 +1025,18 @@
         <button type="submit" class="primary" id="save-btn">Save sound</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- Closing the sound sheet with unsaved work asks first (Ben, 2026-10-16): a modal over it, in the middle of the screen. Esc or a tap outside is Keep editing. -->
+  <dialog id="sheet-warn" class="np-dialog sheet-warn" aria-labelledby="sheet-warn-text">
+    <div class="sheet-warn-body">
+      <h2 class="sheet-warn-title" id="sheet-warn-text">Throw away your changes?</h2>
+      <p class="sheet-warn-sub" id="sheet-warn-sub">They are not saved yet.</p>
+      <div class="sheet-warn-buttons">
+        <button type="button" class="chain-tool" id="sheet-warn-keep" data-close>Keep editing</button>
+        <button type="button" class="chain-tool sheet-warn-drop" id="sheet-warn-drop">Throw away</button>
+      </div>
+    </div>
   </dialog>
 </body>
 </html>

@@ -198,24 +198,25 @@ test('closing an untouched sheet never asks; closing one with changes asks, and 
   assert.equal($('#sheet').open, false, 'nothing changed: ✕ just closes');
 
   await openEditor();
-  assert.equal($('#sheet-warn').hidden, true);
+  assert.equal($('#sheet-warn').open, false);
   chip('chipmunk').dispatch('click');
   closeX();
   assert.equal($('#sheet').open, true, 'a changed knob: ✕ keeps the sheet open');
-  assert.equal($('#sheet-warn').hidden, false);
+  assert.equal($('#sheet-warn').open, true, 'the question is a modal over the sheet');
   assert.equal($('#sheet-warn-text').textContent, 'Throw away your changes?');
   assert.equal(cancelEsc().defaultPrevented, true, 'Esc is held back too');
   $('#sheet-warn-keep').dispatch('click');
-  assert.equal($('#sheet-warn').hidden, true, 'Keep editing hides the question');
+  assert.equal($('#sheet-warn').open, false, 'Keep editing closes the question');
   assert.equal($('#sheet').open, true);
   assert.deepEqual(lit(), ['chipmunk'], 'and the work is as it was');
 
   closeX();
   $('#sheet-warn-drop').dispatch('click');
-  assert.equal($('#sheet').open, false, 'Throw away closes it');
+  assert.equal($('#sheet').open, false, 'Throw away closes the sheet');
+  assert.equal($('#sheet-warn').open, false, 'and the question');
 
   await openEditor();
-  assert.equal($('#sheet-warn').hidden, true, 'the next sheet starts with no question showing');
+  assert.equal($('#sheet-warn').open, false, 'the next sheet starts with no question showing');
   closeX();
   assert.equal($('#sheet').open, false, 'and nothing carried over: it is untouched again');
 });
@@ -242,7 +243,7 @@ test('Save closes the sheet without asking', async () => {
   $('#sheet-form').dispatch('submit');
   await page.settle();
   assert.equal($('#sheet').open, false);
-  assert.equal($('#sheet-warn').hidden, true);
+  assert.equal($('#sheet-warn').open, false);
 });
 
 test('a new sound that was made but not saved asks, in its own words; one with nothing yet does not', async () => {

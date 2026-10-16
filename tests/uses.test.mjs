@@ -183,8 +183,9 @@ test('with the usage switch off nothing is counted or waiting, clearUses empties
 test('every dialog the app has counts as it opens, under a name on the list', () => {
   const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
   const ids = [...html.matchAll(/<dialog[^>]*\bid="([^"]+)"/g)].map((m) => m[1]);
-  // Counted where they open, or by what they do (uses.js DIALOG_USES).
-  const elsewhere = new Set(['kids-sum', 'grooves', 'mixer', 'roll']);
+  // Counted where they open, or by what they do (uses.js DIALOG_USES); the
+  // sound sheet's "Throw away your changes?" is a question, not a feature, so it is not counted.
+  const elsewhere = new Set(['kids-sum', 'grooves', 'mixer', 'roll', 'sheet-warn']);
   for (const id of ids) {
     if (elsewhere.has(id)) assert.equal(useOfDialog({ id }), null, id);
     else assert.ok(USES.includes(useOfDialog({ id })), `#${id} counts`);
