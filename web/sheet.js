@@ -84,6 +84,7 @@ const sheet = {
   edits: null,          // the wave editor's changes to parts of the stored audio (cuts.js), or null
   fade: null,           // the wave editor's fades, {in, out} seconds, or null
   downloadUrl: null,
+  opened: '',           // sheetSignature() as the sheet opened: unlike it now, closing would lose work
 };
 
 // The live preview (Advanced): while a live step's slider is held, the sound
@@ -950,7 +951,9 @@ export function openSheet(mode, clip = null, { returnToPad = null } = {}) {
     focus: first,
     returnTo: () => (returnToPad ? padFor(returnToPad) : document.querySelector('#pads .pad-add')),
   });
+  hideWarn();
   placeStickyRow();
+  sheet.opened = sheetSignature();
   clearInterval(playWatch);
   playWatch = setInterval(syncPlay, 150);
   syncPlay();
@@ -989,7 +992,41 @@ function closeSheet() {
   if (el.sheet.open) el.sheet.close();
 }
 
+// ── Closing with unsaved work (Ben, 2026-10-16) ───────────────────────────
+// What Save would store, plus a recording or file not yet saved and a voice
+// name being typed, as one string. The sheet's as-opened copy against now says
+// whether the ✕, the backdrop or Esc would lose something.
+function sheetSignature() {
+  const fields = chainFields(sheet.chain);
+  const sound = sheet.pending ? [sheet.pending.blob?.size ?? 1, sheet.pending.synth ?? null] : null;
+  return JSON.stringify([el.label.value.trim(), sheet.emoji, sheet.color, fields, storedTweaks() ?? null,
+    sheet.trim, sheet.edits, sheet.fade, sound, sheet.keep ? el.keepName.value.trim() : '']);
+}
+
+// A recording in progress, or anything changed since the sheet opened.
+const sheetHasWork = () => el.sheet.open && (isRecording() || sheetSignature() !== sheet.opened);
+
+function hideWarn() {
+  if (el.warn.hidden) return;
+  el.warn.hidden = true;
+  placeStickyRow();
+}
+
+// ✕, a tap on the backdrop and Esc come here (dialogs.js): false keeps the
+// sheet open and shows the question in its heading, Keep editing focused so
+// a stray Enter keeps the work.
+function askBeforeClosing() {
+  if (!sheetHasWork()) return true;
+  el.warnText.textContent = isRecording() ? 'Throw away this recording?'
+    : sheet.pending && sheet.mode === 'new' ? 'Throw away this sound?' : 'Throw away your changes?';
+  el.warn.hidden = false;
+  placeStickyRow();
+  el.warnKeep.focus({ preventScroll: true });
+  return false;
+}
+
 function cleanupSheet() {
+  hideWarn();
   clearInterval(playWatch);
   stopRecording({ discard: true });
   cut.close();
@@ -1613,6 +1650,10 @@ export function initSheet() {
     keepForm: $('#keep-form'),
     keepTitle: $('#keep-title'),
     keepName: $('#keep-name'),
+    warn: $('#sheet-warn'),
+    warnText: $('#sheet-warn-text'),
+    warnKeep: $('#sheet-warn-keep'),
+    warnDrop: $('#sheet-warn-drop'),
     keepEmoji: $('#keep-emoji'),
     keepSave: $('#keep-save'),
     keepSaveLabel: $('#keep-save-label'),
@@ -1669,8 +1710,12 @@ export function initSheet() {
   meter.sheetOpen = isSheetOpen;
   meter.recording = isRecording;
 
-  setupDialog(el.sheet);
+  setupDialog(el.sheet, { beforeClose: askBeforeClosing });
   el.sheet.addEventListener('close', cleanupSheet);
+  el.warnKeep.addEventListener('click', () => { hideWarn(); el.sheet.querySelector('.sheet-head .close')?.focus({ preventScroll: true }); });
+  el.warnDrop.addEventListener('click', closeSheet);
+  // Closing or reloading the tab with the sheet holding work asks the browser's own question.
+  window.addEventListener('beforeunload', (e) => { if (sheetHasWork()) { e.preventDefault(); e.returnValue = ''; } });
   el.recBtn.addEventListener('click', () => {
     if (recording.recorder) stopRecording();
     else startRecording();

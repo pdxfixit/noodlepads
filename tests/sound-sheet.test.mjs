@@ -188,6 +188,80 @@ test('a knob off normal is drawn as changed and stays marked, by voice or by han
   $('#sheet').close();
 });
 
+// ── Closing with unsaved work asks first (Ben, 2026-10-16) ──
+const closeX = () => $('#sheet').querySelector('.close').dispatch('click');
+const cancelEsc = () => $('#sheet').dispatch('cancel');
+
+test('closing an untouched sheet never asks; closing one with changes asks, and Keep editing or Throw away answers', async () => {
+  await openEditor();
+  closeX();
+  assert.equal($('#sheet').open, false, 'nothing changed: ✕ just closes');
+
+  await openEditor();
+  assert.equal($('#sheet-warn').hidden, true);
+  chip('chipmunk').dispatch('click');
+  closeX();
+  assert.equal($('#sheet').open, true, 'a changed knob: ✕ keeps the sheet open');
+  assert.equal($('#sheet-warn').hidden, false);
+  assert.equal($('#sheet-warn-text').textContent, 'Throw away your changes?');
+  assert.equal(cancelEsc().defaultPrevented, true, 'Esc is held back too');
+  $('#sheet-warn-keep').dispatch('click');
+  assert.equal($('#sheet-warn').hidden, true, 'Keep editing hides the question');
+  assert.equal($('#sheet').open, true);
+  assert.deepEqual(lit(), ['chipmunk'], 'and the work is as it was');
+
+  closeX();
+  $('#sheet-warn-drop').dispatch('click');
+  assert.equal($('#sheet').open, false, 'Throw away closes it');
+
+  await openEditor();
+  assert.equal($('#sheet-warn').hidden, true, 'the next sheet starts with no question showing');
+  closeX();
+  assert.equal($('#sheet').open, false, 'and nothing carried over: it is untouched again');
+});
+
+test('a name or picture changed, or a knob moved and put back, is judged by what Save would store', async () => {
+  await openEditor();
+  const label = $('#clip-label');
+  const was = label.value;
+  label.value = `${was}x`;
+  closeX();
+  assert.equal($('#sheet').open, true, 'a renamed sound asks');
+  label.value = was;
+  $('#sheet-warn-keep').dispatch('click');
+  closeX();
+  assert.equal($('#sheet').open, false, 'the name put back: nothing to lose');
+});
+
+test('Save closes the sheet without asking', async () => {
+  if (document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+  $('#pads').children.find((p) => p.classList.contains('pad-add')).dispatch('click');
+  $('#make-btn').dispatch('click');
+  $('#make-starters').children[0].dispatch('click');   // Laser: a new sound, so no pad the other tests use changes
+  await page.settle();
+  $('#sheet-form').dispatch('submit');
+  await page.settle();
+  assert.equal($('#sheet').open, false);
+  assert.equal($('#sheet-warn').hidden, true);
+});
+
+test('a new sound that was made but not saved asks, in its own words; one with nothing yet does not', async () => {
+  if (document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+  $('#pads').children.find((p) => p.classList.contains('pad-add')).dispatch('click');
+  closeX();
+  assert.equal($('#sheet').open, false, 'a new sheet with nothing in it closes at once');
+
+  $('#pads').children.find((p) => p.classList.contains('pad-add')).dispatch('click');
+  $('#make-btn').dispatch('click');
+  $('#make-starters').children[0].dispatch('click');   // Laser
+  await page.settle();
+  closeX();
+  assert.equal($('#sheet').open, true);
+  assert.equal($('#sheet-warn-text').textContent, 'Throw away this sound?');
+  $('#sheet-warn-drop').dispatch('click');
+  assert.equal($('#sheet').open, false);
+});
+
 test('moving a knob by hand makes it your own; ↩️ Reset voice puts every knob back', async () => {
   await openEditor();
   chip('stadium').dispatch('click');

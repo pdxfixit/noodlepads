@@ -90,6 +90,7 @@ export const HELP = [
       { pic: [word('Burp')], text: 'Its name is at the top of the sheet, over a dashed line: tap it to rename the sound.' },
       { pic: [word('▾ Layers')], text: 'Tap Voice or Layers to fold it away, and again to open it. ⭐ Save voice and ↩️ Reset voice stay where you can reach them.' },
       { pic: [play('Save sound')], text: 'Pick a picture and a color, then save it.' },
+      { pic: [tool('Keep editing'), tool('Throw away')], text: 'Close the sheet after changing something (✕, a tap outside it, or Esc) and it asks first. Keep editing goes back to your sound; Throw away closes it and loses the changes. Save sound never asks.' },
       { pic: [tool('…')], text: 'The … at the end of any picture list opens All emoji: every emoji, in groups that open and shut with a tap on their name, with a search box. Type a word like frog or rocket, and the groups with a match open. The newest ones may show as empty boxes on an older phone.' },
       { adv: true, pic: [tool('+ Add a layer'), tool('⤢')], text: 'With Advanced on, + Add a layer also has steps, like echo or muffled. They play after the knobs; drag the dots at a step’s left to change their order. ⤢ opens a voice into its steps.' },
       { adv: true, pic: [tool('🎲 Surprise steps')], text: 'Makes a few steps for you to try.' },

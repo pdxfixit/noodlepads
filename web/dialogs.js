@@ -4,8 +4,11 @@
 const openers = new WeakMap();   // dialog -> what had focus when it opened
 const returns = new WeakMap();   // dialog -> where to put focus if that is gone
 
-// Wires closing. Call once per dialog.
-export function setupDialog(dialog) {
+// Wires closing. Call once per dialog. `beforeClose()` runs before the ✕, a
+// tap on the backdrop or Esc closes it: returning false keeps it open (the
+// sound sheet asks about unsaved work there). A script's own dialog.close()
+// never asks, so a save can close it.
+export function setupDialog(dialog, { beforeClose } = {}) {
   // A press that starts inside the dialog (selecting text in a field, say) and
   // ends on the backdrop is not a click on the backdrop.
   let pressedBackdrop = false;
@@ -13,8 +16,11 @@ export function setupDialog(dialog) {
   dialog.addEventListener('click', (e) => {
     const onBackdrop = e.target === dialog && pressedBackdrop;
     pressedBackdrop = false;
-    if (onBackdrop || e.target.closest('[data-close]')) dialog.close();
+    if (!onBackdrop && !e.target.closest('[data-close]')) return;
+    if (beforeClose && beforeClose() === false) return;
+    dialog.close();
   });
+  if (beforeClose) dialog.addEventListener('cancel', (e) => { if (beforeClose() === false) e.preventDefault(); });
   // Closing returns focus to what opened the dialog. When that was redrawn in
   // the meantime (a pad, after saving), `returnTo` finds its replacement.
   dialog.addEventListener('close', () => {

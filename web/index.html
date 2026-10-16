@@ -856,6 +856,12 @@
           <label class="sheet-name"><span class="sr-only">Name</span><input id="clip-label" maxlength="24" autocomplete="off" placeholder="Airhorn"></label>
         </div>
         <button type="button" class="close" data-close aria-label="Close">✕</button>
+        <!-- Closing with unsaved work asks first (Ben, 2026-10-16): in the heading, so it is in view however far the sheet has scrolled. -->
+        <div class="sheet-warn" id="sheet-warn" role="alert" hidden>
+          <p class="sheet-warn-text" id="sheet-warn-text">Throw away your changes?</p>
+          <button type="button" class="chain-tool" id="sheet-warn-keep">Keep editing</button>
+          <button type="button" class="chain-tool sheet-warn-drop" id="sheet-warn-drop">Throw away</button>
+        </div>
       </div>
 
       <!-- Parts of the sheet: the sound and its wave; its voice, then its Layers; how it looks.
