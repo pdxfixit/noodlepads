@@ -56,8 +56,11 @@ test("the report's fixed lists match the app's", () => {
   assert.deepEqual(VOICE_IDS, VOICES.map((v) => v.id));
   assert.deepEqual(STEP_KINDS, KINDS.map((k) => k.id));
   assert.deepEqual(SIGNATURE_IDS, Object.keys(SIGNATURES));
-  assert.deepEqual(Object.keys(SETTING_VALUES), Object.keys(SETTINGS));
-  for (const [k, spec] of Object.entries(SETTINGS)) assert.deepEqual(SETTING_VALUES[k], spec.values, k);
+  // Every setting with a list of values; a free-form one (`seen`) is never logged (`quiet`).
+  const listed = Object.entries(SETTINGS).filter(([, spec]) => spec.values);
+  for (const [k, spec] of Object.entries(SETTINGS)) if (!spec.values) assert.equal(spec.quiet, true, k);
+  assert.deepEqual(Object.keys(SETTING_VALUES), listed.map(([k]) => k));
+  for (const [k, spec] of listed) assert.deepEqual(SETTING_VALUES[k], spec.values, k);
 });
 
 test('an unknown kind is dropped and counted; an unknown field is dropped', () => {

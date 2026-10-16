@@ -21,6 +21,7 @@
 // Some rules here were picked while Ben was away: provisional, Q52.
 
 import { legacySlots } from './playlist.js';
+import { unionSeen } from './firsts.js';
 
 export const STAMP = 'changed';
 const SONG_KINDS = new Set(['songs', 'songbook']);
@@ -116,6 +117,13 @@ function mergeFields(b, l, r, ctx, rules = {}, fallback = undefined) {
 function mergeMap(b, l, r, ctx) {
   if (!isObject(l) || !isObject(r)) return newer(l, r, ctx);
   return mergeFields(isObject(b) ? b : {}, l, r, ctx, {}, (bb, ll, rr, c) => newer(ll, rr, c));
+}
+
+// A person's settings: as any map, except what they have seen of their first
+// steps (firsts.js), which keeps everything either side saw.
+function mergePrefValues(b, l, r, ctx) {
+  if (!isObject(l) || !isObject(r)) return newer(l, r, ctx);
+  return mergeFields(isObject(b) ? b : {}, l, r, ctx, { seen: (bb, ll, rr) => unionSeen(ll, rr) }, (bb, ll, rr, c) => newer(ll, rr, c));
 }
 
 const most = (b, l, r) => Math.max(Number(l) || 0, Number(r) || 0);
@@ -277,7 +285,7 @@ export const KIND_RULES = {
   orders: { ids: mergeIds, groups: mergeGroups },
   decks: { keys: mergeMap, mine: mergeMap },
   layouts: { keys: mergeMap },
-  prefs: { values: mergeMap },
+  prefs: { values: mergePrefValues },
   voices: { used: most, knobs: mergeMap },
 };
 

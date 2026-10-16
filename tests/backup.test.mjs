@@ -716,3 +716,14 @@ test('a person\'s pad skin round-trips in a backup; one this copy does not know 
   const out = await readBackup(await makeBackup(state), bundled());
   assert.deepEqual(out.prefs, [{ personId: 'pip', values: { padSkin: 'slam' } }, { personId: 'juno', values: { timeSignature: '3/4' } }]);
 });
+
+// ADR 0028: what a person has seen of their first steps rides in a backup,
+// cleaned; a backup from before it (every 1.x one) loads as before.
+test("a person's seen tips round-trip in a backup, cleaned; older backups load without them", async () => {
+  const state = {
+    people: [], clips: [], overrides: [], orders: [], patterns: [], beats: [],
+    prefs: [{ personId: 'pip', values: { seen: 'tip-pads,dot-keys', level: 'regular' } }, { personId: 'juno', values: { seen: { evil: true }, padSkin: 'jelly' } }],
+  };
+  const out = await readBackup(await makeBackup(state), bundled());
+  assert.deepEqual(out.prefs, [{ personId: 'pip', values: { seen: 'dot-keys,tip-pads', level: 'regular' } }, { personId: 'juno', values: { padSkin: 'jelly' } }]);
+});

@@ -149,6 +149,25 @@ picture and color the app gave. 🧸 Kids gets Pick your picture: the pictures
 and colors only, keeping the name it was given. Kids' screens come once this
 step ends (switching to them closes every dialog).
 
+**One-time tips** (Regular and Advanced, `web/tips.js`): one short line in
+the banner over the top, the first time a thing matters, once per person:
+
+| When | Tip |
+|---|---|
+| Three pad taps on 🔊 Pads | 👆 Hold a pad to make it loop. |
+| The first visit to 🥁 Beats (⌨️ Keys off) with no hits | 👆 Tap squares, then ▶ Play. Or start from a 💃 groove. |
+| The first visit to 🎼 Song | 🎼 Make a song from your beats: 💾 Keep one on 🥁 Beats, then tap it here and tap a lane. |
+| The first visit to 🎤 Live | 🎤 Play the keys like an instrument. ● Record keeps a 🎬 take to play back. |
+| The sound sheet's first opening | 🎭 Tap a voice to hear your sound change. Your recording stays as it was. |
+
+At most one shows per screen visit; a tip never takes the place of a notice
+or an Undo, never shows over a dialog (the sound sheet's own aside) and never
+on 🧸 Kids. What a person has seen is the person setting `seen` (one sorted,
+comma-separated list of ids, `web/firsts.js`): it syncs and rides in backups,
+it is never logged, and a sync merges both devices' lists, so a tip never
+repeats on another device. ❓ Help's 💡 Show tips again clears the tips (and
+hint dots) for the person showing.
+
 Only the two places that make a person from nothing mark them as new, in
 memory (`web/welcome.js`). Anyone stored before, pulled from the cloud or
 loaded from a backup is never asked, and a reload before it shows skips it.
@@ -156,7 +175,7 @@ loaded from a backup is never asked, and a reload before it shows skips it.
 For the tests and `just look`, the app's test hook `noodleFirstSteps = false`
 (`web/firsts.js`) turns every first step off, so a fresh device there opens on
 the app as before. The `welcome`, `welcome-stage` and `welcome-kids-stage` look
-views turn them on.
+views turn them on, and `tip-beats` shows a tip.
 
 ## Help
 

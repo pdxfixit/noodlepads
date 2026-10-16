@@ -2573,6 +2573,18 @@ dialog#help :focus-visible { outline-color: var(--board); }
 }
 .help-head { position: sticky; top: 0; z-index: 1; padding: 20px 20px 12px; background: var(--paper); box-shadow: 0 2px 0 var(--line); }
 .help-head .sheet-head { margin-bottom: 12px; }
+/* 💡 Show tips again (tips.js, ADR 0028): beside the title, before ✕. */
+.help-tips {
+  flex: 0 1 auto;
+  min-height: 44px;
+  margin: 0 10px 0 auto;
+  padding: 0 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 800 0.9rem/1.1 var(--font-ui);
+}
 .help-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
 .help-tab {
   flex: 1 1 auto;

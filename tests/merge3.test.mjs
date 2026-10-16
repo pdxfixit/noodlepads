@@ -141,6 +141,19 @@ test('settings and DJ keys merge key by key', () => {
   assert.deepEqual(d.record.keys, { KeyQ: 'x', KeyW: null });
 });
 
+// ADR 0028: what a person has seen of their first steps keeps what either
+// device saw, so no tip shows twice; a side that alone cleared them (💡 Show
+// tips again) still wins, as any one-sided change does.
+test("a person's seen tips merge as everything either side saw", () => {
+  const B = { personId: 'p-a', values: { seen: 'tip-pads', padSize: 0.5 } };
+  const both = merge3('prefs', B, { personId: 'p-a', values: { seen: 'tip-beats,tip-pads', padSize: 0.5 } }, { personId: 'p-a', values: { seen: 'dot-keys,tip-pads', padSize: 0.7 } });
+  assert.deepEqual(both.record.values, { seen: 'dot-keys,tip-beats,tip-pads', padSize: 0.7 });
+  const cleared = merge3('prefs', B, { personId: 'p-a', values: { seen: '', padSize: 0.5 } }, { personId: 'p-a', values: { seen: 'tip-pads', padSize: 0.7 } });
+  assert.equal(cleared.record.values.seen, '');
+  const fresh = merge3('prefs', null, { personId: 'p-a', values: { seen: 'tip-song' } }, { personId: 'p-a', values: { seen: 'tip-live' } });
+  assert.equal(fresh.record.values.seen, 'tip-live,tip-song', 'no base: both too');
+});
+
 test('a song: how many times a slot plays merges; slots rearranged on both sides keep both songs', () => {
   const s = (slots, extra = {}) => ({ id: 'song-1', personId: 'p-a', name: 'Tune', slots, created: 1, saved: 1, ...extra });
   const B = s([{ beatId: 'beat-1', times: 1 }, { beatId: 'beat-2', times: 1 }]);
