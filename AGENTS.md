@@ -39,7 +39,7 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 | [docs/how-to.md](docs/how-to.md) | Step by step: where to run what, a bug fix, a stored-format change (every place to touch), docs, landing, deploy and rollback, logs, metrics, cloud admin. |
 | [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md) | Hosting: flarepress, the Worker, headers, rollback. |
 | [CHANGELOG.md](CHANGELOG.md) | What each release has, for kids and parents. |
-| [TODO.md](TODO.md) | The one to-do list: "Agents do" (approved work, in order, then work offered but not approved) and "Ben does" (tries, decisions, recordings). |
+| [TODO.md](TODO.md) | The one to-do list: "Agents do" (approved work, in order, then work offered but not approved) and "Ben does" (decisions, recordings, steps only Ben can run). |
 | `web/` | The app. Each module opens with a comment saying what it owns. |
 | `tests/` | `node --test` suites. `fake-dom.mjs` builds the page from `index.html` so `app.test.mjs` runs the real app. |
 | `tools/` | One line each in [docs/layout.md](docs/layout.md): `doctor.sh` (`just doctor`), `serve.py` (dev server, sends the live headers), `look.mjs` (`just look`, and the live checks), `land.sh` (`just land`, `land-continue`), `resolve_todo.py`/`resolve_questions.py` (its conflict resolvers), `cloud_admin.py` and `logs.py` (the cloud database and problem reports). `just --list` says what every recipe does. |
@@ -162,6 +162,7 @@ Ben: *"Optimizing the user interface for a variety of screens is very important.
 **Working while Ben is away**
 - Do not stop to ask. Pick the option closest to [docs/decisions.md](docs/decisions.md), name the call in your report, and keep going. [docs/questions.md](docs/questions.md) is only for questions that need Ben's answer before work can go on.
 - Keep [TODO.md](TODO.md) fresh in the same commit: tick Ben's items that are done, delete moot ones, and add new things only Ben can do under "Ben does".
+- **Keep human-run tests to a minimum** (Ben, 2026-10-16): verify it yourself with tests, `just look` and the live checks. Add no device tries to "Ben does"; what only a person can judge (sound, real touch) stays as "not yet tried on a phone" in [docs/state.md](docs/state.md), and Ben reports tries as he goes.
 
 ## Privacy
 
