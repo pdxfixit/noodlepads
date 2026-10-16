@@ -93,7 +93,7 @@ git reset -q && git worktree remove "$WT" && git push -q origin main
 ### The code
 
 - **No build step and no dependencies.** Modules load as they are. Tools are stdlib Python or plain shell. One exception: `tools/look.mjs` (with the `chrome.mjs` and `look-cloud.mjs` it loads) is Node with no packages, because driving headless Chrome needs a WebSocket client and stdlib Python has none (Ben, 2026-10-11).
-- **The CSP in `web/_headers` allows only what the page loads.** No inline script or style, no outside origins beyond Google Fonts. Adding one means changing that line on purpose.
+- **The CSP in `web/_headers` allows only what the page loads.** No inline script or style, and no outside origin: the fonts are served from `web/fonts/`. Adding one means changing that line on purpose.
 - **Pure logic goes in its own testable function** (`model.js`, `sequencer.js` exports, `names.js`). The DOM code calls it.
 - **Stored formats are kept by users.** A change to IndexedDB needs an upgrade in `store.js` (`SCHEMA`, `upgradeStores`). A backup from 1.0 on (format `1.x`) must still load in a newer copy of the app ([ADR 0011](docs/adr/0011-backups-1-0-merge.md)).
 - **Settings are declared in `settings.js`** with a default and the allowed values. Backups carry them.

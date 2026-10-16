@@ -7,12 +7,12 @@
 # The microphone is allowed for this site only; recording needs it.
 #
 # The policy allows exactly what the page loads: its own scripts and styles,
-# the Google Fonts stylesheet and font files, blob: URLs for downloads and
-# data: for the tab icon. No inline script or style, no framing, no plugins.
+# its own fonts (web/fonts/), blob: URLs for downloads and data: for the tab
+# icon. No outside origin at all. No inline script or style, no framing, no plugins.
 # Adding a new origin or inline code means changing this line on purpose.
 /*
   Cache-Control: no-cache
   Permissions-Policy: microphone=(self), camera=(), geolocation=()
   X-Content-Type-Options: nosniff
   Referrer-Policy: same-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'

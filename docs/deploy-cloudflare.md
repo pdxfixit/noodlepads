@@ -49,8 +49,8 @@ The pieces:
   Read), `D1_DATABASE_ID`, `CLOUDFLARE_ACCOUNT_ID`.
 - `web/_headers`: `Cache-Control: no-cache` so devices pick up a new deploy on
   their next load, the microphone allowed for this site only, two hardening
-  headers, and a Content-Security-Policy (own scripts and styles, Google Fonts,
-  blob: and data: images; no inline code). Adding an outside origin means
+  headers, and a Content-Security-Policy (own scripts, styles and fonts,
+  blob: and data: images; no outside origin, no inline code). Adding an outside origin means
   editing that line. `web/.assetsignore` keeps `.DS_Store` out of uploads.
   Neither file is served.
 
