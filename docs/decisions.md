@@ -168,7 +168,7 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | Chop (advanced) finds where each sound starts, shows slice marks on the wave to drag, add or remove, then makes pads. | Fast, and shows where sounds begin. | 2026-10-11 |
 | 🧩 Chop cuts the sound as you hear it, through its voices; each piece is saved in the Normal voice. | The marks sit on the wave the sheet shows (Ben kept it, Q3). | 2026-10-11 |
 | Automatic logs: an opt-in Settings switch, off by default, sends the event log (no recordings, no names) to an endpoint on the soundboard's own domain; the Cloudflare plan goes to Ben before anything is set up. | Problems reach an agent without copy-paste, only with consent. | 2026-10-11 |
-| Problem reports: the switch says "Ask a grown-up before you turn this on." (Q2). | The family decides; nothing sent names anyone. | 2026-10-11 |
+| 📮 Send problem reports is a plain checkbox in About, right under 📊 Share play data, with "Ask a grown-up before you turn this on." under it (Q2); no words about what a report holds (the shared policy says that). | The family decides; Ben, 2026-10-16: put the two together, "Both at bottom". | 2026-10-16 |
 | Problem reports carry a random device code, shown in Settings and forgotten when switched off (Q4). | Ben can find one tablet's reports. | 2026-10-11 |
 | Problem reports send device detail as families: browser, OS and device type (never the User-Agent string), screen, time zone, audio latency. | Most audio bugs depend on the device; the shared privacy policy (Ben, 2026-10-16) sends families only. | 2026-10-16 |
 | Problem reports send every session's log when the page is hidden, and 10 s after an error (Q8). | Shows normal use too, not only failures. | 2026-10-11 |

@@ -158,7 +158,7 @@ test('every Settings section but About folds under its heading, and the device r
   try {
     const dialog = $('#settings-dialog');
     const folds = dialog.querySelectorAll('.set-fold');
-    assert.deepEqual(folds.map((s) => s.id), ['set-sharing', 'set-backups', 'set-older', 'set-beats', 'set-keys', 'set-reports']);
+    assert.deepEqual(folds.map((s) => s.id), ['set-sharing', 'set-backups', 'set-older', 'set-beats', 'set-keys']);
     assert.equal($('#about-text').closest('.set-fold'), null, 'About is always open');
     for (const s of folds) {
       const head = s.querySelector('.set-head');
@@ -177,7 +177,6 @@ test('every Settings section but About folds under its heading, and the device r
     // The heading's chip says the state at a glance.
     $('#settings-open').dispatch('click');
     assert.equal(keys.querySelector('.set-head-chip').textContent, 'Auto');
-    assert.equal($('#set-reports').querySelector('.set-head-chip').textContent, 'Off');
     assert.equal($('#set-backups').querySelector('.set-head-chip').hidden, true, 'no chip where there is nothing to say');
     $('#settings-dialog').close();
     // And again closes it.
@@ -245,14 +244,17 @@ test('a kept beat gets a fun name, not "Beat 1"', () => {
 });
 
 // 📮 Problem reports (Ben, 2026-10-11): off by default, a grown-up line, a
-// device code shown while on and forgotten when switched off.
-test('Send problem reports is a switch, off by default, with a grown-up line and a device code while on', async () => {
+// device code shown while on and forgotten when switched off. Since
+// 2026-10-16 a plain checkbox in About, right under 📊 Share play data, with
+// no words about what a report holds (the shared policy says that).
+test('Send problem reports is a checkbox under Share play data, off by default, with a grown-up line and a device code while on', async () => {
   const sw = $('#send-logs');
-  const words = sw.closest('section').querySelectorAll('p').map((p) => p.textContent).join('\n');
-  assert.equal(sw.getAttribute('role'), 'switch');
-  assert.equal(sw.parent.querySelector('b').textContent, '📮 Send problem reports');
-  assert.match(words, /Ask a grown-up before you turn this on\./);
-  assert.match(words, /never hold sounds, recordings or anyone's names/);
+  assert.equal($('#set-reports'), null, 'no Problem reports fold');
+  assert.equal(sw.getAttribute('role'), null, 'a checkbox, not a switch');
+  assert.equal(sw.closest('.set-fold'), null);
+  const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
+  assert.match(html, /id="share-usage"> 📊 Share play data<\/label>\s*<label class="set-check"><input type="checkbox" id="send-logs" aria-describedby="send-logs-grownup"> 📮 Send problem reports<\/label>\s*<p class="field-hint set-check-hint" id="send-logs-grownup">Ask a grown-up before you turn this on\.<\/p>/);
+  assert.doesNotMatch(html, /never hold sounds|go only to Ben/, 'what a report holds is in the policy');
   assert.equal(getSetting('sendLogs'), false);
   $('#settings-open').dispatch('click');
   assert.equal(sw.checked, false);
@@ -292,7 +294,9 @@ test('📊 Share play data is a plain checkbox in About, above the version and t
   assert.equal(sw.closest('.set-fold'), null, 'not inside a fold');
   assert.ok($('#about-text').parent.contains(sw), 'in About, at the bottom');
   const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
-  assert.match(html, /<label class="set-check"><input type="checkbox" id="share-usage"> 📊 Share play data<\/label>\s*(<!--[\s\S]*?-->\s*)?<p class="set-version">[\s\S]*?Privacy policy<\/a>/, 'its name only, then the version and the Privacy policy');
+  assert.match(html, /<label class="set-check"><input type="checkbox" id="share-usage"> 📊 Share play data<\/label>/, 'its name only');
+  const at = (s) => html.indexOf(s);
+  assert.ok(at('id="share-usage"') < at('id="send-logs"') && at('id="send-logs"') < at('<p class="set-version">'), 'then 📮 Send problem reports, then the version and the Privacy policy');
   assert.equal(getSetting('sendUsage'), true);
   $('#settings-open').dispatch('click');
   assert.equal(sw.checked, true);
