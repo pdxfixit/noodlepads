@@ -4087,6 +4087,26 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
   .kids-dot, .kids-pad, .kids-tab, .kids-key { transition: none; }
 }
 
+/* A new kid's first steps, with no words (tips.js kidsHint, ADR 0028): a 👆
+   hand pulsing over the first pad until a pad is tapped, and the mic
+   wiggling now and then until the first recording. Still under reduced
+   motion: the hand stays, the mic sits still. */
+.kids-pad:has(> .kids-hand) { position: relative; }
+.kids-hand {
+  position: absolute;
+  right: 4%;
+  bottom: 2%;
+  font-size: calc(var(--kids-pad, 100px) * 0.34);
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 2px rgb(0 0 0 / 0.45));
+  animation: kids-hand 1.2s ease-in-out infinite;
+}
+@keyframes kids-hand { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-10%, -14%) scale(1.15); } }
+.kids-mic.kids-nudge:not(.recording) { animation: kids-nudge 2.4s ease-in-out infinite; }
+@keyframes kids-nudge { 0%, 70%, 100% { rotate: 0deg; } 76% { rotate: -9deg; } 82% { rotate: 9deg; } 88% { rotate: -6deg; } 94% { rotate: 5deg; } }
+@media (prefers-reduced-motion: reduce) { .kids-hand, .kids-mic.kids-nudge:not(.recording) { animation: none; } }
+
 /* ── ⋯ menus (overflow.js; Ben, 2026-10-12: "allow the buttons to move into a
    sub menu where space requires it"). A line short of room gets .more-tight
    on its box: its buttons marked data-more-word hide and ⋯ shows, 44 px like

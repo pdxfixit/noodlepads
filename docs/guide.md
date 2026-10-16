@@ -175,6 +175,12 @@ person first taps each. They are the page's `data-hints`, drawn by
 buttons keep their size. They follow the same `seen` list (`dot-keys`,
 `dot-grooves`, `dot-mixer`), so 💡 Show tips again brings them back.
 
+**🧸 Kids gets no words.** A 👆 hand pulses over the first pad on Kids'
+Pads until a pad is tapped, and the big mic wiggles now and then until the
+first recording is kept (`kids.js`, `tips.js` `kidsHint`). Under reduced
+motion both stay still (the hand still shows). Once per person: `kids-pad`
+and `kids-mic` in `seen`, which 💡 Show tips again leaves alone.
+
 Only the two places that make a person from nothing mark them as new, in
 memory (`web/welcome.js`). Anyone stored before, pulled from the cloud or
 loaded from a backup is never asked, and a reload before it shows skips it.
@@ -182,7 +188,7 @@ loaded from a backup is never asked, and a reload before it shows skips it.
 For the tests and `just look`, the app's test hook `noodleFirstSteps = false`
 (`web/firsts.js`) turns every first step off, so a fresh device there opens on
 the app as before. The `welcome`, `welcome-stage` and `welcome-kids-stage` look
-views turn them on, `tip-beats` shows a tip and `hint-dots` the dots.
+views turn them on, `tip-beats` shows a tip, `hint-dots` the dots and `kids-hand` the 👆 hand.
 
 ## Help
 

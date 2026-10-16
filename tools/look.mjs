@@ -287,6 +287,8 @@ const KIDS = (tab) => `(await import('/settings.js')).setSetting('level', 'kids'
 for (const tab of ['pads', 'record', 'beats', 'keys']) VIEWS[`kids-${tab}`] = { screen: 'pads', kids: true, js: KIDS(tab) };
 VIEWS['kids-mine'] = { screen: 'pads', kids: true, js: `${MINE} ${KIDS('pads')} ${q('[data-kids-tab="record"]')} ${q('[data-kids-tab="pads"]')}` };
 VIEWS['kids-sum'] = { screen: 'pads', kids: true, js: `${KIDS('pads')} ${q('#settings-open')}` };
+// A new kid's first steps (ADR 0028): the 👆 hand over the first pad (add --reduced-motion to see it still).
+VIEWS['kids-hand'] = { screen: 'pads', kids: true, firstSteps: true, js: `${FRESH} ${KIDS('pads')}` };
 for (const s of Object.keys(SCREENS)) VIEWS[s] = { screen: s, js: '' };
 VIEWS.beat = VIEWS.beats;   // the singular too: "just look beat" was a usage error (2026-10-12)
 VIEWS['keys-on'] = { screen: 'beats', keys: true, js: '' };   // Beats with ⌨️ Keys on, the empty scratch open

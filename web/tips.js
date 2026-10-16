@@ -77,6 +77,12 @@ export function showDots() {
   else delete document.body.dataset.hints;
 }
 
+// 🧸 Kids gets no words (ADR 0028): a 👆 hand pulses over the first pad until
+// the first pad tap, and the mic wiggles until the first recording (kids.js
+// draws both). Once per person: kids-pad and kids-mic in `seen`, which 💡
+// Show tips again leaves alone. `what`: 'pad' or 'mic'.
+export const kidsHint = (what) => firstStepsOn() && getSetting('level') === 'kids' && !hasSeen(`kids-${what}`);
+
 // 💡 Show tips again (❓ Help): this person's tips and dots come back.
 export async function showTipsAgain() {
   tipThisVisit = false;
