@@ -183,7 +183,7 @@ test('player metrics last 14 days, devices 90, and hold no IP, city or User-Agen
 
 // ADR 0026 (Ben, 2026-10-16): what the shared policy says of usage events, tied to the code.
 test('usage events go to the site only, from every device while Share play data is on, with fixed keys', async () => {
-  assert.match(html, /<b>📊 Share play data<\/b>/, 'the switch the policy names is in Settings');
+  assert.match(html, /<input type="checkbox" id="share-usage"> 📊 Share play data</, 'the checkbox the policy names is in Settings');
   const { EVENTS, shouldSend } = await import('../web/telemetry.js');
   assert.equal(shouldSend({ enabled: true }), true, 'every device, in the cloud or not (question #425)');
   assert.equal(shouldSend({ enabled: false }), false);

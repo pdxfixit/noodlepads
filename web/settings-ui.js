@@ -86,7 +86,6 @@ function chips() {
     'set-beats': LEVEL_NAMES[getSetting('level')],
     'set-keys': LAYOUT_NAMES[getSetting('djLayout')] ?? '',
     'set-reports': on(getSetting('sendLogs') === true),
-    'set-usage': on(getSetting('sendUsage') === true),
   };
   for (const section of sections()) {
     const chip = section.querySelector('.set-head-chip');
