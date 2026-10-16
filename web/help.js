@@ -109,7 +109,7 @@ export const HELP = [
   {
     id: 'beats', screen: 'beats', tab: '🥁 Beats', title: 'Beats',
     items: [
-      { pic: [word('🥁 Scratch beat'), tool('💾 Keep')], text: 'Your scratch beat is open whenever nothing else is: play with it, load grooves into it, and nothing fills up 🗂️ My beats. 💾 Keep puts it in 🗂️ My beats with a fun name (a groove keeps its name too: “Sleepy Squid (Ska version)”), and the scratch starts empty again.' },
+      { pic: [word('🥁 Scratch beat'), tool('💾 Keep')], text: 'Your scratch beat is open whenever nothing else is: play with it, load grooves into it, and nothing fills up 🗂️ My beats. 💾 Keep puts it in 🗂️ My beats with a fun name (a groove keeps its name too: “Sleepy Squid (Ska version)”), and the scratch starts empty again. Or tap “Scratch beat” and type a name: it goes in 🗂️ My beats with that name, as soon as it has a row.' },
       { pic: [tool('🆕 New'), tool('🗂️ My beats')], text: '🆕 New stops the beat playing and opens a blank scratch beat, with no rows. Nothing goes in 🗂️ My beats until you 💾 Keep it, and a beat of yours stays there as it was. If your scratch beat had something in it, Undo brings it back. 🗂️ My beats (just 🗂️ on a phone) holds them all: open one, 📌 pin, ⧉ copy or 🗑️ delete.' },
       { pic: [word('🥁 Wobbly Thunder'), tool('✏️')], text: 'A beat in 🗂️ My beats saves itself. Tap its name or ✏️ to rename it.' },
       { pic: [word('1 Wobbly Thunder'), word('2 ⏳ Boom Bap')], text: 'Under the beat bar: 8 numbered spots for your beats, the open one lit. Pinned beats come first; the rest are the beats you used last, and tapping one never moves it. Tap one to open it. While a beat plays, the one you tap waits (⏳) and starts at the next bar, so the music never stops. They wait while you record.' },
@@ -155,7 +155,7 @@ export const HELP = [
     id: 'song', screen: 'song', tab: '🎼 Song', title: 'Song',
     items: [
       { pic: [tool('🎼 Song')], text: '🎼 Song in the bar at the bottom: put your saved beats on lanes, and the lanes play together.' },
-      { pic: [word('🎼 Scratch song'), tool('💾 Keep')], text: 'Your scratch song is open whenever nothing else is. 💾 Keep puts it in 🗂️ My songs with a fun name, and the scratch starts empty again. 🆕 New opens a blank scratch song (Undo brings back what was in it); a song of yours stays in 🗂️ My songs as it was.' },
+      { pic: [word('🎼 Scratch song'), tool('💾 Keep')], text: 'Your scratch song is open whenever nothing else is. 💾 Keep puts it in 🗂️ My songs with a fun name, and the scratch starts empty again. Or tap “Scratch song” and type a name: it goes in 🗂️ My songs with that name, as soon as it has a beat in it. 🆕 New opens a blank scratch song (Undo brings back what was in it); a song of yours stays in 🗂️ My songs as it was.' },
       { pic: [word('🎼 Big Parade'), tool('✏️')], text: 'A song in 🗂️ My songs saves itself. Tap its name or ✏️ to rename it. In 🗂️ My songs, ⧉ copies a song and 🗑️ deletes it.' },
       { pic: [eg('Sleepy Squid'), word('→ a lane')], text: 'Pick a beat in the strip of your beats, then tap a spot on a lane: it goes there. Tap more spots for more. Only beats in 🗂️ My beats show: 💾 Keep a beat first.' },
       { pic: [eg('Sleepy Squid ×3'), word('⟷')], text: 'Tap a block to select it. Drag its ⟷ end to play it more or fewer times, or tap ➖ ➕. 🗑️ takes it off (tap twice). Blocks on one lane never overlap.' },

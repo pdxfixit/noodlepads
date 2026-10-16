@@ -174,6 +174,12 @@ export function createSong(deps) {
     return clean({ id: songScratchId(personId), personId, name: SCRATCH_NAME, tempo: DEFAULT_TEMPO, lanes: [] });
   }
   const onScratch = () => !!song && isScratchSong(song);
+  // What the title shows: the name, or the scratch's label (or the name typed for it).
+  const titleOf = () => (onScratch() ? wantedName ?? 'Scratch song' : song.name);
+  // A name typed into the scratch song's title (Ben, 2026-10-16): it keeps
+  // itself under it, at once if it has blocks, else the moment it gets one
+  // (save). Another song, person or 🆕 New forgets it.
+  let wantedName = null;
 
   // The person's open song, or their scratch song (ADR 0020). A stored
   // song in the list opens as the list has it; one with beats from before
@@ -184,6 +190,7 @@ export function createSong(deps) {
     offerUndo(null);
     personId = id;
     picked = null;
+    wantedName = null;
     const stored = deps.load(personId);
     const cleaned = stored && clean(stored);
     const listed = cleaned?.id && songs().find((x) => x.id === cleaned.id);
@@ -253,6 +260,9 @@ export function createSong(deps) {
     if (onScratch()) deps.close(personId); else deps.save(structuredClone(song));
     const before = allSongs().find((x) => x.id === song.id);
     deps.songs.put({ ...structuredClone(song), created: before?.created ?? Date.now(), saved: Date.now() });
+    // A named scratch keeps itself once it has a block: after the change
+    // that gave it one has finished drawing.
+    if (wantedName && onScratch() && blockCount(song)) queueMicrotask(() => { if (wantedName) keep(); });
   }
 
   // An edit to the song's tempo or lanes: kept for ↩️ Undo first.
@@ -280,18 +290,21 @@ export function createSong(deps) {
     stop();
     disarm(false);
     offerUndo(null);
+    wantedName = null;
     song = nextSong ?? scratchSong();
     forget();
     if (onScratch()) deps.close(personId); else save();
     render();
   }
 
-  // 💾 Keep (ADR 0020): the scratch song becomes a song in 🗂️ My songs with a
-  // fun name, and opens; the scratch starts empty again.
+  // 💾 Keep (ADR 0020): the scratch song becomes a song in 🗂️ My songs with
+  // the name typed into its title, else a fun name, and opens; the scratch
+  // starts empty again.
   function keep() {
     if (!onScratch() || !blockCount(song)) return;
     const old = songScratchOf(allSongs(), personId);
-    const name = deps.songName(songs().map((x) => x.name));
+    const name = wantedName ? uniqueSongName(wantedName, songs(), null) : deps.songName(songs().map((x) => x.name));
+    wantedName = null;
     song = { ...song, id: newId('song'), name };
     save();
     if (old) deps.songs.remove(old.id);
@@ -321,17 +334,17 @@ export function createSong(deps) {
   function render() {
     if (!personId || !song) return;
     if (el.songs.open) renderSongs();
-    // The scratch shows "Scratch song", not a name to edit; 💾 Keep stands
-    // where ✏️ is.
+    // The scratch shows "Scratch song", in italics: not kept yet. 💾 Keep
+    // stands where ✏️ is; a name typed into the title keeps it under that
+    // name (nameScratch).
     const scratch = onScratch();
     const count = blockCount(song);
-    el.name.readOnly = scratch;
     el.name.classList.toggle('scratch', scratch);
-    el.name.setAttribute('aria-label', scratch ? 'Scratch song, not kept yet: 💾 Keep puts it in 🗂️ My songs' : 'Song name (tap to rename)');
+    el.name.setAttribute('aria-label', scratch ? 'Scratch song, not kept yet: type a name to keep it in 🗂️ My songs' : 'Song name (tap to rename)');
     el.rename.hidden = scratch;
     el.keep.hidden = !scratch;
     el.keep.disabled = !count;
-    if (document.activeElement !== el.name) el.name.value = scratch ? 'Scratch song' : song.name;
+    if (document.activeElement !== el.name) el.name.value = titleOf();
     if (document.activeElement !== el.tempo) el.tempo.value = String(song.tempo);
     el.tempoDown.disabled = song.tempo <= MIN_TEMPO;
     el.tempoUp.disabled = song.tempo >= MAX_TEMPO;
@@ -779,13 +792,31 @@ export function createSong(deps) {
   el.tempoDown.addEventListener('click', () => setTempo(song.tempo - TEMPO_STEP));
   el.tempoUp.addEventListener('click', () => setTempo(song.tempo + TEMPO_STEP));
 
+  // A name typed into the scratch song's title: kept under it now if it
+  // has blocks; an empty scratch holds the name until its first block (save).
+  function nameScratch(wanted) {
+    if (wanted !== titleOf()) {
+      wantedName = wanted;
+      if (blockCount(song)) keep();
+      else deps.announce?.(`Named “${wanted}”. It goes in 🗂️ My songs when you add a beat.`);
+    }
+    render();
+    el.name.value = titleOf();   // still focused while it changes
+  }
   el.name.addEventListener('change', () => {
     const wanted = el.name.value.trim().slice(0, 24);
-    if (!song || onScratch()) return;
+    if (!song) return;
+    if (onScratch()) {
+      if (wanted) nameScratch(wanted);
+      else el.name.value = titleOf();
+      return;
+    }
     if (wanted) { song.name = uniqueSongName(wanted, songs(), song.id); save(); }
     el.name.value = song.name;
   });
   el.name.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.name.blur(); } });
+  // "Scratch song" is all chosen, so typing replaces it.
+  el.name.addEventListener('focus', () => { if (onScratch() && !wantedName) el.name.select?.(); });
   el.rename.addEventListener('click', () => { el.name.focus(); el.name.select?.(); });
   el.newSong.addEventListener('click', newScratch);
   el.undoButton?.addEventListener('click', undoNew);

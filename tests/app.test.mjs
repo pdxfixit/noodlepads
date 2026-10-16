@@ -410,7 +410,7 @@ test('Beats shows the beat maker in place of the pads; 🆕 New starts with no r
   const name = bar.querySelector('[data-beat-name]');
   assert.equal(name.hidden, false);
   assert.equal(name.value, 'Scratch beat');
-  assert.equal(name.readOnly, true, 'not a name to edit');
+  assert.ok(!name.readOnly, 'a name typed here keeps it');
   assert.equal(bar.querySelector('[data-beat-rename]').hidden, true, '💾 Keep stands where ✏️ is');
   assert.equal(bar.querySelector('[data-beat-keep]').hidden, false);
   assert.equal(bar.querySelector('[data-beat-keep]').disabled, true, 'nothing to keep yet');
@@ -443,7 +443,7 @@ test('Beats shows the beat maker in place of the pads; 🆕 New starts with no r
   assert.deepEqual(pills.map((p) => p.tabIndex), [0, ...Array(15).fill(-1)]);
   // 💾 Keep: now it is a named beat in 🗂️ My beats, for the tests below.
   bar.querySelector('[data-beat-keep]').dispatch('click');
-  assert.equal(name.readOnly, false, 'a named beat');
+  assert.notEqual(name.value, 'Scratch beat', 'a named beat');
   assert.equal(state.savedBeats.filter((b) => b.personId === 'pip' && !b.id.startsWith('beat-scratch-')).length, 1, '💾 Keep puts it in the list');
 });
 
@@ -2088,7 +2088,7 @@ test('🎼 Song: its own tab, Advanced or not; pick a beat, then tap a spot on a
   // Nothing is made for you: the scratch song is open (ADR 0020), and
   // nothing is saved until it changes.
   assert.equal($('#song-name').value, 'Scratch song');
-  assert.equal($('#song-name').readOnly, true);
+  assert.ok(!$('#song-name').readOnly, 'a name typed here keeps it');
   assert.equal($('#song-rename').hidden, true);
   assert.equal($('#song-keep').hidden, false, '💾 Keep stands where ✏️ is');
   assert.equal($('#song-keep').disabled, true, 'nothing to keep yet');

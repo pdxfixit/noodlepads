@@ -194,7 +194,7 @@ test('🎼 Song: the scratch song is open by default; 💾 Keep makes it a song 
   $('#song-keep').dispatch('click');
   const name = $('#song-name').value;
   assert.notEqual(name, 'Scratch song');
-  assert.equal($('#song-name').readOnly, false);
+  assert.ok(!$('#song-name').readOnly);
   assert.equal($('#song-keep').hidden, true);
   assert.equal($('#song-rename').hidden, false);
   assert.equal(state.songs.get(pid).name, name, 'the open song now');
@@ -227,4 +227,71 @@ test('the beat bar\'s 📂 Open is 🗂️ My beats, and Song\'s is 🗂️ My s
   assert.equal($('#song-open').textContent, '🗂️ My songs');
   assert.equal($('#library-title').textContent, '🗂️ My beats');
   assert.equal($('#songs-title').textContent, '🗂️ My songs');
+});
+
+// Ben, 2026-10-16: "while working on a scratch beat, the user should be able
+// to click the title, and rename/save it". A name typed into the scratch's
+// title keeps it under that name; an empty scratch holds the name until its
+// first row (or block), then keeps itself.
+test('a name typed into the scratch beat\'s title keeps it under that name, at once or with its first row', async () => {
+  $('#beats-toggle').dispatch('click');
+  const name = () => bar().querySelector('[data-beat-name]');
+  const mine = (n) => state.savedBeats.filter((b) => b.personId === state.personId && b.name === n && !isHiddenBeat(b));
+  const scratchNow = () => state.savedBeats.find((b) => b.personId === state.personId && isScratch(b));
+  const rename = (n) => { name().value = n; name().dispatch('change'); };
+  const newScratch = () => bar().querySelector('[data-beat-new]').dispatch('click');
+  const addRow = () => { $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click'); };
+
+  newScratch();
+  assert.equal(nameShown(), 'Scratch beat');
+  assert.ok(!name().readOnly, 'the title takes a name');
+  rename('Moon Jam');
+  assert.equal(mine('Moon Jam').length, 0, 'an empty beat is not kept');
+  assert.equal(nameShown(), 'Moon Jam', 'the title shows the name it will have');
+  addRow();
+  await page.settle();
+  assert.equal(mine('Moon Jam').length, 1, 'kept the moment it has a row');
+  assert.equal(nameShown(), 'Moon Jam');
+  assert.equal(bar().querySelector('[data-beat-keep]').hidden, true, 'a beat of its own now');
+  assert.equal(scratchNow(), undefined, 'the scratch starts empty again');
+
+  newScratch();
+  addRow();
+  rename('Moon Jam');
+  assert.equal(mine('Moon Jam 2').length, 1, 'a scratch with rows is kept at once, under a name no other beat has');
+  assert.equal(nameShown(), 'Moon Jam 2');
+
+  newScratch();
+  rename('Lost Jam');
+  newScratch();
+  addRow();
+  await page.settle();
+  assert.equal(mine('Lost Jam').length, 0, '🆕 New forgets the name');
+  assert.ok(scratchNow(), 'and the scratch stays the scratch');
+  assert.equal(nameShown(), 'Scratch beat');
+  newScratch();
+  $('#pads-tab').dispatch('click');
+});
+
+test('🎼 Song: a name typed into the scratch song\'s title keeps it under that name with its first block', async () => {
+  $('#song-tab').dispatch('click');
+  const pid = state.personId;
+  $('#song-new').dispatch('click');
+  assert.equal($('#song-name').value, 'Scratch song');
+  assert.ok(!$('#song-name').readOnly);
+  $('#song-name').value = 'Big Song';
+  $('#song-name').dispatch('change');
+  assert.ok(!state.songbook.some((s) => s.name === 'Big Song'), 'an empty song is not kept');
+  assert.equal($('#song-name').value, 'Big Song');
+  dropBeat($);
+  await page.settle();
+  assert.equal(state.songs.get(pid)?.name, 'Big Song', 'kept with its first block, and open');
+  assert.equal($('#song-keep').hidden, true);
+  assert.ok(!state.songbook.some((s) => s.personId === pid && s.id.startsWith('song-scratch-')), 'the scratch starts empty again');
+  $('#song-new').dispatch('click');
+  dropBeat($);
+  $('#song-name').value = 'Big Song';
+  $('#song-name').dispatch('change');
+  assert.equal(state.songs.get(pid)?.name, 'Big Song 2', 'a scratch with blocks is kept at once, under a name of its own');
+  $('#pads-tab').dispatch('click');
 });
