@@ -52,6 +52,7 @@ A small rule (a label, a color, a layout) needs only its row in `decisions.md`.
 | [0025](0025-github-deploys.md) | GitHub deploys every push to main with this repo's own token; agents hold no Cloudflare credentials; the site folder and its ID placeholders live in this repo | Accepted |
 | [0026](0026-telemetry-standard.md) | Usage events in the shared telemetry standard: one `track()` call, hooks per category, on by default with the `sendUsage` switch, which also gates the older metrics | Accepted |
 | [0027](0027-retire-feature-counts-and-visits.md) | Retire the feature-use counts and visit summaries now the shared events are live; keep devices and activity | Accepted |
+| [0028](0028-welcome-and-tips.md) | New people get a welcome (Who's playing?), a stage name and one-time tips; a level-up nudge | Accepted, to build |
 
 ## Template
 

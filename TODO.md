@@ -76,6 +76,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
+- **A welcome for new people** (Ben, 2026-10-16, ADR 0028): Who's playing?, Pick your stage name, one-time tips, hint dots, 🧸 Kids' 👆 hand, then the level-up nudge. Mockups shown 2026-10-16; waits on Ben's picks.
+
 - **🎤 Live on a phone: a layout builder not tied to a keyboard** (Ben, 2026-10-16): program the phone's Live layout from preset groups (chords, drums, …), far simpler to build than ✏️ Edit keys, with tile sizes you choose. Ben picked (decisions.md, 2026-10-16): stacked groups sized S/M/L, a ⌨️ / 👆 switch everywhere, shared with Beats with ⌨️ Keys, named saves. Waits on Ben's OK of the build plan.
 
 
@@ -99,6 +101,8 @@ Other work:
 ### Offered, not approved
 
 Agents suggested these; nothing happens until Ben says yes.
+
+- **Spoken prompts in 🧸 Kids** (a recorded "tap a pad!" for kids who can't read yet; the clip would be public). Ben, 2026-10-16: "Maybe… some of it should just be found by poking. I'm not closed to it."
 
 - **A `just secret <domain> NAME` recipe in flarepress** (10 min): `wrangler secret put` with flarepress's own Keychain auth, so a Worker secret is set the same way every site's D1 is, not by a hand-typed `npx wrangler` line.
 
