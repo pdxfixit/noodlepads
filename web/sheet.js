@@ -951,7 +951,6 @@ export function openSheet(mode, clip = null, { returnToPad = null } = {}) {
     focus: first,
     returnTo: () => (returnToPad ? padFor(returnToPad) : document.querySelector('#pads .pad-add')),
   });
-  hideWarn();
   placeStickyRow();
   sheet.opened = sheetSignature();
   clearInterval(playWatch);
@@ -1006,27 +1005,21 @@ function sheetSignature() {
 // A recording in progress, or anything changed since the sheet opened.
 const sheetHasWork = () => el.sheet.open && (isRecording() || sheetSignature() !== sheet.opened);
 
-function hideWarn() {
-  if (el.warn.hidden) return;
-  el.warn.hidden = true;
-  placeStickyRow();
-}
-
 // ✕, a tap on the backdrop and Esc come here (dialogs.js): false keeps the
-// sheet open and shows the question in its heading, Keep editing focused so
-// a stray Enter keeps the work.
+// sheet open and asks in a modal over it, Keep editing focused so a stray
+// Enter keeps the work. Esc or a tap outside that modal is Keep editing too.
 function askBeforeClosing() {
   if (!sheetHasWork()) return true;
-  el.warnText.textContent = isRecording() ? 'Throw away this recording?'
-    : sheet.pending && sheet.mode === 'new' ? 'Throw away this sound?' : 'Throw away your changes?';
-  el.warn.hidden = false;
-  placeStickyRow();
-  el.warnKeep.focus({ preventScroll: true });
+  const recording = isRecording();
+  const sound = sheet.pending && sheet.mode === 'new';
+  el.warnText.textContent = recording ? 'Throw away this recording?' : sound ? 'Throw away this sound?' : 'Throw away your changes?';
+  el.warnSub.textContent = recording ? 'It is still recording.' : sound ? 'It is not saved yet.' : 'They are not saved yet.';
+  openDialog(el.warn, { focus: el.warnKeep });
   return false;
 }
 
 function cleanupSheet() {
-  hideWarn();
+  if (el.warn.open) el.warn.close();
   clearInterval(playWatch);
   stopRecording({ discard: true });
   cut.close();
@@ -1652,6 +1645,7 @@ export function initSheet() {
     keepName: $('#keep-name'),
     warn: $('#sheet-warn'),
     warnText: $('#sheet-warn-text'),
+    warnSub: $('#sheet-warn-sub'),
     warnKeep: $('#sheet-warn-keep'),
     warnDrop: $('#sheet-warn-drop'),
     keepEmoji: $('#keep-emoji'),
@@ -1712,8 +1706,8 @@ export function initSheet() {
 
   setupDialog(el.sheet, { beforeClose: askBeforeClosing });
   el.sheet.addEventListener('close', cleanupSheet);
-  el.warnKeep.addEventListener('click', () => { hideWarn(); el.sheet.querySelector('.sheet-head .close')?.focus({ preventScroll: true }); });
-  el.warnDrop.addEventListener('click', closeSheet);
+  setupDialog(el.warn);
+  el.warnDrop.addEventListener('click', () => { el.warn.close(); closeSheet(); });
   // Closing or reloading the tab with the sheet holding work asks the browser's own question.
   window.addEventListener('beforeunload', (e) => { if (sheetHasWork()) { e.preventDefault(); e.returnValue = ''; } });
   el.recBtn.addEventListener('click', () => {
