@@ -52,6 +52,7 @@ stress *args:
 #   just look beats --js 'document.querySelector("#seq-grooves").click()'   runs JS on the screen first
 #   just look --url http://localhost:8765/ --widths 375 --out shots
 #   just look pads --wide           adds the wide screens: 1366, 1920, 2560 and 3440 px
+#   just look pads --skin all       one shot per pad skin (or --skin slam,googly), set before the view
 #   just look beats --top 500      keeps only the top 500 px of each screenshot
 #   just look edit --scroll 700    one 800 px window scrolled down 700 px (an open sheet too), to see what sticks
 #   just look beat-groove --scroll-to '.seq-row'   the same, with that element near the top
