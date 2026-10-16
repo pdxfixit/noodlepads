@@ -12,6 +12,8 @@
 //   --bg NAME[,NAME…]|all|none: the page's pattern (backdrop.js) instead of a random one; one shot per pattern.
 //   --skin ID[,ID…]|all: the pad skin (skins.js), set as the person's padSkin before the view runs; one shot per skin.
 //   --reduced-motion: the device asks for less motion (prefers-reduced-motion: reduce).
+//   A new person's first steps (the welcome, tips, hint dots, the nudge; ADR 0028) stay off,
+//   as a fresh device always looked, except in the views that show them (welcome, …).
 //   node tools/look.mjs cloud-smoke|cloud-e2e [--url URL]   the live cloud checks (look-cloud.mjs)
 //
 // Node with no dependencies: the DevTools protocol over Node's own WebSocket
@@ -90,7 +92,16 @@ const PIN_LINK = `const { state } = await import('/state.js'); const pinId = [..
 const NOTICE = `const { showNotice } = await import('/ui.js');
   showNotice('Saved a backup: Noodle Pads 2026-10-16.zip (3 sounds, 2 beats, 1 song). Keep it somewhere safe.');
   await new Promise((r) => setTimeout(r, 500));`;
+// 👋 A new person's first steps (ADR 0028; web/firsts.js). Every view starts
+// with them off (the app's test hook), as a fresh device always looked; a
+// view with `firstSteps: true` turns them on. WELCOME opens the welcome for
+// the person showing, as if just made (the widths share one device, so only
+// the first width's person is new by itself).
+const WELCOME = `const w = await import('/welcome.js'); const { state } = await import('/state.js');
+  if (!w.welcomeOpen()) { w.markNew(state.personId); w.offerWelcome(state.personId); } ${nap}`;
 const VIEWS = {
+  // Who's playing?: the three picture cards.
+  welcome: { screen: 'pads', firstSteps: true, js: WELCOME },
   edit: { screen: 'pads', js: q('#edit-toggle') },
   settings: { screen: 'pads', js: q('#settings-open') },
   // The banner with a notice, on Pads and over ⚙️ Settings. The Undo banner
@@ -484,8 +495,11 @@ async function lookOnce(screen, w, bg = '', skin = '') {
     const loaded = new Promise((r) => listeners.push(function once(m) {
       if (m.method === 'Page.loadEventFired') { listeners.splice(listeners.indexOf(once), 1); r(); }
     }));
+    // The first-steps hook (web/firsts.js), set before the app's scripts run.
+    const hook = await send('Page.addScriptToEvaluateOnNewDocument', { source: `globalThis.noodleFirstSteps = ${!!VIEWS[screen].firstSteps};` });
     await send('Page.navigate', { url: bg ? `${base}?bg=${bg}` : base });
     await loaded;
+    await send('Page.removeScriptToEvaluateOnNewDocument', { identifier: hook.identifier });
     await sleep(400);
     const row = { screen: [screen, bg, skin].filter(Boolean).join(' '), w, extra: [] };
     try {

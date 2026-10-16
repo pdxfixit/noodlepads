@@ -31,6 +31,7 @@ import { initSheet, openSheet, setBeatTempo, isRecording } from './sheet.js';
 import { initUpdate } from './update.js';
 import { registerOffline } from './offline.js';
 import { initPeople, refreshPeople, addPerson } from './people.js';
+import { initWelcome, markNew, offerWelcome } from './welcome.js';
 import { initCloud, needsPin, leftPerson } from './cloud.js';
 import { initCloudUI, askToOpen, shareSounds } from './cloud-ui.js';
 import { renderPreview } from './share-render.js';
@@ -645,6 +646,7 @@ async function settlePeople() {
   state.peopleEdits.set(me.id, me);
   if (db.handle) await persist('people', me);
   logEvent('person', { soloStart: true });
+  markNew(me.id);   // made from nothing: welcomed once the app is drawn (welcome.js)
 }
 
 // After people here got new ids at start: the remembered person, the closed
@@ -750,6 +752,14 @@ async function start() {
   initSheet();
   initBulk({ share: shareSounds });   // ✏️ Edit sounds with sounds chosen: Move, Color · picture, Voice, Share, Delete
   initPeople({ showPerson: setPerson });
+  // 👋 Who's playing? for a new person (ADR 0028). A card's sound is the
+  // person's copy of a ready-made one.
+  initWelcome({
+    play: (kitId) => {
+      const clip = clipsFor(state.personId, { includeHidden: true, allPresets: true }).find((c) => c.kitId === kitId);
+      if (clip) audio.play(clip);
+    },
+  });
   initCloudUI({ refresh: () => { renderPeople(); refreshPeople(); }, addPerson });
   initBackups();
   // ⚙️ while 🧸 Kids shows asks a grown-up sum first (kids.js).
@@ -917,6 +927,7 @@ async function start() {
   setScreen(first.screen);
   applyKids();
   page?.level(getSetting('level'));   // the level this load starts at, for the usage events
+  offerWelcome(state.personId);   // a device's first person, made just now (settlePeople)
   initLeftover();   // sounds an older copy saved on this address, under the old database name
   // Everyone in the cloud syncs now, and after changes (cloud.js); a share's
   // preview is recorded by the beat maker, as Save as a sound does.

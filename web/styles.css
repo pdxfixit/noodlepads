@@ -4105,6 +4105,43 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
 .more-item[aria-checked="true"]::after { content: "✓"; }
 .more-item.armed { background: #B3261E; color: #fff; }
 
+/* ── 👋 The welcome (welcome.js, ADR 0028) ──
+   Who's playing?: three big picture cards, each a pad (the person's pad
+   skin draws it, below), three across at every width; a quiet Skip. */
+dialog.welcome { width: min(640px, calc(100vw - 2 * var(--gutter))); }
+@media (max-width: 600px) { dialog.welcome { width: 100%; } }
+.wl-title { margin: 0 0 16px; font: 900 1.7rem/1.1 var(--font-display); text-align: center; }
+.wl-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+/* .pad.pad.pad outweighs every skin's size rules (Pad skins, below): the
+   cards keep the grid's width and their height at any skin. */
+.wl-cards .pad.pad.pad.wl-card {
+  container-type: inline-size;
+  grid-template: "emoji" minmax(0, 1fr) "label" auto / minmax(0, 1fr);
+  justify-items: center;
+  align-items: center;
+  aspect-ratio: auto;
+  min-width: 0;
+  height: 156px;
+  padding: 12px 6px 10px;
+  text-align: center;
+  cursor: pointer;
+}
+.wl-cards .pad.pad.pad.wl-card .pad-emoji { align-self: center; font-size: clamp(2.2rem, 34cqw, 3.6rem); }
+.wl-cards .pad.pad.pad.wl-card .pad-label { align-self: end; font-size: clamp(0.85rem, 13cqw, 1.3rem); hyphens: none; overflow-wrap: normal; }
+@media (min-width: 560px) { .wl-cards { gap: 16px; } .wl-cards .pad.pad.pad.wl-card { height: 184px; } }
+.wl-foot { display: flex; justify-content: center; margin-top: 14px; }
+.wl-skip {
+  min-height: 44px;
+  min-width: 88px;
+  padding: 0 16px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 700 1rem/1 var(--font-ui);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* ── Pad skins (skins.js; Ben, 2026-10-16) ──
    How every pad looks, the person's choice in ⚙️ Settings → 🎨 Look:
    Tiles (everything above), Slam buttons, Lit pads, Switch, Spinner, Jelly

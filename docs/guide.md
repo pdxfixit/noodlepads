@@ -124,6 +124,27 @@ five-year-old, with no words to read and nothing to delete, edit or share:
 reloads, wrong goes quietly back. Choosing 🧸 Kids in Settings hands it back.
 The tab is remembered on the device (`kids-tab`).
 
+## A new person's first steps
+
+ADR 0028. A new person learns the app by playing it; nothing blocks the first
+sound.
+
+**Who's playing?** A device's first person (the one the app makes on a fresh
+device) and everyone added later (➕ in 👥 People, 👋 Someone new on the PIN
+pad) are asked once, in a dialog over the screen: three big picture cards,
+each drawn as a pad in the person's pad skin. 🧸 Little noodler sets 🧸 Kids,
+🎵 Tap and make beats Regular, 🎛️ Show me everything Advanced. No ages. A tap
+plays a ready-made sound (Pop, Clap, the C chord), sets the level and moves
+on; Skip keeps Regular. Leaving 🧸 Kids still needs the grown-up sum.
+
+Only the two places that make a person from nothing mark them as new, in
+memory (`web/welcome.js`). Anyone stored before, pulled from the cloud or
+loaded from a backup is never asked, and a reload before it shows skips it.
+
+For the tests and `just look`, the app's test hook `noodleFirstSteps = false`
+(`web/firsts.js`) turns every first step off, so a fresh device there opens on
+the app as before. The `welcome` look view turns them on.
+
 ## Help
 
 The ❓ button, beside ⚙️, opens Help: a picture reference with one tab each for
@@ -131,7 +152,8 @@ Pads, making a sound, Beats, 🎼 Song, 🎤 Live and Settings (every toolbar sc
 one; a test checks). It opens on the tab for the screen
 you are on. Each line draws a control with its real label and says what it does
 in one sentence; tools behind the Advanced switch are marked ⚙️ Advanced. It is
-for looking things up, never a lesson: nothing pops up on its own. The content
+for looking things up, never a lesson: only a new person's first steps
+(above) pop up on their own. The content
 is a table in `web/help.js`. `tests/help.test.mjs` fails when a label Help
 draws no longer exists in the app, or when a key control on its `MUST_MENTION`
 list is missing from Help, so rename both together. Lines marked `soon`

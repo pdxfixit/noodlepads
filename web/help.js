@@ -1,6 +1,6 @@
 // Help: the ❓ button's picture reference of what each control does, one tab
-// per part of the app. A place to look things up, never a lesson: nothing
-// pops up on its own (ADR 0004). Each line pairs a small drawing of the
+// per part of the app. A place to look things up, never a lesson (ADR 0004);
+// only a new person's first steps pop up on their own (ADR 0028). Each line pairs a small drawing of the
 // control, in the app's own button styles, with one short sentence.
 //
 // The drawings use the real labels. tests/help.test.mjs checks that every
@@ -212,6 +212,7 @@ export const HELP = [
       { pic: [word('📊 Share play data')], text: 'In ⚙️ Settings → 📊 Data sharing: on unless you turn it off. Off sends nothing. What it shares is in the Privacy policy, beside the version.' },
       { pic: [chip('💾 Save a backup'), chip('📂 Load a backup')], text: 'One file with all your sounds, beats and settings. Above the buttons it says how many of each it holds. Load it on another phone or tablet: it adds what is new and keeps everything there.' },
       { pic: [chip('📥 Bring them in'), chip('💾 Save everything it left')], text: 'Only when an older copy of the app left sounds in this browser: Older sounds found on this device. Bring them in adds them here; Save everything it left keeps a copy of all of it in one file. The older sounds are never deleted.' },
+      { pic: [word("👋 Who's playing?")], text: 'A new person is asked once, by three picture pads: 🧸 Little noodler (Kids), 🎵 Tap and make beats (Regular) or 🎛️ Show me everything (Advanced). Skip keeps Regular; Level changes it later.' },
       { pic: [seg('🧸 Kids', 'Regular', 'Advanced')], text: 'Level, each person their own. Advanced turns on the extra tools for beats and sounds, and the sharps and flats in the presets; Help marks them ⚙️ Advanced.' },
       { pic: [word('🎨 Look')], text: 'How every pad looks, each person their own, at every level: Tiles, Slam buttons, Lit pads, Switch, Spinner, Jelly or Googly eyes. Tap one to choose it.' },
       { pic: [word('🧸 Kids')], text: 'For small kids: big picture pads (swipe for more; the slider at the top, or a pinch, makes them bigger or smaller, the same size as on Pads; 🎨 at the top left changes how they look), a mic to hold while you talk, a little beat of four drums and toy keys. Nothing to delete or edit, and no words to read.' },

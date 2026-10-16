@@ -22,6 +22,7 @@ import { avatarBadge, openAvatar, openCloudSheet, cloudLabel, askEditPin, drawPi
 import { openDialog, setupDialog } from './dialogs.js';
 import { announce } from './ui.js';
 import { logEvent } from './log.js';
+import { markNew, offerWelcome } from './welcome.js';
 
 const el = {};
 let showPerson = () => {};
@@ -152,9 +153,11 @@ export async function addPerson() {
   state.peopleEdits.set(record.id, record);
   await persist('people', record);
   logEvent('person', { added: record.id });
+  markNew(record.id);
   showPerson(record.id);
   renderPeopleEditor();
   el.peopleEdit.querySelector(`[data-person="${CSS.escape(record.id)}"] [data-profile]`)?.focus();
+  offerWelcome(record.id);   // 👋 Who's playing? (welcome.js, ADR 0028)
 }
 
 // ── a person's profile sheet ──
