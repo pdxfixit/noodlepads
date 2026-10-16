@@ -23,6 +23,7 @@ import { rowParts, rowSpeaker, rowEmoji, twinRows } from './beat-row.js';
 import { logEvent } from './log.js';
 import { countPlay } from './play-count.js';
 import { makeVoice, fadeStop } from './audio.js';
+import { fingerTaps, isFinger } from './finger.js';
 
 const STOPS = tempoStops();   // the click track slider's positions (see sequencer.js)
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
@@ -260,6 +261,7 @@ export function createDJ({ el, deps }) {
   function letGo() {
     for (const t of holds.values()) clearTimeout(t);
     holds.clear();
+    fingers.clear();
     held.clear();
     for (const k of el.keys.querySelectorAll('.down')) k.classList.remove('down');
   }
@@ -305,11 +307,21 @@ export function createDJ({ el, deps }) {
     keyEl(code)?.classList.remove('down');
   }
 
+  // A finger plays a key when it lifts where it landed, as on the pads, so a
+  // scroll that starts on the keys stays silent (Ben, 2026-10-16; finger.js).
+  // Held still, it plays and loops. A mouse still plays on press.
+  const fingers = fingerTaps({
+    onTap: (code) => play(code),
+    onHold: (code) => { const clip = play(code); if (clip) loopIt(clip); },
+    holdMs: HOLD_TO_LOOP_MS,
+  });
   el.keys.addEventListener('pointerdown', (e) => {
     const k = e.target.closest('[data-code]');
     if (!k || e.button > 0) return;
     k.classList.add('down');
-    pointerDown(k.dataset.code, `p${e.pointerId}`, e.shiftKey);
+    const code = k.dataset.code;
+    if (isFinger(e)) { fingers.down(e, code, { hold: !deps.isLooping?.(deck()[code]) }); return; }
+    pointerDown(code, `p${e.pointerId}`, e.shiftKey);
   });
   for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
     el.keys.addEventListener(type, (e) => {
@@ -317,6 +329,10 @@ export function createDJ({ el, deps }) {
       e.target.closest?.('[data-code]')?.classList.remove('down');
     });
   }
+  // On the window: a finger may lift off the key, or the browser may take it for a scroll.
+  window.addEventListener('pointermove', (e) => fingers.move(e));
+  window.addEventListener('pointerup', (e) => fingers.up(e));
+  window.addEventListener('pointercancel', (e) => fingers.cancel(e));
   // Enter or Space on a focused key plays it (pointer taps are handled above);
   // Shift+Enter or Shift+Space loops it, as a hold does.
   el.keys.addEventListener('click', (e) => {
