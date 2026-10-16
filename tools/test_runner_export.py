@@ -162,5 +162,31 @@ class Metrics(Temp):
         self.assertIn("activity 1", said)
 
 
+
+class All(Temp):
+    """`telemetry.py import` starts a job's history once: a second import into
+    `noodlepads` is refused ("already has a stored snapshot"). So both old
+    archives go into one file, imported once."""
+
+    def test_both_archives_in_one_file_checked_together(self):
+        logs, metrics = Reports.old(self), Metrics.old(self)
+        out = self.dir / "noodlepads-for-runner.sqlite3"
+        code, said = self.run_main("all", str(logs), str(metrics), str(out))
+        self.assertEqual(code, 0, said)
+        self.assertIn("✅ reports: 1 written", said)
+        self.assertIn("✅ players: 1 rows (left out: name, avatar)", said)
+        self.assertIn("is in the harvest's shape: activity 1, cf_http_daily 1, harvest_meta 1, players 1, reports 1, uses 1", said)
+        tables = {t for (t,) in sqlite3.connect(out).execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+        self.assertEqual(tables, {"activity", "cf_http_daily", "harvest_meta", "players", "reports", "uses"})
+        for gone in (b"Mozilla", b"Portland", b"Sir Squid"):
+            self.assertNotIn(gone, out.read_bytes())
+        self.assertEqual(rx.problems(out), [])
+
+    def test_a_missing_archive_writes_nothing(self):
+        out = self.dir / "none.sqlite3"
+        code, _ = self.run_main("all", str(Reports.old(self)), str(self.dir / "missing.sqlite3"), str(out))
+        self.assertEqual(code, 1)
+        self.assertFalse(out.exists(), "no half-written file to import by mistake")
+
 if __name__ == "__main__":
     unittest.main()

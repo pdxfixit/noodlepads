@@ -10,6 +10,10 @@ telemetry tooling needs to take this over").
                                      the harvest's tables only, in its shape: no
                                      city, region, network or ASN, no names or
                                      avatars
+  runner_export.py all LOGS METRICS OUT
+                                     both in one file: the one to import, since
+                                     `telemetry.py import` starts a job's history
+                                     once and refuses a job with a stored snapshot
   runner_export.py check FILE        exit 0 when FILE holds only tables in the
                                      harvest's shape, so `telemetry.py import
                                      noodlepads FILE` can take it as history
@@ -194,65 +198,81 @@ def clean_body(text):
     return json.dumps(body, ensure_ascii=False, sort_keys=True)
 
 
-def export_reports(old, new, want=None, out=None):
-    """Old logs.sqlite3 `uploads` -> the harvest's `reports`. Returns {written, skipped}."""
-    want, out = want or shape(), out or sys.stdout
+def write_reports(src, dst, want, out):
+    """Old logs.sqlite3 `uploads` -> the harvest's `reports`, in dst. Returns {written, skipped}."""
     cols, pk = want["reports"]
-    src, dst = open_old(old), open_new(new)
-    try:
-        create(dst, "reports", cols, pk)
-        written = skipped = 0
-        for key, received, device, app, errors, payload in src.execute(
-                "SELECT key, received, device, app, errors, payload FROM uploads ORDER BY key"):
-            body = clean_body(payload)
-            if body is None or not received:
-                skipped += 1
-                continue
-            created = ms(received)
-            dst.execute("INSERT INTO reports (key, device, app, errors, body, created, expires) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (key, device or key.split("_")[1], app or "", errors or 0, body, created, created + REPORT_KEEP_MS))
-            written += 1
-        dst.commit()
-    finally:
-        src.close()
-        dst.close()
+    create(dst, "reports", cols, pk)
+    written = skipped = 0
+    for key, received, device, app, errors, payload in src.execute(
+            "SELECT key, received, device, app, errors, payload FROM uploads ORDER BY key"):
+        body = clean_body(payload)
+        if body is None or not received:
+            skipped += 1
+            continue
+        created = ms(received)
+        dst.execute("INSERT INTO reports (key, device, app, errors, body, created, expires) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (key, device or key.split("_")[1], app or "", errors or 0, body, created, created + REPORT_KEEP_MS))
+        written += 1
     print(f"✅ reports: {written} written" + (f", {skipped} skipped (not a JSON report)" if skipped else ""), file=out)
     return {"written": written, "skipped": skipped}
 
 
-def export_metrics(old, new, want=None, out=None):
-    """Old metrics.sqlite3 -> the harvest's tables only, in its shape. Returns
-    {table: rows} written and the columns left out per table."""
-    want, out = want or shape(), out or sys.stdout
-    src, dst = open_old(old), open_new(new)
+def write_metrics(src, dst, want, out):
+    """Old metrics.sqlite3 -> the harvest's tables only, in its shape, in dst.
+    Returns {table: rows} written and the columns left out per table."""
     written, dropped, skipped = {}, {}, []
-    try:
-        for (t, sql) in src.execute("SELECT name, sql FROM sqlite_master WHERE type = 'table' ORDER BY name").fetchall():
-            if t == "reports" or (t not in want and not OWN.match(t)):
-                skipped.append(t)
-                continue
-            have = columns(src, t)
-            if OWN.match(t):
-                dst.execute(sql)
-                cols = have
-            else:
-                spec, pk = want[t]
-                create(dst, t, spec, pk)
-                cols = [c for c, _ in spec]
-                dropped[t] = [c for c in have if c not in cols]
-            pick = ", ".join(f'"{c}"' if c in have else "NULL" for c in cols)
-            rows = src.execute(f'SELECT {pick} FROM "{t}"').fetchall()
-            dst.executemany(f'INSERT INTO "{t}" VALUES ({", ".join("?" * len(cols))})', rows)
-            written[t] = len(rows)
-        dst.commit()
-    finally:
-        src.close()
-        dst.close()
+    for (t, sql) in src.execute("SELECT name, sql FROM sqlite_master WHERE type = 'table' ORDER BY name").fetchall():
+        if t == "reports" or (t not in want and not OWN.match(t)):
+            skipped.append(t)
+            continue
+        have = columns(src, t)
+        if OWN.match(t):
+            dst.execute(sql)
+            cols = have
+        else:
+            spec, pk = want[t]
+            create(dst, t, spec, pk)
+            cols = [c for c, _ in spec]
+            dropped[t] = [c for c in have if c not in cols]
+        pick = ", ".join(f'"{c}"' if c in have else "NULL" for c in cols)
+        rows = src.execute(f'SELECT {pick} FROM "{t}"').fetchall()
+        dst.executemany(f'INSERT INTO "{t}" VALUES ({", ".join("?" * len(cols))})', rows)
+        written[t] = len(rows)
     for t, n in written.items():
         print(f"✅ {t}: {n} rows" + (f" (left out: {', '.join(dropped[t])})" if dropped.get(t) else ""), file=out)
     if skipped:
         print(f"⏭️  not the harvest's: {', '.join(skipped)}", file=out)
     return written, dropped
+
+
+def export(new, logs=None, metrics=None, want=None, out=None):
+    """One new file from the old report archive, the old metrics archive, or
+    both. `telemetry.py import` starts a job's history once and refuses a job
+    that already has a stored snapshot, so both archives go in one file."""
+    want, out = want or shape(), out or sys.stdout
+    sources = [open_old(p) if p else None for p in (logs, metrics)]
+    try:
+        dst = open_new(new)
+        try:
+            if sources[0]:
+                write_reports(sources[0], dst, want, out)
+            if sources[1]:
+                write_metrics(sources[1], dst, want, out)
+            dst.commit()
+        finally:
+            dst.close()
+    finally:
+        for src in sources:
+            if src:
+                src.close()
+
+
+def export_reports(old, new, want=None, out=None):
+    export(new, logs=old, want=want, out=out)
+
+
+def export_metrics(old, new, want=None, out=None):
+    export(new, metrics=old, want=want, out=out)
 
 
 def main(argv=None):
@@ -262,6 +282,10 @@ def main(argv=None):
         p = sub.add_parser(name)
         p.add_argument("old")
         p.add_argument("out")
+    p = sub.add_parser("all")
+    p.add_argument("logs")
+    p.add_argument("metrics")
+    p.add_argument("out")
     sub.add_parser("check").add_argument("file")
     args = ap.parse_args(argv)
     try:
@@ -269,6 +293,8 @@ def main(argv=None):
             export_reports(args.old, args.out)
         elif args.cmd == "metrics":
             export_metrics(args.old, args.out)
+        elif args.cmd == "all":
+            export(args.out, logs=args.logs, metrics=args.metrics)
         path = args.out if args.cmd != "check" else args.file
         if not Path(path).expanduser().is_file():
             raise Fail(f"no file at {path}")

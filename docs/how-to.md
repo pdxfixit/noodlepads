@@ -103,20 +103,18 @@ Before 2026-10-16 this repo kept its own copies: `~/.local/state/noodlepads/logs
 
 1. **Up to date:** `git -C ~/src/noodlepads pull` and `git -C ~/src/telemetry pull`.
 2. **The runner names the reports' ids.** `~/src/telemetry/telemetry.toml` `[jobs.noodlepads.ids]` must have a `reports` line before any import, since a report's key and `device` hold its device code: `reports = { columns = ["key", "device"], time = "created", unit = "ms", drop = true }`. If it is missing, stop: an agent adds it in pdxfixit/telemetry first.
-3. **Export**, outside the repo (each prints its row counts; write them down):
+3. **Export both archives into one file**, outside the repo. It prints each table's row count; write them down:
    ```sh
    mkdir -p ~/.local/state/noodlepads/export
-   just runner-export reports ~/.local/state/noodlepads/logs.sqlite3 ~/.local/state/noodlepads/export/reports.sqlite3
-   just runner-export metrics ~/.local/state/noodlepads/metrics.sqlite3 ~/.local/state/noodlepads/export/metrics.sqlite3
+   just runner-export all ~/.local/state/noodlepads/logs.sqlite3 ~/.local/state/noodlepads/metrics.sqlite3 ~/.local/state/noodlepads/export/noodlepads.sqlite3
    ```
-   The reports keep no raw User-Agent; the metrics keep no city, region, network, ASN, name or avatar. Each ends `✅ … is in the harvest's shape`. A `❌` line stops here.
-4. **Import, dry run first, then for real:**
+   The reports keep no raw User-Agent; the metrics keep no city, region, network, ASN, name or avatar. It ends `✅ … is in the harvest's shape`. A `❌` line stops here.
+4. **Import once, dry run first, then for real.** `telemetry.py import` only starts a job's history: it refuses a job that already has a stored snapshot. So it must run **before the runner's `noodlepads` job is ever enabled** (`enabled = false` in `telemetry.toml` today), and only once: both archives are in the one file.
    ```sh
-   python3 ~/src/telemetry/telemetry.py import noodlepads ~/.local/state/noodlepads/export/reports.sqlite3
-   python3 ~/src/telemetry/telemetry.py import noodlepads ~/.local/state/noodlepads/export/reports.sqlite3 --apply
-   python3 ~/src/telemetry/telemetry.py import noodlepads ~/.local/state/noodlepads/export/metrics.sqlite3
-   python3 ~/src/telemetry/telemetry.py import noodlepads ~/.local/state/noodlepads/export/metrics.sqlite3 --apply
+   python3 ~/src/telemetry/telemetry.py import noodlepads ~/.local/state/noodlepads/export/noodlepads.sqlite3
+   python3 ~/src/telemetry/telemetry.py import noodlepads ~/.local/state/noodlepads/export/noodlepads.sqlite3 --apply
    ```
+   If the job has already run, the import is refused; ask an agent before going on (the old archives stay until then).
 5. **Verify:** `python3 ~/src/telemetry/telemetry.py pull`, then `python3 ~/src/telemetry/telemetry.py check`. Each count is at least step 3's (the runner may hold newer rows): `sqlite3 ~/.local/state/telemetry/telemetry.sqlite3 "SELECT 'reports', count(*) FROM noodlepads__reports UNION ALL SELECT 'activity', count(*) FROM noodlepads__activity UNION ALL SELECT 'visits', count(*) FROM noodlepads__visits UNION ALL SELECT 'devices', count(*) FROM noodlepads__devices UNION ALL SELECT 'uses', count(*) FROM noodlepads__uses UNION ALL SELECT 'players', count(*) FROM noodlepads__players"`. Then `just logs` lists reports and `just cloud-stats` reports players.
 6. **Delete the old files**, only when step 5 matched: `rm ~/.local/state/noodlepads/logs.sqlite3 ~/.local/state/noodlepads/metrics.sqlite3` and `rm -r ~/.local/state/noodlepads/export`. `just doctor` stops naming them.
 
