@@ -31,7 +31,7 @@ class Land(unittest.TestCase):
             git(repo, 'config', k, v)
         (repo / 'tools').mkdir()
         shutil.copy(LAND, repo / 'tools' / 'land.sh')
-        (repo / 'justfile').write_text('test:\n    true\n')   # finish runs `just test`
+        (repo / 'justfile').write_text('test-quiet:\n    true\n')   # finish runs `just test-quiet`
         (repo / '.gitignore').write_text('.worktrees/\n')
         (repo / 'a.txt').write_text('one\n')
         (repo / 'b.txt').write_text('one\n')
