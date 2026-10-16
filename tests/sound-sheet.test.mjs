@@ -1,5 +1,5 @@
 // The sound sheet's sound-design controls, driven through the real app on
-// the stand-in page: Hold: before, the voice chain (+ Then add, ✕) and
+// the stand-in page: 👂 Plain, the voice chain (+ Then add, ✕) and
 // 🎲 Surprise me. Nothing is heard here: audio.start and audio.stop are
 // replaced by recorders, and voices render with a stand-in AudioBuffer.
 
@@ -43,34 +43,54 @@ async function openEditor() {
   calls.length = 0;
 }
 
-test('Hold: before plays the plain recording while held, and the voiced sound when let go', async () => {
+test('👂 Plain is faded until a voice is on, and sits under the wave for everyone', async () => {
   await openEditor();
   assert.equal($('#wave-box').hidden, false, 'an edit shows the wave straight away');
-  assert.equal($('#before-btn').disabled, false);
+  assert.equal($('#cut').hidden, false, 'the row under the wave shows with Advanced off');
+  assert.equal($('#trim-btn').hidden, true, 'Trim and edit is Advanced only');
+  assert.equal($('#plain-btn').disabled, true, 'every knob normal: plain sounds the same');
+  chip('chipmunk').dispatch('click');
+  await page.settle();
+  assert.equal($('#plain-btn').disabled, false);
+  $('#sheet').close();
+});
 
-  $('#before-btn').dispatch('pointerdown', { button: 0, pointerId: 1 });
+test('👂 Plain: a tap plays the plain recording, a second tap stops it and puts the voiced wave back', async () => {
+  await openEditor();
+  chip('chipmunk').dispatch('click');
+  await page.settle();
+  calls.length = 0;
+  $('#plain-btn').dispatch('click');
   await page.settle();
   const started = calls.filter(([what]) => what === 'start');
   assert.deepEqual(started.map(([, id]) => id), ['preview-original']);
   assert.equal(started[0][2], plain, 'the recording itself, with no voice');
+  assert.ok(calls.some(([what, id]) => what === 'stop' && id === 'preview'), 'the voiced sound stops first');
+  assert.equal($('#plain-btn').getAttribute('aria-pressed'), 'true');
 
-  calls.length = 0;
-  $('#before-btn').dispatch('pointerup', { button: 0, pointerId: 1 });
-  await page.settle();
-  assert.deepEqual(calls[0], ['stop', 'preview-original']);
-  assert.ok(calls.some(([what, id]) => what === 'start' && id === 'preview'), 'the voiced sound plays again');
+  audio.playing.set('preview-original', { fake: true });   // as if still sounding
+  try {
+    calls.length = 0;
+    $('#plain-btn').dispatch('click');
+    await page.settle();
+    assert.deepEqual(calls[0], ['stop', 'preview-original']);
+    assert.ok(!calls.some(([what]) => what === 'start'), 'stopping plays nothing');
+    assert.equal($('#plain-btn').getAttribute('aria-pressed'), 'false');
+  } finally { audio.playing.delete('preview-original'); }
   $('#sheet').close();
 });
 
-test('Hold: before works from the keyboard: Space held down, then let go', async () => {
+test('👂 Plain then a voice: the plain sound stops and the voiced one plays', async () => {
   await openEditor();
-  const down = $('#before-btn').dispatch('keydown', { key: ' ', repeat: false });
-  assert.equal(down.defaultPrevented, true);
+  chip('chipmunk').dispatch('click');
   await page.settle();
-  assert.ok(calls.some(([what, id]) => what === 'start' && id === 'preview-original'));
-  $('#before-btn').dispatch('keyup', { key: ' ' });
+  $('#plain-btn').dispatch('click');
+  await page.settle();
+  calls.length = 0;
+  chip('monster').dispatch('click');
   await page.settle();
   assert.ok(calls.some(([what, id]) => what === 'stop' && id === 'preview-original'));
+  assert.ok(calls.some(([what, id]) => what === 'start' && id === 'preview'), 'the voiced sound plays');
   $('#sheet').close();
 });
 
@@ -453,9 +473,11 @@ test('a new sound’s ▶︎ waits for a sound', () => {
   $('#sheet').close();
 });
 
-test('closing the sheet while Before is held stops the plain sound', async () => {
+test('closing the sheet while 👂 Plain plays stops the plain sound', async () => {
   await openEditor();
-  $('#before-btn').dispatch('pointerdown', { button: 0, pointerId: 1 });
+  chip('chipmunk').dispatch('click');
+  await page.settle();
+  $('#plain-btn').dispatch('click');
   await page.settle();
   $('#sheet').close();
   assert.ok(calls.some(([what, id]) => what === 'stop' && id === 'preview-original'));

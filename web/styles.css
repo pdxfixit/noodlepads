@@ -1812,30 +1812,6 @@ dialog#sheet .make :focus-visible { outline-color: #fff; }
   color: var(--board);
 }
 
-/* Hold: before. A key the width of the wave that stays down while held. */
-.hold-before {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 48px;
-  margin-top: 10px;
-  border: 0;
-  border-radius: 12px;
-  background: var(--chalk);
-  box-shadow: 0 4px 0 var(--line);
-  color: var(--ink);
-  font-weight: 800;
-  font-size: 1rem;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  transition: transform 50ms, box-shadow 50ms;
-}
-.hold-before:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--line); background: #fff; }
-.hold-before:disabled { opacity: 0.45; cursor: default; }
-
 /* Trim and chop (Advanced, chop.js): handles over the wave, 44 px wide to
    grab, each drawn as a line with a knob on top. The cut-off ends of a trim
    are drawn grey by wave.js in --wave-cut. */
@@ -1890,6 +1866,9 @@ dialog#sheet .make :focus-visible { outline-color: #fff; }
 .cut-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .cut-panel .cut-tools { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .cut-tools .chain-tool { padding: 4px 8px; line-height: 1.15; }
+/* Under the wave: 👂 Plain, then ✂️ and 🧩 with Advanced; whichever show share the width. */
+#cut-start { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+#plain-btn[aria-pressed="true"] { background: #fff; border-color: var(--board); box-shadow: inset 0 0 0 1px var(--board); }
 .cut-make { grid-column: 1 / -1; }
 .cut-make:not(:disabled), #cut-done { background: var(--ink); color: #fff; }
 .cut-hint { margin: 0 0 8px; }

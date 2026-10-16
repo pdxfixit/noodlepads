@@ -83,9 +83,6 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 
 
-
-- **Make 👂 Hold: before clear in the sound sheet** (Ben, 2026-10-15: "not clear what the 'hold: Before' button is for. maybe there should be a help button in here next to the exit?"). Options (clearer label, ❓ beside ✕ opening Help on 🎙️ Sounds, show it only once a voice is on) waiting on Ben's pick.
-
 - **Toward a kid-sized music studio** (Ben, 2026-10-12; north star: ADR 0022). Done: pattern chips, mixer, four tabs, the piano roll, the playlist (ADR 0024). Next: Ben's call.
 
 - **After launch: stop loading backups from before 1.0** (Ben, 2026-10-11, "it will only be this once"): once the testing copies' backups are in, remove `beforeOne` in `web/backup.js` so they are refused again (ADR 0011).

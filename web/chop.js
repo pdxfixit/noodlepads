@@ -76,7 +76,8 @@ export function createCut(sheet) {
 
   function render() {
     const { ready } = sheet.now();
-    el.box.hidden = !shown() || !ready;
+    el.box.hidden = !ready;   // 👂 Plain (sheet.js) shares the row for everyone
+    el.trimBtn.hidden = el.chopBtn.hidden = !shown();
     el.trimBtn.disabled = el.chopBtn.disabled = !ready;
     el.start.hidden = !!cut.mode;
     el.panel.hidden = !cut.mode;

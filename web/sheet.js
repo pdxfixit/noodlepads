@@ -79,7 +79,7 @@ const sheet = {
   emoji: '📣',
   color: 'yellow',
   voiced: 0,            // seconds of the voiced sound last drawn, so the plain one is drawn to the same scale
-  holding: false,       // Hold: before is held down
+  plain: false,         // 👂 Plain: false, 'waiting' for the recording, or 'playing' it
   trim: null,           // {start, end} seconds into the stored audio (chop.js), or null for the automatic trim
   edits: null,          // the wave editor's changes to parts of the stored audio (cuts.js), or null
   fade: null,           // the wave editor's fades, {in, out} seconds, or null
@@ -162,7 +162,6 @@ function setVoicesReady(ready) {
   el.sheetPlay.disabled = !ready;
   el.amount.disabled = !ready;
   amountKeys?.();
-  el.beforeBtn.disabled = !ready;
   el.voiceHint.hidden = ready;
   renderVoices();
   cut.ready();
@@ -298,6 +297,7 @@ function renderVoices() {
   el.voiceLine.textContent = sheet.ready ? voiceLine(sheet.lit, sheet.tweaks) : '';
   el.keepBtn.disabled = !sheet.ready || allNormal(sheet.tweaks);
   el.normalBtn.disabled = !sheet.ready || (allNormal(sheet.tweaks) && plainChain());
+  el.plainBtn.disabled = el.normalBtn.disabled;   // with no voice on, plain sounds the same
   renderTweaks();
   renderChain();
 }
@@ -966,6 +966,8 @@ const sheetPlaying = () => audio.playing.has('preview') || audio.playing.has('pr
 let playWatch = 0;
 
 function syncPlay() {
+  if (sheet.plain === 'playing' && !audio.playing.has('preview-original')) endPlain({ redraw: true });
+  el.plainBtn.setAttribute('aria-pressed', String(!!sheet.plain));
   const on = sheetPlaying();
   el.sheetPlay.textContent = on ? '■' : '▶︎';
   el.sheetPlay.setAttribute('aria-pressed', String(on));
@@ -978,7 +980,7 @@ function togglePlay() {
   if (sheetPlaying()) {
     live.on = false;
     audio.stop('preview');
-    audio.stop('preview-original');
+    endPlain({ redraw: true });
   } else previewVoice();
   syncPlay();
 }
@@ -991,7 +993,7 @@ function cleanupSheet() {
   clearInterval(playWatch);
   stopRecording({ discard: true });
   cut.close();
-  sheet.holding = false;
+  sheet.plain = false;
   live.on = false;
   audio.stop('preview');
   audio.stop('preview-original');
@@ -1085,7 +1087,10 @@ function renderAmount() {
 async function previewVoice({ play = true } = {}) {
   if (!sheet.original) return;
   cut.leave();   // a voice tapped while trimming or chopping: back to the voiced wave
-  if (play) live.on = false;   // a new render replaces the live loop
+  if (play) {
+    live.on = false;   // a new render replaces the live loop
+    endPlain();        // and the plain sound
+  }
   const name = stepLook(link()).name;
   const job = rendered();   // as it is now; picking another voice changes sheet.chain
   const expected = sheet.original;
@@ -1093,7 +1098,7 @@ async function previewVoice({ play = true } = {}) {
     const rendered = await job;
     const original = await expected;
     if (sheet.original !== expected || !el.sheet.open) return;  // sheet moved on
-    if (sheet.holding) return;  // Hold: before is showing the plain sound
+    if (sheet.plain) return;  // 👂 Plain was tapped since: the wave shows the plain sound
     el.waveBox.hidden = false;
     sheet.voiced = rendered.buffer.duration;
     wave.show(rendered.buffer, original.duration);
@@ -1196,6 +1201,7 @@ function closePalette() {
 function startLive() {
   if (live.on) return Promise.resolve(true);
   if (live.starting) return live.starting;
+  endPlain();
   live.starting = (async () => {
     const chain = sheet.chain.map((s) => ({ ...s }));
     const split = livePlan(chain, storedTweaks());
@@ -1207,7 +1213,7 @@ function startLive() {
     }
     const expected = sheet.original;
     const head = await sheet.previews.get(key);
-    if (sheet.original !== expected || !el.sheet.open || sheet.holding) return false;
+    if (sheet.original !== expected || !el.sheet.open || sheet.plain) return false;
     const loop = padTo(head.buffer, head.duration + Math.min(6, tailOf(split.tail)), head.duration);
     audio.start('preview', { buffer: loop, duration: loop.duration }, {
       loop: true,
@@ -1292,34 +1298,39 @@ function moveStep(from, to) {
   el.layerRows.querySelector(`[data-grip="${to}"]`)?.focus();
 }
 
-// Hold: before. While it is held, the plain recording plays and the wave
-// shows it; let go, and the voiced sound plays again. Hearing the two back to
-// back is how a change is judged.
-async function holdBefore() {
-  if (!sheet.original || sheet.holding || el.beforeBtn.disabled) return;
+// 👂 Plain. A tap plays the sound with no voice, and the wave shows it; ▶︎
+// then plays the voice. Hearing the two one after the other is how a change
+// is judged. A second tap, ▶︎ or any change stops it.
+async function playPlain() {
+  if (!sheet.original || el.plainBtn.disabled) return;
+  if (sheet.plain) { endPlain({ redraw: true }); syncPlay(); return; }
   cut.leave();
-  sheet.holding = true;
+  live.on = false;
+  audio.stop('preview');
+  sheet.plain = 'waiting';
+  syncPlay();
   const expected = sheet.original;
   let original;
-  try { original = await expected; } catch { sheet.holding = false; return; }
-  if (!sheet.holding || sheet.original !== expected || !el.sheet.open) return;
-  audio.stop('preview');
+  try { original = await expected; } catch { sheet.plain = false; syncPlay(); return; }
+  if (sheet.plain !== 'waiting' || sheet.original !== expected || !el.sheet.open) return;
   wave.show(original, Math.max(sheet.voiced, original.duration));
   audio.start('preview-original', { buffer: original, duration: original.duration });
   wave.follow('preview-original');
+  sheet.plain = 'playing';
 }
 
-function releaseBefore() {
-  if (!sheet.holding) return;
-  sheet.holding = false;
+// Stops the plain sound. `redraw` puts the voiced wave back, without playing it.
+function endPlain({ redraw = false } = {}) {
+  if (!sheet.plain) return;
+  sheet.plain = false;
   audio.stop('preview-original');
-  previewVoice();
+  if (redraw) previewVoice({ play: false });
 }
 
 async function startRecording() {
   sheetError('');
   audio.stop('preview');
-  releaseBefore();
+  endPlain();
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1589,7 +1600,7 @@ export function initSheet() {
     removeBtn: $('#remove-btn'),
     download: $('#download-link'),
     waveBox: $('#wave-box'),
-    beforeBtn: $('#before-btn'),
+    plainBtn: $('#plain-btn'),
     chain: $('#chain'),
     chainLinks: $('#chain-links'),
     chainKnobs: $('#chain-knobs'),
@@ -1675,18 +1686,7 @@ export function initSheet() {
     e.preventDefault();
     togglePlay();
   });
-  // Hold: before works with a finger, a mouse, or Space and Enter held down.
-  el.beforeBtn.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0) return;
-    try { el.beforeBtn.setPointerCapture?.(e.pointerId); } catch { /* a pointer already gone */ }
-    holdBefore();
-  });
-  for (const type of ['pointerup', 'pointercancel', 'blur']) el.beforeBtn.addEventListener(type, releaseBefore);
-  el.beforeBtn.addEventListener('keydown', (e) => {
-    if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); holdBefore(); }
-  });
-  el.beforeBtn.addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'Enter') releaseBefore(); });
-  el.beforeBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+  el.plainBtn.addEventListener('click', playPlain);
   el.fileInput.addEventListener('change', () => {
     const file = el.fileInput.files[0];
     if (!file) return;
