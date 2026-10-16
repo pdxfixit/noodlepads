@@ -2441,7 +2441,7 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 .dj-input:has(> .dj-layout-switch:not([hidden])) > .dj-input-switch { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 .dj-layout-switch { border-top-width: 0; border-radius: 0 0 12px 12px; }
 .dj-layout-switch[hidden] { display: none; }
-.dj-layout-switch button { min-height: 44px; padding: 0 8px; }
+.dj-layout-switch button { padding: 0 8px; }
 /* Each letter on a little keycap: a deeper bottom edge, like a real key. */
 .keycap { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 28px; border: 2px solid currentColor; border-bottom-width: 5px; border-radius: 7px; background: rgb(255 255 255 / 0.12); font-size: 0.95rem; font-weight: 900; line-height: 1; }
 .dj-layout-switch button[aria-pressed="true"] .keycap { background: #fff; border-color: var(--ink); color: var(--ink); }
