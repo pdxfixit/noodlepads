@@ -8,7 +8,7 @@ opens with a comment saying what it owns. How the app behaves is in
   - `app.js`: starts everything; who is showing, Edit sounds, the four tabs (Pads, Beats, Song, Live) and Beats' ⌨️ Keys
   - `dj.js`, `rhythm.js`: the keys (like a periodic table), on Live and on Beats with ⌨️ Keys, and its pure rules: keymap, default keys, layouts, the forgiving snap
   - `dj-keys.js`, `keyset.js`: ✏️ Edit keys, and its pure rules: placing sounds, moving what was in the way, swaps, rows, the ready-made key layouts
-  - `touch.js`: 👆 touch layouts' pure rules (ADR 0028): bands of sounds, their sizes and starting sounds, the ready-made ones, editing, cleaning
+  - `dj-touch.js`, `touch.js`: 👆 the touch layout (ADR 0028): drawing its bands for playing and ✏️ Edit layout, and its pure rules: bands of sounds, their sizes and starting sounds, the ready-made ones, editing, cleaning
   - data: `store.js` (IndexedDB schema and upgrades), `state.js` (what is in memory, and saving it)
   - the board: `model.js` (pure rules: people, clip order, edits), `board.js` (those, bound to the state)
   - sound: `audio.js` (playing, looping, caching voiced clips), `meter.js` (the speaker grille)

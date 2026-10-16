@@ -17,6 +17,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 ## Ben does
 
+- **Try 👆 touch layouts on a phone** (3 min): on 🎤 Live (a phone starts on 👆; else tap 👆 above the keys), tap and hold a few tiles, then ✏️ Edit layout: drag a group's ⠿ to move it (hold first), tap S M L, ✕ a group twice, + Add a group, + more, tap a tile to swap it, load 🥁 Drum kit and ⭐ My layout. Then 🥁 Beats with ⌨️ Keys: ● Record a few tiles; the rows follow the bands. Say anything that feels slow, cramped or unclear.
+
 - **Scroll a phone over the pads** (2 min): on 🔊 Pads, 🧸 Kids and 🎤 Live's keys, scroll and swipe starting on a pad or key (no sound should play), tap pads quickly (does sounding on the lift feel slow?), hold one to loop it. If small nudges still sound a pad, the knob is `TAP_SLOP` in `web/finger.js` (10 px).
 
 - **Delete the old address's DNS record** (1 min): in Cloudflare, open the old address's domain → DNS and delete its `soundboard` record if it is still there (the Worker is gone and the name answers 530). The domain's apex stays. Also, if you like, delete the old address's leftover folder in `~/src/flarepress/` (only wrangler's local `.wrangler/` cache is in it).
@@ -78,7 +80,6 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 - **A welcome for new people** (Ben, 2026-10-16, ADR 0028): Who's playing?, Pick your stage name, one-time tips, hint dots, 🧸 Kids' 👆 hand, then the level-up nudge. Mockups shown 2026-10-16; waits on Ben's picks.
 
-- **🎤 Live on a phone: a layout builder not tied to a keyboard** (Ben, 2026-10-16): program the phone's Live layout from preset groups (chords, drums, …), far simpler to build than ✏️ Edit keys, with tile sizes you choose. Ben picked (decisions.md, 2026-10-16): stacked groups sized S/M/L, a ⌨️ / 👆 switch everywhere, shared with Beats with ⌨️ Keys, named saves. Waits on Ben's OK of the build plan.
 
 
 
