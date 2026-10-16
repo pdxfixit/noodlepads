@@ -93,7 +93,7 @@ Agents may read the live database without asking (`just cloud-sql`, `just cloud-
 | Player metrics | `just cloud-stats [--days N]` | Run `telemetry.py pull` first (pdxfixit/telemetry). Reports per player from its store, `~/.local/state/telemetry/telemetry.sqlite3` (read only; the `noodlepads__` tables, and nothing else; ADR 0016): devices, places and activity. App-wide use (screens, controls, dialogs, errors, speed, play) is in `noodlepads_events__daily_events` (ADR 0026). Ask anything else with `sqlite3 ~/.local/state/telemetry/telemetry.sqlite3` (tables `noodlepads__activity`, `__devices`, `__players`, `__cf_*`; `__uses` is empty and `__visits` does not exist: they were dropped from D1 before any harvest, ADR 0027). |
 | Profiles | `just cloud-profiles`, `just cloud-prune [--days N] [--empty] [--yes]` | Prune is a dry run without `--yes`. |
 | A forgotten PIN | `just cloud-reset-pin <id>` | From an email to the PIN-reset address; it asks before it changes anything. |
-| Schema | `just cloud-migrate [--yes]`; `just cloud-schema` (a new, empty database only) | Ben runs migrate right before the deploy that needs it. |
+| Schema | `just cloud-migrate [--yes]`; `just cloud-schema` (a new, empty database only) | Ben runs migrate right before the deploy that needs it. A migration that drops a table D1 holds rows of is refused until the telemetry mirror holds at least as many (`just pull noodlepads` in ~/src/telemetry first); `--allow-drop TABLE` drops them anyway (it cannot be undone). |
 | Back up the database | `just cloud-backup [file]` | A whole-database `.sql` export (reads only), by default in `~/.local/state/noodlepads/backups/`; it refuses a path inside the repo. |
 | Anything else | `just cloud-sql "…"`, `just cloud-db …` | Ben's. |
 
