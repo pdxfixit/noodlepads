@@ -38,6 +38,13 @@ test('every ADR is listed in the ADR index', () => {
   assert.deepEqual(adrs.filter((f) => !index.includes(`(${f})`)), []);
 });
 
+// Two agents in two worktrees can each take the next number; landing both
+// gives two ADRs one number (0028, 2026-10-16). The later one renumbers.
+test('every ADR has a number of its own', () => {
+  const nums = readdirSync(join(root, 'docs/adr')).filter((f) => /^\d{4}-.*\.md$/.test(f)).map((f) => f.slice(0, 4));
+  assert.deepEqual(nums.filter((n, i) => nums.indexOf(n) !== i), [], 'renumber the ADR that landed later, and every "ADR NNNN" that names it');
+});
+
 test('CLAUDE.md only imports AGENTS.md, so the two never drift', () => {
   assert.match(readFileSync(join(root, 'CLAUDE.md'), 'utf8'), /^@AGENTS\.md\n/);
 });
