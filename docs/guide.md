@@ -135,7 +135,19 @@ pad) are asked once, in a dialog over the screen: three big picture cards,
 each drawn as a pad in the person's pad skin. 🧸 Little noodler sets 🧸 Kids,
 🎵 Tap and make beats Regular, 🎛️ Show me everything Advanced. No ages. A tap
 plays a ready-made sound (Pop, Clap, the C chord), sets the level and moves
-on; Skip keeps Regular. Leaving 🧸 Kids still needs the grown-up sum.
+on; Skip keeps Regular and ends the welcome. Leaving 🧸 Kids still needs the
+grown-up sum.
+
+**Pick your stage name** follows in the same dialog: a big face on the
+person's color with their name and 🎲, six fun names (dealt as 👥 People's
+Pick a name deals them; 🎲 deals six more), a row of seven pictures ending in
+… (the full picture chooser), the ten person colors, then Skip and ▶ Let's
+play. Each tap changes them at once, through the profile sheet's own paths
+(`people.js` `editLook`), so they sync, a PIN guards them and the name stays a
+fun name; the screen takes the color as you tap. Skip puts back the name,
+picture and color the app gave. 🧸 Kids gets Pick your picture: the pictures
+and colors only, keeping the name it was given. Kids' screens come once this
+step ends (switching to them closes every dialog).
 
 Only the two places that make a person from nothing mark them as new, in
 memory (`web/welcome.js`). Anyone stored before, pulled from the cloud or
@@ -143,7 +155,8 @@ loaded from a backup is never asked, and a reload before it shows skips it.
 
 For the tests and `just look`, the app's test hook `noodleFirstSteps = false`
 (`web/firsts.js`) turns every first step off, so a fresh device there opens on
-the app as before. The `welcome` look view turns them on.
+the app as before. The `welcome`, `welcome-stage` and `welcome-kids-stage` look
+views turn them on.
 
 ## Help
 

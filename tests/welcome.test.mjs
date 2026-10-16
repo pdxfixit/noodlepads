@@ -1,14 +1,17 @@
 // 👋 The welcome for a new person (ADR 0028, web/welcome.js): Who's playing?
-// on a device's first open and for everyone added, never for anyone who
-// already exists. The real app on the stand-in page, as a new device, with
-// first steps on (fake-dom.mjs installPage's `firstSteps`). The sound a card
-// plays and how the cards look need a browser: `just look welcome`.
+// then Pick your stage name, on a device's first open and for everyone added,
+// never for anyone who already exists. The real app on the stand-in page, as
+// a new device, with first steps on (fake-dom.mjs installPage's
+// `firstSteps`). The sound a card plays and how it all looks need a browser:
+// `just look welcome welcome-stage welcome-kids-stage`.
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { installPage } from './fake-dom.mjs';
 import { state } from '../web/state.js';
 import { getSetting } from '../web/settings.js';
+import { person } from '../web/board.js';
+import { isFunName } from '../web/names.js';
 
 let page;
 let $;
@@ -22,6 +25,9 @@ before(async () => {
 
 const cards = () => $('#wl-cards').querySelectorAll('[data-level]');
 const card = (level) => cards().find((c) => c.dataset.level === level);
+const names = () => $('#wl-names').querySelectorAll('[data-name]');
+const pics = () => $('#wl-pics').querySelectorAll('[data-pic]');
+const tap = async (el) => { el.dispatch('click'); await page.settle(); };
 
 test("a new device's first person is asked Who's playing?: three picture pads, no ages", () => {
   assert.equal($('#welcome').open, true, 'the welcome is open over the app');
@@ -36,28 +42,94 @@ test("a new device's first person is asked Who's playing?: three picture pads, n
   assert.equal($('#wl-skip').textContent, 'Skip');
 });
 
-test('a card sets the level for the person showing; Advanced shows at once', async () => {
+test('a card sets the level for the person showing, then Pick your stage name', async () => {
   const id = state.personId;
-  card('advanced').dispatch('click');
-  await page.settle();
+  await tap(card('advanced'));
   assert.equal(getSetting('level'), 'advanced');
   assert.equal(state.prefs.get(id).values.level, 'advanced', "stored as the person's own level");
+  assert.equal($('#welcome').open, true, 'the same dialog goes on');
+  assert.equal($('#wl-who').hidden, true);
+  assert.equal($('#wl-stage').hidden, false);
+  assert.equal($('#welcome-title').textContent, 'Pick your stage name');
+  assert.equal($('#wl-name').textContent, person(id).name);
+  assert.equal(names().length, 6);
+  for (const b of names()) assert.ok(isFunName(b.dataset.name), b.dataset.name);
+  assert.equal(pics().length, 7);
+  assert.equal(pics()[0].dataset.pic, person(id).avatar, 'their own picture first');
+  assert.equal($('#wl-pics').children.at(-1).textContent, '…', 'then the full chooser');
+  assert.equal($('#wl-colors').children.length, 10);
 });
 
-test('➕ in 👥 People welcomes the new person; Skip keeps Regular', async () => {
-  if ($('#welcome').open) $('#welcome').close();
-  $('#person-add').dispatch('click');
-  await page.settle();
+test('each tap changes them at once: a name, a picture, a color (the screen takes it); 🎲 deals more names', async () => {
+  const id = state.personId;
+  const before = names().map((b) => b.dataset.name);
+  $('#wl-dice').dispatch('click');
+  const after = names().map((b) => b.dataset.name);
+  assert.notDeepEqual(after, before);
+  const name = after[2];
+  await tap(names()[2]);
+  assert.equal(person(id).name, name);
+  assert.equal(state.peopleEdits.get(id).fun, true, 'a fun name, so it syncs');
+  assert.equal($('#wl-name').textContent, name);
+  const emoji = pics()[3].dataset.pic;
+  await tap(pics()[3]);
+  assert.equal(person(id).avatar, emoji);
+  await tap($('#wl-colors').querySelector('[data-color="#9E1640"]'));
+  assert.equal(person(id).color, '#9E1640');
+  assert.equal(document.documentElement.style.props['--board'], '#9E1640', 'the screen takes the color');
+  assert.equal($('#welcome').style.props['--c'], '#9E1640');
+  await tap($('#wl-go'));
+  assert.equal($('#welcome').open, false);
+  assert.equal(person(id).name, name, "▶ Let's play keeps them");
+});
+
+test('➕ in 👥 People welcomes the new person; Skip on the first step keeps Regular', async () => {
+  await tap($('#person-add'));
   const id = state.personId;
   assert.equal($('#welcome').open, true, 'asked again, for the new person');
-  $('#wl-skip').dispatch('click');
-  await page.settle();
+  assert.equal($('#wl-who').hidden, false, 'from the first step');
+  await tap($('#wl-skip'));
   assert.equal($('#welcome').open, false);
   assert.equal(state.personId, id);
   assert.equal(getSetting('level'), 'regular');
 });
 
+test('Skip on Pick your stage name puts back what the app gave', async () => {
+  await tap($('#person-add'));
+  const id = state.personId;
+  const was = { ...person(id) };
+  await tap(card('regular'));
+  await tap(names()[0]);
+  await tap($('#wl-colors').querySelector('[data-color="#0C5E4B"]'));
+  assert.notEqual(person(id).name, was.name);
+  await tap($('#wl-stage-skip'));
+  assert.equal($('#welcome').open, false);
+  assert.equal(person(id).name, was.name);
+  assert.equal(person(id).color, was.color);
+  assert.equal(person(id).avatar, was.avatar);
+});
+
+test("🧸 Kids picks a picture and a color, keeps its given name, and gets Kids' screens as the welcome ends", async () => {
+  await tap($('#person-add'));
+  const id = state.personId;
+  const name = person(id).name;
+  await tap(card('kids'));
+  assert.equal($('#welcome').open, true, "still open: Kids' screens wait for the end");
+  assert.equal(getSetting('level'), 'regular');
+  assert.equal($('#wl-names').hidden, true, 'no names to read');
+  assert.equal($('#wl-dice').hidden, true);
+  assert.equal($('#welcome-title').textContent, 'Pick your picture');
+  await tap(pics()[1]);
+  await tap($('#wl-go'));
+  assert.equal($('#welcome').open, false);
+  assert.equal(getSetting('level'), 'kids');
+  assert.equal(person(id).name, name);
+  assert.equal(document.body.classList.contains('kids'), true, "Kids' screens show");
+});
+
 test('nobody is welcomed twice: showing someone who exists asks nothing', async () => {
+  const { setSetting } = await import('../web/settings.js');
+  await setSetting('level', 'regular');
   const [first] = [...state.peopleEdits.keys()];
   const { setPersonEdit } = await import('../web/state.js');
   await setPersonEdit(first, { color: '#0C5E4B' });   // a change, as a sync or backup would make

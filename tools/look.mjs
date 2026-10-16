@@ -102,6 +102,9 @@ const WELCOME = `const w = await import('/welcome.js'); const { state } = await 
 const VIEWS = {
   // Who's playing?: the three picture cards.
   welcome: { screen: 'pads', firstSteps: true, js: WELCOME },
+  // Pick your stage name, after 🎵 Tap and make beats; and after 🧸 Little noodler (picture and color only).
+  'welcome-stage': { screen: 'pads', firstSteps: true, js: `${WELCOME} ${q('#wl-cards [data-level="regular"]')} ${nap}` },
+  'welcome-kids-stage': { screen: 'pads', firstSteps: true, js: `${WELCOME} ${q('#wl-cards [data-level="kids"]')} ${nap}` },
   edit: { screen: 'pads', js: q('#edit-toggle') },
   settings: { screen: 'pads', js: q('#settings-open') },
   // The banner with a notice, on Pads and over ⚙️ Settings. The Undo banner

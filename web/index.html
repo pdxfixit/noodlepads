@@ -505,14 +505,31 @@
   </dialog>
 
   <!-- 👋 The welcome for a new person (welcome.js, ADR 0028): Who's playing?
-       Three picture pads set the level. -->
+       Three picture pads set the level; then Pick your stage name: a name
+       (not for 🧸 Kids), a picture and a color. -->
   <dialog id="welcome" class="np-dialog welcome" aria-labelledby="welcome-title">
     <div class="chooser-body">
+      <h2 class="wl-title" id="welcome-title">Who's playing?</h2>
       <section class="wl-step" id="wl-who">
-        <h2 class="wl-title" id="welcome-title">Who's playing?</h2>
         <div class="wl-cards" id="wl-cards" role="group" aria-labelledby="welcome-title"></div>
         <div class="wl-foot">
           <button type="button" class="wl-skip" id="wl-skip">Skip</button>
+        </div>
+      </section>
+      <section class="wl-step" id="wl-stage" hidden>
+        <div class="wl-me" id="wl-me">
+          <span class="wl-face" id="wl-face" aria-hidden="true"></span>
+          <span class="wl-name" id="wl-name" role="status"></span>
+          <button type="button" class="wl-dice" id="wl-dice" aria-label="🎲 More names">🎲</button>
+        </div>
+        <ul class="wl-names" id="wl-names" aria-label="Stage names"></ul>
+        <h3 class="cl-head" id="wl-pics-title">Picture</h3>
+        <div class="wl-pics" id="wl-pics" role="group" aria-labelledby="wl-pics-title"></div>
+        <h3 class="cl-head" id="wl-colors-title">🎨 Color</h3>
+        <div class="pf-colors wl-colors" id="wl-colors" role="group" aria-labelledby="wl-colors-title"></div>
+        <div class="wl-foot wl-go-line">
+          <button type="button" class="wl-skip" id="wl-stage-skip">Skip</button>
+          <button type="button" class="wl-go" id="wl-go">▶ Let's play</button>
         </div>
       </section>
     </div>

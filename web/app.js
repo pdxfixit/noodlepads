@@ -30,7 +30,7 @@ import { initBulk } from './bulk.js';
 import { initSheet, openSheet, setBeatTempo, isRecording } from './sheet.js';
 import { initUpdate } from './update.js';
 import { registerOffline } from './offline.js';
-import { initPeople, refreshPeople, addPerson } from './people.js';
+import { initPeople, refreshPeople, addPerson, editLook, openPictures } from './people.js';
 import { initWelcome, markNew, offerWelcome } from './welcome.js';
 import { initCloud, needsPin, leftPerson } from './cloud.js';
 import { initCloudUI, askToOpen, shareSounds } from './cloud-ui.js';
@@ -759,6 +759,8 @@ async function start() {
       const clip = clipsFor(state.personId, { includeHidden: true, allPresets: true }).find((c) => c.kitId === kitId);
       if (clip) audio.play(clip);
     },
+    edit: editLook,
+    pictures: openPictures,
   });
   initCloudUI({ refresh: () => { renderPeople(); refreshPeople(); }, addPerson });
   initBackups();
