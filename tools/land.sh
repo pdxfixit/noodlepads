@@ -80,7 +80,7 @@ finish() {
   old=$(cat "$wt/.land/old")
   touched=$(cat "$wt/.land/touched")
   [ "$(git rev-parse main)" = "$old" ] || { echo "🛑 main moved since this landing began; land again" >&2; return 1; }
-  (cd "$wt" && just test > /dev/null) || { echo "🛑 tests fail on the landed commits; main unchanged ($wt kept)" >&2; return 1; }
+  (cd "$wt" && just test-quiet) || { echo "🛑 tests fail on the landed commits; main unchanged ($wt kept)" >&2; return 1; }
   git update-ref refs/heads/main "$(git -C "$wt" rev-parse HEAD)" "$old"
   git reset -q
   for f in $touched; do

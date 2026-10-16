@@ -24,6 +24,19 @@ test:
     python3 -m unittest discover -s tools -p 'test_*.py'
     python3 -m unittest discover -s skills/noodlepads-logs -p 'test_*.py'
 
+# `just test` with its output kept in a log: quiet when it passes; when it
+# fails, the failing tests' names and the log's path. ship and land run it
+# in throwaway worktrees, where a bare "tests fail" once meant rebuilding the
+# worktree by hand to see which (2026-10-16).
+[private]
+test-quiet:
+    #!/usr/bin/env bash
+    log=$(mktemp -t noodlepads-test)
+    if just test > "$log" 2>&1; then rm -f "$log"; exit 0; fi
+    grep -E '^✖|^(FAIL|ERROR): |AssertionError' "$log" | grep -v '^✖ failing tests:' | sort -u | head -20 >&2
+    echo "📄 full output: $log" >&2
+    exit 1
+
 #   just stress                   the whole suite 10 times with 6 cores kept busy
 #   just stress 20 8 tests/cloud-ui.test.mjs   one file, 20 times, 8 cores busy
 [doc("Run the Node tests again and again with cores kept busy, to catch a test that fails only under load (docs/how-to.md Flaky tests)")]
@@ -320,7 +333,7 @@ ship msgfile +files:
     if git diff --quiet main -- "${files[@]}" && [ -z "$(git ls-files --others --exclude-standard -- "${files[@]}")" ]; then
       echo "✅ these files are already on main ($(git log --oneline -1 main | cut -c1-60)); live: $(curl -s https://noodlepads.com/version.json)"; exit 0
     fi
-    just test > /dev/null || { echo "🛑 tests fail; nothing committed" >&2; exit 1; }
+    just test-quiet || { echo "🛑 tests fail; nothing committed" >&2; exit 1; }
     old=$(git rev-parse main)
     wt=.worktrees/ship-$(date +%s)-$$
     git worktree add -q --detach "$wt" main
@@ -336,7 +349,7 @@ ship msgfile +files:
     # Test the commit itself too: checks that read `git ls-files` (no-names,
     # conflict markers) see a new file only once it is tracked. On 2026-10-11
     # an untracked test file passed here and then failed on main.
-    (cd "$wt" && just test > /dev/null) || { echo "🛑 tests fail on the commit; main unchanged" >&2; exit 1; }
+    (cd "$wt" && just test-quiet) || { echo "🛑 tests fail on the commit; main unchanged" >&2; exit 1; }
     git update-ref refs/heads/main "$(git -C "$wt" rev-parse HEAD)" "$old"
     git reset -q
     git push -q origin main
