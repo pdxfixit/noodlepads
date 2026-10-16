@@ -1,6 +1,6 @@
-// web/agent.js reads a User-Agent as families for problem reports;
-// worker/metrics.js reads it the same way for its devices table. One set of
-// rules: the two must agree, and every answer is on agent.js's lists.
+// web/agent.js reads a User-Agent as families for problem reports and for
+// the Worker's devices table (worker/metrics.js): one set of rules, and every
+// answer is on agent.js's lists.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,10 +21,8 @@ const AGENTS = [
   'curl/8.4.0', '', null,
 ];
 
-test('web/agent.js and the Worker read every User-Agent the same way', () => {
-  for (const ua of AGENTS) {
-    for (const touch of [false, true]) assert.deepEqual(parseAgent(ua, touch), workerParse(ua, touch), `${ua} touch=${touch}`);
-  }
+test('the Worker reads the User-Agent with web/agent.js itself, not a copy', () => {
+  assert.equal(workerParse, parseAgent);
 });
 
 test('every family is on the fixed lists a report may send', () => {

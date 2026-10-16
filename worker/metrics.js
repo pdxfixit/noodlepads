@@ -20,6 +20,7 @@
 import { USES, WIDTHS, MAX_COUNT } from '../web/uses.js';
 import { cleanVisit, MAX_SEND } from '../web/visits.js';
 import { utcDay } from './http.js';
+import { parseAgent } from '../web/agent.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const KEEP_MS = 14 * DAY_MS;          // activity, uses, visits
@@ -41,32 +42,9 @@ export function placeOf(request) {
   return { country: text(cf.country)?.slice(0, 2) ?? null };
 }
 
-// The browser, OS and device type a User-Agent names, as families.
-// `touch`: the device said it has a touch screen (an iPad asks for the
-// desktop site and says "Macintosh").
-export function parseAgent(ua, touch = false) {
-  const s = typeof ua === 'string' ? ua.slice(0, 512) : '';
-  const has = (re) => re.test(s);
-  const browser = has(/Edg(e|A|iOS)?\//) ? 'Edge'
-    : has(/SamsungBrowser\//) ? 'Samsung'
-      : has(/OPR\/|Opera/) ? 'Opera'
-        : has(/Firefox\/|FxiOS\//) ? 'Firefox'
-          : has(/Chrome\/|CriOS\/|Chromium\//) ? 'Chrome'
-            : has(/Safari\//) && has(/Version\//) ? 'Safari'
-              : 'Other';
-  const ipad = has(/iPad/) || (has(/Macintosh/) && touch);
-  const os = has(/iPhone|iPod/) || ipad ? 'iOS'
-    : has(/Android/) ? 'Android'
-      : has(/CrOS/) ? 'ChromeOS'
-        : has(/Windows/) ? 'Windows'
-          : has(/Macintosh|Mac OS X/) ? 'macOS'
-            : has(/Linux/) ? 'Linux'
-              : 'Other';
-  const type = ipad || (os === 'Android' && !has(/Mobile/)) || has(/Tablet/) ? 'tablet'
-    : has(/iPhone|iPod/) || (os === 'Android' && has(/Mobile/)) || has(/Mobi/) ? 'phone'
-      : 'desktop';
-  return { browser, os, type };
-}
+// The browser, OS and device type a User-Agent names, as families: the same
+// rules problem reports use (web/agent.js).
+export { parseAgent };
 
 // Whether the device's usage switch is on: it sends X-Noodle-App only then.
 export const optedIn = (request) => !!request.headers.get('X-Noodle-App');
