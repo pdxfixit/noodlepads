@@ -47,3 +47,18 @@ test('white text reads on every DJ key family color', async () => {
     assert.ok(contrastRatio('#FFFFFF', color) >= 4.5, `${family} ${color}: ${contrastRatio('#FFFFFF', color).toFixed(2)}`);
   }
 });
+
+// Pad skins (styles.css "Pad skins"; Ben, 2026-10-16): the name sits on a
+// dark plate in Slam buttons, Switch and Spinner, and on dark rubber in Lit
+// pads until it lights up (then it is ink on the pad's color, as on tiles).
+test('the skins\' light words read (4.5:1) on their dark plates, and on a broken pad\'s stripes', () => {
+  const PLATE_TEXT = '#F2EEFF';   // Slam buttons, Switch, Spinner
+  const LIT_TEXT = '#EDE9F8';     // Lit pads
+  for (const [text, on] of [[PLATE_TEXT, '#191427'], [PLATE_TEXT, '#2C2640'], [PLATE_TEXT, '#221C33'], [LIT_TEXT, '#221C33'], [LIT_TEXT, '#2C2640']]) {
+    assert.ok(contrastRatio(text, on) >= 4.5, `${text} on ${on}: ${contrastRatio(text, on).toFixed(2)}`);
+  }
+  // The light words are written in styles.css as tested here.
+  const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
+  assert.ok(css.includes(`color: ${PLATE_TEXT};`) && css.includes('--plate: #191427;'));
+  assert.ok(css.includes(`color: ${LIT_TEXT};`) && css.includes('background: #221C33;'));
+});
