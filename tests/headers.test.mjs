@@ -34,11 +34,28 @@ test('the policy is closed by default and never allows inline code or eval', () 
   assert.doesNotMatch(value('Content-Security-Policy'), /unsafe-|\*/);
 });
 
-test('the only outside origins are Google Fonts, exactly as index.html uses them', () => {
-  assert.deepEqual(csp['style-src'], ["'self'", 'https://fonts.googleapis.com']);
-  assert.deepEqual(csp['font-src'], ['https://fonts.gstatic.com']);
+test('no outside origin at all: the fonts are served from this site', () => {
+  assert.deepEqual(csp['style-src'], ["'self'"]);
+  assert.deepEqual(csp['font-src'], ["'self'"]);
+  assert.doesNotMatch(headers, /googleapis|gstatic/);
   const origins = new Set([...html.matchAll(/(?:href|src)="(https?:\/\/[^/"]+)/g)].map((m) => m[1]));
-  assert.deepEqual([...origins].filter((o) => o !== 'https://fonts.googleapis.com' && o !== 'https://fonts.gstatic.com'), []);
+  assert.deepEqual([...origins], []);
+});
+
+test('fonts.css names only font files that are in web/fonts/, and index.html loads it', () => {
+  assert.match(html, /<link rel="stylesheet" href="fonts\/fonts\.css">/);
+  const fonts = readFileSync(new URL('../web/fonts/fonts.css', import.meta.url), 'utf8');
+  const urls = [...fonts.matchAll(/url\(([^)]+)\)/g)].map((m) => m[1]);
+  assert.ok(urls.length >= 5, 'every subset of both fonts');
+  for (const u of urls) {
+    assert.match(u, /^[a-z0-9-]+\.woff2$/, `${u}: a file beside fonts.css`);
+    const bytes = readFileSync(new URL(`../web/fonts/${u}`, import.meta.url));
+    assert.equal(bytes.subarray(0, 4).toString('latin1'), 'wOF2', `${u} is a WOFF2 file`);
+  }
+  for (const family of ['Anybody', 'Atkinson Hyperlegible Next']) assert.match(fonts, new RegExp(`font-family: '${family}'`));
+  for (const license of ['OFL-anybody.txt', 'OFL-atkinson-next.txt']) {
+    assert.match(readFileSync(new URL(`../web/fonts/${license}`, import.meta.url), 'utf8'), /SIL Open Font License, Version 1\.1/);
+  }
 });
 
 test('the tab icon (data:) and downloads (blob:) are allowed images and nothing else is', () => {

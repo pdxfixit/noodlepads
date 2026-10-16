@@ -37,6 +37,7 @@ opens with a comment saying what it owns. How the app behaves is in
   - `names.js`: the made-up default names ("Wobbly Thunder" for a beat; "Admiral Avocado", a person's fun name; `keptName`, a kept groove's "<fun name> (<groove> version)"); `scratch.js`: the scratch beat and song's reserved ids, and 🧸 Kids' old beat becoming the scratch (ADR 0020)
   - `reid.js`: random person ids, and the one rule that renames an old plain id everywhere on the device
   - `cloud.js`, `cloud-sync.js`, `cloud-api.js`, `cloud-ui.js`: cloud profiles on the device (binding it to storage, the rules, the routes, the screens); `sync-timing.js`: when it syncs; `merge3.js`: the three-way merge of one record; `share-render.js`: a share's preview, recorded as it plays; `privacy.js`: "What's private"
+  - `fonts/`: the app's two fonts, served from this site: `fonts.css` (Google Fonts' faces, pointed here), the WOFF2 subsets of Anybody and Atkinson Hyperlegible Next, and their licenses (SIL OFL 1.1)
   - `boards.json`: the kit, its groups, the palette, and people (none today). v2 reads this format too.
 - `worker/`: the Worker script beside the static files, with one D1 database and one R2 bucket for usage events (`docs/deploy-cloudflare.md`); `schema.sql` is the full schema, `migrations/` brings the live one there (`just cloud-migrate`)
   - `index.js`: routes `/api/log` to `reports.js`, `/api/events` to `events-worker.js`, the rest of `/api/` to `cloud.js`; every other path goes to the static files
