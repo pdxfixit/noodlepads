@@ -138,3 +138,19 @@ test('nobody is welcomed twice: showing someone who exists asks nothing', async 
   await page.settle();
   assert.equal($('#welcome').open, false);
 });
+
+test('⚙️ Settings → About → Show the welcome again closes Settings, opens Who\'s playing? and brings the tips back', async () => {
+  const { setSetting } = await import('../web/settings.js');
+  await setSetting('seen', 'dot-keys,kids-pad,tip-pads');
+  $('#settings-open').dispatch('click');
+  await page.settle();
+  assert.equal($('#settings-dialog').open, true);
+  assert.match($('#welcome-again').textContent, /Show the welcome again/);
+  await tap($('#welcome-again'));
+  assert.equal($('#settings-dialog').open, false, 'Settings steps aside');
+  assert.equal($('#welcome').open, true);
+  assert.equal($('#welcome-title').textContent, "Who's playing?");
+  assert.equal(getSetting('seen'), 'kids-pad', 'the tips and dots are cleared; the 🧸 hand stays seen');
+  await tap($('#wl-skip'));
+  assert.equal($('#welcome').open, false, 'Skip ends it and keeps what the person has');
+});

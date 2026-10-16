@@ -2843,6 +2843,11 @@ dialog.np-dialog .set-buttons .quiet { justify-content: center; }
 }
 .page-foot .privacy-link:hover { opacity: 1; }
 .set-version .privacy-link { display: inline-flex; align-items: center; min-height: 44px; }
+/* The link above the version, centered like it. */
+.set-again { margin: 14px 0 0; text-align: center; }
+/* A button that reads as a link (About's Show the welcome again); still 44 px tall. */
+.link-btn { min-height: 44px; padding: 0 10px; border: 0; background: none; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
+.link-btn:focus-visible { outline: 3px solid var(--board); outline-offset: 2px; }
 /* 📊 Share play data: a plain checkbox above the version (Ben, 2026-10-16). */
 .set-check { display: flex; align-items: center; gap: 12px; min-height: 44px; margin: 8px 0 0; font-weight: 700; cursor: pointer; }
 .set-check input { flex: none; width: 24px; height: 24px; margin: 0; accent-color: var(--board); }
