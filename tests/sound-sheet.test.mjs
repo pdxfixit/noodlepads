@@ -2,6 +2,10 @@
 // the stand-in page: 👂 Plain, the voice chain (+ Then add, ✕) and
 // 🎲 Surprise me. Nothing is heard here: audio.start and audio.stop are
 // replaced by recorders, and voices render with a stand-in AudioBuffer.
+// A started sound stays in audio.playing until it is stopped, or a test says
+// it ended: the sheet's 150 ms play watch reads that map, so a sound that was
+// never there ended 👂 Plain whenever a slow settle() let the watch run (a
+// full `just test` on 2026-10-16).
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
@@ -25,8 +29,8 @@ before(async () => {
   await (await import('../web/app.js')).ready;   // drawn and wired
   await page.settle();
   ({ audio } = await import('../web/audio.js'));
-  audio.start = (id, { buffer }) => { calls.push(['start', id, buffer]); };
-  audio.stop = (id) => { calls.push(['stop', id]); };
+  audio.start = (id, { buffer }) => { calls.push(['start', id, buffer]); audio.playing.set(id, { fake: true }); };
+  audio.stop = (id) => { calls.push(['stop', id]); audio.playing.delete(id); };
 });
 
 const pads = () => $('#pads').querySelectorAll('.pad').filter((c) => c.dataset.id);   // in Edit sounds each sits in a cell with its badges
@@ -67,16 +71,15 @@ test('👂 Plain: a tap plays the plain recording, a second tap stops it and put
   assert.equal(started[0][2], plain, 'the recording itself, with no voice');
   assert.ok(calls.some(([what, id]) => what === 'stop' && id === 'preview'), 'the voiced sound stops first');
   assert.equal($('#plain-btn').getAttribute('aria-pressed'), 'true');
+  await new Promise((r) => setTimeout(r, 200));   // past a tick of the play watch
+  assert.equal($('#plain-btn').getAttribute('aria-pressed'), 'true', 'still sounding: the watch leaves it on');
 
-  audio.playing.set('preview-original', { fake: true });   // as if still sounding
-  try {
-    calls.length = 0;
-    $('#plain-btn').dispatch('click');
-    await page.settle();
-    assert.deepEqual(calls[0], ['stop', 'preview-original']);
-    assert.ok(!calls.some(([what]) => what === 'start'), 'stopping plays nothing');
-    assert.equal($('#plain-btn').getAttribute('aria-pressed'), 'false');
-  } finally { audio.playing.delete('preview-original'); }
+  calls.length = 0;
+  $('#plain-btn').dispatch('click');
+  await page.settle();
+  assert.deepEqual(calls[0], ['stop', 'preview-original']);
+  assert.ok(!calls.some(([what]) => what === 'start'), 'stopping plays nothing');
+  assert.equal($('#plain-btn').getAttribute('aria-pressed'), 'false');
   $('#sheet').close();
 });
 
@@ -527,6 +530,7 @@ test('▶︎ at the left of the title row plays the sound as it sounds now; ■ 
   if (!$('#normal-btn').disabled) $('#normal-btn').dispatch('click');
   chip('robot').dispatch('click');   // an unsaved change: it plays with it
   await page.settle();
+  audio.playing.delete('preview');   // the chip's own preview has ended
   calls.length = 0;
   play.dispatch('click');
   await page.settle();
@@ -536,15 +540,12 @@ test('▶︎ at the left of the title row plays the sound as it sounds now; ■ 
   const robot = (await applyChain(plain, null, { robot: 1, first: false })).buffer;
   assert.equal(started[2].length, robot.length, 'the sound with its layers, as the sheet hears it');
   // While it plays: ■, and a tap stops it.
-  audio.playing.set('preview', { fake: true });
-  try {
-    await new Promise((r) => setTimeout(r, 200));
-    assert.equal(play.textContent, '■');
-    assert.equal(play.getAttribute('aria-label'), 'Stop the sound');
-    calls.length = 0;
-    play.dispatch('click');
-    assert.ok(calls.some(([w, id]) => w === 'stop' && id === 'preview'), '■ stops it');
-  } finally { audio.playing.delete('preview'); }
+  await new Promise((r) => setTimeout(r, 200));
+  assert.equal(play.textContent, '■');
+  assert.equal(play.getAttribute('aria-label'), 'Stop the sound');
+  calls.length = 0;
+  play.dispatch('click');
+  assert.ok(calls.some(([w, id]) => w === 'stop' && id === 'preview'), '■ stops it');
   await new Promise((r) => setTimeout(r, 200));
   assert.equal(play.textContent, '▶︎', 'the sound ended: ▶︎ again');
   // Space: plays from the sheet, but types in the name.
