@@ -1,5 +1,5 @@
 # Every push to main is deployed to https://noodlepads.com (Ben, 2026-10-15):
-# the tests, the migration guard, then the flarepress action (check, gate,
+# the tests, then the flarepress action (check, gate,
 # stamp, wrangler deploy, verify), then the live checks. GitHub holds this
 # repo's own Cloudflare token (Workers, its zone, D1 read only); no agent
 # holds one. Ben's `just deploy` on the Mac is the fallback.
@@ -27,24 +27,22 @@ jobs:
       D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
       FLAREPRESS: ${{ github.workspace }}/.flarepress
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # git describe names the version from the tags
-      # The same flarepress the action is, for the recipes (cloud-db, deploy-migrated).
-      - uses: actions/checkout@v7.0.1
+      # The same flarepress the action is, for the recipes (cloud-db).
+      - uses: actions/checkout@v7
         with:
           repository: pdxfixit/flarepress
           ref: v1  # the same tag as the action below
           path: .flarepress
-      - uses: actions/setup-node@v7.1.0
+      - uses: actions/setup-node@v7
         with:
           node-version: 26.11.1
       - name: Install just (pinned release)
         run: curl -sSfL https://github.com/casey/just/releases/download/1.58.0/just-1.58.0-x86_64-unknown-linux-musl.tar.gz | sudo tar xz -C /usr/local/bin just
       - name: just test
         run: just test
-      - name: Every migration is applied (migrating is Ben's)
-        run: just deploy-migrated
       - uses: pdxfixit/flarepress@v1  # rolling: the owner moves v1 to release
         with:
           site: site

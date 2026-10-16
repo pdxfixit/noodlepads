@@ -76,17 +76,6 @@ class Migrate(unittest.TestCase):
         self.assertEqual(ca.migrate(db, True, out), [])
         self.assertEqual(db.ran, [], 'nothing runs twice')
 
-    def test_pending_names_each_waiting_migration_and_fails(self):
-        # The deploy's guard: GitHub deploys every push, but migrating is Ben's.
-        db = Local(ROOT / 'tests' / 'schema-before-001.sql')
-        lines, out = quiet()
-        self.assertEqual(len(ca.pending(db, out)), len(list((ROOT / 'worker' / 'migrations').glob('[0-9][0-9][0-9]-*.sql'))))
-        self.assertIn('cloud-migrate --yes', lines[-1])
-        self.assertEqual(db.ran, [], 'pending changes nothing')
-        self.assertEqual(ca.main(['pending'], db=db), 1)
-        ca.migrate(db, True, out)
-        self.assertEqual(ca.main(['pending'], db=db), 0)
-
     def test_a_fresh_database_from_schema_needs_no_migration(self):
         db = Local(ROOT / 'worker' / 'schema.sql')
         self.assertEqual(ca.migrate(db, True, quiet()[1]), [])

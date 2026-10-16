@@ -221,23 +221,13 @@ site := justfile_directory() / "site"
 # start with this line.
 ids := '[ -n "${D1_DATABASE_ID:-}" ] || eval "$(python3 tools/cloud_config.py --exports)"'
 
-[doc("Read-only pre-flight: main checkout on main, web/ worker/ site/ committed (ALLOW_DIRTY=1 overrides), HEAD pushed, every migration applied, tests pass")]
+[doc("Read-only pre-flight: main checkout on main, web/ worker/ site/ committed (ALLOW_DIRTY=1 overrides), HEAD pushed, tests pass")]
 deploy-check:
     #!/usr/bin/env bash
     set -euo pipefail
     "{{flarepress}}/tools/site.sh" "{{site}}" check --from "{{justfile_directory()}}"
-    just deploy-migrated
     if out=$(just test 2>&1); then echo "✅ tests pass"
     else echo "$out" >&2; echo "🛑 tests fail; nothing to deploy" >&2; exit 1; fi
-
-# The Worker in a commit may need tables a migration adds, and migrating is
-# Ben's: GitHub's deploy and Ben's both stop here until D1 has every migration.
-[doc("Exit 1 while any worker/migrations/*.sql is not applied to D1 (read-only). Every deploy runs it first")]
-deploy-migrated:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    {{ids}}
-    python3 tools/cloud_admin.py pending
 
 [doc("Dry run: deploy-check, then wrangler validates, bundles the Worker and lists the files; sends nothing")]
 deploy-plan: deploy-check

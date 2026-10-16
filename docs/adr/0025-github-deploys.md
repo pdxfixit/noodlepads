@@ -4,7 +4,7 @@
 - **Date:** 2026-10-15
 - **Decided by:** Ben, 2026-10-15: "move towards a GHA focused deploy, so an agent / ide isn't in the mix"; push to main deploys; the site's config moves into this repo with its IDs as GitHub secrets; `just deploy` stays as his fallback; one Cloudflare token per repo; flarepress becomes a public code repo with fresh history. Rows in [decisions.md](../decisions.md) (Working).
 
-**In short.** `.github/workflows/deploy.yml` deploys every push to `main`: `just test`, the migration guard, the public `pdxfixit/flarepress` action (check, gate, stamp, `wrangler deploy`, verify), then the live checks. The site folder is `site/` in this repo; the D1 id is `${D1_DATABASE_ID}` there, filled from a secret. This repo's own token (Workers, its zone, D1 read) lives only in GitHub. Agents push `main`; they never deploy.
+**In short.** `.github/workflows/deploy.yml` deploys every push to `main`: `just test`, the public `pdxfixit/flarepress` action (check, gate, stamp, `wrangler deploy`, verify), then the live checks. The site folder is `site/` in this repo; the D1 id is `${D1_DATABASE_ID}` there, filled from a secret. This repo's own token (Workers, its zone, D1 read) lives only in GitHub. Agents push `main`; they never deploy.
 
 ## Context
 
@@ -18,7 +18,7 @@
 - **The site folder lives here:** `site/wrangler.toml` (assets `../web`, Worker `../worker/index.js`), `site/site.conf`, `site/harvest.conf`. `committed=web worker site`, so a dirty config never ships.
 - **No IDs in the repo.** `database_id = "${D1_DATABASE_ID}"`; flarepress fills it from the environment into a throwaway copy. GitHub has it as a secret; the Mac exports it from `~/.config/noodlepads/cloud.json` (`tools/cloud_config.py --exports`).
 - **The token is this repo's own:** Account → Workers Scripts: Edit, D1: Read; noodlepads.com → Workers Routes: Edit, DNS: Edit, Zone: Read. D1 Read, not Write: whoever can push `main` can change the workflow, so the token is the real limit, and migrating stays Ben's.
-- **Migrations first.** `just deploy-migrated` (`cloud_admin.py pending`) stops a deploy while D1 lacks any `worker/migrations/*.sql`. Ben runs `just cloud-migrate --yes`, then re-runs the deploy.
+- **No migration guard.** The deploy used to stop while D1 lacked a migration (`deploy-migrated`). It was removed on 2026-10-16 (Ben: the guard came from the move off soundboard). Ben still runs `just cloud-migrate --yes` for a schema change; the Worker skips a new part while its table is missing.
 - **Ben's fallback:** `just deploy` from the Mac, the same steps with the Keychain token, through a clone of the public flarepress at `~/src/flarepress`.
 - **flarepress is public code only** (`github.com/pdxfixit/flarepress`; workflows use its rolling `v1` tag, which Ben moves to release); the private repo with its history is archived as `flarepress-archive`.
 
