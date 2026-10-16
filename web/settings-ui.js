@@ -7,9 +7,10 @@
 // Every section but About folds under its heading (Ben, 2026-10-11: "each
 // -other- settings section should be collapsible"). Which are open is this
 // device's, remembered in localStorage `settings-open`; all start closed
-// (Q22) but 🔓 Privacy, which comes first and starts open (`data-open-first`)
-// until this device folds it. About is always open and ends with the
-// version, as the footer shows it.
+// (Q22). A section marked `data-open-first` would start open until this
+// device folds it; none is now (🔓 What's private left Settings for the
+// shared privacy policy, Ben, 2026-10-16). About is always open and ends
+// with the version, as the footer shows it.
 
 import { SETTINGS, getSetting, setSetting, onSetting } from './settings.js';
 import { openDialog, setupDialog } from './dialogs.js';
