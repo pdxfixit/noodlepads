@@ -83,6 +83,8 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 
 
+- **Add several rows at once on Beats** (Ben, 2026-10-16: "it would be neat to find a way to add multiple sound-rows at once"). Mockups first; waits on Ben's pick of the design.
+
 - **Toward a kid-sized music studio** (Ben, 2026-10-12; north star: ADR 0022). Done: pattern chips, mixer, four tabs, the piano roll, the playlist (ADR 0024). Next: Ben's call.
 
 - **After launch: stop loading backups from before 1.0** (Ben, 2026-10-11, "it will only be this once"): once the testing copies' backups are in, remove `beforeOne` in `web/backup.js` so they are refused again (ADR 0011).
