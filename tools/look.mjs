@@ -311,7 +311,11 @@ let csp = [];
 // of reading pixels off a screenshot.
 let logs = [];
 listeners.push((m) => {
-  if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'log') {
+  // The sound sheet asks before the tab closes with unsaved work (a --js that
+  // leaves it changed). Navigating to the next width would wait on that for
+  // ever, so a "Leave site?" is accepted (2026-10-16: it hung a run).
+  if (m.method === 'Page.javascriptDialogOpening') send('Page.handleJavaScriptDialog', { accept: true }).catch(() => {});
+  else if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'log') {
     logs.push(m.params.args.map((a) => a.value ?? a.description ?? '').join(' '));
   } else if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') {
     errors.push(m.params.args.map((a) => a.value ?? a.description ?? '').join(' '));
