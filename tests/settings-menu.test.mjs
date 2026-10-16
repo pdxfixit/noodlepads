@@ -304,7 +304,15 @@ test('📊 Play data comes right after 🔓 What\'s private: 📊 Share play dat
   assert.equal(sw.getAttribute('role'), 'switch');
   assert.equal(sw.parent.querySelector('b').textContent, '📊 Share play data');
   assert.equal($('#set-usage-title').textContent, '📊 Play data');
-  assert.match($('#share-usage-hint').textContent, /^Never sounds, recordings or anyone's names\.$/);
+  // Ben, 2026-10-16: "Switch + policy link only".
+  const body = $('#set-usage-body');
+  assert.equal(body.querySelectorAll('.field-hint').length, 0, 'no words about what is collected');
+  const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
+  const section = html.slice(html.indexOf('id="set-usage-body"'), html.indexOf('</section>', html.indexOf('id="set-usage-body"')));
+  assert.doesNotMatch(section, /Never sounds|recordings|anyone's names|screens and buttons/, 'the collection words stay out');
+  assert.match(section, /<span><b>📊 Share play data<\/b><\/span>/, 'the switch says its name and nothing more');
+  assert.match(section, /<a class="privacy-link" id="share-usage-policy" href="https:\/\/privacy\.pdxfixit\.com\/noodlepads\/" target="_blank" rel="noopener">Privacy policy<\/a>/);
+  assert.ok(section.indexOf('id="share-usage"') < section.indexOf('share-usage-policy'), 'the link right under the switch');
   assert.equal(getSetting('sendUsage'), true);
   $('#settings-open').dispatch('click');
   assert.equal(sw.checked, true);
