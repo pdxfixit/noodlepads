@@ -29,23 +29,20 @@ before(async () => {
   tel = await import('../web/telemetry.js');
 });
 
-// Someone on this device in the cloud, for one test: until Ben answers
-// question #425, a device where nobody is in the cloud keeps no events.
-async function inTheCloud(fn) {
-  state.cloud.set('p-test-link', { id: 'p-test-link', key: 'k' });
-  try { await fn(); } finally { state.cloud.delete('p-test-link'); }
-}
 const records = () => tel.currentTelemetry().queued();
 
-test('the shared client starts once the version is known, and nobody in the cloud means nothing is kept', () => {
+// Ben, 2026-10-16 (question #425): "Yes, everyone".
+test('the shared client starts once the version is known, and keeps events with nobody in the cloud', () => {
   assert.ok(tel.currentTelemetry().client(), 'started');
   assert.equal(state.cloud.size, 0);
+  const before = records().length;
   page.$('#pads-tab').dispatch('click');
-  assert.deepEqual(records(), []);
+  assert.ok(records().length > before);
+  tel.currentTelemetry().clear();
 });
 
 test('a tab, a toolbar button, a dialog and a setting each make their event, with the app and the screen', async () => {
-  await inTheCloud(async () => {
+  {
     const $ = page.$;
     $('#beats-toggle').dispatch('click');
     $('#settings-open').dispatch('click');
@@ -65,7 +62,7 @@ test('a tab, a toolbar button, a dialog and a setting each make their event, wit
     assert.deepEqual([mine[3].details.control, mine[3].details.group], ['Settings', 'top']);
     assert.deepEqual(mine[4].details, { key: 'timeSignature', from: '4/4', to: '3/4' });
     await setSetting('timeSignature', '4/4');
-  });
+  }
 });
 
 test('the usage switch off: nothing tracked, counted or kept, what waited is gone, and cloud calls carry no X-Noodle-App', async () => {
@@ -76,14 +73,14 @@ test('the usage switch off: nothing tracked, counted or kept, what waited is gon
   countUse('pad', state.personId);
   keepVisit(state.personId, { at: Date.now() - 10_000, secs: 9, screens: ['pads'] });
   assert.ok(pendingUses(state.personId) && pendingVisits(state.personId));
-  await inTheCloud(async () => {
+  {
     tel.track('screen.view', { from: 'pads' });
     assert.ok(records().length > 0);
     await setSetting('sendUsage', false);
     assert.equal(tel.track('screen.view', { from: 'pads' }), false, 'no events');
     assert.deepEqual(records(), [], 'the queue is gone');
     assert.ok(![...store.keys()].some((k) => k.startsWith('events:')), 'from localStorage too');
-  });
+  }
   assert.equal(store.get('uses'), undefined, 'waiting counts are gone');
   assert.equal(store.get('visits'), undefined, 'waiting visits are gone');
   countUse('pad', state.personId);
@@ -92,5 +89,5 @@ test('the usage switch off: nothing tracked, counted or kept, what waited is gon
   assert.equal(keepVisit(state.personId, { at: Date.now() - 10_000, secs: 9 }), false, 'no visit is kept');
   assert.equal(appMeta('abc', 400, true), null, 'no header for the Worker');
   await setSetting('sendUsage', true);
-  await inTheCloud(() => { assert.equal(tel.track('screen.view', { from: 'pads' }), true, 'on again, it tracks again'); });
+  assert.equal(tel.track('screen.view', { from: 'pads' }), true, 'on again, it tracks again');
 });

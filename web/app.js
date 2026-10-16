@@ -680,7 +680,6 @@ let page = null;        // where they come from (track-page.js)
 function countUses() {
   telemetry = useTelemetry(createTelemetry({
     screen: () => page?.current(),
-    cloud: () => (state.cloud?.size ?? 0) > 0,   // someone on this device syncs (question #425)
   }));
   learnLabels(document.body);   // before anyone's sounds or names are drawn
   page = trackPage({ telemetry, onLog, onDialogOpen, root: document.body, doc: document, win: globalThis });

@@ -7,10 +7,9 @@
 // sends batches to POST /api/events (the Worker stores them in R2).
 //
 // With the usage switch off (usage.js, the `sendUsage` setting) `track` does
-// nothing and every queued record is dropped. It sends only while
-// `shouldSend` says so: the switch on, and someone on this device in the
-// cloud unless SEND_WITHOUT_CLOUD (question #425); otherwise the client keeps
-// nothing. The player is a plain random id kept on this device
+// nothing and every queued record is dropped. While it is on, every device
+// sends, in the cloud or not (Ben, 2026-10-16, question #425: "Yes,
+// everyone"), with its own random code and never a profile. The player is a plain random id kept on this device
 // (`telemetry-player`): not a profile's id and not tied to one, made in
 // `newPlayer` alone so its rules (#150) change in one place.
 //
@@ -28,10 +27,6 @@ import { usageOn } from './usage.js';
 import { createEvents } from './events-client.js';
 
 export const APP = 'noodlepads';
-
-// Question #425 (open): do players who never use the cloud send events too?
-// Until Ben answers, only devices where someone syncs send; one flag changes it.
-export const SEND_WITHOUT_CLOUD = false;
 
 // Every event this app sends, with the details keys each may carry. The
 // standard's names first (events.toml), then this app's own (`noodlepads.`).
@@ -103,13 +98,12 @@ export function cleanDetails(event, details) {
   return out;
 }
 
-// Whether the client may keep and send: the switch is on, and someone on this
-// device is in the cloud unless SEND_WITHOUT_CLOUD (question #425).
-export const shouldSend = ({ enabled = usageOn(), cloud = false } = {}) => enabled && (SEND_WITHOUT_CLOUD || cloud);
+// Whether the client may keep and send: the switch is on. Every device, in
+// the cloud or not (question #425, Ben: "Yes, everyone").
+export const shouldSend = ({ enabled = usageOn() } = {}) => enabled === true;
 
 // deps (all optional, for the tests): {
 //   enabled()    the usage switch (usage.js usageOn)
-//   cloud()      someone on this device is in the cloud
 //   screen()     the screen showing, from the app's screen names
 //   globals      the shared client's window, document, storage, fetch… (events-client.js)
 //   endpoint     where batches go (/api/events)
@@ -117,7 +111,6 @@ export const shouldSend = ({ enabled = usageOn(), cloud = false } = {}) => enabl
 // Returns {track, flush, clear, setVersion, queued, player, first, client()}.
 export function createTelemetry(deps = {}) {
   const enabled = deps.enabled ?? usageOn;
-  const cloud = deps.cloud ?? (() => false);
   const { id: player, first } = playerId();
   forget(OLD_QUEUE);
   let client = null;
@@ -149,7 +142,7 @@ export function createTelemetry(deps = {}) {
         version: String(v ?? 'dev').slice(0, 40) || 'dev',
         player,
         screen: () => safe(deps.screen),
-        enabled: () => shouldSend({ enabled: enabled(), cloud: !!safe(cloud) }),
+        enabled: () => shouldSend({ enabled: enabled() }),
         ...(deps.endpoint ? { endpoint: deps.endpoint } : {}),
         ...(deps.globals ? { globals: deps.globals } : {}),
       });

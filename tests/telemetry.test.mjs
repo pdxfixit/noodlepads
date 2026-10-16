@@ -1,14 +1,14 @@
 // Usage events in the shared standard (web/telemetry.js, Arrow-Rama #151):
 // the record's columns as flarepress's shared client fills them, events that
-// wait for the version, the player id, the usage switch and question #425's
-// flag, what a details object may hold, and the batches sent to /api/events.
+// wait for the version, the player id, the usage switch (every device sends,
+// question #425), what a details object may hold, and the batches sent to /api/events.
 
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import {
   createTelemetry, cleanDetails, playerId, shouldSend, track, useTelemetry,
-  EVENTS, MAX_TEXT, MAX_WAITING, SEND_WITHOUT_CLOUD, APP,
+  EVENTS, MAX_TEXT, MAX_WAITING, APP,
 } from '../web/telemetry.js';
 import { setUsage, usageOn } from '../web/usage.js';
 
@@ -27,11 +27,10 @@ beforeEach(() => {
 
 // A telemetry with the shared client's world faked: storage, a fetch that
 // records each batch, no timers, a touch phone.
-function make({ cloud = true, status = 204, screen = 'beats' } = {}) {
+function make({ status = 204, screen = 'beats' } = {}) {
   const sent = [];
   const tel = createTelemetry({
     screen: () => screen,
-    cloud: () => cloud,
     globals: {
       window: { screen: { width: 390, height: 844 }, matchMedia: () => ({ matches: true }) },
       document: undefined,
@@ -138,16 +137,17 @@ test('the usage switch off: track() does nothing, the queue and what waited are 
   assert.equal(track('screen.view', {}), false, 'no telemetry yet: nothing, and no error');
 });
 
-test('question #425 is one flag: until Ben answers, a device where nobody is in the cloud keeps and sends nothing', async () => {
-  assert.equal(SEND_WITHOUT_CLOUD, false);
-  assert.equal(shouldSend({ enabled: true, cloud: true }), true);
-  assert.equal(shouldSend({ enabled: true, cloud: false }), SEND_WITHOUT_CLOUD);
-  assert.equal(shouldSend({ enabled: false, cloud: true }), false, 'off sends nothing, ever');
-  const { tel, sent } = make({ cloud: false });
+// Ben, 2026-10-16 (question #425): "Yes, everyone".
+test('every device sends while the switch is on, in the cloud or not, with its own code and never a profile', async () => {
+  assert.equal(shouldSend({ enabled: true }), true);
+  assert.equal(shouldSend({ enabled: false }), false, 'off sends nothing, ever');
+  const { tel, sent } = make();
   tel.setVersion('v');
   tel.track('screen.view', {});
   await tel.flush();
-  assert.deepEqual([tel.queued(), sent], [[], []]);
+  assert.equal(sent.length, 1, 'nobody here is in the cloud, and it still sends');
+  assert.equal(JSON.parse(sent[0].body.trim()).player, tel.player);
+  assert.match(tel.player, /^[0-9a-f-]{36}$/, 'the device\'s random code, never a p- profile id');
 });
 
 test('details keep only the event\'s listed keys and plain values; an unknown event is not recorded', () => {

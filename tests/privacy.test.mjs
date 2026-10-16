@@ -177,15 +177,15 @@ test('"the cloud also keeps for 14 days … The internet address is not kept": m
 });
 
 // ADR 0026 (Ben, 2026-10-16): usage events, said plainly and tied to the code.
-test('"also sends noodlepads.com how the app is used … Never sounds, names or anything typed": events go to the site only, from cloud devices, with fixed keys', async () => {
+test('"also sends noodlepads.com how the app is used … Never sounds, names or anything typed": events go to the site only, from every device, with fixed keys', async () => {
   const line = claim('also sends noodlepads.com how the app is used');
-  assert.match(line, /Each device where someone is in the cloud/);
+  assert.match(line, /Every device, in the cloud or not/);
   assert.match(line, /a random number for this device \(not a profile\)/);
   assert.match(line, /⚙️ Settings → 📊 Play data → 📊 Share play data turns it off/);
   assert.match(html, /<b>📊 Share play data<\/b>/, 'the switch it names is in Settings');
-  const { EVENTS, SEND_WITHOUT_CLOUD, shouldSend } = await import('../web/telemetry.js');
-  assert.equal(SEND_WITHOUT_CLOUD, false, 'only devices where someone is in the cloud (question #425)');
-  assert.equal(shouldSend({ enabled: true, cloud: false }), false);
+  const { EVENTS, shouldSend } = await import('../web/telemetry.js');
+  assert.equal(shouldSend({ enabled: true }), true, 'every device, in the cloud or not (question #425)');
+  assert.equal(shouldSend({ enabled: false }), false);
   const keys = Object.values(EVENTS).flat();
   for (const bad of ['name', 'label', 'message', 'text', 'title', 'profile', 'person']) assert.ok(!keys.includes(bad), `no ${bad} in any event`);
   const client = readFileSync(new URL('../web/events-client.js', import.meta.url), 'utf8');
