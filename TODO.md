@@ -51,7 +51,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 ### Hosting at noodlepads.com
 
 - [ ] Apply migration 004, country only (`just cloud-migrate --yes`), so the waiting deploy goes out (1 min) 🔼
-  the activity log drops city, region, network and ASN (Ben, 2026-10-16: country only). Every deploy stops at the migration guard until it is applied; once it is, rerun the stopped deploy run (`gh run rerun <id>`) or push anything. `docs/adr/0016-player-metrics.md`
+  the activity log drops city, region, network and ASN (Ben, 2026-10-16: country only). `docs/adr/0016-player-metrics.md`
 - [x] Apply the player-metrics migration (`just cloud-migrate --yes`) ✅ 2026-10-13
 - [ ] Re-clone flarepress on the Mac: it is public code now, and the old one is archived as `flarepress-archive` (2 min)
   `mv ~/src/flarepress ~/src/flarepress-archive && git clone https://github.com/pdxfixit/flarepress ~/src/flarepress`. Then `just doctor`. Migration 003 adds `visits` and drops the always-empty `ip_hash` column; events written in the minute between the two are skipped, never failed. `docs/adr/0016-player-metrics.md`

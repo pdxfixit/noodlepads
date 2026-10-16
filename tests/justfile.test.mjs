@@ -56,7 +56,6 @@ test('a deploy runs the shared flarepress check, stamp and verify on site/', () 
   const just = readFileSync(join(root, 'justfile'), 'utf8');
   const body = (name) => just.split(`\n${name}`)[1].split('\n\n')[0];
   assert.match(body('deploy-check:'), /site\.sh" "\{\{site\}\}" check --from/);
-  assert.match(body('deploy-check:'), /just deploy-migrated/);
   assert.match(body('stamp:'), /site\.sh" "\{\{site\}\}" stamp/);
   assert.match(body('deploy-verify *flags:'), /site\.sh" "\{\{site\}\}" verify/);
   assert.match(body('deploy:'), /just deploy-check/);
@@ -79,12 +78,11 @@ test('site/wrangler.toml holds no ids: the public repo names them for the deploy
   assert.match(toml, /^directory = "\.\.\/web"$/m);
 });
 
-test('GitHub deploys only after the tests and the migration guard', () => {
-  // Migrating is Ben's: a Worker that needs newer tables must not go out first.
+test('GitHub deploys only after the tests', () => {
   const wf = readFileSync(join(root, '.github/workflows/deploy.yml'), 'utf8');
   const at = (s) => { const i = wf.indexOf(s); assert.ok(i >= 0, `deploy.yml runs ${s}`); return i; };
-  assert.ok(at('run: just test') < at('run: just deploy-migrated'));
-  assert.ok(at('run: just deploy-migrated') < at('uses: pdxfixit/flarepress@'));
+  assert.ok(at('run: just test') < at('uses: pdxfixit/flarepress@'));
+  assert.doesNotMatch(wf, /deploy-migrated/);
   assert.ok(at('uses: pdxfixit/flarepress@') < at('run: just deploy-checks'));
   // flarepress's rolling v1 tag, the action and the checkout alike (Ben, 2026-10-15).
   assert.match(wf, /uses: pdxfixit\/flarepress@v1\b/);

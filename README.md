@@ -70,7 +70,7 @@ the cloud database show what they would do, or ask, before they do it.
 | Run it here | `just serve`; on an Android phone `just phone <serial>`, undone by `just phone-off <serial>` |
 | Test | `just test` (judge by the exit code); `just stress` for a test that fails only sometimes |
 | Look at every screen width | `just look` (`--wide` adds the big screens; `just look --help` lists views) |
-| Deploy | GitHub deploys every push to `main` (`.github/workflows/deploy.yml`); from the Mac, `just deploy` (asks first). `just deploy-check`, `just deploy-plan` and `just deploy-migrated` change nothing |
+| Deploy | GitHub deploys every push to `main` (`.github/workflows/deploy.yml`); from the Mac, `just deploy` (asks first). `just deploy-check` and `just deploy-plan` change nothing |
 | What is live, and roll back | `just live`; `just rollback` prints the steps; `just live-check` is the daily check |
 | Check the live cloud | `just deploy-checks` runs `just cloud-smoke` and `just cloud-e2e` (each makes and deletes its own test profile) |
 | Back up the cloud database | `just cloud-backup` (a `.sql` file in `~/.local/state/noodlepads/backups/`) |
