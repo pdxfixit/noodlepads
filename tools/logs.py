@@ -1,27 +1,29 @@
 #!/usr/bin/env python3
-"""Noodle Pads problem reports: copy them from the site's D1 database (table
-`reports`, ADR 0009) into a local SQLite archive, and read that archive.
+"""Noodle Pads problem reports, read from the telemetry runner's mirror.
 
-D1 holds each upload for 14 days. `--sync` copies new ones into the archive,
-which keeps them forever. Everything else reads only the archive.
+The site's Worker keeps each report in D1 (table `reports`, ADR 0009) for 14
+days. The telemetry runner (pdxfixit/telemetry) is the only thing that copies
+them out (Ben, 2026-10-16: "the telemetry tooling needs to take this over"):
+its `noodlepads` job harvests `reports`, and `telemetry.py pull` brings them
+to this Mac as the table `noodlepads__reports` in
+~/.local/state/telemetry/telemetry.sqlite3 (or $TELEMETRY_DB). This tool only
+reads that mirror; it never writes it, and never talks to Cloudflare.
 
   logs.py                       the last 20 uploads, newest first
   logs.py --errors              only uploads with errors
   logs.py K7Q4-M2XD             one device's uploads, each with its event log
   logs.py --json KEY            one upload as raw JSON
   logs.py --grep TEXT           errors and notices whose text contains TEXT
-  logs.py --sql 'SELECT ...'    a query against the archive (opened read-only)
-  logs.py --sync                copy new uploads from D1 (one transaction)
+  logs.py --sql 'SELECT ...'    a query against the mirror (read only; views
+                                uploads and events, and every mirrored table)
   logs.py --digest              errors and notices since the last marked digest, grouped
   logs.py --digest --file-new TODO.md
                                 the same, and add one "Agents do" line per new kind
                                 of error (an error already in the file is skipped)
   logs.py --digest --mark       the same, and record it as the last digest
 
-Archive: ~/.local/state/noodlepads/logs.sqlite3, or $NOODLE_LOGS_DB.
-D1 account and database: ~/.config/noodlepads/cloud.json (tools/cloud_config.py;
-the template is tools/cloud.example.json). The API token (D1: Read) is read
-from the macOS Keychain, service `noodlepads-logs`.
+The last marked digest is kept in ~/.local/state/noodlepads/logs-digest.json
+(or $NOODLE_LOGS_DIGEST), since the mirror is read only.
 
 Stdlib only, Python 3.8+.
 """
@@ -33,39 +35,34 @@ import re
 import shlex
 import sqlite3
 import sys
-import urllib.error
-import urllib.parse
-import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import cloud_config  # noqa: E402
-API = "https://api.cloudflare.com/client/v4"
-EPOCH = "1970-01-01T00:00:00.000Z"
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS uploads (    -- one row per upload, never deleted
-  key TEXT PRIMARY KEY,                 -- the report's key: <ISO time>_<device>_<random>
-  received TEXT NOT NULL,               -- ISO time the Worker stored it
-  device TEXT, app TEXT, ua TEXT,       -- device code, app version, "browser · OS · type" (families only)
-  errors INTEGER NOT NULL,
-  payload TEXT NOT NULL                 -- the cleaned upload, as JSON
-);
-CREATE TABLE IF NOT EXISTS events (     -- each upload's event log, flattened for SQL
-  upload TEXT NOT NULL REFERENCES uploads(key),
-  seq INTEGER NOT NULL, t TEXT, kind TEXT NOT NULL, data TEXT,   -- data as JSON (json_extract works)
-  PRIMARY KEY (upload, seq)
-);
-CREATE INDEX IF NOT EXISTS events_kind ON events(kind);
-CREATE TABLE IF NOT EXISTS meta (       -- the archive's own bookkeeping: last_sync, newest_key, last_digest
-  key TEXT PRIMARY KEY, value TEXT
-);
+EPOCH = "1970-01-01T00:00:00.000Z"
+# The runner's job and table: harvest job `noodlepads`, D1 table `reports`.
+REPORTS = "noodlepads__reports"
+
+# The mirror's reports, read as the two shapes the readers below use.
+# A report's key starts with the ISO time the Worker stored it (24 characters).
+VIEWS = f"""
+CREATE TEMP VIEW uploads AS
+  SELECT key, substr(key, 1, 24) AS received, device, app, errors, body AS payload FROM main."{REPORTS}";
+CREATE TEMP VIEW events AS
+  SELECT r.key AS upload, CAST(e.key AS INTEGER) AS seq, json_extract(e.value, '$.t') AS t,
+         COALESCE(json_extract(e.value, '$.kind'), '?') AS kind, json_extract(e.value, '$.data') AS data
+  FROM main."{REPORTS}" r, json_each(CASE WHEN json_valid(r.body) THEN r.body ELSE '{{}}' END, '$.entries') e;
 """
 
 
 class Fail(Exception):
     """A failure to report in one line and exit non-zero. Never read as "no data"."""
+
+
+class NoReports(Exception):
+    """The mirror is there, but no run has brought any reports into it yet."""
 
 
 def utcnow():
@@ -78,183 +75,43 @@ def iso(t):
     return t.strftime("%Y-%m-%dT%H:%M:%S.") + f"{t.microsecond // 1000:03d}Z"
 
 
-def db_path():
-    return Path(os.environ.get("NOODLE_LOGS_DB") or cloud_config.state_dir() / "logs.sqlite3").expanduser()
+def mirror_path(home=None):
+    return Path(os.environ.get("TELEMETRY_DB")
+                or Path(home or Path.home()) / ".local/state/telemetry/telemetry.sqlite3").expanduser()
 
 
-def connect(path=None, readonly=False):
-    path = Path(path or db_path())
-    if readonly:
-        if not path.exists():
-            raise Fail(f"no archive at {path} yet; run `just logs --sync` first")
-        return sqlite3.connect(f"file:{path}?mode=ro", uri=True)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path))
-    conn.executescript(SCHEMA)
+def digest_state_path(home=None):
+    return Path(os.environ.get("NOODLE_LOGS_DIGEST") or cloud_config.state_dir(home) / "logs-digest.json").expanduser()
+
+
+def connect(path=None):
+    """The mirror, read only, with the views `uploads` and `events`. Fail when it
+    is missing (never created here); NoReports when it has no reports table yet."""
+    path = Path(path or mirror_path())
+    if not path.exists():
+        raise Fail(f"no telemetry mirror at {path}: run `python3 ~/src/telemetry/telemetry.py pull` first")
+    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    if not conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (REPORTS,)).fetchone():
+        conn.close()
+        raise NoReports(f"the mirror ({path}) has no {REPORTS} yet: the runner harvests reports once "
+                        "site/harvest.conf names them (docs/state.md, To do)")
+    conn.executescript(VIEWS)
     return conn
 
 
-def get_meta(conn, key, default=None):
-    row = conn.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
-    return row[0] if row else default
-
-
-def set_meta(conn, key, value):
-    conn.execute("INSERT INTO meta (key, value) VALUES (?, ?) "
-                 "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (key, value))
-
-
-# ── Reading reports from D1 ──
-
-def load_config(path=None):
+def last_digest(path=None):
     try:
-        return cloud_config.load(path)
-    except cloud_config.ConfigError as e:
-        raise Fail(str(e))
+        return json.loads(Path(path or digest_state_path()).read_text()).get("last_digest") or EPOCH
+    except FileNotFoundError:
+        return EPOCH
 
 
-def keychain_token(service):
-    try:
-        return cloud_config.keychain_token(service)
-    except cloud_config.ConfigError as e:
-        raise Fail(str(e))
-
-
-def urllib_fetch(url, headers, body=None):
-    """GET (or POST `body`) url. Returns (status, body bytes). Network errors raise Fail."""
-    req = urllib.request.Request(url, headers=headers, data=body, method="POST" if body is not None else "GET")
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return r.status, r.read()
-    except urllib.error.HTTPError as e:
-        return e.code, e.read()
-    except (urllib.error.URLError, OSError) as e:
-        raise Fail(f"cannot reach Cloudflare: {e}")
-
-
-class D1Reports:
-    """The site's `reports` table, read-only, through D1's query API (POST
-    /accounts/<id>/d1/database/<id>/query). keys() lists {name, metadata},
-    value(name) gives one upload's bytes. `fetch(url, headers, body)` is
-    injectable for tests."""
-
-    PAGE = 1000
-
-    def __init__(self, account_id, database_id, token, fetch=urllib_fetch):
-        self.url = f"{API}/accounts/{account_id}/d1/database/{database_id}/query"
-        self.headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-        self.fetch = fetch
-
-    def query(self, sql, params):
-        status, body = self.fetch(self.url, self.headers, json.dumps({"sql": sql, "params": params}).encode())
-        try:
-            doc = json.loads(body)
-        except ValueError:
-            raise Fail(f"D1 query: HTTP {status}, not JSON")
-        if status != 200 or not doc.get("success"):
-            raise Fail(f"D1 query: HTTP {status} {json.dumps(doc.get('errors'))}")
-        result = doc.get("result") or [{}]
-        return result[0].get("results") or []
-
-    def keys(self):
-        """Every report's key, as {name, metadata}. Raises Fail on any error: a half listing is never returned."""
-        out, after = [], ""
-        while True:
-            rows = self.query("SELECT key, app, device, errors FROM reports WHERE key > ? ORDER BY key LIMIT ?",
-                              [after, self.PAGE])
-            out.extend({"name": r["key"], "metadata": {"app": r.get("app"), "device": r.get("device"),
-                                                       "errors": r.get("errors")}} for r in rows)
-            if len(rows) < self.PAGE:
-                return out
-            after = rows[-1]["key"]
-
-    def value(self, name):
-        """The upload's bytes, or None if it is gone (expired since the listing)."""
-        rows = self.query("SELECT body FROM reports WHERE key = ?", [name])
-        return rows[0]["body"].encode() if rows else None
-
-
-def reports_from_config():
-    cfg = load_config()
-    return D1Reports(cfg["account_id"], cfg["database_id"], keychain_token(cfg["keychain_service"]))
-
-
-# ── The archive ──
-
-def parse_key(key):
-    """<ISO time>_<device>_<random> -> (received, device)."""
-    parts = key.split("_")
-    received = parts[0] if parts and re.match(r"^\d{4}-\d{2}-\d{2}T", parts[0]) else ""
-    device = parts[1] if len(parts) >= 3 else None
-    return received, device
-
-
-def device_families(env):
-    """The device as a report names it: "Chrome · Android · phone". Reports carry only
-    the browser, OS and device-type families (web/agent.js), never the User-Agent string.
-    A report from before 2026-10-16 had the raw string in env.ua: it is not copied."""
-    if not isinstance(env, dict):
-        return None
-    parts = [env.get(k) for k in ("browser", "os", "type")]
-    return " · ".join(p for p in parts if isinstance(p, str) and p) or None
-
-
-def insert_upload(conn, key, raw, metadata=None):
-    """Adds one upload and its events. Returns False when the value was not JSON
-    (kept as text, with no events, so it is still there to look at)."""
-    received, device = parse_key(key)
-    metadata = metadata or {}
-    text = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else raw
-    try:
-        payload = json.loads(text)
-        if not isinstance(payload, dict):
-            raise ValueError("not an object")
-    except ValueError:
-        conn.execute("INSERT INTO uploads VALUES (?, ?, ?, ?, ?, ?, ?)",
-                     (key, received, device, metadata.get("app"), None, 0, text))
-        return False
-    entries = [e for e in payload.get("entries") or [] if isinstance(e, dict)]
-    errors = sum(1 for e in entries if e.get("kind") == "error")
-    ua = device_families(payload.get("env"))
-    conn.execute("INSERT INTO uploads VALUES (?, ?, ?, ?, ?, ?, ?)",
-                 (key, received, payload.get("device") or device, payload.get("app"), ua, errors,
-                  json.dumps(payload, ensure_ascii=False, sort_keys=True)))
-    conn.executemany("INSERT INTO events VALUES (?, ?, ?, ?, ?)", [
-        (key, i, e.get("t"), str(e.get("kind") or "?"), json.dumps(e.get("data"), ensure_ascii=False, sort_keys=True))
-        for i, e in enumerate(entries)])
-    return True
-
-
-def sync(conn, kv, now=None, out=sys.stdout):
-    """Copy every report in D1 not yet in the archive. Reads everything first, then
-    writes in one transaction, so a failure part-way leaves the archive as it was."""
-    have = {r[0] for r in conn.execute("SELECT key FROM uploads")}
-    listed = kv.keys()
-    new = sorted((k for k in listed if k.get("name") and k["name"] not in have), key=lambda k: k["name"])
-    fetched, gone = [], 0
-    for k in new:
-        raw = kv.value(k["name"])
-        if raw is None:
-            gone += 1
-            continue
-        fetched.append((k["name"], raw, k.get("metadata")))
-    bad = 0
-    with conn:
-        for name, raw, meta in fetched:
-            if not insert_upload(conn, name, raw, meta):
-                bad += 1
-        set_meta(conn, "last_sync", iso(now or utcnow()))
-        if fetched:
-            newest = max(f[0] for f in fetched)
-            if newest > (get_meta(conn, "newest_key") or ""):
-                set_meta(conn, "newest_key", newest)
-    stats = {"listed": len(listed), "new": len(fetched), "gone": gone, "bad": bad,
-             "newest": get_meta(conn, "newest_key") or ""}
-    print(f"✅ synced {stats['new']} new upload(s) of {stats['listed']} in D1"
-          + (f"; {gone} expired before they could be read" if gone else "")
-          + (f"; ⚠️ {bad} not JSON (kept as text)" if bad else "")
-          + (f"; newest {stats['newest']}" if stats["newest"] else ""), file=out)
-    return stats
+def mark_digest(when, path=None):
+    path = Path(path or digest_state_path())
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps({"last_digest": when}) + "\n")
+    os.replace(tmp, path)
 
 
 # ── Reading ──
@@ -298,7 +155,7 @@ def show_device(conn, device, limit=20, out=sys.stdout):
 def show_json(conn, key, out=sys.stdout):
     row = conn.execute("SELECT payload FROM uploads WHERE key = ?", (key,)).fetchone()
     if not row:
-        raise Fail(f"no upload {key!r} in the archive")
+        raise Fail(f"no upload {key!r} in the mirror")
     try:
         print(json.dumps(json.loads(row[0]), indent=2, ensure_ascii=False), file=out)
     except ValueError:
@@ -429,7 +286,6 @@ def main(argv=None):
     ap.add_argument("--json", metavar="KEY")
     ap.add_argument("--grep", metavar="TEXT")
     ap.add_argument("--sql", metavar="QUERY")
-    ap.add_argument("--sync", action="store_true")
     ap.add_argument("--digest", action="store_true")
     ap.add_argument("--mark", action="store_true", help="with --digest: record this as the last digest")
     ap.add_argument("--file-new", metavar="TODO_MD", help="with --digest: add new kinds of error to this TODO.md")
@@ -438,29 +294,29 @@ def main(argv=None):
     if (args.mark or args.file_new) and not args.digest:
         ap.error("--mark and --file-new go with --digest")
     try:
-        if args.sync:
-            kv = reports_from_config()  # config and token first: a missing one never creates an empty archive
-            sync(connect(), kv)
-        elif args.digest:
-            conn = connect()
+        conn = connect()
+        if args.digest:
             now = utcnow()
-            md, new = digest(conn, get_meta(conn, "last_digest", EPOCH), now)
+            md, new = digest(conn, last_digest(), now)
             print(md)
             if args.file_new:
                 file_new(args.file_new, new)
             if args.mark:
-                with conn:
-                    set_meta(conn, "last_digest", iso(now))
+                mark_digest(iso(now))
         elif args.sql:
-            run_sql(connect(readonly=True), args.sql)
+            run_sql(conn, args.sql)
         elif args.json:
-            show_json(connect(readonly=True), args.json)
+            show_json(conn, args.json)
         elif args.grep:
-            grep(connect(readonly=True), args.grep)
+            grep(conn, args.grep)
         elif args.device:
-            show_device(connect(readonly=True), args.device, args.limit)
+            show_device(conn, args.device, args.limit)
         else:
-            list_uploads(connect(readonly=True), "WHERE errors > 0" if args.errors else "", (), args.limit)
+            list_uploads(conn, "WHERE errors > 0" if args.errors else "", (), args.limit)
+    except NoReports as e:
+        # A known state, not a failure: nothing to read until the harvest names reports.
+        print(f"⏳ {e}")
+        return 0
     except Fail as e:
         print(f"🛑 {e}", file=sys.stderr)
         return 1
