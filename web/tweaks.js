@@ -164,6 +164,10 @@ export function fullTweaks(raw) {
   return { ...NO_TWEAKS, ...t };
 }
 
+// Whether knob `key` (or the ✦ special layer) is off normal in `raw`: its
+// Layers row is drawn as changed.
+export const knobMoved = (key, raw) => fullTweaks(raw)[key] !== NO_TWEAKS[key];
+
 // Whether every knob is at normal and there is no special layer.
 export const allNormal = (raw) => cleanTweaks({ ...raw, first: false }) === null;
 

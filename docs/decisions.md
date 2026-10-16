@@ -267,6 +267,7 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | Tools are stdlib Python or shell, except `tools/look.mjs` and the `chrome.mjs` and `look-cloud.mjs` it loads (Node, no packages), so each agent checks layout in its own headless Chrome. | Agents kept taking over each other's tab in the shared Browser pane. | 2026-10-11 |
 | The cartoon fart preset is "Toot" 💩. | Ben kept it when asked (2026-10-11). | 2026-10-11 |
 | Layers sit top to bottom in the order they play; a knob moved back to normal by hand keeps its row until a voice, 🎲 or ↩️ Normal moves the knobs. | Ben kept both (Q42a, Q42b). | 2026-10-11 |
+| Each Layers row is its own bordered card; a knob off normal (or a ✦ special layer) is outlined in the casing color, with a thicker left edge and a faint tint, and keeps it until the knob is back at normal. | Ben: the panel is busy and "it's hard to identify what-all has changed" after tapping a voice; picked cards with changed ones outlined. | 2026-10-16 |
 | A kid's own voice can't be shared by code: postponed. | Ben: "postpone voice sharing until further notice". | 2026-10-11 |
 | ⌨️ Keys: a tapped tempo within 2 BPM of a common tempo lands on it (60–180); growing is decided as the last beat starts and only when ● Record started the beat; no dashed room-to-grow bar under 360 px. | Ben: "sounds like 46 is good with me" (Q46). | 2026-10-11 |
 | The Pick a name list opens by holding 🎲 (or right-click, Shift+Enter); no separate ▾ button. | Ben: "49 ok". | 2026-10-11 |

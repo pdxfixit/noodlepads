@@ -26,7 +26,7 @@ is faded while every knob is normal, when plain sounds the same); ▶︎ at the 
 sheet's title plays it as it sounds now (■ stops it, Space too). **A voice is knob
 settings**: tapping one (the chips are just pictures; hold one, or Shift-click it, for its name)
 slides the knobs in **Layers** under it to where that voice puts them (the
-rows it moves glow), and the line under the voices says so ("Chipmunk is:
+rows it moves glow, and any knob off normal keeps a blue outline), and the line under the voices says so ("Chipmunk is:
 higher +9, faster 1.74×"). Layers are one row per layer, top to bottom in the
 order they play, like Beats' rows: an emoji, a name, keys or a slider, 🔈 to
 mute it (it keeps its setting) and ✕ to take it out (two taps). Deeper ↔
