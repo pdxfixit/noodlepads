@@ -170,6 +170,24 @@ test('a voice moves its knobs and lights; the line says what it is; a second add
   $('#sheet').close();
 });
 
+test('a knob off normal is drawn as changed and stays marked, by voice or by hand; at normal it is plain', async () => {
+  await openEditor();
+  const changed = (k) => layerRow(k).classList.contains('changed');
+  assert.deepEqual(layers().filter(changed), [], 'every knob at normal: nothing marked');
+  chip('chipmunk').dispatch('click');
+  await page.settle();
+  assert.ok(changed('pitch') && changed('speed'), 'the knobs Chipmunk moved are marked, and stay marked after the glow');
+  assert.ok(!changed('warble') && !changed('volume'), 'the ones it left are plain');
+  const pitch = knob('pitch');
+  pitch.value = '0';
+  pitch.dispatch('input');
+  assert.ok(!changed('pitch'), 'a knob dragged back to normal loses its mark at once');
+  pitch.value = '4';
+  pitch.dispatch('input');
+  assert.ok(changed('pitch'), 'and gets it again when dragged off');
+  $('#sheet').close();
+});
+
 test('moving a knob by hand makes it your own; ↩️ Normal puts every knob back', async () => {
   await openEditor();
   chip('stadium').dispatch('click');

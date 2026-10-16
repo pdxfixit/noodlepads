@@ -33,7 +33,7 @@ import { cutKey, cleanEdits, cleanFade } from './cuts.js';
 import { createWave } from './wave.js';
 import { createCut } from './chop.js';
 import { fitLine, keysForSlider, showingKeys, KEYED_STEPS } from './lines.js';
-import { NO_TWEAKS, MORE_KNOBS, cleanTweaks, fullTweaks, tweakText, tweakByKey, allNormal, layerRows, addableKnobs, ADDED_AT } from './tweaks.js';
+import { NO_TWEAKS, MORE_KNOBS, cleanTweaks, fullTweaks, tweakText, tweakByKey, allNormal, knobMoved, layerRows, addableKnobs, ADDED_AT } from './tweaks.js';
 import { PRESETS, presetById, stackAll, matches, voiceLine, presetText, chainToKnobs, hasClassicVoice, surpriseVoices, cleanMyVoice, myVoicesFor, MY_VOICE_CHIPS } from './voice-knobs.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
 
@@ -1818,6 +1818,7 @@ function wireLayers() {
       if (k === 'speed' && Math.abs(v) < SPEED_PULL) { v = 0; knob.value = '0'; }
       sheet.tweaks = fullTweaks({ ...sheet.tweaks, [k]: v });
       if (!tweakByKey(k).flag) knob.parentElement.querySelector('output').textContent = tweakText(k, sheet.tweaks[k]);
+      knob.closest('.layer-row')?.classList.toggle('changed', knobMoved(k, sheet.tweaks));
       return;
     }
     const input = e.target.closest('input[data-key]');

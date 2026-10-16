@@ -2010,9 +2010,22 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
   grid-template-areas: "grip tile name tools" "ctl ctl ctl ctl";
   align-items: center;
   column-gap: 10px;
-  padding: 10px 0;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
 }
-.layer-row + .layer-row { border-top: 2px solid var(--line); }
+/* Each row is its own card, and a knob that is off normal is outlined in the
+   casing color with a thicker left edge and a faint tint (Ben, 2026-10-16:
+   "alternating background colors, or some visual distinction ... hard to
+   identify what-all has changed"). The left padding gives back the 4 px the
+   thicker edge takes, so the tile does not shift. */
+.layer-rows { gap: 8px; }
+.layer-row.changed {
+  padding-left: 8px;
+  border-color: var(--board);
+  border-left-width: 6px;
+  background: color-mix(in srgb, var(--board) 7%, var(--paper));
+}
 .layer-row > .layer-grip { grid-area: grip; }
 .layer-tile {
   grid-area: tile;

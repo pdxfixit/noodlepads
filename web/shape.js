@@ -12,7 +12,7 @@
 import { KINDS, kindById } from './steps.js';
 import { voiceById, amountText, stepLook } from './voices.js';
 import { fitLine, keysForSlider, KEYED_STEPS } from './lines.js';
-import { tweakByKey, tweakText, knobSay } from './tweaks.js';
+import { tweakByKey, tweakText, knobSay, knobMoved } from './tweaks.js';
 
 // What a slider shows for number spec `n` at value `v`, and back. Ratio
 // sliders (`log`) move evenly in ratio, so ½× sits as far from 1× as 2×.
@@ -119,7 +119,10 @@ export function renderLayers(list, rows, ctx) {
       li.classList.add('layer-step');
       li.dataset.step = String(step);
       li.append(make('button', { type: 'button', class: 'layer-grip', 'data-grip': String(step), disabled: !ready || stepCount < 2, 'aria-label': `Move ${look.name}: drag, or use the arrow keys` }));
-    } else if (tweakByKey(row)?.main) li.classList.add('layer-main');
+    } else {
+      if (tweakByKey(row)?.main) li.classList.add('layer-main');
+      li.classList.toggle('changed', knobMoved(row, tweaks));
+    }
     li.append(make('span', { class: 'layer-tile', 'aria-hidden': 'true', text: look.emoji }), make('span', { class: 'layer-name', text: look.name }));
     const removable = row === 'special' || step !== null || !tweakByKey(row)?.main;
     li.append(tools(row, look, { muted: isMuted, mutes, removable, armed, ready, open: step !== null && canOpen?.(chain[step]) ? String(step) : null }));
