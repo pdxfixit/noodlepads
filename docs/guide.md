@@ -546,7 +546,10 @@ ADR 0002.
   Besides the screens, controls and the rest, each visit also sends how late a
   sound played (`perf.latency`) and how much was played (`noodlepads.play`:
   pads, keys, roll notes, song blocks and Kids pads, one count each; never
-  which sound), as the page hides.
+  which sound), as the page hides, and not when nothing was played. Each load
+  also says the person's level (`noodlepads.level`: kids, regular or advanced)
+  once, and `app.open` carries the browser's family (chrome, safari, firefox,
+  edge, samsung, opera or other), never the full browser string.
 
 ## Keyboard and screen readers
 

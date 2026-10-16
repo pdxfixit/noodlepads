@@ -91,7 +91,6 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 Other work:
 
 - [ ] About 2026-11-16: remove the no-op `POST /api/profiles/:id/uses` route (`takeUses` in `worker/cloud.js`, its route line and `tests/metrics.test.mjs`'s test), and `forget('uses')`/`forget('visits')` in `web/app.js startUsage` if no old copy is left (ADR 0027).
-- [ ] Report to the telemetry orchestrator, for `events.toml` (ADR 0027): `app.open` details `browser` (family) and `level`; `perf.latency` (`ms`) and `noodlepads.play` (`pads`, `keys`, `notes`, `blocks`, `kids`) which this app already sends; `screen.view` summary by screen; the `pin-wrong` value of `noodlepads.cloud`'s `action`.
 
 - [ ] Move `skills/noodlepads-logs` to `~/src/skills/noodlepads-logs` and link it (the skills workspace convention); the recurrent routine's leg is now named `noodlepads-logs`, and its state file `~/.local/state/skills/noodlepads-logs.state.json`
 

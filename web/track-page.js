@@ -16,6 +16,8 @@
 //              perf.longtask, perf.latency (the sound's delay, once a visit)
 //   play       noodlepads.play: pads, keys, roll notes and song blocks played
 //              this visit, one count each (play-count.js), as the page hides
+//   level      noodlepads.level: the person's level, once a page load, after
+//              app.open (app.js says it when the first person's level is known)
 //
 // A control's name is never text a kid typed: a control from index.html is
 // named by its label as the page first drew it, any other by its id, a data-
@@ -24,6 +26,7 @@
 
 import { CONTROLS, tipFor } from './tooltips.js';
 import { takePlay } from './play-count.js';
+import { LEVELS } from './settings.js';
 
 // Play surfaces: tapped hundreds of times a visit, and play, not controls.
 export const PLAY = '.pad, .dj-key, .pill, .kids-pad, .kids-key, .kids-square, .kids-drum, .roll-hit, .lane-cell';
@@ -158,6 +161,21 @@ export function errorOf(data = {}) {
   return { kind, where: errorSig(data), fatal: false };
 }
 
+// The browser family from the user agent: edge, opera, samsung, firefox,
+// chrome, safari or other. Those built on Chrome say "Chrome" too, so they
+// are asked first; Safari alone says only "Safari" (with "Version/"). Nothing
+// of the version, and never the user agent itself.
+export function browserOf(ua) {
+  const s = String(ua ?? '');
+  if (/Edg(e|A|iOS)?\//.test(s)) return 'edge';
+  if (/OPR\/|OPT\/|Opera/.test(s)) return 'opera';
+  if (/SamsungBrowser\//.test(s)) return 'samsung';
+  if (/Firefox\/|FxiOS\//.test(s)) return 'firefox';
+  if (/Chrome\/|CriOS\//.test(s)) return 'chrome';
+  if (/Safari\//.test(s) && /Version\//.test(s)) return 'safari';
+  return 'other';
+}
+
 // The environment app.open carries, from the window. Pure given `win`.
 export function environment(win, first) {
   const mq = (q) => win.matchMedia?.(q)?.matches === true;
@@ -178,6 +196,7 @@ export function environment(win, first) {
     os,
     input: mq('(hover: hover) and (pointer: fine)') ? 'mouse' : (win.navigator?.maxTouchPoints ?? 0) > 0 ? 'touch' : 'mouse',
     pwa: mq('(display-mode: standalone)'),
+    browser: browserOf(ua),
   };
 }
 
@@ -203,6 +222,7 @@ export function trackPage(deps) {
   let pointer = null;
   const open = {};
   const dialogs = new Map();   // an open dialog -> when it opened
+  let levelSent = false;
 
   track('app.open', environment(win, t.first));
 
@@ -288,7 +308,15 @@ export function trackPage(deps) {
       if (!name || name === screen) return;
       const from = screen;
       screen = name;
-      track('screen.view', { from });
+      track('screen.view', { from, to: name });
+    },
+    // The person's level (kids, regular or advanced), once a page load, so a
+    // person who never changes it still shows (setting.change shows only a
+    // change). app.js says it once the first person's level is known.
+    level(value) {
+      if (levelSent || !LEVELS.includes(value)) return;
+      levelSent = true;
+      track('noodlepads.level', { level: value });
     },
     current: () => screen,
   };

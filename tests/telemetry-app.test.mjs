@@ -35,6 +35,13 @@ const records = () => tel.currentTelemetry().queued();
 test('the shared client starts once the version is known, and keeps events with nobody in the cloud', () => {
   assert.ok(tel.currentTelemetry().client(), 'started');
   assert.equal(state.cloud.size, 0);
+  // The start: app.open with the browser family, then the level this load
+  // starts at (a person who never changes it shows here, not in setting.change).
+  const start = records();
+  assert.equal(start[0].event, 'app.open');
+  assert.match(start[0].details.browser, /^(chrome|safari|firefox|edge|samsung|opera|other)$/);
+  const level = start.filter((r) => r.event === 'noodlepads.level');
+  assert.deepEqual(level.map((r) => r.details), [{ level: 'regular' }], 'once');
   const before = records().length;
   page.$('#pads-tab').dispatch('click');
   assert.ok(records().length > before);
@@ -55,7 +62,7 @@ test('a tab, a toolbar button, a dialog and a setting each make their event, wit
     // control.use follows what it did here.
     assert.deepEqual(mine.map((r) => r.event), ['screen.view', 'control.use', 'dialog.open', 'control.use', 'setting.change', 'dialog.close']);
     assert.ok(mine.every((r) => r.screen === 'beats' && r.app === 'noodlepads' && r.player === tel.currentTelemetry().player));
-    assert.deepEqual(mine[0].details, { from: 'pads' });
+    assert.deepEqual(mine[0].details, { from: 'pads', to: 'beats' });
     assert.equal(mine[1].details.control, 'beats-toggle', 'a tab whose label the stand-in page cannot read is named by its id');
     assert.equal(mine[1].details.group, 'toolbar');
     assert.equal(mine[2].details.dialog, 'settings-dialog');
