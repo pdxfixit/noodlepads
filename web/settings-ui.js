@@ -85,6 +85,7 @@ function chips() {
     'set-beats': LEVEL_NAMES[getSetting('level')],
     'set-keys': LAYOUT_NAMES[getSetting('djLayout')] ?? '',
     'set-reports': on(getSetting('sendLogs') === true),
+    'set-usage': on(getSetting('sendUsage') === true),
   };
   for (const section of sections()) {
     const chip = section.querySelector('.set-head-chip');
@@ -100,6 +101,7 @@ export function syncSettingsControls() {
   const level = getSetting('level');
   for (const b of el.levels) b.setAttribute('aria-pressed', String(b.dataset.level === level));
   el.levelHint.textContent = LEVEL_HINTS[level];
+  el.shareUsage.checked = getSetting('sendUsage') === true;
   const reports = getSetting('sendLogs') === true;
   el.sendLogs.checked = reports;
   el.code.hidden = !reports;
@@ -130,6 +132,7 @@ export function initSettingsUI({ gate = () => false, onKids = () => {} } = {}) {
     levels: document.querySelector('#level-keys').querySelectorAll('[data-level]'),
     levelHint: document.querySelector('#level-hint'),
     sendLogs: document.querySelector('#send-logs'),
+    shareUsage: document.querySelector('#share-usage'),
     code: document.querySelector('#send-logs-code'),
     device: document.querySelector('#send-logs-device'),
     where: document.querySelector('#send-logs-where'),
@@ -172,11 +175,12 @@ export function initSettingsUI({ gate = () => false, onKids = () => {} } = {}) {
   // The version and date in the page footer open Settings at About (Ben, 2026-10-11).
   el.version.addEventListener('click', () => open(true));
   // The radios are named for the setting they set (timeSignature);
-  // the switch is sendLogs, a real boolean.
+  // the switches are sendLogs and sendUsage, real booleans.
   el.dialog.addEventListener('change', async (e) => {
     const radio = e.target.closest('input[type="radio"]');
     const change = radio ? [radio.getAttribute('name'), radio.dataset.value]
-      : e.target.closest('#send-logs') ? ['sendLogs', el.sendLogs.checked] : null;
+      : e.target.closest('#send-logs') ? ['sendLogs', el.sendLogs.checked]
+        : e.target.closest('#share-usage') ? ['sendUsage', el.shareUsage.checked] : null;
     if (!change) return;
     try {
       await setSetting(...change);

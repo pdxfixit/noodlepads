@@ -158,7 +158,7 @@ test('every Settings section but About folds under its heading, and the device r
   try {
     const dialog = $('#settings-dialog');
     const folds = dialog.querySelectorAll('.set-fold');
-    assert.deepEqual(folds.map((s) => s.id), ['set-privacy', 'set-sharing', 'set-backups', 'set-older', 'set-beats', 'set-keys', 'set-reports']);
+    assert.deepEqual(folds.map((s) => s.id), ['set-privacy', 'set-usage', 'set-sharing', 'set-backups', 'set-older', 'set-beats', 'set-keys', 'set-reports']);
     assert.equal($('#about-text').closest('.set-fold'), null, 'About is always open');
     for (const s of folds.slice(1)) {
       const head = s.querySelector('.set-head');
@@ -292,5 +292,32 @@ test('Send problem reports is a switch, off by default, with a grown-up line and
   sw.checked = false;
   sw.dispatch('change');
   await page.settle();
+  $('#settings-dialog').close();
+});
+
+// Ben, 2026-10-16: "use B and 'Share play data' everywhere": its own fold
+// right after 🔓 What's private, on by default; off sends nothing.
+test('📊 Play data comes right after 🔓 What\'s private: 📊 Share play data, on by default, sets sendUsage', async () => {
+  const folds = $('#settings-dialog').querySelectorAll('.set-fold').map((f) => f.id);
+  assert.equal(folds[folds.indexOf('set-privacy') + 1], 'set-usage');
+  const sw = $('#share-usage');
+  assert.equal(sw.getAttribute('role'), 'switch');
+  assert.equal(sw.parent.querySelector('b').textContent, '📊 Share play data');
+  assert.equal($('#set-usage-title').textContent, '📊 Play data');
+  assert.match($('#share-usage-hint').textContent, /^Never sounds, recordings or anyone's names\.$/);
+  assert.equal(getSetting('sendUsage'), true);
+  $('#settings-open').dispatch('click');
+  assert.equal(sw.checked, true);
+  const chip = () => $('#set-usage').querySelector('.set-head-chip').textContent;
+  assert.equal(chip(), 'On');
+  sw.checked = false;
+  sw.dispatch('change');
+  await page.settle();
+  assert.strictEqual(getSetting('sendUsage'), false);
+  assert.equal(chip(), 'Off');
+  sw.checked = true;
+  sw.dispatch('change');
+  await page.settle();
+  assert.strictEqual(getSetting('sendUsage'), true);
   $('#settings-dialog').close();
 });

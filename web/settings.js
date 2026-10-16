@@ -69,8 +69,9 @@ export const SETTINGS = {
   sendLogs: { default: false, values: [false, true], scope: 'device' },
   // Usage events and counts (telemetry.js, uses.js, visits.js; Ben,
   // 2026-10-16: on by default, a switch turns it off, and off sends nothing,
-  // ever). The device's, as the device is what sends. No control shows it
-  // yet: the switch waits for Ben's OK on its mockup.
+  // ever). The device's, as the device is what sends. ⚙️ Settings → 📊 Play
+  // data → 📊 Share play data (Ben, 2026-10-16: "use B and 'Share play
+  // data' everywhere").
   sendUsage: { default: true, values: [false, true], scope: 'device' },
 };
 
