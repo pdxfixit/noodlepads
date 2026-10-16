@@ -10,6 +10,7 @@
 //   node tools/look.mjs [pads|beats|keys-on|song|live|VIEW ...] [--advanced] [--top PX] [--scroll PX | --scroll-to SELECTOR] [--js CODE | --js-file PATH] [--url URL] [--out DIR] [--widths 320,375] [--wide]
 //   console.log() in --js prints under the table (📝), to measure as well as look.
 //   --bg NAME[,NAME…]|all|none: the page's pattern (backdrop.js) instead of a random one; one shot per pattern.
+//   --skin ID[,ID…]|all: the pad skin (skins.js), set as the person's padSkin before the view runs; one shot per skin.
 //   node tools/look.mjs cloud-smoke|cloud-e2e [--url URL]   the live cloud checks (look-cloud.mjs)
 //
 // Node with no dependencies: the DevTools protocol over Node's own WebSocket
@@ -22,6 +23,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { CHROME, launchChrome, connect, evaluate as evaluateIn, waitFor, sleep, freePort } from './chrome.mjs';
 import { BACKDROPS } from '../web/backdrop.js';
+import { SKIN_IDS } from '../web/skins.js';
 
 // The live cloud checks `just deploy` runs (just cloud-smoke, just cloud-e2e).
 if (['cloud-smoke', 'cloud-e2e'].includes(process.argv[2])) {
@@ -249,11 +251,12 @@ const MIN_TAP = 44;
 function usage(msg) {
   if (msg) console.error(`🛑 ${msg}`);
   console.error(`views: ${Object.keys(VIEWS).join(' ')}`);
-  console.error('usage: just look [pads|beats|keys-on|song|live|VIEW ...] [--advanced] [--top PX] [--scroll PX | --scroll-to SELECTOR] [--js CODE | --js-file PATH] [--url URL] [--out DIR] [--widths 320,375,...] [--wide] [--bg NAME,...|all|none]');
+  console.error('usage: just look [pads|beats|keys-on|song|live|VIEW ...] [--advanced] [--top PX] [--scroll PX | --scroll-to SELECTOR] [--js CODE | --js-file PATH] [--url URL] [--out DIR] [--widths 320,375,...] [--wide] [--bg NAME,...|all|none] [--skin ID,...|all]');
+  console.error(`skins: ${SKIN_IDS.join(' ')}`);
   process.exit(2);
 }
 
-const opts = { screens: [], js: '', url: '', out: '', advanced: false, top: 0, scroll: null, scrollTo: '', widths: [320, 375, 700, 900, 1100], bgs: [''] };
+const opts = { screens: [], js: '', url: '', out: '', advanced: false, top: 0, scroll: null, scrollTo: '', widths: [320, 375, 700, 900, 1100], bgs: [''], skins: [''] };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
@@ -276,6 +279,12 @@ for (let i = 0; i < argv.length; i++) {
     const v = val();
     opts.bgs = v === 'all' ? [...BACKDROPS] : v.split(',');
     for (const b of opts.bgs) if (b !== 'none' && !BACKDROPS.includes(b)) usage(`no pattern called ${b}: ${BACKDROPS.join(' ')}`);
+  }
+  // The pad skin: one shot per skin named (all seven with `all`), else the person's own (Tiles on a fresh device).
+  else if (a === '--skin') {
+    const v = val();
+    opts.skins = v === 'all' ? [...SKIN_IDS] : v.split(',');
+    for (const k of opts.skins) if (!SKIN_IDS.includes(k)) usage(`no skin called ${k}: ${SKIN_IDS.join(' ')}`);
   }
   else if (a === '-h' || a === '--help') usage();
   else if (a in VIEWS) opts.screens.push(a);
@@ -440,7 +449,7 @@ fs.mkdirSync(out, { recursive: true });
 
 const rows = [];
 // One page load at one width, measured and photographed.
-async function lookOnce(screen, w, bg = '') {
+async function lookOnce(screen, w, bg = '', skin = '') {
     errors = []; csp = []; logs = [];
     await send('Emulation.setDeviceMetricsOverride', { width: w, height: 800, deviceScaleFactor: 1, mobile: w < 768 });
     const loaded = new Promise((r) => listeners.push(function once(m) {
@@ -449,11 +458,15 @@ async function lookOnce(screen, w, bg = '') {
     await send('Page.navigate', { url: bg ? `${base}?bg=${bg}` : base });
     await loaded;
     await sleep(400);
-    const row = { screen: bg ? `${screen} ${bg}` : screen, w, extra: [] };
+    const row = { screen: [screen, bg, skin].filter(Boolean).join(' '), w, extra: [] };
     try {
       // --advanced turns on the Advanced switch first, so every control is on the page.
       if (!VIEWS[screen].kids) {
         await evaluate(`(async () => { const s = await import('/settings.js'); if (s.getSetting('level') === 'kids') { await s.setSetting('level', 'regular'); await new Promise((r) => setTimeout(r, 150)); } })()`);
+      }
+      // --skin: the person's pad skin, before the view (the widths share storage, so it is set each time).
+      if (skin) {
+        await evaluate(`(async () => { await (await import('/settings.js')).setSetting('padSkin', ${JSON.stringify(skin)}); await new Promise((r) => setTimeout(r, 100)); })()`);
       }
       if (opts.advanced) {
         await evaluate(`(async () => { (await import('/settings.js')).setSetting('advancedBeats', true); await new Promise((r) => setTimeout(r, 200)); })()`);
@@ -468,7 +481,7 @@ async function lookOnce(screen, w, bg = '') {
     }
     await sleep(400);
     const m = await evaluate(MEASURE(w));
-    const shot = path.join(out, `${screen}-${w}${bg ? `-${bg}` : ''}.png`);
+    const shot = path.join(out, `${screen}-${w}${bg ? `-${bg}` : ''}${skin ? `-${skin}` : ''}.png`);
     // A full-page shot grows the window to the page's height first, as a
     // phone scrolled to the end would show it: capturing beyond an 800 px
     // window leaves the fixed toolbar mid-picture, over the page foot.
@@ -499,13 +512,15 @@ const hiccup = (row) => row.errors.some((e) => /net::ERR_|Failed to load resourc
 for (const screen of opts.screens) {
   for (const w of opts.widths) {
     for (const bg of opts.bgs) {
-      let row = await lookOnce(screen, w, bg);
-      if (!row.ok && hiccup(row)) {
-        const first = row.errors.find((e) => /net::ERR_|Failed to load resource/.test(e));
-        row = await lookOnce(screen, w, bg);
-        row.retried = first;
+      for (const skin of opts.skins) {
+        let row = await lookOnce(screen, w, bg, skin);
+        if (!row.ok && hiccup(row)) {
+          const first = row.errors.find((e) => /net::ERR_|Failed to load resource/.test(e));
+          row = await lookOnce(screen, w, bg, skin);
+          row.retried = first;
+        }
+        rows.push(row);
       }
-      rows.push(row);
     }
   }
 }
