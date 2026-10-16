@@ -889,12 +889,11 @@
 
       <div class="wave-box" id="wave-box" hidden>
         <canvas class="wave" id="wave" role="img" aria-label="The sound's wave"></canvas>
-        <button type="button" class="hold-before" id="before-btn" aria-describedby="before-hint"><span aria-hidden="true">👂</span> Hold: before</button>
-        <span class="sr-only" id="before-hint">Hold to hear the sound with no voice; let go to hear the voice again.</span>
         <div class="wave-marks" id="wave-marks" hidden></div>
         <p class="field-hint cut-from" id="cut-from" hidden></p>
         <div class="cut" id="cut" hidden>
           <div class="cut-tools" id="cut-start">
+            <button type="button" class="chain-tool" id="plain-btn" aria-pressed="false" title="Play it with no voice, to hear what the voice changes. Tap again to stop."><span aria-hidden="true">👂</span> Plain</button>
             <button type="button" class="chain-tool" id="trim-btn"><span aria-hidden="true">✂️</span> Trim and edit</button>
             <button type="button" class="chain-tool" id="chop-btn"><span aria-hidden="true">🧩</span> Chop into pads</button>
           </div>

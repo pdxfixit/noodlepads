@@ -60,10 +60,13 @@ async function openEditor() {
 test('trim and chop are Advanced: hidden until the switch is on', async () => {
   await setSetting('advancedBeats', false);
   await openEditor();
-  assert.equal($('#cut').hidden, true);
+  assert.equal($('#cut').hidden, false, 'the row shows for 👂 Plain');
+  assert.equal($('#trim-btn').hidden, true);
+  assert.equal($('#chop-btn').hidden, true);
   await setSetting('advancedBeats', true);
-  assert.equal($('#cut').hidden, false, 'shows at once when switched on');
-  assert.equal($('#cut-panel').hidden, true, 'just the two buttons to start');
+  assert.equal($('#trim-btn').hidden, false, 'shows at once when switched on');
+  assert.equal($('#chop-btn').hidden, false);
+  assert.equal($('#cut-panel').hidden, true, 'just the buttons to start');
   $('#sheet').close();
 });
 
