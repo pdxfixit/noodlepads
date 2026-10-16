@@ -159,7 +159,7 @@ test('every Settings section but About folds under its heading, and the device r
   try {
     const dialog = $('#settings-dialog');
     const folds = dialog.querySelectorAll('.set-fold');
-    assert.deepEqual(folds.map((s) => s.id), ['set-sharing', 'set-backups', 'set-older', 'set-beats', 'set-keys', 'set-data']);
+    assert.deepEqual(folds.map((s) => s.id), ['set-sharing', 'set-backups', 'set-older', 'set-beats', 'set-look', 'set-keys', 'set-data']);
     assert.equal($('#about-text').closest('.set-fold'), null, 'About is always open');
     for (const s of folds) {
       const head = s.querySelector('.set-head');

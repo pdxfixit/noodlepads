@@ -231,6 +231,9 @@ const VIEWS = {
   'cloud-list': { screen: 'pads', js: `${q('#people-open') + q('#cloud-browse')} ${nap}` },
   pin: { screen: 'pads', js: `const ui = await import('/cloud-ui.js');
     ui.askPin({ title: 'Their PIN', hint: 'Type the PIN to open this profile on this device.', note: "That PIN isn't right. 4 tries left before a 10-minute wait.", remember: true, forgot: true, someoneNew: true });` },
+  // ⚙️ Settings → 🎨 Look open (the pad skins to choose from), scrolled to it.
+  look: { screen: 'pads', js: `${q('#settings-open')} { const h = document.querySelector('#set-look .set-head'); if (h.getAttribute('aria-expanded') !== 'true') h.click(); }
+    document.querySelector('#set-look').scrollIntoView(); ${nap}` },
   // Settings with every section open, to see them all at once.
   'settings-all': { screen: 'pads', js: `${q('#settings-open')} for (const h of document.querySelectorAll('#settings-dialog .set-head[aria-expanded="false"]')) h.click(); ${nap}` },
 };

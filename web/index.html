@@ -422,6 +422,16 @@
         </div>
       </section>
 
+      <!-- 🎨 Look: the person's pad skin (skins.js, settings-ui.js draws one
+           radio per skin, each with a sample pad in that skin). -->
+      <section class="set-section set-fold" id="set-look" aria-labelledby="set-look-title">
+        <h3><button type="button" class="set-head" aria-expanded="false" aria-controls="set-look-body"><span class="set-head-caret" aria-hidden="true">▸</span><span id="set-look-title">🎨 Look</span><span class="set-head-chip" hidden></span></button></h3>
+        <div class="set-body" id="set-look-body" hidden>
+          <p class="field-hint">How the pads look, everywhere. Each person has their own.</p>
+          <div class="set-skins" id="skin-picks" role="radiogroup" aria-labelledby="set-look-title"></div>
+        </div>
+      </section>
+
       <section class="set-section set-fold" id="set-keys" aria-labelledby="set-keys-title">
         <h3><button type="button" class="set-head" aria-expanded="false" aria-controls="set-keys-body"><span class="set-head-caret" aria-hidden="true">▸</span><span id="set-keys-title">⌨️ Keyboard</span><span class="set-head-chip" hidden></span></button></h3>
         <div class="set-body" id="set-keys-body" hidden>

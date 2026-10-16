@@ -1,6 +1,7 @@
 // The ⚙️ Settings dialog: Backups (its buttons live here, its code is in
 // backup-ui.js; people are managed from the corner avatar, people.js), the
-// person's Level (🧸 Kids · Regular · Advanced, ADR 0019),
+// person's Level (🧸 Kids · Regular · Advanced, ADR 0019), 🎨 Look (the
+// person's pad skin, skins.js: a sample pad in each skin to pick from),
 // 📊 Data sharing (the Share play data and Send problem reports
 // checkboxes; sending is log-send.js) and About. The button sits in the top corner, small and away from the pads and
 // the toolbar where thumbs play, so it isn't pressed by accident.
@@ -18,6 +19,7 @@ import { openDialog, setupDialog } from './dialogs.js';
 import { deviceCode, LIVE_HOST } from './log-send.js';
 import { LAYOUT_NAMES } from './rhythm.js';
 import { remember, recall } from './util.js';
+import { SKINS, skinLabel } from './skins.js';
 
 const el = {};
 
@@ -89,6 +91,7 @@ function chips() {
   const words = {
     'set-beats': LEVEL_NAMES[getSetting('level')],
     'set-keys': LAYOUT_NAMES[getSetting('djLayout')] ?? '',
+    'set-look': skinLabel(getSetting('padSkin')),
     // Which of the two are on, short enough for a 320 px heading: 📊 On, 📊📮 On, Off.
     'set-data': dataChip(getSetting('sendUsage') === true, getSetting('sendLogs') === true),
   };
@@ -103,6 +106,12 @@ function chips() {
 // Puts the controls in step with the stored settings and the current people.
 export function syncSettingsControls() {
   for (const radio of el.radios) radio.checked = radio.dataset.value === getSetting(radio.getAttribute('name'));
+  // The chosen look's sample shows itself playing (a lever down, a lit pad, a dial part way round).
+  for (const sample of el.skinPicks.querySelectorAll('.skin-sample')) {
+    const on = sample.closest('label').querySelector('input').checked;
+    sample.classList.toggle('playing', on);
+    sample.style.setProperty('--progress', on ? 0.35 : 0);
+  }
   const level = getSetting('level');
   for (const b of el.levels) b.setAttribute('aria-pressed', String(b.dataset.level === level));
   el.levelHint.textContent = LEVEL_HINTS[level];
@@ -125,8 +134,43 @@ export const showSettings = () => openSettings();
 // `gate()`: true when it took the ⚙️ tap itself (🧸 Kids asks a sum first).
 // `onKids()`: 🧸 Kids was chosen, even when it already was (back to Kids
 // after a grown-up's visit).
+// 🎨 Look's choices: a radio per skin (named for the setting, as the change
+// handler expects), each with a sample pad drawn in that skin by its own
+// data-skin, whatever the page's skin is. Sample colors from the palette.
+const SAMPLE_COLORS = ['#FFD60A', '#FF5A36', '#4C8DFF', '#1FC7B0', '#FF5FA8', '#FF9A1F', '#B8E62E'];
+function drawSkinPicks(box) {
+  box.replaceChildren(...SKINS.map((skin, i) => {
+    const line = document.createElement('label');
+    line.className = 'set-skin';
+    line.dataset.skin = skin.id;
+    const radio = document.createElement('input');
+    radio.setAttribute('type', 'radio');
+    radio.setAttribute('name', 'padSkin');
+    radio.dataset.value = skin.id;
+    radio.setAttribute('aria-label', skin.label);
+    const sample = document.createElement('span');
+    sample.className = 'pad pad-mini skin-sample';
+    sample.setAttribute('aria-hidden', 'true');
+    sample.style.setProperty('--pad', SAMPLE_COLORS[i % SAMPLE_COLORS.length]);
+    const emoji = document.createElement('span');
+    emoji.className = 'pad-emoji';
+    emoji.textContent = '🥁';
+    const name = document.createElement('span');
+    name.className = 'pad-label';
+    name.textContent = 'Drum';
+    sample.append(emoji, name);
+    const word = document.createElement('span');
+    word.className = 'set-skin-name';
+    word.textContent = skin.label;
+    line.append(radio, sample, word);
+    return line;
+  }));
+}
+
 export function initSettingsUI({ gate = () => false, onKids = () => {} } = {}) {
+  drawSkinPicks(document.querySelector('#skin-picks'));
   Object.assign(el, {
+    skinPicks: document.querySelector('#skin-picks'),
     open: document.querySelector('#settings-open'),
     dialog: document.querySelector('#settings-dialog'),
     note: document.querySelector('#settings-note'),
