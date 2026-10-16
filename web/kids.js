@@ -3,7 +3,10 @@
 // 🎙️ Record, 🥁 Beats, 🎹 Keys) and a big ⏹️, over the same sounds and beats
 // as the regular app. Nothing here deletes, edits, shares or opens Settings;
 // the ⚙️ gear in its usual corner asks a grown-up sum first (the Settings
-// gate, settings-ui.js). The pure parts are in kids-logic.js.
+// gate, settings-ui.js). The Pads screen's round button at the top left
+// moves to the next pad skin (skins.js), the person's own `padSkin`, as
+// ⚙️ Settings → 🎨 Look would (Ben, 2026-10-16). The pure parts are in
+// kids-logic.js.
 //
 // Remembered on the device: the tab (`kids-tab`) and the pad size a pinch
 // chose (`kids-size`).
@@ -16,6 +19,8 @@ import { remember, recall, newId } from './util.js';
 import { soundName } from './names.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { scratchOf, scratchId } from './scratch.js';
+import { getSetting, setSetting, onSetting } from './settings.js';
+import { SKINS, nextSkin } from './skins.js';
 import {
   makeSum, typeDigit, cleanSize, kidsColumns, pageShape, pagesOf, pageAt, pinchSize, kidsPadOrder,
   KIDS_DRUMS, KIDS_SQUARES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds,
@@ -122,6 +127,23 @@ function goPage(n) {
   if (typeof el.pages.scrollTo === 'function') el.pages.scrollTo({ left: page * width, behavior: reduced() ? 'auto' : 'smooth' });
   else el.pages.scrollLeft = page * width;
   showPage();
+}
+
+// 🎨 The skin button shows the person's skin's picture; a tap moves to the
+// next one, round to Tiles again after Googly eyes.
+function showSkinButton() {
+  const skin = SKINS.find((s) => s.id === getSetting('padSkin')) ?? SKINS[0];
+  el.skin.textContent = skin.emoji;
+  el.skin.dataset.skin = skin.id;
+}
+
+async function nextLook() {
+  boing(el.skin);
+  try {
+    await setSetting('padSkin', nextSkin(getSetting('padSkin')));
+  } catch (err) {
+    console.error('Changing the look failed:', err);
+  }
 }
 
 function setSize(next) {
@@ -620,6 +642,7 @@ export function initKids(d) {
     views: document.querySelectorAll('[data-kids-view]'),
     tabs: document.querySelectorAll('[data-kids-tab]'),
     stop: q('#kids-stop'),
+    skin: q('#kids-skin'),
     pages: q('#kids-pages'), turn: q('#kids-turn'), dots: q('#kids-dots'), arrows: document.querySelectorAll('[data-turn]'),
     mic: q('#kids-mic'), last: q('#kids-last'), voices: document.querySelectorAll('[data-kids-voice]'),
     beat: q('#kids-beat'), play: q('#kids-play'), slow: q('#kids-slow'), fast: q('#kids-fast'),
@@ -628,6 +651,9 @@ export function initKids(d) {
   });
   for (const b of el.tabs) b.addEventListener('click', () => { boing(b); setTab(b.dataset.kidsTab); });
   el.stop.addEventListener('click', stopAll);
+  el.skin.addEventListener('click', nextLook);
+  showSkinButton();
+  onSetting('padSkin', showSkinButton);
   wirePads();
   wireRecord();
   wireBeat();
