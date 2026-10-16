@@ -236,6 +236,38 @@ main {
   background: var(--bed);
   max-width: 60ch;
 }
+/* The banner (ui.js showBanner): every one-line notice, and Undo after a
+   change, floats over the top of the screen, over the sticky header, and
+   fades away; the page under it never moves (Ben, 2026-10-16). It is a
+   popover, so it sits in the top layer (over a dialog too); the resets undo
+   the popover's own box. It slides down and fades in, and fades up as it
+   goes (reduced motion: it only fades). On a phone its words take a line
+   and its buttons wrap under them, filling it. */
+.banner {
+  position: fixed; z-index: 70; inset: auto;
+  top: calc(env(safe-area-inset-top) + 10px); left: 50%; transform: translateX(-50%);
+  width: min(60ch, calc(100vw - 2 * var(--gutter))); box-sizing: border-box; height: auto; overflow: visible;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin: 0; padding: 6px 6px 6px 14px; border: 0; border-radius: 12px;
+  background: var(--bed-edge); color: #fff; font: 800 1rem/1.35 var(--font-ui);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+}
+.banner[hidden] { display: none; }
+.banner-text { flex: 1 1 12em; min-width: 0; padding: 6px 0; }
+.banner-buttons { display: flex; justify-content: flex-end; gap: 8px; flex: 1 0 auto; max-width: 16em; margin-left: auto; }
+.banner:not(.has-action) .banner-buttons { flex: none; }
+@media (max-width: 559px) { .banner-buttons { max-width: none; } }   /* on their own line: fill it */
+.banner button { min-height: 44px; min-width: 44px; border-radius: 10px; font: inherit; cursor: pointer; }
+.banner-action { flex: 1 0 auto; padding: 0 18px; border: 0; background: var(--led); color: var(--ink); }
+.banner-close { flex: none; padding: 0 12px; border: 2px solid rgb(255 255 255 / 0.6); background: transparent; color: #fff; }
+.banner.banner-in { animation: banner-in 0.25s ease-out; }
+@keyframes banner-in { from { opacity: 0; transform: translate(-50%, -16px); } }
+@keyframes banner-fade-in { from { opacity: 0; } }
+.banner.fading { opacity: 0; transform: translate(-50%, -16px); transition: opacity 0.6s ease, transform 0.6s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .banner.banner-in { animation-name: banner-fade-in; }
+  .banner.fading { transform: translateX(-50%); transition: opacity 0.6s ease; }
+}
 /* 🆕 An update for Noodle Pads is ready. (update.js): like a notice, with Reload
    and ✕ on its line; on a phone the words take a line and the buttons wrap
    under them, filling it. It stays until tapped. */
@@ -1179,6 +1211,7 @@ dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
   .doc-bar:has(.doc-keys):has(.beat-name[hidden]) :is(.doc-grooves, .doc-keys) { flex: 1 1 44px; }
   .doc-bar:has(.doc-keys):has(.beat-name[hidden]) :is(.doc-new, .doc-open) { flex: 1 1 calc(50% - 4px); }
 }
+/* The take card and the groove line with ⌨️ Keys (#dj-done, #dj-trying). */
 .seq-undo { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 8px 8px 8px 16px; border-radius: 12px; background: rgb(255 255 255 / 0.12); font-weight: 800; }
 .seq-undo[hidden] { display: none; }
 .seq-foot { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
@@ -1339,8 +1372,6 @@ dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
 /* ➕ Add a lane and ↩️ Undo under the lanes, like + Add a row. */
 .song-foot { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
 .song-foot > * { min-height: 48px; }
-.song-note { margin: 8px 0 0; font-weight: 700; }
-.song-note:empty { display: none; }
 .lane-name-field { width: 100%; margin-bottom: 12px; }
 @media (max-width: 600px) {
   .song-foot > * { flex: 1 1 auto; }
@@ -3242,29 +3273,6 @@ body.editing .pads .pad-cell .pad-emoji { margin-left: 26px; }
 }
 /* Room under the last pads, so the bar never covers them. */
 body.choosing .page-foot { margin-bottom: 180px; }
-
-/* After a delete: what went, ↩️ Undo and ✕, in the bar's place. */
-.pads-undo {
-  position: fixed;
-  z-index: 9;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(var(--toolbar-h) + env(safe-area-inset-bottom) + 8px);
-  width: min(60ch, calc(100vw - 2 * var(--gutter)));
-  box-sizing: border-box;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 6px 6px 14px;
-  border-radius: 12px;
-  background: var(--bed);
-  color: #fff;
-  font-weight: 800;
-  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
-}
-.pads-undo[hidden] { display: none; }
 
 /* The Edit sounds sheets (bulk.js): the groups to move to, a new group's
    name, and the button that applies. */

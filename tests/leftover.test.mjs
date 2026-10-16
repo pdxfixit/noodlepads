@@ -136,7 +136,7 @@ test('Settings shows the older sounds, brings them in with a backup\'s checks, a
   assert.match(zed.id, /^p-/);
   assert.equal(written.get('people').has('zed'), false);
   assert.equal(written.get('overrides').get(`${zed.id}-airhorn`).label, 'Toot', 'the renamed starter is an edit of the Airhorn preset');
-  assert.match(page.$('#notice').textContent, /^Older sounds brought in 🎉 Added 🔊 3 sounds, 🥁 1 beat, 👥 2 people\./);
+  assert.match(page.$('#banner-text').textContent, /^Older sounds brought in 🎉 Added 🔊 3 sounds, 🥁 1 beat, 👥 2 people\./);
   assert.ok(state.userClips.some((c) => c.id === 'user-x3-cccc'));
   assert.ok(fake.opened.every((mode) => mode === 'readonly'), 'only ever read');
   db.handle = null;

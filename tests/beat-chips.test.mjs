@@ -230,7 +230,7 @@ test('the chips wait while ⌨️ Keys records into the beat', async () => {
   assert.ok(chips(1).every((c) => c.disabled), 'locked while recording');
   $('#dj-record').dispatch('click');
   assert.ok(chips(1).every((c) => !c.disabled), 'back after ■ Stop');
-  $('#dj-done-close')?.dispatch('click');
+  $('#banner-close').dispatch('click');
   keysOff(page);
   $('#pads-tab').dispatch('click');
 });

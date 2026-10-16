@@ -437,7 +437,7 @@ function makeSequencer() {
     el: {
       play: $('#seq-play'), bpm: $('#seq-bpm'), bpmOut: $('#seq-bpm-out'), bpmType: $('#seq-bpm-type'),
       rows: $('#seq-rows'), add: $('#seq-add'), addTune: $('#seq-add-tune'), roll: $('#roll'), top: $('#seq-deck'), controls: $('#seq-shape-line'), djPlay: $('#dj-play'),
-      undo: $('#seq-undo'), undoText: $('#seq-undo-text'), undoButton: $('#seq-undo-button'), undoClose: $('#seq-undo-close'), empty: $('#seq-empty'), noRows: $('#seq-no-rows'),
+      empty: $('#seq-empty'), noRows: $('#seq-no-rows'),
       chooser: $('#chooser'), chooserTitle: $('#chooser-title'), chooserGrid: $('#chooser-grid'),
       chooserOk: $('#chooser-ok'), chooserTools: $('#chooser-tools'), chooserMelody: $('#chooser-melody'),
       chooserRate: $('#chooser-rate'),
@@ -553,13 +553,12 @@ function makeSong() {
       name: $('#song-name'), empty: $('#song-empty'), keep: $('#song-keep'),
       rename: $('#song-rename'), newSong: $('#song-new'), open: $('#song-open'),
       songs: $('#songs'), songsList: $('#songs-list'), songsEmpty: $('#songs-empty'), songsNote: $('#songs-note'),
-      play: $('#song-play'), sound: $('#song-sound'), note: $('#song-note'),
+      play: $('#song-play'), sound: $('#song-sound'),
       tempo: $('#song-tempo'), tempoDown: $('#song-tempo-down'), tempoUp: $('#song-tempo-up'),
       strip: $('#song-beats'), lanes: $('#song-lanes'),
       sel: $('#song-sel'), selText: $('#song-sel-text'), less: $('#song-less'), more: $('#song-more'), remove: $('#song-remove'), selClose: $('#song-sel-close'),
       addLane: $('#song-add-lane'), stepUndo: $('#song-step-undo'),
       laneSheet: $('#lane-sheet'), laneTitle: $('#lane-title'), laneName: $('#lane-name'), laneGrid: $('#lane-grid'),
-      undo: $('#song-undo'), undoText: $('#song-undo-text'), undoButton: $('#song-undo-button'), undoClose: $('#song-undo-close'),
     },
     audio,
     meter,
@@ -766,7 +765,7 @@ async function start() {
       keysEdit: { dialog: $('#keys-edit'), layouts: $('#ke-layouts'), saveLine: $('#ke-save-line'), saveName: $('#ke-save-name'), saveOk: $('#ke-save-ok'), saveCancel: $('#ke-save-cancel'),
         ownLine: $('#ke-own-line'), rename: $('#ke-rename'), remove: $('#ke-delete'), keys: $('#ke-keys'), note: $('#ke-note'), undo: $('#ke-undo'), reset: $('#ke-reset'),
         groups: $('#ke-groups'), picks: $('#ke-picks'), picksHint: $('#ke-picks-hint'), clearPicks: $('#ke-clear-picks') },
-      record: $('#dj-record'), status: $('#dj-status'), done: $('#dj-done'), doneText: $('#dj-done-text'), nameFlash: $('#dj-name-flash'),
+      record: $('#dj-record'), status: $('#dj-status'), done: $('#dj-done'), nameFlash: $('#dj-name-flash'),
       donePlay: $('#dj-done-play'), doneUndo: $('#dj-done-undo'), doneSound: $('#dj-done-sound'),
       trying: $('#dj-trying'), tryingText: $('#dj-trying-text'), tryingStop: $('#dj-trying-stop'),
       takeLine: $('#dj-take-line'), doneRename: $('#dj-done-rename'), doneClose: $('#dj-done-close'), takeName: $('#dj-take-name'), takeLength: $('#dj-take-length'),
@@ -795,7 +794,7 @@ async function start() {
       playOnce: (clip, opts) => audio.play(clip, opts),
       stopClip: (clip) => audio.stop(clip.id),
       announce: (text) => announce(text),
-      notice: (text) => showNotice(text),   // fades by itself (#notice)
+      notice: (text) => showNotice(text),   // the banner over the top, which fades by itself
       takes: (pid) => state.takes.filter((t) => t.personId === pid),
       setEmoji: setClipEmoji,
       boardClips: (clipId) => { const owner = people().find((p) => clipsFor(p.id, { allPresets: true }).some((c) => c.id === clipId)); return owner ? clipsFor(owner.id, { allPresets: true }) : []; },
@@ -881,16 +880,13 @@ async function start() {
     refitLines();
   });
   fitLines();
-  // Every notice fades by itself: bars when they show, lines of text when
-  // they get words. A bar with Undo stays long enough to reach it.
+  // Every notice fades by itself. The banner over the top of the screen fades
+  // on its own (ui.js showBanner); the take card after a take, when it shows,
+  // and the status lines in sheets, when they get words.
   if (typeof MutationObserver === 'function') {
-    const bars = [['#dj-done', 10000], ['#seq-undo', 8000], ['#pads-undo', 8000], ['#notice', 10000]];
-    for (const [sel, ms] of bars) {
-      const bar = $(sel);
-      if (!bar) continue;
-      new MutationObserver(() => { if (!bar.hidden) fadeAway(bar, ms); }).observe(bar, { attributes: true, attributeFilter: ['hidden'], childList: true, characterData: true, subtree: true });
-    }
-    for (const line of document.querySelectorAll('.lib-note, .set-note, .song-note')) {
+    const take = $('#dj-done');
+    if (take) new MutationObserver(() => { if (!take.hidden) fadeAway(take, 10000); }).observe(take, { attributes: true, attributeFilter: ['hidden'], childList: true, characterData: true, subtree: true });
+    for (const line of document.querySelectorAll('.lib-note, .set-note')) {
       new MutationObserver(() => { if (line.textContent.trim()) fadeAway(line, 6000, { clear: true }); }).observe(line, { childList: true, characterData: true, subtree: true });
     }
   }

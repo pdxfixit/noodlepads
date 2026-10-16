@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import { keysOn, keysOff, newBeatWithRow } from './new-beat.mjs';
 import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
+import { hasUndo } from './banner.mjs';
 import { dropBeat, allBlocks } from './song-ui.mjs';
 import { state } from '../web/state.js';
 
@@ -58,7 +59,7 @@ test('🆕 New with a named beat open: a blank scratch, the beat stays in 🗂�
   assert.equal(rows().length, 0, 'no rows');
   assert.equal($('#seq-no-rows').hidden, false, 'the dashed line points to + Add a row and 💃 Grooves');
   assert.equal($('#seq-bars').querySelector('[data-bars="1"]').getAttribute('aria-pressed'), 'true', 'one bar, as a new beat has');
-  assert.equal($('#seq-undo').hidden, true, 'nothing was lost: no Undo');
+  assert.equal(hasUndo(), false, 'nothing was lost: no Undo');
   assert.equal(JSON.stringify(mine()), before, `“${named}” stays in 🗂️ My beats as it was, and nothing joins it`);
   assert.equal(scratch(), undefined, 'the blank scratch is saved only once it changes');
   assert.equal(state.patterns.get(state.personId) ?? null, null, 'the scratch is open');
@@ -75,10 +76,10 @@ test('🆕 New over a scratch with hits: it empties, a line says so, and ↩️ 
   assert.equal($('#seq-bars').querySelector('[data-bars="1"]').getAttribute('aria-pressed'), 'true', 'the bars go back to one');
   assert.equal(scratch(), undefined, 'the scratch is empty');
   assert.equal(mine().length, count, 'nothing joins 🗂️ My beats');
-  assert.equal($('#seq-undo').hidden, false);
-  assert.equal($('#seq-undo-text').textContent, '🆕 Your scratch beat is blank now.');
-  tap('#seq-undo-button');
-  assert.equal($('#seq-undo').hidden, true);
+  assert.equal(hasUndo(), true);
+  assert.equal($('#banner-text').textContent, '🆕 Your scratch beat is blank now.');
+  tap('#banner-action');
+  assert.equal(hasUndo(), false);
   assert.equal(name(), 'Scratch beat');
   assert.equal(rows().length, 1, 'Undo: the row is back');
   assert.equal(hitsOf(scratch()), 1, 'and its hit');
@@ -92,8 +93,8 @@ test('🆕 New with a named beat open over a full scratch: Undo brings back both
   assert.equal(name(), named);
   bar().querySelector('[data-beat-new]').dispatch('click');
   assert.equal(name(), 'Scratch beat');
-  assert.equal($('#seq-undo').hidden, false, 'the scratch it emptied had hits');
-  tap('#seq-undo-button');
+  assert.equal(hasUndo(), true, 'the scratch it emptied had hits');
+  tap('#banner-action');
   assert.equal(name(), named, 'the beat open before');
   assert.equal(hitsOf(scratch()), 1, 'and the scratch as it was');
 });
@@ -109,17 +110,17 @@ test('⌨️ Keys on: 🆕 New opens the blank scratch; a full one is said on th
   assert.equal($('#dj-no-rows').hidden, false, 'the line points to the keys');
   assert.equal(scratch(), undefined);
   assert.equal(mine().length, count, 'nothing joins 🗂️ My beats');
-  assert.equal($('#dj-done').hidden, false);
-  assert.equal($('#dj-done-text').textContent, '🆕 Your scratch beat is blank now.');
-  tap('#dj-done-undo');
-  assert.equal($('#dj-done').hidden, true);
+  assert.equal(hasUndo(), true);
+  assert.equal($('#banner-text').textContent, '🆕 Your scratch beat is blank now.');
+  tap('#banner-action');
+  assert.equal(hasUndo(), false);
   assert.equal(djName(), named, 'Undo: the beat open before');
   assert.equal(hitsOf(scratch()), 1, 'and the scratch as it was');
   // An empty scratch emptied: no line.
   $('#dj-beatbar').querySelector('[data-beat-new]').dispatch('click');
-  $('#dj-done-close').dispatch('click');
+  $('#banner-close').dispatch('click');
   $('#dj-beatbar').querySelector('[data-beat-new]').dispatch('click');
-  assert.equal($('#dj-done').hidden, true, 'nothing lost, nothing to undo');
+  assert.equal(hasUndo(), false, 'nothing lost, nothing to undo');
   keysOff(page);
 });
 
@@ -137,7 +138,7 @@ test('🎼 Song: 🆕 New opens a blank scratch song; nothing joins 🗂️ My s
   tap('#song-new');
   assert.equal($('#song-name').value, 'Scratch song');
   assert.equal(allBlocks($).length, 0);
-  assert.equal($('#song-undo').hidden, true, 'the scratch was empty: no Undo');
+  assert.equal(hasUndo(), false, 'the scratch was empty: no Undo');
   assert.equal(JSON.stringify(songs()), before, `“${named}” stays as it was, and nothing joins the list`);
   // A scratch with slots: emptied, with Undo.
   addBeat();
@@ -147,15 +148,15 @@ test('🎼 Song: 🆕 New opens a blank scratch song; nothing joins 🗂️ My s
   assert.equal(allBlocks($).length, 0);
   assert.equal(songScratch(), undefined);
   assert.equal(JSON.stringify(songs()), before);
-  assert.equal($('#song-undo').hidden, false);
-  assert.equal($('#song-undo-text').textContent, '🆕 Your scratch song is blank now.');
-  tap('#song-undo-button');
-  assert.equal($('#song-undo').hidden, true);
+  assert.equal(hasUndo(), true);
+  assert.equal($('#banner-text').textContent, '🆕 Your scratch song is blank now.');
+  tap('#banner-action');
+  assert.equal(hasUndo(), false);
   assert.equal(allBlocks($).length, 2, 'Undo: the blocks are back');
   assert.equal(blocks(songScratch()), 2);
   // A change ends the Undo: it would undo that too.
   tap('#song-new');
   addBeat();
-  assert.equal($('#song-undo').hidden, true);
+  assert.equal(hasUndo(), false);
   tap('#pads-tab');
 });

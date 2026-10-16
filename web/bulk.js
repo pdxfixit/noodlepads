@@ -3,7 +3,7 @@
 // 📁 Move to group, 🎨 Color · picture, 🪄 Voice, 🔗 Share (one code) and
 // 🗑️ Delete (two taps, then Undo) — plus Select all (every sound the kid
 // made), a group's own ✏️ sheet (rename, move, delete, select its sounds)
-// and the Undo bar after a delete. pads.js draws the pads
+// and Undo after a delete (in the banner, ui.js). pads.js draws the pads
 // and keeps what is chosen; groups.js is the groups' logic.
 //
 // Presets can be chosen too: Color · picture, Voice and Delete (which hides
@@ -22,7 +22,7 @@ import { renderPads, chosenIds, clearChosen, chooseAll, setPadHooks, ownGroups, 
 import { EMOJI } from './sheet.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
 import { openDialog, setupDialog } from './dialogs.js';
-import { announce } from './ui.js';
+import { announce, showBanner } from './ui.js';
 import { count } from './util.js';
 import { cleanGroups, pruneGroups, moveGroup, groupName, newGroupId, MAX_GROUP_NAME } from './groups.js';
 
@@ -59,7 +59,6 @@ function drawBar() {
   el.bar.hidden = !on;
   document.body.classList.toggle('choosing', on);
   if (!on) { deleteArmed = ''; return; }
-  el.undo.hidden = true;   // the bar takes its place
   el.count.textContent = `${clips.length} selected`;
   const picked = new Set(chosenIds());
   const own = ownSounds();
@@ -169,15 +168,11 @@ async function removeSounds(clips) {
 
 // ── Undo ───────────────────────────────────────────────────────────────
 
-let undoing = null;
+// In the banner over the top of the screen (ui.js showBanner), for as long
+// as the old bar stayed. Focus on its vanishing Undo goes to ✏️ Edit sounds.
+const UNDO_MS = 8000;
 function showUndo(text, fn) {
-  undoing = fn;
-  el.undoText.textContent = text;
-  el.undo.hidden = false;
-}
-function hideUndo() {
-  undoing = null;
-  el.undo.hidden = true;
+  showBanner(text, { action: { label: '↩️ Undo', fn }, ms: UNDO_MS, focusBack: () => document.querySelector('#edit-toggle') });
 }
 
 // ── The sheets: one dialog, drawn for each action ──────────────────────
@@ -529,7 +524,6 @@ export function initBulk(hooks = {}) {
   const $ = (s) => document.querySelector(s);
   Object.assign(el, {
     bar: $('#pads-chosen'), count: $('#chosen-count'), clear: $('#chosen-clear'), all: $('#chosen-all'), why: $('#chosen-why'),
-    undo: $('#pads-undo'), undoText: $('#pads-undo-text'), undoButton: $('#pads-undo-button'), undoClose: $('#pads-undo-close'),
     dialog: $('#bulk-dialog'), title: $('#bulk-title'), body: $('#bulk-body'),
   });
   setupDialog(el.dialog);
@@ -539,12 +533,6 @@ export function initBulk(hooks = {}) {
     if (b) moveTo(b.dataset.moveTo || null);
   });
   el.bar.addEventListener('click', onBar);
-  el.undoButton.addEventListener('click', async () => {
-    const fn = undoing;
-    hideUndo();
-    await fn?.();
-  });
-  el.undoClose.addEventListener('click', hideUndo);
   setPadHooks({ onChosen: drawBar, remove: removeSounds, editGroup });
   drawBar();
 }

@@ -5,9 +5,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadStorage, state } from '../web/state.js';
 import { db, STORE_NAMES } from '../web/store.js';
+import { stubBanner } from './banner.mjs';
 
-const notice = { textContent: '', hidden: true };
-globalThis.document ??= { querySelector: () => notice };
+const { box, text: notice } = stubBanner();
 
 // An IndexedDB whose open request the test finishes by hand, and whose
 // stores all read as empty.
@@ -36,7 +36,7 @@ test('a held-up database: the board goes ahead with a note, and the data arrives
   fake.req.onsuccess();                                            // the other tab let go
   await new Promise((r) => setTimeout(r, 20));
   assert.equal(late, 1);
-  assert.equal(notice.textContent, '');                            // the note is cleared
+  assert.equal(box.hidden, true);                                 // the note is put away
   assert.equal(state.settings.size, 0);                            // and storage was read
   assert.equal(STORE_NAMES.length, 16);
   db.handle = null;

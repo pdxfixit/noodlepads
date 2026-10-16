@@ -11,6 +11,7 @@ import { readBackup, makeBackup } from '../web/backup.js';
 import { shareBundle, shareDoc } from '../web/cloud-sync.js';
 import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
+import { hasUndo } from './banner.mjs';
 import { newBeatWithRow, newBuilderBeatWithRow, keysOn, keysOff } from './new-beat.mjs';
 
 const on = (...at) => Array.from({ length: 16 }, (_, i) => at.includes(i));
@@ -151,9 +152,9 @@ test('a row\'s speaker: a tap mutes and unmutes and keeps the level; ↑ ↓ ste
   speaker().dispatch('keydown', { key: 'ArrowLeft' });
   assert.match(speaker().getAttribute('aria-label'), / loudness 70 %$/);
   assert.equal(row().style.props['--vol'], '0.7', 'its pills draw fainter');
-  assert.equal($('#seq-undo').hidden, false);
-  assert.match($('#seq-undo-text').textContent, /loudness 70 %\.$/);
-  $('#seq-undo-button').dispatch('click');
+  assert.equal(hasUndo(), true);
+  assert.match($('#banner-text').textContent, /loudness 70 %\.$/);
+  $('#banner-action').dispatch('click');
   assert.match(speaker().getAttribute('aria-label'), / loudness 100 %$/, 'one Undo for the whole run');
 });
 
@@ -177,7 +178,7 @@ test('holding or dragging a speaker opens its slider; a drag sets the level, is 
   // A tap elsewhere closes it.
   page.docEvent('pointerdown', { target: document.body });
   assert.equal(pop().hidden, true);
-  $('#seq-undo-button').dispatch('click');
+  $('#banner-action').dispatch('click');
   assert.match(speaker().getAttribute('aria-label'), / loudness 100 %$/);
 });
 
@@ -187,7 +188,7 @@ test('turning a muted row\'s level unmutes it', () => {
   speaker().dispatch('keydown', { key: 'ArrowDown' });
   assert.equal(speaker().getAttribute('aria-pressed'), 'false');
   assert.match(speaker().getAttribute('aria-label'), / loudness 90 %$/);
-  $('#seq-undo-button').dispatch('click');
+  $('#banner-action').dispatch('click');
   assert.equal(speaker().getAttribute('aria-pressed'), 'true', 'Undo puts the mute back too');
   speaker().dispatch('click');
 });
@@ -206,8 +207,8 @@ test('the keys view\'s grid (Beats with ⌨️ Keys): each row has a speaker; a 
   sp().dispatch('keydown', { key: 'ArrowDown' });
   assert.match(sp().getAttribute('aria-label'), / loudness 80 %$/);
   assert.equal(line().style.props['--vol'], '0.8');
-  assert.match($('#dj-done-text').textContent, /loudness 80 %\.$/);
-  $('#dj-done-undo').dispatch('click');
+  assert.match($('#banner-text').textContent, /loudness 80 %\.$/);
+  $('#banner-action').dispatch('click');
   assert.match(sp().getAttribute('aria-label'), / loudness 100 %$/, 'one Undo for the run');
   keysOff(page);
   $('#pads-tab').dispatch('click');

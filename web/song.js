@@ -26,6 +26,7 @@ import { openDialog, setupDialog } from './dialogs.js';
 import { encodeWav, normalize, barSteps, SIGNATURES } from './sequencer.js';
 import { fadeStop } from './audio.js';
 import { logEvent } from './log.js';
+import { showBanner } from './ui.js';
 import { countPlay } from './play-count.js';
 import { newId } from './util.js';
 import { isScratchSong, songScratchOf, songScratchId, SCRATCH_NAME } from './scratch.js';
@@ -228,19 +229,27 @@ export function createSong(deps) {
     else deps.announce?.('A blank scratch song.');
   }
 
-  // The Undo line under the lanes: for a few seconds after 🆕 New emptied
-  // the scratch. Another song opening, or another person, forgets it.
+  // The Undo line, in the banner over the top of the screen (ui.js
+  // showBanner): for a few seconds after 🆕 New emptied the scratch. Another
+  // song opening, or another person, forgets it; focus on its vanishing Undo
+  // goes to ➕ Add a lane.
   let undo = null;
-  let undoTimer = 0;
+  let undoBanner = null;
   function offerUndo(nextUndo) {
-    clearTimeout(undoTimer);
     undo = nextUndo;
-    if (!el.undo) return;
-    if (nextUndo) {
-      el.undoText.textContent = '🆕 Your scratch song is blank now.';
-      undoTimer = setTimeout(() => offerUndo(null), UNDO_MS);
-    } else if (document.activeElement === el.undoButton) el.addLane.focus();
-    el.undo.hidden = !nextUndo;
+    if (!nextUndo) { undoBanner?.close(); undoBanner = null; return; }
+    undoBanner = showBanner('🆕 Your scratch song is blank now.', {
+      action: { label: '↩️ Undo', fn: undoNew },
+      ms: UNDO_MS,
+      focusBack: () => el.addLane,
+      onClose: () => { if (undo === nextUndo) { undo = null; undoBanner = null; } },
+    });
+  }
+  // A short note about the song (a lane full, the sound made), in the banner.
+  let noteBanner = null;
+  function note(text) {
+    if (!text) { noteBanner?.close(); noteBanner = null; return; }
+    noteBanner = showBanner(text);
   }
   function undoNew() {
     const was = undo;
@@ -540,18 +549,18 @@ export function createSong(deps) {
     if (!picked) {
       sel = null;
       disarm(false);
-      el.note.textContent = beats().length ? 'Pick a beat above first, then tap the spot.' : 'Make a beat in 🥁 Beats and 💾 Keep it first.';
+      note(beats().length ? 'Pick a beat above first, then tap the spot.' : 'Make a beat in 🥁 Beats and 💾 Keep it first.');
       render();
       return;
     }
     const placed = placeBlock(lane, bar, picked, stepsOf);
     if (placed.why) {
-      el.note.textContent = placed.why === 'full' ? `${lane.name} is full. Try another lane.`
-        : `No room there: “${beatName(picked)}” is longer than the gap. Try a spot further along.`;
+      note(placed.why === 'full' ? `${lane.name} is full. Try another lane.`
+        : `No room there: “${beatName(picked)}” is longer than the gap. Try a spot further along.`);
       return;
     }
     stop();
-    el.note.textContent = '';
+    note('');
     countPlay('blocks');
     edit(() => {
       // The first beat in an empty song sets its tempo.
@@ -598,7 +607,7 @@ export function createSong(deps) {
     const b = e.target.closest('[data-beat]');
     if (!b) return;
     picked = picked === b.dataset.beat ? null : b.dataset.beat;
-    el.note.textContent = '';
+    note('');
     render();
     el.strip.querySelector(`[data-beat="${CSS.escape(b.dataset.beat)}"]`)?.focus();
   });
@@ -819,8 +828,6 @@ export function createSong(deps) {
   el.name.addEventListener('focus', () => { if (onScratch() && !wantedName) el.name.select?.(); });
   el.rename.addEventListener('click', () => { el.name.focus(); el.name.select?.(); });
   el.newSong.addEventListener('click', newScratch);
-  el.undoButton?.addEventListener('click', undoNew);
-  el.undoClose?.addEventListener('click', () => offerUndo(null));
   el.keep.addEventListener('click', keep);
 
   // ── A lane's name and picture ──
@@ -1054,25 +1061,25 @@ export function createSong(deps) {
     const plan = planSong(song, beatById, seq, { skipMuted: true });
     if (!plan.parts.length) return;
     if (plan.seconds > MAX_SONG_SECONDS) {
-      el.note.textContent = `This song is ${Math.round(plan.seconds)} seconds. Songs up to ${MAX_SONG_SECONDS / 60} minutes can be a sound: take a block out, repeat one less, or speed up the tempo.`;
+      note(`This song is ${Math.round(plan.seconds)} seconds. Songs up to ${MAX_SONG_SECONDS / 60} minutes can be a sound: take a block out, repeat one less, or speed up the tempo.`);
       return;
     }
     el.sound.disabled = true;
-    el.note.textContent = 'Making the sound…';
+    note('Making the sound…');
     try {
       await seq.prepareBeats([...plan.plans.values()].map((p) => p.pattern));
       const rate = audio.context().sampleRate;
       const ctx = new OfflineAudioContext(2, Math.ceil(plan.seconds * rate), rate);
       const hits = soundSong(ctx, laneGainsFor(ctx, ctx.destination, { live: false }), plan, seq);
-      if (!hits) { el.note.textContent = 'This song has nothing to hear yet. Turn on some pills in its beats, or unmute a lane.'; return; }
+      if (!hits) { note('This song has nothing to hear yet. Turn on some pills in its beats, or unmute a lane.'); return; }
       const buffer = normalize(await ctx.startRendering());
       const label = deps.soundLabel(song.name);
       await deps.addClip({ label, blob: encodeWav(buffer) });
-      el.note.textContent = `Added “${label}” to the pads (${buffer.duration.toFixed(1)} s).`;
+      note(`Added “${label}” to the pads (${buffer.duration.toFixed(1)} s).`);
       logEvent('song', { action: 'sound', seconds: Math.round(buffer.duration * 10) / 10 });
     } catch (err) {
       console.error('Making a sound from the song failed:', err);
-      el.note.textContent = `That didn't work (${err.message || err.name}). Try again.`;
+      note(`That didn't work (${err.message || err.name}). Try again.`);
     } finally {
       el.sound.disabled = false;
     }

@@ -184,8 +184,8 @@ test('● Record onto a groove adds your hits to the scratch; Stop stops it; Und
   assert.ok(names().includes(mine), 'the beat that was open stays in 🗂️ My beats');
   const hitsOf = (b) => b.rows.reduce((n, r) => n + r.steps.filter(Boolean).length, 0);
   assert.equal(hitsOf(scratch()), 4 + 2 + 4 + 1, 'the groove\'s hits, and the one played on top');
-  assert.match($('#dj-done-text').textContent, /^Added 1 note to your scratch beat/);
-  $('#dj-done-undo').dispatch('click');
+  assert.match($('#banner-text').textContent, /^Added 1 note to your scratch beat/);
+  $('#banner-action').dispatch('click');
   assert.equal(hitsOf(scratch()), 4 + 2 + 4, 'Undo takes the note out');
   // 💾 Keep: a beat of its own, named after the groove; the scratch empties.
   djBar().querySelector('[data-beat-keep]').dispatch('click');

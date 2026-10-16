@@ -17,7 +17,7 @@ import { takeName, soundName } from './names.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { getSetting, setSetting, onSetting } from './settings.js';
 import { createKeysEditor } from './dj-keys.js';
-import { fadeAway } from './ui.js';
+import { fadeAway, showBanner } from './ui.js';
 import { drawSpeaker, speakerControls, percent } from './row-volume.js';
 import { rowParts, rowSpeaker, rowEmoji, twinRows } from './beat-row.js';
 import { logEvent } from './log.js';
@@ -357,7 +357,9 @@ export function createDJ({ el, deps }) {
 
   let rec = null;        // {started: bool, events: [{at, clipId, kind, ring?}]} while recording
   let recTimer = 0;
-  let lastTake = null;   // the take just made, for the done bar
+  let lastTake = null;   // the take just made, for the take card (#dj-done)
+  let beatLine = null;   // the banner with ↩️ Undo for a change to the beat (ui.js showBanner)
+  let levelUndo = null;  // {at, before}: a row's loudness before the drags that line undoes
   let gridSpeakers = null;   // the grid's speakers and their loudness popover (renderGrid draws them)
   let replay = [];       // timers of a take being played back
   let replaying = null;  // the id of the take playing back, or null
@@ -403,7 +405,6 @@ export function createDJ({ el, deps }) {
     };
     deps.saveTake(lastTake);
     // The take's name is a field, so it can be renamed right here.
-    el.doneText.hidden = true;
     el.takeLine.hidden = false;
     el.takeName.value = lastTake.name;
     fitTakeName();
@@ -698,7 +699,8 @@ export function createDJ({ el, deps }) {
         el.tryingText.textContent = deps.seq.playing()
           ? `💃 ${was}“${name}” is playing. Play along, or ● Record to add your hits.`
           : `💃 ${was}“${name}”: ▶ Play to hear it behind you, or ● Record to add your hits on top.`;
-        el.done.hidden = true;   // the done bar's news is older than the groove
+        el.done.hidden = true;   // the take's or the line's news is older than the groove
+        beatLine?.close();
       }
     }
     if (el.play) el.play.disabled = !!beatRec;   // ● Record's ■ Stop ends a recording
@@ -709,6 +711,7 @@ export function createDJ({ el, deps }) {
     stopReplay();
     lastTake = null;
     el.done.hidden = true;
+    beatLine?.close();   // its Undo is older than the take
     // Records into the open beat (🆕 New in the beat bar for a clean start).
     const copy = seq.snapshot();
     beatRec = { copy, snap: null, rows: new Set(), added: 0, startedBeat: !seq.playing(), from: Infinity, growing: false, lastBar: false, mirror: null,
@@ -750,37 +753,36 @@ export function createDJ({ el, deps }) {
     showRec();
     renderGrid();   // 🗑️ Remove a row and the shape keys come back
     if (!done.added) return;
-    // The beat saved itself as each note landed; Undo takes them out.
-    lastTake = { undoBeat: done.copy };
-    el.takeLine.hidden = true;
-    el.doneText.textContent = `Added ${done.added} ${done.added === 1 ? 'note' : 'notes'} to ${seq.onScratch?.() ? 'your scratch beat' : `“${seq.beat().name}”`}.`;
-    // The news shows over the beat's name and fades (Ben, 2026-10-12); the bar
-    // below keeps only Undo and ✕. Screen readers hear it from announce().
-    el.doneText.hidden = true;
+    // The beat saved itself as each note landed; Undo takes them out. The
+    // news also shows over the beat's name and fades (Ben, 2026-10-12).
+    const text = `Added ${done.added} ${done.added === 1 ? 'note' : 'notes'} to ${seq.onScratch?.() ? 'your scratch beat' : `“${seq.beat().name}”`}.`;
     if (el.nameFlash) {
       el.nameFlash.textContent = `✅ ${done.added} ${done.added === 1 ? 'note' : 'notes'} added`;
       el.nameFlash.hidden = false;
       fadeAway(el.nameFlash, 3500);
     }
-    el.donePlay.hidden = true;
-    el.doneSound.hidden = true;
-    el.doneRename.hidden = true;
-    el.done.hidden = false;
-    deps.announce?.(`Stopped. ${el.doneText.textContent} Undo is available.`);
+    offerBeatUndo(done.copy, text);
+    deps.announce?.(`Stopped. ${text} Undo is available.`);
   }
   const FULL = 'The beat is full: every row has hits. Remove a row (✕) to add another sound.';
-  // The done bar, offering ↩️ Undo back to `copy` (the beat as it was).
-  // The line with ↩️ Undo for a change to the beat: `copy` is the beat to
+  // How long a line with Undo for the beat stays (held while touched).
+  const LINE_MS = 10000;
+  // The banner with ↩️ Undo for a change to the beat: `copy` is the beat to
   // put back, or `fn` undoes it (🆕 New's emptied scratch, sequencer.js).
   function offerBeatUndo(copy, text, fn = null) {
-    lastTake = { undoBeat: copy, undoFn: fn };
-    el.doneText.hidden = false;
-    el.takeLine.hidden = true;
-    el.doneText.textContent = text;
-    el.donePlay.hidden = true;
-    el.doneSound.hidden = true;
-    el.doneRename.hidden = true;
-    el.done.hidden = false;
+    showBeatLine(text, () => {
+      if (fn) fn(); else deps.seq.restore(copy);
+      renderGrid();
+    });
+  }
+  // Focus in a vanishing banner goes to ● Record.
+  function showBeatLine(text, undo) {
+    beatLine = showBanner(text, {
+      action: { label: '↩️ Undo', fn: undo },
+      ms: LINE_MS,
+      focusBack: () => el.record,
+      onClose: () => { beatLine = null; levelUndo = null; },
+    });
   }
   // From the beat maker: a line with ↩️ Undo running `fn` (🆕 New).
   function offerUndo(text, fn) {
@@ -955,18 +957,16 @@ export function createDJ({ el, deps }) {
       deps.seq.setLevel(i, value, done, { offer: false });
       showGridLevel(i);
       if (!done) return;
-      const kept = lastTake?.undoLevel?.at === i ? lastTake.undoLevel.before : levelBefore.before;
+      // Drags on the same row while its line shows undo back to the first.
+      const kept = levelUndo?.at === i && beatLine?.open ? levelUndo.before : levelBefore.before;
       levelBefore = null;
-      if (beatRec) return;   // while recording, the done bar is the take's
+      if (beatRec) return;   // while recording, Undo is the take's
       const s = deps.seq.levelState(i);
-      lastTake = { undoLevel: { at: i, before: kept } };
-      el.doneText.hidden = false;
-      el.takeLine.hidden = true;
-      el.doneText.textContent = `${s.name} loudness ${percent(s.level)} %.`;
-      el.donePlay.hidden = true;
-      el.doneSound.hidden = true;
-      el.doneRename.hidden = true;
-      el.done.hidden = false;
+      showBeatLine(`${s.name} loudness ${percent(s.level)} %.`, () => {
+        deps.seq.putLevel(i, kept);
+        renderGrid();
+      });
+      levelUndo = { at: i, before: kept };
     },
   });
   function steps(shown) {
@@ -1081,9 +1081,10 @@ export function createDJ({ el, deps }) {
       const clip = deps.clipById(seq.beat()?.rows[i]?.clipId);
       const copy = seq.snapshot();
       if (rm) seq.dropRow(i); else seq.clearRow(i);
-      offerBeatUndo(copy, `${rm ? 'Removed' : 'Cleared'} the ${clip?.label ?? 'empty'} row.`);
+      const text = `${rm ? 'Removed' : 'Cleared'} the ${clip?.label ?? 'empty'} row.`;
+      offerBeatUndo(copy, text);
       renderGrid();
-      deps.announce?.(`${el.doneText.textContent} Undo is available.`);
+      deps.announce?.(`${text} Undo is available.`);
       return;
     }
     const p = e.target.closest('[data-step]');
@@ -1268,7 +1269,7 @@ export function createDJ({ el, deps }) {
     else startRec();
   });
   el.donePlay.addEventListener('click', () => lastTake && playTake(lastTake));
-  // ✕ puts the bar away (the take, or the beat, stays as it is).
+  // ✕ puts the take card away (the take stays as it is).
   el.doneClose.addEventListener('click', () => { lastTake = null; el.done.hidden = true; });
   el.takeName.addEventListener('change', () => {
     const name = el.takeName.value.trim().slice(0, 24);
@@ -1282,23 +1283,9 @@ export function createDJ({ el, deps }) {
   el.takeName.addEventListener('input', fitTakeName);
   el.doneSound.dataset.idle = el.doneSound.textContent;
   el.doneSound.addEventListener('click', () => lastTake?.id && askThenMake(lastTake, el.doneSound, el.takeLine));
+  // The take card's ↩️ Undo deletes the take.
   el.doneUndo.addEventListener('click', () => {
     if (!lastTake) return;
-    if (lastTake.undoLevel) {
-      const { at, before } = lastTake.undoLevel;
-      deps.seq.putLevel(at, before);
-      lastTake = null;
-      el.done.hidden = true;
-      renderGrid();
-      return;
-    }
-    if (lastTake.undoFn || lastTake.undoBeat) {
-      if (lastTake.undoFn) lastTake.undoFn(); else deps.seq.restore(lastTake.undoBeat);
-      lastTake = null;
-      el.done.hidden = true;
-      renderGrid();
-      return;
-    }
     deps.deleteTake(lastTake.id);
     lastTake = null;
     el.done.hidden = true;

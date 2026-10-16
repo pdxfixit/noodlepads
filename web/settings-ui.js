@@ -23,9 +23,6 @@ import { SKINS, skinLabel } from './skins.js';
 
 const el = {};
 
-// The dialog's status line (notices are mirrored there, ui.js).
-const note = (text) => { el.note.textContent = text; };
-
 // ── Folding sections ──
 
 const OPEN_KEY = 'settings-open';
@@ -173,7 +170,6 @@ export function initSettingsUI({ gate = () => false, onKids = () => {} } = {}) {
     skinPicks: document.querySelector('#skin-picks'),
     open: document.querySelector('#settings-open'),
     dialog: document.querySelector('#settings-dialog'),
-    note: document.querySelector('#settings-note'),
     about: document.querySelector('#about-text'),
     aboutVersion: document.querySelector('#about-version'),
     version: document.querySelector('#version'),
@@ -198,7 +194,6 @@ export function initSettingsUI({ gate = () => false, onKids = () => {} } = {}) {
   });
 
   const open = (atEnd = false) => {
-    note('');
     syncSettingsControls();
     openDialog(el.dialog);
     // The dialog is the box that scrolls; its end is About and the credits.

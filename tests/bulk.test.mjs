@@ -6,6 +6,7 @@ import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
+import { hasUndo } from './banner.mjs';
 
 let page;
 let $;
@@ -116,9 +117,9 @@ test('🗑️ Delete asks first, deletes sounds and hides a preset, and ↩️ U
   assert.equal(mine().length, 3);
   const kick = [...state.overrides.values()].find((o) => o.id.endsWith('-kick'));
   assert.equal(kick?.hidden, true);
-  assert.equal($('#pads-undo').hidden, false);
-  assert.match($('#pads-undo-text').textContent, /^Deleted Oink, hid Kick\.$/);
-  $('#pads-undo-button').dispatch('click');
+  assert.equal(hasUndo(), true);
+  assert.match($('#banner-text').textContent, /^Deleted Oink, hid Kick\.$/);
+  $('#banner-action').dispatch('click');
   await page.settle();
   assert.equal(mine().length, 4);
   assert.ok(mine().some((c) => c.label === 'Oink' && c.tweaks?.robot === 1), 'as it was');
@@ -137,7 +138,7 @@ test('a pad\'s own 🗑️ deletes in two taps, with Undo; a group left empty go
   }
   assert.equal(state.orders.get(state.personId).groups, undefined, 'the empty group is gone');
   assert.deepEqual(ownHeaders(), [], 'no groups, no headers');
-  $('#pads-undo-button').dispatch('click');
+  $('#banner-action').dispatch('click');
   await page.settle();
   assert.ok(mine().some((c) => c.label === 'Baa' && c.group === id));
   assert.equal(state.orders.get(state.personId).groups[0].id, id, 'Undo brings the group back with it');
