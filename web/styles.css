@@ -3361,7 +3361,7 @@ body.choosing .page-foot { margin-bottom: 180px; }
    below, "individual and grouped") ──
    A focused view over the whole screen, dark like the DJ panel: Layouts,
    the 40 keys, then Sounds. From 1400 px the sounds sit beside the keys. */
-dialog#keys-edit {
+dialog#keys-edit, dialog#touch-edit {
   width: 100%;
   max-width: 100%;
   height: 100dvh;
@@ -3373,7 +3373,7 @@ dialog#keys-edit {
   color: #fff;
   overscroll-behavior: contain;
 }
-dialog#keys-edit::backdrop { background: var(--bed); }
+dialog#keys-edit::backdrop, dialog#touch-edit::backdrop { background: var(--bed); }
 .ke-body {
   max-width: var(--max);
   margin: 0 auto;
@@ -3498,6 +3498,55 @@ dialog#keys-edit::backdrop { background: var(--bed); }
   .ke-body { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; column-gap: 32px; }
   .ke-head { grid-column: 1 / -1; }
   .ke-sounds { position: sticky; top: 76px; max-height: calc(100dvh - 96px); overflow: auto; }
+}
+
+/* ── ✏️ Edit layout (ADR 0028): the 👆 touch layout's own view, built like
+   ✏️ Edit keys: Layouts, then the groups top to bottom, each with ⠿ to move
+   it, its name, S M L and ✕, its tiles (tap one to swap it or take it out)
+   and + more; then + Add a group. From 1400 px the groups sit at the left,
+   Layouts and + Add a group beside them. ── */
+.te-bands { display: grid; gap: 12px; }
+.te-band { display: grid; gap: 8px; padding: 10px; border-radius: 14px; background: rgb(255 255 255 / 0.05); box-shadow: inset 0 0 0 2px rgb(255 255 255 / 0.1); }
+.te-band.te-over { box-shadow: inset 0 0 0 3px var(--led); }
+/* A phone: ⠿ and ✕ at the ends, the name over S M L between them, so the name
+   is never cut short; wider, all on one line. */
+.te-band-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "handle name remove" "handle sizes remove"; align-items: center; gap: 6px 8px; min-width: 0; }
+@media (min-width: 560px) { .te-band-head { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "handle name sizes remove"; } }
+.te-handle { grid-area: handle; align-self: stretch; width: 44px; min-height: 44px; padding: 0; border: 2px solid rgb(255 255 255 / 0.4); border-radius: 10px; background: transparent; color: #fff; font-size: 1.3rem; cursor: grab; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.te-handle:focus-visible { outline: 3px solid var(--led); outline-offset: 2px; }
+.te-band-name { grid-area: name; min-width: 0; overflow: hidden; font: 800 1rem/1.1 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
+.te-sizes { grid-area: sizes; justify-self: start; }
+.te-sizes button { min-width: 44px; min-height: 44px; padding: 0 8px; }
+.te-remove { grid-area: remove; width: 44px; height: 44px; }
+.te-tiles { --across: 4; display: grid; grid-template-columns: repeat(var(--across), minmax(0, 1fr)); gap: 6px; }
+.te-tiles[data-size="s"] { --across: 5; }
+.te-tiles[data-size="l"] { --across: 2; }
+.te-tile { --c: #333040; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; min-height: 52px; padding: 4px; border: 3px solid transparent; border-radius: 10px; background: var(--c); color: #fff; touch-action: manipulation; }
+.te-tiles[data-size="l"] .te-tile { min-height: 72px; }
+.te-tile .touch-emoji { font-size: 1.2rem; }
+.te-tile .touch-name { font-size: 0.7rem; }
+.te-tile[aria-pressed="true"] { border-color: var(--led); box-shadow: 0 0 0 2px var(--led); }
+.te-more { min-width: 0; min-height: 52px; padding: 0 2px; white-space: nowrap; overflow: hidden; border: 2px dashed rgb(255 255 255 / 0.5); border-radius: 10px; background: transparent; color: #fff; font: 800 0.78rem/1.1 var(--font-ui); }
+.te-more[aria-expanded="true"] { border-style: solid; border-color: var(--led); }
+.te-picker { display: grid; gap: 8px; padding: 10px; border-radius: 12px; background: rgb(0 0 0 / 0.25); }
+.te-picker .ke-hint { margin: 0; }
+.te-picker .ke-groups { gap: 6px; }
+.te-picker .ke-group { flex: 0 1 auto; padding: 0 10px; font-size: 0.85rem; }
+.te-pick-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.te-pick-actions .seq-tool { flex: 1 1 auto; }
+.te-adding .ke-hint { margin: 0 0 8px; }
+.te-dragging, .te-dragging * { cursor: grabbing; }
+@media (min-width: 700px) {
+  .te-tiles { --tile: 96px; grid-template-columns: repeat(auto-fill, minmax(min(var(--tile), 100%), 1fr)); }
+  .te-tiles[data-size="s"] { --tile: 76px; }
+  .te-tiles[data-size="l"] { --tile: 160px; }
+}
+@media (min-width: 1400px) {
+  .te-body { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-template-rows: auto auto auto 1fr; grid-template-areas: "head head" "bands layouts" "bands add" "bands ."; }
+  .te-body > .ke-head { grid-area: head; }
+  .te-body > .ke-layouts { grid-area: layouts; }
+  .te-body > .te-groups { grid-area: bands; }
+  .te-body > .te-adding { grid-area: add; }
 }
 
 /* ── Voices are knob settings (voice-knobs.js; Ben, 2026-10-11) ─────────
