@@ -169,7 +169,7 @@ export async function mergeLoaded(local, incoming, { kitIds = [], newId = makeId
   const keysVia = (keys) => Object.fromEntries(Object.entries(keys ?? {}).map(([k, v]) => [k, v === null ? null : clip(v)]));
   await byId('layouts', 'layout', (l) => ({ ...l, keys: keysVia(l.keys) }));
   added.layouts = put.layouts.length;
-  // A touch layout's sounds follow a renamed sound too (ADR 0028).
+  // A touch layout's sounds follow a renamed sound too (ADR 0029).
   const bandsVia = (bands) => (Array.isArray(bands) ? bands.map((b) => ({ ...b, sounds: Array.isArray(b?.sounds) ? b.sounds.map(clip) : b?.sounds })) : bands);
   await byId('touchLayouts', 'touch', (l) => ({ ...l, bands: bandsVia(l.bands) }));
   added.touchLayouts = put.touchLayouts.length;

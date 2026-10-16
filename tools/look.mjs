@@ -205,7 +205,7 @@ const VIEWS = {
   takes: { screen: 'live', js: q('#dj-takes-open') },
   // ✏️ Edit keys: as it opens, with a ready-made layout loaded, and with sounds picked.
   keys: { screen: 'live', js: q('#dj-input [data-input="keys"]') + q('#dj-change') },
-  // ⌨️ / 👆 (ADR 0028): 🎤 Live on the touch layout or on the keys (a phone's
+  // ⌨️ / 👆 (ADR 0029): 🎤 Live on the touch layout or on the keys (a phone's
   // default is 👆), and Beats with ⌨️ Keys on the touch layout.
   touch: { screen: 'live', js: q('#dj-input [data-input="touch"]') },
   'live-keys': { screen: 'live', js: q('#dj-input [data-input="keys"]') },

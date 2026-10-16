@@ -20,7 +20,7 @@ const remembered = new Map(Object.entries({
   'dj-click': '1',
   'dj-layer': '1',
   'dj-size': 'l',
-  'dj-input': 'touch',   // ⌨️ / 👆: the touch layout (ADR 0028)
+  'dj-input': 'touch',   // ⌨️ / 👆: the touch layout (ADR 0029)
   'beat-click': '1',
   'dj-layout': 'dvorak',
   'dj-labels': '{"KeyQ":"\'"}',

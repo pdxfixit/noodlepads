@@ -1,4 +1,4 @@
-// 👆 Playing the touch layout (ADR 0028) on 🎤 Live and Beats with ⌨️ Keys:
+// 👆 Playing the touch layout (ADR 0029) on 🎤 Live and Beats with ⌨️ Keys:
 // the ⌨️ / 👆 switch, remembered on the device; the bands, top to bottom; a
 // tile plays like a key (on the finger's lift, held to loop) into takes and
 // the beat's rows, which follow the bands' order.

@@ -1,4 +1,4 @@
-// The touch layout's pure rules (ADR 0028): 🎤 Live and Beats with ⌨️ Keys
+// The touch layout's pure rules (ADR 0029): 🎤 Live and Beats with ⌨️ Keys
 // played with 👆 instead of ⌨️, on a screen with no keyboard in sight. Ben,
 // 2026-10-16: "not tied to a kbd… preset groups (chords, drums etc)… far
 // simpler in how to construct the layout and size of the tiles".

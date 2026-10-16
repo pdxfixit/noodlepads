@@ -54,7 +54,7 @@ test('each older database gets only the stores that came after it', () => {
   assert.deepEqual(upgraded(11), ['layouts', 'voices', 'bases', 'touchLayouts'], 'saved DJ key layouts start empty');
   assert.deepEqual(upgraded(12), ['voices', 'bases', 'touchLayouts'], "a kid's own voices (⭐ Save voice) start empty; nothing else is touched");
   assert.deepEqual(upgraded(13), ['bases', 'touchLayouts'], 'sync bases start empty: the first sync after keeps them, and until then the hashes in `cloud` decide');
-  assert.deepEqual(upgraded(14), ['touchLayouts'], 'saved 👆 touch layouts start empty (ADR 0028); nothing else is touched');
+  assert.deepEqual(upgraded(14), ['touchLayouts'], 'saved 👆 touch layouts start empty (ADR 0029); nothing else is touched');
   assert.deepEqual(upgraded(15), []);
 });
 

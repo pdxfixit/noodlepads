@@ -141,7 +141,7 @@ test('a clash keeps both: the incoming record gets a new id, and everything nami
   assert.equal(merged.put.patterns[0].id, beat.id);
   assert.equal(merged.put.patterns[0].rows[0].clipId, clip.id);
   assert.deepEqual(merged.put.decks[0], { personId: 'p-bo-1', keys: { KeyA: clip.id, KeyB: null }, beatId: beat.id, mine: { KeyS: clip.id, KeyD: null }, touch: { bands: [{ group: 'mine', size: 'm', sounds: [clip.id, 'user-b-2'] }] } });
-  assert.deepEqual(merged.put.touchLayouts[0].bands[0].sounds, [clip.id], 'a saved touch layout follows the renamed sound (ADR 0028)');
+  assert.deepEqual(merged.put.touchLayouts[0].bands[0].sounds, [clip.id], 'a saved touch layout follows the renamed sound (ADR 0029)');
   assert.deepEqual(merged.put.layouts[0].keys, { KeyQ: clip.id, KeyW: null }, 'a saved key layout follows the renamed sound');
   assert.equal(merged.put.songs[0].id, song.id);
   assert.equal(merged.put.songs[0].slots[0].beatId, beat.id);

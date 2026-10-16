@@ -4,7 +4,7 @@
 // the real keys play them; on a phone they are big pads, one row at a time.
 // The rules (default keys, labels, snapping) are in rhythm.js.
 //
-// Two ways to play them, picked on the device with ⌨️ / 👆 (ADR 0028): the
+// Two ways to play them, picked on the device with ⌨️ / 👆 (ADR 0029): the
 // keys, or a touch layout of bands of big tiles (dj-touch.js, touch.js).
 // Both play through the same path (hit), so takes, rows and loops agree.
 //
@@ -414,7 +414,7 @@ export function createDJ({ el, deps }) {
       closed: () => render(),
     },
   });
-  // ── ✏️ Edit layout: the touch layout's own view (dj-touch.js, ADR 0028) ──
+  // ── ✏️ Edit layout: the touch layout's own view (dj-touch.js, ADR 0029) ──
   const touchEditor = createTouchEditor({
     el: el.touchEdit,
     deps: {
