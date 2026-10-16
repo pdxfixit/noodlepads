@@ -26,3 +26,15 @@ test('drop_done removes the picked commits from the todo list, on this machine\'
   execFileSync('bash', ['-c', `${fn}\ndrop_done "$1" ccc333`, 'x', todo]);
   assert.equal(readFileSync(todo, 'utf8').trim(), '');
 });
+
+// sed's `1,/re/` looks for its end from line 2 on, so a commit on line 1
+// matched nothing and the whole list went: a conflict on the next commit to
+// pick then left land-continue nothing to land (2026-10-16, two commits lost).
+test('drop_done on the first commit keeps the commits after it', () => {
+  const fn = script.match(/^drop_done\(\) \{[\s\S]*?^\}/m)?.[0];
+  const dir = mkdtempSync(join(tmpdir(), 'land-'));
+  const todo = join(dir, 'todo');
+  writeFileSync(todo, 'aaa111\nbbb222\nccc333\n');
+  execFileSync('bash', ['-c', `${fn}\ndrop_done "$1" aaa111`, 'x', todo]);
+  assert.equal(readFileSync(todo, 'utf8'), 'bbb222\nccc333\n');
+});
