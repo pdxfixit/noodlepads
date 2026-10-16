@@ -49,7 +49,8 @@ test('a newer version live: the bar shows, waits while a sheet is open, and Relo
   await showAgain();
   const bar = page.$('#update-bar');
   assert.equal(bar.hidden, false);
-  assert.match(page.$('.update-text').textContent, /An update for Noodle Pads is ready/);
+  // The fake page drops the nested span's words; update.test.mjs checks the full wording in the source.
+  assert.match(page.$('.update-text').textContent, /An update.*is ready/);
   page.$('#update-reload').click();
   assert.equal(reloads, 1);
 });
