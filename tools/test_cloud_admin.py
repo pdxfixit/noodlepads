@@ -394,6 +394,32 @@ class ResetPin(unittest.TestCase):
 
 
 class Wrangler(unittest.TestCase):
+    def test_a_failure_shows_wranglers_own_error_not_only_justs_line(self):
+        # Ben's `just cloud-migrate --yes` said only "recipe `cloud-db` failed":
+        # wrangler's reason was on stdout (--json), and only stderr was shown.
+        with tempfile.TemporaryDirectory() as d:
+            fake = Path(d) / 'just'
+            fake.write_text('#!/bin/sh\n'
+                            'echo \'{"error": {"text": "A request to the Cloudflare API failed.", '
+                            '"notes": [{"text": "duplicate column name: country [code: 7500]"}], "kind": "error"}}\'\n'
+                            'echo "error: recipe \\`cloud-db\\` failed with exit code 1" >&2\n'
+                            'exit 1\n')
+            fake.chmod(0o755)
+            with self.assertRaises(ca.Trouble) as e:
+                ca.Wrangler(just=str(fake)).execute('SELECT 1')
+        said = str(e.exception)
+        self.assertIn('A request to the Cloudflare API failed.', said)
+        self.assertIn('duplicate column name: country [code: 7500]', said)
+        self.assertIn('recipe `cloud-db` failed', said)
+        self.assertLess(said.index('duplicate column'), said.index('recipe `cloud-db`'), 'wrangler first, then just')
+        self.assertNotIn('"notes"', said, 'the message text, not the raw JSON')
+
+    def test_failure_text_keeps_plain_stdout_and_trims_both(self):
+        self.assertEqual(ca.failure_text('Authentication error\n', 'recipe failed\n'), 'Authentication error\nrecipe failed')
+        long = ca.failure_text('x' * 5000, '')
+        self.assertLessEqual(len(long), ca.FAIL_TEXT_MAX + 2)
+        self.assertEqual(ca.failure_text('', ''), '(no output)')
+
     def test_a_failed_or_strange_answer_is_trouble_not_an_empty_list(self):
         w = ca.Wrangler()
         w._run = lambda args: 'npm warn something\n'

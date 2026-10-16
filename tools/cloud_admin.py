@@ -68,6 +68,31 @@ class Trouble(Exception):
     """Something the grown-up must see; the tool stops."""
 
 
+FAIL_TEXT_MAX = 1500   # each stream's share of a failure message
+
+
+def failure_text(stdout, stderr):
+    """Why a `just cloud-db` call failed, in words: wrangler's own error first
+    (under --json it writes it to stdout, as {"error": {"text", "notes"}}), then
+    stderr, where `just` always adds its "recipe failed" line. Showing stderr
+    alone hid the reason (2026-10-16)."""
+    def trim(s):
+        s = (s or '').strip()
+        return s if len(s) <= FAIL_TEXT_MAX else s[:FAIL_TEXT_MAX] + ' …'
+    out = (stdout or '').strip()
+    start = out.find('{')
+    if start >= 0:
+        try:
+            doc = json.loads(out[start:])
+        except json.JSONDecodeError:
+            doc = None
+        err = doc.get('error') if isinstance(doc, dict) else None
+        if isinstance(err, dict) and err.get('text'):
+            notes = [n.get('text') for n in err.get('notes') or [] if isinstance(n, dict) and n.get('text')]
+            out = '\n'.join([str(err['text']), *map(str, notes)])
+    return '\n'.join(p for p in (trim(out), trim(stderr)) if p) or '(no output)'
+
+
 class Wrangler:
     """Runs SQL on the live database through `just cloud-db`."""
 
@@ -78,7 +103,7 @@ class Wrangler:
         cmd = [self.just, '--justfile', str(ROOT / 'justfile'), 'cloud-db', 'execute', 'noodle-pads', '--remote', '--yes', *args]
         done = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
         if done.returncode != 0:
-            raise Trouble(f'wrangler failed ({done.returncode}):\n{done.stderr.strip() or done.stdout.strip()}')
+            raise Trouble(f'wrangler failed ({done.returncode}):\n{failure_text(done.stdout, done.stderr)}')
         return done.stdout
 
     def query(self, sql):
