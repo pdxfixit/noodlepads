@@ -10,7 +10,7 @@
 
 import { audio, makeVoice, fadeStop, trimBounds } from './audio.js';
 import { logEvent } from './log.js';
-import { countUse } from './uses.js';
+import { countPlay } from './play-count.js';
 import { fingerTaps, isFinger } from './finger.js';
 import { remember, recall, newId } from './util.js';
 import { soundName } from './names.js';
@@ -58,7 +58,6 @@ function setTab(name) {
   for (const v of el.views) v.hidden = v.dataset.kidsView !== name;
   for (const b of el.tabs) b.setAttribute('aria-pressed', String(b.dataset.kidsTab === name));
   if (showing) {
-    countUse(`kids-${name}`, deps.personId());
     logEvent('kids', { tab: name });
     render();
   }
@@ -139,7 +138,7 @@ function wirePads() {
     const clip = deps.clips().find((c) => c.id === pad.dataset.clip);
     if (!clip) return;
     audio.play(clip);   // from the start, every tap: no holding, no looping
-    countUse('pad', deps.personId());
+    countPlay('kids');
     boing(pad);
   };
   // A finger plays a pad when it lifts in place, so a page swipe or a pinch
@@ -284,7 +283,6 @@ async function keep(blob, seconds) {
   };
   await deps.saveClip(clip);
   lastId = clip.id;
-  countUse('record', pid);
   logEvent('kids', { recorded: Math.round(seconds * 10) / 10, voice: voice ?? 'normal' });
   page = 0;   // the new pad is the first one on Pads
   renderRecord();
@@ -433,7 +431,6 @@ async function playBeat() {
   run.timer = setInterval(tick, 25);
   tick();
   audio.on.started();
-  countUse('beat-play', deps.personId());
   logEvent('kids', { play: true, bpm: kidsBeat().bpm });
   showPlay();
 }
@@ -581,7 +578,6 @@ function tapDigit(d) {
   logEvent('kids', { sum: next.right ? 'right' : 'wrong' });
   if (next.right) {
     el.sum.close();
-    countUse('kids-unlock', deps.personId());
     deps.grownUp();
   } else {
     wiggle(el.sumBox);

@@ -35,8 +35,8 @@ export function setupDialog(dialog, { beforeClose } = {}) {
   });
 }
 
-// Who hears of every dialog opened (app.js counts them, uses.js
-// DIALOG_USES). A watcher's trouble never stops a dialog opening.
+// Who hears of every dialog opened (track-page.js). A watcher's trouble
+// never stops a dialog opening.
 const openWatchers = [];
 export function onDialogOpen(fn) {
   const safe = (d) => { try { fn(d); } catch { /* counting is never in the way */ } };

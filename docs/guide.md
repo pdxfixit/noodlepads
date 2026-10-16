@@ -491,22 +491,23 @@ ADR 0002.
   throwaway profile of its own (`just cloud-smoke`, `just cloud-e2e`), made
   and deleted in seconds; `just cloud-prune --smoke` clears one a killed check
   left.
-- **Player metrics** (Ben, ADR 0016), for people in the cloud only: each
-  sync also sends the person's feature-use counts (`web/uses.js`: screens,
-  tools, every dialog opened) and a summary of each finished visit
-  (`web/visits.js`: seconds in view, screens, level, load time, the sound's
-  delay, errors as file:line). D1 keeps them 14 days (a device's row 90).
-  The telemetry runner (pdxfixit/telemetry) harvests them daily, with
-  Cloudflare's stats for the site, and keeps them (ids a year at most).
-  `just cloud-stats` reads only its mirror, as `telemetry.py pull` leaves it on
-  the Mac (`~/.local/state/telemetry/telemetry.sqlite3`, read only; or
-  `$TELEMETRY_DB`), lists what each player
-  made, and shows per player: devices (type, browser, OS, width, app version,
-  syncs, first and last seen), places (the country; nothing finer is kept),
-  activity over the last 14 days (`--days N`) and by hour, feature-use counts
-  and visits; then every visit's errors by where they came from. A player
-  seen from more than one place is flagged ⚠️. Test profiles are left out.
-  Deleting a profile deletes its metrics in D1, not in the runner's copy.
+- **Player metrics** (Ben, ADR 0016, narrowed by ADR 0027), for people in the
+  cloud only: the cloud notes each device that uses a profile (type, browser,
+  OS, screen width, app version, syncs, first and last seen) and each make,
+  open, pull, push, share, PIN change and wrong PIN with the country it came
+  from. D1 keeps events 14 days (a device's row 90). The telemetry runner
+  (pdxfixit/telemetry) harvests them daily, with Cloudflare's stats for the
+  site, and keeps them (ids a year at most). `just cloud-stats` reads only its
+  mirror, as `telemetry.py pull` leaves it on the Mac
+  (`~/.local/state/telemetry/telemetry.sqlite3`, read only; or
+  `$TELEMETRY_DB`), lists what each player made, and shows per player: devices,
+  places (the country; nothing finer is kept) and activity over the last 14
+  days (`--days N`) and by hour. A player seen from more than one place is
+  flagged ⚠️. Test profiles are left out. Deleting a profile deletes its
+  metrics in D1, not in the runner's copy. The feature-use counts and visit
+  summaries ADR 0016 once added are retired (ADR 0027): the usage events below
+  cover them. Older copies of the app that still send them are answered and
+  ignored until about 2026-11-16.
 - **Usage events** (Ben, ADR 0026), in the shared telemetry standard:
   `web/telemetry.js` records one event at a time (screens, dialogs, every
   control tapped, beats, songs and takes started and finished, settings
@@ -518,6 +519,10 @@ ADR 0002.
   "Yes, everyone"), with its own random code, never a profile.
   📊 Share play data, a checkbox in ⚙️ Settings → 📊 Data sharing (the `sendUsage` setting,
   on by default) turns all of it off, the player metrics above included.
+  Besides the screens, controls and the rest, each visit also sends how late a
+  sound played (`perf.latency`) and how much was played (`noodlepads.play`:
+  pads, keys, roll notes, song blocks and Kids pads, one count each; never
+  which sound), as the page hides.
 
 ## Keyboard and screen readers
 

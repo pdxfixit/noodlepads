@@ -194,3 +194,50 @@ test('perf.load once the page has loaded, with whether it came over the network'
   await new Promise((r) => setTimeout(r, 5));
   assert.deepEqual(tel.queued().find((r) => r.event === 'perf.load').details, { ms: 812, cold: true });
 });
+
+// ADR 0027: the sound's delay and the play counts, once a visit, as the page hides.
+test('hiding the page sends the sound\'s delay and what was played, once, and only when there is something', async () => {
+  const { countPlay, clearPlay } = await import('../web/play-count.js');
+  const tel = telemetry();
+  const doc = emitter({ visibilityState: 'visible', readyState: 'loading' });
+  let delay = null;
+  trackPage({ telemetry: tel, doc, win: emitter({ innerWidth: 800, navigator: {} }), now: () => 0, latency: () => delay });
+  const hide = () => { doc.visibilityState = 'hidden'; doc.fire('visibilitychange'); doc.visibilityState = 'visible'; doc.fire('visibilitychange'); };
+  const sent = () => tel.queued().filter((r) => r.event === 'perf.latency' || r.event === 'noodlepads.play').map((r) => [r.event, r.details]);
+  hide();
+  assert.deepEqual(sent(), [], 'no sound played, nothing played: nothing sent');
+  delay = 23.6;
+  for (const k of ['pads', 'pads', 'pads', 'keys', 'notes', 'blocks', 'kids', 'nope']) countPlay(k);
+  hide();
+  assert.deepEqual(sent(), [['perf.latency', { ms: 24 }], ['noodlepads.play', { pads: 3, keys: 1, notes: 1, blocks: 1, kids: 1 }]]);
+  hide();
+  assert.equal(sent().filter(([e]) => e === 'noodlepads.play').length, 1, 'taken once: the next visit starts from zero');
+  countPlay('pads');
+  clearPlay();
+  hide();
+  assert.equal(sent().filter(([e]) => e === 'noodlepads.play').length, 1, 'a cleared count (the switch went off) is not sent');
+});
+
+test('what the kid made in one step is a content.finish: a sound recorded on Kids, sounds chopped, a voice rendered', () => {
+  assert.deepEqual(contentOf({ kind: 'kids', data: { recorded: 2.4, voice: 'normal' } }, {}, 0), ['content.finish', { kind: 'sound-record', ms: 2400 }]);
+  assert.equal(contentOf({ kind: 'kids', data: { tab: 'pads' } }, {}, 0), null, 'a tab change is no recording');
+  assert.deepEqual(contentOf({ kind: 'chop', data: { made: 3 } }, {}, 0), ['content.finish', { kind: 'chop' }]);
+  assert.equal(contentOf({ kind: 'chop', data: { found: 3, seconds: 4 } }, {}, 0), null, 'finding marks makes nothing yet');
+  assert.deepEqual(contentOf({ kind: 'render', data: { voice: 'robot', ms: 80, seconds: 1 } }, {}, 0), ['content.finish', { kind: 'voice', ms: 80 }]);
+});
+
+test('play-count counts nothing while the usage switch is off', async () => {
+  const { countPlay, takePlay } = await import('../web/play-count.js');
+  setUsage(false);
+  countPlay('pads');
+  setUsage(true);
+  assert.equal(takePlay(), null);
+});
+
+test('errorSig names where an error came from, never its message', async () => {
+  const { errorSig } = await import('../web/track-page.js');
+  assert.equal(errorSig({ source: 'https://noodlepads.com/sheet.js?v=3#x', line: 7, message: 'Pip broke it' }), 'sheet.js:7');
+  assert.equal(errorSig({ source: 'https://elsewhere.test/Some Odd File.js', line: 1 }), 'other', 'a file name that is not a module name');
+  assert.equal(errorSig({ storage: 'Quota' }), 'storage');
+  assert.equal(errorSig({ message: 'x' }), 'promise');
+});

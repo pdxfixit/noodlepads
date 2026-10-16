@@ -21,7 +21,7 @@ import { fadeAway } from './ui.js';
 import { drawSpeaker, speakerControls, percent } from './row-volume.js';
 import { rowParts, rowSpeaker, rowEmoji, twinRows } from './beat-row.js';
 import { logEvent } from './log.js';
-import { countUse } from './uses.js';
+import { countPlay } from './play-count.js';
 import { makeVoice, fadeStop } from './audio.js';
 
 const STOPS = tempoStops();   // the click track slider's positions (see sequencer.js)
@@ -225,6 +225,7 @@ export function createDJ({ el, deps }) {
     // 🔔 Overlap on Live: a key's repeated hits ring over each other.
     const ring = ringing();
     const stopped = deps.tap(clip, { ring });   // a tap on a looping sound stops it
+    if (!stopped) countPlay('keys');
     record(clip.id, stopped ? 'stop' : 'hit', deps.now(), ring);
     showRow(clip);
     if (!stopped) intoBeat(clip, earlier);
@@ -642,7 +643,6 @@ export function createDJ({ el, deps }) {
   }
   el.overlap?.addEventListener('click', () => {
     overlap = !overlap;
-    if (overlap) countUse('live-overlap', deps.personId());
     showOverlap();
     deps.announce?.(overlap ? 'Overlap on: each hit rings over the last.' : 'Overlap off: each hit starts its sound again.');
   });

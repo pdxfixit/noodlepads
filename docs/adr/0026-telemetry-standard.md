@@ -28,5 +28,5 @@
 ## Consequences
 
 - A new button, dialog or setting is tracked with no code of its own.
-- The older metrics (ADR 0016) keep flowing beside the events until the events are seen live; then they can go.
+- The older metrics (ADR 0016) flowed beside the events until the events were seen live (2026-10-16); the feature-use counts and visits then went ([ADR 0027](0027-retire-feature-counts-and-visits.md)); devices and activity stay.
 - Revisit if a control's name needs more than its label, id or class.

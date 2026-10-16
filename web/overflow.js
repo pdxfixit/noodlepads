@@ -85,7 +85,7 @@ export function moreItems(more) {
 // down move through it. Returns {close, refresh, isOpen, key}: refresh()
 // after the screen redraws its lines, so an open menu shows the new state
 // (a toggle's on, a button asking first) or closes with its line.
-// `opened(key)`, if given, hears each time a menu opens (counted, uses.js).
+// `opened(key)`, if given, hears each time a menu opens.
 export function moreMenu(root, { opened } = {}) {
   let pop = null;   // {box, key}
   const find = (key) => root.querySelector(`[data-more="${CSS.escape(String(key))}"]`);

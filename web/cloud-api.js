@@ -17,7 +17,7 @@ export class CloudError extends Error {
   }
 }
 
-// `meta()`: what the device says about itself on every call (uses.js appMeta:
+// `meta()`: what the device says about itself on every call (device-meta.js appMeta:
 // the app's version, a screen-width bucket, touch), in the X-Noodle-App header.
 export function createCloudApi({ fetch, base = '/api', meta = null }) {
   async function call(method, path, { body, key, raw, type } = {}) {
@@ -79,11 +79,6 @@ export function createCloudApi({ fetch, base = '/api', meta = null }) {
       const blob = await res.blob();
       return mime && blob.type !== mime ? new Blob([blob], { type: mime }) : blob;
     },
-    // Feature-use counts (uses.js) for the cloud to add up, {feature: n}, and
-    // finished visits (visits.js), [{at, secs, …}]; either may be null.
-    uses: (id, key, counts, visits = null) => checked('POST', () => `profiles/${pid(id)}/uses`, {
-      key, body: { ...(counts ? { uses: counts } : {}), ...(visits ? { visits } : {}) },
-    }),
     share: (id, key, snapshot) => checked('POST', () => `profiles/${pid(id)}/shares`, { key, body: snapshot }),
     shared: (code) => call('GET', `shares/${enc(code)}`),
     myShares: (id, key) => checked('GET', () => `profiles/${pid(id)}/shares`, { key }),

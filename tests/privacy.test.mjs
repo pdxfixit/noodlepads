@@ -11,8 +11,6 @@ import worker from '../worker/index.js';
 import { ORIGIN } from '../worker/http.js';
 import { TTL_MS } from '../worker/reports.js';
 import { KEEP_MS, DEVICE_KEEP_MS } from '../worker/metrics.js';
-import { USES } from '../web/uses.js';
-import { VISIT_SCREENS } from '../web/visits.js';
 import { FakeD1 } from './fake-d1.mjs';
 import { PRIVACY, PRIVACY_TITLE, PRIVACY_URL } from '../web/privacy.js';
 import { cleanPayload } from '../web/log-clean.js';
@@ -158,15 +156,11 @@ test('"What\'s private" says nothing about usage data: the shared policy does', 
   }
 });
 
-// ADR 0016 (Ben, 2026-10-12; 14 days and no IP hash, 2026-10-15): what the shared
-// policy says of the player metrics, tied to the code.
+// ADR 0016 (Ben, 2026-10-12; 14 days and no IP hash, 2026-10-15), narrowed by
+// ADR 0027: what the shared policy says of the player metrics, tied to the code.
 test('player metrics last 14 days, devices 90, and hold no IP, city or User-Agent', async () => {
   assert.equal(KEEP_MS, 14 * 24 * 60 * 60 * 1000);
   assert.equal(DEVICE_KEEP_MS, 90 * 24 * 60 * 60 * 1000);
-  assert.ok(USES.every((f) => /^[a-z-]+$/.test(f)), 'feature names, nothing a kid made');
-  const visits = readFileSync(new URL('../web/visits.js', import.meta.url), 'utf8');
-  assert.match(visits, /Never what was made, said or typed/);
-  assert.ok(VISIT_SCREENS.every((f) => /^[a-z-]+$/.test(f)), 'screen names only');
   const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('') } };
   const req = new Request('https://noodlepads.com/api/profiles', {
     method: 'POST',

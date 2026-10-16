@@ -40,7 +40,7 @@ A small rule (a label, a color, a layout) needs only its row in `decisions.md`.
 | [0013](0013-groups-of-own-sounds.md) | Groups of a kid's own sounds live on the sound and on the pad order | Accepted |
 | [0014](0014-dj-key-layouts.md) | Saved DJ key layouts are their own records (`layouts`), apart from the live keyboard (`decks`) | Accepted |
 | [0015](0015-row-volume.md) | A beat row's loudness is stored as `volume`, left out at full | Accepted |
-| [0016](0016-player-metrics.md) | Player metrics, for people in the cloud: devices, places (nothing of the IP), activity, feature use and visits, 14 days in D1, then the telemetry runner's mirror | Accepted |
+| [0016](0016-player-metrics.md) | Player metrics, for people in the cloud: devices, places (nothing of the IP), activity, feature use and visits, 14 days in D1, then the telemetry runner's mirror | Accepted (feature use and visits superseded by 0027) |
 | [0017](0017-four-peer-tabs.md) | Four peer tabs, Pads · Beats · Song · Live; Beat Builder becomes Beats' ⌨️ Keys; one open beat | Accepted, built |
 | [0018](0018-mixer-fields.md) | The 🎚️ Mixer's solo, effects and master are stored on the beat, left out at normal | Proposed |
 | [0019](0019-kids-level.md) | Three levels per person, 🧸 Kids · Regular · Advanced; Kids is four big picture screens, left by a grown-up sum | Accepted, built |
@@ -51,6 +51,7 @@ A small rule (a label, a color, a layout) needs only its row in `decisions.md`.
 | [0024](0024-playlist-lanes.md) | Song is a playlist: up to 8 lanes of beat blocks at one song tempo; pick a beat, tap a spot | Accepted, built |
 | [0025](0025-github-deploys.md) | GitHub deploys every push to main with this repo's own token; agents hold no Cloudflare credentials; the site folder and its ID placeholders live in this repo | Accepted |
 | [0026](0026-telemetry-standard.md) | Usage events in the shared telemetry standard: one `track()` call, hooks per category, on by default with the `sendUsage` switch, which also gates the older metrics | Accepted |
+| [0027](0027-retire-feature-counts-and-visits.md) | Retire the feature-use counts and visit summaries now the shared events are live; keep devices and activity | Accepted |
 
 ## Template
 

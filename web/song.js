@@ -26,7 +26,7 @@ import { openDialog, setupDialog } from './dialogs.js';
 import { encodeWav, normalize, barSteps, SIGNATURES } from './sequencer.js';
 import { fadeStop } from './audio.js';
 import { logEvent } from './log.js';
-import { countUse } from './uses.js';
+import { countPlay } from './play-count.js';
 import { newId } from './util.js';
 import { isScratchSong, songScratchOf, songScratchId, SCRATCH_NAME } from './scratch.js';
 import { speakerControls, makeSpeaker, drawSpeaker, cleanVolume } from './row-volume.js';
@@ -552,7 +552,7 @@ export function createSong(deps) {
     }
     stop();
     el.note.textContent = '';
-    countUse('song-block', personId);
+    countPlay('blocks');
     edit(() => {
       // The first beat in an empty song sets its tempo.
       if (!blockCount(song)) song.tempo = cleanTempo(beatById(picked)?.bpm);

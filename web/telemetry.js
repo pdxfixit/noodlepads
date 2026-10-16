@@ -45,6 +45,9 @@ export const EVENTS = {
   error: ['kind', 'where', 'fatal'],
   'perf.load': ['ms', 'cold'],
   'perf.longtask': ['n', 'ms'],
+  // The sound's delay (the output and base latency of the audio context),
+  // once a visit, when a sound has played. Not in events.toml yet (asked for).
+  'perf.latency': ['ms'],
   // 💾 Keep: a scratch beat or song kept in 🗂️ My beats or My songs.
   'noodlepads.keep': ['kind'],
   // 💃 A groove loaded into the scratch beat, or its ▶ sample heard.
@@ -52,6 +55,9 @@ export const EVENTS = {
   // The cloud: a person put in or opened, set 📴 Offline, a share made,
   // opened, remixed or taken back, a PIN set.
   'noodlepads.cloud': ['action'],
+  // Pads, keys, roll notes and song blocks played in a visit, one count each
+  // (play-count.js), sent as the page hides. Not in events.toml yet (asked for).
+  'noodlepads.play': ['pads', 'keys', 'notes', 'blocks', 'kids'],
 };
 
 export const MAX_TEXT = 60;        // a string value's length

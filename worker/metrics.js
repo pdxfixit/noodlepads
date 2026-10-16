@@ -1,29 +1,28 @@
-// Player metrics (ADR 0016): which devices use a profile, from where, when,
-// which parts of the app, and how each visit went (worker/schema.sql:
-// devices, activity, uses, visits). D1 keeps events, counts and visits 14
-// days and a device's row 90; `just harvest` copies them first into the
-// archive on Ben's Mac, which keeps them for good.
+// Player metrics (ADR 0016, narrowed by ADR 0027): which devices use a
+// profile, from where, and when (worker/schema.sql: devices, activity). The
+// feature-use counts and visit summaries it once also kept (uses, visits)
+// went with ADR 0027; the shared telemetry events (ADR 0026) cover them. D1
+// keeps events 14 days and a device's row 90; the telemetry runner copies
+// them first, and keeps them for good.
 //
 // What is kept of a request: the country Cloudflare reads from it
 // (request.cf), and no finer place (Ben, 2026-10-16: country only), never
 // the IP. Of the User-Agent,
 // only the browser, OS and device-type families. Of the device's own header
-// (X-Noodle-App, web/uses.js appMeta): the app version, a width bucket, touch.
+// (X-Noodle-App, web/device-meta.js appMeta): the app version, a width bucket, touch.
 //
 // A call without that header (the device's usage switch is off, Ben
 // 2026-10-16: off sends nothing) leaves no metrics at all: no device row, no
-// event, no counts, no visit (`optedIn`).
+// event (`optedIn`).
 //
 // Metrics never fail a request: every write is caught. While the tables are
 // missing (the migration not yet run), it skips them without a word.
 
-import { USES, WIDTHS, MAX_COUNT } from '../web/uses.js';
-import { cleanVisit, MAX_SEND } from '../web/visits.js';
-import { utcDay } from './http.js';
+import { WIDTHS } from '../web/device-meta.js';
 import { parseAgent } from '../web/agent.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-export const KEEP_MS = 14 * DAY_MS;          // activity, uses, visits
+export const KEEP_MS = 14 * DAY_MS;          // activity
 export const DEVICE_KEEP_MS = 90 * DAY_MS;   // a device's row: its first-seen and sync count
 export const KINDS = ['make', 'open', 'pull', 'push', 'share', 'pin', 'pin-wrong'];
 // The events that also delete old rows: every one but a pull, the most
@@ -49,7 +48,7 @@ export { parseAgent };
 // Whether the device's usage switch is on: it sends X-Noodle-App only then.
 export const optedIn = (request) => !!request.headers.get('X-Noodle-App');
 
-// The device's own header (web/uses.js appMeta), each part only if valid.
+// The device's own header (web/device-meta.js appMeta), each part only if valid.
 export function readMeta(request) {
   const raw = request.headers.get('X-Noodle-App') ?? '';
   const p = new URLSearchParams(raw.slice(0, 200));
@@ -111,63 +110,22 @@ export function sweep(env, now) {
   return [
     env.DB.prepare('DELETE FROM activity WHERE at < ?').bind(before),
     env.DB.prepare('DELETE FROM devices WHERE last_seen < ?').bind(now - DEVICE_KEEP_MS),
-    env.DB.prepare('DELETE FROM uses WHERE day < ?').bind(utcDay(before)),
-    env.DB.prepare('DELETE FROM visits WHERE at < ?').bind(before),
   ];
 }
 
 // A deleted profile's metrics go with it ("gone from the cloud at once",
 // web/privacy.js). The local archive keeps what it copied before.
-export const forgetProfile = (env, profile) => quietly(env, () => [
-  env.DB.prepare('DELETE FROM activity WHERE profile_id = ?').bind(profile),
-  env.DB.prepare('DELETE FROM devices WHERE profile_id = ?').bind(profile),
-  env.DB.prepare('DELETE FROM uses WHERE profile_id = ?').bind(profile),
-  env.DB.prepare('DELETE FROM visits WHERE profile_id = ?').bind(profile),
-], 'delete');
+// Until migration 005 has dropped `uses` and `visits` (ADR 0027), their rows
+// go too, in a call of their own: a missing table fails a whole batch, and
+// must not take the other deletes with it. Drop that call once 005 is applied.
+export const forgetProfile = async (env, profile) => {
+  await quietly(env, () => [
+    env.DB.prepare('DELETE FROM activity WHERE profile_id = ?').bind(profile),
+    env.DB.prepare('DELETE FROM devices WHERE profile_id = ?').bind(profile),
+  ], 'delete');
+  await quietly(env, () => [
+    env.DB.prepare('DELETE FROM uses WHERE profile_id = ?').bind(profile),
+    env.DB.prepare('DELETE FROM visits WHERE profile_id = ?').bind(profile),
+  ], 'delete old');
+};
 
-// {uses: {feature: n}} from a device: every name from web/uses.js USES, every
-// count a whole number from 1 to MAX_COUNT. Anything else: null.
-export function cleanUses(body) {
-  const u = body?.uses;
-  if (!u || typeof u !== 'object' || Array.isArray(u)) return null;
-  const entries = Object.entries(u);
-  if (!entries.length || entries.length > USES.length) return null;
-  for (const [f, n] of entries) {
-    if (!USES.includes(f) || !Number.isInteger(n) || n < 1 || n > MAX_COUNT) return null;
-  }
-  return Object.fromEntries(entries);
-}
-
-// {visits: [...]} from a device (web/visits.js): each visit checked as the
-// app checks it, the bad ones dropped, at most MAX_SEND. [] when none.
-export function cleanVisits(body, now) {
-  const v = body?.visits;
-  if (!Array.isArray(v)) return [];
-  return v.slice(0, MAX_SEND).map((x) => cleanVisit(x, now)).filter(Boolean);
-}
-
-// Adds a device's counts to today's (UTC) for the profile, stores its
-// finished visits, and brings the device's row up to date. Whether they were
-// stored: false while the tables are missing, so the device keeps them for
-// later. `uses` may be null when only visits came. Without X-Noodle-App
-// (the switch off) nothing is stored, and the device is told it went.
-export async function addUses(env, request, profile, device, uses, now, visits = []) {
-  if (!optedIn(request)) return true;
-  const meta = readMeta(request);
-  const agent = parseAgent(request.headers.get('User-Agent'), meta.touch);
-  return quietly(env, () => [
-    env.DB.prepare(`INSERT INTO devices (hash, profile_id, first_seen, last_seen, syncs, app, browser, os, type, width)
-      VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)
-      ON CONFLICT (hash) DO UPDATE SET last_seen = excluded.last_seen, app = COALESCE(excluded.app, app),
-        browser = excluded.browser, os = excluded.os, type = excluded.type, width = COALESCE(excluded.width, width)`)
-      .bind(device, profile, now, now, meta.app, agent.browser, agent.os, agent.type, meta.width),
-    ...Object.entries(uses ?? {}).map(([f, n]) => env.DB.prepare(`INSERT INTO uses (profile_id, feature, day, n) VALUES (?, ?, ?, ?)
-      ON CONFLICT (profile_id, feature, day) DO UPDATE SET n = n + excluded.n`).bind(profile, f, utcDay(now), n)),
-    // The app version is the one sending, which is the one that made the
-    // visit unless the page updated in between.
-    ...visits.map((v) => env.DB.prepare(`INSERT INTO visits (at, profile_id, device, app, secs, first, screens, level, load_ms, latency_ms, errors, error_sigs)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .bind(v.at, profile, device, meta.app, v.secs, v.first, v.screens.join(',') || null, v.level, v.load, v.latency,
-        Object.values(v.errors).reduce((a, n) => a + n, 0), Object.keys(v.errors).length ? JSON.stringify(v.errors) : null)),
-  ], 'uses');
-}

@@ -50,7 +50,9 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 ### Hosting at noodlepads.com
 
-- [ ] Apply migration 004, country only (`just cloud-migrate --yes`) (1 min) 🔼
+- [ ] Retire the feature-use counts and visits, your two steps (10 min) 🔼
+  after the commit that stops them (ADR 0027) is live on noodlepads.com: 1. make the runner harvest once more and bring it home, `python3 ~/src/telemetry/telemetry.py pull`; check `sqlite3 -readonly ~/.local/state/telemetry/telemetry.sqlite3 "select count(*) from noodlepads__uses; select count(*) from noodlepads__visits"` shows at least 52 and 25 (D1 held those on 2026-10-16); a smaller number means do not go on. 2. `just cloud-migrate --yes` (migration 005 drops `uses` and `visits`; D1 is then their only copy gone). Never in the other order: the older Worker would lose its event writes. `docs/adr/0027-retire-feature-counts-and-visits.md`
+- [x] Apply migration 004, country only (`just cloud-migrate --yes`) ✅ 2026-10-16 (checked in D1's `migrations`)
   the live Worker already writes only the country; this drops the city, region, network and ASN columns from the activity log, with what they hold (Ben, 2026-10-16: country only). `docs/adr/0016-player-metrics.md`
 - [x] Apply the player-metrics migration (`just cloud-migrate --yes`) ✅ 2026-10-13
 - [ ] Re-clone flarepress on the Mac: it is public code now, and the old one is archived as `flarepress-archive` (2 min)
@@ -88,6 +90,10 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 - **After launch: stop loading backups from before 1.0** (Ben, 2026-10-11, "it will only be this once"): once the testing copies' backups are in, remove `beforeOne` in `web/backup.js` so they are refused again (ADR 0011).
 
 Other work:
+
+- [ ] After Ben applies migration 005: drop `table=visits` and `table=uses` from `site/harvest.conf` (and the "New in a coming" comment above `visits`), the separate `uses`/`visits` call in `worker/metrics.js` `forgetProfile` and its test, and the pointer to them in `docs/state.md` (ADR 0027). Leave the `players` line alone; the `reports` line is the dated To do in `docs/state.md`.
+- [ ] About 2026-11-16: remove the no-op `POST /api/profiles/:id/uses` route (`takeUses` in `worker/cloud.js`, its route line and `tests/metrics.test.mjs`'s test), and `forget('uses')`/`forget('visits')` in `web/app.js startUsage` if no old copy is left (ADR 0027).
+- [ ] Report to the telemetry orchestrator, for `events.toml` (ADR 0027): `app.open` details `browser` (family) and `level`; `perf.latency` (`ms`) and `noodlepads.play` (`pads`, `keys`, `notes`, `blocks`, `kids`) which this app already sends; `screen.view` summary by screen; the `pin-wrong` value of `noodlepads.cloud`'s `action`.
 
 - [ ] Move `skills/noodlepads-logs` to `~/src/skills/noodlepads-logs` and link it (the skills workspace convention); the recurrent routine's leg is now named `noodlepads-logs`, and its state file `~/.local/state/skills/noodlepads-logs.state.json`
 

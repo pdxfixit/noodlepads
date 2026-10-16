@@ -114,13 +114,3 @@ test('a screen remembered by an older copy opens its new home', async () => {
   assert.deepEqual(startScreen('live', null), { screen: 'live' });
   assert.deepEqual(startScreen('nowhere', null), { screen: 'pads' });
 });
-
-// The Worker refuses a feature name it doesn't know, so names older copies
-// still send stay accepted next to the new ones.
-test('feature-use names: Live and ⌨️ Keys are counted; DJ\'s old names are still accepted', async () => {
-  const { USES } = await import('../web/uses.js');
-  const { cleanUses } = await import('../worker/metrics.js');
-  for (const f of ['live', 'beat-keys', 'dj', 'dj-freestyle', 'beat-builder']) assert.ok(USES.includes(f), f);
-  assert.deepEqual(cleanUses({ uses: { dj: 1, 'dj-freestyle': 2, 'beat-builder': 3, live: 4, 'beat-keys': 5 } }),
-    { dj: 1, 'dj-freestyle': 2, 'beat-builder': 3, live: 4, 'beat-keys': 5 });
-});
