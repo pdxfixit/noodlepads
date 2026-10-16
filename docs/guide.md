@@ -112,8 +112,8 @@ describe features still being built and stay hidden until their mark is removed.
 ## Settings
 
 The ⚙️ button in the top corner (small, and away from the pads and toolbar so
-it isn't pressed by accident) opens Settings: 🔗 Sharing (🔗 Shared with me), Backups, Level (🧸 Kids · Regular · Advanced, each person's own, ADR 0019; stored as `level` with `advancedBeats` beside it, true only for Advanced, so an older copy still reads Advanced right; Advanced shows the extra beat and sound tools: each beat row's sound picker gets Speed, beats get Swing, and each beat can have its own time signature), ⌨️ Keyboard and About. Every section but About folds under its heading (all closed at first; the device remembers which are open, in `localStorage` `settings-open`), with a chip saying its state where there is one (how many people, the level, the keyboard). About is always open: the 📊 Share play data and 📮 Send problem reports checkboxes (with the grown-up line and, while reports are on, the device code), then the version and the Privacy policy, centered. The pad size (`padSize`, `auto` or 0 to 1; an older percent, 50 to 220, or S M L reads as the nearest place) is a setting too, though its slider sits on the Pads screen.
-**📮 Send problem reports** (a checkbox at the bottom of Settings, off by default, per device) sends the event log,
+it isn't pressed by accident) opens Settings: 🔗 Sharing (🔗 Shared with me), Backups, Level (🧸 Kids · Regular · Advanced, each person's own, ADR 0019; stored as `level` with `advancedBeats` beside it, true only for Advanced, so an older copy still reads Advanced right; Advanced shows the extra beat and sound tools: each beat row's sound picker gets Speed, beats get Swing, and each beat can have its own time signature), ⌨️ Keyboard, 📊 Play data & reports (📊 Share play data, 📮 Send problem reports and a Privacy policy link) and About. Every section but About folds under its heading (all closed at first; the device remembers which are open, in `localStorage` `settings-open`), with a chip saying its state where there is one (how many people, the level, the keyboard, which of play data and reports are on). About is always open: a line on what the app is, then the version and the Privacy policy, centered. The pad size (`padSize`, `auto` or 0 to 1; an older percent, 50 to 220, or S M L reads as the nearest place) is a setting too, though its slider sits on the Pads screen.
+**📮 Send problem reports** (a checkbox in 📊 Play data & reports, off by default, per device) sends the event log,
 cleaned by `log-clean.js` so it holds no names and no audio, to the site's own
 `/api/log` when the page is hidden and 10 s after an error (`log-send.js`; plan
 in `docs/design/automatic-logs.md`). Settings are stored in IndexedDB `settings`
@@ -507,7 +507,7 @@ ADR 0002.
   each batch in the R2 bucket `noodlepads-telemetry` for the telemetry
   runner. Every device sends, in the cloud or not (Ben, question #425:
   "Yes, everyone"), with its own random code, never a profile.
-  📊 Share play data, a checkbox at the bottom of ⚙️ Settings (the `sendUsage` setting,
+  📊 Share play data, a checkbox in ⚙️ Settings → 📊 Play data & reports (the `sendUsage` setting,
   on by default) turns all of it off, the player metrics above included.
 
 ## Keyboard and screen readers
