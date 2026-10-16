@@ -1,8 +1,7 @@
 // A User-Agent read as families: the browser, OS and device type, and nothing
 // else. Problem reports (log-send.js, log-clean.js) send only these, never the
-// raw string. Imports nothing, so the app and the Worker both run it.
-// worker/metrics.js has the same rules for its devices table;
-// tests/agent.test.mjs keeps the two equal.
+// raw string. Imports nothing, so the app and the Worker both run it:
+// worker/metrics.js reads its devices table's families with it too.
 
 export const BROWSERS = ['Edge', 'Samsung', 'Opera', 'Firefox', 'Chrome', 'Safari', 'Other'];
 export const SYSTEMS = ['iOS', 'Android', 'ChromeOS', 'Windows', 'macOS', 'Linux', 'Other'];
