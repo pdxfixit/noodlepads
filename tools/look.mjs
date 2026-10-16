@@ -52,7 +52,9 @@ const BUILDER_REC = `${q('#dj-record')}
   await new Promise((r) => setTimeout(r, 600)); hit();
   await new Promise((r) => setTimeout(r, 300));`;
 // 🆕 New, + Add a row and 💾 Keep on Beats (⌨️ Keys off): a named beat in 🗂️ My beats.
-const KEEP_NEW = q('.beat-bar [data-beat-new]') + q('#seq-add') + q('.beat-bar [data-beat-keep]');
+// + Add a row opens the chooser with the next sound ticked; Add puts its row in.
+const ADD_ROW = q('#seq-add') + q('#chooser-ok');
+const KEEP_NEW = q('.beat-bar [data-beat-new]') + ADD_ROW + q('.beat-bar [data-beat-keep]');
 // 🎼 Song's playlist (ADR 0024). SONG_DROP defines chip(i) (the strip's beat
 // i, newest first) and drop(i, lane, bar): pick it (if not picked) and tap
 // that spot. PLAYLIST keeps three grooves as beats on Beats (Ska, House, then
@@ -151,7 +153,9 @@ const VIEWS = {
   'keys-new-full': { screen: 'beats', keys: true, js: q('#dj-beatbar [data-beat-grooves]') + GROOVE_GROUPS_OPEN('dance') + q('[data-groove="house"]') + nap
     + q('#dj-beatbar [data-beat-new]') + nap },
   'song-new-full': { screen: 'song', js: `${q('#beats-toggle') + KEEP_NEW + q('#song-tab') + nap + q('#song-new')} ${SONG_DROP} drop(0, 0, 0); drop(0, 0, 1); ${q('#song-new') + nap}` },
-  chooser: { screen: 'beats', js: q('.beat-bar [data-beat-new]') + q('#seq-add') + q('.seq-row [data-pick]') },   // a new beat has no rows: + Add a row first
+  chooser: { screen: 'beats', js: q('.beat-bar [data-beat-new]') + q('#seq-add') },   // the chooser for new rows (+ Add a row)
+  // A row's own sound chooser (tap its emoji), on a new beat with one row.
+  'chooser-row': { screen: 'beats', js: q('.beat-bar [data-beat-new]') + ADD_ROW + q('.seq-row [data-pick]') },
   // Pattern chips: six beats made with 🆕 New, + Add a row and 💾 Keep (the newest open), then the chips' line.
   'beat-chips': { screen: 'beats', js: KEEP_NEW.repeat(6) },
   // beat-chips with the two oldest beats 📌 pinned in 🗂️ My beats (each only if not pinned yet), Open closed again.
@@ -164,8 +168,8 @@ const VIEWS = {
     + q('#dj-beatbar [data-beat-keep]')).repeat(6) },
   // 🎚️ Mixer on a new beat with six rows (+ Add a row brings sounds not used yet), the second soloed;
   // beat-solo is the rows behind it after closing; builder-mixer is the keys view's after builder-rows.
-  mixer: { screen: 'beats', js: q('.beat-bar [data-beat-new]') + q('#seq-add').repeat(6) + q('#seq-shape-line [data-mixer]') + q('[data-solo="1"]') },
-  'beat-solo': { screen: 'beats', js: q('.beat-bar [data-beat-new]') + q('#seq-add').repeat(6) + q('#seq-shape-line [data-mixer]') + q('[data-solo="1"]') + q('#mixer [data-close]') },
+  mixer: { screen: 'beats', js: q('.beat-bar [data-beat-new]') + ADD_ROW.repeat(6) + q('#seq-shape-line [data-mixer]') + q('[data-solo="1"]') },
+  'beat-solo': { screen: 'beats', js: q('.beat-bar [data-beat-new]') + ADD_ROW.repeat(6) + q('#seq-shape-line [data-mixer]') + q('[data-solo="1"]') + q('#mixer [data-close]') },
   'builder-mixer': { screen: 'beats', keys: true, js: q('#dj-beatbar [data-beat-new]') + BUILDER_REC + q('#dj-record')
     + `for (const [code, key] of [['KeyZ', 'z'], ['KeyQ', 'q']]) for (const type of ['keydown', 'keyup']) document.dispatchEvent(new KeyboardEvent(type, { code, key, bubbles: true }));`
     + q('#dj-setup [data-mixer]') },
