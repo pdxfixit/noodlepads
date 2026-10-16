@@ -7,9 +7,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { state } from '../web/state.js';
 import { getSetting, setSetting, onSetting, cleanPrefs, levelOf, storedPair, LEVELS } from '../web/settings.js';
+import { stubBanner } from './banner.mjs';
 
-const notice = { textContent: '', hidden: true };
-globalThis.document ??= { querySelector: () => notice };
+stubBanner();
 
 const as = (values) => {
   state.settings = new Map();

@@ -42,7 +42,7 @@ export async function newBuilderBeatWithRow(page, { key = 'z', code = 'KeyZ' } =
   ctx.currentTime = 52.47;
   page.key(key, { code });
   $('#dj-record').dispatch('click');
-  $('#dj-done-close').dispatch('click');
+  $('#banner-close').dispatch('click');
   $('#dj-beatbar').querySelector('[data-beat-keep]').dispatch('click');
   ctx.currentTime = was;
 }

@@ -26,7 +26,14 @@
   </header>
 
   <main>
-    <p class="notice" id="notice" role="status" hidden></p>
+    <!-- Every one-line notice, and Undo after a change: floats over the top of the screen, one at a time, and fades (ui.js showBanner). -->
+    <div class="banner" id="banner" role="status" aria-live="polite" popover="manual" hidden>
+      <span class="banner-text" id="banner-text"></span>
+      <span class="banner-buttons">
+        <button type="button" class="banner-action" id="banner-action" hidden></button>
+        <button type="button" class="banner-close" id="banner-close" aria-label="Dismiss">✕</button>
+      </span>
+    </div>
     <!-- A newer version is live: reload, or ✕ until the next one (update.js). It does not fade. -->
     <div class="update-bar" id="update-bar" role="status" hidden>
       <span class="update-text">🆕 An update for Noodle Pads is ready.</span>
@@ -60,13 +67,6 @@
         <button type="button" class="chosen-act chosen-delete" data-bulk="delete"><span class="chosen-icon" aria-hidden="true">🗑️</span> <span class="chosen-word">Delete</span></button>
       </div>
     </section>
-    <div class="pads-undo" id="pads-undo" role="status" hidden>
-      <span id="pads-undo-text"></span>
-      <span class="dj-done-buttons">
-        <button type="button" class="seq-tool" id="pads-undo-button">↩️ Undo</button>
-        <button type="button" class="close bar-close" id="pads-undo-close" aria-label="Dismiss">✕</button>
-      </span>
-    </div>
 
     <section class="seq" id="seq" aria-label="Beat maker" hidden>
       <div class="beat-bar doc-bar">
@@ -123,13 +123,6 @@
       <p class="seq-empty" id="seq-empty" hidden>This board has no sounds yet. Tap 🔊 Pads, then New sound.</p>
       <p class="seq-empty" id="seq-no-rows" hidden>No rows yet. Tap + Add a row for a sound, or 💃 Grooves at the top for a ready-made beat.</p>
       <div class="seq-rows" id="seq-rows"></div>
-      <div class="seq-undo" id="seq-undo" role="status" hidden>
-        <span id="seq-undo-text"></span>
-        <span class="dj-done-buttons">
-          <button type="button" class="seq-tool" id="seq-undo-button">↩️ Undo</button>
-          <button type="button" class="close bar-close" id="seq-undo-close" aria-label="Dismiss">✕</button>
-        </span>
-      </div>
       <div class="seq-foot">
         <button type="button" class="seq-add" id="seq-add">+ Add a row</button>
         <button type="button" class="seq-add" id="seq-add-tune">🎹 Add a tune</button>
@@ -187,7 +180,6 @@
       </div>
       <p class="seq-empty" id="dj-no-rows" hidden>No rows yet. Tap ● Record and play the keys below: each sound you play gets a row.</p>
       <div class="seq-undo dj-done" id="dj-done" role="status" hidden>
-        <span id="dj-done-text"></span>
         <span class="dj-take-line" id="dj-take-line" hidden>Saved <input class="beat-name take-rename" id="dj-take-name" maxlength="24" autocomplete="off" aria-label="Take name (tap to rename)"> <span id="dj-take-length"></span></span>
         <span class="dj-done-buttons">
           <button type="button" class="seq-tool" id="dj-done-play">▶ Play</button>
@@ -272,18 +264,10 @@
           <button type="button" class="close bar-close" id="song-sel-close" aria-label="Done with this block">✕</button>
         </span>
       </div>
-      <div class="seq-undo" id="song-undo" role="status" hidden>
-        <span id="song-undo-text"></span>
-        <span class="dj-done-buttons">
-          <button type="button" class="seq-tool" id="song-undo-button">↩️ Undo</button>
-          <button type="button" class="close bar-close" id="song-undo-close" aria-label="Dismiss">✕</button>
-        </span>
-      </div>
       <div class="song-foot">
         <button type="button" class="seq-add" id="song-add-lane">➕ Add a lane</button>
         <button type="button" class="seq-tool" id="song-step-undo">↩️ Undo</button>
       </div>
-      <p class="song-note" id="song-note" role="status"></p>
     </section>
     <div class="page-foot">
       <p class="screen-hint" id="screen-hint"></p>
@@ -384,7 +368,6 @@
         <h2 id="settings-title">Settings</h2>
         <button type="button" class="close" data-close aria-label="Close">✕</button>
       </div>
-      <p class="set-note" id="settings-note" role="status"></p>
 
       <section class="set-section set-fold" id="set-sharing" aria-labelledby="set-sharing-title">
         <h3><button type="button" class="set-head" aria-expanded="false" aria-controls="set-sharing-body"><span class="set-head-caret" aria-hidden="true">▸</span><span id="set-sharing-title">🔗 Sharing</span><span class="set-head-chip" hidden></span></button></h3>

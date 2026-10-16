@@ -20,6 +20,7 @@ import { newId, recall, remember } from './util.js';
 import { makeVoice, fadeStop } from './audio.js';
 import { getSetting, onSetting } from './settings.js';
 import { logEvent } from './log.js';
+import { showBanner } from './ui.js';
 import { countPlay } from './play-count.js';
 import { soundKind } from './log-clean.js';
 import { rootShift } from './pitch.js';
@@ -1856,24 +1857,27 @@ export function createSequencer(deps) {
 
   // The last removed row, which Undo puts back where it was, for a few
   // seconds. Loading another beat or person forgets it.
+  // It shows in the banner over the top of the screen (ui.js showBanner),
+  // which forgets it when it goes.
   let undo = null;
-  let undoTimer = 0;
+  let undoBanner = null;
   function offerUndo(next) {
-    clearTimeout(undoTimer);
     undo = next;
-    if (next) {
-      const clip = next.row && deps.clipById(next.row.clipId);
-      el.undoText.textContent = next.level ? `${levelState(next.level.at).name} loudness ${percent(rowLevel(pattern.rows[next.level.at]))} %.`
-        : next.fresh ? FRESH_TEXT
-        : 'before' in next && next.added !== undefined ? `Added ${next.added} ${next.added === 1 ? 'hit' : 'hits'} from “${next.groove}”.`
-        : 'before' in next && next.replaced ? `“${next.groove}” replaced your scratch beat.`
-        : 'before' in next ? `Loaded “${next.groove}” into your scratch beat.`
-        : `Removed row ${next.at + 1}${clip ? ` (${clip.label})` : ''}.`;
-      undoTimer = setTimeout(() => offerUndo(null), UNDO_MS);
-    }
-    // Focus on a vanishing Undo would be lost; it goes to Add a row.
-    if (!next && document.activeElement === el.undoButton) el.add.focus();
-    el.undo.hidden = !next;
+    if (!next) { undoBanner?.close(); undoBanner = null; return; }
+    const clip = next.row && deps.clipById(next.row.clipId);
+    const text = next.level ? `${levelState(next.level.at).name} loudness ${percent(rowLevel(pattern.rows[next.level.at]))} %.`
+      : next.fresh ? FRESH_TEXT
+      : 'before' in next && next.added !== undefined ? `Added ${next.added} ${next.added === 1 ? 'hit' : 'hits'} from “${next.groove}”.`
+      : 'before' in next && next.replaced ? `“${next.groove}” replaced your scratch beat.`
+      : 'before' in next ? `Loaded “${next.groove}” into your scratch beat.`
+      : `Removed row ${next.at + 1}${clip ? ` (${clip.label})` : ''}.`;
+    undoBanner = showBanner(text, {
+      action: { label: '↩️ Undo', fn: undoRemove },
+      ms: UNDO_MS,
+      // Focus on a vanishing Undo would be lost; it goes to Add a row.
+      focusBack: () => el.add,
+      onClose: () => { if (undo === next) { undo = null; undoBanner = null; } },
+    });
   }
 
   function undoRemove() {
@@ -2191,8 +2195,6 @@ export function createSequencer(deps) {
   });
   el.bpmType.addEventListener('blur', () => endTyping(true));
 
-  el.undoButton.addEventListener('click', undoRemove);
-  el.undoClose?.addEventListener('click', () => offerUndo(null));
 
   // + Add a row opens the chooser for new rows (Ben, 2026-10-16: adding eight
   // chords one at a time meant closing Drums eight times). The sound after
@@ -2243,7 +2245,7 @@ export function createSequencer(deps) {
         el.rows.querySelector(`[data-speaker="${i}"]`)?.focus();
       } else {
         removeRow(i);
-        el.undoButton.focus();
+        undoBanner?.focus();
       }
       return;
     }
@@ -2558,12 +2560,12 @@ export function createSequencer(deps) {
       render();
       deps.onBeatChange?.();
       offerUndo({ before, pattern, groove: g.name, added });
-      el.undoButton.focus();
+      undoBanner?.focus();
       return;
     }
     el.grooves.close();
     loadGroove(g);
-    if (slot !== 'dj') el.undoButton.focus();
+    if (slot !== 'dj') undoBanner?.focus();
   }
 
   // The groove into the scratch, which opens. With ⌨️ Keys on it opens

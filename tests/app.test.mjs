@@ -8,6 +8,7 @@ import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
+import { hasUndo } from './banner.mjs';
 import { isFunName } from '../web/names.js';
 import { state } from '../web/state.js';
 import { newBeatWithRow, newBuilderBeatWithRow, keysOn, keysOff } from './new-beat.mjs';
@@ -424,7 +425,7 @@ test('Beats shows the beat maker in place of the pads; 🆕 New starts with no r
   assert.equal(name.value, 'Scratch beat');
   assert.equal(bar.querySelector('[data-beat-keep]').hidden, false, '💾 Keep, for when it has something');
   assert.equal(state.savedBeats.filter((b) => b.personId === 'pip').length, 0, '🆕 New adds nothing to 🗂️ My beats');
-  assert.equal($('#seq-undo').hidden, true, 'an empty scratch emptied needs no Undo');
+  assert.equal(hasUndo(), false, 'an empty scratch emptied needs no Undo');
   // A new beat is empty (Ben, 2026-10-11): a line says how to fill it.
   const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
   assert.equal(rows().length, 0, 'no rows');
@@ -575,9 +576,9 @@ test('a groove loads into the scratch beat, copying nothing, and Undo goes back 
   assert.equal(name(), 'Four on the floor (scratch)');
   assert.equal($('.beat-bar [data-beat-keep]').hidden, false, '💾 Keep shows');
   assert.equal($('#seq-bpm-out').textContent, '120 BPM');
-  assert.equal($('#seq-undo-text').textContent, 'Loaded “Four on the floor” into your scratch beat.');
+  assert.equal($('#banner-text').textContent, 'Loaded “Four on the floor” into your scratch beat.');
   assert.deepEqual(listed(), before.listed, 'nothing new in 🗂️ My beats');
-  $('#seq-undo-button').dispatch('click');
+  $('#banner-action').dispatch('click');
   assert.deepEqual(sounds(), before.sounds);
   assert.equal(name(), before.name);
   assert.deepEqual(listed(), before.listed);
@@ -601,9 +602,9 @@ test('a groove over a scratch with hits says so, with Undo; 💾 Keep makes it a
   assert.ok(scratch(), 'the scratch is saved, like any beat');
   $('#seq-grooves').dispatch('click');
   $('#groove-list').querySelector('[data-groove="ska"]').dispatch('click');
-  assert.equal($('#seq-undo').hidden, false);
-  assert.equal($('#seq-undo-text').textContent, '“Ska” replaced your scratch beat.');
-  $('#seq-undo-button').dispatch('click');
+  assert.equal(hasUndo(), true);
+  assert.equal($('#banner-text').textContent, '“Ska” replaced your scratch beat.');
+  $('#banner-action').dispatch('click');
   assert.equal(name(), 'Trap (scratch)', 'Undo brings back the scratch as it was');
   assert.equal(scratch().name, 'Trap');
   $('#seq-grooves').dispatch('click');
@@ -648,8 +649,8 @@ test('➕ Add to this beat lays a groove over the open beat, keeping its tempo a
   assert.equal(name(), before.name, 'the same beat');
   assert.equal($('#seq-bpm-out').textContent, before.bpm, 'at its own tempo');
   for (const s of ['Kick', 'Clap', 'Hi-hat']) assert.ok(sounds().includes(s), s);
-  assert.match($('#seq-undo-text').textContent, /^Added \d+ hits from “Four on the floor”/);
-  $('#seq-undo-button').dispatch('click');
+  assert.match($('#banner-text').textContent, /^Added \d+ hits from “Four on the floor”/);
+  $('#banner-action').dispatch('click');
   assert.deepEqual(sounds(), before.sounds);
   $('#seq-grooves').dispatch('click');
   $('#groove-how').querySelector('[data-how="load"]').dispatch('click');
@@ -818,15 +819,15 @@ test('Undo brings a removed row back where it was, pills and all', () => {
   $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
   const before = rows().map((_, r) => sound(r));
   rows()[1].querySelectorAll('.pill')[6].dispatch('click');
-  assert.equal($('#seq-undo').hidden, true);
+  assert.equal(hasUndo(), false);
   rows()[1].querySelector('[data-remove]').dispatch('click');
   rows()[1].querySelector('[data-remove]').dispatch('click');
   assert.equal(rows().length, before.length - 1);
-  assert.equal($('#seq-undo').hidden, false);
-  assert.equal($('#seq-undo-text').textContent, `Removed row 2 (${before[1]}).`);
-  assert.equal(document.activeElement, $('#seq-undo-button'));
-  $('#seq-undo-button').dispatch('click');
-  assert.equal($('#seq-undo').hidden, true);
+  assert.equal(hasUndo(), true);
+  assert.equal($('#banner-text').textContent, `Removed row 2 (${before[1]}).`);
+  assert.equal(document.activeElement, $('#banner-action'));
+  $('#banner-action').dispatch('click');
+  assert.equal(hasUndo(), false);
   assert.deepEqual(rows().map((_, r) => sound(r)), before);
   assert.equal(rows()[1].querySelectorAll('.pill')[6].getAttribute('aria-pressed'), 'true');
   // Tidy up for the tests after: back to one row, pills off (one tap).
@@ -959,7 +960,7 @@ test('a Beats row\'s ⋯: 🔔 🧹 ✕ move into its menu on a line short of ro
   items()[2].dispatch('click');
   assert.equal(rows().length, count - 1);
   assert.equal(pop().hidden, true);
-  $('#seq-undo-button').dispatch('click');
+  $('#banner-action').dispatch('click');
   assert.equal(rows().length, count, 'Undo puts it back');
   // Esc closes it, the focus back on ⋯; a tap outside closes it too.
   more().dispatch('click');
@@ -1080,7 +1081,7 @@ test('🆕 New stops the beat playing and starts with no rows; 🗂️ My beats,
   await page.settle();
   assert.match(name(), /^Four on the floor/);
   assert.equal(playing(), true, 'a groove keeps playing');
-  $('#seq-undo-button').dispatch('click');
+  $('#banner-action').dispatch('click');
   await page.settle();
   assert.equal(name(), groove);
   assert.equal(playing(), true, 'Undo keeps playing');
@@ -1399,12 +1400,14 @@ test('Beats with ⌨️ Keys: a count-in, then hits land on the open beat\'s pil
   assert.equal($('#dj-status').textContent, '', 'after the count-in, no status line: ■ Stop says it (Ben, 2026-10-12)');
   assert.equal($('#dj-record').textContent, '■ Stop');
   $('#dj-record').dispatch('click');
-  assert.equal($('#dj-done-text').textContent, `Added 3 notes to “${beatName}”.`);
-  // The news floats over the beat's name and fades; the bar below keeps Undo (Ben, 2026-10-12).
+  assert.equal($('#banner-text').textContent, `Added 3 notes to “${beatName}”.`);
+  // The news also floats over the beat's name and fades (Ben, 2026-10-12);
+  // Undo rides in the banner over the top, and the take card stays away.
   assert.equal($('#dj-name-flash').hidden, false);
   assert.equal($('#dj-name-flash').textContent, '✅ 3 notes added');
-  assert.equal($('#dj-done-text').hidden, true);
-  assert.equal($('#dj-done-play').hidden, true);
+  assert.equal(hasUndo(), true);
+  assert.equal($('#banner-action').textContent, '↩️ Undo');
+  assert.equal($('#dj-done').hidden, true, 'the take card is for 🎤 Live');
   // The Kick row (added for the hits) has pills 0 and 4 on, with Keys off too: it is the one open beat.
   keysOff(page);
   const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
@@ -1413,7 +1416,7 @@ test('Beats with ⌨️ Keys: a count-in, then hits land on the open beat\'s pil
   const on = (r) => r.querySelectorAll('.pill').map((p, i) => (p.getAttribute('aria-pressed') === 'true' ? i : -1)).filter((i) => i >= 0);
   assert.deepEqual(on(kick()).slice(0, 3), [0, 4, 7], 'Shift put the last one on pill 7');
   keysOn(page);
-  $('#dj-done-undo').dispatch('click');
+  $('#banner-action').dispatch('click');
   keysOff(page);
   assert.ok(!kick() || on(kick()).length === 0 || on(kick())[0] !== 4, 'Undo: the beat is as it was');
   $('#pads-tab').dispatch('click');
@@ -1515,8 +1518,8 @@ test('Beats with ⌨️ Keys: a row\'s ✕ beside its emoji asks first, then rem
   x().dispatch('click');
   x().dispatch('click');
   assert.equal(lines().length, before - 1);
-  assert.match($('#dj-done-text').textContent, /^Removed the .+ row\.$/);
-  $('#dj-done-undo').dispatch('click');
+  assert.match($('#banner-text').textContent, /^Removed the .+ row\.$/);
+  $('#banner-action').dispatch('click');
   assert.equal(lines().length, before, 'Undo puts it back');
   keysOff(page);
   $('#pads-tab').dispatch('click');
@@ -1559,9 +1562,9 @@ test('Beats with ⌨️ Keys: a row\'s 🧹 beside ✕ asks first, then clears i
   sweep().dispatch('click');
   assert.deepEqual(lit(), [], 'cleared');
   assert.equal($('#dj-grid').children.length, 1, 'the row stays');
-  assert.match($('#dj-done-text').textContent, /^Cleared the .+ row\.$/);
+  assert.match($('#banner-text').textContent, /^Cleared the .+ row\.$/);
   assert.equal(sweep().disabled, true, 'nothing to clear: it waits');
-  $('#dj-done-undo').dispatch('click');
+  $('#banner-action').dispatch('click');
   assert.deepEqual(lit(), [0, 6], 'Undo puts the pills back');
   // While recording, it keeps its place but hides, as ✕ does.
   audio.context().currentTime = 70;
@@ -1626,12 +1629,12 @@ test('Beats with ⌨️ Keys: a key played makes its sound\'s row at once, witho
   line(a).querySelector('[data-clear-row]').dispatch('click');
   line(a).querySelector('[data-clear-row]').dispatch('click');
   assert.equal(line(a).querySelectorAll('[data-step].on').length, 0, '🧹 cleared Kick');
-  assert.match($('#dj-done-text').textContent, /^Cleared the Kick row\.$/);
+  assert.match($('#banner-text').textContent, /^Cleared the Kick row\.$/);
   // ✕ on the first line shown removes that sound's row (stored last).
   line(q).querySelector('[data-remove-row]').dispatch('click');
   line(q).querySelector('[data-remove-row]').dispatch('click');
   assert.deepEqual(shown(), [a, z]);
-  $('#dj-done-undo').dispatch('click');
+  $('#banner-action').dispatch('click');
   assert.deepEqual(shown(), [q, a, z]);
   assert.deepEqual(stored(), [z, a, q], 'still stored as played');
   // ✏️ Edit keys: swap A and Z, and the rows follow the keys.
@@ -1931,7 +1934,7 @@ test('Beats with ⌨️ Keys: the beat grows while you keep playing into its las
   assert.equal(ghost(), false, '4 bars is as long as a beat gets');
   assert.equal($('#dj-status').textContent, '');
   $('#dj-record').dispatch('click');
-  $('#dj-done-undo').dispatch('click');
+  $('#banner-action').dispatch('click');
   assert.equal(pillsOf(), 16, 'Undo: one bar again');
   assert.deepEqual(kickLit(), []);
   // Resting through the last bar: it goes round, as before.
@@ -2112,7 +2115,7 @@ test('🎼 Song: its own tab, Advanced or not; pick a beat, then tap a spot on a
   $('#song-new').dispatch('click');
   assert.equal($('#song-name').value, 'Scratch song');
   assert.equal(state.songbook.filter((s) => s.personId === state.personId).length, 0, '🆕 New adds nothing to 🗂️ My songs');
-  assert.equal($('#song-undo').hidden, true, 'an empty scratch emptied needs no Undo');
+  assert.equal(hasUndo(), false, 'an empty scratch emptied needs no Undo');
   assert.equal($('#song-step-undo').hidden, true, '↩️ Undo shows once there is something to take back');
   // Two saved beats: the open one with a pill on, then a new one at 132 BPM.
   const bar = () => document.querySelectorAll('.beat-bar')[0];
@@ -2132,7 +2135,7 @@ test('🎼 Song: its own tab, Advanced or not; pick a beat, then tap a spot on a
   assert.equal($('#song-play').disabled, true, 'nothing to play yet');
   // A spot tapped with no beat picked says what to do.
   cellAt($, 0, 0).dispatch('click');
-  assert.match($('#song-note').textContent, /^Pick a beat above first/);
+  assert.match($('#banner-text').textContent, /^Pick a beat above first/);
   assert.equal(allBlocks($).length, 0);
   // Pick, then tap: the beat goes there, and stays picked for more.
   pickBeat($, first);

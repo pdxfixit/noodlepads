@@ -2,11 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { state } from '../web/state.js';
 import { SETTINGS, getSetting, setSetting, onSetting, cleanPrefs } from '../web/settings.js';
+import { stubBanner } from './banner.mjs';
 
 // Storage is closed in these tests, so a save fails and shows a notice; this
-// is the one element that needs.
-const notice = { textContent: '', hidden: true };
-globalThis.document ??= { querySelector: () => notice };
+// is the banner it shows in (tests/banner.mjs).
+stubBanner();
 
 test('an unset setting reads as its default', () => {
   state.settings = new Map();

@@ -225,11 +225,23 @@ test('Settings has no Diagnostics section; 📮 Send problem reports stays', () 
   assert.ok(dialog.contains($('#send-logs-device')));
 });
 
-test('notices are mirrored into the dialog, which covers the page, and written to the log', () => {
+// The dialog covers the page and makes the rest of it inert, so the banner
+// moves inside it while it is open, and floats over it (a popover in the
+// browser); it goes home when the dialog closes. Ben, 2026-10-16.
+test('a notice with ⚙️ Settings open floats in the banner over the dialog, and is written to the log', () => {
+  const dialog = $('#settings-dialog');
+  if (!dialog.open) $('#settings-open').dispatch('click');
   showNotice('Saved a backup: test.');
-  assert.equal($('#settings-note').textContent, 'Saved a backup: test.');
-  assert.equal($('#notice').textContent, 'Saved a backup: test.');
+  assert.equal($('#banner').hidden, false);
+  assert.equal($('#banner-text').textContent, 'Saved a backup: test.');
+  assert.ok(dialog.contains($('#banner')), 'inside the open dialog, so it is not inert');
+  assert.equal($('#settings-note'), null, 'no status line of its own in the dialog');
   assert.ok(getLog().some((e) => e.kind === 'notice' && e.data.text === 'Saved a backup: test.'));
+  dialog.close();
+  assert.equal(dialog.contains($('#banner')), false, 'home again when the dialog closes');
+  assert.equal($('#banner').hidden, false, 'still showing');
+  $('#banner-close').dispatch('click');
+  assert.equal($('#banner').hidden, true);
 });
 
 test('a kept beat gets a fun name, not "Beat 1"', () => {

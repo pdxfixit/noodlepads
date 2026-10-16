@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import { keysOn, keysOff } from './new-beat.mjs';
 import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
+import { hasUndo } from './banner.mjs';
 import { fakeIndexedDB } from './fake-idb.mjs';
 import { state } from '../web/state.js';
 
@@ -76,7 +77,7 @@ test('a cloud sync mid-recording leaves the beat playing and ⌨️ Keys recordi
   $('#dj-record').dispatch('click');
   assert.equal($('#seq-play').getAttribute('aria-pressed'), 'false', 'Stop stops the beat');
   assert.equal($('#dj-record').textContent, '● Record');
-  assert.match($('#dj-done-text').textContent, /^Added 6 notes/);
+  assert.match($('#banner-text').textContent, /^Added 6 notes/);
   // Problem reports carry Beat Builder's own story.
   const dj = getLog().filter((e) => e.kind === 'dj').map((e) => e.data);
   assert.deepEqual(dj.map((d) => d.rec), ['start', 'grow', 'grow', 'stop']);
@@ -99,7 +100,7 @@ test('the beat stopped from outside (⏹ Stop all) ends the recording too: the b
   $('#stop-all').dispatch('click');
   assert.equal($('#seq-play').getAttribute('aria-pressed'), 'false');
   assert.equal($('#dj-record').textContent, '● Record', 'the recording ended with the beat');
-  assert.match($('#dj-done-text').textContent, /^Added 1 note/);
+  assert.match($('#banner-text').textContent, /^Added 1 note/);
   assert.equal(getLog().filter((e) => e.kind === 'dj').at(-1).data.why, 'stopped');
   ctx.currentTime = 0;
 });
@@ -123,11 +124,11 @@ test('🆕 New mid-recording ends the recording cleanly; the note is in the scra
   assert.equal(getLog().filter((e) => e.kind === 'dj').at(-1).data.why, 'stopped');
   assert.equal($('#dj-beatbar').querySelector('[data-beat-name]').value, 'Scratch beat');
   assert.equal(hits(), 0, 'a blank scratch');
-  assert.equal($('#dj-done').hidden, false);
-  assert.equal($('#dj-done-text').textContent, '🆕 Your scratch beat is blank now.');
-  $('#dj-done-undo').dispatch('click');
+  assert.equal(hasUndo(), true);
+  assert.equal($('#banner-text').textContent, '🆕 Your scratch beat is blank now.');
+  $('#banner-action').dispatch('click');
   assert.equal(hits(), 1, 'Undo: the note is back in the scratch');
-  assert.equal($('#dj-done').hidden, true);
+  assert.equal(hasUndo(), false);
   $('#stop-all').dispatch('click');
   ctx.currentTime = 0;
 });
