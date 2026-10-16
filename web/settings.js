@@ -18,7 +18,7 @@ import { logEvent } from './log.js';
 import { LAYOUT_NAMES } from './rhythm.js';
 import { PAD_STOPS, fromOldSize } from './pad-size.js';
 import { SKIN_IDS } from './skins.js';
-import { cleanSeen } from './firsts.js';
+import { cleanSeen, cleanReaches } from './firsts.js';
 
 // A person's level (ADR 0019): 🧸 Kids, Regular or Advanced.
 export const LEVELS = ['kids', 'regular', 'advanced'];
@@ -67,6 +67,9 @@ export const SETTINGS = {
   // (it is not a choice anyone made). Per person, so a tip never repeats on
   // another device or after a backup.
   seen: { default: '', clean: cleanSeen, scope: 'person', quiet: true },
+  // A Regular person's reaches for what Advanced adds, one visit id each
+  // (firsts.js): three over two visits offer Advanced once (nudge.js).
+  reaches: { default: '', clean: cleanReaches, scope: 'person', quiet: true },
   // The keyboard the DJ keys' letters follow (dj.js, rhythm.js). The device's
   // own keyboard, so it stays with the device (Ben, Q17); a person's from
   // when it travelled is ignored, and dropped when their settings are next

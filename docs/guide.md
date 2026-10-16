@@ -181,6 +181,18 @@ first recording is kept (`kids.js`, `tips.js` `kidsHint`). Under reduced
 motion both stay still (the hand still shows). Once per person: `kids-pad`
 and `kids-mic` in `seen`, which 💡 Show tips again leaves alone.
 
+**The level-up nudge** (Regular only, `web/nudge.js`): a reach for more is
+opening 🎚️ Mixer, opening 🎹 a tune (the piano roll) or opening + Add a layer
+in the sound sheet; each is kept with the visit's id in the person setting
+`reaches` (the last eight). After three over at least two visits (a visit is a
+page load), "🎛️ Want more knobs?" with Try Advanced and ✕ shows once, in the
+bar where 🆕 update shows and in its look. A thin line along its foot runs
+down, then after about 12 s it fades; a finger, the mouse or focus holds it.
+Try Advanced sets the level and offers ↩️ Undo in the banner. ✕, a fade or Try
+Advanced mean never again (`nudge` in `seen`). It waits while a dialog is open
+or the update bar shows, and hides, unanswered, when an update comes. 🧸 Kids
+never gets it (a kid can't read it; leaving Kids is the grown-up sum).
+
 Only the two places that make a person from nothing mark them as new, in
 memory (`web/welcome.js`). Anyone stored before, pulled from the cloud or
 loaded from a backup is never asked, and a reload before it shows skips it.
@@ -188,7 +200,7 @@ loaded from a backup is never asked, and a reload before it shows skips it.
 For the tests and `just look`, the app's test hook `noodleFirstSteps = false`
 (`web/firsts.js`) turns every first step off, so a fresh device there opens on
 the app as before. The `welcome`, `welcome-stage` and `welcome-kids-stage` look
-views turn them on, `tip-beats` shows a tip, `hint-dots` the dots and `kids-hand` the 👆 hand.
+views turn them on, `tip-beats` shows a tip, `hint-dots` the dots, `kids-hand` the 👆 hand and `nudge` the level-up nudge.
 
 ## Help
 

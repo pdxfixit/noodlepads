@@ -282,6 +282,15 @@ main {
 @media (max-width: 559px) { .update-long { display: none; } }   /* a phone says just "An update is ready." (Ben, 2026-10-16) */
 .update-reload { flex: 1 0 auto; padding: 0 18px; border: 0; background: var(--led); color: var(--ink); }
 .update-close { flex: none; padding: 0 12px; border: 2px solid rgb(255 255 255 / 0.6); background: transparent; color: #fff; }
+/* 🎛️ The level-up nudge (nudge.js, ADR 0028): the update bar's place and
+   look, and a thin line along its foot that runs down over the 12 s before
+   it fades. Held (a finger, the mouse or focus on it), the line is full
+   again and waits, as the fade does. */
+.nudge-bar { overflow: hidden; }
+.nudge-time { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--led); transform-origin: left; animation: nudge-time 12s linear forwards; }
+.nudge-bar.held .nudge-time { animation: none; }
+@keyframes nudge-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .nudge-time { animation: none; } }
 
 /* Edit sounds lives on the pads screen, at the top right of the pads. */
 .pads-bar { display: flex; justify-content: flex-end; }

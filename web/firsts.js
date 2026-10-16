@@ -46,6 +46,29 @@ export const TIPS = {
 };
 export const PAD_TAPS_FOR_TIP = 3;   // pad taps on 🔊 Pads before "Hold a pad"
 
+// ── The level-up nudge (Regular only; nudge.js) ──
+// A person setting, `reaches`: one visit id per time this person reached for
+// what Advanced adds (opened 🎚️ Mixer, opened 🎹 a tune, opened + Add a
+// layer), the last REACH_KEEP of them, comma-separated, repeats kept (three
+// in one visit are three). After REACHES_FOR_NUDGE of them across at least
+// VISITS_FOR_NUDGE visits, Advanced is offered once ('nudge' in `seen`).
+const VISIT_ID = /^[a-z0-9]{1,12}$/;
+export const REACH_KEEP = 8;
+export const REACHES_FOR_NUDGE = 3;
+export const VISITS_FOR_NUDGE = 2;
+export function cleanReaches(v) {
+  if (typeof v !== 'string' || v.length > 200) return undefined;
+  return v.split(',').filter((id) => VISIT_ID.test(id)).slice(-REACH_KEEP).join(',');
+}
+export const withReach = (v, visit) => cleanReaches(`${cleanReaches(v) ?? ''},${visit}`);
+// Whether to offer Advanced now: Regular, not offered before, enough reaches
+// over enough visits.
+export function nudgeDue({ level, seen, reaches }) {
+  if (level !== 'regular' || seenSet(seen).has('nudge')) return false;
+  const list = (cleanReaches(reaches) ?? '').split(',').filter(Boolean);
+  return list.length >= REACHES_FOR_NUDGE && new Set(list).size >= VISITS_FOR_NUDGE;
+}
+
 // Whether a beat has any hits: a pill on in a plain row, or a note in a
 // tune row (sequencer.js rows: `steps`, `melody` and `tune`).
 export function beatHasHits(beat) {

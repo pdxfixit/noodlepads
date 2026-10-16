@@ -33,6 +33,7 @@ import { registerOffline } from './offline.js';
 import { initPeople, refreshPeople, addPerson, editLook, openPictures } from './people.js';
 import { initWelcome, markNew, offerWelcome } from './welcome.js';
 import { initTips, tipsScreen } from './tips.js';
+import { initNudge } from './nudge.js';
 import { beatHasHits } from './firsts.js';
 import { initCloud, needsPin, leftPerson } from './cloud.js';
 import { initCloudUI, askToOpen, shareSounds } from './cloud-ui.js';
@@ -914,6 +915,7 @@ async function start() {
     busy: () => isRecording() || !!document.querySelector('dialog[open]') || seq.playing() || song.playing() || dj.busy() || kidsBusy()
       || [...audio.playing.values()].some((v) => v.loop),
   });
+  initNudge();   // 🎛️ Want more knobs? in the update bar's place (ADR 0028)
   onSetting('advancedBeats', () => {
     if (currentPerson()) renderPads();   // the sharps and flats come and go with Advanced (a restore may be mid-way)
     if (keysShow()) dj?.render();
