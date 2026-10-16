@@ -111,6 +111,8 @@ const VIEWS = {
   'welcome-stage': { screen: 'pads', firstSteps: true, js: `${WELCOME} ${q('#wl-cards [data-level="regular"]')} ${nap}` },
   // A one-time tip in the banner: 🥁 Beats' first visit, the scratch beat empty.
   'tip-beats': { screen: 'beats', firstSteps: true, js: `${FRESH} ${q('#pads-tab')} ${q('#beats-toggle')} ${nap}` },
+  // Hint dots on ⌨️ Keys, 💃 Grooves and 🎚️ Mixer, for a person who has tapped none (the tip put away).
+  'hint-dots': { screen: 'beats', firstSteps: true, js: `${FRESH} document.querySelector('#banner-close')?.click(); ${nap}` },
   'welcome-kids-stage': { screen: 'pads', firstSteps: true, js: `${WELCOME} ${q('#wl-cards [data-level="kids"]')} ${nap}` },
   edit: { screen: 'pads', js: q('#edit-toggle') },
   settings: { screen: 'pads', js: q('#settings-open') },
