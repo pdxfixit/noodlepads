@@ -376,18 +376,6 @@
       </div>
       <p class="set-note" id="settings-note" role="status"></p>
 
-      <section class="set-section set-fold" id="set-usage" aria-labelledby="set-usage-title">
-        <h3><button type="button" class="set-head" aria-expanded="false" aria-controls="set-usage-body"><span class="set-head-caret" aria-hidden="true">▸</span><span id="set-usage-title">📊 Play data</span><span class="set-head-chip" hidden></span></button></h3>
-        <div class="set-body" id="set-usage-body" hidden>
-          <!-- Switch + policy link only (Ben, 2026-10-16): what is collected is in the shared policy. -->
-          <label class="set-radio set-switch">
-            <input type="checkbox" role="switch" id="share-usage">
-            <span><b>📊 Share play data</b></span>
-          </label>
-          <p class="set-policy"><a class="privacy-link" id="share-usage-policy" href="https://privacy.pdxfixit.com/noodlepads/" target="_blank" rel="noopener">Privacy policy</a></p>
-        </div>
-      </section>
-
       <section class="set-section set-fold" id="set-sharing" aria-labelledby="set-sharing-title">
         <h3><button type="button" class="set-head" aria-expanded="false" aria-controls="set-sharing-body"><span class="set-head-caret" aria-hidden="true">▸</span><span id="set-sharing-title">🔗 Sharing</span><span class="set-head-chip" hidden></span></button></h3>
         <div class="set-body" id="set-sharing-body" hidden>
@@ -464,6 +452,9 @@
       <section class="set-section" aria-labelledby="set-about-title">
         <h3 id="set-about-title">About</h3>
         <p class="set-about" id="about-text"></p>
+        <!-- A plain checkbox at the bottom, not a fold (Ben, 2026-10-16); what it
+             shares is in the Privacy policy, linked right under it. -->
+        <label class="set-check"><input type="checkbox" id="share-usage"> 📊 Share play data</label>
         <!-- The version, as the page footer shows it: always last (settings-ui.js). -->
         <p class="set-version">
           <span id="about-version"></span> ·

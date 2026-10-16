@@ -158,7 +158,7 @@ test('every Settings section but About folds under its heading, and the device r
   try {
     const dialog = $('#settings-dialog');
     const folds = dialog.querySelectorAll('.set-fold');
-    assert.deepEqual(folds.map((s) => s.id), ['set-usage', 'set-sharing', 'set-backups', 'set-older', 'set-beats', 'set-keys', 'set-reports']);
+    assert.deepEqual(folds.map((s) => s.id), ['set-sharing', 'set-backups', 'set-older', 'set-beats', 'set-keys', 'set-reports']);
     assert.equal($('#about-text').closest('.set-fold'), null, 'About is always open');
     for (const s of folds) {
       const head = s.querySelector('.set-head');
@@ -190,13 +190,13 @@ test('every Settings section but About folds under its heading, and the device r
 });
 
 // Ben, 2026-10-16: "take the what's-private section out of the settings now
-// that we have the privacy policy". 📊 Play data comes first; 🔗 Sharing holds
+// that we have the privacy policy". 🔗 Sharing comes first and holds
 // Shared with me. A section marked data-open-first would start open until
 // folded; none is now, but startsOpen keeps that rule.
-test('🔓 What\'s private is gone from Settings; 📊 Play data is first; 🔗 Sharing holds Shared with me', async () => {
+test('🔓 What\'s private is gone from Settings; 🔗 Sharing is first and holds Shared with me', async () => {
   const { startsOpen } = await import('../web/settings-ui.js');
   assert.equal($('#set-privacy'), null, 'no 🔓 What\'s private');
-  assert.equal($('#settings-dialog').querySelectorAll('.set-fold')[0], $('#set-usage'), '📊 Play data is first');
+  assert.equal($('#settings-dialog').querySelectorAll('.set-fold')[0], $('#set-sharing'), '🔗 Sharing is first');
   assert.equal($('#settings-dialog').querySelectorAll('[data-open-first]').length, 0, 'nothing starts open');
   assert.ok($('#set-sharing').contains($('#shared-browse')), '🔗 Shared with me is under Sharing');
   assert.equal($('#set-cloud'), null, 'no ☁️ Cloud section is left');
@@ -281,34 +281,25 @@ test('Send problem reports is a switch, off by default, with a grown-up line and
   $('#settings-dialog').close();
 });
 
-// Ben, 2026-10-16: "use B and 'Share play data' everywhere": its own fold,
-// first in Settings, on by default; off sends nothing.
-test('📊 Play data comes first: 📊 Share play data, on by default, sets sendUsage', async () => {
-  const folds = $('#settings-dialog').querySelectorAll('.set-fold').map((f) => f.id);
-  assert.equal(folds[0], 'set-usage');
+// Ben, 2026-10-16: "use B and 'Share play data' everywhere"; then "play data
+// should be a check box at the bottom, not a collapsing pane". On by default;
+// off sends nothing; the Privacy policy is linked right under it.
+test('📊 Share play data is a plain checkbox in About, above the version and the Privacy policy, on by default', async () => {
+  assert.equal($('#set-usage'), null, 'no 📊 Play data fold');
   const sw = $('#share-usage');
-  assert.equal(sw.getAttribute('role'), 'switch');
-  assert.equal(sw.parent.querySelector('b').textContent, '📊 Share play data');
-  assert.equal($('#set-usage-title').textContent, '📊 Play data');
-  // Ben, 2026-10-16: "Switch + policy link only".
-  const body = $('#set-usage-body');
-  assert.equal(body.querySelectorAll('.field-hint').length, 0, 'no words about what is collected');
+  assert.equal(sw.getAttribute('type'), 'checkbox');
+  assert.equal(sw.getAttribute('role'), null, 'a checkbox, not a switch');
+  assert.equal(sw.closest('.set-fold'), null, 'not inside a fold');
+  assert.ok($('#about-text').parent.contains(sw), 'in About, at the bottom');
   const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
-  const section = html.slice(html.indexOf('id="set-usage-body"'), html.indexOf('</section>', html.indexOf('id="set-usage-body"')));
-  assert.doesNotMatch(section, /Never sounds|recordings|anyone's names|screens and buttons/, 'the collection words stay out');
-  assert.match(section, /<span><b>📊 Share play data<\/b><\/span>/, 'the switch says its name and nothing more');
-  assert.match(section, /<a class="privacy-link" id="share-usage-policy" href="https:\/\/privacy\.pdxfixit\.com\/noodlepads\/" target="_blank" rel="noopener">Privacy policy<\/a>/);
-  assert.ok(section.indexOf('id="share-usage"') < section.indexOf('share-usage-policy'), 'the link right under the switch');
+  assert.match(html, /<label class="set-check"><input type="checkbox" id="share-usage"> 📊 Share play data<\/label>\s*(<!--[\s\S]*?-->\s*)?<p class="set-version">[\s\S]*?Privacy policy<\/a>/, 'its name only, then the version and the Privacy policy');
   assert.equal(getSetting('sendUsage'), true);
   $('#settings-open').dispatch('click');
   assert.equal(sw.checked, true);
-  const chip = () => $('#set-usage').querySelector('.set-head-chip').textContent;
-  assert.equal(chip(), 'On');
   sw.checked = false;
   sw.dispatch('change');
   await page.settle();
   assert.strictEqual(getSetting('sendUsage'), false);
-  assert.equal(chip(), 'Off');
   sw.checked = true;
   sw.dispatch('change');
   await page.settle();
