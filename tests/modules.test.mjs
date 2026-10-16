@@ -21,8 +21,10 @@ function importsOf(text) {
   return out;
 }
 
-// app.js starts the page when loaded, so it is only read, not run.
-const loadable = files.filter((f) => f !== 'app.js');
+// app.js starts the page when loaded, so it is only read, not run. sw.js is
+// the service worker, a classic script run on a worker's `self`;
+// offline.test.mjs runs it on stand-ins.
+const loadable = files.filter((f) => f !== 'app.js' && f !== 'sw.js');
 
 test('every module except app.js loads outside a browser', async () => {
   for (const f of loadable) await import(new URL(f, webDir));

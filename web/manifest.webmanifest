@@ -1,0 +1,16 @@
+{
+  "name": "Noodle Pads",
+  "short_name": "Noodle Pads",
+  "description": "Tap a pad to play a sound, hold it to loop, record your own sounds and make beats.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#1F3FA8",
+  "background_color": "#1F3FA8",
+  "icons": [
+    { "src": "app-icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "app-icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "app-icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

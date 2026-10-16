@@ -71,7 +71,10 @@ export function initUpdate(deps) {
     lastAsked = now();
     try {
       const res = await fetch('version.json', { cache: 'no-store' });
-      if (res?.ok) live = liveVersionOf(await res.json()) ?? live;
+      // With no network the service worker answers with the version it
+      // keeps, marked X-Noodle-Offline (sw.js): that says what this device
+      // holds, not what is live, so it is no news.
+      if (res?.ok && !res.headers?.get?.('X-Noodle-Offline')) live = liveVersionOf(await res.json()) ?? live;
       // ✕ lasts one round: each check (every 10 minutes, or on coming back)
       // offers the newer version again (Ben, 2026-10-11).
       dismissed = null;
