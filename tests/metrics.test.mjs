@@ -234,21 +234,6 @@ test('deleting a profile deletes its metrics: it is gone from the cloud at once'
   assert.equal(env.DB.rows("SELECT COUNT(*) AS n FROM activity WHERE profile_id = 'p-b'")[0].n, 1, "another profile's stay");
 });
 
-// Until migration 005 has dropped them (ADR 0027), a deleted profile's old
-// `uses` and `visits` rows go too, and a database without them is no trouble.
-test('before migration 005, deleting a profile also deletes its old counts and visits', async () => {
-  const { env, call } = cloud();
-  env.DB.db.exec(`CREATE TABLE uses (profile_id TEXT, feature TEXT, day TEXT, n INTEGER);
-    CREATE TABLE visits (id INTEGER PRIMARY KEY, at INTEGER, profile_id TEXT);
-    INSERT INTO uses VALUES ('p-a', 'pad', '2026-10-12', 3), ('p-b', 'pad', '2026-10-12', 1);
-    INSERT INTO visits (at, profile_id) VALUES (1, 'p-a'), (2, 'p-b');`);
-  const key = await make(call);
-  await make(call, 'p-b');
-  assert.equal((await call('DELETE', 'profiles/p-a', { key, body: {} })).status, 200);
-  assert.deepEqual(env.DB.rows('SELECT profile_id FROM uses'), [{ profile_id: 'p-b' }]);
-  assert.deepEqual(env.DB.rows('SELECT profile_id FROM visits'), [{ profile_id: 'p-b' }]);
-});
-
 // ADR 0027: older copies of the app still send {uses, visits}; the Worker says
 // yes and keeps nothing, so they drop what they hold instead of retrying.
 test('the retired /uses route answers 200 and stores nothing, but still needs the key and a small body', async () => {
