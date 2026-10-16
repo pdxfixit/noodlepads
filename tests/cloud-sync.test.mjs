@@ -19,7 +19,7 @@ import { appMeta } from '../web/device-meta.js';
 
 const KIT = ['kick', 'snare'];
 const KEYS = { clips: 'id', overrides: 'id', orders: 'personId', patterns: 'personId', beats: 'id', people: 'id',
-  settings: 'key', decks: 'personId', takes: 'id', songs: 'personId', songbook: 'id', prefs: 'personId', layouts: 'id', voices: 'id' };
+  settings: 'key', decks: 'personId', takes: 'id', songs: 'personId', songbook: 'id', prefs: 'personId', layouts: 'id', voices: 'id', touchLayouts: 'id' };
 
 function server() {
   const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') } };
@@ -401,6 +401,18 @@ test('saved DJ key layouts sync with their person, and the app and the Worker ag
   assert.deepEqual(b.stores.layouts.map((l) => [l.id, l.name, l.keys.KeyQ]), [['layout-1', 'Space jam', 'user-1']]);
   // A kind from a newer copy of the app is left in the cloud, not a crash.
   assert.deepEqual(pulledDoc('p-a', null, [{ kind: 'gadgets', id: 'g-1', body: { id: 'g-1' } }]).gadgets, undefined);
+});
+
+test('👆 touch layouts sync with their person, and count as something made (ADR 0028)', async () => {
+  const { api } = server();
+  const { a, link } = await startA(api);
+  const saved = { id: 'touch-1', personId: 'p-a', name: 'Jam pads', created: 7, bands: [{ group: 'mine', size: 'l', sounds: ['user-1'] }] };
+  a.stores.touchLayouts = [saved];
+  await syncProfile(link, a.deps(api));
+  const { d: b, link: bl } = await openOn(api, 'p-a');
+  await syncProfile(bl, b.deps(api));
+  assert.deepEqual(b.stores.touchLayouts, [saved]);
+  assert.equal(hasMade({ touchLayouts: [saved] }, 'p-a'), true, 'a saved touch layout takes its person to the cloud');
 });
 
 test("a kid's own voices sync with their person: made, used, renamed and deleted on one device, the same on the other", async () => {

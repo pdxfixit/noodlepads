@@ -53,6 +53,7 @@ A small rule (a label, a color, a layout) needs only its row in `decisions.md`.
 | [0026](0026-telemetry-standard.md) | Usage events in the shared telemetry standard: one `track()` call, hooks per category, on by default with the `sendUsage` switch, which also gates the older metrics | Accepted |
 | [0027](0027-retire-feature-counts-and-visits.md) | Retire the feature-use counts and visit summaries now the shared events are live; keep devices and activity | Accepted |
 | [0028](0028-welcome-and-tips.md) | New people get a welcome (Who's playing?), a stage name and one-time tips; a level-up nudge | Accepted, to build |
+| [0028](0028-touch-layouts.md) | 👆 Touch layouts: bands of sounds on the deck (`decks.touch`), named saves as their own records (`touchLayouts`) | Proposed |
 
 ## Template
 

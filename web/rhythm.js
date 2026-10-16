@@ -2,6 +2,8 @@
 // key, and how a kid's imprecise hits become pills without ever judging them.
 // No DOM, no audio, no storage, so every rule is unit-tested.
 
+import { cleanTouch } from './touch.js';
+
 // The number row and the three letter rows of a keyboard, by physical
 // position (KeyboardEvent.code), so a key stays put whatever the layout.
 // Ben, 2026-10-12: "the keyboard layout should have the number row as well".
@@ -227,6 +229,8 @@ export function cleanDeck(d) {
   if (/^beat-[a-z0-9-]{1,48}$/.test(d.beatId)) out.beatId = d.beatId;
   // `mine`: ⭐ My keys, the kid's own keyboard kept when a layout replaced it (ADR 0014), all 40 keys (an older one's number row as No sound).
   if (d.mine && typeof d.mine === 'object' && !Array.isArray(d.mine)) out.mine = { ...Object.fromEntries(KEY_CODES.map((c) => [c, null])), ...codes(d.mine) };
+  // `touch`: the 👆 touch layout, bands of sounds (ADR 0028); `touchMine`: ⭐ My layout, the hand-made one kept when a saved one replaced it.
+  for (const k of ['touch', 'touchMine']) { const t = cleanTouch(d[k]); if (t) out[k] = t; }
   return out;
 }
 

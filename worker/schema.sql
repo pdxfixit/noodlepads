@@ -47,7 +47,7 @@ CREATE INDEX IF NOT EXISTS keys_profile ON keys (profile_id);
 -- tombstone (deleted = 1, body NULL) so other devices learn of the delete.
 CREATE TABLE IF NOT EXISTS records (
   profile_id TEXT NOT NULL,
-  kind       TEXT NOT NULL,     -- clips overrides orders patterns beats decks takes songs songbook prefs layouts voices
+  kind       TEXT NOT NULL,     -- clips overrides orders patterns beats decks takes songs songbook prefs layouts voices touchLayouts
   id         TEXT NOT NULL,     -- the record's id (personId for one-per-person kinds)
   body       TEXT,              -- JSON; NULL when deleted
   sound_id   TEXT,              -- clips only: the sound holding its audio

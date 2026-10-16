@@ -326,7 +326,7 @@ export function personIdsIn(doc, kitIds = []) {
   const ids = [];
   const list = (name) => (Array.isArray(doc?.[name]) ? doc[name] : []);
   for (const p of list('people')) ids.push(p?.id);
-  for (const name of ['clips', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'layouts', 'voices']) {
+  for (const name of ['clips', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'layouts', 'voices', 'touchLayouts']) {
     for (const r of list(name)) ids.push(r?.personId);
   }
   for (const o of list('overrides')) {
@@ -437,7 +437,7 @@ export function overrideWithEmoji(base, existing, emoji) {
 // ✏️ Edit sounds, 🎛️ DJ, 🔗 Share, ⭐ My voices.
 export const KIND_EMOJI = Object.freeze({
   sounds: '🔊', beats: '🥁', songs: '🎼', takes: '🎬', voices: '⭐',
-  people: '👥', edits: '✏️', djKeys: '🎛️', shares: '🔗', layouts: '⌨️',
+  people: '👥', edits: '✏️', djKeys: '🎛️', shares: '🔗', layouts: '⌨️', touchLayouts: '👆',
 });
 
 // The kinds a person's row in 👥 People counts, in order, with their words.

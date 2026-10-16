@@ -28,13 +28,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 // The stores whose records get a `changed` stamp when a kid edits them: every
 // kind that syncs (cloud-sync.js CLOUD_KINDS). People keep their own `edited`.
-export const STAMPED = new Set(['clips', 'overrides', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices']);
+export const STAMPED = new Set(['clips', 'overrides', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices', 'touchLayouts']);
 
 // Kinds that can keep two copies when a clash can't be merged safely: each
 // has its own ids, so the cloud's copy goes under a new id (merge.js). The
 // rest (one per person, kit edits, own voices) can't, so the newer edit wins
 // there instead.
-export const KEEP_BOTH = new Set(['clips', 'beats', 'takes', 'songbook', 'layouts']);
+export const KEEP_BOTH = new Set(['clips', 'beats', 'takes', 'songbook', 'layouts', 'touchLayouts']);
 
 // A stamp as stored, or undefined: a time, and never far in the future (a
 // backup or the cloud can't make one record win every clash forever).

@@ -18,11 +18,11 @@ import { songBeatIds, mapSongBeats } from './playlist.js';
 // The stores that belong to one person (`voices` is ⭐ My voices, IndexedDB
 // `voices`). orders, patterns, decks, songs and
 // prefs (the person's settings) hold one record per person, keyed by personId.
-export const CLOUD_KINDS = ['clips', 'overrides', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices'];
+export const CLOUD_KINDS = ['clips', 'overrides', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices', 'touchLayouts'];
 export const ONE_EACH = new Set(['orders', 'patterns', 'decks', 'songs', 'prefs']);
 // What counts as a person having made something: a person with none of these
 // (a new device's empty "Me") never goes to the cloud by itself.
-const MADE = new Set(['clips', 'overrides', 'beats', 'takes', 'songbook', 'layouts', 'voices']);
+const MADE = new Set(['clips', 'overrides', 'beats', 'takes', 'songbook', 'layouts', 'voices', 'touchLayouts']);
 export const CHUNK_BYTES = 1_900_000;
 // The biggest sound the cloud keeps (worker/cloud.js MAX_SOUND_BYTES). The
 // app makes longer ones (a 3-minute song as a sound); those stay on the
@@ -38,7 +38,7 @@ export const keyOf = (kind, id) => `${kind}:${id}`;
 export function recordsOf(lists, personId, kitIds = []) {
   const out = new Map();
   const add = (kind, id, record) => out.set(keyOf(kind, id), { kind, id, record });
-  for (const kind of ['clips', 'beats', 'takes', 'songbook', 'layouts', 'voices']) {
+  for (const kind of ['clips', 'beats', 'takes', 'songbook', 'layouts', 'voices', 'touchLayouts']) {
     for (const r of list(lists, kind)) if (r?.personId === personId && typeof r.id === 'string') add(kind, r.id, r);
   }
   for (const kind of ONE_EACH) {

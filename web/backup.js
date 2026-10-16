@@ -2,8 +2,9 @@
 // another copy of the app (another device, or another address) can load.
 //
 //   backup.json     {app: 'noodlepads', format: '1.1', exported, version, people, clips, overrides,
-//                    orders, patterns, beats, settings, decks, takes, songs, songbook, prefs, layouts, voices}; each clip names its audio file.
+//                    orders, patterns, beats, settings, decks, takes, songs, songbook, prefs, layouts, voices, touchLayouts}; each clip names its audio file.
 //                    `layouts` (since the DJ's ✏️ Edit keys) is each person's saved key layouts; an older 1.x copy skips it.
+//                    `touchLayouts` (since 👆 touch layouts, ADR 0028) is each person's saved touch layouts; an older 1.x copy skips it.
 //                    `voices` (since ⭐ Save voice) is each person's own voices, knob settings with a name; an older 1.x copy skips it.
 //                    `songs` holds each person's open song, `songbook` every saved song.
 //   sounds/<id>.<ext>  the audio of each sound made in the app
@@ -27,6 +28,7 @@ import { cleanTrim, cleanFrom, cleanEdits, cleanFade } from './cuts.js';
 import { allowedValue, inBackups, cleanPrefs } from './settings.js';
 import { cleanDeck, cleanTake } from './rhythm.js';
 import { cleanLayout } from './keyset.js';
+import { cleanTouchLayout, MAX_TOUCH_LAYOUTS } from './touch.js';
 import { cleanMyVoice } from './voice-knobs.js';
 import { cleanSong, SONG_ID } from './song.js';
 import { cleanSynth } from './synth.js';
@@ -77,7 +79,7 @@ const MAX_JSON_BYTES = 8 * 1024 * 1024;
 // One sound: the biggest the app itself makes is a 3-minute song or DJ take
 // saved as a sound (a stereo WAV: 35 MB at 48 kHz, 69 MB at 96 kHz).
 export const MAX_SOUND_BYTES = 80 * 1024 * 1024;
-const MAX_RECORDS = { people: 100, clips: 2000, overrides: 2000, orders: 100, patterns: 100, beats: 1000, settings: 50, decks: 100, takes: 500, songs: 100, songbook: 1000, prefs: 100, layouts: 500, voices: 500 };
+const MAX_RECORDS = { people: 100, clips: 2000, overrides: 2000, orders: 100, patterns: 100, beats: 1000, settings: 50, decks: 100, takes: 500, songs: 100, songbook: 1000, prefs: 100, layouts: 500, voices: 500, touchLayouts: MAX_TOUCH_LAYOUTS };
 
 const text = (v, max) => (typeof v === 'string' ? v.slice(0, max) : undefined);
 // A name or label: trimmed, cut to `max`, and undefined when nothing is left.
@@ -125,6 +127,7 @@ export async function makeBackup(state, version = 'dev') {
     prefs: state.prefs ?? [],
     layouts: state.layouts ?? [],
     voices: state.voices ?? [],
+    touchLayouts: state.touchLayouts ?? [],
   };
   files.unshift({ name: 'backup.json', data: new TextEncoder().encode(JSON.stringify(doc, null, 1)) });
   return zip(files);
@@ -353,6 +356,7 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
   const decks = clean('decks', (d) => (knownPerson(d?.personId) ? cleanDeck(d) : null));
   const takes = clean('takes', (t) => (knownPerson(t?.personId) ? cleanTake(t) : null));
   const layouts = clean('layouts', (l) => (knownPerson(l?.personId) ? cleanLayout(l) : null));
+  const touchLayouts = clean('touchLayouts', (l) => (knownPerson(l?.personId) ? cleanTouchLayout(l) : null));
   // A kid's own voice: a safe id, a name or emoji, and knobs that change something.
   const voices = clean('voices', (v) => (VOICE_RECORD_ID.test(v?.id) && knownPerson(v.personId) ? cleanMyVoice(v) : null));
   // A block naming a beat that isn't here stays; it shows as deleted. Old
@@ -381,7 +385,7 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
   const prefs = clean('prefs', (p) => (knownPerson(p?.personId) ? cleanPrefs(p) : null));
 
   return {
-    people, clips, overrides, orders, patterns, beats, settings, decks, takes, songs, songbook, prefs, layouts, voices, skipped, left, notes,
+    people, clips, overrides, orders, patterns, beats, settings, decks, takes, songs, songbook, prefs, layouts, voices, touchLayouts, skipped, left, notes,
     exported: text(doc.exported, 40),
     version: text(doc.version, 40),
   };
@@ -402,7 +406,7 @@ const LEFT_WORDS = {
 };
 const STORE_WORDS = {
   people: 'person', clips: 'sound', overrides: 'sound change', orders: 'pad order', patterns: 'open beat',
-  beats: 'beat', settings: 'setting', decks: 'key set', takes: 'take', songs: 'open song', songbook: 'song', layouts: 'key layout', voices: 'own voice',
+  beats: 'beat', settings: 'setting', decks: 'key set', takes: 'take', songs: 'open song', songbook: 'song', layouts: 'key layout', voices: 'own voice', touchLayouts: 'touch layout',
 };
 
 export function leftOutNote({ skipped = 0, left = {}, notes = {} } = {}) {

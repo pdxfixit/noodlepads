@@ -50,20 +50,20 @@ export async function sameBytes(a, b) {
   return true;
 }
 
-const STORES = ['people', 'clips', 'overrides', 'orders', 'patterns', 'beats', 'settings', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices'];
+const STORES = ['people', 'clips', 'overrides', 'orders', 'patterns', 'beats', 'settings', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices', 'touchLayouts'];
 const list = (doc, name) => (Array.isArray(doc?.[name]) ? doc[name] : []);
 
 // local: the stores on this device as lists ({key, value} for settings).
 // incoming: cleaned data (backup.js cleanBackup). `kitIds` are the kit's ids
 // (a kit edit names its person). `newId(prefix)` makes a fresh id.
 // Returns {put: {<store>: [records]}, dropPeople: [ids], added: {people,
-// sounds, beats, songs, takes, layouts, voices}, already}: what to store, the device's default
+// sounds, beats, songs, takes, layouts, voices, touchLayouts}, already}: what to store, the device's default
 // people to delete, and what to tell the kid.
 export async function mergeLoaded(local, incoming, { kitIds = [], newId = makeId } = {}) {
   const put = Object.fromEntries(STORES.map((s) => [s, []]));
-  const added = { people: 0, sounds: 0, beats: 0, songs: 0, takes: 0, layouts: 0, voices: 0 };
+  const added = { people: 0, sounds: 0, beats: 0, songs: 0, takes: 0, layouts: 0, voices: 0, touchLayouts: 0 };
   let already = 0;
-  const usedIds = new Set(['clips', 'beats', 'takes', 'songbook', 'layouts', 'voices'].flatMap((s) => [...list(local, s), ...list(incoming, s)].map((r) => r?.id)));
+  const usedIds = new Set(['clips', 'beats', 'takes', 'songbook', 'layouts', 'voices', 'touchLayouts'].flatMap((s) => [...list(local, s), ...list(incoming, s)].map((r) => r?.id)));
   const freshId = (prefix) => {
     let id;
     do id = newId(prefix); while (usedIds.has(id));
@@ -169,6 +169,10 @@ export async function mergeLoaded(local, incoming, { kitIds = [], newId = makeId
   const keysVia = (keys) => Object.fromEntries(Object.entries(keys ?? {}).map(([k, v]) => [k, v === null ? null : clip(v)]));
   await byId('layouts', 'layout', (l) => ({ ...l, keys: keysVia(l.keys) }));
   added.layouts = put.layouts.length;
+  // A touch layout's sounds follow a renamed sound too (ADR 0028).
+  const bandsVia = (bands) => (Array.isArray(bands) ? bands.map((b) => ({ ...b, sounds: Array.isArray(b?.sounds) ? b.sounds.map(clip) : b?.sounds })) : bands);
+  await byId('touchLayouts', 'touch', (l) => ({ ...l, bands: bandsVia(l.bands) }));
+  added.touchLayouts = put.touchLayouts.length;
 
   // A kid's own voice is one voice under its id: when two copies differ, the
   // newer rename wins (`edited`), and it keeps the latest use. A voice is a
@@ -207,6 +211,7 @@ export async function mergeLoaded(local, incoming, { kitIds = [], newId = makeId
   keepMine('decks', 'personId', (d) => {
     const out = { ...d, keys: keysVia(d.keys) };
     if (d.mine) out.mine = keysVia(d.mine);
+    for (const k of ['touch', 'touchMine']) if (d[k]) out[k] = { ...d[k], bands: bandsVia(d[k].bands) };
     if (d.beatId) out.beatId = beat(d.beatId);
     return out;
   });
@@ -226,7 +231,7 @@ export async function mergeLoaded(local, incoming, { kitIds = [], newId = makeId
 // sounds, 🥁 2 beats; 4 already here."
 export function mergeSummary({ added, already }) {
   const parts = [
-    ['sounds', 'sound'], ['beats', 'beat'], ['songs', 'song'], ['takes', 'take'], ['layouts', 'key layout'], ['voices', 'own voice'], ['people', 'person'],
+    ['sounds', 'sound'], ['beats', 'beat'], ['songs', 'song'], ['takes', 'take'], ['layouts', 'key layout'], ['touchLayouts', 'touch layout'], ['voices', 'own voice'], ['people', 'person'],
   ].filter(([k]) => added[k] > 0).map(([k, word]) => {
     const n = added[k];
     return `${KIND_EMOJI[k]} ${word === 'person' ? (n === 1 ? '1 person' : `${n} people`) : count(n, word)}`;

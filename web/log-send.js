@@ -129,7 +129,7 @@ export function createLogSender(deps) {
   };
 }
 
-// Every name typed on this device: people, sounds, beats, songs, takes, DJ layouts, a kid's own voices, and
+// Every name typed on this device: people, sounds, beats, songs, takes, DJ layouts, touch layouts, a kid's own voices, and
 // the bundled people's ids (they are first names). log-clean.js blanks them.
 export function namesOnDevice(s = state) {
   const everyone = people({ includeHidden: true });
@@ -146,6 +146,7 @@ export function namesOnDevice(s = state) {
     ...[...s.songs.values()].map((x) => x.name),
     ...s.songbook.map((x) => x.name),
     ...(s.layouts ?? []).map((l) => l.name),
+    ...(s.touchLayouts ?? []).map((l) => l.name),
     ...(s.myVoices ?? []).map((v) => v.name),
   ].filter((n) => typeof n === 'string' && n);
 }

@@ -41,7 +41,7 @@ export const SESSION_KEY_MS = 7 * 24 * 60 * 60 * 1000;
 export const ACTIVE_STEP_MS = 60 * 60 * 1000;
 
 // The stores that belong to one person (state.js, store.js).
-export const KINDS = ['clips', 'overrides', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices'];
+export const KINDS = ['clips', 'overrides', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices', 'touchLayouts'];
 const RECORD_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const SOUND_ID = /^s-[a-z2-7]{26}$/;
 const SHA = /^[0-9a-f]{64}$/;

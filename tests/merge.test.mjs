@@ -7,7 +7,7 @@ import { mergeLoaded, mergeSummary, sameBytes } from '../web/merge.js';
 import { soloPerson } from '../web/model.js';
 
 const audio = (...b) => new Blob([new Uint8Array(b)], { type: 'audio/webm' });
-const STORES = ['people', 'clips', 'overrides', 'orders', 'patterns', 'beats', 'settings', 'decks', 'takes', 'songs', 'songbook', 'layouts', 'voices'];
+const STORES = ['people', 'clips', 'overrides', 'orders', 'patterns', 'beats', 'settings', 'decks', 'takes', 'songs', 'songbook', 'layouts', 'voices', 'touchLayouts'];
 const empty = () => Object.fromEntries(STORES.map((s) => [s, []]));
 const doc = (over) => ({ ...empty(), ...over });
 const KEY = { orders: 'personId', patterns: 'personId', decks: 'personId', songs: 'personId', settings: 'key' };
@@ -118,9 +118,10 @@ test('a clash keeps both: the incoming record gets a new id, and everything nami
     takes: [{ id: 'take-b-1', personId: 'p-bo-1', name: 'Jam', created: 1, duration: 1, events: [{ t: 0, clipId: 'user-a-1', kind: 'tap' }] }],
     orders: [{ personId: 'p-bo-1', ids: ['user-a-1', 'user-b-2'] }],
     patterns: [{ id: 'beat-a-1', personId: 'p-bo-1', name: 'Groove', bpm: 120, rows: [{ clipId: 'user-a-1', steps: [] }] }],
-    decks: [{ personId: 'p-bo-1', keys: { KeyA: 'user-a-1', KeyB: null }, beatId: 'beat-a-1', mine: { KeyS: 'user-a-1', KeyD: null } }],
+    decks: [{ personId: 'p-bo-1', keys: { KeyA: 'user-a-1', KeyB: null }, beatId: 'beat-a-1', mine: { KeyS: 'user-a-1', KeyD: null }, touch: { bands: [{ group: 'mine', size: 'm', sounds: ['user-a-1', 'user-b-2'] }] } }],
     songs: [{ id: 'song-a-1', personId: 'p-bo-1', name: 'Tune', slots: [{ beatId: 'beat-a-1', times: 2 }], tempo: 100, lanes: [{ name: 'Drums', blocks: [{ beatId: 'beat-a-1', bar: 0, times: 2 }] }] }],
     layouts: [{ id: 'layout-b-1', personId: 'p-bo-1', name: 'Party', created: 1, keys: { KeyQ: 'user-a-1', KeyW: null } }],
+    touchLayouts: [{ id: 'touch-b-1', personId: 'p-bo-1', name: 'Jam pads', created: 1, bands: [{ group: 'mine', size: 'l', sounds: ['user-a-1'] }] }],
   });
   const merged = await merge(local, incoming);
   const [clip, chopped] = merged.put.clips;
@@ -139,19 +140,20 @@ test('a clash keeps both: the incoming record gets a new id, and everything nami
   assert.deepEqual(merged.put.orders[0].ids, [clip.id, 'user-b-2']);
   assert.equal(merged.put.patterns[0].id, beat.id);
   assert.equal(merged.put.patterns[0].rows[0].clipId, clip.id);
-  assert.deepEqual(merged.put.decks[0], { personId: 'p-bo-1', keys: { KeyA: clip.id, KeyB: null }, beatId: beat.id, mine: { KeyS: clip.id, KeyD: null } });
+  assert.deepEqual(merged.put.decks[0], { personId: 'p-bo-1', keys: { KeyA: clip.id, KeyB: null }, beatId: beat.id, mine: { KeyS: clip.id, KeyD: null }, touch: { bands: [{ group: 'mine', size: 'm', sounds: [clip.id, 'user-b-2'] }] } });
+  assert.deepEqual(merged.put.touchLayouts[0].bands[0].sounds, [clip.id], 'a saved touch layout follows the renamed sound (ADR 0028)');
   assert.deepEqual(merged.put.layouts[0].keys, { KeyQ: clip.id, KeyW: null }, 'a saved key layout follows the renamed sound');
   assert.equal(merged.put.songs[0].id, song.id);
   assert.equal(merged.put.songs[0].slots[0].beatId, beat.id);
   assert.equal(merged.put.songs[0].lanes[0].blocks[0].beatId, beat.id);
-  assert.deepEqual(merged.added, { people: 1, sounds: 2, beats: 1, songs: 1, takes: 1, layouts: 1, voices: 0 });
-  assert.equal(mergeSummary(merged), 'Added 🔊 2 sounds, 🥁 1 beat, 🎼 1 song, 🎬 1 take, ⌨️ 1 key layout, 👥 1 person; 1 already here.');
+  assert.deepEqual(merged.added, { people: 1, sounds: 2, beats: 1, songs: 1, takes: 1, layouts: 1, voices: 0, touchLayouts: 1 });
+  assert.equal(mergeSummary(merged), 'Added 🔊 2 sounds, 🥁 1 beat, 🎼 1 song, 🎬 1 take, ⌨️ 1 key layout, 👆 1 touch layout, 👥 1 person; 1 already here.');
 
   // Loading the same backup again changes nothing: each renamed record is found under its new id.
   const after = stored(local, merged);
   const again = await merge(after, incoming);
   for (const s of STORES) assert.deepEqual(again.put[s], [], s);
-  assert.deepEqual(again.added, { people: 0, sounds: 0, beats: 0, songs: 0, takes: 0, layouts: 0, voices: 0 });
+  assert.deepEqual(again.added, { people: 0, sounds: 0, beats: 0, songs: 0, takes: 0, layouts: 0, voices: 0, touchLayouts: 0 });
 });
 
 test('mergeSummary says what came and what was already here', () => {
