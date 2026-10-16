@@ -52,7 +52,7 @@ const MUST_MENTION = [
   '⌨️', '● Record', '↩️ My beat',
   // Live
   '⏲️ Click track', 'keep tapping…', '✏️ Edit keys', '↺ Reset keys', '⭐ Save this layout', '⭐ My keys', '✕ Unpick all', '🎬 Takes',
-  '🔊 Make a sound', 'Make another?', '⌨️ Keyboard',
+  '🔊 Make a sound', 'Make another?', '⌨️ Keyboard', '👆',
   // Song
   '🎼 Song', '➕ Add a lane', '▶ Play song', '🔊 Save as a sound', '↩️ Undo',
   // Settings

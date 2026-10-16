@@ -2428,6 +2428,61 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 .dj-keys.pads-mode[data-size="l"] .dj-name { font-size: 0.95rem; }
 .dj-tabs[hidden], .dj-size[hidden] { display: none; }
 .dj-size button { min-width: 44px; }
+/* ⌨️ / 👆 (ADR 0028): its own short line, at the right, above the keys or tiles. */
+.dj-input { display: flex; justify-content: flex-end; margin: 0 0 10px; }
+.dj-input-switch button { min-width: 56px; font-size: 1.3rem; }
+/* 👆 The touch layout: bands top to bottom, each a heading and a grid of
+   tiles all one size. On a phone S, M and L are 5, 4 and 2 across (Ben,
+   2026-10-16); wider, as many as fit at that size, stretched to fill. */
+.dj-touch { display: grid; gap: 14px; width: 100%; max-width: 1500px; margin-inline: auto; }
+.dj-touch[hidden], .dj-keys[hidden] { display: none; }
+.touch-band { display: grid; gap: 6px; min-width: 0; }
+.touch-head { margin: 0; font: 800 0.8rem/1 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: rgb(255 255 255 / 0.8); }
+.touch-tiles { --across: 4; display: grid; grid-template-columns: repeat(var(--across), minmax(0, 1fr)); gap: 8px; }
+.touch-band[data-size="s"] .touch-tiles { --across: 5; }
+.touch-band[data-size="l"] .touch-tiles { --across: 2; }
+.touch-tile {
+  --c: #333040;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 76px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--c);
+  color: #fff;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--c) 55%, black);
+  transition: transform 50ms, box-shadow 50ms;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.touch-band[data-size="s"] .touch-tile { min-height: 60px; }
+.touch-band[data-size="l"] .touch-tile { min-height: 120px; }
+.touch-emoji { font-size: 1.6rem; line-height: 1; }
+.touch-band[data-size="s"] .touch-emoji { font-size: 1.3rem; }
+.touch-band[data-size="l"] .touch-emoji { font-size: 2.6rem; }
+.touch-name { max-width: 100%; overflow: hidden; font: 800 0.8rem/1.1 var(--font-ui); text-overflow: ellipsis; white-space: nowrap; }
+.touch-band[data-size="s"] .touch-name { font-size: 0.7rem; font-stretch: 80%; }
+.touch-band[data-size="l"] .touch-name { font-size: 1rem; }
+.touch-tile.down, .touch-tile.hit { filter: brightness(1.45) saturate(1.2); box-shadow: 0 0 18px 4px var(--c), 0 1px 0 color-mix(in srgb, var(--c) 55%, black); transform: translateY(3px); }
+.touch-tile.looping { animation: dj-pulse 0.9s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .touch-tile.looping { animation: none; filter: brightness(1.35); } }
+.touch-empty { margin: 8px 0; color: rgb(255 255 255 / 0.85); font-weight: 700; }
+@media (min-width: 700px) {
+  .touch-tiles { --tile: 128px; grid-template-columns: repeat(auto-fit, minmax(min(var(--tile), 100%), 1fr)); }
+  .touch-band[data-size="s"] .touch-tiles { --tile: 96px; }
+  .touch-band[data-size="l"] .touch-tiles { --tile: 220px; }
+  .touch-band[data-size="s"] .touch-tile { min-height: 64px; }
+  .touch-band .touch-tile { min-height: 88px; }
+  .touch-band[data-size="l"] .touch-tile { min-height: 130px; }
+}
+
 /* A legend for the key colors, like the periodic table's. */
 .dj-change-row { grid-area: change; display: flex; justify-content: flex-end; }
 /* Under the keys: the pad size, then the last line: the key colors at the
@@ -2850,8 +2905,8 @@ body[data-locked] main { visibility: hidden; }
   /* Beat Builder: the beat beside the keys that record into it. */
   .dj:has(> .dj-grid:not([hidden])) { display: grid; grid-template-columns: minmax(18rem, 1fr) minmax(0, 2fr); column-gap: 20px; align-items: start; }
   .dj:has(> .dj-grid:not([hidden])) > * { grid-column: 1 / -1; }
-  .dj:has(> .dj-grid:not([hidden])) > .dj-grid { grid-column: 1; }
-  .dj:has(> .dj-grid:not([hidden])) > .dj-keys { grid-column: 2; }
+  .dj:has(> .dj-grid:not([hidden])) > .dj-grid { grid-column: 1; grid-row: span 2; }   /* beside ⌨️ / 👆 and the keys or tiles under it */
+  .dj:has(> .dj-grid:not([hidden])) > :is(.dj-keys, .dj-touch, .dj-input) { grid-column: 2; }
 
   /* ❓ Help: wider, its pictures and sentences in two columns. */
   dialog#help { width: min(1180px, calc(100vw - 2 * var(--gutter))); }

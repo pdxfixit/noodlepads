@@ -1964,7 +1964,7 @@ test('Beats with ⌨️ Keys: 🆕 New has no rows and says to play the keys; th
   assert.equal($('#dj-grid').children.length, 0, 'no rows');
   assert.equal($('#dj-no-rows').hidden, false);
   assert.match($('#dj-no-rows').textContent, /●\sRecord/);
-  assert.match($('#dj-no-rows').textContent, /keys/);
+  assert.match($('#dj-no-rows').textContent, /play the sounds below/, 'the keys or the 👆 tiles alike');
   assert.equal($('#dj-record').disabled, false, 'Record is ready');
   await newBuilderBeatWithRow(page);
   assert.equal($('#dj-grid').children.length, 1, 'one row for the sound played');

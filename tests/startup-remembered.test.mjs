@@ -20,6 +20,7 @@ const remembered = new Map(Object.entries({
   'dj-click': '1',
   'dj-layer': '1',
   'dj-size': 'l',
+  'dj-input': 'touch',   // ⌨️ / 👆: the touch layout (ADR 0028)
   'beat-click': '1',
   'dj-layout': 'dvorak',
   'dj-labels': '{"KeyQ":"\'"}',
@@ -59,6 +60,8 @@ test('with every remembered choice set, the app starts on the remembered screen'
   assert.equal(remembered.get('screen'), 'beats', 'remembered as Beats from now on');
   assert.equal(remembered.get('beat-keys'), '1');
   assert.equal($('#dj-keys').querySelectorAll('.dj-key').length, 40);
+  assert.equal($('#dj-touch').hidden, false, '👆 remembered: the touch layout shows');
+  assert.equal($('#dj-keys').hidden, true);
   assert.equal($('#dj-beatbar').querySelector('[data-beat-name]').value, 'Scratch beat', 'the scratch beat is open (ADR 0020)');
   assert.equal($('#dj-grid').hidden, false, 'its grid, ready to play into');
   assert.equal($('#dj-grid').children.length, 0, 'an empty scratch has no rows');
