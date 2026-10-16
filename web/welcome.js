@@ -39,6 +39,7 @@ import { openDialog, setupDialog } from './dialogs.js';
 import { announce } from './ui.js';
 import { logEvent } from './log.js';
 import { firstStepsOn } from './firsts.js';
+import { showTipsAgain } from './tips.js';
 
 // The three cards: the level, the picture and words on the pad, its pad
 // color (boards.json palette) and the ready-made sound a tap plays (a kit id).
@@ -68,6 +69,22 @@ export function offerWelcome(id) {
   if (!fresh.has(id) || !el.dialog || !firstStepsOn()) return false;
   fresh.delete(id);
   if (!person(id)) return false;
+  now = { id, step: 'who', kids: false, was: null, names: [], pics: [] };
+  showStep();
+  logEvent('welcome', { shown: true });
+  openDialog(el.dialog, { focus: el.cards.querySelector('[data-level]') });
+  return true;
+}
+
+// ⚙️ Settings → About → Show the welcome again (as isopix has, Ben, 2026-10-16):
+// the welcome opens once more for the person showing, and their one-time
+// tips and dots come back (tips.js showTipsAgain), so a new person's whole
+// first run can be seen again. Picking a level or a name changes them as the
+// first time did; Skip keeps what they have. True when it opened.
+export async function replayWelcome() {
+  const id = state.personId;
+  if (!el.dialog || !person(id)) return false;
+  await showTipsAgain();
   now = { id, step: 'who', kids: false, was: null, names: [], pics: [] };
   showStep();
   logEvent('welcome', { shown: true });
@@ -257,6 +274,11 @@ export function initWelcome(hooks = {}) {
   // Skip on step 1 keeps Regular (nothing to set) and ends the welcome.
   el.skip.addEventListener('click', () => { logEvent('welcome', { skipped: true }); end(); });
   el.stage.addEventListener('click', onStageClick);
+  // ⚙️ Settings → About → Show the welcome again: Settings closes, the welcome opens.
+  document.querySelector('#welcome-again')?.addEventListener('click', () => {
+    document.querySelector('#settings-dialog')?.close();
+    replayWelcome().catch((err) => console.error('Showing the welcome again failed:', err));
+  });
   document.querySelector('#avatar-dialog')?.addEventListener('close', () => { if (now?.step === 'stage') renderStage(); });
   el.dialog.addEventListener('close', finish);
 }
