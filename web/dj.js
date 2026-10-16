@@ -788,16 +788,16 @@ export function createDJ({ el, deps }) {
   }
   // The keys view: a key played whose sound has no row gets one at once,
   // recording or not (Ben, 2026-10-12: "pressing an instrument in beat
-  // builder should cause its row to appear"). Undo takes it out again;
-  // while recording, the take's own Undo does.
+  // builder should cause its row to appear"). It comes quietly, with no
+  // notice (Ben, 2026-10-16: "drop the notification that a new row has been
+  // added to beats"): the row's ✕ takes it out; while recording, the take's
+  // own Undo does.
   function showRow(clip) {
     const seq = deps.seq;
     const beat = mode === 'beat' && seq.beat();
     if (!beat || beat.rows.some((r) => r.clipId === clip.id)) return;
     if (seq.trying?.() && !beatRec) return;   // jamming over a groove changes nothing
-    const copy = beatRec ? null : seq.snapshot();
     if (seq.addRowFor(clip.id, beatRec?.rows) < 0) { (deps.notice ?? deps.announce)?.(FULL); return; }
-    if (!beatRec) offerBeatUndo(copy, `Added a row for ${clip.label}${/[.!?]$/.test(clip.label) ? '' : '.'}`);   // "Let's go!" has its own stop
     renderGrid();
   }
   // A live hit while recording into the beat: snapped once, as it arrives,
