@@ -88,6 +88,92 @@ class Migrate(unittest.TestCase):
         self.assertTrue(ca.has_table(empty, 'shares'))
 
 
+class DropGuard(unittest.TestCase):
+    """A migration that drops a table D1 holds rows of waits for the telemetry
+    mirror to hold at least as many (2026-10-16: 005 dropped 77 unharvested rows)."""
+
+    def setUp(self):
+        self.db = Local(ROOT / 'worker' / 'schema.sql')
+        self.db.execute("DELETE FROM migrations WHERE name = '005-drop-uses-visits';"
+                        "CREATE TABLE uses (profile_id TEXT, feature TEXT, day TEXT, n INTEGER);"
+                        "CREATE TABLE visits (id INTEGER PRIMARY KEY, at INTEGER);"
+                        "INSERT INTO uses VALUES ('p-a', 'pad', '2026-10-14', 3), ('p-a', 'beats', '2026-10-14', 1);"
+                        "INSERT INTO visits (at) VALUES (1);")
+        self.db.ran.clear()
+        self.mirror = sqlite3.connect(':memory:')
+
+    def run_migrate(self, yes, **kw):
+        lines, out = quiet()
+        try:
+            ca.migrate(self.db, yes, out, archive=self.mirror, **kw)
+            error = None
+        except ca.Trouble as err:
+            error = str(err)
+        return lines, error
+
+    def test_finds_the_tables_a_migration_drops_and_ignores_comments(self):
+        self.assertEqual(ca.dropped_tables(ROOT / 'worker' / 'migrations' / '005-drop-uses-visits.sql'), ['uses', 'visits'])
+        self.assertEqual(ca.dropped_tables(ROOT / 'worker' / 'migrations' / '004-country-only.sql'), [], 'a dropped column is not a dropped table')
+
+    def test_rows_the_mirror_lacks_stop_the_migration_before_anything_runs(self):
+        lines, error = self.run_migrate(True)
+        self.assertIn('rows nothing has copied', error)
+        self.assertIn('just pull noodlepads', error)
+        self.assertIn('--allow-drop uses --allow-drop visits', error)
+        self.assertTrue(any(l.startswith('🛑 uses: D1 holds 2 rows, the telemetry mirror 0.') for l in lines), lines)
+        self.assertTrue(any(l.startswith('🛑 visits: D1 holds 1 rows, the telemetry mirror 0.') for l in lines), lines)
+        self.assertEqual(self.db.ran, [], 'nothing ran')
+        self.assertTrue(ca.has_table(self.db, 'uses'))
+
+    def test_a_dry_run_says_so_and_changes_nothing(self):
+        lines, error = self.run_migrate(False)
+        self.assertIsNone(error)
+        self.assertTrue(any('would stop here' in l for l in lines), lines)
+        self.assertEqual(self.db.ran, [])
+
+    def test_a_mirror_with_as_many_rows_lets_it_through(self):
+        self.mirror.executescript("CREATE TABLE uses (profile_id, feature, day, n);"
+                                  "INSERT INTO uses VALUES ('p-a', 'pad', '2026-10-14', 3), ('p-a', 'beats', '2026-10-14', 1);"
+                                  "CREATE TABLE visits (id INTEGER PRIMARY KEY, at INTEGER); INSERT INTO visits (at) VALUES (1);")
+        lines, error = self.run_migrate(True)
+        self.assertIsNone(error, lines)
+        self.assertFalse(ca.has_table(self.db, 'uses'))
+        self.assertIn('✅ 005-drop-uses-visits', lines)
+
+    def test_fewer_rows_in_the_mirror_still_stop_it(self):
+        self.mirror.executescript("CREATE TABLE uses (profile_id, feature, day, n); INSERT INTO uses VALUES ('p-a', 'pad', '2026-10-14', 3);")
+        lines, error = self.run_migrate(True)
+        self.assertTrue(any(l.startswith('🛑 uses: D1 holds 2 rows, the telemetry mirror 1.') for l in lines), lines)
+        self.assertTrue(any(l.startswith('🛑 visits: D1 holds 1 rows, the telemetry mirror 0.') for l in lines), lines)
+        self.assertTrue(error)
+
+    def test_an_empty_table_or_one_that_is_gone_needs_no_copy(self):
+        self.db.execute('DELETE FROM uses; DROP TABLE visits;')
+        lines, error = self.run_migrate(True)
+        self.assertIsNone(error, lines)
+
+    def test_allow_drop_is_the_explicit_way_through_and_per_table(self):
+        lines, error = self.run_migrate(True, allow=('uses',))
+        self.assertIn('--allow-drop visits', error)
+        self.assertNotIn('--allow-drop uses', error)
+        lines, error = self.run_migrate(True, allow=('uses', 'visits'))
+        self.assertIsNone(error, lines)
+        self.assertFalse(ca.has_table(self.db, 'visits'))
+
+    def test_no_mirror_at_all_counts_as_no_rows(self):
+        with tempfile.TemporaryDirectory() as home, mock.patch.dict(os.environ, {'TELEMETRY_DB': str(Path(home) / 'nope.sqlite3')}):
+            lines, out = quiet()
+            with self.assertRaises(ca.Trouble):
+                ca.migrate(self.db, True, out)
+            self.assertTrue(any(l.startswith('🛑 uses: D1 holds 2 rows, the telemetry mirror 0.') for l in lines), lines)
+
+    def test_the_command_line_takes_allow_drop_once_per_table(self):
+        seen = {}
+        with mock.patch.object(ca, 'migrate', lambda db, yes, **kw: seen.update(yes=yes, **kw)):
+            ca.main(['migrate', '--yes', '--allow-drop', 'uses', '--allow-drop', 'visits'], db=object())
+        self.assertEqual(seen, {'yes': True, 'allow': ('uses', 'visits')})
+
+
 class Prune(unittest.TestCase):
     def setUp(self):
         self.db = Local(ROOT / 'worker' / 'schema.sql')

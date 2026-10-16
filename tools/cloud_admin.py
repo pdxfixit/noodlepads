@@ -2,7 +2,8 @@
 """Grown-up chores on the cloud database (D1 `noodle-pads`), for the justfile.
 
     cloud_admin.py schema   [--yes]              a NEW, empty database: worker/schema.sql
-    cloud_admin.py migrate  [--yes]              apply worker/migrations/*.sql not yet applied
+    cloud_admin.py migrate  [--yes] [--allow-drop TABLE]   apply worker/migrations/*.sql not yet applied; refuses a
+                                                 DROP TABLE of rows the telemetry mirror has fewer of
     cloud_admin.py profiles                      every profile: id, name, made, last active, records, sound bytes
     cloud_admin.py prune    [--days N] [--empty] [--smoke] [--yes]   profiles idle N days (default 180) or empty, and loose sounds;
                                                  --smoke: what the deploy checks left (p-smoke-…, p-e2e-…, and their shares)
@@ -175,7 +176,49 @@ def applied(db):
     return {r['name'] for r in db.query('SELECT name FROM migrations')}
 
 
-def migrate(db, yes, out=print):
+# A migration that drops a table. Lines that are comments don't count.
+DROP_TABLE = re.compile(r'^\s*DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?[`"\[]?(\w+)', re.IGNORECASE | re.MULTILINE)
+
+
+def dropped_tables(path):
+    """The tables a migration file drops, in order."""
+    text = '\n'.join(re.sub(r'--.*$', '', line) for line in Path(path).read_text().splitlines())
+    return DROP_TABLE.findall(text)
+
+
+def unharvested(db, pending, archive=None, allow=()):
+    """[(table, rows in D1, rows in the telemetry mirror)] for each table a
+    pending migration drops that D1 holds rows of and the mirror holds fewer
+    of, except those named in `allow`. A drop cannot be undone, and D1 keeps
+    only 14 days of metrics: the mirror is the other copy (ADR 0016). On
+    2026-10-16 migration 005 dropped `uses` and `visits` before any harvest had
+    copied them, and 77 rows were lost. At least as many rows is the test, not
+    proof that every row was copied. `archive`: a path or an open connection
+    (default: the runner's pulled store); no mirror counts as no rows."""
+    tables = [t for p in pending for t in dropped_tables(p) if t not in allow]
+    short = []
+    conn = None
+    for t in dict.fromkeys(tables):
+        if not has_table(db, t):
+            continue
+        held = db.query(f'SELECT COUNT(*) AS n FROM "{t}"')[0]['n']
+        if not held:
+            continue
+        if conn is None:
+            try:
+                conn = archive if isinstance(archive, sqlite3.Connection) else open_archive(archive)
+            except Trouble:
+                conn = False   # no mirror yet
+        try:
+            copied = conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0] if conn else 0
+        except sqlite3.Error:
+            copied = 0   # the mirror has no such table
+        if copied < held:
+            short.append((t, held, copied))
+    return short
+
+
+def migrate(db, yes, out=print, archive=None, allow=()):
     if not has_table(db, 'profiles'):
         raise Trouble('this database has no tables yet: use `just cloud-schema` for a new one.')
     done = applied(db)
@@ -185,6 +228,18 @@ def migrate(db, yes, out=print):
         return []
     for p in pending:
         out(f'{"Applying" if yes else "Would apply"} {p.relative_to(ROOT)}')
+    short = unharvested(db, pending, archive, allow)
+    for t, held, copied in short:
+        out(f'🛑 {t}: D1 holds {held} rows, the telemetry mirror {copied}. A migration here drops it.')
+    if short:
+        names = ' '.join(f'--allow-drop {t}' for t, _, _ in short)
+        message = ('a migration would drop rows nothing has copied: harvest and bring them home first '
+                   '(`cd ~/src/telemetry && just pull noodlepads`), then run this again. '
+                   f'To drop them anyway, say so: {names}')
+        if yes:
+            raise Trouble(message)
+        out(f'Run again with --yes would stop here: {message}')
+        return pending
     if not yes:
         out('Run again with --yes to apply them, in this order.')
         return pending
@@ -597,8 +652,11 @@ def reset_pin(db, pid, yes=False, ask=input, out=print):
 def main(argv=None, db=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest='cmd', required=True)
-    for name in ('schema', 'migrate'):
-        sub.add_parser(name).add_argument('--yes', action='store_true')
+    sub.add_parser('schema').add_argument('--yes', action='store_true')
+    mg = sub.add_parser('migrate')
+    mg.add_argument('--yes', action='store_true')
+    mg.add_argument('--allow-drop', action='append', default=[], metavar='TABLE',
+                    help='drop this table although D1 holds rows the telemetry mirror lacks (cannot be undone)')
     sub.add_parser('profiles')
     st = sub.add_parser('stats')
     st.add_argument('--days', type=int, default=14, help='days in the activity strip (default 14)')
@@ -616,7 +674,7 @@ def main(argv=None, db=None):
         if args.cmd == 'schema':
             schema(db, args.yes)
         elif args.cmd == 'migrate':
-            migrate(db, args.yes)
+            migrate(db, args.yes, allow=tuple(args.allow_drop))
         elif args.cmd == 'profiles':
             profiles(db)
         elif args.cmd == 'stats':
