@@ -702,12 +702,17 @@ export function createSequencer(deps) {
   // beat changes: {groove, replaced, before, scratchBefore}, or null. The
   // keys view shows a line for it with ↩️ My beat (undoLoad).
   let loaded = null;
+  // A name typed into the scratch's title (Ben, 2026-10-16): the scratch
+  // keeps itself under it, at once if it has rows, else the moment it gets
+  // one (save). Another beat, person or 🆕 New forgets it.
+  let wantedName = null;
   function setPerson(id) {
     if (id === personId && playing()) { readAgain = true; return; }
     readAgain = false;
     stop();
     personId = id;
     loaded = null;
+    wantedName = null;
     doc = fromStore();
     if (doc.link) { pattern = doc.pattern; save(); }
     pattern = slot === 'live' ? null : doc.pattern;
@@ -729,6 +734,8 @@ export function createSequencer(deps) {
   }
   const scratchDoc = () => ({ pattern: scratchPattern(), seen: scratchSaved() });
   const onScratch = () => !!pattern && isScratch(pattern);
+  // What the title shows: the name, or the scratch's label (or the name typed for it).
+  const titleOf = () => (onScratch() ? wantedName ?? scratchLabel(pattern) : pattern.name);
 
   // The stored open beat: the library's copy of the beat it names, or the
   // scratch. Beats stored the whole beat before ADR 0008: one with notes
@@ -802,17 +809,23 @@ export function createSequencer(deps) {
     deps.library.put(record);
     doc = { pattern, seen: record };
     deps.setOpen(personId, isScratch(pattern) ? null : pattern);
+    // A named scratch keeps itself once it has a row: after the change that
+    // gave it one has finished drawing.
+    if (wantedName && isScratch(pattern) && pattern.rows.length) queueMicrotask(() => { if (wantedName) keep(); });
   }
 
   // 💾 Keep (ADR 0020): the scratch becomes a beat of its own in 🗂️ My beats,
-  // which is the open beat now, and the scratch starts empty again. One
-  // from a groove is named after it ("Sleepy Squid (Ska version)", names.js
-  // keptName); a plain one gets a fun name. A beat playing carries on.
+  // which is the open beat now, and the scratch starts empty again. It takes
+  // a name typed into its title; else one from a groove is named after it
+  // ("Sleepy Squid (Ska version)", names.js keptName), and a plain one gets
+  // a fun name. A beat playing carries on.
   function keep() {
     if (!onScratch() || !pattern.rows.length || chipsLocked) return;
     const taken = library().map((b) => b.name);
     const groove = grooveOf(pattern);
-    const name = groove && deps.keptName ? deps.keptName(groove.name, taken) : freshName();
+    const name = wantedName ? uniqueName(wantedName, null)
+      : groove && deps.keptName ? deps.keptName(groove.name, taken) : freshName();
+    wantedName = null;
     const old = scratchSaved();
     offerUndo(null);
     pattern = { ...pattern, id: newId('beat'), name };
@@ -825,23 +838,23 @@ export function createSequencer(deps) {
   }
 
   // ── The beat bar (Beats and DJ): the open beat's name, 🆕 New, 🗂️ My beats ──
-  // The scratch shows "Scratch beat" (or "Ska (scratch)"), which is not
-  // renamed: 💾 Keep stands where ✏️ is, and names it as it keeps it.
+  // The scratch shows "Scratch beat" (or "Ska (scratch)"), in italics: not
+  // kept yet. 💾 Keep stands where ✏️ is and names it as it keeps it; a
+  // name typed into the title keeps it under that name (nameScratch).
   function showBeatBars() {
     const scratch = onScratch();
     for (const bar of el.beatBars ?? []) {
       const name = bar.querySelector('[data-beat-name]');
       name.hidden = !pattern;
-      name.readOnly = scratch;
       name.classList.toggle('scratch', scratch);
-      name.setAttribute('aria-label', scratch ? 'Scratch beat, not kept yet: 💾 Keep puts it in 🗂️ My beats' : 'Beat name (tap to rename)');
+      name.setAttribute('aria-label', scratch ? 'Scratch beat, not kept yet: type a name to keep it in 🗂️ My beats' : 'Beat name (tap to rename)');
       bar.querySelector('[data-beat-rename]').hidden = !pattern || scratch;
       const keepButton = bar.querySelector('[data-beat-keep]');
       if (keepButton) {
         keepButton.hidden = !scratch;
         keepButton.disabled = !pattern?.rows.length || chipsLocked;
       }
-      if (pattern && document.activeElement !== name) name.value = scratch ? scratchLabel(pattern) : pattern.name;
+      if (pattern && document.activeElement !== name) name.value = titleOf();
     }
     showChips();
   }
@@ -954,6 +967,7 @@ export function createSequencer(deps) {
     chipsLocked = !!on;
     if (on) queued = null;
     showBeatBars();   // 💾 Keep waits too
+    if (!on && wantedName) queueMicrotask(keep);   // so does a named scratch
   }
   for (const line of el.chipLines ?? []) {
     line.addEventListener('click', (e) => {
@@ -970,6 +984,7 @@ export function createSequencer(deps) {
     queued = null;
     stop();
     loaded = null;
+    wantedName = null;
     if (next && !isScratch(next)) { pattern = next; save(); }
     else { doc = scratchDoc(); pattern = doc.pattern; deps.setOpen(personId, null); }
     render();
@@ -990,19 +1005,31 @@ export function createSequencer(deps) {
       if (!taken.has(candidate.toLowerCase())) return candidate;
     }
   }
+  // A name typed into the scratch's title: kept under it now if it has
+  // rows; an empty scratch holds the name until its first row (save).
+  function nameScratch(wanted) {
+    if (wanted === titleOf()) return;
+    wantedName = wanted;
+    if (pattern.rows.length) keep();
+    else deps.announce?.(`Named “${wanted}”. It goes in 🗂️ My beats when you add a sound.`);
+  }
   for (const bar of el.beatBars ?? []) {
     const name = bar.querySelector('[data-beat-name]');
     name.addEventListener('change', () => {
       const wanted = name.value.trim().slice(0, 24);
-      if (wanted && pattern && !onScratch()) { pattern.name = uniqueName(wanted, pattern.id); save(); }
+      if (wanted && pattern && onScratch()) nameScratch(wanted);
+      else if (wanted && pattern) { pattern.name = uniqueName(wanted, pattern.id); save(); }
+      if (pattern) name.value = titleOf();   // still focused while it changes
       showBeatBars();
       deps.onBeatChange?.();
     });
     name.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); name.blur(); } });
+    // "Scratch beat" is all chosen, so typing replaces it.
+    name.addEventListener('focus', () => { if (onScratch() && !wantedName) name.select?.(); });
     bar.querySelector('[data-beat-rename]').addEventListener('click', () => { name.focus(); name.select?.(); });
     bar.querySelector('[data-beat-new]').addEventListener('click', newScratch);
     bar.querySelector('[data-beat-open]').addEventListener('click', () => openLibrary(bar.querySelector('[data-beat-open]')));
-    bar.querySelector('[data-beat-keep]')?.addEventListener('click', keep);
+    bar.querySelector('[data-beat-keep]')?.addEventListener('click', () => keep());
   }
 
   // ── Playback ──
