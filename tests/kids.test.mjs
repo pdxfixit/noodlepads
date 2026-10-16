@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
 import {
-  makeSum, typeDigit, kidsColumns, cleanSize, pageShape, pagesOf, pageAt, pinchSize, kidsPadOrder,
+  makeSum, typeDigit, kidsRange, kidsAutoPx, kidsPadPx, kidsShare, shareOf, kidsSliderAt, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder,
   newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds, KIDS_TEMPOS,
   kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS,
 } from '../web/kids-logic.js';
@@ -38,22 +38,41 @@ test('typing the answer: done after as many digits as it has; right only when th
   assert.deepEqual(typeDigit('', '9', 15), { typed: '9', done: false, right: false });
 });
 
-test('pad size: 2 to 4 across a phone, that many per 560 px on a wider screen', () => {
-  assert.equal(cleanSize('junk'), 3);
-  assert.equal(cleanSize('7'), 3);
-  assert.equal(cleanSize('2'), 2);
-  assert.equal(kidsColumns(2, 375), 2);
-  assert.equal(kidsColumns(4, 320), 4);
-  assert.equal(kidsColumns(3, 1100), 6);
-  assert.equal(kidsColumns(2, 1920), 6);
+// Ben, 2026-10-16: Kids uses the person's own pad size, Pads' padSize, with
+// ends of its own: four across a phone at the smallest, one pad filling the
+// line at the biggest, every step in between a little bigger.
+test('pad size: the person\'s padSize between Kids\' own ends, smooth, square pads at an exact size', () => {
+  // A 343 px wide box (a 375 px phone) 520 px tall.
+  const { min, max } = kidsRange(343, 520);
+  assert.equal(min, (343 - 12 * 5) / 4, 'smallest: four across');
+  assert.equal(max, 343 - 24, 'biggest: one pad filling the line');
+  assert.equal(kidsPadPx(343, 520, 0), Math.floor(min));
+  assert.equal(kidsPadPx(343, 520, 1), max);
+  assert.equal(kidsPadPx(343, 520, 'auto'), Math.floor((343 - 48) / 3), 'auto: three across, as Kids always opened');
+  for (const junk of [null, 'big', 2, -1]) assert.equal(kidsPadPx(343, 520, junk), kidsPadPx(343, 520, 'auto'));
+  let last = 0;
+  for (let i = 0; i <= 100; i++) {
+    const px = kidsPadPx(343, 520, i / 100);
+    assert.ok(px >= last, `step ${i} never smaller`);
+    last = px;
+  }
+  assert.ok(kidsPadPx(343, 520, 0.51) > kidsPadPx(343, 520, 0.49), 'the steps between change the size');
+  assert.equal(pageShape(343, 520, kidsPadPx(343, 520, 0)).cols, 4);
+  assert.equal(pageShape(343, 520, kidsPadPx(343, 520, 1)).cols, 1);
+  // A short, wide box: the biggest pad still fits its height.
+  assert.equal(kidsRange(1068, 400).max, 400 - 24);
+  assert.equal(kidsRange(1068, 400).min, (1068 - 12 * 9) / 8, 'four per 560 px on a wider screen');
+  // The slider and the size agree both ways.
+  assert.equal(kidsSliderAt(343, 520, 0.37), 37);
+  assert.equal(kidsSliderAt(343, 520, 'auto'), Math.round(100 * kidsShare(343, 520, kidsAutoPx(343, 520))));
+  assert.equal(shareOf(343, 520, 0.2), 0.2);
 });
 
-test('a page of pads: square pads that fit, at least one row; the list cut into pages', () => {
-  const s = pageShape(375, 600, 3);
-  assert.equal(s.cols, 3);
-  assert.equal(s.size, Math.floor((375 - 48) / 3));
-  assert.equal(s.rows, Math.floor((600 - 12) / (s.size + 12)));
-  assert.equal(pageShape(375, 50, 2).rows, 1);
+test('a page of pads: as many square pads as fit, at least one row and column; the list cut into pages', () => {
+  const s = pageShape(375, 600, 100);
+  assert.deepEqual(s, { cols: Math.floor((375 - 12) / 112), rows: Math.floor((600 - 12) / 112), size: 100 });
+  assert.deepEqual(pageShape(375, 50, 100), { cols: 3, rows: 1, size: 100 });
+  assert.equal(pageShape(100, 100, 300).cols, 1);
   assert.deepEqual(pagesOf([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
   assert.deepEqual(pagesOf([], 6), [[]]);
 });
@@ -67,13 +86,17 @@ test('a swipe rests on the nearest page, never past the first or last', () => {
   assert.equal(pageAt(100, 0, 3), 0);
 });
 
-test('a pinch: fingers apart make the pads bigger (fewer across), together smaller, 2 to 4', () => {
-  assert.equal(pinchSize(3, 100, 100), 3);
-  assert.equal(pinchSize(3, 100, 145), 2, 'spread: bigger pads');
-  assert.equal(pinchSize(3, 100, 70), 4, 'pinched: smaller pads');
-  assert.equal(pinchSize(2, 100, 400), 2);
-  assert.equal(pinchSize(4, 100, 10), 4);
-  assert.equal(pinchSize(3, 0, 50), 3);
+test('a pinch: fingers apart make the pads bigger, together smaller, smoothly, kept to the setting\'s steps', () => {
+  const ratio = (kidsRange(343, 520).max + 12) / (kidsRange(343, 520).min + 12);
+  assert.equal(pinchShare(0.5, 100, 100, 343, 520), 0.5, 'still fingers change nothing');
+  const wider = pinchShare(0.5, 100, 120, 343, 520);
+  assert.equal(wider, Math.round((0.5 + Math.log(1.2) / Math.log(ratio)) * 100) / 100, 'the pads grow by as much as the fingers spread');
+  assert.ok(pinchShare(0.5, 100, 90, 343, 520) < 0.5, 'pinched: smaller');
+  assert.ok(pinchShare(0.5, 100, 103, 343, 520) > 0.5, 'a small spread is a small step, not a jump of a column');
+  assert.equal(pinchShare(0.5, 100, 10000, 343, 520), 1);
+  assert.equal(pinchShare(0.5, 100, 1, 343, 520), 0);
+  assert.equal(pinchShare('auto', 100, 100, 343, 520), Math.round(100 * kidsShare(343, 520, kidsAutoPx(343, 520))) / 100, 'auto starts where the screen\'s own size sits');
+  assert.equal(pinchShare(0.3, 0, 50, 343, 520), 0.3);
 });
 
 test('the kid\'s own sounds come first, newest first, then the rest in board order', () => {
@@ -405,12 +428,20 @@ test('🧸 Kids in Settings brings the kid\'s screens back; Regular leaves them 
   $('#pads-tab').dispatch('click');
 });
 
+// Kids showing for sure: chosen in ⚙️ Settings → Level, which also ends a
+// grown-up's visit (an earlier test left one open).
+const toKids = async () => {
+  $('#level-keys').querySelector('[data-level="kids"]').dispatch('click');
+  await page.settle();
+  assert.equal(document.body.classList.contains('kids'), true);
+};
+
 // Ben, 2026-10-16: 🧸 Kids can't reach ⚙️ Settings → 🎨 Look without a
 // grown-up's sum, so its Pads screen has a round skin button at the top left.
 test('🎨 the Kids skin button: each tap moves to the next skin and keeps it, round to Tiles again', async () => {
   const { getSetting } = await import('../web/settings.js');
   const { SKINS, SKIN_IDS } = await import('../web/skins.js');
-  await setLevel('kids');
+  await toKids();
   $('[data-kids-tab="pads"]').dispatch('click');
   const button = $('#kids-skin');
   assert.equal(button.getAttribute('aria-label'), 'Next look', 'its tooltip; no words on it');
@@ -427,5 +458,66 @@ test('🎨 the Kids skin button: each tap moves to the next skin and keeps it, r
   }
   assert.deepEqual(seen, ['slam', 'lit', 'switch', 'spinner', 'jelly', 'googly', 'tiles']);
   assert.ok(state.prefs.get(state.personId) && 'padSkin' in state.prefs.get(state.personId).values, 'kept as the person\'s setting');
+  await setLevel('regular');
+});
+
+// Ben, 2026-10-16: one pad size per person, the same on Pads and on 🧸 Kids
+// at any level; Kids has the slider too (centered in its top bar), and a
+// pinch moves the same size.
+test('the pad size is the person\'s: the same on Pads and Kids, through a level change; two people keep their own', async () => {
+  const { getSetting, setSetting } = await import('../web/settings.js');
+  const people = () => $('#people').querySelectorAll('[data-person]');
+  await setLevel('regular');
+  people()[0].dispatch('click');
+  await setSetting('padSize', 0.3);
+  people()[1].dispatch('click');
+  await page.settle();
+  await setSetting('padSize', 0.8);
+  people()[0].dispatch('click');
+  await page.settle();
+  assert.equal(getSetting('padSize'), 0.3, 'the first person kept theirs');
+  assert.equal($('#pads-size-slider').value, '30');
+  await toKids();
+  $('[data-kids-tab="pads"]').dispatch('click');
+  assert.equal(getSetting('padSize'), 0.3, 'a level change keeps it');
+  assert.equal($('#kids-size-slider').value, '30', 'Kids\' slider shows the same size');
+  const { kidsPadPx } = await import('../web/kids-logic.js');
+  assert.equal($('#kids-pages').style.props['--kids-pad'], `${kidsPadPx(375, 520, 0.3)}px`, 'the pads are that size');
+  people()[1].dispatch('click');
+  await page.settle();
+  assert.equal($('#kids-size-slider').value, '80', 'the other person\'s own size');
+  people()[0].dispatch('click');
+  await page.settle();
+  await setLevel('regular');
+});
+
+test('Kids\' slider and a pinch keep the person\'s pad size, and the pads follow as they move', async () => {
+  const { getSetting, setSetting } = await import('../web/settings.js');
+  const { kidsPadPx, pinchShare } = await import('../web/kids-logic.js');
+  await setSetting('padSize', 0.5);
+  await toKids();
+  $('[data-kids-tab="pads"]').dispatch('click');
+  const slider = $('#kids-size-slider');
+  assert.ok(slider.closest('.kids-top'), 'in the Pads screen\'s top bar');
+  assert.equal(slider.getAttribute('aria-label'), 'Pad size');
+  slider.value = '90';
+  slider.dispatch('input');
+  assert.equal($('#kids-pages').style.props['--kids-pad'] ?? '', `${kidsPadPx(375, 520, 0.9)}px`, 'the pads grow as it moves');
+  assert.equal(getSetting('padSize'), 0.5, 'kept only when it lets go');
+  slider.dispatch('change');
+  await page.settle();
+  assert.equal(getSetting('padSize'), 0.9);
+  // Two fingers spread: bigger, smoothly; kept as the fingers lift.
+  const pages = $('#kids-pages');
+  const touch = (x) => [{ clientX: 100, clientY: 100 }, { clientX: 100 + x, clientY: 100 }];
+  await setSetting('padSize', 0.5);
+  pages.dispatch('touchstart', { touches: touch(100) });
+  pages.dispatch('touchmove', { touches: touch(80) });
+  const want = pinchShare(0.5, 100, 80, 375, 520);
+  assert.ok(want < 0.5);
+  assert.equal(slider.value, String(Math.round(want * 100)), 'the slider follows the pinch');
+  pages.dispatch('touchend', { touches: [] });
+  await page.settle();
+  assert.equal(getSetting('padSize'), want);
   await setLevel('regular');
 });
