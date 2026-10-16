@@ -619,7 +619,7 @@ leaves the previous version showing; flarepress warns when the stamp is old.
 loaded. The app asks `version.json` (`cache: 'no-store'`) when the page is
 focused or shown again, at most once a minute, and every 10 minutes while it
 shows. When the live version differs from the loaded one, a bar
-offers **Reload** and ✕ (hidden until the next check, 10 minutes later or on coming back). It floats over the bottom, above the toolbar, and does not fade.
+offers **Reload** and ✕; on a phone (under 560 px) it says just "🆕 An update is ready." ✕ hides it until the next check, 10 minutes later or on coming back. It floats over the bottom, above the toolbar, and does not fade.
 It neither asks nor shows while a sound is recorded, a beat, song or take plays,
 a pad loops, or any sheet or dialog is open (the sound sheet keeps its edits
 until Save), and catches up after. Everything else is already saved in

@@ -279,6 +279,7 @@ main {
 /* Reload and ✕ wrap together, so ✕ never sits on a line alone. */
 .update-buttons { display: flex; gap: 8px; flex: 1 0 auto; max-width: 16em; margin-left: auto; }
 @media (max-width: 559px) { .update-buttons { max-width: none; } }   /* on their own line: fill it */
+@media (max-width: 559px) { .update-long { display: none; } }   /* a phone says just "An update is ready." (Ben, 2026-10-16) */
 .update-reload { flex: 1 0 auto; padding: 0 18px; border: 0; background: var(--led); color: var(--ink); }
 .update-close { flex: none; padding: 0 12px; border: 2px solid rgb(255 255 255 / 0.6); background: transparent; color: #fff; }
 

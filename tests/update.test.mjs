@@ -3,6 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { updateOffer, liveVersionOf, initUpdate, MIN_GAP_MS, CHECK_MS, TICK_MS } from '../web/update.js';
 
 const offer = (o) => updateOffer({ loaded: 'aaa1111', live: 'bbb2222', busy: false, dismissed: null, ...o });
@@ -142,4 +143,11 @@ test('a dev copy never asks', async () => {
   await r.run(CHECK_MS);
   assert.equal(r.asked.length, 0);
   assert.equal(r.bar.hidden, true);
+});
+
+test('a phone says just "An update is ready.": the words naming the app hide under 560 px', () => {
+  const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
+  assert.match(html, /<span class="update-text">🆕 An update<span class="update-long"> for Noodle Pads<\/span> is ready\.<\/span>/);
+  assert.match(css, /@media \(max-width: 559px\) \{ \.update-long \{ display: none; \} \}/);
 });
