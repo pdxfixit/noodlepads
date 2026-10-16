@@ -44,6 +44,16 @@
         <button type="button" class="update-close" id="update-close" aria-label="Not now">✕</button>
       </span>
     </div>
+    <!-- 🎛️ The level-up nudge (nudge.js, ADR 0028): offered once to a Regular person who keeps reaching
+         for more, in 🆕 update's place and look. The thin line runs down, then it fades. -->
+    <div class="update-bar nudge-bar" id="nudge-bar" role="status" hidden>
+      <span class="update-text">🎛️ Want more knobs?</span>
+      <span class="update-buttons">
+        <button type="button" class="update-reload" id="nudge-try">Try Advanced</button>
+        <button type="button" class="update-close" id="nudge-close" aria-label="No thanks">✕</button>
+      </span>
+      <span class="nudge-time" aria-hidden="true"></span>
+    </div>
     <div class="pads-bar" id="pads-bar">
       <!-- Pad size: one smooth slider from this screen's smallest pads (0) to its biggest (100) (pads.js, pad-size.js). -->
       <div class="pads-size" id="pads-size">

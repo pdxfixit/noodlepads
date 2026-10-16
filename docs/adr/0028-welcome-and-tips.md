@@ -1,6 +1,6 @@
 # 0028. New people get a welcome, a stage name and one-time tips
 
-- **Status:** Accepted (2026-10-16), to build; Ben picked from the mockups the same day
+- **Status:** Accepted (2026-10-16), built 2026-10-16; Ben picked from the mockups the same day
 - **Date:** 2026-10-16
 - **Decided by:** Ben, 2026-10-16, on the new-user brainstorm: one-time tips and hint dots "yes"; "this dialog will directly countermand" the no-tutorials rules; "Include a 'Pick your Stage Name' chooser for the rest of the profile"; level-up nudges "yes, as a notification in the upgrade space, but maybe it fades after awhile". Rows in [decisions.md](../decisions.md) (Product).
 

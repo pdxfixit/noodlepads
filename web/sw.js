@@ -51,7 +51,7 @@ const MODULES = [
   'cloud-sync', 'cloud-ui', 'cloud', 'contact', 'contrast', 'cuts', 'device-meta', 'dialogs', 'dj-keys', 'dj-touch', 'dj',
   'download', 'emoji-all', 'emoji-check', 'emoji-more', 'events-client', 'finger', 'firsts', 'grooves', 'groups', 'help',
   'keyset', 'kids-logic', 'kids', 'leftover', 'lines', 'log-clean', 'log-send', 'log', 'merge', 'merge3', 'meter',
-  'mix', 'mixer', 'model', 'names', 'notes', 'offline', 'old-backup', 'overflow', 'pad-size', 'pads', 'people',
+  'mix', 'mixer', 'model', 'names', 'notes', 'nudge', 'offline', 'old-backup', 'overflow', 'pad-size', 'pads', 'people',
   'pitch', 'play-count', 'playlist', 'privacy', 'reid', 'rhythm', 'roll', 'row-volume', 'scratch', 'sequencer',
   'settings-ui', 'settings', 'shape', 'share-render', 'sheet', 'skins', 'song', 'starters', 'state', 'steps',
   'store', 'stretch-worker', 'stretch', 'sync-timing', 'synth', 'telemetry', 'tips', 'tooltips', 'touch', 'track-page', 'tweaks',

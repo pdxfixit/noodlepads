@@ -113,6 +113,9 @@ const VIEWS = {
   'tip-beats': { screen: 'beats', firstSteps: true, js: `${FRESH} ${q('#pads-tab')} ${q('#beats-toggle')} ${nap}` },
   // Hint dots on ⌨️ Keys, 💃 Grooves and 🎚️ Mixer, for a person who has tapped none (the tip put away).
   'hint-dots': { screen: 'beats', firstSteps: true, js: `${FRESH} document.querySelector('#banner-close')?.click(); ${nap}` },
+  // 🎛️ The level-up nudge in the update bar's place: three reaches over two visits, made up.
+  nudge: { screen: 'pads', firstSteps: true, js: `${FRESH} document.querySelector('#banner-close')?.click();
+    await (await import('/settings.js')).setSetting('reaches', 'a,b,c'); (await import('/nudge.js')).nudgeTick(); ${nap}` },
   'welcome-kids-stage': { screen: 'pads', firstSteps: true, js: `${WELCOME} ${q('#wl-cards [data-level="kids"]')} ${nap}` },
   edit: { screen: 'pads', js: q('#edit-toggle') },
   settings: { screen: 'pads', js: q('#settings-open') },
