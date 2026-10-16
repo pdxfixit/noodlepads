@@ -102,7 +102,7 @@ cloud-smoke *args:
 cloud-e2e *args:
     @node tools/look.mjs cloud-e2e "$@"
 
-# Clear a profile's forgotten PIN (from an email to [old address removed]): shows the profile, asks, then runs it and checks
+# Clear a profile's forgotten PIN (from an email to the PIN-reset address): shows the profile, asks, then runs it and checks
 [positional-arguments]
 cloud-reset-pin id:
     @python3 tools/cloud_admin.py reset-pin "$1"

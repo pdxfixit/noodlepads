@@ -8,7 +8,7 @@
     cloud_admin.py profiles                      every profile: id, name, made, last active, records, sound bytes
     cloud_admin.py prune    [--days N] [--empty] [--smoke] [--yes]   profiles idle N days (default 180) or empty, and loose sounds;
                                                  --smoke: what the deploy checks left (p-smoke-…, p-e2e-…, and their shares)
-    cloud_admin.py reset-pin ID [--yes]          clear a profile's PIN (Ben, from a pin.reset@ email)
+    cloud_admin.py reset-pin ID [--yes]          clear a profile's PIN (Ben, from a PIN-reset email)
     cloud_admin.py stats    [--days N]           the players: what each made; then reports the metrics
                                                  (ADR 0016) from the telemetry runner's pulled store
                                                  (read only): devices, places, activity by day and hour,

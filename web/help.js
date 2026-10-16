@@ -9,6 +9,7 @@
 
 import { state } from './state.js';
 import { VOICES } from './voices.js';
+import { PIN_RESET_EMAIL } from './contact.js';
 import { openDialog, setupDialog } from './dialogs.js';
 
 // Picture pieces. `t` is a real label, checked by the test.
@@ -197,7 +198,7 @@ export const HELP = [
       { pic: [chip('☁️ Open from the cloud')], text: 'In 👥 People: puts someone from the cloud on this device, with everything of theirs. Changes on one device show on the others.' },
       { pic: [chip('🔒 Set a PIN')], text: 'In someone’s profile, once they are in the cloud: a 4-number PIN, asked each time they are opened and before their name, picture or color changes. Five wrong tries mean a 10-minute wait.' },
       { pic: [word('Remember on this device'), chip('🙈 Forget on this device')], text: 'On the PIN pad, Remember on this device opens them here without the PIN from then on. In their profile, Forget on this device asks for it every time again.' },
-      { pic: [word('[old address removed]')], text: 'Forgot a PIN? A grown-up emails [old address removed] with the fun name, and it gets cleared.' },
+      { pic: [word(PIN_RESET_EMAIL)], text: `Forgot a PIN? A grown-up emails ${PIN_RESET_EMAIL} with the fun name, and it gets cleared.` },
       { pic: [chip('🔗 Share…')], text: 'In someone’s ☁️ Cloud: pick a sound, beat or song and get a code. Anyone who types it can play it, but never change yours.' },
       { pic: [chip('🚫 Unshare')], text: 'In 🔗 Share…, under Shared already: tap twice and that code stops working for everyone. Remixes others made stay theirs.' },
       { pic: [chip('🔗 Shared with me'), chip('🎛️ Remix')], text: 'In ⚙️ Settings → 🔗 Sharing: type a code to play what someone shared. 🎛️ Remix puts a copy on your board to change, and it stays yours. ✕ Remove (tap twice) takes it off your list.' },

@@ -16,6 +16,7 @@ import { openDialog, setupDialog } from './dialogs.js';
 import { announce } from './ui.js';
 import { audio } from './audio.js';
 import { PRIVACY_TITLE, renderPrivacy } from './privacy.js';
+import { PIN_RESET_EMAIL } from './contact.js';
 import {
   api, CloudError, cloudTrouble, cloudThere, inCloud, linkOf, keyOf, isOffline, statusOf, onCloud, syncNow, syncAll,
   openProfile, unlock, forgetHere, checkPin, setPin, setOffline, wantsCloud, shareable, shareItem, showCode,
@@ -23,8 +24,7 @@ import {
 } from './cloud.js';
 import { mergeSummary } from './merge.js';
 
-// Where a forgotten PIN goes: Ben resets it by hand (`just cloud-reset-pin`).
-export const PIN_RESET_EMAIL = '[old address removed]';
+// Where a forgotten PIN goes: Ben resets it by hand (`just cloud-reset-pin`). The address is built in web/contact.js.
 export const FORGOT_PIN = `Forgot your PIN? A grown-up can email ${PIN_RESET_EMAIL} with your fun name.`;
 
 const el = {};

@@ -92,7 +92,7 @@ Agents may read the live database without asking (`just cloud-stats`, `just logs
 | Metrics harvest | none here | The telemetry runner (pdxfixit/telemetry) is the only harvester: daily, flarepress's `tools/harvest.py` on `site/`; the Mac reads it with its `telemetry.py pull` (into `~/.local/state/telemetry/telemetry.sqlite3`). |
 | Player metrics | `just cloud-stats [--days N]` | Run `telemetry.py pull` first (pdxfixit/telemetry). Reports per player from its store, `~/.local/state/telemetry/telemetry.sqlite3` (read only; the `noodlepads__` tables; else the older `metrics.sqlite3`; ADR 0016): devices, places, activity, feature use, visits, and every visit's errors. Ask anything else with `sqlite3 ~/.local/state/telemetry/telemetry.sqlite3` (tables `noodlepads__activity`, `__devices`, `__uses`, `__visits`, `__players`, `__cf_*`). |
 | Profiles | `just cloud-profiles`, `just cloud-prune [--days N] [--empty] [--yes]` | Prune is a dry run without `--yes`. |
-| A forgotten PIN | `just cloud-reset-pin <id>` | From an email to [old address removed]; it asks before it changes anything. |
+| A forgotten PIN | `just cloud-reset-pin <id>` | From an email to the PIN-reset address; it asks before it changes anything. |
 | Schema | `just cloud-migrate [--yes]`; `just cloud-schema` (a new, empty database only) | Ben runs migrate right before the deploy that needs it. |
 | Back up the database | `just cloud-backup [file]` | A whole-database `.sql` export (reads only), by default in `~/.local/state/noodlepads/backups/`; it refuses a path inside the repo. |
 | Anything else | `just cloud-sql "…"`, `just cloud-db …` | Ben's. |
