@@ -3745,6 +3745,38 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
 .kids .boing, .kids-sum .boing { animation: kids-boing 0.3s ease-out; }
 .kids .wiggle, .kids-sum .wiggle { animation: kids-wiggle 0.4s ease-in-out; }
 
+/* The Pads screen's top bar, in the room above the pads beside the floating
+   ⚙️ (and the level lights from 700 px): 🎨 the next pad skin at its left.
+   Its right end stops short of ⚙️ and the lights. */
+.kids-pads-view { position: relative; }
+.kids-top {
+  --kids-top-room: 56px;
+  position: absolute;
+  top: -60px;
+  left: 0;
+  right: var(--kids-top-room);
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+@media (min-width: 700px) { .kids-top { --kids-top-room: 128px; } }
+@media (min-width: 900px) { .kids-top { --kids-top-room: 160px; } }
+.kids-skin {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bed);
+  box-shadow: 0 5px 0 var(--bed-edge);
+  font-size: 1.8rem;
+  line-height: 1;
+  transition: transform 60ms, box-shadow 60ms;
+}
+.kids-skin:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--bed-edge); }
+
 /* Pads: pages side by side, one screen wide, snapping as they are swiped. */
 .kids-pages {
   flex: 1 1 auto;

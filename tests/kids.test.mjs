@@ -404,3 +404,28 @@ test('🧸 Kids in Settings brings the kid\'s screens back; Regular leaves them 
   $('#library').close();
   $('#pads-tab').dispatch('click');
 });
+
+// Ben, 2026-10-16: 🧸 Kids can't reach ⚙️ Settings → 🎨 Look without a
+// grown-up's sum, so its Pads screen has a round skin button at the top left.
+test('🎨 the Kids skin button: each tap moves to the next skin and keeps it, round to Tiles again', async () => {
+  const { getSetting } = await import('../web/settings.js');
+  const { SKINS, SKIN_IDS } = await import('../web/skins.js');
+  await setLevel('kids');
+  $('[data-kids-tab="pads"]').dispatch('click');
+  const button = $('#kids-skin');
+  assert.equal(button.getAttribute('aria-label'), 'Next look', 'its tooltip; no words on it');
+  assert.equal(button.closest('[data-kids-view]').dataset.kidsView, 'pads', 'on the Pads screen');
+  assert.equal(getSetting('padSkin'), 'tiles');
+  assert.equal(button.textContent, SKINS[0].emoji);
+  const seen = [];
+  for (let i = 0; i < SKIN_IDS.length; i++) {
+    button.dispatch('click');
+    await page.settle();
+    seen.push(getSetting('padSkin'));
+    assert.equal(button.textContent, SKINS.find((s) => s.id === seen.at(-1)).emoji, 'it shows the skin now on');
+    assert.equal(document.documentElement.getAttribute('data-skin'), seen.at(-1) === 'tiles' ? null : seen.at(-1));
+  }
+  assert.deepEqual(seen, ['slam', 'lit', 'switch', 'spinner', 'jelly', 'googly', 'tiles']);
+  assert.ok(state.prefs.get(state.personId) && 'padSkin' in state.prefs.get(state.personId).values, 'kept as the person\'s setting');
+  await setLevel('regular');
+});

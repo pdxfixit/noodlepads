@@ -225,6 +225,7 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | Rule | Why | Since |
 |---|---|---|
 | Pad skins: Tiles, Slam buttons, Lit pads, Switch, Spinner, Jelly, Googly eyes. Each person picks one in ⚙️ Settings → 🎨 Look, at every level, and every pad everywhere takes it. Slam's name sits on the plate under the dome. | Ben: his first idea was big round slam buttons; "the kid version could get silly". | 2026-10-16 |
+| 🧸 Kids' Pads screen has a round skin button at the top left: each tap moves to the next skin and keeps it as the person's. No words, no menu. | Ben, 2026-10-16: Kids can't open ⚙️ Settings without a grown-up's sum. | 2026-10-16 |
 | The page behind the panels has a subtle pattern, from a wide set, picked at random on each visit; the panels stay solid, and the sticky bars (slim header, Pads' slider bar, bottom toolbar) carry the same pattern, lined up with the page's. No picker. | Ben: "a wide set of bkgnds that just rotate randomly"; "would be good if the bkgnd could extend to the sticky panels". | 2026-10-13 |
 | Pads' size slider sits centered in the room left on its line, and does not move when the bar sticks. | Ben: "the size scroller should be centered in the available space". | 2026-10-13 |
 | Where a line runs out of room, its less-used buttons move into a ⋯ menu at the line's end; buttons never shrink below 44 px to fit, and names may drop out. | Ben: "no need to muck about with smaller sizes… allow the buttons to move into a sub menu where space requires it". | 2026-10-12 |

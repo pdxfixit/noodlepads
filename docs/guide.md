@@ -93,7 +93,9 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   then the kit. Swipe sideways for more pages (◀️ ▶️ with a mouse); pinch to
   make them bigger or smaller (2 to 4 across a phone, more per 560 px on a
   wider screen; remembered on the device, `kids-size`). A tap plays from the
-  start; no holding or looping.
+  start; no holding or looping. The round button at the top left shows the
+  person's pad skin; each tap moves to the next one (Tiles after Googly eyes)
+  and keeps it, as ⚙️ Settings → 🎨 Look would.
 - **🎙️ Record**: hold the big mic, let go to stop (10 s at most; a tap under
   0.3 s or silence keeps nothing). It becomes a pad of the kid's own, saved
   as the sound sheet saves one, and plays. 🤖 Robot, 🐭 Tiny (Chipmunk) and
