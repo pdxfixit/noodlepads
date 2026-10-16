@@ -205,6 +205,22 @@ def fill(db):
     db.execute("INSERT INTO uses (profile_id, feature, day, n) VALUES ('p-kid', 'pad', '2027-01-14', 40), ('p-kid', 'beats', '2027-01-14', 2), ('p-smoke-1', 'pad', '2027-01-14', 1);")
 
 
+class HarvestKeepsNoNames(unittest.TestCase):
+    """The shared privacy policy (2026-10-16): no profile name or avatar leaves D1.
+    site/harvest.conf copies only a profile's id and when it was made."""
+
+    def test_the_harvest_copies_only_id_and_created_from_profiles(self):
+        lines = [l for l in (ROOT / 'site' / 'harvest.conf').read_text().splitlines() if l.startswith('table=profiles ')]
+        self.assertEqual(len(lines), 1)
+        cols = re.search(r'\bcols=(\S+)', lines[0]).group(1).split(',')
+        self.assertEqual(cols, ['id', 'created'])
+        self.assertIn('as=players', lines[0])
+
+    def test_the_archive_players_table_has_no_name_or_avatar(self):
+        conn = ca.open_archive(':memory:')
+        self.assertEqual([r[1] for r in conn.execute('PRAGMA table_info(players)')], ['id', 'created'])
+
+
 class Metrics(unittest.TestCase):
     """`just cloud-stats`: the players from D1, then the metrics reported per
     player from the harvest's archive (ADR 0016)."""
@@ -217,7 +233,7 @@ class Metrics(unittest.TestCase):
         fill(self.db)
         self.archive = ca.open_archive(':memory:')
         fill(self.archive)
-        self.archive.execute("INSERT INTO players VALUES ('p-kid', 'Sir Squid', '🐙', ?)", (NOW - 10 * DAY,))
+        self.archive.execute("INSERT INTO players VALUES ('p-kid', ?)", (NOW - 10 * DAY,))
         self.archive.execute("INSERT INTO harvest_meta VALUES ('last_run', '2027-01-15T07:00:00Z'), ('last_result', 'ok')")
 
     def stats(self):
@@ -234,6 +250,13 @@ class Metrics(unittest.TestCase):
         self.assertTrue(all(l.startswith('     feature-') for l in lines[1:]))
         self.assertEqual(' · '.join(l.strip().removeprefix('🧩 ') for l in lines).split(' · '), names)
         self.assertEqual(ca.wrapped('  🧩 ', ['pad 40', 'beats 2']), ['  🧩 pad 40 · beats 2'])
+
+    def test_names_come_from_the_live_cloud_and_a_gone_player_has_none(self):
+        text = '\n'.join(self.stats())
+        self.assertIn('Sir Squid  p-kid', text, 'the name D1 has now')
+        lines, out = quiet()
+        ca.metrics_report(self.archive, NOW, out=out, tz=timezone.utc)
+        self.assertTrue(any(l.startswith('(gone)  p-kid') for l in lines), 'no live name: the archive has none to show')
 
     def test_reports_devices_places_activity_and_uses_and_flags_two_places(self):
         lines = self.stats()
