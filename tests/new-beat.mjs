@@ -8,7 +8,7 @@ export function newBeatWithRow(page) {
   const $ = page.$;
   const bar = document.querySelectorAll('.beat-bar')[0];
   bar.querySelector('[data-beat-new]').dispatch('click');
-  $('#seq-add').dispatch('click');
+  $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
   bar.querySelector('[data-beat-keep]').dispatch('click');
 }
 

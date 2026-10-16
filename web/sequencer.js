@@ -143,6 +143,23 @@ function cleanPlainRow(r) {
 // read as notes a pill long. Its pills and per-pill notes are worked out
 // from the notes: the pills light where notes start (the compact row's
 // preview, chips and thumbnails), and an older copy plays them.
+// The sound a new row starts on: the first one not used yet after the last
+// row's, in the chooser's order (after an F chord, the next chord; Ben,
+// 2026-10-16), going round at the end. With no rows, or the last row's
+// sound not in `order`, the first unused one in `start`.
+export function nextSound(order, rowIds, start = order) {
+  const used = new Set(rowIds);
+  const from = order.findIndex((c) => c.id === rowIds.at(-1));
+  if (from >= 0) {
+    for (let k = 1; k <= order.length; k++) {
+      const c = order[(from + k) % order.length];
+      if (!used.has(c.id)) return c;
+    }
+    return order[(from + 1) % order.length];
+  }
+  return start.find((c) => !used.has(c.id)) ?? start[0] ?? null;
+}
+
 export function cleanRow(r) {
   const row = cleanPlainRow(r);
   if (!row.melody) return row;
@@ -1570,16 +1587,19 @@ export function createSequencer(deps) {
   // "Use" sets the row. With advanced beats on, also the row's speed (its
   // 🔔 Overlap is on the row's header line). ──
 
-  // What the chooser is choosing for: a beat row ({row: i, title}).
+  // What the chooser is choosing for: a beat row ({row: i, title}), or new
+  // rows ({adding: true, title}).
   let target = null;
   let choosing = -1;   // the row, when the target is a row
   let picked = null;   // the sound marked in it, not used until "Use"
+  let ticks = [];      // new rows: the sounds ticked, in the order tapped
   let opened = new Map();  // group id -> open, set in this dialog (it wins over the shared state)
 
   function openFor(next, current, returnTo) {
     target = next;
     choosing = next.row ?? -1;
     picked = current ?? null;
+    ticks = next.adding && current ? [current] : [];
     // The group holding the current sound starts open, but can still be closed.
     const home = deps.groups().find((g) => g.collapsible && g.clips.some((c) => c.id === picked));
     opened = new Map(home ? [[home.groupId, true]] : []);
@@ -1623,7 +1643,7 @@ export function createSequencer(deps) {
         const b = deps.makePad(c);
         b.classList.add('pad-mini');
         b.dataset.choose = c.id;
-        b.setAttribute('aria-pressed', String(c.id === picked));
+        showTick(b);
         return b;
       }));
       grid.hidden = !open;
@@ -1636,6 +1656,14 @@ export function createSequencer(deps) {
   // The bottom bar: the Use button names the marked sound; the row buttons
   // show the row as it is now.
   function renderChooserTools() {
+    if (target?.adding) {
+      const n = ticks.length;
+      el.chooserOk.textContent = n ? `Add ${n} row${n === 1 ? '' : 's'}` : 'Tick a sound';
+      el.chooserOk.disabled = !n;
+      el.chooserTitle.textContent = n && n >= room() ? 'New rows · beat full' : 'New rows';
+      el.chooserTools.hidden = true;
+      return;
+    }
     const clip = deps.clipById(picked);
     el.chooserOk.textContent = clip ? `Use ${clip.label}` : 'Pick a sound';
     el.chooserOk.disabled = !clip;
@@ -1649,13 +1677,43 @@ export function createSequencer(deps) {
     for (const b of el.chooserRate.querySelectorAll('[data-rate]')) b.setAttribute('aria-pressed', String(Number(b.dataset.rate) === row.rate));
   }
 
-  // Marks a sound and plays it, so it can be heard before it is used.
+  // A sound in the chooser shows whether it is marked; for new rows, ticked,
+  // with its place in the order tapped (the rows go in that order).
+  function showTick(b) {
+    const id = b.dataset.choose;
+    const at = target?.adding ? ticks.indexOf(id) : -1;
+    b.setAttribute('aria-pressed', String(target?.adding ? at >= 0 : id === picked));
+    if (at >= 0) b.dataset.tick = String(at + 1);
+    else delete b.dataset.tick;
+  }
+  const room = () => MAX_ROWS - (pattern?.rows.length ?? MAX_ROWS);
+
+  // Marks a sound and plays it, so it can be heard before it is used. For new
+  // rows a tap ticks it (and plays it), or unticks it; a full beat ticks no more.
   function mark(clipId) {
-    picked = clipId;
-    for (const b of el.chooserGrid.querySelectorAll('[data-choose]')) b.setAttribute('aria-pressed', String(b.dataset.choose === clipId));
+    let hear = true;
+    if (target?.adding) {
+      const at = ticks.indexOf(clipId);
+      if (at >= 0) { ticks.splice(at, 1); hear = false; }
+      else if (ticks.length < room()) ticks.push(clipId);
+    } else picked = clipId;
+    for (const b of el.chooserGrid.querySelectorAll('[data-choose]')) showTick(b);
     const clip = deps.clipById(clipId);
-    if (clip) audio.play(clip);
+    if (clip && hear) audio.play(clip);
     renderChooserTools();
+  }
+
+  // The new rows' Add: a row for each ticked sound, in the order tapped.
+  function addTicked() {
+    const clips = ticks.map((id) => deps.clipById(id)).filter(Boolean).slice(0, room());
+    for (const clip of clips) {
+      pattern.rows.push(cleanRow({ clipId: clip.id }));
+      if (playing()) prepare(clip);
+    }
+    el.chooser.close();
+    if (!clips.length) return;
+    save();
+    render();
   }
 
   // `then`: what happens once the chooser has closed (🎹 Tune opens the roll).
@@ -2113,16 +2171,15 @@ export function createSequencer(deps) {
   el.undoButton.addEventListener('click', undoRemove);
   el.undoClose?.addEventListener('click', () => offerUndo(null));
 
+  // + Add a row opens the chooser for new rows (Ben, 2026-10-16: adding eight
+  // chords one at a time meant closing Drums eight times). The sound after
+  // the last row's comes ticked, its group open, so one tap on Add still adds
+  // the next one.
   el.add.addEventListener('click', () => {
     if (!pattern || pattern.rows.length >= MAX_ROWS) return;
-    // A new row starts on a sound not used yet: this board's first, then anyone's.
-    const clips = [...deps.clips(), ...deps.groups().flatMap((g) => g.clips)];
-    const used = new Set(pattern.rows.map((r) => r.clipId));
-    const next = clips.find((c) => !used.has(c.id)) || clips[0];
-    pattern.rows.push(cleanRow({ clipId: next?.id ?? null }));
-    if (playing()) prepare(next);
-    save();
-    render();
+    const order = deps.groups().flatMap((g) => g.clips);
+    const next = nextSound(order, pattern.rows.map((r) => r.clipId), [...deps.clips(), ...order]);
+    openFor({ adding: true, title: 'New rows' }, next?.id, () => el.add);
   });
 
   let afterHold = () => false;   // set below, once the hold listener is on
@@ -2258,7 +2315,7 @@ export function createSequencer(deps) {
     const pick = e.target.closest('[data-choose]');
     if (pick) mark(pick.dataset.choose);
   });
-  el.chooserOk.addEventListener('click', () => useMarked());
+  el.chooserOk.addEventListener('click', () => (target?.adding ? addTicked() : useMarked()));
   // 🎹 Tune: the row plays notes from 🎹 the piano roll (ADR 0023). On, its
   // pills become notes a pill long, at the sound's own note, and the roll
   // opens (after Use, if a sound is marked). Off, its notes become pills

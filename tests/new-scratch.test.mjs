@@ -36,7 +36,7 @@ const tap = (selector) => $(selector).dispatch('click');
 // The scratch with one row and a hit, and its tempo and bars changed.
 function fillScratch() {
   bar().querySelector('[data-beat-new]').dispatch('click');
-  tap('#seq-add');
+  tap('#seq-add'); tap('#chooser-ok');
   rows()[0].querySelectorAll('.pill')[0].dispatch('click');
   $('#seq-bars').querySelector('[data-bars="2"]').dispatch('click');
 }

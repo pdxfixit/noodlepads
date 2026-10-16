@@ -433,7 +433,7 @@ test('Beats shows the beat maker in place of the pads; 🆕 New starts with no r
   assert.match($('#seq-no-rows').textContent, /💃\sGrooves/);
   assert.equal($('#seq-add').hidden, false, '+ Add a row is there');
   assert.equal($('#seq-grooves').hidden, false, 'and 💃 Grooves');
-  $('#seq-add').dispatch('click');
+  $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
   assert.equal($('#seq-no-rows').hidden, true, 'the line goes with the first row');
   assert.equal(rows().length, 1);
   const pills = rows()[0].querySelectorAll('.pill');
@@ -494,7 +494,7 @@ test('beat pills: one tap switches on or off; a hold (or Shift) makes a loud hit
 });
 
 test('Add a row adds a second row, and arrow keys then reach it', () => {
-  $('#seq-add').dispatch('click');
+  $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
   const rows = $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
   assert.equal(rows.length, 2);
   const first = rows[0].querySelectorAll('.pill')[1];
@@ -694,7 +694,7 @@ test('a beat file: 📥 Load a beat file opens it under its own name; ⬇️ sav
 
 test('a row collapses to one slim line with its sound\'s name, and opens again', () => {
   const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
-  if (rows().length < 2) $('#seq-add').dispatch('click');
+  if (rows().length < 2) $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
   const fold = () => rows()[0].querySelector('.seq-fold');
   const name = rows()[0].querySelector('[data-pick]').getAttribute('aria-label').split(':')[1].split('.')[0].trim();
   assert.equal(fold().getAttribute('aria-expanded'), 'true');
@@ -814,8 +814,8 @@ test('closing the chooser without Use leaves the row\'s sound alone', () => {
 test('Undo brings a removed row back where it was, pills and all', () => {
   const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
   const sound = (r) => rows()[r].querySelector('[data-pick]').getAttribute('aria-label').split('.')[0].replace(/^Row \d+: /, '');
-  $('#seq-add').dispatch('click');
-  $('#seq-add').dispatch('click');
+  $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
+  $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
   const before = rows().map((_, r) => sound(r));
   rows()[1].querySelectorAll('.pill')[6].dispatch('click');
   assert.equal($('#seq-undo').hidden, true);
@@ -851,7 +851,7 @@ test('a row\'s 🧹 and ✕ ask first: the second tap does it, any other tap tak
   tool(0, 'clear').dispatch('click');
   assert.ok(rows()[0].querySelectorAll('.pill').every((p) => p.getAttribute('aria-pressed') === 'false'));
 
-  $('#seq-add').dispatch('click');
+  $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
   const count = rows().length;
   tool(count - 1, 'remove').dispatch('click');
   assert.equal(rows().length, count, 'the first tap only asks');
@@ -880,7 +880,7 @@ test('🔔 Overlap is on each beat row\'s header line, at every level: a tap tur
   const { setSetting, getSetting } = await import('../web/settings.js');
   assert.equal(getSetting('advancedBeats'), false, 'Regular, not Advanced');
   const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
-  if (!rows().length) $('#seq-add').dispatch('click');
+  if (!rows().length) $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
   const bell = () => rows()[0].querySelector('.seq-head .row-tools [data-ring]');
   const beat = () => state.patterns.get(state.personId);
   assert.equal(bell().textContent, '🔔');
@@ -912,7 +912,7 @@ test('🔔 Overlap is on each beat row\'s header line, at every level: a tap tur
 // buttons to move into a sub menu where space requires it".
 test('a Beats row\'s ⋯: 🔔 🧹 ✕ move into its menu on a line short of room, and still work there (Overlap on, Clear and Remove ask first, Undo)', () => {
   const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
-  while (rows().length < 2) $('#seq-add').dispatch('click');
+  while (rows().length < 2) $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
   const beat = () => state.patterns.get(state.personId);
   const more = () => rows()[0].querySelector('.seq-head .row-tools [data-more]');
   const pop = () => document.body.children.find((c) => c.classList.contains('more-pop'));
