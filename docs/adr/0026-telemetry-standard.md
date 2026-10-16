@@ -4,7 +4,7 @@
 - **Date:** 2026-10-16
 - **Decided by:** Ben, 2026-10-16: one telemetry standard across every app (Arrow-Rama backlog #151, pdxfixit/telemetry `docs/standard.md`); "telemetry on by default with a user switch to turn it off", and off sends nothing, ever. Open: whether players who never use the cloud send events (question #425). Rows in [decisions.md](../decisions.md) (Hosting and data).
 
-**In short.** `web/telemetry.js` has one call, `track(event, details)`, that builds a record in the standard's shape and queues it on the device. `web/track-page.js` calls it from one hook per category: lifecycle, screens, dialogs, every control (one click listener), content (beats, songs, takes), settings (from and to), errors and speed. The `sendUsage` setting, on by default, gates it, and the older metrics (ADR 0016) too.
+**In short.** `web/telemetry.js` has one call, `track(event, details)`, that hands a checked event to flarepress's shared client, which builds the standard's record and sends batches to `/api/events`, stored in R2. `web/track-page.js` calls it from one hook per category: lifecycle, screens, dialogs, every control (one click listener), content (beats, songs, takes), settings (from and to), errors and speed. The `sendUsage` setting, on by default, gates it, and the older metrics (ADR 0016) too.
 
 ## Context
 
@@ -17,7 +17,7 @@
 - **The player** is a plain random id in localStorage `telemetry-player`: not a profile id, never hashed or rotated here, made in one function (`newPlayer`) so #150's rules change one place.
 - **Controls are named without a kid's words:** a control from `index.html` by its first label, any other by its id, a `data-` attribute's name or its class. Pads, keys and pills are play, not controls, and are left out. No coordinates: `layout` says which arrangement showed it.
 - **The switch.** `sendUsage` (device, default on). Off: `track` does nothing and its queue is emptied; no feature-use counts or visits are kept and what waited goes; cloud calls carry no `X-Noodle-App`, and the Worker keeps no device, event, count or visit for a call without it.
-- **Sending** comes with flarepress's shared web transport (phase B). It asks `shouldSend`: the switch on, and someone on the device in the cloud unless `SEND_WITHOUT_CLOUD` (question #425, one flag).
+- **Sending** is flarepress's shared web transport, vendored: `web/events-client.js` batches records to `POST /api/events`, and `worker/events-worker.js` stores each batch in the R2 bucket `noodlepads-telemetry` as sent (never parsed, no IP); the telemetry runner's job reads it. The client keeps and sends only while `shouldSend` says so: the switch on, and someone on the device in the cloud unless `SEND_WITHOUT_CLOUD` (question #425, one flag). Events from before version.json arrives wait in `telemetry.js` and go in, in order, once the client starts.
 
 ## Options turned down
 
@@ -28,5 +28,5 @@
 ## Consequences
 
 - A new button, dialog or setting is tracked with no code of its own.
-- Until the sender lands, the queue keeps the newest 500 records on the device.
+- The older metrics (ADR 0016) keep flowing beside the events until the events are seen live; then they can go.
 - Revisit when Ben answers #425, or if a control's name needs more than its label, id or class.

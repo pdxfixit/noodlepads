@@ -499,12 +499,15 @@ ADR 0002.
   seen from more than one place is flagged ⚠️. Test profiles are left out.
   Deleting a profile deletes its metrics in D1, not in the archive.
 - **Usage events** (Ben, ADR 0026), in the shared telemetry standard:
-  `web/telemetry.js` queues one record per event (screens, dialogs, every
+  `web/telemetry.js` records one event at a time (screens, dialogs, every
   control tapped, beats, songs and takes started and finished, settings
   changed from and to, errors as file:line, load time); `web/track-page.js`
-  says where each comes from. Nothing sends them yet (flarepress's shared
-  transport comes next). The `sendUsage` setting, on by default and with no
-  control yet, turns all of it off, the player metrics above included.
+  says where each comes from. flarepress's shared client
+  (`web/events-client.js`) batches them to `POST /api/events`, which stores
+  each batch in the R2 bucket `noodlepads-telemetry` for the telemetry
+  runner. Only devices where someone is in the cloud send (question #425).
+  The `sendUsage` setting, on by default and with no control yet, turns all
+  of it off, the player metrics above included.
 
 ## Keyboard and screen readers
 

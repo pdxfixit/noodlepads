@@ -16,6 +16,16 @@ beforeEach(() => {
   setUsage(true);
 });
 
+// A telemetry, started, whose shared client sends nothing and runs no timers.
+function telemetry() {
+  const tel = createTelemetry({
+    cloud: () => true,
+    globals: { window: {}, document: undefined, navigator: {}, storage: globalThis.localStorage, fetch: null, setInterval: () => 1, clearInterval: () => {} },
+  });
+  tel.setVersion('v');
+  return tel;
+}
+
 const el = (tag, { id = '', cls = '', attrs = {}, text = '' } = {}, ...kids) => {
   const e = new FakeElement(tag, id);
   if (cls) e.className = cls;
@@ -113,7 +123,7 @@ test('app.open carries the environment once: viewport, density, font scale, dark
 
 test('the hooks: open, screens, dialogs, controls (not play), settings, content, errors, hiding and showing', () => {
   let t = 0;
-  const tel = createTelemetry({ now: () => t, later: () => {} });
+  const tel = telemetry();
   const doc = emitter({ visibilityState: 'visible', readyState: 'loading' });
   const win = emitter({ innerWidth: 800, innerHeight: 600, navigator: {} });
   const logs = [];
@@ -177,7 +187,7 @@ test('the hooks: open, screens, dialogs, controls (not play), settings, content,
 });
 
 test('perf.load once the page has loaded, with whether it came over the network', async () => {
-  const tel = createTelemetry({ later: () => {} });
+  const tel = telemetry();
   const nav = { loadEventEnd: 812.4, transferSize: 5000 };
   const win = emitter({ performance: { getEntriesByType: () => [nav] }, navigator: {} });
   trackPage({ telemetry: tel, doc: emitter({ readyState: 'loading' }), win });

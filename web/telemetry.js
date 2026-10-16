@@ -1,16 +1,22 @@
 // Usage events in the shared standard (pdxfixit/telemetry docs/standard.md,
-// Arrow-Rama backlog #151): one call, `track(event, details)`, builds a record
-// with every column the standard names (app, platform, form, version, player,
-// session, seq, at, tz, event, screen, details) and queues it in memory and
-// in localStorage `telemetry-queue`. Nothing is sent from here yet: the shared
-// sender comes with flarepress's web transport (phase B), and it asks
-// `shouldSend` first.
+// Arrow-Rama backlog #151, ADR 0026): the app's one call, `track(event,
+// details)`. It checks the event and its details against EVENTS and hands
+// them to flarepress's shared client (events-client.js, vendored), which
+// fills the rest of the record (app, platform, form, version, player,
+// session, seq, at, tz, screen), queues it in memory and localStorage, and
+// sends batches to POST /api/events (the Worker stores them in R2).
 //
 // With the usage switch off (usage.js, the `sendUsage` setting) `track` does
-// nothing and the queue is emptied. The player is a plain random id kept on
-// this device (`telemetry-player`): not a profile's id and not tied to one,
-// made in `newPlayer` alone so its rules (#150) change in one place. The
-// session is one page load.
+// nothing and every queued record is dropped. It sends only while
+// `shouldSend` says so: the switch on, and someone on this device in the
+// cloud unless SEND_WITHOUT_CLOUD (question #425); otherwise the client keeps
+// nothing. The player is a plain random id kept on this device
+// (`telemetry-player`): not a profile's id and not tied to one, made in
+// `newPlayer` alone so its rules (#150) change in one place.
+//
+// The client needs the app's version, which version.json says only after the
+// page has started: events before that wait here and go in, in order, once
+// `setVersion` is called.
 //
 // What a record may hold is fixed: each event's details keys are listed in
 // EVENTS (the standard's events.toml, plus this app's own), and a value is a
@@ -19,9 +25,9 @@
 
 import { remember, recall, forget } from './util.js';
 import { usageOn } from './usage.js';
+import { createEvents } from './events-client.js';
 
 export const APP = 'noodlepads';
-export const PLATFORM = 'web';
 
 // Question #425 (open): do players who never use the cloud send events too?
 // Until Ben answers, only devices where someone syncs send; one flag changes it.
@@ -53,11 +59,10 @@ export const EVENTS = {
   'noodlepads.cloud': ['action'],
 };
 
-export const MAX_QUEUE = 500;      // records waiting on this device; the oldest go first
 export const MAX_TEXT = 60;        // a string value's length
-const QUEUE_KEY = 'telemetry-queue';
+export const MAX_WAITING = 200;    // events waiting for the version
 const PLAYER_KEY = 'telemetry-player';
-const SAVE_MS = 2000;              // localStorage is written at most this often (and on hiding)
+const OLD_QUEUE = 'telemetry-queue';   // this app's own queue before the shared client (2026-10-16)
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 export function randomId() {
@@ -83,17 +88,8 @@ export function playerId() {
   return { id, first: true };
 }
 
-// phone, tablet or desktop, from the screen's size and touch: no touch is a
-// desktop; a touch screen whose short side is under 600 CSS px is a phone.
-export function formOf(width, height, touch) {
-  if (!touch) return 'desktop';
-  const short = Math.min(Number(width) || 0, Number(height) || 0);
-  return short > 0 && short < 600 ? 'phone' : 'tablet';
-}
-
 // A details object as a record keeps it: only the event's listed keys, and
-// only numbers (whole below 1e12, else rounded to 3 places), booleans, null
-// and strings cut to MAX_TEXT.
+// only numbers (rounded to 3 places), booleans, null and strings cut to MAX_TEXT.
 export function cleanDetails(event, details) {
   const keys = EVENTS[event] ?? [];
   const out = {};
@@ -107,92 +103,68 @@ export function cleanDetails(event, details) {
   return out;
 }
 
-// Whether the sender may send: the switch is on, and someone on this device
-// is in the cloud unless SEND_WITHOUT_CLOUD (question #425).
+// Whether the client may keep and send: the switch is on, and someone on this
+// device is in the cloud unless SEND_WITHOUT_CLOUD (question #425).
 export const shouldSend = ({ enabled = usageOn(), cloud = false } = {}) => enabled && (SEND_WITHOUT_CLOUD || cloud);
 
-// The queue as localStorage holds it, junk dropped.
-export function readQueue() {
-  let raw;
-  try { raw = JSON.parse(recall(QUEUE_KEY) || '[]'); } catch { raw = []; }
-  if (!Array.isArray(raw)) return [];
-  return raw.filter((r) => r && typeof r === 'object' && r.app === APP && typeof r.session === 'string'
-    && Number.isInteger(r.seq) && Number.isInteger(r.at) && Object.hasOwn(EVENTS, r.event)).slice(-MAX_QUEUE);
-}
-
 // deps (all optional, for the tests): {
-//   now()        ms (Date.now)
 //   enabled()    the usage switch (usage.js usageOn)
+//   cloud()      someone on this device is in the cloud
 //   screen()     the screen showing, from the app's screen names
-//   size()       {width, height, touch} of the device's screen
-//   later(fn, ms) a timer (setTimeout)
+//   globals      the shared client's window, document, storage, fetch… (events-client.js)
+//   endpoint     where batches go (/api/events)
 // }
-// Returns {track, flush, clear, setVersion, queued, session, player, first}.
+// Returns {track, flush, clear, setVersion, queued, player, first, client()}.
 export function createTelemetry(deps = {}) {
-  const now = deps.now ?? (() => Date.now());
   const enabled = deps.enabled ?? usageOn;
-  const later = deps.later ?? ((fn, ms) => setTimeout(fn, ms));
-  const session = randomId();
+  const cloud = deps.cloud ?? (() => false);
   const { id: player, first } = playerId();
-  let version = null;     // version.json arrives after the first events
-  let seq = 0;
-  let queue = readQueue();
-  let saving = false;
-
-  const save = () => {
-    saving = false;
-    // Records made before the version is known wait in memory for it.
-    const ready = queue.filter((r) => r.version !== null);
-    if (ready.length) remember(QUEUE_KEY, JSON.stringify(ready.slice(-MAX_QUEUE)));
-    else forget(QUEUE_KEY);
-  };
-  const soon = () => {
-    if (saving) return;
-    saving = true;
-    later(save, SAVE_MS);
-  };
+  forget(OLD_QUEUE);
+  let client = null;
+  let waiting = [];   // [event, details] before the version is known
 
   function track(event, details = {}) {
-    if (!enabled() || !Object.hasOwn(EVENTS, event)) return null;
-    const at = now();
-    const size = safe(deps.size) ?? {};
-    const record = {
-      app: APP,
-      platform: PLATFORM,
-      form: formOf(size.width, size.height, size.touch),
-      version,
-      player,
-      session,
-      seq: seq++,
-      at,
-      tz: -new Date(at).getTimezoneOffset(),
-      event,
-      screen: safe(deps.screen) ?? null,
-      details: cleanDetails(event, details),
-    };
-    queue.push(record);
-    if (queue.length > MAX_QUEUE) queue.splice(0, queue.length - MAX_QUEUE);
-    soon();
-    return record;
+    if (!enabled() || !Object.hasOwn(EVENTS, event)) return false;
+    const clean = cleanDetails(event, details);
+    if (client) return client.track(event, clean);
+    if (waiting.length < MAX_WAITING) waiting.push([event, clean]);
+    return true;
   }
 
   return {
     track,
-    session,
     player,
     first,
-    // Writes the queue now (the page is hiding).
-    flush: save,
+    client: () => client,
+    // Sends what is queued now (the tests; the client sends by itself).
+    flush: (opts) => client?.flush(opts) ?? Promise.resolve(),
     // The switch went off: nothing waits any more, here or in localStorage.
-    clear() { queue = []; forget(QUEUE_KEY); },
-    // The app's version, once version.json says it: stamped on every record
-    // of this page load that waited for it.
+    clear() { waiting = []; client?.clear(); },
+    // The app's version, once version.json says it: the client starts, and
+    // the events that waited for it go in, in order.
     setVersion(v) {
-      version = String(v ?? 'dev').slice(0, 40) || 'dev';
-      for (const r of queue) if (r.session === session && r.version === null) r.version = version;
-      soon();
+      if (client) return;
+      client = createEvents({
+        app: APP,
+        version: String(v ?? 'dev').slice(0, 40) || 'dev',
+        player,
+        screen: () => safe(deps.screen),
+        enabled: () => shouldSend({ enabled: enabled(), cloud: !!safe(cloud) }),
+        ...(deps.endpoint ? { endpoint: deps.endpoint } : {}),
+        ...(deps.globals ? { globals: deps.globals } : {}),
+      });
+      const early = waiting;
+      waiting = [];
+      if (enabled()) for (const [e, d] of early) client.track(e, d);
     },
-    queued: () => queue.slice(),
+    // What waits to be sent, as records (the tests).
+    queued() {
+      if (!client) return [];
+      const q = client.queued();
+      const lines = [...q.batches.flatMap((b) => b.body.split('\n').filter(Boolean)), ...q.records];
+      return lines.map((l) => JSON.parse(l));
+    },
+    waiting: () => waiting.slice(),
   };
 }
 
@@ -203,5 +175,5 @@ function safe(fn) {
 // The page's one instance, so any module can call `track` without wiring.
 let current = null;
 export function useTelemetry(t) { current = t; return t; }
-export const track = (event, details) => current?.track(event, details) ?? null;
+export const track = (event, details) => current?.track(event, details) ?? false;
 export const currentTelemetry = () => current;

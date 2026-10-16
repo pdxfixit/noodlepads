@@ -20,6 +20,8 @@ before(async () => {
     getItem: (k) => (store.has(k) ? store.get(k) : null),
     setItem: (k, v) => { store.set(k, String(v)); },
     removeItem: (k) => { store.delete(k); },
+    get length() { return store.size; },
+    key: (i) => [...store.keys()][i] ?? null,
   };
   await (await import('../web/app.js')).ready;
   await page.settle();
@@ -27,37 +29,43 @@ before(async () => {
   tel = await import('../web/telemetry.js');
 });
 
-// A probe event: its seq and screen show what the session has recorded.
-const probe = () => tel.track('perf.longtask', { n: 0, ms: 0 });
+// Someone on this device in the cloud, for one test: until Ben answers
+// question #425, a device where nobody is in the cloud keeps no events.
+async function inTheCloud(fn) {
+  state.cloud.set('p-test-link', { id: 'p-test-link', key: 'k' });
+  try { await fn(); } finally { state.cloud.delete('p-test-link'); }
+}
+const records = () => tel.currentTelemetry().queued();
 
-test('the app opens with app.open and its first screen, and every record names the app and the screen', async () => {
-  const p = probe();
-  assert.equal(p.app, 'noodlepads');
-  assert.equal(p.screen, state.screen);
-  assert.ok(p.seq >= 2, 'app.open and the first screen.view came first');
+test('the shared client starts once the version is known, and nobody in the cloud means nothing is kept', () => {
+  assert.ok(tel.currentTelemetry().client(), 'started');
+  assert.equal(state.cloud.size, 0);
+  page.$('#pads-tab').dispatch('click');
+  assert.deepEqual(records(), []);
 });
 
-test('a tab, a toolbar button, a dialog and a setting each make their event', async () => {
-  const $ = page.$;
-  const from = probe().seq + 1;
-  $('#beats-toggle').dispatch('click');
-  $('#settings-open').dispatch('click');
-  const { setSetting } = await import('../web/settings.js');
-  await setSetting('timeSignature', '3/4');
-  $('#settings-dialog').close();
-  const mine = tel.currentTelemetry().queued().filter((r) => r.seq >= from);
-  // The stand-in page runs a control's own handler before the page's
-  // listener (a browser's capture phase hears the tap first), so each
-  // control.use follows what it did here.
-  assert.deepEqual(mine.map((r) => r.event), ['screen.view', 'control.use', 'dialog.open', 'control.use', 'setting.change', 'dialog.close']);
-  assert.ok(mine.every((r) => r.screen === 'beats'));
-  assert.deepEqual(mine[0].details, { from: 'pads' });
-  assert.equal(mine[1].details.control, 'beats-toggle', 'a tab whose label the stand-in page cannot read is named by its id');
-  assert.equal(mine[1].details.group, 'toolbar');
-  assert.equal(mine[2].details.dialog, 'settings-dialog');
-  assert.deepEqual([mine[3].details.control, mine[3].details.group], ['Settings', 'top']);
-  assert.deepEqual(mine[4].details, { key: 'timeSignature', from: '4/4', to: '3/4' });
-  await setSetting('timeSignature', '4/4');
+test('a tab, a toolbar button, a dialog and a setting each make their event, with the app and the screen', async () => {
+  await inTheCloud(async () => {
+    const $ = page.$;
+    $('#beats-toggle').dispatch('click');
+    $('#settings-open').dispatch('click');
+    const { setSetting } = await import('../web/settings.js');
+    await setSetting('timeSignature', '3/4');
+    $('#settings-dialog').close();
+    const mine = records();
+    // The stand-in page runs a control's own handler before the page's
+    // listener (a browser's capture phase hears the tap first), so each
+    // control.use follows what it did here.
+    assert.deepEqual(mine.map((r) => r.event), ['screen.view', 'control.use', 'dialog.open', 'control.use', 'setting.change', 'dialog.close']);
+    assert.ok(mine.every((r) => r.screen === 'beats' && r.app === 'noodlepads' && r.player === tel.currentTelemetry().player));
+    assert.deepEqual(mine[0].details, { from: 'pads' });
+    assert.equal(mine[1].details.control, 'beats-toggle', 'a tab whose label the stand-in page cannot read is named by its id');
+    assert.equal(mine[1].details.group, 'toolbar');
+    assert.equal(mine[2].details.dialog, 'settings-dialog');
+    assert.deepEqual([mine[3].details.control, mine[3].details.group], ['Settings', 'top']);
+    assert.deepEqual(mine[4].details, { key: 'timeSignature', from: '4/4', to: '3/4' });
+    await setSetting('timeSignature', '4/4');
+  });
 });
 
 test('the usage switch off: nothing tracked, counted or kept, what waited is gone, and cloud calls carry no X-Noodle-App', async () => {
@@ -68,9 +76,14 @@ test('the usage switch off: nothing tracked, counted or kept, what waited is gon
   countUse('pad', state.personId);
   keepVisit(state.personId, { at: Date.now() - 10_000, secs: 9, screens: ['pads'] });
   assert.ok(pendingUses(state.personId) && pendingVisits(state.personId));
-  await setSetting('sendUsage', false);
-  assert.equal(tel.track('screen.view', { from: 'pads' }), null, 'no events');
-  assert.equal(store.get('telemetry-queue'), undefined, 'the queue is gone');
+  await inTheCloud(async () => {
+    tel.track('screen.view', { from: 'pads' });
+    assert.ok(records().length > 0);
+    await setSetting('sendUsage', false);
+    assert.equal(tel.track('screen.view', { from: 'pads' }), false, 'no events');
+    assert.deepEqual(records(), [], 'the queue is gone');
+    assert.ok(![...store.keys()].some((k) => k.startsWith('events:')), 'from localStorage too');
+  });
   assert.equal(store.get('uses'), undefined, 'waiting counts are gone');
   assert.equal(store.get('visits'), undefined, 'waiting visits are gone');
   countUse('pad', state.personId);
@@ -79,5 +92,5 @@ test('the usage switch off: nothing tracked, counted or kept, what waited is gon
   assert.equal(keepVisit(state.personId, { at: Date.now() - 10_000, secs: 9 }), false, 'no visit is kept');
   assert.equal(appMeta('abc', 400, true), null, 'no header for the Worker');
   await setSetting('sendUsage', true);
-  assert.ok(tel.track('screen.view', { from: 'pads' }), 'on again, it tracks again');
+  await inTheCloud(() => { assert.equal(tel.track('screen.view', { from: 'pads' }), true, 'on again, it tracks again'); });
 });

@@ -172,3 +172,19 @@ test('"the cloud also keeps for 14 days … The internet address is not kept": m
   assert.ok(kept.includes('Portland') && kept.includes('Comcast Cable'), 'the city and network are kept');
   assert.ok(!kept.includes('192.0.2.44') && !kept.includes('iPhone OS'), 'the IP and User-Agent are not');
 });
+
+// ADR 0026 (Ben, 2026-10-16): usage events, said plainly and tied to the code.
+test('"also sends noodlepads.com how the app is used … Never sounds, names or anything typed": events go to the site only, from cloud devices, with fixed keys', async () => {
+  const line = claim('also sends noodlepads.com how the app is used');
+  assert.match(line, /Each device where someone is in the cloud/);
+  assert.match(line, /a random number for this device \(not a profile\)/);
+  const { EVENTS, SEND_WITHOUT_CLOUD, shouldSend } = await import('../web/telemetry.js');
+  assert.equal(SEND_WITHOUT_CLOUD, false, 'only devices where someone is in the cloud (question #425)');
+  assert.equal(shouldSend({ enabled: true, cloud: false }), false);
+  const keys = Object.values(EVENTS).flat();
+  for (const bad of ['name', 'label', 'message', 'text', 'title', 'profile', 'person']) assert.ok(!keys.includes(bad), `no ${bad} in any event`);
+  const client = readFileSync(new URL('../web/events-client.js', import.meta.url), 'utf8');
+  assert.match(client, /endpoint = opts\.endpoint \?\? "\/api\/events"/, 'sent to the site itself');
+  const telemetry = readFileSync(new URL('../web/telemetry.js', import.meta.url), 'utf8');
+  assert.ok(!/endpoint:\s*['"]http/.test(telemetry), 'never another origin');
+});
