@@ -125,7 +125,7 @@ export const HELP = [
       { adv: true, pic: [seg('4/4', '3/4', '6/8')], text: 'Time signature, beside the bars: how this beat counts. 4/4 is most songs; 3/4 is a waltz.' },
       { adv: true, pic: [seg('Straight', 'Swing', 'Shuffle')], text: 'Swing makes the beat bounce: every second pill plays a little late. Shuffle bounces most.' },
       { adv: true, pic: [word('4/4 ▾')], text: 'When the line runs out of room, these turn into pickers. Tap one to choose.' },
-      { pic: [add('+ Add a row')], text: 'Pick a sound for a new row.' },
+      { pic: [add('+ Add a row')], text: 'Opens the sounds. Tap as many as you like (each plays, and gets a number), then Add: a new row for each, in that order. The sound after your last row comes ticked, so Add straight away gives you the next one.' },
       { pic: [pills('.x.L')], text: 'Tap a pill to turn it on, tap again to turn it off. Hold it (or Shift-click it) for a loud hit (white ring); hold again for a normal one.' },
       { pic: [pills('1...')], text: 'The brighter pill with a dot is the 1: where each bar starts.' },
       { pic: [word('⠿ ▾ 🦶 … 🔔 🔊 🧹 ✕')], text: 'Each row starts with one line: its emoji at the left, and at its right ✕ removes it and 🧹 clears its pills (each asks first, in red: ✕? or 🧹?, so tap twice); ↩️ Undo brings a removed row back. Its pills fill the width below. Tap the row’s emoji to change its sound; tap a sound to hear it first.' },

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanPattern, encodeWav, STEPS, mergeGroove, cleanRow, balancedColumns, SIGNATURES, beatToFile, beatFromFile, BEAT_FILE, rowSlot } from '../web/sequencer.js';
+import { cleanPattern, encodeWav, STEPS, mergeGroove, cleanRow, balancedColumns, SIGNATURES, beatToFile, beatFromFile, BEAT_FILE, rowSlot, nextSound } from '../web/sequencer.js';
 import { fakeBuffer } from './helpers.mjs';
 
 test('cleanPattern: defaults for nothing at all', () => {
@@ -203,4 +203,15 @@ test('rowSlot: a new sound gets a new row while there is room; a full beat reuse
   assert.equal(rowSlot(full, 4), 1, 'full: the first row with no hits');
   assert.equal(rowSlot(full, 4, new Set([1])), 3, 'but not one being recorded into right now');
   assert.equal(rowSlot([row(true), row(true)], 2), -1, 'every row has hits: no room');
+});
+
+test('nextSound: the first unused after the last row\'s sound, going round', () => {
+  const c = (id) => ({ id });
+  const order = ['kick', 'snare', 'hat', 'C', 'F', 'G', 'Am'].map(c);
+  assert.equal(nextSound(order, ['kick', 'F']).id, 'G', 'after an F chord, the next chord, not the hat');
+  assert.equal(nextSound(order, ['F', 'G', 'kick', 'Am']).id, 'snare', 'round past the end, skipping used ones');
+  assert.equal(nextSound(order, ['kick', 'snare', 'hat', 'C', 'F', 'G', 'Am']).id, 'kick', 'all used: the one after the last');
+  assert.equal(nextSound(order, [], [c('pad'), ...order]).id, 'pad', 'no rows: the first in start');
+  assert.equal(nextSound(order, ['gone'], [c('pad'), ...order]).id, 'pad', 'last sound not in order: the first unused in start');
+  assert.equal(nextSound([], []), null);
 });

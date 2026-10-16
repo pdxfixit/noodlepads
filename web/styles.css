@@ -1483,6 +1483,13 @@ dialog#sheet :focus-visible, dialog#chooser :focus-visible, dialog#library :focu
 .chooser-toggle + .chooser-grid { padding-top: 0; }
 .chooser-grid :focus-visible { outline-color: #fff; }
 .chooser-grid .pad[aria-pressed="true"] { outline: 4px solid #fff; outline-offset: 3px; }
+/* New rows: a ticked sound wears its place in the order tapped. */
+.chooser-grid .pad[data-tick] { position: relative; }
+.chooser-grid .pad[data-tick]::after {
+  content: attr(data-tick); position: absolute; top: 6px; right: 6px;
+  min-width: 24px; height: 24px; border-radius: 12px; display: grid; place-items: center;
+  background: #fff; color: #1b1f4a; font-weight: 700; font-size: 0.85rem;
+}
 .chooser-grid .pad.pad-mini { padding: 10px 10px 10px 12px; }
 .chooser-grid .pad.pad-mini .pad-emoji { font-size: 1.7rem; }
 .chooser-grid .pad.pad-mini .pad-label { font-size: 0.92rem; }   /* "Tambourine" fits a phone line; longer names wrap */

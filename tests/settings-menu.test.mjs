@@ -236,7 +236,7 @@ test('a kept beat gets a fun name, not "Beat 1"', () => {
   $('#settings-dialog').close();
   const bar = document.querySelectorAll('.beat-bar')[0];
   bar.querySelector('[data-beat-new]').dispatch('click');
-  $('#seq-add').dispatch('click');
+  $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
   bar.querySelector('[data-beat-keep]').dispatch('click');
   const name = document.querySelectorAll('.beat-bar')[0].querySelector('[data-beat-name]').value;
   assert.doesNotMatch(name, /^Beat \d+$/);

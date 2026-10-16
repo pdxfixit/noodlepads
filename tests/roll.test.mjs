@@ -40,7 +40,7 @@ async function setLevel(level) {
 test('🎹 Add a tune makes a tune row of the C note and opens its roll: two octaves of white keys, C rows brighter', () => {
   keysOff(page);
   newBeat();
-  $('#seq-add').dispatch('click');                  // a drum row first, for the strip
+  $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');                  // a drum row first, for the strip
   rows()[0].querySelectorAll('.pill')[0].dispatch('click');
   $('#seq-add-tune').dispatch('click');
   assert.equal(roll().open, true, 'the roll opens');

@@ -154,7 +154,7 @@ before(async () => {
   $('#beats-toggle').dispatch('click');
   await page.settle();
   newBeatWithRow(page);
-  $('#seq-add').dispatch('click');
+  $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
   await page.settle();
 });
 
