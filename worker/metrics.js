@@ -115,17 +115,8 @@ export function sweep(env, now) {
 
 // A deleted profile's metrics go with it ("gone from the cloud at once",
 // web/privacy.js). The local archive keeps what it copied before.
-// Until migration 005 has dropped `uses` and `visits` (ADR 0027), their rows
-// go too, in a call of their own: a missing table fails a whole batch, and
-// must not take the other deletes with it. Drop that call once 005 is applied.
-export const forgetProfile = async (env, profile) => {
-  await quietly(env, () => [
-    env.DB.prepare('DELETE FROM activity WHERE profile_id = ?').bind(profile),
-    env.DB.prepare('DELETE FROM devices WHERE profile_id = ?').bind(profile),
-  ], 'delete');
-  await quietly(env, () => [
-    env.DB.prepare('DELETE FROM uses WHERE profile_id = ?').bind(profile),
-    env.DB.prepare('DELETE FROM visits WHERE profile_id = ?').bind(profile),
-  ], 'delete old');
-};
+export const forgetProfile = (env, profile) => quietly(env, () => [
+  env.DB.prepare('DELETE FROM activity WHERE profile_id = ?').bind(profile),
+  env.DB.prepare('DELETE FROM devices WHERE profile_id = ?').bind(profile),
+], 'delete');
 

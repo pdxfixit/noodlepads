@@ -28,8 +28,7 @@
 
 ## Consequences
 
-- Migration 005 is applied by Ben, only after this commit's Worker is live and the runner has harvested `uses` and `visits` once more (D1 holds 52 and 25 rows, all from 2026-10-14 on). Applying it first would make the older Worker's sweep fail, which shares a batch with the `activity` insert.
-- Stopping the writes also stops the 14-day sweep for those two tables: what has not been harvested waits in D1 until 005 drops it, instead of running down.
-- Until 005, deleting a profile still deletes its old `uses` and `visits` rows (in a call of its own in `worker/metrics.js`, removed in the commit after 005).
+- Migration 005 was meant to wait for one more harvest of `uses` and `visits` (D1 held 52 and 25 rows, all from 2026-10-14 on). Ben applied it on 2026-10-16 before the runner's `noodlepads` job had ever harvested D1 (its only run was the 08:11 UTC import of the old Mac archives), so those rows were never copied and are gone. They were two days of early use, mostly Ben's and agents' own testing; the shared events cover what they answered from 2026-10-16 on. `activity` and `devices` were not touched and still wait for the first real harvest.
+- The check that would have caught it was a hand-run sequence (harvest, pull, count rows). pdxfixit/telemetry now has `just pull JOB --expect TABLE:N`, which harvests first and fails on a short count.
 - The shared privacy policy (https://privacy.pdxfixit.com/noodlepads/) lists what Noodle Pads keeps; its owner drops the lines on feature-use counts and visit summaries.
 - Revisit if a profile-level question is wanted that `devices` and `activity` cannot answer.
