@@ -20,6 +20,7 @@ opens with a comment saying what it owns. How the app behaves is in
   - `util.js`, `contrast.js`, `download.js`: small shared helpers; color contrast math; handing a file to the user
   - `backdrop.js`: the faint pattern behind the panels, one of the tiles in `bg/` picked at random each visit and drawn as a mask in the casing color; nothing remembered (`?bg=<name>` or `none` asks for one, for `just look --bg`)
   - `tooltips.js`: a tooltip on every control, from its `aria-label` or text, unless it has a `title` of its own
+  - `contact.js`: the PIN-reset address, built from an encoded constant so it is never written out in a served or tracked file
   - `update.js`: the "🆕 An update for Noodle Pads is ready." bar (when to ask `version.json`, when to show)
   - `log.js` (the in-memory event log), `log-clean.js` (what a problem report may hold), `log-send.js` (sending it), `agent.js` (a User-Agent read as browser, OS and device-type families; a report sends only these, and the Worker's `metrics.js` uses it too)
   - `uses.js`: feature-use counts per person (localStorage `uses`, sent with that person's sync), mostly read from the event log and from dialogs opening (`DIALOG_USES`), and what the device says about itself on each cloud call (version, width bucket, touch)

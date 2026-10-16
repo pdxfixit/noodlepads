@@ -405,7 +405,7 @@ makes the profile again). Families are gone (Q11).
 
 ## 10. A forgotten PIN
 
-Ben (Q12): a grown-up emails **pin.reset@noodlepads.com** with the profile's
+Ben (Q12): a grown-up emails **the PIN-reset address** with the profile's
 fun name. Ben finds it (`just cloud-profiles`) and runs `just cloud-reset-pin
 <profile id>`: it shows the profile, asks, clears the PIN and every key
 through `just cloud-db`, and checks. Each device then opens it once with no

@@ -467,7 +467,7 @@ ADR 0002.
 
 ## For grown-ups
 
-- **A forgotten PIN:** email pin.reset@noodlepads.com with the profile's fun
+- **A forgotten PIN:** email the PIN-reset address with the profile's fun
   name. Ben clears it by hand (`just cloud-reset-pin <profile id>`); then each
   device opens the profile once with no PIN.
 - **To delete a profile and everything in it:** 👥 People → tap them → ☁️ Cloud →
