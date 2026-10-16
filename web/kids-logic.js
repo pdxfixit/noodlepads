@@ -30,22 +30,58 @@ export function typeDigit(typed, digit, answer) {
 
 // ── Picture pads ──
 
-// Pad size is a step from 2 to 4: the columns on a phone. A wider screen
-// shows that many per 560 px, so the pads stay big but not huge.
-export const MIN_SIZE = 2;
-export const MAX_SIZE = 4;
-export const DEFAULT_SIZE = 3;
-export const cleanSize = (n) => {
-  const v = Math.round(Number(n));
-  return Number.isFinite(v) && v >= MIN_SIZE && v <= MAX_SIZE ? v : DEFAULT_SIZE;
-};
-export const kidsColumns = (size, width) => cleanSize(size) * Math.max(1, Math.round((width || 0) / 560));
+// Pad size: the person's own `padSize` (settings.js), the same one Pads'
+// slider keeps (Ben, 2026-10-16): 'auto', or 0 to 1 between this screen's
+// smallest and biggest pads. Kids has its own ends: the smallest is four
+// across a phone (four per 560 px on a wider screen), the biggest one pad
+// filling the line (or the box's height, whichever is less). Between them
+// every step changes the size, on a ratio scale as on Pads (pad-size.js).
+// Pads are square, at an exact px size; as many as fit go on a line.
+export const KIDS_GAP = 12;
+const per560 = (n, width) => n * Math.max(1, Math.round((width || 0) / 560));
+const across = (n, width, gap) => (width - gap * (n + 1)) / n;
 
-// How a page of pads fits a box: columns, rows (at least one), and the pad
-// size in px, square pads with `gap` around and between.
-export function pageShape(width, height, cols, gap = 12) {
-  const size = Math.max(40, Math.floor((width - gap * (cols + 1)) / cols));
-  const rows = Math.max(1, Math.floor((height - gap) / (size + gap)));
+export function kidsRange(width, height, gap = KIDS_GAP) {
+  const min = Math.max(40, across(per560(4, width), width, gap));
+  const max = Math.max(min, Math.min(width - 2 * gap, height - 2 * gap));
+  return { min, max };
+}
+
+// 'auto': three across a phone, three per 560 px wider (the size Kids opened at before).
+export function kidsAutoPx(width, height, gap = KIDS_GAP) {
+  const { min, max } = kidsRange(width, height, gap);
+  return Math.min(max, Math.max(min, across(per560(3, width), width, gap)));
+}
+
+// The pad's px size for a kept size on a box `width` × `height`.
+export function kidsPadPx(width, height, size, gap = KIDS_GAP) {
+  if (size === 'auto' || typeof size !== 'number' || !(size >= 0 && size <= 1)) return Math.floor(kidsAutoPx(width, height, gap));
+  const { min, max } = kidsRange(width, height, gap);
+  const lo = min + gap;
+  const hi = max + gap;
+  return Math.floor(lo * (hi / lo) ** size - gap);
+}
+
+// Where a pad `px` wide sits between the ends, 0 to 1.
+export function kidsShare(width, height, px, gap = KIDS_GAP) {
+  const { min, max } = kidsRange(width, height, gap);
+  const lo = min + gap;
+  const hi = max + gap;
+  if (hi <= lo) return 0;
+  return Math.min(1, Math.max(0, Math.log((px + gap) / lo) / Math.log(hi / lo)));
+}
+
+// The kept size as a share, 0 to 1 ('auto' is where the screen's own size sits).
+export const shareOf = (width, height, size, gap = KIDS_GAP) => (typeof size === 'number' && size >= 0 && size <= 1 ? size : kidsShare(width, height, kidsAutoPx(width, height, gap), gap));
+
+// The slider's position, 0 to 100.
+export const kidsSliderAt = (width, height, size, gap = KIDS_GAP) => Math.round(100 * shareOf(width, height, size, gap));
+
+// How a page of pads `size` px square fits a box: as many columns and rows
+// as fit (at least one each), with `gap` around and between.
+export function pageShape(width, height, size, gap = KIDS_GAP) {
+  const cols = Math.max(1, Math.floor((width - gap) / (size + gap) + 1e-6));
+  const rows = Math.max(1, Math.floor((height - gap) / (size + gap) + 1e-6));
   return { cols, rows, size };
 }
 
@@ -60,12 +96,17 @@ export function pagesOf(list, per) {
 // The page a sideways scroll rests on.
 export const pageAt = (scrollLeft, width, pages) => (width > 0 ? Math.min(pages - 1, Math.max(0, Math.round(scrollLeft / width))) : 0);
 
-// A pinch: fingers spread apart make the pads bigger (fewer columns), pinched
-// together smaller. Each 1.4× of spread is one step.
-export function pinchSize(start, startDist, dist) {
-  if (!(startDist > 0) || !(dist > 0)) return cleanSize(start);
-  const steps = Math.round(Math.log(dist / startDist) / Math.log(1.4));
-  return Math.min(MAX_SIZE, Math.max(MIN_SIZE, cleanSize(start) - steps));
+// A pinch: fingers spread apart make the pads bigger, pinched together
+// smaller, smoothly: the pads grow by as much as the fingers spread, as a
+// share of the way between this box's ends, kept to 0.01 (the setting's steps).
+export function pinchShare(start, startDist, dist, width, height, gap = KIDS_GAP) {
+  const from = shareOf(width, height, start, gap);
+  const keep = (v) => Math.round(Math.min(1, Math.max(0, v)) * 100) / 100;
+  if (!(startDist > 0) || !(dist > 0)) return keep(from);
+  const { min, max } = kidsRange(width, height, gap);
+  const ratio = (max + gap) / (min + gap);
+  if (!(ratio > 1)) return keep(from);
+  return keep(from + Math.log(dist / startDist) / Math.log(ratio));
 }
 
 // The pads in Kids: the kid's own sounds first, newest first (a new

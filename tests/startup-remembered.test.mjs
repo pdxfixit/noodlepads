@@ -31,7 +31,6 @@ const remembered = new Map(Object.entries({
   uses: '{"juno":{"pad":3,"nope":1},"toby":"junk"}',
   visits: '[{"person":"juno","visit":{"at":1791000000000,"secs":40,"screens":["pads","nope"]}},"junk",{"person":"toby","visit":{"at":"x","secs":5}}]',
   'kids-tab': 'beats',
-  'kids-size': '9',
   'telemetry-player': 'not-a-random-id',   // replaced by a random one (telemetry.js playerId)
   'telemetry-queue': '[{"app":"noodlepads","session":"s-1","seq":0,"at":1791000000000,"event":"app.open","version":"abc","details":{}},"junk",{"event":"no.such"}]',
   'dj-overlap': '1',   // a key nothing reads: 🎤 Live's 🔔 Overlap is for the visit (Ben, 2026-10-12)
@@ -100,7 +99,7 @@ test('🧸 Kids opens on the remembered tab; a junk pad size reads as the middle
   assert.equal($('[data-kids-view="beats"]').hidden, false, 'kids-tab: beats');
   assert.equal($('#kids-beat').querySelectorAll('.kids-square').length, 32);
   $('[data-kids-tab="pads"]').dispatch('click');
-  assert.equal($('#kids-pages').style.props['--kids-cols'], '3', 'kids-size 9 is junk: 3 across');
+  assert.equal($('#kids-pages').style.props['--kids-cols'], '3', 'the person\'s pad size (auto): 3 across a phone');
   assert.equal(remembered.get('kids-tab'), 'pads');
   await setSetting('level', 'regular');
 });

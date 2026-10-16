@@ -55,9 +55,10 @@ The **pad size slider** at the top left of the pads makes them smoothly
 smaller (more on a line) or bigger (fewer). Its ends are the smallest and
 biggest pads this screen can show: as many 76 px pads as fill a line, and one
 whole-width pad on a phone (400 px on a wide screen). It is kept as the
-`padSize` setting: `auto` (the screen's own size) or 0 to 1, the share of the
-way from smallest to biggest, so it means the same on every screen
-(`pad-size.js`).
+`padSize` setting, the person's own: `auto` (the screen's own size) or 0 to
+1, the share of the way from smallest to biggest, so it means the same on
+every screen (`pad-size.js`) and on 🧸 Kids, which shows the same size
+between ends of its own.
 
 **Pad skins** change how every pad looks, each person their own, at every
 level (⚙️ Settings → 🎨 Look; the `padSkin` setting, `skins.js`): **Tiles**
@@ -90,10 +91,15 @@ A person on the 🧸 Kids level (ADR 0019; `kids.js`, its pure parts in
 five-year-old, with no words to read and nothing to delete, edit or share:
 
 - **🔊 Pads**: big picture pads, the kid's own sounds first (newest first),
-  then the kit. Swipe sideways for more pages (◀️ ▶️ with a mouse); pinch to
-  make them bigger or smaller (2 to 4 across a phone, more per 560 px on a
-  wider screen; remembered on the device, `kids-size`). A tap plays from the
-  start; no holding or looping. The round button at the top left shows the
+  then the kit. Swipe sideways for more pages (◀️ ▶️ with a mouse). The top
+  bar's slider, centered between 🎨 and ⚙️, makes them bigger or smaller,
+  smoothly: the person's own `padSize`, the same one as Pads' slider, between
+  Kids' own ends (four across a phone, four per 560 px wider, up to one pad
+  filling the line; `auto` is three across). Pads are square at an exact size,
+  as many as fit, the room left shared evenly (`kids-logic.js` `kidsPadPx`,
+  `pageShape`). A pinch moves the same size, smoothly, and the slider follows;
+  it is kept as the fingers lift. An older copy's `kids-size` in localStorage
+  is ignored. A tap plays from the start; no holding or looping. The round button at the top left shows the
   person's pad skin; each tap moves to the next one (Tiles after Googly eyes)
   and keeps it, as ⚙️ Settings → 🎨 Look would.
 - **🎙️ Record**: hold the big mic, let go to stop (10 s at most; a tap under

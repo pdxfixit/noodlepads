@@ -311,10 +311,15 @@
        grown-up sum) in its usual corner. The regular app is hidden meanwhile. -->
   <section class="kids" id="kids" aria-label="Kids" hidden>
     <div class="kids-view kids-pads-view" data-kids-view="pads">
-      <!-- The Pads screen's top bar: 🎨 the next pad skin at the left (kids.js);
-           ⚙️ floats in its usual corner at the right, over this bar. -->
+      <!-- The Pads screen's top bar: 🎨 the next pad skin at the left, the pad
+           size slider centered in the room left (kids.js); ⚙️ floats in its
+           usual corner at the right, beside this bar. -->
       <div class="kids-top" id="kids-top">
         <button type="button" class="kids-skin" id="kids-skin" aria-label="Next look"></button>
+        <!-- The person's pad size, the same one as Pads' slider (kids.js). -->
+        <div class="pads-size kids-size" id="kids-size">
+          <input type="range" id="kids-size-slider" min="0" max="100" step="1" value="50" aria-label="Pad size">
+        </div>
       </div>
       <div class="kids-pages" id="kids-pages"></div>
       <!-- More pages: ◀️ ▶️ for a mouse, a dot for each page (a finger swipes). -->

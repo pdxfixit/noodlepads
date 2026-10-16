@@ -8,8 +8,10 @@
 // ⚙️ Settings → 🎨 Look would (Ben, 2026-10-16). The pure parts are in
 // kids-logic.js.
 //
-// Remembered on the device: the tab (`kids-tab`) and the pad size a pinch
-// chose (`kids-size`).
+// Remembered on the device: the tab (`kids-tab`). The pad size is the
+// person's own `padSize`, shared with Pads (Ben, 2026-10-16): the slider in
+// the top bar and a pinch both move it, smoothly. An older copy kept a
+// device size in localStorage `kids-size`; it is ignored.
 
 import { audio, makeVoice, fadeStop, trimBounds } from './audio.js';
 import { logEvent } from './log.js';
@@ -22,7 +24,7 @@ import { scratchOf, scratchId } from './scratch.js';
 import { getSetting, setSetting, onSetting } from './settings.js';
 import { SKINS, nextSkin } from './skins.js';
 import {
-  makeSum, typeDigit, cleanSize, kidsColumns, pageShape, pagesOf, pageAt, pinchSize, kidsPadOrder,
+  makeSum, typeDigit, kidsPadPx, kidsSliderAt, shareOf, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder,
   KIDS_DRUMS, KIDS_SQUARES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds,
   kidsVoiceFields, voiceAfter, MAX_RECORD_SECONDS, MIN_RECORD_SECONDS, pictureFor, KIDS_KEYS, beatLayout, cleanTab,
 } from './kids-logic.js';
@@ -31,7 +33,7 @@ const el = {};
 let deps = null;
 let showing = false;
 let tab = cleanTab(recall('kids-tab'));
-let size = cleanSize(recall('kids-size'));
+let live = null;   // the size under a finger (the slider moving, a pinch) before it is kept
 
 const make = (tag, className, props = {}) => Object.assign(document.createElement(tag), { className, ...props });
 const reduced = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
@@ -81,12 +83,19 @@ function render() {
 let page = 0;
 let pageCount = 1;
 
+const boxSize = () => ({ width: el.pages.clientWidth || 375, height: el.pages.clientHeight || 520 });
+const sizeNow = () => live ?? getSetting('padSize');
+let drawn = null;   // {cols, rows, count} of the pages drawn: a size that keeps them only resizes the pads
+
+// The pads at the person's size: square, exact px, as many as fit; the room
+// left is shared evenly (styles.css .kids-page).
 function renderPads() {
   const box = el.pages;
-  const width = box.clientWidth || 375;
-  const height = box.clientHeight || 520;
-  const shape = pageShape(width, height, kidsColumns(size, width));
+  const { width, height } = boxSize();
+  const shape = pageShape(width, height, kidsPadPx(width, height, sizeNow()));
+  if (live === null) el.sizeSlider.value = String(kidsSliderAt(width, height, sizeNow()));
   const clips = kidsPadOrder(deps.clips());
+  drawn = { cols: shape.cols, rows: shape.rows, count: clips.length };
   const pages = pagesOf(clips, shape.cols * shape.rows);
   pageCount = pages.length;
   page = Math.min(page, pageCount - 1);
@@ -146,16 +155,37 @@ async function nextLook() {
   }
 }
 
-function setSize(next) {
-  next = cleanSize(next);
-  if (next === size) return;
-  size = next;
-  remember('kids-size', String(size));
-  renderPads();
+// A new size: only the pads' px size changes while as many fit as before,
+// so a slider or pinch stays smooth; else the pages are drawn again.
+function resize() {
+  if (!showing || tab !== 'pads') return;
+  const { width, height } = boxSize();
+  const shape = pageShape(width, height, kidsPadPx(width, height, sizeNow()));
+  if (drawn && shape.cols === drawn.cols && shape.rows === drawn.rows && deps.clips().length === drawn.count) el.pages.style.setProperty('--kids-pad', `${shape.size}px`);
+  else renderPads();
+}
+
+// Keeps a size as the person's (Pads shows it too).
+async function keepSize(share) {
+  live = null;
+  try {
+    if (share !== getSetting('padSize')) await setSetting('padSize', share);
+  } catch (err) {
+    console.error('Saving the pad size failed:', err);
+  }
+  resize();
+}
+
+function wireSize() {
+  const picked = () => Number(el.sizeSlider.value) / 100;
+  el.sizeSlider.addEventListener('input', () => { live = picked(); resize(); });
+  el.sizeSlider.addEventListener('change', () => keepSize(picked()));
+  // Pads' slider, another device or a loaded backup changed it.
+  onSetting('padSize', () => { if (live === null) { resize(); const { width, height } = boxSize(); el.sizeSlider.value = String(kidsSliderAt(width, height, sizeNow())); } });
 }
 
 function wirePads() {
-  let pinch = null;   // two fingers down: {size, dist} when they landed
+  let pinch = null;   // two fingers down: {share, dist} when they landed
   const play = (pad) => {
     const clip = deps.clips().find((c) => c.id === pad.dataset.clip);
     if (!clip) return;
@@ -187,21 +217,31 @@ function wirePads() {
   // Two fingers: a pinch. The pads change size as the fingers move.
   const spread = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
   el.pages.addEventListener('touchstart', (e) => {
-    if (e.touches?.length === 2) { pinch = { size, dist: spread(e.touches) }; fingers.clear(); }
+    if (e.touches?.length === 2) { const { width, height } = boxSize(); pinch = { share: shareOf(width, height, sizeNow()), dist: spread(e.touches) }; fingers.clear(); }
   }, { passive: true });
   el.pages.addEventListener('touchmove', (e) => {
     if (!pinch || e.touches?.length !== 2) return;
     e.preventDefault();
-    setSize(pinchSize(pinch.size, pinch.dist, spread(e.touches)));
+    const { width, height } = boxSize();
+    live = pinchShare(pinch.share, pinch.dist, spread(e.touches), width, height);
+    el.sizeSlider.value = String(Math.round(live * 100));
+    resize();
   }, { passive: false });
-  const endPinch = (e) => { if ((e.touches?.length ?? 0) < 2) pinch = null; };
+  // The pinch's size is kept when the fingers lift.
+  const endPinch = (e) => {
+    if (!pinch || (e.touches?.length ?? 0) >= 2) return;
+    pinch = null;
+    if (live !== null) keepSize(live);
+  };
   el.pages.addEventListener('touchend', endPinch);
   el.pages.addEventListener('touchcancel', endPinch);
   // A trackpad's pinch arrives as a wheel with Ctrl held.
   el.pages.addEventListener('wheel', (e) => {
     if (!e.ctrlKey) return;
     e.preventDefault();
-    setSize(size + (e.deltaY > 0 ? 1 : -1));
+    const { width, height } = boxSize();
+    const now = shareOf(width, height, sizeNow());
+    keepSize(Math.round(Math.min(1, Math.max(0, now + (e.deltaY > 0 ? -0.05 : 0.05))) * 100) / 100);
   }, { passive: false });
   if (typeof ResizeObserver === 'function') new ResizeObserver(() => { if (showing && tab === 'pads') renderPads(); }).observe(el.pages);
 }
@@ -642,7 +682,7 @@ export function initKids(d) {
     views: document.querySelectorAll('[data-kids-view]'),
     tabs: document.querySelectorAll('[data-kids-tab]'),
     stop: q('#kids-stop'),
-    skin: q('#kids-skin'),
+    skin: q('#kids-skin'), sizeSlider: q('#kids-size-slider'),
     pages: q('#kids-pages'), turn: q('#kids-turn'), dots: q('#kids-dots'), arrows: document.querySelectorAll('[data-turn]'),
     mic: q('#kids-mic'), last: q('#kids-last'), voices: document.querySelectorAll('[data-kids-voice]'),
     beat: q('#kids-beat'), play: q('#kids-play'), slow: q('#kids-slow'), fast: q('#kids-fast'),
@@ -655,6 +695,7 @@ export function initKids(d) {
   showSkinButton();
   onSetting('padSkin', showSkinButton);
   wirePads();
+  wireSize();
   wireRecord();
   wireBeat();
   wireKeys();
