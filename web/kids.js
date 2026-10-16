@@ -8,6 +8,11 @@
 // ⚙️ Settings → 🎨 Look would (Ben, 2026-10-16). The pure parts are in
 // kids-logic.js.
 //
+// A new kid's first steps have no words (ADR 0028, tips.js kidsHint): a 👆
+// hand pulses over the first pad until a pad is tapped, and the mic wiggles
+// until the first recording; both stay still when the device asks for less
+// motion, and each shows once per person.
+//
 // Remembered on the device: the tab (`kids-tab`). The pad size is the
 // person's own `padSize`, shared with Pads (Ben, 2026-10-16): the slider in
 // the top bar and a pinch both move it, smoothly. An older copy kept a
@@ -23,6 +28,7 @@ import { openDialog, setupDialog } from './dialogs.js';
 import { scratchOf, scratchId } from './scratch.js';
 import { getSetting, setSetting, onSetting } from './settings.js';
 import { SKINS, nextSkin } from './skins.js';
+import { kidsHint, markSeen } from './tips.js';
 import {
   makeSum, typeDigit, kidsPadPx, kidsSliderAt, shareOf, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder,
   KIDS_DRUMS, KIDS_SQUARES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds,
@@ -114,6 +120,12 @@ function renderPads() {
     }));
     return p;
   }));
+  // 👆 over the first pad, until the first tap (ADR 0028).
+  if (kidsHint('pad')) {
+    const hand = make('span', 'kids-hand', { textContent: '👆' });
+    hand.setAttribute('aria-hidden', 'true');
+    box.querySelector('.kids-pad')?.append(hand);
+  }
   renderDots();
   box.scrollLeft = page * width;
 }
@@ -192,6 +204,7 @@ function wirePads() {
     audio.play(clip);   // from the start, every tap: no holding, no looping
     countPlay('kids');
     boing(pad);
+    if (kidsHint('pad')) { markSeen('kids-pad'); el.pages.querySelector('.kids-hand')?.remove(); }
   };
   // A finger plays a pad when it lifts in place, so a page swipe or a pinch
   // that starts on a pad stays silent (finger.js). A mouse plays on press.
@@ -263,6 +276,7 @@ function renderRecord() {
     el.last.style.setProperty('--pad', deps.colorOf(last));
   }
   el.mic.disabled = !canRecord();
+  el.mic.classList.toggle('kids-nudge', kidsHint('mic'));   // wiggles until the first recording (ADR 0028)
 }
 
 async function startRecording() {
@@ -345,6 +359,7 @@ async function keep(blob, seconds) {
   };
   await deps.saveClip(clip);
   lastId = clip.id;
+  if (kidsHint('mic')) markSeen('kids-mic');
   logEvent('kids', { recorded: Math.round(seconds * 10) / 10, voice: voice ?? 'normal' });
   page = 0;   // the new pad is the first one on Pads
   renderRecord();
