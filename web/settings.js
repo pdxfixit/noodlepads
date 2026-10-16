@@ -70,13 +70,15 @@ export const SETTINGS = {
   // A Regular person's reaches for what Advanced adds, one visit id each
   // (firsts.js): three over two visits offer Advanced once (nudge.js).
   reaches: { default: '', clean: cleanReaches, scope: 'person', quiet: true },
-  // The keyboard the DJ keys' letters follow (dj.js, rhythm.js). The device's
-  // own keyboard, so it stays with the device (Ben, Q17); a person's from
-  // when it travelled is ignored, and dropped when their settings are next
-  // saved. Kept in localStorage `dj-layout` before it was a setting; that is
-  // read once as the device's choice. AZERTY and Colemak were choices until
-  // 2026-10-11; one stored or backed up reads as Auto.
-  djLayout: { default: 'auto', values: Object.keys(LAYOUT_NAMES), upgrade: { azerty: 'auto', colemak: 'auto' }, scope: 'device', legacy: () => recall('dj-layout') },
+  // The keyboard the DJ keys' letters follow (dj.js, rhythm.js): the Q / D
+  // keycaps under ⌨️ / 👆. The device's own keyboard, so it stays with the
+  // device (Ben, Q17); a person's from when it travelled is ignored, and
+  // dropped when their settings are next saved. Kept in localStorage
+  // `dj-layout` before it was a setting; that is read once as the device's
+  // choice. Auto, AZERTY and Colemak were choices once (Ben dropped the last
+  // two 2026-10-11, Auto 2026-10-16); one stored or backed up reads as not
+  // picked, so the keyboard the browser detects decides (dj.js, deviceChoice).
+  djLayout: { default: 'qwerty', values: Object.keys(LAYOUT_NAMES), scope: 'device', legacy: () => recall('dj-layout') },
   // 📮 Send problem reports (log-send.js). The device's, and backups carry it
   // like every setting (Ben, Q5: "Carry it"): restoring one on a new tablet
   // brings the family's choice along. The device code (log-send.js,
@@ -103,6 +105,14 @@ export function allowedValue(key, value) {
     return spec.values.includes(now) ? now : undefined;
   }
   return spec.upgrade && typeof value === 'string' && Object.hasOwn(spec.upgrade, value) ? spec.upgrade[value] : undefined;
+}
+
+// What this device chose for a device setting, or undefined when it never
+// chose one this copy knows (getSetting then reads the default).
+export function deviceChoice(key) {
+  const spec = SETTINGS[key];
+  if (spec?.scope !== 'device') return undefined;
+  return allowedValue(key, state.settings.get(key)) ?? allowedValue(key, spec.legacy?.());
 }
 
 export const isPersonal = (key) => SETTINGS[key]?.scope === 'person';

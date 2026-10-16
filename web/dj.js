@@ -12,14 +12,14 @@
 // click track) and 🥁 Beats with ⌨️ Keys on (mode 'beat': the open beat
 // above the keys, ● Record into it). app.js picks the mode with setMode.
 
-import { countAt, KEY_ROWS, KEY_CODES, keyboardOrder, defaultDeck, fallbackLabel, layoutLabel, LAYOUT_NAMES, keyFor, takeFrom, clockText, MAX_TAKE_SECONDS, planTake, createSnapper, tapTempo, TAP_GAP_MAX } from './rhythm.js';
+import { countAt, KEY_ROWS, KEY_CODES, keyboardOrder, defaultDeck, fallbackLabel, layoutLabel, detectLayout, LAYOUTS, LAYOUT_NAMES, keyFor, takeFrom, clockText, MAX_TAKE_SECONDS, planTake, createSnapper, tapTempo, TAP_GAP_MAX } from './rhythm.js';
 import { encodeWav, SIGNATURES, COMMON_BPMS, tempoStops, stopFor, pillHolds, typedBpm } from './sequencer.js';
 import { recall, remember, newId } from './util.js';
 import { PICTURES, pictureTakenBy } from './model.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
 import { takeName, soundName } from './names.js';
 import { openDialog, setupDialog } from './dialogs.js';
-import { getSetting, setSetting, onSetting } from './settings.js';
+import { setSetting, onSetting, deviceChoice } from './settings.js';
 import { createKeysEditor } from './dj-keys.js';
 import { fadeAway, showBanner } from './ui.js';
 import { drawSpeaker, speakerControls, percent } from './row-volume.js';
@@ -55,12 +55,13 @@ const HOME = 2;   // A S D F…: the drums by default
 export function createDJ({ el, deps }) {
   let row = HOME;              // the row shown on phones: the home row (drums) first
   let keyboardSeen = false;    // a key was pressed this visit, so letters are worth showing
-  let labels = {};             // code -> printed label, from the layout map or learned
-  try { labels = JSON.parse(recall('dj-labels') || '{}') || {}; } catch { labels = {}; }
-  // The keyboard's layout, for the letters on the tiles: 'auto' asks the
-  // browser and learns from presses; or the kid picks one (QWERTY, Dvorak).
-  // The device's own setting (settings.js djLayout): it is this device's keyboard.
-  let layout = getSetting('djLayout');
+  // The keyboard's layout, for the letters on the tiles and which key a
+  // press is: the one the kid picked on the Q / D keycaps (settings.js
+  // djLayout, the device's own), else the one the browser says this is
+  // (Chrome, Edge), else QWERTY.
+  let detected = null;
+  const layoutNow = () => deviceChoice('djLayout') ?? detected ?? 'qwerty';
+  let layout = layoutNow();
   const holds = new Map();     // pointer id -> timer that turns the loop on
   // Keys held down: code -> {at, looped}. A key loops only when the OS's own
   // repeat presses prove it is still down past the hold time, so a lost
@@ -89,7 +90,7 @@ export function createDJ({ el, deps }) {
     return out;
   }
 
-  const letterFor = (code) => (layout !== 'auto' && layoutLabel(code, layout)) || labels[code] || fallbackLabel(code);
+  const letterFor = (code) => layoutLabel(code, layout) || fallbackLabel(code);
   // A keyboard is likely when one was used this visit, or the device has a
   // mouse. Then the keys are laid out like a keyboard, with letters. On a
   // phone or tablet they are a plain grid of pads that fits the screen.
@@ -127,6 +128,9 @@ export function createDJ({ el, deps }) {
     el.keys.hidden = touch;
     el.touch.hidden = !touch;
     for (const b of el.input.querySelectorAll('[data-input]')) b.setAttribute('aria-pressed', String(b.dataset.input === inputNow()));
+    // Q / D hang under ⌨️ while the keys show their letters.
+    el.layout.hidden = touch || !letters;
+    showLayout();
     // ✏️ in the corner edits what shows: the keys, or the touch layout.
     el.change.textContent = touch ? '✏️ Edit layout' : '✏️ Edit keys';
     if (touch) drawBands(el.touch, touchNow(), { clipById: deps.clipById, family, kitGroups: () => deps.kitGroups?.() ?? [], isLooping: deps.isLooping });
@@ -192,14 +196,15 @@ export function createDJ({ el, deps }) {
     }
   }
 
-  // Where the browser can say what each key prints (Chrome, Edge), use it.
+  // Where the browser can say which keyboard this is (Chrome, Edge), it
+  // decides until the kid picks one.
   async function readLayout() {
     try {
-      const map = await globalThis.navigator?.keyboard?.getLayoutMap?.();
-      if (!map) return;
-      for (const code of KEY_CODES) { const k = map.get(code); if (k) labels[code] = k.toUpperCase(); }
-      render();
-    } catch { /* no layout map: US labels until keys are pressed */ }
+      detected = detectLayout(await globalThis.navigator?.keyboard?.getLayoutMap?.());
+    } catch { /* no layout map: QWERTY until one is picked */ }
+    if (layoutNow() === layout) return;
+    layout = layoutNow();
+    render();
   }
 
   function keyEl(code) { return el.keys.querySelector(`[data-code="${code}"]`); }
@@ -317,7 +322,6 @@ export function createDJ({ el, deps }) {
   }
 
   // From the page's keydown: a DJ key plays (once per press, held keys loop).
-  // Learns what the key prints, for layouts the browser won't describe.
   function keydown(e) {
     const code = keyFor(e, layout);
     if (!code) return false;
@@ -333,15 +337,8 @@ export function createDJ({ el, deps }) {
       }
       return true;
     }
-    const first = !keyboardSeen;
-    keyboardSeen = true;
-    // In Auto, learn what each place prints, for browsers that won't say.
-    const learned = layout === 'auto' && typeof e.key === 'string' && e.key.length === 1 && !e.shiftKey ? e.key.toUpperCase() : null;
-    if ((learned && labels[code] !== learned) || first) {
-      if (learned) labels[code] = learned;
-      remember('dj-labels', JSON.stringify(labels));
-      render();
-    }
+    // The first key pressed shows a keyboard is there: the letters (and Q / D) come out.
+    if (!keyboardSeen) { keyboardSeen = true; render(); }
     // Shift: "that one was meant a pill earlier", for recording into the beat.
     if (play(code, { earlier: e.shiftKey })) held.set(code, { at: now, looped: false });
     keyEl(code)?.classList.add('down');
@@ -1465,31 +1462,22 @@ export function createDJ({ el, deps }) {
     render();
   });
 
-  // The Keyboard chooser in Settings: a key per layout, before the picker
-  // that takes their place when they don't fit (app.js wires it, lines.js).
-  const layoutKeys = Object.entries(LAYOUT_NAMES).map(([id, name]) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.dataset.layout = id;
-    b.textContent = name;
-    return b;
-  });
-  const showLayout = () => { for (const b of layoutKeys) b.setAttribute('aria-pressed', String(b.dataset.layout === layout)); };
-  el.layout.replaceChildren(...layoutKeys, ...el.layout.querySelectorAll('select'));
-  showLayout();
+  // Q / D under ⌨️ / 👆: the keyboard the letters follow, this device's own.
+  function showLayout() { for (const b of el.layout.querySelectorAll('[data-layout]')) b.setAttribute('aria-pressed', String(b.dataset.layout === layout)); }
   el.layout.addEventListener('click', (e) => {
     const b = e.target.closest('[data-layout]');
-    if (!b) return;
-    layout = Object.hasOwn(LAYOUT_NAMES, b.dataset.layout) ? b.dataset.layout : 'auto';
-    showLayout();
+    if (!b || !Object.hasOwn(LAYOUTS, b.dataset.layout)) return;
+    letGo();
+    layout = b.dataset.layout;
     setSetting('djLayout', layout);
     keyboardSeen = true;  // picking a keyboard means there is one: show the letters
     render();
+    deps.announce?.(`${LAYOUT_NAMES[layout]} keyboard.`);
   });
-  onSetting('djLayout', (value) => {
-    if (value === layout) return;
-    layout = value;
-    showLayout();
+  // A backup loaded, or the setting changed elsewhere: follow it.
+  onSetting('djLayout', () => {
+    if (layoutNow() === layout) return;
+    layout = layoutNow();
     render();
   });
 

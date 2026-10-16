@@ -2280,11 +2280,6 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
   transition: box-shadow 80ms linear;
 }
 .dj[hidden] { display: none; }
-/* Settings' Keyboard: a key per layout on the white sheet; a picker when
-   they don't fit (lines.js). */
-.set-layout { display: flex; align-items: center; gap: 12px; color: var(--ink); font-weight: 800; }
-.set-layout .set-keys { display: flex; flex: 1 0 auto; border-color: rgb(20 19 24 / 0.3); }
-.set-layout .set-keys button { flex: 1 0 auto; color: var(--ink); }
 /* Beat Builder's beat bar: the open beat's name, ✏️, New and Open. */
 .dj-beatbar[hidden] { display: none; }
 /* Beat Builder's control bar is .beat-deck (above), with what is happening
@@ -2437,9 +2432,19 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 .dj-keys.pads-mode[data-size="l"] .dj-name { font-size: 0.95rem; }
 .dj-tabs[hidden], .dj-size[hidden] { display: none; }
 .dj-size button { min-width: 44px; }
-/* ⌨️ / 👆 (ADR 0029): its own short line, at the right, above the keys or tiles. */
-.dj-input { display: flex; justify-content: flex-end; margin: 0 0 10px; }
+/* ⌨️ / 👆 (ADR 0029): its own short line, at the right, above the keys or
+   tiles. While the keys show letters, Q / D hang under it as its second row,
+   the same width, so the two read as one switch. */
+.dj-input { display: grid; justify-content: end; margin: 0 0 10px; }
+.dj-input > .seq-barsel button { flex: 1 1 0; }
 .dj-input-switch button { min-width: 56px; font-size: 1.3rem; }
+.dj-input:has(> .dj-layout-switch:not([hidden])) > .dj-input-switch { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.dj-layout-switch { border-top-width: 0; border-radius: 0 0 12px 12px; }
+.dj-layout-switch[hidden] { display: none; }
+.dj-layout-switch button { min-height: 44px; padding: 0 8px; }
+/* Each letter on a little keycap: a deeper bottom edge, like a real key. */
+.keycap { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 28px; border: 2px solid currentColor; border-bottom-width: 5px; border-radius: 7px; background: rgb(255 255 255 / 0.12); font-size: 0.95rem; font-weight: 900; line-height: 1; }
+.dj-layout-switch button[aria-pressed="true"] .keycap { background: #fff; border-color: var(--ink); color: var(--ink); }
 /* 👆 The touch layout: bands top to bottom, each a heading and a grid of
    tiles all one size. On a phone S, M and L are 5, 4 and 2 across (Ben,
    2026-10-16); wider, as many as fit at that size, stretched to fill. */

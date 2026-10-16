@@ -288,7 +288,6 @@ function fitLines() {
   const deck = document.querySelector('.dj-bar');
   fitLine(deck.querySelector('.beat-shape'), ['fit-tight', 'fit-short', 'fit-pick', 'fit-nosig'], deck);
   fitLine($('#groove-how'), ['fit-stack']);   // keeps its padding: stacks before it hugs the frame
-  fitLine($('#dj-layout-line'), ['fit-tight', 'fit-pick']);   // Settings' Keyboard: keys, then a picker
 }
 
 // ── Version ────────────────────────────────────────────────────────────

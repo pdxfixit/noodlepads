@@ -110,7 +110,7 @@ test('layouts label the same 30 physical keys: Dvorak\'s home row is AOEUIDHTNS'
   assert.equal(layoutLabel('KeyS', 'qwerty'), 'S');
   assert.deepEqual(Object.keys(LAYOUTS), ['qwerty', 'dvorak'], 'AZERTY and Colemak were dropped (Ben, 2026-10-11)');
   assert.equal(layoutLabel('KeyQ', 'azerty'), null, 'a dropped layout labels nothing');
-  assert.equal(layoutLabel('KeyA', 'auto'), null, 'auto asks the browser instead');
+  assert.equal(layoutLabel('KeyA', 'auto'), null, 'Auto is gone too');
 });
 
 test('a take starts at its first hit, keeps events in order, and ends at Stop', async () => {
@@ -162,9 +162,9 @@ test('a picked layout matches by the letter typed, so a keyboard that remaps in 
   assert.equal(keyFor({ code: 'KeyS', key: 'o' }, 'dvorak'), 'KeyS');
   assert.equal(keyFor({ code: 'KeyQ', key: "'" }, 'dvorak'), 'KeyQ');
   assert.equal(keyFor({ code: 'KeyS', key: 'O' }, 'dvorak'), 'KeyS', 'Caps Lock or Shift: same key');
-  // Auto: by place, whatever is typed.
-  assert.equal(keyFor({ code: 'KeyS', key: 'o' }, 'auto'), 'KeyS');
-  assert.equal(keyFor({ code: 'Enter', key: 'Enter' }, 'auto'), null);
+  // No layout: by place, whatever is typed.
+  assert.equal(keyFor({ code: 'KeyS', key: 'o' }), 'KeyS');
+  assert.equal(keyFor({ code: 'Enter', key: 'Enter' }, 'dvorak'), null);
   assert.equal(keyFor({ code: 'Digit1', key: '1' }, 'dvorak'), 'Digit1', 'the number row is one of the 40');
   assert.equal(keyFor({ code: 'Minus', key: '-' }, 'dvorak'), null, 'not one of the 40');
 });
@@ -192,12 +192,12 @@ test('keyboardOrder: rows by where their sound first sits on the keys, top row f
 
 test('keyFor: the number keys by place, or by the digit typed with a layout picked; Shift+1 is still 1', async () => {
   const { keyFor } = await import('../web/rhythm.js');
-  assert.equal(keyFor({ code: 'Digit1', key: '1' }, 'auto'), 'Digit1');
+  assert.equal(keyFor({ code: 'Digit1', key: '1' }), 'Digit1');
   assert.equal(keyFor({ code: 'Digit0', key: '0' }, 'qwerty'), 'Digit0');
   assert.equal(keyFor({ code: 'Digit5', key: '5' }, 'dvorak'), 'Digit5');
   assert.equal(keyFor({ code: 'Digit1', key: '!', shiftKey: true }, 'qwerty'), 'Digit1', 'Shift: "a pill earlier"');
-  assert.equal(keyFor({ code: 'Digit1', key: '!', shiftKey: true }, 'auto'), 'Digit1');
-  assert.equal(keyFor({ code: 'Numpad1', key: '1' }, 'auto'), null, 'the number pad is not the number row');
+  assert.equal(keyFor({ code: 'Digit1', key: '!', shiftKey: true }, 'dvorak'), 'Digit1');
+  assert.equal(keyFor({ code: 'Numpad1', key: '1' }), null, 'the number pad is not the number row');
   assert.equal(keyFor({ code: 'Minus', key: '-' }, 'qwerty'), null);
 });
 
@@ -223,4 +223,24 @@ test('cleanDeck keeps the 👆 touch layout and ⭐ My layout, cleaned; a broken
 test('keyboardOrder: a sound on the number row comes before the letter rows', () => {
   const rows = [{ clipId: 'kick' }, { clipId: 'note' }];
   assert.deepEqual(keyboardOrder(rows, { KeyA: 'kick', Digit4: 'note' }), [1, 0]);
+});
+
+// Ben, 2026-10-16: Auto left the keyboard choices for the Q / D keycaps, so
+// the browser's own layout (where it says) picks the one to start on, and a
+// character that is not on the layout's picture plays its key by place.
+test('detectLayout: Dvorak when the top-left letter prints an apostrophe; null with no layout map', async () => {
+  const { detectLayout } = await import('../web/rhythm.js');
+  assert.equal(detectLayout(new Map([['KeyQ', "'"], ['KeyS', 'o']])), 'dvorak');
+  assert.equal(detectLayout(new Map([['KeyQ', 'q']])), 'qwerty');
+  assert.equal(detectLayout(new Map([['KeyQ', 'a']])), 'qwerty', 'AZERTY: QWERTY, and the keys go by the letter typed');
+  assert.equal(detectLayout(undefined), null, 'Safari, Firefox: nothing to ask');
+});
+
+test('keyFor: a character not on the picked layout plays its key by place', async () => {
+  const { keyFor } = await import('../web/rhythm.js');
+  assert.equal(keyFor({ code: 'KeyQ', key: 'й' }, 'qwerty'), 'KeyQ', 'a Cyrillic keyboard still plays');
+  assert.equal(keyFor({ code: 'KeyQ', key: "'" }, 'qwerty'), 'KeyQ', 'QWERTY picked on a Dvorak computer: the apostrophe key still plays');
+  assert.equal(keyFor({ code: 'Comma', key: '<', shiftKey: true }, 'qwerty'), 'Comma', 'Shift+, is still the comma key');
+  assert.equal(keyFor({ code: 'KeyA', key: 'Dead' }, 'dvorak'), 'KeyA', 'a dead key, by place');
+  assert.equal(keyFor({ code: 'Quote', key: "'" }, 'qwerty'), null, 'not one of the 40');
 });

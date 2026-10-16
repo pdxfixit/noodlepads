@@ -17,7 +17,6 @@
 import { SETTINGS, getSetting, setSetting, onSetting } from './settings.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { deviceCode, LIVE_HOST } from './log-send.js';
-import { LAYOUT_NAMES } from './rhythm.js';
 import { remember, recall } from './util.js';
 import { SKINS, skinLabel } from './skins.js';
 
@@ -87,7 +86,6 @@ function chips() {
   const on = (v) => (v ? 'On' : 'Off');
   const words = {
     'set-beats': LEVEL_NAMES[getSetting('level')],
-    'set-keys': LAYOUT_NAMES[getSetting('djLayout')] ?? '',
     'set-look': skinLabel(getSetting('padSkin')),
     // Which of the two are on, short enough for a 320 px heading: 📊 On, 📊📮 On, Off.
     'set-data': dataChip(getSetting('sendUsage') === true, getSetting('sendLogs') === true),

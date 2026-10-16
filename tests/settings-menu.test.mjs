@@ -159,7 +159,7 @@ test('every Settings section but About folds under its heading, and the device r
   try {
     const dialog = $('#settings-dialog');
     const folds = dialog.querySelectorAll('.set-fold');
-    assert.deepEqual(folds.map((s) => s.id), ['set-sharing', 'set-backups', 'set-older', 'set-beats', 'set-look', 'set-keys', 'set-data']);
+    assert.deepEqual(folds.map((s) => s.id), ['set-sharing', 'set-backups', 'set-older', 'set-beats', 'set-look', 'set-data']);
     assert.equal($('#about-text').closest('.set-fold'), null, 'About is always open');
     for (const s of folds) {
       const head = s.querySelector('.set-head');
@@ -169,20 +169,20 @@ test('every Settings section but About folds under its heading, and the device r
       assert.equal(s.querySelector('.set-body').hidden, true);
     }
     // Tapping a heading opens it, and the device remembers.
-    const keys = $('#set-keys');
-    keys.querySelector('.set-head').dispatch('click', { bubbles: true });
-    assert.equal(keys.querySelector('.set-head').getAttribute('aria-expanded'), 'true');
-    assert.equal(keys.querySelector('.set-body').hidden, false);
-    assert.equal(keys.querySelector('.set-head-caret').textContent, '▾');
-    assert.deepEqual(JSON.parse(stored.get('settings-open')), ['set-keys']);
+    const look = $('#set-look');
+    look.querySelector('.set-head').dispatch('click', { bubbles: true });
+    assert.equal(look.querySelector('.set-head').getAttribute('aria-expanded'), 'true');
+    assert.equal(look.querySelector('.set-body').hidden, false);
+    assert.equal(look.querySelector('.set-head-caret').textContent, '▾');
+    assert.deepEqual(JSON.parse(stored.get('settings-open')), ['set-look']);
     // The heading's chip says the state at a glance.
     $('#settings-open').dispatch('click');
-    assert.equal(keys.querySelector('.set-head-chip').textContent, 'Auto');
+    assert.equal(look.querySelector('.set-head-chip').textContent, 'Tiles');
     assert.equal($('#set-backups').querySelector('.set-head-chip').hidden, true, 'no chip where there is nothing to say');
     $('#settings-dialog').close();
     // And again closes it.
-    keys.querySelector('.set-head').dispatch('click', { bubbles: true });
-    assert.equal(keys.querySelector('.set-body').hidden, true);
+    look.querySelector('.set-head').dispatch('click', { bubbles: true });
+    assert.equal(look.querySelector('.set-body').hidden, true);
     assert.deepEqual(JSON.parse(stored.get('settings-open')), []);
   } finally {
     delete globalThis.localStorage;
@@ -202,8 +202,8 @@ test('🔓 What\'s private is gone from Settings; 🔗 Sharing is first and hold
   assert.equal($('#set-cloud'), null, 'no ☁️ Cloud section is left');
   assert.equal(startsOpen('set-x', true, new Set()), true);
   assert.equal(startsOpen('set-x', true, new Set(['!set-x'])), false, 'folded here, it stays folded');
-  assert.equal(startsOpen('set-keys', false, new Set(['set-keys'])), true);
-  assert.equal(startsOpen('set-keys', false, new Set()), false, 'the others start closed (Q22)');
+  assert.equal(startsOpen('set-look', false, new Set(['set-look'])), true);
+  assert.equal(startsOpen('set-look', false, new Set()), false, 'the others start closed (Q22)');
 });
 
 test('a remembered list of open sections reads junk as none', async () => {

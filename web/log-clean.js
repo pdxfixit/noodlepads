@@ -36,7 +36,7 @@ export const SETTING_VALUES = {
   timeSignature: SIGNATURE_IDS,
   padSize: ['auto', ...Array.from({ length: 101 }, (_, i) => i / 100)],   // 'auto', or 0 to 1 between the screen's smallest and biggest pads
   padSkin: ['tiles', 'slam', 'lit', 'switch', 'spinner', 'jelly', 'googly'],   // skins.js SKIN_IDS
-  djLayout: ['auto', 'qwerty', 'dvorak'],
+  djLayout: ['qwerty', 'dvorak'],
   sendLogs: [false, true],
   sendUsage: [false, true],
 };
