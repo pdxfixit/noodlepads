@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS counters (
 );
 
 -- Player metrics (ADR 0016): which devices use each profile, from where
--- (city and network, never the IP), when, which parts of the app, and how
+-- (the country only, never the IP), when, which parts of the app, and how
 -- each visit went. Events, counts and visits are kept 14 days and a device's
 -- row 90: the Worker deletes older rows as it goes (worker/metrics.js), and
 -- `just harvest` copies them into a local archive first. Every write is
@@ -163,11 +163,7 @@ CREATE TABLE IF NOT EXISTS activity (
   profile_id TEXT NOT NULL,
   device     TEXT,                      -- devices.hash; NULL for a wrong PIN (no key yet)
   kind       TEXT NOT NULL,             -- make open pull push share pin pin-wrong
-  city       TEXT,
-  region     TEXT,
-  country    TEXT,                      -- two letters
-  network    TEXT,                      -- the network's name (asOrganization)
-  asn        INTEGER
+  country    TEXT                       -- two letters: the finest place kept (Ben, 2026-10-16)
 );
 CREATE INDEX IF NOT EXISTS activity_at ON activity (at);
 CREATE INDEX IF NOT EXISTS activity_profile ON activity (profile_id, at);
@@ -212,4 +208,4 @@ CREATE TABLE IF NOT EXISTS migrations (
   name    TEXT PRIMARY KEY,   -- the file's name, without .sql
   applied INTEGER NOT NULL
 );
-INSERT OR IGNORE INTO migrations (name, applied) VALUES ('001-shares-not-gifts-or-families', 0), ('002-player-metrics', 0), ('003-visits-no-ip-hash', 0);
+INSERT OR IGNORE INTO migrations (name, applied) VALUES ('001-shares-not-gifts-or-families', 0), ('002-player-metrics', 0), ('003-visits-no-ip-hash', 0), ('004-country-only', 0);

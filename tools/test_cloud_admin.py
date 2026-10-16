@@ -66,7 +66,9 @@ class Migrate(unittest.TestCase):
         db = Local(ROOT / 'tests' / 'schema-before-001.sql')
         lines, out = quiet()
         pending = ca.migrate(db, False, out)
-        self.assertEqual([p.name for p in pending], ['001-shares-not-gifts-or-families.sql', '002-player-metrics.sql', '003-visits-no-ip-hash.sql'])
+        names = [p.name for p in pending]
+        self.assertEqual(names[:4], ['001-shares-not-gifts-or-families.sql', '002-player-metrics.sql', '003-visits-no-ip-hash.sql', '004-country-only.sql'])
+        self.assertEqual(names, sorted(p.name for p in (ROOT / 'worker' / 'migrations').glob('[0-9][0-9][0-9]-*.sql')), 'every one, in order')
         self.assertEqual(db.ran, [], 'a dry run changes nothing')
         ca.migrate(db, True, out)
         self.assertIn('active', [c['name'] for c in db.query('PRAGMA table_info(profiles)')])
@@ -78,7 +80,7 @@ class Migrate(unittest.TestCase):
         # The deploy's guard: GitHub deploys every push, but migrating is Ben's.
         db = Local(ROOT / 'tests' / 'schema-before-001.sql')
         lines, out = quiet()
-        self.assertEqual(len(ca.pending(db, out)), 3)
+        self.assertEqual(len(ca.pending(db, out)), len(list((ROOT / 'worker' / 'migrations').glob('[0-9][0-9][0-9]-*.sql'))))
         self.assertIn('cloud-migrate --yes', lines[-1])
         self.assertEqual(db.ran, [], 'pending changes nothing')
         self.assertEqual(ca.main(['pending'], db=db), 1)
@@ -172,10 +174,10 @@ PHONE = 'a' * 64
 TABLET = 'b' * 64
 
 
-def event(db, at, pid, kind, device=PHONE, city='Portland', network='Comcast Cable'):
+def event(db, at, pid, kind, device=PHONE, country='US'):
     dev = "'" + device + "'" if device else 'NULL'
-    db.execute(f"INSERT INTO activity (at, profile_id, device, kind, city, region, country, network, asn) "
-               f"VALUES ({at}, '{pid}', {dev}, '{kind}', '{city}', 'Oregon', 'US', '{network}', 7922);")
+    db.execute(f"INSERT INTO activity (at, profile_id, device, kind, country) "
+               f"VALUES ({at}, '{pid}', {dev}, '{kind}', '{country}');")
 
 
 def device(db, h, pid, kind='phone', last=NOW, syncs=3):
@@ -197,8 +199,8 @@ def fill(db):
     device(db, 'c' * 64, 'p-smoke-1')
     event(db, NOW - 2 * DAY, 'p-kid', 'open')
     event(db, NOW - 2 * DAY + HOUR, 'p-kid', 'pull')
-    event(db, NOW - DAY, 'p-kid', 'pull', device=TABLET, city='Seattle', network='T-Mobile USA')
-    event(db, NOW - HOUR, 'p-kid', 'pin-wrong', device=None, city='Seattle', network='T-Mobile USA')
+    event(db, NOW - DAY, 'p-kid', 'pull', device=TABLET, country='CA')
+    event(db, NOW - HOUR, 'p-kid', 'pin-wrong', device=None, country='CA')
     event(db, NOW - HOUR, 'p-smoke-1', 'make', device='c' * 64)
     db.execute("INSERT INTO uses (profile_id, feature, day, n) VALUES ('p-kid', 'pad', '2027-01-14', 40), ('p-kid', 'beats', '2027-01-14', 2), ('p-smoke-1', 'pad', '2027-01-14', 1);")
 
@@ -243,8 +245,8 @@ class Metrics(unittest.TestCase):
         self.assertIn('📱 devices: 2', text)
         self.assertRegex(text, r'aaaaaa  phone   Safari   iOS      w360   app 7b5fc5e\s+3 syncs')
         self.assertRegex(text, r'bbbbbb  tablet')
-        self.assertIn('Portland, Oregon, US · Comcast Cable (AS7922) · 2 events', text)
-        self.assertIn('Seattle, Oregon, US · T-Mobile USA (AS7922) · 2 events', text)
+        self.assertIn('     US · 2 events', text)
+        self.assertIn('     CA · 2 events', text)
         self.assertNotIn('IP', text, 'nothing of the IP is kept, so none is reported')
         day_line = next(l for l in lines if l.startswith('  📅'))
         self.assertIn('4 events; 3 days with any', day_line)
@@ -268,7 +270,7 @@ class Metrics(unittest.TestCase):
         self.assertIn('🐞 errors in visits: smoke.js:1 9 · app.js:9 3 · storage 1', text)
 
     def test_one_place_is_not_flagged(self):
-        self.archive.execute("DELETE FROM activity WHERE city = 'Seattle';")
+        self.archive.execute("DELETE FROM activity WHERE country = 'CA';")
         lines = self.stats()
         self.assertNotIn('⚠️', '\n'.join(lines))
         self.assertEqual(lines[-1], '1 players with metrics · 0 seen from more than one place')

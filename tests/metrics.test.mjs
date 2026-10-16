@@ -17,7 +17,7 @@ const DAY = 24 * 60 * 60 * 1000;
 const IP = '203.0.113.77';
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 const PORTLAND = { city: 'Portland', region: 'Oregon', country: 'US', asOrganization: 'Comcast Cable', asn: 7922 };
-const SEATTLE = { city: 'Seattle', region: 'Washington', country: 'US', asOrganization: 'T-Mobile USA', asn: 21928 };
+const VANCOUVER = { city: 'Vancouver', region: 'British Columbia', country: 'CA', asOrganization: 'Telus', asn: 852 };
 
 function cloud() {
   const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') } };
@@ -65,31 +65,29 @@ test('the User-Agent is read as browser, OS and device type families', () => {
   for (const [ua, touch, want] of cases) assert.deepEqual(parseAgent(ua, touch), want, ua);
 });
 
-test('the place is what Cloudflare read from the request, capped, and no IP', () => {
+// Ben, 2026-10-16: country only, in every app.
+test('the place is the country Cloudflare read from the request, and nothing finer: no city, region, network, ASN or IP', () => {
   const req = new Request('https://noodlepads.com/api/cloud');
-  Object.defineProperty(req, 'cf', { value: { ...PORTLAND, city: 'x'.repeat(200), country: 'USA', asn: 'nope', clientIp: IP, latitude: '45.5' } });
-  const p = placeOf(req);
-  assert.deepEqual(Object.keys(p), ['city', 'region', 'country', 'network', 'asn']);
-  assert.equal(p.city.length, 64);
-  assert.equal(p.country, 'US');
-  assert.equal(p.asn, null);
-  assert.deepEqual(placeOf(new Request('https://noodlepads.com/')), { city: null, region: null, country: null, network: null, asn: null });
+  Object.defineProperty(req, 'cf', { value: { ...PORTLAND, country: 'USA', clientIp: IP, latitude: '45.5' } });
+  assert.deepEqual(placeOf(req), { country: 'US' });
+  assert.deepEqual(placeOf(new Request('https://noodlepads.com/')), { country: null });
 });
 
 test('make, open, pull, push and share each log one event with its place; the device keeps its families and counts its syncs', async () => {
   const { env, call } = cloud();
   const key = await make(call);
   assert.equal((await call('GET', 'profiles/p-a/records?since=0', { key })).status, 200);
-  assert.equal((await call('GET', 'profiles/p-a/records?since=0', { key, cf: SEATTLE, ip: '198.51.100.9' })).status, 200);
+  assert.equal((await call('GET', 'profiles/p-a/records?since=0', { key, cf: VANCOUVER, ip: '198.51.100.9' })).status, 200);
   assert.equal((await call('POST', 'profiles/p-a/records', { key, body: { put: [{ kind: 'beats', id: 'beat-1', body: { name: 'x' } }], del: [] } })).status, 200);
   assert.equal((await call('POST', 'profiles/p-a/shares', { key, body: { kind: 'beat', title: 'Taco', bundle: { beats: [{ id: 'beat-1' }] } } })).status, 201);
   const other = (await (await call('POST', 'profiles/p-a/open', { body: { remember: true }, ua: 'Mozilla/5.0 (Windows NT 10.0) Chrome/129.0 Safari/537.36', meta: appMeta('abc', 1920, false) })).json()).key;
   assert.ok(other);
 
-  const acts = env.DB.rows('SELECT kind, device, city, region, country, network, asn FROM activity ORDER BY id');
+  const acts = env.DB.rows('SELECT * FROM activity ORDER BY id');
   assert.deepEqual(acts.map((a) => a.kind), ['make', 'pull', 'pull', 'push', 'share', 'open']);
-  assert.deepEqual([acts[0].city, acts[0].region, acts[0].country, acts[0].network, acts[0].asn], ['Portland', 'Oregon', 'US', 'Comcast Cable', 7922]);
-  assert.equal(acts[2].city, 'Seattle');
+  assert.deepEqual(Object.keys(acts[0]), ['id', 'at', 'profile_id', 'device', 'kind', 'country'], 'the country is the only place kept');
+  assert.deepEqual([acts[0].country, acts[2].country], ['US', 'CA']);
+  assert.ok(!JSON.stringify(acts).match(/Portland|Oregon|Comcast|Vancouver|Telus/));
   assert.equal(new Set(acts.slice(0, 5).map((a) => a.device)).size, 1, 'one device until the open');
   assert.notEqual(acts[5].device, acts[0].device, 'another key, another device');
 
@@ -121,12 +119,12 @@ test('nothing stored holds the IP, a hash of it, or the User-Agent', async () =>
 test('a wrong PIN is logged with no device; a refused key logs nothing', async () => {
   const { env, call } = cloud();
   await make(call, 'p-a', '1234');
-  assert.equal((await call('POST', 'profiles/p-a/open', { body: { pin: '0000' }, cf: SEATTLE })).status, 401);
+  assert.equal((await call('POST', 'profiles/p-a/open', { body: { pin: '0000' }, cf: VANCOUVER })).status, 401);
   assert.equal((await call('GET', 'profiles/p-a/records?since=0', { key: 'a'.repeat(32) })).status, 401);
   assert.equal((await call('POST', 'profiles/p-zz/open', { body: {} })).status, 404);
-  assert.deepEqual(env.DB.rows('SELECT kind, device, city FROM activity ORDER BY id'), [
-    { kind: 'make', device: env.DB.rows('SELECT hash FROM keys')[0].hash, city: 'Portland' },
-    { kind: 'pin-wrong', device: null, city: 'Seattle' },
+  assert.deepEqual(env.DB.rows('SELECT kind, device, country FROM activity ORDER BY id'), [
+    { kind: 'make', device: env.DB.rows('SELECT hash FROM keys')[0].hash, country: 'US' },
+    { kind: 'pin-wrong', device: null, country: 'CA' },
   ]);
 });
 

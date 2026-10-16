@@ -166,10 +166,12 @@ test('"the cloud also keeps for 14 days … The internet address is not kept": m
     headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'CF-Connecting-IP': '192.0.2.44', 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)', 'X-Noodle-App': 'v=abc&w=400&t=1' },
     body: JSON.stringify({ id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8' }),
   });
-  Object.defineProperty(req, 'cf', { value: { city: 'Portland', asOrganization: 'Comcast Cable' } });
+  Object.defineProperty(req, 'cf', { value: { city: 'Portland', region: 'Oregon', country: 'US', asOrganization: 'Comcast Cable', asn: 7922 } });
   assert.equal((await worker.fetch(req, env)).status, 201);
   const kept = JSON.stringify([env.DB.rows('SELECT * FROM activity'), env.DB.rows('SELECT * FROM devices')]);
-  assert.ok(kept.includes('Portland') && kept.includes('Comcast Cable'), 'the city and network are kept');
+  assert.match(line, /the country each visit came from, and no finer place/);
+  assert.ok(kept.includes('"US"'), 'the country is kept');
+  assert.ok(!kept.includes('Portland') && !kept.includes('Oregon') && !kept.includes('Comcast Cable'), 'the city, region and network are not (worker/schema.sql has no column for them)');
   assert.ok(!kept.includes('192.0.2.44') && !kept.includes('iPhone OS'), 'the IP and User-Agent are not');
 });
 
