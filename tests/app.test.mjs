@@ -1588,13 +1588,18 @@ test('Beats with ⌨️ Keys: a key played makes its sound\'s row at once, witho
   const [q, a, z] = [soundOn('KeyQ'), soundOn('KeyA'), soundOn('KeyZ')];
   assert.equal(a, 'Kick');
   assert.equal(lines().length, 0);
-  // Not recording: a key makes its row, empty, with Undo.
+  // Not recording: a key makes its row, empty, quietly (Ben, 2026-10-16:
+  // "drop the notification that a new row has been added to beats").
+  $('#dj-done-close').dispatch('click');
   page.key('z', { code: 'KeyZ' });
   assert.deepEqual(shown(), [z], 'the row is there at once');
   assert.equal(lines()[0].querySelectorAll('[data-step].on').length, 0, 'empty: nothing was recorded');
-  assert.equal($('#dj-done-text').textContent, `Added a row for ${z}.`);
-  $('#dj-done-undo').dispatch('click');
-  assert.equal(lines().length, 0, 'Undo takes it out');
+  assert.equal($('#dj-done').hidden, true, 'no notice and no Undo line');
+  // Its ✕ takes it out (two taps).
+  lines()[0].querySelector('[data-remove-row]').dispatch('click');
+  lines()[0].querySelector('[data-remove-row]').dispatch('click');
+  assert.equal(lines().length, 0, 'the row\'s ✕ takes it out');
+  $('#dj-done-close').dispatch('click');
   // Played again: one row per sound, never two.
   page.key('z', { code: 'KeyZ' });
   page.key('z', { code: 'KeyZ' });
@@ -1648,7 +1653,8 @@ test('Beats with ⌨️ Keys: a key played makes its sound\'s row at once, witho
   const one = soundOn('Digit1');
   page.key('1', { code: 'Digit1' });
   assert.deepEqual(shown(), [one, q, a, z], 'the number row, then the letter rows');
-  $('#dj-done-undo').dispatch('click');
+  line(one).querySelector('[data-remove-row]').dispatch('click');
+  line(one).querySelector('[data-remove-row]').dispatch('click');
   assert.deepEqual(shown(), [q, a, z]);
   $('#live-tab').dispatch('click');
   page.key('s', { code: 'KeyS' });
