@@ -677,7 +677,7 @@ test('saved DJ key layouts and ⭐ My keys round-trip in a backup, cleaned; stra
   assert.deepEqual((await read({})).layouts, [], 'a backup from before layouts loads');
 });
 
-test('👆 touch layouts round-trip in a backup, cleaned: the live one and ⭐ My layout on the deck, the saved ones; strangers\' and broken ones dropped; older backups load (ADR 0028)', async () => {
+test('👆 touch layouts round-trip in a backup, cleaned: the live one and ⭐ My layout on the deck, the saved ones; strangers\' and broken ones dropped; older backups load (ADR 0029)', async () => {
   const saved = { id: 'touch-q-1', personId: 'pip', name: '  Jam   pads ', created: 3, bands: [{ group: 'drums', size: 'l', sounds: ['pip-kick', 'pip-kick', 7] }, { group: '<b>', size: 'm', sounds: [] }] };
   const touch = { bands: [{ group: 'mine', size: 'x', sounds: ['pip-airhorn'] }] };
   const state = {

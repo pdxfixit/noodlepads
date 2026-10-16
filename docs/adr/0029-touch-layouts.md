@@ -1,4 +1,4 @@
-# 0028. 👆 Touch layouts: bands of sounds on the deck, named saves as their own records
+# 0029. 👆 Touch layouts: bands of sounds on the deck, named saves as their own records
 
 - **Status:** Proposed
 - **Date:** 2026-10-16

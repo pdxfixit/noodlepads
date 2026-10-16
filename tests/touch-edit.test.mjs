@@ -1,4 +1,4 @@
-// ✏️ Edit layout (ADR 0028): the 👆 touch layout's own view. Bands with ⠿
+// ✏️ Edit layout (ADR 0029): the 👆 touch layout's own view. Bands with ⠿
 // (drag, or ↑ ↓), S M L and ✕ (two taps, ↩️ Undo); + Add a group; + more;
 // a tile swapped or taken out; layouts loaded (⭐ My layout kept), saved,
 // renamed and deleted; at most 8 bands.

@@ -182,7 +182,7 @@ export function startScreen(screen, djMode) {
 // Each screen's one-line how-to, in the page footer opposite the version.
 // Worded for the device: a touch screen taps and holds; a mouse and keyboard
 // clicks, holds or Shift-clicks, and the keys are real keys. `keys` is Beats
-// with ⌨️ Keys on; `tiles-keys` and `tiles-live` the same with 👆 (ADR 0028).
+// with ⌨️ Keys on; `tiles-keys` and `tiles-live` the same with 👆 (ADR 0029).
 const SCREEN_HINTS = {
   touch: {
     pads: 'Tap a pad to play it. Hold one to keep it going.',
@@ -824,7 +824,7 @@ async function start() {
         state.layouts = state.layouts.filter((l) => l.id !== id);
         db.remove('layouts', id).catch((err) => console.error('Deleting a key layout failed:', err));
       },
-      // Saved 👆 touch layouts (✏️ Edit layout, ADR 0028).
+      // Saved 👆 touch layouts (✏️ Edit layout, ADR 0029).
       touchLayouts: (pid) => state.touchLayouts.filter((l) => l.personId === pid),
       saveTouchLayout: (layout) => {
         state.touchLayouts = [...state.touchLayouts.filter((l) => l.id !== layout.id), layout];

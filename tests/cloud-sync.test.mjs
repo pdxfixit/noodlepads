@@ -403,7 +403,7 @@ test('saved DJ key layouts sync with their person, and the app and the Worker ag
   assert.deepEqual(pulledDoc('p-a', null, [{ kind: 'gadgets', id: 'g-1', body: { id: 'g-1' } }]).gadgets, undefined);
 });
 
-test('👆 touch layouts sync with their person, and count as something made (ADR 0028)', async () => {
+test('👆 touch layouts sync with their person, and count as something made (ADR 0029)', async () => {
   const { api } = server();
   const { a, link } = await startA(api);
   const saved = { id: 'touch-1', personId: 'p-a', name: 'Jam pads', created: 7, bands: [{ group: 'mine', size: 'l', sounds: ['user-1'] }] };

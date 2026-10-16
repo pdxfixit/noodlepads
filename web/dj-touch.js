@@ -1,4 +1,4 @@
-// 👆 The touch layout (ADR 0028): 🎤 Live and Beats with ⌨️ Keys played on
+// 👆 The touch layout (ADR 0029): 🎤 Live and Beats with ⌨️ Keys played on
 // big tiles in bands, one group each, top to bottom (Ben, 2026-10-16: "not
 // tied to a kbd… preset groups… far simpler"). This file draws the bands
 // for playing; dj.js listens to them and plays through the same path as the

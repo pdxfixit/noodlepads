@@ -1,4 +1,4 @@
-// 👆 touch layouts' pure rules (web/touch.js, ADR 0028): bands of sounds,
+// 👆 touch layouts' pure rules (web/touch.js, ADR 0029): bands of sounds,
 // each one group at one size, their starting sounds, the ready-made ones,
 // changing a layout in ✏️ Edit layout, and cleaning what comes in.
 
