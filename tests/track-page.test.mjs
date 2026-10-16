@@ -19,7 +19,6 @@ beforeEach(() => {
 // A telemetry, started, whose shared client sends nothing and runs no timers.
 function telemetry() {
   const tel = createTelemetry({
-    cloud: () => true,
     globals: { window: {}, document: undefined, navigator: {}, storage: globalThis.localStorage, fetch: null, setInterval: () => 1, clearInterval: () => {} },
   });
   tel.setVersion('v');

@@ -505,7 +505,8 @@ ADR 0002.
   says where each comes from. flarepress's shared client
   (`web/events-client.js`) batches them to `POST /api/events`, which stores
   each batch in the R2 bucket `noodlepads-telemetry` for the telemetry
-  runner. Only devices where someone is in the cloud send (question #425).
+  runner. Every device sends, in the cloud or not (Ben, question #425:
+  "Yes, everyone"), with its own random code, never a profile.
   ⚙️ Settings → 📊 Play data → 📊 Share play data (the `sendUsage` setting,
   on by default) turns all of it off, the player metrics above included.
 
