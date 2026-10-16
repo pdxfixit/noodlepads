@@ -21,12 +21,14 @@ the Keychain on Ben's Mac, the repo's read-only token on GitHub); nothing
 here holds a credential. A read that fails stops the tool: an empty answer is
 never taken for "nothing there".
 
-The metrics archive is ~/.local/state/noodlepads/metrics.sqlite3 (or
-$NOODLE_METRICS_DB), beside the problem-report archive (tools/logs.py).
-It was filled by flarepress's tools/harvest.py (site/harvest.conf says
-how); since 2026-10-15 the telemetry runner (pdxfixit/telemetry) is the only
-harvester, and the Mac reads its store with `telemetry.py pull`. D1 keeps events, counts and visits 14 days and a device's row 90; the
-archive keeps them forever.
+The metrics come only from the telemetry runner's mirror (Ben, 2026-10-16:
+"i want consistent local storage mirror of this data"): the runner
+(pdxfixit/telemetry) harvests D1 with flarepress's tools/harvest.py
+(site/harvest.conf says what), and `telemetry.py pull` copies its store to
+~/.local/state/telemetry/telemetry.sqlite3 (or $TELEMETRY_DB), which keeps no
+id past a year. D1 keeps events, counts and visits 14 days and a device's row
+90. The older Mac archive, metrics.sqlite3, is retired: docs/how-to.md
+"Retire the old Mac archives" moves it into the runner.
 
 Stdlib only. The tests (tools/test_cloud_admin.py) run every command against
 a local SQLite database with the same schema.
@@ -238,7 +240,7 @@ def stats(db, now=None, out=print, archive=None, days=14, tz=None):
     each has made, how much sound, PIN, devices and shares; then totals. Then
     the metrics (ADR 0016), reported from the archive (`archive`: a path or
     an open connection; default default_archive(): the telemetry runner's
-    pulled store, else the older metrics.sqlite3)."""
+    pulled store)."""
     now = now or int(time.time() * 1000)
     rows = [r for r in db.query(STATS_SQL) if not is_test(r['id'])]
     counts = {}
@@ -303,10 +305,6 @@ DEVICE_COLUMNS = ('hash', 'profile_id', 'first_seen', 'last_seen', 'syncs', 'app
 ACTIVITY_COLUMNS = ('id', 'at', 'profile_id', 'device', 'kind', 'country')
 
 
-def metrics_path(home=None):
-    return Path(os.environ.get('NOODLE_METRICS_DB') or cloud_config.state_dir(home) / 'metrics.sqlite3').expanduser()
-
-
 # The telemetry runner (pdxfixit/telemetry) is the only harvester since
 # 2026-10-15; `telemetry.py pull` copies its store to this Mac, with this
 # site's tables as noodlepads__<table> and a `_runs` log of every run.
@@ -318,12 +316,8 @@ def telemetry_path(home=None):
 
 
 def default_archive(home=None):
-    """The runner's pulled store when it is there (and NOODLE_METRICS_DB names
-    no other file); else the older harvest archive, metrics.sqlite3."""
-    if os.environ.get('NOODLE_METRICS_DB'):
-        return metrics_path(home)
-    store = telemetry_path(home)
-    return store if store.exists() else metrics_path(home)
+    """The runner's pulled store, the only place the metrics are read from."""
+    return telemetry_path(home)
 
 
 def archive_name(archive):
@@ -360,14 +354,18 @@ def open_store(path):
 
 
 def open_archive(path=None):
+    """The runner's pulled store, read only. ':memory:' is an empty one with the
+    harvest's tables (the tests). Anything else is refused, never created."""
+    if str(path) == ':memory:':
+        conn = sqlite3.connect(':memory:')
+        conn.executescript(ARCHIVE_SCHEMA)
+        return conn
     path = Path(path or default_archive())
-    if str(path) != ':memory:' and path.exists() and is_store(path):
-        return open_store(path)
-    if str(path) != ':memory:':
-        path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path))
-    conn.executescript(ARCHIVE_SCHEMA)
-    return conn
+    if not path.exists():
+        raise Trouble(f'no telemetry mirror at {path}: run `python3 ~/src/telemetry/telemetry.py pull` first')
+    if not is_store(path):
+        raise Trouble(f'{path} is not the telemetry runner\'s mirror (it has no _runs table)')
+    return open_store(path)
 
 
 def harvest_line(conn, name):

@@ -216,6 +216,12 @@ class HarvestKeepsNoNames(unittest.TestCase):
         self.assertEqual(cols, ['id', 'created'])
         self.assertIn('as=players', lines[0])
 
+    def test_the_harvest_names_no_mac_archive(self):
+        # The runner passes --db; a db= line would name the retired metrics.sqlite3.
+        conf = (ROOT / 'site' / 'harvest.conf').read_text()
+        self.assertFalse([l for l in conf.splitlines() if l.startswith('db=')])
+        self.assertNotIn('metrics.sqlite3\n', conf.replace('metrics.sqlite3, is retired', ''))
+
     def test_the_archive_players_table_has_no_name_or_avatar(self):
         conn = ca.open_archive(':memory:')
         self.assertEqual([r[1] for r in conn.execute('PRAGMA table_info(players)')], ['id', 'created'])
@@ -354,18 +360,21 @@ class Metrics(unittest.TestCase):
             ca.stats(self.db, now=NOW, out=out, archive=path, tz=timezone.utc)
             self.assertTrue(any('no noodlepads run pulled yet' in l for l in lines))
 
-    def test_the_default_is_the_pulled_store_when_it_is_there(self):
-        with tempfile.TemporaryDirectory() as home, mock.patch.dict(os.environ, {'NOODLE_METRICS_DB': '', 'TELEMETRY_DB': ''}):
-            self.assertEqual(ca.default_archive(home).name, 'metrics.sqlite3')
-            store = ca.telemetry_path(home)
-            store.parent.mkdir(parents=True)
-            store.write_bytes(b'')
-            self.assertEqual(ca.default_archive(home), store)
-
-    def test_the_archive_lives_beside_the_report_archive_unless_told(self):
-        with tempfile.TemporaryDirectory() as home:
-            self.assertEqual(ca.metrics_path(home).name, 'metrics.sqlite3')
-            self.assertEqual(ca.metrics_path(home).parent.name, 'noodlepads')
+    def test_the_metrics_come_only_from_the_runners_mirror(self):
+        # Ben, 2026-10-16: "the telemetry tooling needs to take this over". The old
+        # metrics.sqlite3 is never read, even when it is there or named.
+        with tempfile.TemporaryDirectory() as home, mock.patch.dict(os.environ, {'NOODLE_METRICS_DB': 'x', 'TELEMETRY_DB': ''}):
+            old = Path(home) / '.local/state/noodlepads/metrics.sqlite3'
+            old.parent.mkdir(parents=True)
+            ca.open_archive(':memory:').close()
+            sqlite3.connect(old).executescript(ca.ARCHIVE_SCHEMA)
+            self.assertEqual(ca.default_archive(home), Path(home) / '.local/state/telemetry/telemetry.sqlite3')
+            self.assertFalse(hasattr(ca, 'metrics_path'))
+            with self.assertRaisesRegex(ca.Trouble, 'no telemetry mirror at .*telemetry.py pull'):
+                ca.open_archive(ca.default_archive(home))
+            self.assertFalse(ca.default_archive(home).exists(), 'a missing mirror is never created')
+            with self.assertRaisesRegex(ca.Trouble, "not the telemetry runner's mirror"):
+                ca.open_archive(old)
 
     def test_pruning_a_profile_deletes_its_metrics_too(self):
         self.db.execute(f"UPDATE profiles SET active = {NOW - 400 * DAY}, created = {NOW - 400 * DAY} WHERE id = 'p-kid';")
