@@ -296,7 +296,9 @@ CREATE TABLE IF NOT EXISTS visits (      -- as D1's visits, by its never-reused 
 CREATE TABLE IF NOT EXISTS harvest_meta (key TEXT PRIMARY KEY, value TEXT);   -- last_run, last_result (flarepress)
 """
 DEVICE_COLUMNS = ('hash', 'profile_id', 'first_seen', 'last_seen', 'syncs', 'app', 'browser', 'os', 'type', 'width')
-ACTIVITY_COLUMNS = ('id', 'at', 'profile_id', 'device', 'kind', 'city', 'region', 'country', 'network', 'asn')
+# The country is the only place reported (Ben, 2026-10-16: country only); the
+# archive's older rows keep their city and network columns, unread.
+ACTIVITY_COLUMNS = ('id', 'at', 'profile_id', 'device', 'kind', 'country')
 
 
 def metrics_path(home=None):
@@ -407,14 +409,12 @@ def wrapped(head, items, width=100, indent='     '):
 
 
 def place_of(a):
-    where = ', '.join(x for x in (a['city'], a['region'], a['country']) if x) or 'unknown place'
-    net = a['network'] or 'unknown network'
-    return f"{where} · {net}" + (f" (AS{a['asn']})" if a['asn'] else '')
+    return a['country'] or 'unknown country'
 
 
 def metrics_report(conn, now, out=print, days=14, tz=None):
     """Per player (test profiles left out), newest activity first: devices,
-    places (city, region, country and network), activity by day and by hour
+    places (the country), activity by day and by hour
     of the day (this Mac's time, or `tz`), what each event was, feature use,
     and visits. A player seen from more than one place is flagged ⚠️. Then
     the errors visits saw, everyone's, by where they came from. Returns

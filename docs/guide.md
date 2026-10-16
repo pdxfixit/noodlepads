@@ -493,7 +493,7 @@ ADR 0002.
   the Mac (`~/.local/state/telemetry/telemetry.sqlite3`, read only; or
   `$TELEMETRY_DB`), lists what each player
   made, and shows per player: devices (type, browser, OS, width, app version,
-  syncs, first and last seen), places (city, region, country and network),
+  syncs, first and last seen), places (the country; nothing finer is kept),
   activity over the last 14 days (`--days N`) and by hour, feature-use counts
   and visits; then every visit's errors by where they came from. A player
   seen from more than one place is flagged ⚠️. Test profiles are left out.

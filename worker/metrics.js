@@ -4,8 +4,9 @@
 // days and a device's row 90; `just harvest` copies them first into the
 // archive on Ben's Mac, which keeps them for good.
 //
-// What is kept of a request: the city, region, country and network that
-// Cloudflare reads from it (request.cf), never the IP. Of the User-Agent,
+// What is kept of a request: the country Cloudflare reads from it
+// (request.cf), and no finer place (Ben, 2026-10-16: country only), never
+// the IP. Of the User-Agent,
 // only the browser, OS and device-type families. Of the device's own header
 // (X-Noodle-App, web/uses.js appMeta): the app version, a width bucket, touch.
 //
@@ -34,16 +35,10 @@ const missingTable = (err) => /no such table/i.test(String(err?.message ?? err))
 // A string from request.cf, or null.
 const text = (v) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, FIELD) : null);
 
-// Where a request came from, as Cloudflare saw it. No IP.
+// Where a request came from, as Cloudflare saw it: the country alone.
 export function placeOf(request) {
   const cf = request.cf ?? {};
-  return {
-    city: text(cf.city),
-    region: text(cf.region),
-    country: text(cf.country)?.slice(0, 2) ?? null,
-    network: text(cf.asOrganization),
-    asn: Number.isSafeInteger(cf.asn) && cf.asn > 0 ? cf.asn : null,
-  };
+  return { country: text(cf.country)?.slice(0, 2) ?? null };
 }
 
 // The browser, OS and device type a User-Agent names, as families.
@@ -123,9 +118,9 @@ export async function noteEvent(env, request, seen, now) {
           width = COALESCE(excluded.width, width)`)
         .bind(seen.device, seen.profile, now, now, seen.kind === 'pull' ? 1 : 0, meta.app, agent.browser, agent.os, agent.type, meta.width));
     }
-    out.push(DB.prepare(`INSERT INTO activity (at, profile_id, device, kind, city, region, country, network, asn)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .bind(now, seen.profile, seen.device ?? null, seen.kind, place.city, place.region, place.country, place.network, place.asn));
+    out.push(DB.prepare(`INSERT INTO activity (at, profile_id, device, kind, country)
+      VALUES (?, ?, ?, ?, ?)`)
+      .bind(now, seen.profile, seen.device ?? null, seen.kind, place.country));
     if (SWEEPS.has(seen.kind)) out.push(...sweep(env, now));
     return out;
   }, seen.kind);
