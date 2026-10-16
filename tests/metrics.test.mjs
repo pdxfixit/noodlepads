@@ -1,15 +1,16 @@
-// Player metrics in the Worker (worker/metrics.js, ADR 0016), against a fake
-// D1 with the real schema: each device's row, the activity log with its
-// place (nothing of the IP), the User-Agent read as families (never kept),
-// feature-use counts, visits, 14 days kept (a device's row 90), and a Worker
-// that keeps working while the tables are missing.
+// Player metrics in the Worker (worker/metrics.js, ADR 0016, narrowed by ADR
+// 0027), against a fake D1 with the real schema: each device's row, the
+// activity log with its place (nothing of the IP), the User-Agent read as
+// families (never kept), 14 days kept (a device's row 90), a Worker that
+// keeps working while the tables are missing, and the retired feature-use
+// route that still answers older copies of the app.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../worker/index.js';
 import { ORIGIN } from '../worker/http.js';
 import { parseAgent, placeOf, KEEP_MS, DEVICE_KEEP_MS } from '../worker/metrics.js';
-import { appMeta, USES } from '../web/uses.js';
+import { appMeta } from '../web/device-meta.js';
 import { FakeD1 } from './fake-d1.mjs';
 
 const T0 = Date.parse('2026-10-12T18:00:00Z');
@@ -38,11 +39,6 @@ function cloud() {
   };
   return { env, call, at: (t) => { now = t; } };
 }
-
-// A visit as web/visits.js sends it.
-const visit = (over = {}) => ({
-  at: T0 - 120_000, secs: 95, first: 'pads', screens: ['pads', 'beats'], level: 'regular', load: 830, latency: 24, errors: {}, ...over,
-});
 
 const make = async (call, id = 'p-a', pin) => (await (await call('POST', 'profiles', {
   body: { id, name: 'Sir Squid', avatar: '', color: '#1F3FA8', ...(pin ? { pin } : {}) },
@@ -107,8 +103,7 @@ test('nothing stored holds the IP, a hash of it, or the User-Agent', async () =>
   const { env, call } = cloud();
   const key = await make(call);
   await call('GET', 'profiles/p-a/records?since=0', { key });
-  await call('POST', 'profiles/p-a/uses', { key, body: { uses: { pad: 2 }, visits: [visit()] } });
-  const dump = JSON.stringify(['profiles', 'keys', 'records', 'devices', 'activity', 'uses', 'visits', 'counters'].map((t) => env.DB.rows(`SELECT * FROM ${t}`)));
+  const dump = JSON.stringify(['profiles', 'keys', 'records', 'devices', 'activity', 'counters'].map((t) => env.DB.rows(`SELECT * FROM ${t}`)));
   const columns = env.DB.rows('PRAGMA table_info(activity)').map((c) => c.name);
   assert.ok(!columns.some((c) => /ip/.test(c)), `no IP column in activity: ${columns}`);
   assert.ok(!dump.includes(IP), 'no IP');
@@ -142,93 +137,25 @@ test('a new PIN gives the device a new key, and it stays one device', async () =
   assert.deepEqual(env.DB.rows('SELECT kind FROM activity ORDER BY id').map((a) => a.kind), ['make', 'pull', 'pin', 'pull']);
 });
 
-test('feature-use counts add up per profile and day; a bad send is refused whole', async () => {
-  const { env, call, at } = cloud();
-  const key = await make(call);
-  assert.equal((await call('POST', 'profiles/p-a/uses', { key, body: { uses: { pad: 5, dj: 1 } } })).status, 200);
-  assert.equal((await call('POST', 'profiles/p-a/uses', { key, body: { uses: { pad: 2 } } })).status, 200);
-  at(T0 + DAY);
-  assert.equal((await call('POST', 'profiles/p-a/uses', { key, body: { uses: { pad: 1 } } })).status, 200);
-  assert.deepEqual(env.DB.rows('SELECT feature, day, n FROM uses ORDER BY day, feature'), [
-    { feature: 'dj', day: '2026-10-12', n: 1 }, { feature: 'pad', day: '2026-10-12', n: 7 }, { feature: 'pad', day: '2026-10-13', n: 1 },
-  ]);
-  assert.equal((await call('POST', 'profiles/p-a/uses', { key, body: { uses: { pad: 1, 'a-name': 1 } } })).status, 400);
-  assert.equal((await call('POST', 'profiles/p-a/uses', { key, body: { uses: { pad: 1e9 } } })).status, 400);
-  assert.equal((await call('POST', 'profiles/p-a/uses', { body: { uses: { pad: 1 } } })).status, 401, 'needs the key');
-  assert.equal((await call('POST', 'profiles/p-a/uses', { key, body: { uses: { pad: 1 }, pad: 'x'.repeat(40_000) } })).status, 413);
-  assert.equal(env.DB.rows("SELECT SUM(n) AS n FROM uses WHERE feature = 'pad'")[0].n, 8, 'the refused sends added nothing');
-  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM activity')[0].n, 1, 'counts are not activity');
-  assert.equal(env.DB.rows('SELECT last_seen FROM devices')[0].last_seen, T0 + DAY, 'but the device was seen');
-});
-
-test("the Worker takes the newest names (2026-10-12's features) and still the oldest, from a device on an older copy", async () => {
-  const { env, call } = cloud();
-  const key = await make(call);
-  const today = ['roll', 'roll-note', 'song-block', 'mixer', 'beat-chip', 'beat-keep', 'song-keep', 'row-overlap', 'live-overlap', 'more'];
-  const old = ['dj', 'dj-freestyle', 'beat-builder'];
-  for (const f of [...today, ...old]) assert.ok(USES.includes(f), f);
-  assert.equal((await call('POST', 'profiles/p-a/uses', { key, body: { uses: Object.fromEntries(today.map((f) => [f, 2])) } })).status, 200);
-  assert.equal((await call('POST', 'profiles/p-a/uses', { key, body: { uses: Object.fromEntries(old.map((f) => [f, 1])) } })).status, 200);
-  assert.equal((await call('POST', 'profiles/p-a/uses', { key, body: { uses: Object.fromEntries(USES.map((f) => [f, 1])) } })).status, 200, 'every name at once fits a send');
-  const got = Object.fromEntries(env.DB.rows('SELECT feature, n FROM uses').map((r) => [r.feature, r.n]));
-  for (const f of today) assert.equal(got[f], 3, f);
-  for (const f of old) assert.equal(got[f], 2, f);
-});
-
-test('events, counts and visits older than 14 days go when a profile is opened, made, pushed or shared, never on a pull; a device\'s row lasts 90', async () => {
+test('events older than 14 days go when a profile is opened, made, pushed or shared, never on a pull; a device\'s row lasts 90', async () => {
   assert.equal(KEEP_MS, 14 * DAY);
   assert.equal(DEVICE_KEEP_MS, 90 * DAY);
   const { env, call, at } = cloud();
   const key = await make(call);
-  await call('POST', 'profiles/p-a/uses', { key, body: { uses: { pad: 1 }, visits: [visit()] } });
   at(T0 + KEEP_MS + DAY);
   await call('GET', 'profiles/p-a/records?since=0', { key });
   assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM activity')[0].n, 2, 'a pull deletes nothing');
   await make(call, 'p-b');
   assert.deepEqual(env.DB.rows('SELECT kind, profile_id FROM activity ORDER BY id'), [{ kind: 'pull', profile_id: 'p-a' }, { kind: 'make', profile_id: 'p-b' }]);
-  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM uses')[0].n, 0, 'old days\' counts go');
-  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM visits')[0].n, 0, 'old visits go');
   assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM devices')[0].n, 2, 'devices stay past 14 days');
   at(T0 + KEEP_MS + DEVICE_KEEP_MS + 2 * DAY);
   await make(call, 'p-c');
   assert.deepEqual(env.DB.rows('SELECT profile_id FROM devices'), [{ profile_id: 'p-c' }], 'devices not seen in 90 days go');
 });
 
-test('visits are stored with the sending device and app; a bad one is dropped, not the send', async () => {
-  const { env, call } = cloud();
-  const key = await make(call);
-  const good = visit({ errors: { 'sequencer.js:120': 2, storage: 1 } });
-  const res = await call('POST', 'profiles/p-a/uses', {
-    key, body: { visits: [good, { ...good, at: 'yesterday' }, visit({ at: T0 - 1000, secs: 1 }), visit({ at: T0 - 9000, screens: ['pads', 'a-name'], errors: { 'Hello Pip': 1 } })] },
-  });
-  assert.equal(res.status, 200, 'visits alone are a send');
-  const rows = env.DB.rows('SELECT * FROM visits ORDER BY at');
-  assert.equal(rows.length, 2, 'the two good ones; a 1-second flick and a bad time are dropped');
-  const device = env.DB.rows('SELECT hash FROM devices')[0].hash;
-  assert.deepEqual({ ...rows[0], id: undefined }, {
-    id: undefined, at: good.at, profile_id: 'p-a', device, app: '7b5fc5e', secs: 95, first: 'pads', screens: 'pads,beats',
-    level: 'regular', load_ms: 830, latency_ms: 24, errors: 3, error_sigs: '{"sequencer.js:120":2,"storage":1}',
-  });
-  assert.equal(rows[1].screens, 'pads', 'an unknown screen is left out');
-  assert.equal(rows[1].error_sigs, null, 'and an error place that is not file:line');
-  assert.equal((await call('POST', 'profiles/p-a/uses', { key, body: {} })).status, 400, 'neither counts nor visits');
-  assert.equal((await call('POST', 'profiles/p-a/uses', { key, body: { uses: { pad: 1, 'a-name': 1 }, visits: [visit()] } })).status, 400, 'bad counts still refuse the send');
-});
-
-test('a full send of visits fits what the Worker reads', async () => {
-  const { MAX_SEND, MAX_ERRORS } = await import('../web/visits.js');
-  const { env, call } = cloud();
-  const key = await make(call);
-  const errors = Object.fromEntries(Array.from({ length: MAX_ERRORS }, (_, i) => [`some-long-module-name-${i}.js:${100000 + i}`, 9999]));
-  const visits = Array.from({ length: MAX_SEND }, (_, i) => visit({ at: T0 - i * 60_000, errors, screens: ['pads', 'beats', 'song', 'live', 'kids'] }));
-  const uses = Object.fromEntries(USES.map((f) => [f, 99_999]));
-  assert.equal((await call('POST', 'profiles/p-a/uses', { key, body: { uses, visits } })).status, 200);
-  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM visits')[0].n, MAX_SEND);
-});
-
 test('before the migration runs, every route works and only the metrics are skipped', async () => {
   const { env, call } = cloud();
-  for (const t of ['devices', 'activity', 'uses', 'visits']) env.DB.db.exec(`DROP TABLE ${t}`);
+  for (const t of ['devices', 'activity']) env.DB.db.exec(`DROP TABLE ${t}`);
   const errors = [];
   const realError = console.error;
   console.error = (...a) => errors.push(a.join(' '));
@@ -238,7 +165,6 @@ test('before the migration runs, every route works and only the metrics are skip
     assert.equal((await call('GET', 'profiles/p-a/records?since=0', { key })).status, 200);
     assert.equal((await call('POST', 'profiles/p-a/records', { key, body: { put: [{ kind: 'beats', id: 'b-1', body: {} }] } })).status, 200);
     assert.equal((await call('POST', 'profiles/p-a/open', { body: {} })).status, 200);
-    assert.equal((await call('POST', 'profiles/p-a/uses', { key, body: { uses: { pad: 1 } } })).status, 503, 'the device keeps its counts for later');
   } finally {
     console.error = realError;
   }
@@ -266,9 +192,9 @@ test('another D1 trouble in the metrics is logged, and the answer is still the r
 });
 
 // Ben, 2026-10-16: off means nothing is sent, ever. A device with its usage
-// switch off sends no X-Noodle-App (web/uses.js appMeta), and the Worker then
-// keeps no metrics for the call; old rows still go on time.
-test('a call without X-Noodle-App (the usage switch off) leaves no device, event, count or visit', async () => {
+// switch off sends no X-Noodle-App (web/device-meta.js appMeta), and the Worker
+// then keeps no metrics for the call; old rows still go on time.
+test('a call without X-Noodle-App (the usage switch off) leaves no device or event', async () => {
   const { env, call, at } = cloud();
   await make(call, 'p-a');
   const old = env.DB.rows('SELECT COUNT(*) AS n FROM activity')[0].n;
@@ -277,11 +203,8 @@ test('a call without X-Noodle-App (the usage switch off) leaves no device, event
   const off = { meta: null };
   const key2 = (await (await call('POST', 'profiles', { ...off, body: { id: 'p-b', name: 'Sir Squid', avatar: '', color: '#1F3FA8' } })).json()).key;
   assert.equal((await call('GET', 'profiles/p-b/records?since=0', { ...off, key: key2 })).status, 200);
-  assert.equal((await call('POST', 'profiles/p-b/uses', { ...off, key: key2, body: { uses: { pad: 2 }, visits: [visit({ at: T0 + 20 * DAY - 60_000 })] } })).status, 200, 'the device is told it went');
   assert.deepEqual(env.DB.rows("SELECT * FROM activity WHERE profile_id = 'p-b'"), []);
   assert.deepEqual(env.DB.rows("SELECT * FROM devices WHERE profile_id = 'p-b'"), []);
-  assert.deepEqual(env.DB.rows("SELECT * FROM uses WHERE profile_id = 'p-b'"), []);
-  assert.deepEqual(env.DB.rows("SELECT * FROM visits WHERE profile_id = 'p-b'"), []);
   assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM activity')[0].n, 0, "p-a's 20-day-old event went with the sweep all the same");
 });
 
@@ -304,10 +227,37 @@ test('deleting a profile deletes its metrics: it is gone from the cloud at once'
   const key = await make(call);
   await make(call, 'p-b');
   await call('GET', 'profiles/p-a/records?since=0', { key });
-  await call('POST', 'profiles/p-a/uses', { key, body: { uses: { pad: 1 }, visits: [visit()] } });
   assert.equal((await call('DELETE', 'profiles/p-a', { key, body: {} })).status, 200);
-  for (const t of ['activity', 'devices', 'uses', 'visits']) {
+  for (const t of ['activity', 'devices']) {
     assert.equal(env.DB.rows(`SELECT COUNT(*) AS n FROM ${t} WHERE profile_id = 'p-a'`)[0].n, 0, t);
   }
   assert.equal(env.DB.rows("SELECT COUNT(*) AS n FROM activity WHERE profile_id = 'p-b'")[0].n, 1, "another profile's stay");
+});
+
+// Until migration 005 has dropped them (ADR 0027), a deleted profile's old
+// `uses` and `visits` rows go too, and a database without them is no trouble.
+test('before migration 005, deleting a profile also deletes its old counts and visits', async () => {
+  const { env, call } = cloud();
+  env.DB.db.exec(`CREATE TABLE uses (profile_id TEXT, feature TEXT, day TEXT, n INTEGER);
+    CREATE TABLE visits (id INTEGER PRIMARY KEY, at INTEGER, profile_id TEXT);
+    INSERT INTO uses VALUES ('p-a', 'pad', '2026-10-12', 3), ('p-b', 'pad', '2026-10-12', 1);
+    INSERT INTO visits (at, profile_id) VALUES (1, 'p-a'), (2, 'p-b');`);
+  const key = await make(call);
+  await make(call, 'p-b');
+  assert.equal((await call('DELETE', 'profiles/p-a', { key, body: {} })).status, 200);
+  assert.deepEqual(env.DB.rows('SELECT profile_id FROM uses'), [{ profile_id: 'p-b' }]);
+  assert.deepEqual(env.DB.rows('SELECT profile_id FROM visits'), [{ profile_id: 'p-b' }]);
+});
+
+// ADR 0027: older copies of the app still send {uses, visits}; the Worker says
+// yes and keeps nothing, so they drop what they hold instead of retrying.
+test('the retired /uses route answers 200 and stores nothing, but still needs the key and a small body', async () => {
+  const { env, call } = cloud();
+  const key = await make(call);
+  const body = { uses: { pad: 2 }, visits: [{ at: T0 - 120_000, secs: 95, first: 'pads', screens: ['pads'], level: 'regular', errors: {} }] };
+  assert.equal((await call('POST', 'profiles/p-a/uses', { key, body })).status, 200);
+  assert.equal((await call('POST', 'profiles/p-a/uses', { body })).status, 401, 'needs the key');
+  assert.equal((await call('POST', 'profiles/p-a/uses', { key, body: { pad: 'x'.repeat(40_000) } })).status, 413);
+  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM activity')[0].n, 1, 'only the make is noted');
+  assert.deepEqual(env.DB.rows("SELECT name FROM sqlite_master WHERE name IN ('uses', 'visits')"), [], 'and no table for them');
 });

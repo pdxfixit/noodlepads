@@ -13,7 +13,9 @@
 //   settings   setting.change, from and to, from the log (settings.js
 //              setSetting logs every change)
 //   errors     error (kind and file:line, never the message), perf.load,
-//              perf.longtask
+//              perf.longtask, perf.latency (the sound's delay, once a visit)
+//   play       noodlepads.play: pads, keys, roll notes and song blocks played
+//              this visit, one count each (play-count.js), as the page hides
 //
 // A control's name is never text a kid typed: a control from index.html is
 // named by its label as the page first drew it, any other by its id, a data-
@@ -21,7 +23,7 @@
 // controls, and are left out (as board taps are in the other apps).
 
 import { CONTROLS, tipFor } from './tooltips.js';
-import { errorSig } from './visits.js';
+import { takePlay } from './play-count.js';
 
 // Play surfaces: tapped hundreds of times a visit, and play, not controls.
 export const PLAY = '.pad, .dj-key, .pill, .kids-pad, .kids-key, .kids-square, .kids-drum, .roll-hit, .lane-cell';
@@ -29,6 +31,18 @@ export const PLAY = '.pad, .dj-key, .pill, .kids-pad, .kids-key, .kids-square, .
 const NOT_NAMES = new Set(['data-id', 'data-auto-tip', 'data-code', 'data-key', 'data-index', 'data-row', 'data-col', 'data-step',
   'data-color', 'data-more-word', 'data-person', 'data-clip', 'data-n', 'data-bar', 'data-lane', 'data-block', 'data-at']);
 const SPLIT_PX = 1400;   // from here a screen's two parts sit side by side (styles.css, Wide screens)
+
+// Where an error came from, as "file.js:line", or a word when it has no
+// place: "storage" (the browser's database), "promise" (a rejected promise),
+// "other". Nothing of the message itself.
+const SIG = /^([a-z0-9][a-z0-9_-]{0,40}\.m?js:\d{1,6}|storage|promise|other)$/;
+export function errorSig(data = {}) {
+  if (data.storage) return 'storage';
+  const file = typeof data.source === 'string' ? data.source.split(/[?#]/)[0].split('/').pop().toLowerCase() : '';
+  const sig = `${file}:${Number.isInteger(data.line) ? data.line : 0}`;
+  if (file && SIG.test(sig)) return sig;
+  return data.source ? 'other' : 'promise';
+}
 
 const attrNames = (el) => el.getAttributeNames?.() ?? [...(el.attributes?.keys?.() ?? [])];
 const classes = (el) => (typeof el?.className === 'string' ? el.className.split(/\s+/).filter(Boolean) : []);
@@ -108,6 +122,14 @@ export function contentOf(entry, open, now) {
       if (d.rec === 'start') return start('beat-record');
       if (d.rec === 'stop') return d.added > 0 ? end('beat-record', 'content.finish') : end('beat-record', 'content.abandon', { why: 'empty' });
       return null;
+    // A sound recorded on Kids, sounds cut out of a recording, a voice rendered
+    // onto a sound (a preview counts too): made in one step, so only a finish.
+    case 'kids':
+      return d.recorded !== undefined ? ['content.finish', { kind: 'sound-record', ms: Math.round(d.recorded * 1000) }] : null;
+    case 'chop':
+      return d.made ? ['content.finish', { kind: 'chop' }] : null;
+    case 'render':
+      return ['content.finish', { kind: 'voice', ms: d.ms }];
     // ● Record a take on 🎤 Live.
     case 'take':
       if (d.rec === 'start') return start('take');
@@ -159,6 +181,8 @@ export function environment(win, first) {
   };
 }
 
+const safe = (fn) => { try { return fn?.() ?? null; } catch { return null; } };
+
 // Wires every hook. deps: {
 //   telemetry     createTelemetry's
 //   onLog         log.js onLog
@@ -166,6 +190,7 @@ export function environment(win, first) {
 //   root          where clicks are heard (document.body)
 //   doc, win      the page's document and window
 //   now()         ms
+//   latency()     the sound's delay in ms, or null when no sound has played
 // }
 // Returns {screen(name)}: app.js says each screen shown.
 export function trackPage(deps) {
@@ -188,6 +213,10 @@ export function trackPage(deps) {
       hiddenAt = now();
       if (long.n) track('perf.longtask', long);
       long = { n: 0, ms: 0 };
+      const delay = safe(deps.latency);
+      if (delay > 0) track('perf.latency', { ms: Math.round(delay) });
+      const played = takePlay();
+      if (played) track('noodlepads.play', played);
       // Heard before the shared client's own listener (it starts later), so
       // this record is in the batch it sends as the page hides.
       track('app.background', { shown_ms: hiddenAt - shownAt });

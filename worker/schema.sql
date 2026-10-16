@@ -129,12 +129,13 @@ CREATE TABLE IF NOT EXISTS counters (
   PRIMARY KEY (name, day)
 );
 
--- Player metrics (ADR 0016): which devices use each profile, from where
--- (the country only, never the IP), when, which parts of the app, and how
--- each visit went. Events, counts and visits are kept 14 days and a device's
--- row 90: the Worker deletes older rows as it goes (worker/metrics.js), and
--- `just harvest` copies them into a local archive first. Every write is
--- skipped, never a failure, while these tables are missing.
+-- Player metrics (ADR 0016, narrowed by ADR 0027): which devices use each
+-- profile, from where (the country only, never the IP), and when. Events are
+-- kept 14 days and a device's row 90: the Worker deletes older rows as it
+-- goes (worker/metrics.js), and the telemetry runner copies them first. The
+-- feature-use counts and visit summaries once kept here went in migration 005;
+-- the shared telemetry events cover them. Every write is skipped, never a
+-- failure, while these tables are missing.
 
 -- One row per device on a profile: a device is a key (keys.hash), so a
 -- device that does not tick "Remember on this device" is a new device each
@@ -150,7 +151,7 @@ CREATE TABLE IF NOT EXISTS devices (
   browser    TEXT,                      -- Chrome Safari Firefox Edge Samsung Opera Other
   os         TEXT,                      -- iOS Android Windows macOS ChromeOS Linux Other
   type       TEXT,                      -- phone tablet desktop
-  width      INTEGER                    -- the screen's width, rounded down to a bucket (web/uses.js WIDTHS)
+  width      INTEGER                    -- the screen's width, rounded down to a bucket (web/device-meta.js WIDTHS)
 );
 CREATE INDEX IF NOT EXISTS devices_profile ON devices (profile_id);
 CREATE INDEX IF NOT EXISTS devices_seen ON devices (last_seen);
@@ -168,39 +169,6 @@ CREATE TABLE IF NOT EXISTS activity (
 CREATE INDEX IF NOT EXISTS activity_at ON activity (at);
 CREATE INDEX IF NOT EXISTS activity_profile ON activity (profile_id, at);
 
--- How often each part of the app was used, counted on the device and sent
--- with a sync (POST /api/profiles/:id/uses): counts only, per UTC day.
-CREATE TABLE IF NOT EXISTS uses (
-  profile_id TEXT NOT NULL,
-  feature    TEXT NOT NULL,             -- web/uses.js USES
-  day        TEXT NOT NULL,             -- YYYY-MM-DD, UTC
-  n          INTEGER NOT NULL,
-  PRIMARY KEY (profile_id, feature, day)
-);
-CREATE INDEX IF NOT EXISTS uses_day ON uses (day);
-
--- One row per visit (the page in view, from showing to hiding), sent with a
--- sync (POST /api/profiles/:id/uses, web/visits.js): how long, which screens,
--- the level, the page's load time, the sound's delay, and where errors came
--- from as file:line. Never what was made, said or typed.
-CREATE TABLE IF NOT EXISTS visits (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,  -- never reused, so the archive copies by id
-  at         INTEGER NOT NULL,          -- when it started
-  profile_id TEXT NOT NULL,
-  device     TEXT,                      -- devices.hash
-  app        TEXT,                      -- the app version that sent it
-  secs       INTEGER NOT NULL,          -- seconds in view
-  first      TEXT,                      -- the first screen shown (web/visits.js VISIT_SCREENS)
-  screens    TEXT,                      -- every screen shown, comma-separated
-  level      TEXT,                      -- kids regular advanced
-  load_ms    INTEGER,                   -- the page's load time, first visit of a page only
-  latency_ms INTEGER,                   -- the sound's delay, when a sound played
-  errors     INTEGER NOT NULL DEFAULT 0,-- errors in the visit
-  error_sigs TEXT                       -- JSON {"file.js:line": n}
-);
-CREATE INDEX IF NOT EXISTS visits_at ON visits (at);
-CREATE INDEX IF NOT EXISTS visits_profile ON visits (profile_id, at);
-
 -- Migrations applied (worker/migrations/, `just cloud-migrate`). A database
 -- made from this file already has every change they make, so each is listed
 -- as applied; `applied` 0 means "made from schema.sql".
@@ -208,4 +176,4 @@ CREATE TABLE IF NOT EXISTS migrations (
   name    TEXT PRIMARY KEY,   -- the file's name, without .sql
   applied INTEGER NOT NULL
 );
-INSERT OR IGNORE INTO migrations (name, applied) VALUES ('001-shares-not-gifts-or-families', 0), ('002-player-metrics', 0), ('003-visits-no-ip-hash', 0), ('004-country-only', 0);
+INSERT OR IGNORE INTO migrations (name, applied) VALUES ('001-shares-not-gifts-or-families', 0), ('002-player-metrics', 0), ('003-visits-no-ip-hash', 0), ('004-country-only', 0), ('005-drop-uses-visits', 0);

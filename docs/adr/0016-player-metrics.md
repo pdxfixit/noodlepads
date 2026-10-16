@@ -1,6 +1,6 @@
 # 0016. Player metrics: devices, places, activity, feature use and visits, 14 days in D1 and the telemetry runner's mirror
 
-- **Status:** Accepted
+- **Status:** Accepted; the feature-use counts and visits are superseded by [0027](0027-retire-feature-counts-and-visits.md). Devices, activity, the 14 and 90 days, and the runner's mirror stand.
 - **Date:** 2026-10-12, 2026-10-15, 2026-10-16
 - **Decided by:** Ben, 2026-10-12: "all the metrics we relatively can, so we can try to understand if a player profile is being used from multiple locations, or any other statistic"; 2026-10-15: "add a bunch of telemetry … store it in D1, and harvest it back to an sqlite db", for people in the cloud only, "strip out what's not really needed. I want the local data to keep forever, but the D1 data to be pruned frequently", and a shared flarepress harvest tool; 2026-10-16: "i want consistent local storage mirror of this data", "the telemetry tooling needs to take this over". Rows in [decisions.md](../decisions.md) (Hosting and data).
 

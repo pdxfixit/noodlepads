@@ -10,7 +10,7 @@ import { voiceById, amountText, chainOf, chainText, stepLook } from './voices.js
 import { announce } from './ui.js';
 import { isKitClip, ownSoundsTitle, groupKit, openKitGroups, withHidden } from './model.js';
 import { remember, recall } from './util.js';
-import { countUse } from './uses.js';
+import { countPlay } from './play-count.js';
 import { groupOwn, cleanGroups, UNGROUPED } from './groups.js';
 import { getSetting, setSetting, onSetting } from './settings.js';
 import { padWidth, sliderAt } from './pad-size.js';
@@ -501,7 +501,7 @@ export function tapPad(clip, { ring = false } = {}) {
     return true;
   }
   audio.play(clip, { ring });
-  countUse('pad', state.personId);
+  countPlay('pads');
   return false;
 }
 

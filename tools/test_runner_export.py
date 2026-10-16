@@ -72,7 +72,7 @@ class Shape(unittest.TestCase):
         self.assertEqual([c for c, _ in want["players"][0]], ["id", "created"], "no name or avatar leaves D1")
         self.assertEqual([c for c, _ in want["activity"][0]], ["id", "at", "profile_id", "device", "kind", "country"])
         self.assertEqual(want["activity"][1], ["id"])
-        self.assertEqual(want["uses"][1], ["profile_id", "feature", "day"])
+        self.assertNotIn("uses", want, "the feature-use counts are retired (ADR 0027): D1 has no such table, so the harvest skips it")
         self.assertEqual([c for c, _ in want["reports"][0]], ["key", "device", "app", "errors", "body", "created", "expires"])
         self.assertEqual(want["reports"][1], ["key"])
 
@@ -175,9 +175,10 @@ class All(Temp):
         self.assertEqual(code, 0, said)
         self.assertIn("✅ reports: 1 written", said)
         self.assertIn("✅ players: 1 rows (left out: name, avatar)", said)
-        self.assertIn("is in the harvest's shape: activity 1, cf_http_daily 1, harvest_meta 1, players 1, reports 1, uses 1", said)
+        self.assertIn("is in the harvest's shape: activity 1, cf_http_daily 1, harvest_meta 1, players 1, reports 1", said)
+        self.assertIn("not the harvest's: scratch, uses", said, "an old archive's counts are left behind, not imported")
         tables = {t for (t,) in sqlite3.connect(out).execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
-        self.assertEqual(tables, {"activity", "cf_http_daily", "harvest_meta", "players", "reports", "uses"})
+        self.assertEqual(tables, {"activity", "cf_http_daily", "harvest_meta", "players", "reports"})
         for gone in (b"Mozilla", b"Portland", b"Sir Squid"):
             self.assertNotIn(gone, out.read_bytes())
         self.assertEqual(rx.problems(out), [])

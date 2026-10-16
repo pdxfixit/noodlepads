@@ -20,7 +20,7 @@ import { newId, recall, remember } from './util.js';
 import { makeVoice, fadeStop } from './audio.js';
 import { getSetting, onSetting } from './settings.js';
 import { logEvent } from './log.js';
-import { countUse } from './uses.js';
+import { countPlay } from './play-count.js';
 import { soundKind } from './log-clean.js';
 import { rootShift } from './pitch.js';
 import { downloadBlob } from './download.js';
@@ -921,7 +921,6 @@ export function createSequencer(deps) {
     if (id === pattern?.id) { if (queued) { queued = null; showChips(); } return; }
     const saved = library().find((b) => b.id === id);
     if (!saved) return;
-    countUse('beat-chip', personId);
     if (!playing()) { openBeat(cleanPattern(saved, personId)); return; }
     queued = { id, at: nextBarLine() };
     for (const r of saved.rows ?? []) prepare(deps.clipById(r.clipId));   // ready by the bar line
@@ -1595,7 +1594,6 @@ export function createSequencer(deps) {
     const row = pattern?.rows[i];
     if (!row || row.melody) return;
     row.ring = !row.ring;
-    if (row.ring) countUse('row-overlap', personId);
     save();
     render();
     deps.announce?.(`Overlap ${row.ring ? 'on' : 'off'} for row ${i + 1}.`);
@@ -2080,12 +2078,11 @@ export function createSequencer(deps) {
       togglePlay: () => (slot === 'dj' && el.djPlay ? el.djPlay : el.play).click(),
       openSound: (i, returnTo) => openFor({ row: i, title: `Row ${i + 1}` }, pattern.rows[i]?.clipId, returnTo),
       clipById: deps.clipById, colorOf: deps.colorOf,
-      placed: () => countUse('roll-note', personId),
+      placed: () => countPlay('notes'),
     });
   }
   function openRoll(i, step = 0) {
     if (!roll || !pattern?.rows[i]?.melody) return;
-    countUse('roll', personId);
     const returnTo = () => el.rows.querySelector(`.seq-row[data-row="${i}"] [data-pick]`) ?? el.add;
     roll.open(i, { step, returnTo });
   }
@@ -2107,7 +2104,6 @@ export function createSequencer(deps) {
   // 🎚️ on the control bar, Beats and the keys view alike.
   function openMixer(from) {
     if (!pattern || !mixer) return;
-    countUse('mixer', personId);
     mixer.render();
     openDialog(el.mixer, { focus: el.mixerStrips.querySelector('[data-fader]'), returnTo: () => from });
   }
@@ -2115,7 +2111,7 @@ export function createSequencer(deps) {
 
   // ⋯ on a header line short of room (under about 360 px): 🔔 🧹 ✕ move into its
   // menu and stay 44 px; the speaker stays on the line (decisions.md, Screens).
-  rowMenus = moreMenu(el.rows, { opened: () => countUse('more', personId) });
+  rowMenus = moreMenu(el.rows);
   rowRoom = fitMore(el.rows, '.seq-head');
   speakers = speakerControls(el.rows, {
     state: (key) => levelState(Number(key)),

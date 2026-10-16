@@ -27,7 +27,7 @@ const UNDO_STEPS = 30;   // changes ↩️ Undo can take back, per visit
 // saves and redraws the rows behind), preview(i, p, pills) (hears a note
 // while the beat is stopped), playing(), togglePlay(), openSound(i, returnTo)
 // (the row's sound chooser), clipById(id), colorOf(clip), placed() (a note
-// was placed: counted, uses.js).
+// was placed: counted, play-count.js).
 export function createRoll(dialog, deps) {
   const q = (name) => dialog.querySelector(`[data-roll="${name}"]`);
   const el = {

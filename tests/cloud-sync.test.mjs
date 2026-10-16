@@ -15,7 +15,7 @@ import {
 import { cleanBackup } from '../web/backup.js';
 import { mergeLoaded } from '../web/merge.js';
 import { newId } from '../web/util.js';
-import { appMeta } from '../web/uses.js';
+import { appMeta } from '../web/device-meta.js';
 
 const KIT = ['kick', 'snare'];
 const KEYS = { clips: 'id', overrides: 'id', orders: 'personId', patterns: 'personId', beats: 'id', people: 'id',
@@ -568,58 +568,4 @@ test('a device synced before bases were kept still merges safely: unchanged side
   await syncA(); await syncB(); await syncA();
   assert.deepEqual(beatOf(a).map((x) => x.bpm).sort(), [111, 99], 'no base, both changed: both kept, as before');
   assert.deepEqual(contentOf(a), contentOf(b));
-});
-
-// Feature-use counts (web/uses.js, ADR 0016) go up after the records, and
-// only what the cloud took is taken off the device's.
-test('a sync sends the person\'s feature-use counts, and keeps them when the cloud says no', async () => {
-  const { api, env } = server();
-  const { a, link } = await startA(api);
-  let waiting = { pad: 3, beats: 1 };
-  const sent = [];
-  const uses = {
-    pending: (id) => (id === 'p-a' && waiting ? { ...waiting } : null),
-    sent: (id, counts) => { sent.push([id, counts]); waiting = null; },
-  };
-  await syncProfile(link, { ...a.deps(api), uses });
-  assert.deepEqual(sent, [['p-a', { pad: 3, beats: 1 }]]);
-  assert.deepEqual(env.DB.rows('SELECT feature, n FROM uses ORDER BY feature'), [{ feature: 'beats', n: 1 }, { feature: 'pad', n: 3 }]);
-
-  await syncProfile(link, { ...a.deps(api), uses });
-  assert.equal(sent.length, 1, 'nothing waiting, nothing sent');
-
-  waiting = { pad: 2 };
-  env.DB.db.exec('DROP TABLE uses');   // a Worker whose migration has not run
-  const report = await syncProfile(link, { ...a.deps(api), uses });
-  assert.equal(report.pushed, 0, 'the sync itself went fine');
-  assert.equal(sent.length, 1, 'the counts wait for the next sync');
-  assert.deepEqual(waiting, { pad: 2 });
-});
-
-// Finished visits (web/visits.js) go up in the same call as the counts, or
-// alone; only what the cloud took is taken off.
-test('a sync sends the person\'s finished visits, with the counts or alone, and keeps them when the cloud says no', async () => {
-  const { api, env } = server();
-  const { a, link } = await startA(api);
-  const v = { at: Date.now() - 60_000, secs: 42, first: 'beats', screens: ['beats'], level: 'advanced', load: null, latency: 12, errors: { 'app.js:9': 1 } };
-  let waitingUses = { pad: 1 };
-  let waitingVisits = [v];
-  const took = [];
-  const uses = { pending: () => (waitingUses ? { ...waitingUses } : null), sent: () => { waitingUses = null; } };
-  const visits = { pending: (id) => (id === 'p-a' && waitingVisits ? [...waitingVisits] : null), sent: (id, vs) => { took.push(vs.length); waitingVisits = null; } };
-  await syncProfile(link, { ...a.deps(api), uses, visits });
-  assert.deepEqual(took, [1]);
-  assert.equal(waitingUses, null, 'the counts went in the same call');
-  assert.deepEqual(env.DB.rows('SELECT secs, first, level, latency_ms, errors FROM visits'), [{ secs: 42, first: 'beats', level: 'advanced', latency_ms: 12, errors: 1 }]);
-
-  waitingVisits = [{ ...v, at: v.at + 1000 }];
-  await syncProfile(link, { ...a.deps(api), uses, visits });
-  assert.deepEqual(took, [1, 1], 'visits alone are sent');
-  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM visits')[0].n, 2);
-
-  waitingVisits = [{ ...v, at: v.at + 2000 }];
-  env.DB.db.exec('DROP TABLE visits');   // a Worker whose migration has not run
-  await syncProfile(link, { ...a.deps(api), uses, visits });
-  assert.deepEqual(took, [1, 1], 'they wait for the next sync');
-  assert.equal(waitingVisits.length, 1);
 });

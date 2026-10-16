@@ -67,12 +67,10 @@ test('a tab, a toolbar button, a dialog and a setting each make their event, wit
 
 test('the usage switch off: nothing tracked, counted or kept, what waited is gone, and cloud calls carry no X-Noodle-App', async () => {
   const { setSetting, getSetting } = await import('../web/settings.js');
-  const { countUse, pendingUses, appMeta } = await import('../web/uses.js');
-  const { keepVisit, pendingVisits } = await import('../web/visits.js');
+  const { appMeta } = await import('../web/device-meta.js');
+  const { countPlay, takePlay } = await import('../web/play-count.js');
   assert.equal(getSetting('sendUsage'), true, 'on by default');
-  countUse('pad', state.personId);
-  keepVisit(state.personId, { at: Date.now() - 10_000, secs: 9, screens: ['pads'] });
-  assert.ok(pendingUses(state.personId) && pendingVisits(state.personId));
+  countPlay('pads');
   {
     tel.track('screen.view', { from: 'pads' });
     assert.ok(records().length > 0);
@@ -81,12 +79,10 @@ test('the usage switch off: nothing tracked, counted or kept, what waited is gon
     assert.deepEqual(records(), [], 'the queue is gone');
     assert.ok(![...store.keys()].some((k) => k.startsWith('events:')), 'from localStorage too');
   }
-  assert.equal(store.get('uses'), undefined, 'waiting counts are gone');
-  assert.equal(store.get('visits'), undefined, 'waiting visits are gone');
-  countUse('pad', state.personId);
-  page.$('#pads-tab').dispatch('click');
-  assert.equal(pendingUses(state.personId), null, 'nothing is counted');
-  assert.equal(keepVisit(state.personId, { at: Date.now() - 10_000, secs: 9 }), false, 'no visit is kept');
+  countPlay('pads');
+  assert.equal(takePlay(), null, 'what was counted went with the switch');
+  countPlay('pads');
+  assert.equal(takePlay(), null, 'and no play is counted while it is off');
   assert.equal(appMeta('abc', 400, true), null, 'no header for the Worker');
   await setSetting('sendUsage', true);
   assert.equal(tel.track('screen.view', { from: 'pads' }), true, 'on again, it tracks again');

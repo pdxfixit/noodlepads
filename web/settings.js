@@ -67,7 +67,7 @@ export const SETTINGS = {
   // brings the family's choice along. The device code (log-send.js,
   // localStorage `log-device`) is never in a backup.
   sendLogs: { default: false, values: [false, true], scope: 'device' },
-  // Usage events and counts (telemetry.js, uses.js, visits.js; Ben,
+  // Usage events and counts (telemetry.js; Ben,
   // 2026-10-16: on by default, a switch turns it off, and off sends nothing,
   // ever). The device's, as the device is what sends. ⚙️ Settings → 📊 Play
   // data → 📊 Share play data (Ben, 2026-10-16: "use B and 'Share play

@@ -19,8 +19,8 @@ import { people } from './board.js';
 import { newId, recall, remember } from './util.js';
 import { logEvent } from './log.js';
 import { createSyncTiming, SYNC_DELAY_MS, ACTIVE_MS } from './sync-timing.js';
-import { appMeta, pendingUses, sentUses } from './uses.js';
-import { pendingVisits, sentVisits } from './visits.js';
+import { appMeta } from './device-meta.js';
+import { track } from './telemetry.js';
 
 // Given by app.js (initCloud), so this module never imports backup-ui.js,
 // which imports the People screen, which imports this.
@@ -160,6 +160,8 @@ export async function unlock(personId, pin, remember = false) {
     await saveLink({ ...link, key: opened.key, pin: !!opened.pin, remember, check: await pinCheck(pin) });
     status.delete(personId);
   } catch (err) {
+    // The cloud said no to the PIN (wrong, or too many wrong tries): a usage event, no log entry.
+    if (err instanceof CloudError && (err.status === 401 || err.status === 429)) track('noodlepads.cloud', { action: 'pin-wrong' });
     if (!(err instanceof CloudError) || err.status !== 0 || !link.check || await pinHash(pin, link.check.salt) !== link.check.hash) throw err;
   }
   unlocked.add(personId);
@@ -235,8 +237,6 @@ function deps() {
   return {
     api,
     bases,
-    uses: { pending: pendingUses, sent: sentUses },
-    visits: { pending: pendingVisits, sent: sentVisits },
     lists: storedLists,
     kitIds: kitIds(),
     sha256,

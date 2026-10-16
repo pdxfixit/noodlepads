@@ -9,7 +9,7 @@ import { isFunName } from '../web/names.js';
 import { CLOUD_ID } from '../web/reid.js';
 import { ORIGIN, json, fail, Refuse, readJson, readBytes, randomId, sha256Hex, toBytes, withinDaily, utcDay } from './http.js';
 import { isPin, newSalt, hashSecret, checkSecret, shareCode, isShareCode, plainCode } from './pin.js';
-import { noteEvent, cleanUses, cleanVisits, addUses, forgetProfile } from './metrics.js';
+import { noteEvent, forgetProfile } from './metrics.js';
 
 // A D1 row holds at most 2,000,000 bytes; audio goes in pieces a little smaller.
 export const CHUNK_BYTES = 1_900_000;
@@ -31,7 +31,6 @@ export const LIMITS = {
   pushBytes: 4 * 1024 * 1024,        // one push's body
   pullPage: 500,                     // records in one pull
   sharesPerProfile: 200,
-  usesPerDay: 5000,                  // feature-use sends (worker/metrics.js)
   shareBytes: 1024 * 1024,           // one share's bundle
 };
 
@@ -523,22 +522,16 @@ async function unshare(request, env, id, raw) {
   return json(200, { ok: true });
 }
 
-// ── feature-use counts ──
+// ── feature-use counts (retired) ──
 
-// {uses: {feature: n}, visits: [...]} from the device's sync (web/uses.js,
-// web/visits.js): counts added to today's, visits stored. Either may be
-// missing; bad counts refuse the call, a bad visit is dropped. 503 while the
-// tables are missing, so the device keeps them for later.
-async function takeUses(request, env, id, now) {
-  const body = await readJson(request, 32_768);
+// Older copies of the app still send {uses, visits} with a sync (ADR 0016,
+// retired by ADR 0027). The Worker checks the key and the size, stores
+// nothing, and says yes, so those devices drop what they hold instead of
+// retrying for as long as the page stays open. Remove this route (and its
+// test) about 2026-11-16, when no copy is left.
+async function takeUses(request, env, id) {
+  await readJson(request, 32_768);
   await needKey(request, env, id);
-  const uses = body?.uses === undefined ? null : cleanUses(body);
-  if (body?.uses !== undefined && !uses) throw new Refuse(400, 'uses');
-  const visits = cleanVisits(body, now);
-  if (!uses && !visits.length && !Array.isArray(body?.visits)) throw new Refuse(400, 'uses');
-  if (!await withinDaily(env, 'uses', LIMITS.usesPerDay, now)) throw new Refuse(429, 'busy');
-  const device = await sha256Hex(bearer(request));
-  if (!await addUses(env, request, id, device, uses, now, visits)) throw new Refuse(503, 'cloud');
   return json(200, { ok: true });
 }
 
@@ -588,7 +581,7 @@ async function route(request, env, now, seen) {
         if (parts.length === 3 && c === 'records' && m === 'POST') return await push(request, env, b, now, seen);
         if (parts.length === 3 && c === 'sounds' && m === 'POST') return await startSound(request, env, b, now);
         if (parts.length === 3 && c === 'shares' && m === 'POST') return await makeShare(request, env, b, now, seen);
-        if (parts.length === 3 && c === 'uses' && m === 'POST') return await takeUses(request, env, b, now);
+        if (parts.length === 3 && c === 'uses' && m === 'POST') return await takeUses(request, env, b);
         if (parts.length === 3 && c === 'shares' && m === 'GET') return await myShares(request, env, b);
         if (parts.length === 4 && c === 'shares' && m === 'DELETE') return await unshare(request, env, b, parts[3]);
       }

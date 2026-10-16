@@ -40,15 +40,14 @@ import { initHelp } from './help.js';
 import { initLogSend } from './log-send.js';
 import { initLeftover } from './leftover.js';
 import { installErrorLog, logEvent, onLog } from './log.js';
-import { countUse, watchUses, useOfDialog, clearUses } from './uses.js';
 import { onDialogOpen } from './dialogs.js';
-import { trackVisits, clearVisits } from './visits.js';
 import { createTelemetry, useTelemetry } from './telemetry.js';
 import { trackPage, learnLabels } from './track-page.js';
 import { setUsage } from './usage.js';
+import { clearPlay } from './play-count.js';
 import { $, showNotice, announce, fadeAway, trackSlimHead } from './ui.js';
 import { db } from './store.js';
-import { newId, versionLabel, footStacks, remember, recall } from './util.js';
+import { newId, versionLabel, footStacks, remember, recall, forget } from './util.js';
 import { beatName, remixName, songName, funName, keptName } from './names.js';
 import { adoptKidsBeats, isHiddenBeat } from './scratch.js';
 import { onSetting, followPerson, getSetting } from './settings.js';
@@ -141,7 +140,6 @@ function applyKids() {
   }
   document.body.classList.toggle('kids', on);
   showKids(on);
-  visits?.screen(on ? 'kids' : state.screen);
   page?.screen(on ? 'kids' : state.screen);
   if (!on) refitLines();
 }
@@ -235,8 +233,6 @@ function setScreen(name) {
   el.pads.hidden = name !== 'pads';
   el.padsBar.hidden = name !== 'pads';
   remember('screen', name);
-  countUse(name, state.personId);
-  visits?.screen(name);
   if (!kidsShowing()) page?.screen(name);
 }
 
@@ -265,7 +261,6 @@ function setKeys(on) {
   if (keysShow()) dj.leave();
   keysOn = on;
   remember('beat-keys', on ? '1' : '');
-  if (on) countUse('beat-keys', state.personId);
   if (state.screen === 'beats') showView();
 }
 
@@ -666,40 +661,25 @@ function followRenames(pairs) {
   }
 }
 
-// Feature-use counts (uses.js, ADR 0016), for whoever is the current person:
-// most come from what the app logs already; the grooves list is counted from
-// its buttons here, so sequencer.js needs nothing for it. Screens are
-// counted in setScreen, ⌨️ Keys in setKeys, pads in pads.js tapPad,
-// recordings in sheet.js; 🎹 the roll, 🎚️ the Mixer, chips, a row's 🔔 and
-// ⋯ in sequencer.js, 🔔 on Live in dj.js and a song's blocks in song.js.
-// Every dialog counts as it opens (uses.js DIALOG_USES). Visits are followed
-// from here too (visits.js): sent only for people in the cloud.
-let visits = null;
+// Usage events (ADR 0026): screens, dialogs, controls, content, settings,
+// errors and speed all come from track-page.js; the play counts it sends are
+// kept by play-count.js (pads.js, kids.js, dj.js, roll, song.js).
 let telemetry = null;   // usage events in the shared standard (telemetry.js)
 let page = null;        // where they come from (track-page.js)
-function countUses() {
+function startUsage() {
   telemetry = useTelemetry(createTelemetry({
     screen: () => page?.current(),
   }));
   learnLabels(document.body);   // before anyone's sounds or names are drawn
-  page = trackPage({ telemetry, onLog, onDialogOpen, root: document.body, doc: document, win: globalThis });
-  visits = trackVisits({
-    now: () => Date.now(),
-    who: () => state.personId,
-    level: () => getSetting('level'),
-    load: () => Math.round(performance.getEntriesByType?.('navigation')?.[0]?.loadEventEnd || 0) || null,
+  page = trackPage({
+    telemetry, onLog, onDialogOpen, root: document.body, doc: document, win: globalThis,
+    // The sound's delay in ms, or null before any sound has played.
     latency: () => (audio.ctx ? ((audio.ctx.outputLatency || 0) + (audio.ctx.baseLatency || 0)) * 1000 : null),
-    onLog,
-    doc: document,
-    win: globalThis,
   });
-  watchUses(onLog, () => state.personId);
-  onDialogOpen((dialog) => {
-    const f = useOfDialog(dialog);
-    if (f) countUse(f, state.personId);
-  });
-  // 💃 Grooves in both beat bars (⌨️ Keys off and on).
-  for (const b of document.querySelectorAll('[data-beat-grooves]')) b.addEventListener('click', () => countUse('grooves', state.personId));
+  // Counts and visits that older copies of the app left in this device's
+  // storage (ADR 0027): nothing sends them any more.
+  forget('uses');
+  forget('visits');
 }
 
 // The usage switch (settings.js sendUsage), from storage and whenever it
@@ -709,8 +689,7 @@ function followUsage() {
     setUsage(on);
     if (on) return;
     telemetry?.clear();
-    clearUses();
-    clearVisits();
+    clearPlay();
   };
   apply(getSetting('sendUsage'));
   onSetting('sendUsage', apply);
@@ -735,7 +714,7 @@ async function start() {
     screenHint: $('#screen-hint'),
   });
   showBackdrop(el.root, pickBackdrop(globalThis.location?.search ?? ''));
-  countUses();
+  startUsage();
   buildGrille(el.grille, GRILLE_DOTS);
   buildGrille($('#rec-grille'), GRILLE_DOTS_LG);
   try {

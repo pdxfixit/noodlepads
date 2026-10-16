@@ -25,7 +25,7 @@ import { extensionFor, slug, newId } from './util.js';
 import { soundName, synthName, mixName, funName } from './names.js';
 import { MIX, cleanMix, mixSounds } from './mix.js';
 import { showNotice } from './ui.js';
-import { countUse } from './uses.js';
+import { track } from './telemetry.js';
 import { STARTERS, TONES, LIMITS, RATE, renderSynth, cleanSynth, surpriseSynth } from './synth.js';
 import { encodeWav } from './sequencer.js';
 import { findNote, noteName } from './pitch.js';
@@ -1392,7 +1392,7 @@ async function startRecording() {
     if (recording.discard) return;
     const type = recorder.mimeType || mime || 'audio/webm';
     acceptAudio(new Blob(recording.chunks, { type }), 'recording');
-    countUse('record', state.personId);
+    track('content.finish', { kind: 'sound-record' });
   };
   recording.discard = false;
   el.recBtn.setAttribute('aria-pressed', 'true');

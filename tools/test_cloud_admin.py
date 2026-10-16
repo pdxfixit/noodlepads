@@ -67,7 +67,7 @@ class Migrate(unittest.TestCase):
         lines, out = quiet()
         pending = ca.migrate(db, False, out)
         names = [p.name for p in pending]
-        self.assertEqual(names[:4], ['001-shares-not-gifts-or-families.sql', '002-player-metrics.sql', '003-visits-no-ip-hash.sql', '004-country-only.sql'])
+        self.assertEqual(names[:5], ['001-shares-not-gifts-or-families.sql', '002-player-metrics.sql', '003-visits-no-ip-hash.sql', '004-country-only.sql', '005-drop-uses-visits.sql'])
         self.assertEqual(names, sorted(p.name for p in (ROOT / 'worker' / 'migrations').glob('[0-9][0-9][0-9]-*.sql')), 'every one, in order')
         self.assertEqual(db.ran, [], 'a dry run changes nothing')
         ca.migrate(db, True, out)
@@ -174,13 +174,6 @@ def device(db, h, pid, kind='phone', last=NOW, syncs=3):
                f"VALUES ('{h}', '{pid}', {NOW - 5 * DAY}, {last}, {syncs}, '7b5fc5e', 'Safari', 'iOS', '{kind}', 360);")
 
 
-def visit(db, at, pid, secs, screens='pads', level='regular', load=None, latency=None, sigs=None):
-    errors = sum(json.loads(sigs).values()) if sigs else 0
-    db.execute("INSERT INTO visits (at, profile_id, device, app, secs, first, screens, level, load_ms, latency_ms, errors, error_sigs) "
-               "VALUES (?, ?, ?, '7b5fc5e', ?, ?, ?, ?, ?, ?, ?, ?)",
-               (at, pid, PHONE, secs, screens.split(',')[0], screens, level, load, latency, errors, sigs))
-
-
 def fill(db):
     """The same metrics, in D1 (for prune) or in the archive (as the harvest leaves it)."""
     device(db, PHONE, 'p-kid')
@@ -191,7 +184,6 @@ def fill(db):
     event(db, NOW - DAY, 'p-kid', 'pull', device=TABLET, country='CA')
     event(db, NOW - HOUR, 'p-kid', 'pin-wrong', device=None, country='CA')
     event(db, NOW - HOUR, 'p-smoke-1', 'make', device='c' * 64)
-    db.execute("INSERT INTO uses (profile_id, feature, day, n) VALUES ('p-kid', 'pad', '2027-01-14', 40), ('p-kid', 'beats', '2027-01-14', 2), ('p-smoke-1', 'pad', '2027-01-14', 1);")
 
 
 class HarvestKeepsNoNames(unittest.TestCase):
@@ -236,16 +228,6 @@ class Metrics(unittest.TestCase):
         ca.stats(self.db, now=NOW, out=out, archive=self.archive, tz=timezone.utc)
         return lines
 
-    def test_a_long_feature_list_wraps_without_splitting_a_name(self):
-        names = [f'feature-{i} {i * 7}' for i in range(34)]
-        lines = ca.wrapped('  🧩 ', names)
-        self.assertGreater(len(lines), 1)
-        self.assertTrue(all(len(l) <= 100 for l in lines), lines)
-        self.assertTrue(lines[0].startswith('  🧩 feature-0 0 · '))
-        self.assertTrue(all(l.startswith('     feature-') for l in lines[1:]))
-        self.assertEqual(' · '.join(l.strip().removeprefix('🧩 ') for l in lines).split(' · '), names)
-        self.assertEqual(ca.wrapped('  🧩 ', ['pad 40', 'beats 2']), ['  🧩 pad 40 · beats 2'])
-
     def test_names_come_from_the_live_cloud_and_a_gone_player_has_none(self):
         text = '\n'.join(self.stats())
         self.assertIn('Sir Squid  p-kid', text, 'the name D1 has now')
@@ -253,7 +235,7 @@ class Metrics(unittest.TestCase):
         ca.metrics_report(self.archive, NOW, out=out, tz=timezone.utc)
         self.assertTrue(any(l.startswith('(gone)  p-kid') for l in lines), 'no live name: the archive has none to show')
 
-    def test_reports_devices_places_activity_and_uses_and_flags_two_places(self):
+    def test_reports_devices_places_and_activity_and_flags_two_places(self):
         lines = self.stats()
         text = '\n'.join(lines)
         self.assertIn('📦 archive (in memory): last harvested 2027-01-15T07:00:00Z', text)
@@ -272,20 +254,10 @@ class Metrics(unittest.TestCase):
         self.assertIn('by hour (UTC)', hour_line)
         self.assertEqual(len(hour_line.split('|')[1]), 24)
         self.assertIn('🔁 pull 2 · open 1 · pin-wrong 1', text)
-        self.assertIn('🧩 pad 40 · beats 2', text)
-        self.assertNotIn('👀', text, 'no visits, no visits line')
+        self.assertNotIn('🧩', text, 'feature-use counts are retired (ADR 0027)')
+        self.assertNotIn('👀', text, 'and so are visits')
+        self.assertIn('noodlepads_events__daily_events', text, 'where the app-wide numbers are now')
         self.assertEqual(lines[-1], '1 players with metrics · 1 seen from more than one place')
-
-    def test_visits_and_their_errors_are_reported(self):
-        visit(self.archive, NOW - DAY, 'p-kid', 120, 'pads,beats', load=900, latency=20, sigs='{"app.js:9": 2}')
-        visit(self.archive, NOW - HOUR, 'p-kid', 60, 'kids', level='kids', load=700)
-        visit(self.archive, NOW - 2 * HOUR, 'p-kid', 30, 'pads', sigs='{"app.js:9": 1, "storage": 1}')
-        visit(self.archive, NOW - HOUR, 'p-smoke-1', 5, 'pads', sigs='{"smoke.js:1": 9}')
-        text = '\n'.join(self.stats())
-        self.assertIn('👀 3 visits · 4 min in all · median 60 s · loads in 900 ms · sound delay 20 ms · 2 with errors', text)
-        self.assertIn('screens: pads 2 · beats 1 · kids 1', text)
-        self.assertIn('levels: regular 2 · kids 1', text)
-        self.assertIn('🐞 errors in visits: smoke.js:1 9 · app.js:9 3 · storage 1', text)
 
     def test_one_place_is_not_flagged(self):
         self.archive.execute("DELETE FROM activity WHERE country = 'CA';")

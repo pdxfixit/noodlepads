@@ -23,8 +23,8 @@ opens with a comment saying what it owns. How the app behaves is in
   - `contact.js`: the PIN-reset address, built from an encoded constant so it is never written out in a served or tracked file
   - `update.js`: the "🆕 An update for Noodle Pads is ready." bar (when to ask `version.json`, when to show)
   - `log.js` (the in-memory event log), `log-clean.js` (what a problem report may hold), `log-send.js` (sending it), `agent.js` (a User-Agent read as browser, OS and device-type families; a report sends only these, and the Worker's `metrics.js` uses it too)
-  - `uses.js`: feature-use counts per person (localStorage `uses`, sent with that person's sync), mostly read from the event log and from dialogs opening (`DIALOG_USES`), and what the device says about itself on each cloud call (version, width bucket, touch)
-  - `visits.js`: one summary per visit (the page in view: seconds, screens, level, load time, the sound's delay, errors as file:line), kept in localStorage `visits` under the person and sent with their sync; the Worker checks them with its `cleanVisit`
+  - `device-meta.js`: what the device says about itself on each cloud call (`X-Noodle-App`: version, width bucket, touch), for the Worker's `devices` and `activity` (ADR 0016); the Worker imports `WIDTHS` from it
+  - `play-count.js`: pads, keys, roll notes, song blocks and Kids pads played this visit, one count each, in memory; `track-page.js` sends them as `noodlepads.play` as the page hides
   - `telemetry.js`: usage events in the shared standard (ADR 0026): `track(event, details)` checks each event against `EVENTS` and hands it to `events-client.js`; the player id (`telemetry-player`); `shouldSend` (the switch; every device sends, question #425)
   - `events-client.js`: flarepress's shared events client, vendored (never edited here): fills each record's columns, queues it in localStorage `events:noodlepads:<session>`, sends batches to `/api/events`
   - `track-page.js`: where the events come from: lifecycle, screens, dialogs, one click listener for every control (named without a kid's words), content, settings, errors and speed
@@ -44,7 +44,7 @@ opens with a comment saying what it owns. How the app behaves is in
   - `index.js`: routes `/api/log` to `reports.js`, `/api/events` to `events-worker.js`, the rest of `/api/` to `cloud.js`; every other path goes to the static files
   - `events-worker.js`: flarepress's shared `/api/events` route, vendored (`just events-vendor` in flarepress; never edited here): checks the origin, size and batch id, stores the batch in R2 (`EVENTS`) as sent
   - `cloud.js`: cloud profiles: the list, keys, records by rev, sounds in 1.9 MB pieces, share codes, last activity, free-plan caps
-  - `metrics.js`: player metrics (ADR 0016): each device's row, the activity log with its place (nothing of the IP), the User-Agent read as families, feature-use counts and visits; 14 days kept (a device's row 90); skipped while its tables are missing
+  - `metrics.js`: player metrics (ADR 0016): each device's row and the activity log with its place (nothing of the IP), the User-Agent read as families; 14 days kept (a device's row 90); skipped while its tables are missing. The feature-use counts and visits it once kept are retired (ADR 0027)
   - `pin.js`: PINs (salted PBKDF2, 5 tries then a 10-minute wait) and share codes; `http.js`: shared answers, ids, daily counters
   - `reports.js`: `POST /api/log` takes an opt-in problem report (site's Origin, JSON, 64 KB, 10 a minute per device, 1,000 a day) into D1 for 14 days
   - `clean.js`: the Worker's copy of the report allowlist (numbers, booleans, listed values, two short free-text fields)

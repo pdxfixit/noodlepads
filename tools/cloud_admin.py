@@ -9,8 +9,7 @@
     cloud_admin.py reset-pin ID [--yes]          clear a profile's PIN (Ben, from a PIN-reset email)
     cloud_admin.py stats    [--days N]           the players: what each made; then reports the metrics
                                                  (ADR 0016) from the telemetry runner's pulled store
-                                                 (read only): devices, places, activity by day and hour,
-                                                 feature use, visits, errors
+                                                 (read only): devices, places, activity by day and hour
 
 Everything that changes the database shows what it would do and stops,
 unless --yes is given (reset-pin asks instead). Every statement runs through
@@ -24,8 +23,9 @@ The metrics come only from the telemetry runner's mirror (Ben, 2026-10-16:
 (pdxfixit/telemetry) harvests D1 with flarepress's tools/harvest.py
 (site/harvest.conf says what), and `telemetry.py pull` copies its store to
 ~/.local/state/telemetry/telemetry.sqlite3 (or $TELEMETRY_DB), which keeps no
-id past a year. D1 keeps events, counts and visits 14 days and a device's row
-90. The older Mac archive, metrics.sqlite3, is retired: docs/how-to.md
+id past a year. D1 keeps events 14 days and a device's row 90. The feature-use
+counts and visits ADR 0016 once kept are retired (ADR 0027): the app-wide
+numbers are the shared events, `noodlepads_events__daily_events` in the mirror. The older Mac archive, metrics.sqlite3, is retired: docs/how-to.md
 "Retire the old Mac archives" moves it into the runner.
 
 Stdlib only. The tests (tools/test_cloud_admin.py) run every command against
@@ -298,13 +298,6 @@ CREATE TABLE IF NOT EXISTS activity (    -- as D1's activity, by its never-reuse
   city TEXT, region TEXT, country TEXT, network TEXT, asn INTEGER, ip_hash TEXT
 );
 CREATE INDEX IF NOT EXISTS activity_profile ON activity (profile_id, at);
-CREATE TABLE IF NOT EXISTS uses (        -- as D1's uses: one day's count
-  profile_id TEXT, feature TEXT, day TEXT, n INTEGER, PRIMARY KEY (profile_id, feature, day)
-);
-CREATE TABLE IF NOT EXISTS visits (      -- as D1's visits, by its never-reused id
-  id INTEGER PRIMARY KEY, at INTEGER, profile_id TEXT, device TEXT, app TEXT, secs INTEGER, first TEXT,
-  screens TEXT, level TEXT, load_ms INTEGER, latency_ms INTEGER, errors INTEGER, error_sigs TEXT
-);
 CREATE TABLE IF NOT EXISTS harvest_meta (key TEXT PRIMARY KEY, value TEXT);   -- last_run, last_result (flarepress)
 """
 DEVICE_COLUMNS = ('hash', 'profile_id', 'first_seen', 'last_seen', 'syncs', 'app', 'browser', 'os', 'type', 'width')
@@ -403,19 +396,6 @@ def bars(values):
     return ''.join(BARS[0] if not v else BARS[max(1, round(v / top * 8))] for v in values)
 
 
-def wrapped(head, items, width=100, indent='     '):
-    """`items` joined with ' · ' after `head`, in lines of at most `width`
-    characters (an item never split), each line after the first indented. The
-    feature-use list (web/uses.js USES) is too long for one line."""
-    lines, line = [], head
-    for item in items:
-        if line not in (head, indent) and len(line) + 3 + len(item) > width:
-            lines.append(line)
-            line = indent
-        line += item if line in (head, indent) else f' · {item}'
-    return lines + [line]
-
-
 def place_of(a):
     return a['country'] or 'unknown country'
 
@@ -423,9 +403,8 @@ def place_of(a):
 def metrics_report(conn, now, out=print, days=14, tz=None, names=None):
     """Per player (test profiles left out), newest activity first: devices,
     places (the country), activity by day and by hour
-    of the day (this Mac's time, or `tz`), what each event was, feature use,
-    and visits. A player seen from more than one place is flagged ⚠️. Then
-    the errors visits saw, everyone's, by where they came from. Returns
+    of the day (this Mac's time, or `tz`) and what each event was. A player seen
+    from more than one place is flagged ⚠️. Returns
     {profile_id: number of places}. `names`: {profile_id: shown name}, from
     the live cloud; a player no longer there shows as (gone)."""
     tz = tz or datetime.now().astimezone().tzinfo
@@ -474,58 +453,11 @@ def metrics_report(conn, now, out=print, days=14, tz=None, names=None):
                 f"{sum(by_day.get(d, 0) for d in span)} events; {len(by_day)} days with any")
             out(f'  🕐 by hour ({zone}) |{bars(hours)}| 0 → 23')
             out('  🔁 ' + ' · '.join(f'{k} {n}' for k, n in sorted(kinds.items(), key=lambda kv: (-kv[1], kv[0]))))
-        uses = q('SELECT feature, SUM(n) FROM uses WHERE profile_id = ? GROUP BY feature ORDER BY SUM(n) DESC, feature', pid)
-        if uses:
-            for line in wrapped('  🧩 ', [f'{f} {n}' for f, n in uses]):
-                out(line)
-        visit_lines(q('SELECT secs, screens, level, load_ms, latency_ms, errors FROM visits WHERE profile_id = ? ORDER BY at', pid), out)
         out('')
     many = sum(1 for n in places_of.values() if n > 1)
-    errors = {}
-    for (sigs,) in q('SELECT error_sigs FROM visits WHERE error_sigs IS NOT NULL'):
-        try:
-            for sig, n in json.loads(sigs).items():
-                errors[sig] = errors.get(sig, 0) + int(n)
-        except (ValueError, TypeError, AttributeError):
-            continue
-    if errors:
-        for line in wrapped('🐞 errors in visits: ', [f'{s} {n}' for s, n in sorted(errors.items(), key=lambda kv: (-kv[1], kv[0]))]):
-            out(line)
+    out('Screens, controls, dialogs, errors and speed for every player: noodlepads_events__daily_events (the shared events, ADR 0026).')
     out(f'{len(ids)} players with metrics · {many} seen from more than one place')
     return places_of
-
-
-def median(values):
-    v = sorted(values)
-    return v[len(v) // 2] if v else None
-
-
-def visit_lines(rows, out):
-    """A player's visits: how many, how long, which screens, levels, the load
-    time and sound delay (medians), and how many had errors."""
-    if not rows:
-        return
-    secs = [r[0] for r in rows]
-    screens, levels = {}, {}
-    for r in rows:
-        for s in (r[1] or '').split(','):
-            if s:
-                screens[s] = screens.get(s, 0) + 1
-        if r[2]:
-            levels[r[2]] = levels.get(r[2], 0) + 1
-    loads = [r[3] for r in rows if r[3] is not None]
-    delays = [r[4] for r in rows if r[4] is not None]
-    bits = [f'{len(rows)} visits', f'{round(sum(secs) / 60)} min in all', f'median {median(secs)} s']
-    if loads:
-        bits.append(f'loads in {median(loads)} ms')
-    if delays:
-        bits.append(f'sound delay {median(delays)} ms')
-    bits.append(f'{sum(1 for r in rows if r[5])} with errors')
-    out('  👀 ' + ' · '.join(bits))
-    if screens:
-        out('     screens: ' + ' · '.join(f'{s} {n}' for s, n in sorted(screens.items(), key=lambda kv: (-kv[1], kv[0]))))
-    if levels:
-        out('     levels: ' + ' · '.join(f'{s} {n}' for s, n in sorted(levels.items(), key=lambda kv: (-kv[1], kv[0]))))
 
 
 # ── prune ──
@@ -575,7 +507,7 @@ def loose_sounds(db, now):
       AND {UNSHARED} AND created < {int(now - DAY_MS)}""")
 
 
-METRICS_TABLES = ('activity', 'devices', 'uses', 'visits')
+METRICS_TABLES = ('activity', 'devices')
 
 
 def delete_profile_sql(pid, metrics=METRICS_TABLES):

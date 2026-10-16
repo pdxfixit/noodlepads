@@ -76,23 +76,11 @@ test('with every remembered choice set, the app starts on the remembered screen'
   assert.deepEqual(open, ['set-keys'], 'the Settings sections left open (set-reports is gone)');
 });
 
-test('feature-use counts left from before stay, junk goes, and the screens shown are counted (uses.js)', async () => {
-  const { state } = await import('../web/state.js');
-  const uses = JSON.parse(remembered.get('uses'));
-  assert.equal(uses.toby, undefined, 'junk dropped');
-  const mine = uses[state.personId];
-  assert.ok(mine.beats >= 1 && mine.pads >= 1, JSON.stringify(uses));
-  assert.equal(mine.nope, undefined);
-  assert.equal(state.personId, 'juno');
-  assert.equal(mine.pad, 3, 'the remembered count stays');
-});
-
-test('visits left from before stay for their person, junk goes (visits.js)', async () => {
-  const { pendingVisits } = await import('../web/visits.js');
-  const juno = pendingVisits('juno');
-  assert.equal(juno.length, 1);
-  assert.deepEqual([juno[0].secs, juno[0].screens], [40, ['pads']]);
-  assert.equal(pendingVisits('toby'), null, 'a broken one is dropped');
+// ADR 0027: nothing counts or sends these any more, so a device that still
+// holds them from an older copy is cleaned once at start.
+test('feature-use counts and visits left by an older copy are removed (ADR 0027)', () => {
+  assert.equal(remembered.has('uses'), false);
+  assert.equal(remembered.has('visits'), false);
 });
 
 test('the usage queue this app kept before the shared client is dropped, and a player id that is not a random one is replaced (telemetry.js)', async () => {
