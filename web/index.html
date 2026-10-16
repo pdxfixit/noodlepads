@@ -504,6 +504,20 @@
     </div>
   </dialog>
 
+  <!-- 👋 The welcome for a new person (welcome.js, ADR 0028): Who's playing?
+       Three picture pads set the level. -->
+  <dialog id="welcome" class="np-dialog welcome" aria-labelledby="welcome-title">
+    <div class="chooser-body">
+      <section class="wl-step" id="wl-who">
+        <h2 class="wl-title" id="welcome-title">Who's playing?</h2>
+        <div class="wl-cards" id="wl-cards" role="group" aria-labelledby="welcome-title"></div>
+        <div class="wl-foot">
+          <button type="button" class="wl-skip" id="wl-skip">Skip</button>
+        </div>
+      </section>
+    </div>
+  </dialog>
+
   <!-- 👥 People → tap someone: their profile sheet (people.js). With a PIN,
        a change to the name, picture or color asks for it once per visit. -->
   <dialog id="profile-dialog" class="np-dialog" aria-labelledby="profile-title">

@@ -355,8 +355,13 @@ export async function settle() {
 
 // Installs the page globals and returns helpers. Call before importing app.js.
 // `manifest` is served as boards.json in place of the real file.
-export function installPage({ hash = '', storage, manifest } = {}) {
+// `firstSteps`: a new person's welcome, tips, hint dots and nudge (ADR 0028,
+// web/firsts.js). Off unless a test asks, through the app's test hook
+// (`noodleFirstSteps`), so the app starts as a fresh device always did and
+// the other tests' first taps land on the app, not on the welcome.
+export function installPage({ hash = '', storage, manifest, firstSteps = false } = {}) {
   watchWork();
+  globalThis.noodleFirstSteps = firstSteps;
   const root = new FakeElement('html');
   const body = new FakeElement('body');
   const head = new FakeElement('head');
