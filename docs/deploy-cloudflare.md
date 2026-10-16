@@ -167,7 +167,8 @@ database_id = "<id from step 1>"
   2. On a phone: 👥 People → ☁️ by someone → ☁️ Put in the cloud. On a second
      device: ☁️ Open from the cloud, pick them; their sounds play.
   3. ⚙️ Settings → 📮 Send problem reports on, use the app, switch away; then
-     `just logs --sync && just logs` shows the upload.
+     after the telemetry runner's next run and `telemetry.py pull`, `just logs`
+     shows the upload.
 
 Static files are still served before the script runs; only paths with no file
 reach it, and it hands everything but `/api/…` back to the assets.
@@ -189,8 +190,8 @@ is answered 503, so the app says "resting until tomorrow").
 - **Delete everything in the cloud:** after the step above,
   `npx wrangler d1 delete noodle-pads`, and revoke the read-only token. This
   deletes every profile, sound and report there; devices keep their own copies.
-- The local report archive (`~/.local/state/noodlepads/logs.sqlite3`) is
-  untouched by any of this.
+- The telemetry runner's copies (pdxfixit/telemetry) are untouched by any of
+  this.
 
 ## Rollback
 

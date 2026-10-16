@@ -33,14 +33,14 @@ A small rule (a label, a color, a layout) needs only its row in `decisions.md`.
 | [0006](0006-song-mode-data.md) | Song mode keeps one song per person in a new `songs` store, carried in backups | Replaced by 0007 |
 | [0007](0007-songs-are-a-list.md) | Songs are a list, like beats: `songs` keeps each person's open song, `songbook` every song | Accepted |
 | [0008](0008-own-open-document-per-screen.md) | One open beat and one open song per person, and either may be none | Accepted |
-| [0009](0009-opt-in-problem-reports.md) | Opt-in problem reports: one route on the site, 14 days in D1, and a local archive | Accepted |
+| [0009](0009-opt-in-problem-reports.md) | Opt-in problem reports: one route on the site, 14 days in D1, then the telemetry runner's mirror | Accepted |
 | [0010](0010-move-to-noodlepads-com.md) | The app is at noodlepads.com, and the old address is retired | Accepted |
 | [0011](0011-backups-1-0-merge.md) | Backups start over at format 1.0, and loading one merges | Accepted |
 | [0012](0012-sound-tweaks.md) | A sound's knobs are stored as `tweaks`, and a voice is knob settings | Accepted |
 | [0013](0013-groups-of-own-sounds.md) | Groups of a kid's own sounds live on the sound and on the pad order | Accepted |
 | [0014](0014-dj-key-layouts.md) | Saved DJ key layouts are their own records (`layouts`), apart from the live keyboard (`decks`) | Accepted |
 | [0015](0015-row-volume.md) | A beat row's loudness is stored as `volume`, left out at full | Accepted |
-| [0016](0016-player-metrics.md) | Player metrics, for people in the cloud: devices, places (nothing of the IP), activity, feature use and visits, 14 days in D1 and an archive kept forever, filled by flarepress's `just harvest` | Accepted |
+| [0016](0016-player-metrics.md) | Player metrics, for people in the cloud: devices, places (nothing of the IP), activity, feature use and visits, 14 days in D1, then the telemetry runner's mirror | Accepted |
 | [0017](0017-four-peer-tabs.md) | Four peer tabs, Pads · Beats · Song · Live; Beat Builder becomes Beats' ⌨️ Keys; one open beat | Accepted, built |
 | [0018](0018-mixer-fields.md) | The 🎚️ Mixer's solo, effects and master are stored on the beat, left out at normal | Proposed |
 | [0019](0019-kids-level.md) | Three levels per person, 🧸 Kids · Regular · Advanced; Kids is four big picture screens, left by a grown-up sum | Accepted, built |

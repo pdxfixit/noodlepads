@@ -488,8 +488,8 @@ ADR 0002.
   (`web/visits.js`: seconds in view, screens, level, load time, the sound's
   delay, errors as file:line). D1 keeps them 14 days (a device's row 90).
   The telemetry runner (pdxfixit/telemetry) harvests them daily, with
-  Cloudflare's stats for the site, into an archive kept forever.
-  `just cloud-stats` reads that archive as `telemetry.py pull` leaves it on
+  Cloudflare's stats for the site, and keeps them (ids a year at most).
+  `just cloud-stats` reads only its mirror, as `telemetry.py pull` leaves it on
   the Mac (`~/.local/state/telemetry/telemetry.sqlite3`, read only; or
   `$TELEMETRY_DB`), lists what each player
   made, and shows per player: devices (type, browser, OS, width, app version,
@@ -497,7 +497,7 @@ ADR 0002.
   activity over the last 14 days (`--days N`) and by hour, feature-use counts
   and visits; then every visit's errors by where they came from. A player
   seen from more than one place is flagged ⚠️. Test profiles are left out.
-  Deleting a profile deletes its metrics in D1, not in the archive.
+  Deleting a profile deletes its metrics in D1, not in the runner's copy.
 - **Usage events** (Ben, ADR 0026), in the shared telemetry standard:
   `web/telemetry.js` records one event at a time (screens, dialogs, every
   control tapped, beats, songs and takes started and finished, settings
