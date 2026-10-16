@@ -53,6 +53,8 @@ export function showNotice(text) {
 // dialog and the sticky header alike.
 export const BANNER_MS = 8000;
 let showing = null;   // {box, handle, onClose, focusBack, before, action}
+// Whether a banner shows now (tips.js waits for a notice or an Undo to go).
+export const bannerShowing = () => !!showing;
 let home = null;      // where the banner lives in index.html
 const wired = new WeakSet();
 

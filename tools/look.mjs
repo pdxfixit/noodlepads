@@ -99,11 +99,18 @@ const NOTICE = `const { showNotice } = await import('/ui.js');
 // the first width's person is new by itself).
 const WELCOME = `const w = await import('/welcome.js'); const { state } = await import('/state.js');
   if (!w.welcomeOpen()) { w.markNew(state.personId); w.offerWelcome(state.personId); } ${nap}`;
+// A person with first steps on and nothing seen yet: the welcome (open on
+// the first width's new person) put away, and `seen` emptied (the widths
+// share one device).
+const FRESH = `{ const d = document.querySelector('#welcome'); if (d.open) d.close(); }
+  await (await import('/settings.js')).setSetting('seen', ''); ${nap}`;
 const VIEWS = {
   // Who's playing?: the three picture cards.
   welcome: { screen: 'pads', firstSteps: true, js: WELCOME },
   // Pick your stage name, after 🎵 Tap and make beats; and after 🧸 Little noodler (picture and color only).
   'welcome-stage': { screen: 'pads', firstSteps: true, js: `${WELCOME} ${q('#wl-cards [data-level="regular"]')} ${nap}` },
+  // A one-time tip in the banner: 🥁 Beats' first visit, the scratch beat empty.
+  'tip-beats': { screen: 'beats', firstSteps: true, js: `${FRESH} ${q('#pads-tab')} ${q('#beats-toggle')} ${nap}` },
   'welcome-kids-stage': { screen: 'pads', firstSteps: true, js: `${WELCOME} ${q('#wl-cards [data-level="kids"]')} ${nap}` },
   edit: { screen: 'pads', js: q('#edit-toggle') },
   settings: { screen: 'pads', js: q('#settings-open') },

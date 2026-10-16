@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { state } from '../web/state.js';
-import { SETTINGS, getSetting, setSetting, onSetting, cleanPrefs } from '../web/settings.js';
+import { SETTINGS, getSetting, setSetting, onSetting, cleanPrefs, allowedValue } from '../web/settings.js';
 import { stubBanner } from './banner.mjs';
 
 // Storage is closed in these tests, so a save fails and shows a notice; this
@@ -32,7 +32,7 @@ test('setting a value updates it in memory, tells listeners, and stops telling t
 test('unknown settings and values are refused loudly', async () => {
   assert.throws(() => getSetting('nope'), /unknown setting/);
   await assert.rejects(setSetting('timeSignature', '9/9'), /isn't a value/);
-  for (const spec of Object.values(SETTINGS)) assert.ok(spec.values.includes(spec.default));
+  for (const [key, spec] of Object.entries(SETTINGS)) assert.equal(allowedValue(key, spec.default), spec.default, key);
 });
 
 test('the beat maker starts simple: advanced beats off, 4/4', () => {
@@ -122,4 +122,27 @@ test('the pad skin is the person\'s: Tiles to begin with, one of seven, anything
   assert.deepEqual(cleanPrefs({ personId: 'p', values: { padSkin: 'glitter' } }), { personId: 'p', values: {} });
   state.personId = null;
   state.prefs = new Map();
+});
+
+// ADR 0028: what a person has seen of their first steps (tips, dots, the 🧸
+// hand) is a person setting, free-form, cleaned, kept with them and quiet.
+test('seen: per person, a cleaned list of ids, stored with them, never logged', async () => {
+  assert.equal(SETTINGS.seen.scope, 'person');
+  assert.equal(SETTINGS.seen.default, '');
+  assert.equal(allowedValue('seen', 'tip-pads,dot-keys,tip-pads'), 'dot-keys,tip-pads', 'sorted, once each');
+  assert.equal(allowedValue('seen', 'tip-pads,Not OK,<b>,tip-new-one'), 'tip-new-one,tip-pads', "a newer copy's ids stay; junk goes");
+  assert.equal(allowedValue('seen', 7), undefined);
+  assert.equal(allowedValue('seen', ['tip-pads']), undefined);
+  assert.deepEqual(cleanPrefs({ personId: 'p-a', values: { seen: 'tip-pads', level: 'kids' } }).values, { seen: 'tip-pads', level: 'kids' });
+  assert.deepEqual(cleanPrefs({ personId: 'p-a', values: { seen: { x: 1 } } }).values, {});
+  state.personId = 'p-seen';
+  state.prefs = new Map();
+  const { getLog } = await import('../web/log.js');
+  const settingsLogged = () => getLog().filter((e) => e.kind === 'setting').length;
+  const before = settingsLogged();
+  await setSetting('seen', 'tip-beats');
+  assert.equal(getSetting('seen'), 'tip-beats');
+  assert.equal(state.prefs.get('p-seen').values.seen, 'tip-beats');
+  assert.equal(settingsLogged(), before, 'not logged: nobody chose it');
+  await assert.rejects(setSetting('seen', 'b,a'), /isn't a value/, 'only a cleaned value is stored');
 });

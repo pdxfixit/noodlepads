@@ -18,6 +18,7 @@ import { logEvent } from './log.js';
 import { LAYOUT_NAMES } from './rhythm.js';
 import { PAD_STOPS, fromOldSize } from './pad-size.js';
 import { SKIN_IDS } from './skins.js';
+import { cleanSeen } from './firsts.js';
 
 // A person's level (ADR 0019): 🧸 Kids, Regular or Advanced.
 export const LEVELS = ['kids', 'regular', 'advanced'];
@@ -60,6 +61,12 @@ export const SETTINGS = {
   // Lit pads, Switch, Spinner, Jelly or Googly eyes. ⚙️ Settings → 🎨 Look,
   // and 🧸 Kids' skin button. Each person their own, at every level.
   padSkin: { default: 'tiles', values: SKIN_IDS, scope: 'person' },
+  // What this person has seen of a new person's first steps (ADR 0028,
+  // firsts.js): one-time tips, hint dots, the 🧸 hand. Free-form, so it has
+  // `clean` in place of a list of values; `quiet`: a change is not logged
+  // (it is not a choice anyone made). Per person, so a tip never repeats on
+  // another device or after a backup.
+  seen: { default: '', clean: cleanSeen, scope: 'person', quiet: true },
   // The keyboard the DJ keys' letters follow (dj.js, rhythm.js). The device's
   // own keyboard, so it stays with the device (Ben, Q17); a person's from
   // when it travelled is ignored, and dropped when their settings are next
@@ -81,10 +88,12 @@ export const SETTINGS = {
 };
 
 // A stored value as this copy reads it: allowed as it is, or upgraded from an
-// older copy's value, else undefined.
+// older copy's value, else undefined. A free-form setting (`clean` instead
+// of `values`) is whatever its own cleaner makes of it.
 export function allowedValue(key, value) {
   const spec = SETTINGS[key];
   if (!spec) return undefined;
+  if (spec.clean) return spec.clean(value);
   if (spec.values.includes(value)) return value;
   if (typeof spec.upgrade === 'function') {
     const now = spec.upgrade(value);
@@ -144,8 +153,8 @@ function tell(key, value) {
 export async function setSetting(key, value) {
   const spec = SETTINGS[key];
   if (!spec) throw new Error(`unknown setting "${key}"`);
-  if (!spec.values.includes(value)) throw new Error(`"${value}" isn't a value for ${key}`);
-  logEvent('setting', { key, value, was: getSetting(key) });
+  if (allowedValue(key, value) !== value) throw new Error(`"${value}" isn't a value for ${key}`);
+  if (!spec.quiet) logEvent('setting', { key, value, was: getSetting(key) });
   const pair = storedPair(key, value, getSetting('level'));
   if (spec.scope === 'person' && state.personId && state.prefs) {
     const was = state.prefs.get(state.personId);

@@ -32,6 +32,8 @@ import { initUpdate } from './update.js';
 import { registerOffline } from './offline.js';
 import { initPeople, refreshPeople, addPerson, editLook, openPictures } from './people.js';
 import { initWelcome, markNew, offerWelcome } from './welcome.js';
+import { initTips, tipsScreen } from './tips.js';
+import { beatHasHits } from './firsts.js';
 import { initCloud, needsPin, leftPerson } from './cloud.js';
 import { initCloudUI, askToOpen, shareSounds } from './cloud-ui.js';
 import { renderPreview } from './share-render.js';
@@ -242,6 +244,7 @@ function setScreen(name) {
   el.padsBar.hidden = name !== 'pads';
   remember('screen', name);
   if (!kidsShowing()) page?.screen(name);
+  tipsScreen(name);   // a one-time tip for this screen, if it has one (tips.js)
 }
 
 // What Beats and Live show: Beats' rows (⌨️ Keys off), or the keys panel,
@@ -761,6 +764,12 @@ async function start() {
     },
     edit: editLook,
     pictures: openPictures,
+  });
+  // One-time tips (ADR 0028): Beats' needs to know the open beat is empty.
+  initTips({
+    kids: () => kidsShowing(),
+    keysOn: () => keysOn,
+    beatHasHits: () => beatHasHits(seq?.beat()),
   });
   initCloudUI({ refresh: () => { renderPeople(); refreshPeople(); }, addPerson });
   initBackups();
