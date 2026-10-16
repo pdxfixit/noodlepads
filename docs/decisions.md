@@ -265,6 +265,7 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | Rule | Why | Since |
 |---|---|---|
 | Mockups first for a new screen, a new layout or a moved control; fixes and restyles inside an agreed design go straight to building. | Ben: "Yes, for new screens and layouts". | 2026-10-12 |
+| Human-run tests are kept to a minimum. Agents check with tests, `just look` and the live checks; TODO's "Ben does" gets no device tries. What only a person can judge stays in state.md as "not yet tried on a phone". | Ben, 2026-10-16: "human-run tests should be kept to a minimum"; he reports tries as he goes. | 2026-10-16 |
 | Agents delegate independent work to background agents in worktrees and land it with `just land`. | Ben keeps talking while work runs. | 2026-10-12 |
 | Agents may read the live database (stats, problem reports) without asking; writes stay Ben's, except the deploy checks' own. | Ben: "read-only is fine". | 2026-10-12 |
 | Every commit to `main` is deployed and checked live. | The live site is always the latest work. | 2026-10-10 |
