@@ -44,7 +44,9 @@ and ⭐ My voices ▾ renames or deletes them.
 a ✦ special part no knob makes. A sound saved with an older voice plays it
 exactly as before; ⤢ **Turn into knobs** is the kid's choice. The sound's
 name is the sheet's title (tap it to rename), and Voice and Layers
-fold under their headings. With Advanced on (Settings), ✂️ **Trim and edit** drags a sound's
+fold under their headings. Closing the sheet (✕, a tap outside it, Esc, or
+closing the tab) with unsaved changes, a sound not yet saved, or a recording
+in progress asks first: **Keep editing** or **Throw away**. With Advanced on (Settings), ✂️ **Trim and edit** drags a sound's
 start and end in (same pad, Undo works), drags fades in from either end, and
 changes just a selected part (Backwards, Silence it, Louder, Quieter, Keep
 only this). 🧩 **Chop into pads** cuts it where

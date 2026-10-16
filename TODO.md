@@ -83,8 +83,6 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 
 
-- **Warn before unsaved work is lost** (Ben, 2026-10-16: "clicking away from a screen like editing a sound, if there are changes, should cause a warning"; "consider where else in the app"). Plan and options are in the chat: waiting for Ben's OK on the numbered plan before building.
-
 - **Toward a kid-sized music studio** (Ben, 2026-10-12; north star: ADR 0022). Done: pattern chips, mixer, four tabs, the piano roll, the playlist (ADR 0024). Next: Ben's call.
 
 - **After launch: stop loading backups from before 1.0** (Ben, 2026-10-11, "it will only be this once"): once the testing copies' backups are in, remove `beforeOne` in `web/backup.js` so they are refused again (ADR 0011).

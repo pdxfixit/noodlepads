@@ -3517,6 +3517,25 @@ dialog#keys-edit::backdrop { background: var(--bed); }
 .sheet-name input:hover { border-bottom-color: var(--muted); background: var(--chalk); }
 .sheet-name input:focus { text-overflow: clip; }
 .sheet-name input:focus-visible { outline: 3px solid var(--board); outline-offset: 0; border-bottom-color: transparent; background: #fff; }
+/* ── Closing the sound sheet with unsaved work asks first (Ben, 2026-10-16) ──
+   A row in the sticky heading, under the title: the question, then Keep editing
+   and a red Throw away (red as the two-tap Remove? is). */
+#sheet-form > .sheet-head { flex-wrap: wrap; }
+.sheet-warn {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 2px solid #B3261E;
+  border-radius: 12px;
+  background: #FDECEA;
+}
+.sheet-warn[hidden] { display: none; }
+.sheet-warn-text { flex: 1 1 100%; margin: 0; color: #7A1812; font-weight: 800; }
+.sheet-warn .chain-tool { flex: 1 1 0; min-width: 0; }
+.sheet-warn-drop { border-color: #B3261E; background: #B3261E; color: #fff; }
 dialog#sheet legend.field-name, dialog#sheet h3.field-name { width: 100%; margin-bottom: 8px; padding: 0; }
 .sheet-fold { font-weight: 800; font-size: 1.05rem; }
 .fold-body[hidden] { display: none; }
