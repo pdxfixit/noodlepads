@@ -3948,3 +3948,333 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
 .more-item[aria-checked]::after { content: ""; margin-left: auto; padding-left: 12px; }
 .more-item[aria-checked="true"]::after { content: "✓"; }
 .more-item.armed { background: #B3261E; color: #fff; }
+
+/* ── Pad skins (skins.js; Ben, 2026-10-16) ──
+   How every pad looks, the person's choice in ⚙️ Settings → 🎨 Look:
+   Tiles (everything above), Slam buttons, Lit pads, Switch, Spinner, Jelly
+   and Googly eyes. A skin applies under the nearest box with a `data-skin`
+   (the page's root, or a sample in 🎨 Look): each block is an @scope that
+   stops at a nearer `data-skin`, so a sample shows its own skin on any page.
+   A browser without @scope shows Tiles. Every pad takes it: Pads, the sound
+   chooser, ❓ Help's small pads and 🧸 Kids' picture pads. The dashed New
+   sound slot stays as it is. A pad says .playing while its sound is part way
+   (pads.js setProgress), .looping while held, .hit for a moment after a key
+   plays it. The pad selector is written .pad.pad.pad so it outweighs the
+   size rules above (.pads .pad, .chooser-grid .pad.pad-mini…). */
+
+/* The skins on a dark plate (Slam buttons, Switch, Spinner): light words,
+   the key number and the voice in its corners. */
+@scope (:is([data-skin="slam"], [data-skin="switch"], [data-skin="spinner"])) to (:scope [data-skin]) {
+  .pad.pad.pad:not(.pad-add) {
+    --plate: #191427;
+    --bezel: #3A3350;
+    background: var(--plate);
+    color: #F2EEFF;
+    box-shadow: inset 0 0 0 2px var(--bezel), 0 5px 0 #0B0913;
+  }
+  .pad.pad.pad:not(.pad-add)::before { content: none; }
+  .pad.pad.pad:not(.pad-add):active, .pad.pad.pad.hit, .pad.pad.pad.looping {
+    transform: none;
+    box-shadow: inset 0 0 0 2px var(--bezel), 0 5px 0 #0B0913;
+    animation: none;
+  }
+  .pad.pad.pad.looping { box-shadow: inset 0 0 0 2px var(--bezel), 0 5px 0 #0B0913, 0 0 0 4px #fff; }
+  .pad.pad.pad.broken { background: repeating-linear-gradient(135deg, #2C2640 0 12px, #221C33 12px 24px); }
+}
+
+/* Slam buttons and Spinner: a round thing in the pad's color on the plate,
+   the picture on it, the name on the plate under it. */
+@scope (:is([data-skin="slam"], [data-skin="spinner"])) to (:scope [data-skin]) {
+  .pad.pad.pad:not(.pad-add) {
+    grid-template: "emoji" minmax(0, 1fr) "label" auto / minmax(0, 1fr);
+    row-gap: 4px;
+    aspect-ratio: 1 / 0.9;
+    border-radius: 16px;
+    text-align: center;
+  }
+  .pad.pad.pad:not(.pad-add) .pad-emoji {
+    grid-area: emoji;
+    justify-self: center;
+    align-self: center;
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    height: 100%;
+    max-width: 100%;
+    aspect-ratio: 1;
+    margin: 0;
+    border-radius: 50%;
+    line-height: 1;
+  }
+  .pad.pad.pad:not(.pad-add) .pad-label { grid-area: label; justify-self: center; text-align: center; }
+  /* Out of the grid (grid-area: auto), so they sit in the pad's corners. */
+  .pad.pad.pad:not(.pad-add) :is(.pad-key, .pad-badge) { grid-area: auto; position: absolute; top: 6px; left: 8px; }
+  .pad.pad.pad:not(.pad-add) .pad-voice { grid-area: auto; position: absolute; top: 6px; right: 8px; }
+  .pads .pad.pad.pad:not(.pad-add) .pad-emoji { font-size: clamp(1.25rem, 25cqw, 5rem); }
+  .pads .pad.pad.pad:not(.pad-add) .pad-label { font-size: clamp(0.75rem, 10cqw, 1.7rem); }
+  .pads .pad.pad.pad:not(.pad-add) .pad-voice { font-size: clamp(0.85rem, 8cqw, 1.4rem); }
+}
+
+/* Slam buttons: an arcade dome with a solid darker edge below and a small
+   highlight, in a bezel ring that fills round as the sound plays. Pressing
+   sinks the dome; held to loop, it stays down and glows. */
+@scope ([data-skin="slam"]) to (:scope [data-skin]) {
+  .pad.pad.pad:not(.pad-add) .pad-emoji {
+    padding-bottom: 5px;
+    border: 5px solid transparent;
+    background:
+      radial-gradient(15% 9% at 31% 24%, rgb(255 255 255 / 0.65) 96%, transparent 100%) padding-box,
+      linear-gradient(var(--pad), var(--pad)) padding-box,
+      conic-gradient(#FFE58A calc(var(--progress, 0) * 360deg), var(--bezel) 0) border-box;
+    box-shadow: inset 0 -7px 0 var(--pad-edge), 0 3px 0 #0B0913;
+    transition: box-shadow 50ms, padding 50ms;
+  }
+  .pad.pad.pad:not(.pad-add):active .pad-emoji, .pad.pad.pad.hit .pad-emoji, .pad.pad.pad.looping .pad-emoji {
+    padding: 4px 0 0;
+    box-shadow: inset 0 -2px 0 var(--pad-edge), inset 0 3px 0 rgb(0 0 0 / 0.25), 0 1px 0 #0B0913;
+  }
+  .pad.pad.pad.looping .pad-emoji { animation: slam-loop 0.5s ease-in-out infinite alternate; }
+  .pad.pad.pad.looping { box-shadow: inset 0 0 0 2px var(--bezel), 0 5px 0 #0B0913; }
+  .pad.pad.pad.broken .pad-emoji { background: repeating-linear-gradient(135deg, #D9D6E3 0 8px, #C9C5D6 8px 16px) padding-box, linear-gradient(var(--bezel), var(--bezel)) border-box; }
+  /* ❓ Help's smallest pads: no plate, just the round button. */
+  .pad.pad.pad.help-pad { aspect-ratio: 1; padding: 6px; border-radius: 50%; background: radial-gradient(15% 9% at 31% 24%, rgb(255 255 255 / 0.65) 96%, transparent 100%), var(--pad); color: var(--ink); box-shadow: inset 0 -5px 0 var(--pad-edge), 0 0 0 3px var(--bezel); }
+  .pad.pad.pad.help-pad .pad-emoji { height: auto; border: 0; padding: 0; background: none; box-shadow: none; aspect-ratio: auto; }
+  .pad.pad.pad.help-pad .pad-label { font-size: 0.7rem; }
+}
+@keyframes slam-loop {
+  from { box-shadow: inset 0 -2px 0 var(--pad-edge), inset 0 3px 0 rgb(0 0 0 / 0.25), 0 0 0 2px #fff; }
+  to { box-shadow: inset 0 -2px 0 var(--pad-edge), inset 0 3px 0 rgb(0 0 0 / 0.25), 0 0 0 6px rgb(255 255 255 / 0.4); }
+}
+
+/* Spinner: a dial with a knurled rim and a white notch; it turns once over
+   the sound (--progress), so it is the progress too. */
+@scope ([data-skin="spinner"]) to (:scope [data-skin]) {
+  .pad.pad.pad:not(.pad-add) .pad-emoji {
+    border: 5px solid transparent;
+    background:
+      radial-gradient(9% 9% at 50% 13%, #fff 0 80%, var(--ink) 84% 98%, transparent 100%) padding-box,
+      radial-gradient(closest-side, color-mix(in srgb, #fff 18%, var(--pad)) 0 60%, var(--pad) 62%) padding-box,
+      repeating-conic-gradient(var(--pad-edge) 0 6deg, color-mix(in srgb, var(--pad) 70%, black) 6deg 12deg) border-box;
+    box-shadow: 0 4px 0 #0B0913;
+    rotate: calc(var(--progress, 0) * 360deg);
+  }
+  .pad.pad.pad:not(.pad-add):active .pad-emoji, .pad.pad.pad.hit .pad-emoji { scale: 0.95; }
+  .pad.pad.pad.looping .pad-emoji { box-shadow: 0 4px 0 #0B0913, 0 0 0 4px #fff; }
+  .pad.pad.pad.broken .pad-emoji { background: repeating-linear-gradient(135deg, #D9D6E3 0 8px, #C9C5D6 8px 16px); }
+  .pad.pad.pad.help-pad .pad-emoji { border-width: 3px; }
+}
+
+/* Switch: a lever in the pad's color in a dark slot on the plate. While the
+   sound plays (and held to loop) it is down and the light above it is on;
+   at the end it flips back up. */
+@scope ([data-skin="switch"]) to (:scope [data-skin]) {
+  .pad.pad.pad:not(.pad-add) { aspect-ratio: 1 / 0.9; }
+  .pad.pad.pad:not(.pad-add)::before {
+    content: "";
+    position: absolute;
+    inset: 12% 9% auto auto;
+    width: 19%;
+    height: 50%;
+    box-sizing: border-box;
+    border: 3px solid #0B0913;
+    border-radius: 9px;
+    transform: none;
+    background:
+      linear-gradient(to bottom, color-mix(in srgb, #fff 35%, var(--pad)) 0 14%, var(--pad) 14% 80%, var(--pad-edge) 80%) 0 0 / 100% 50% no-repeat,
+      radial-gradient(closest-side, var(--light, #4A4360) 0 70%, transparent 76%) 50% 22% / 70% 30% no-repeat,
+      #0B0913;
+    transition: background-position 90ms ease-in;
+  }
+  .pad.pad.pad.playing::before, .pad.pad.pad.looping::before, .pad.pad.pad:not(.pad-add):active::before, .pad.pad.pad.hit::before {
+    --light: #7CFF9E;
+    background-position: 0 100%, 50% 22%, 0 0;
+  }
+  .pad.pad.pad:not(.pad-add) .pad-key { grid-area: auto; position: absolute; top: 10px; right: calc(28% + 6px); }
+  .pad.pad.pad:not(.pad-add) .pad-label { margin-right: 4px; }
+  .pad.pad.pad.help-pad::before { border-width: 2px; border-radius: 6px; }
+}
+
+/* Lit pads: dark rubber with a rim in the pad's color and a tinted picture;
+   it lights up full color while pressed, playing or looping. */
+@scope ([data-skin="lit"]) to (:scope [data-skin]) {
+  .pad.pad.pad:not(.pad-add) {
+    background: #221C33;
+    color: #EDE9F8;
+    box-shadow: inset 0 0 0 3px var(--pad), 0 5px 0 #0B0913;
+    transition: transform 50ms, box-shadow 50ms, background-color 60ms, color 60ms;
+  }
+  .pad.pad.pad:not(.pad-add) .pad-emoji { filter: drop-shadow(0 0 0.18em var(--pad)); }
+  .pad.pad.pad:not(.pad-add)::before { background: rgb(255 255 255 / 0.3); }
+  .pad.pad.pad:not(.pad-add):active, .pad.pad.pad.hit, .pad.pad.pad.playing, .pad.pad.pad.looping {
+    background: var(--pad);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 3px color-mix(in srgb, #fff 45%, var(--pad)), 0 0 18px 3px color-mix(in srgb, var(--pad) 65%, transparent), 0 5px 0 #0B0913;
+  }
+  .pad.pad.pad:not(.pad-add):active, .pad.pad.pad.hit { box-shadow: inset 0 0 0 3px color-mix(in srgb, #fff 45%, var(--pad)), 0 0 18px 3px color-mix(in srgb, var(--pad) 65%, transparent), 0 1px 0 #0B0913; }
+  .pad.pad.pad.looping { animation: lit-loop 0.5s ease-in-out infinite alternate; }
+  .pad.pad.pad:is(:active, .hit, .playing, .looping) .pad-emoji { filter: none; }
+  .pad.pad.pad.broken { background: repeating-linear-gradient(135deg, #2C2640 0 12px, #221C33 12px 24px); }
+}
+@keyframes lit-loop {
+  from { box-shadow: inset 0 0 0 3px #fff, 0 0 10px 2px color-mix(in srgb, var(--pad) 65%, transparent), 0 1px 0 #0B0913; }
+  to { box-shadow: inset 0 0 0 3px #fff, 0 0 24px 6px color-mix(in srgb, var(--pad) 80%, transparent), 0 1px 0 #0B0913; }
+}
+
+/* Jelly: a glossy blob that squishes when pressed and wobbles when its
+   sound starts; held to loop it keeps wobbling. */
+@scope ([data-skin="jelly"]) to (:scope [data-skin]) {
+  .pad.pad.pad:not(.pad-add) {
+    grid-template: "emoji" auto "." minmax(0, 1fr) "label" auto / minmax(0, 1fr);
+    justify-items: center;
+    text-align: center;
+    border-radius: 40% 46% 42% 44% / 46% 40% 46% 42%;
+    background: radial-gradient(34% 24% at 32% 22%, rgb(255 255 255 / 0.55), transparent 70%), var(--pad);
+    box-shadow: inset 0 -9px 14px color-mix(in srgb, var(--pad-edge) 55%, transparent), 0 6px 0 var(--pad-edge);
+    transition: transform 70ms, scale 70ms, box-shadow 70ms;
+  }
+  .pad.pad.pad:not(.pad-add) .pad-emoji { grid-area: emoji; margin: 0; }
+  .pad.pad.pad:not(.pad-add) .pad-label { grid-area: label; }
+  .pads .pad.pad.pad:not(.pad-add) .pad-emoji { font-size: clamp(1.4rem, 24cqw, 4.6rem); }
+  .pad.pad.pad:not(.pad-add) :is(.pad-key, .pad-badge) { grid-area: auto; position: absolute; top: 12%; right: 13%; }
+  .pad.pad.pad:not(.pad-add) .pad-voice { grid-area: auto; position: absolute; bottom: 30%; right: 12%; }
+  .pad.pad.pad:not(.pad-add):active, .pad.pad.pad.hit { transform: translateY(4px); scale: 1.08 0.88; box-shadow: inset 0 -5px 10px color-mix(in srgb, var(--pad-edge) 55%, transparent), 0 2px 0 var(--pad-edge); }
+  .pad.pad.pad.playing { animation: jelly-wobble 0.7s ease-out 1; }
+  .pad.pad.pad.looping { transform: none; box-shadow: inset 0 -9px 14px color-mix(in srgb, var(--pad-edge) 55%, transparent), 0 6px 0 var(--pad-edge), 0 0 0 4px #fff; animation: jelly-wobble 0.9s ease-in-out infinite; }
+  .pad.pad.pad.broken { background: repeating-linear-gradient(135deg, #D9D6E3 0 12px, #C9C5D6 12px 24px); }
+}
+@keyframes jelly-wobble {
+  0% { scale: 1.12 0.86; }
+  30% { scale: 0.92 1.08; }
+  50% { scale: 1.05 0.96; }
+  70% { scale: 0.98 1.02; }
+  100% { scale: 1 1; }
+}
+
+/* Googly eyes: a tile with two googly eyes in its middle (one pseudo-
+   element: two whites and two pupils drawn as gradients). While it plays
+   the pupils dart about. The smallest pads go without. */
+@scope ([data-skin="googly"]) to (:scope [data-skin]) {
+  /* (A ticked pad in the chooser wears its number there instead.) */
+  .pad.pad.pad:not(.pad-add):not([data-tick])::after {
+    content: "";
+    position: absolute;
+    top: 52%;
+    left: 50%;
+    width: 44%;
+    aspect-ratio: 2.2;
+    translate: -50% -60%;
+    pointer-events: none;
+    background:
+      radial-gradient(closest-side, #141018 0 92%, transparent 100%) 19% 64% / 20% 45% no-repeat,
+      radial-gradient(closest-side, #141018 0 92%, transparent 100%) 81% 64% / 20% 45% no-repeat,
+      radial-gradient(closest-side, #fff 0 80%, var(--ink) 82% 96%, transparent 100%) 0 50% / 46% 100% no-repeat,
+      radial-gradient(closest-side, #fff 0 80%, var(--ink) 82% 96%, transparent 100%) 100% 50% / 46% 100% no-repeat;
+  }
+  .pad.pad.pad.playing::after, .pad.pad.pad.looping::after { animation: googly-dart 1.1s step-end infinite; }
+  .pad.pad.pad.help-pad::after { content: none; }
+}
+@container (max-width: 96px) {
+  @scope ([data-skin="googly"]) to (:scope [data-skin]) {
+    .pads .pad.pad.pad::after { content: none; }
+  }
+}
+@keyframes googly-dart {
+  0% { background-position: 8% 30%, 76% 30%, 0 50%, 100% 50%; }
+  18% { background-position: 25% 70%, 93% 70%, 0 50%, 100% 50%; }
+  36% { background-position: 10% 72%, 78% 72%, 0 50%, 100% 50%; }
+  52% { background-position: 24% 26%, 92% 26%, 0 50%, 100% 50%; }
+  70% { background-position: 16% 50%, 84% 50%, 0 50%, 100% 50%; }
+  86% { background-position: 6% 60%, 94% 40%, 0 50%, 100% 50%; }
+}
+
+/* 🧸 Kids' picture pads in each skin: the emoji alone, no name. Pressed,
+   and for a moment after a tap (.boing), they show it their own way. */
+@scope ([data-skin="slam"]) to (:scope [data-skin]) {
+  .kids-pad.kids-pad {
+    border: 6px solid #3A3350;
+    border-radius: 50%;
+    background: radial-gradient(14% 8% at 30% 22%, rgb(255 255 255 / 0.65) 96%, transparent 100%), var(--pad, #FFD60A);
+    box-shadow: inset 0 -10px 0 color-mix(in srgb, var(--pad, #FFD60A) 55%, black), 0 7px 0 #0B0913;
+    padding-bottom: 6px;
+  }
+  .kids-pad.kids-pad:active, .kids-pad.kids-pad.boing {
+    transform: translateY(3px);
+    padding: 6px 0 0;
+    box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--pad, #FFD60A) 55%, black), inset 0 4px 0 rgb(0 0 0 / 0.25), 0 4px 0 #0B0913;
+  }
+  .kids-pad.kids-pad.boing { animation: none; }
+}
+@scope ([data-skin="lit"]) to (:scope [data-skin]) {
+  .kids-pad.kids-pad { background: #221C33; box-shadow: inset 0 0 0 5px var(--pad, #FFD60A), 0 6px 0 #0B0913; }
+  .kids-pad.kids-pad:not(:active, .boing) { text-shadow: 0 0 0.2em var(--pad, #FFD60A); }
+  .kids-pad.kids-pad:active, .kids-pad.kids-pad.boing { background: var(--pad, #FFD60A); box-shadow: inset 0 0 0 5px #fff, 0 0 24px 4px var(--pad, #FFD60A), 0 2px 0 #0B0913; }
+}
+@scope ([data-skin="switch"]) to (:scope [data-skin]) {
+  .kids-pad.kids-pad {
+    background:
+      radial-gradient(closest-side, var(--light, #4A4360) 0 70%, transparent 76%) calc(100% - 9%) 9% / 14% 14% no-repeat,
+      linear-gradient(to bottom, color-mix(in srgb, #fff 35%, var(--pad, #FFD60A)) 0 12%, var(--pad, #FFD60A) 12% 84%, color-mix(in srgb, var(--pad, #FFD60A) 55%, black) 84%) 50% 12% / 62% 44% no-repeat,
+      #191427;
+    box-shadow: inset 0 0 0 3px #3A3350, 0 6px 0 #0B0913;
+    transition: background-position 90ms ease-in, transform 60ms;
+  }
+  .kids-pad.kids-pad:active, .kids-pad.kids-pad.boing { --light: #7CFF9E; background-position: calc(100% - 9%) 9%, 50% 88%, 0 0; box-shadow: inset 0 0 0 3px #3A3350, 0 2px 0 #0B0913; }
+  .kids-pad.kids-pad.boing { animation: none; }
+}
+@scope ([data-skin="spinner"]) to (:scope [data-skin]) {
+  .kids-pad.kids-pad {
+    border: 6px solid transparent;
+    border-radius: 50%;
+    background:
+      radial-gradient(8% 8% at 50% 12%, #fff 0 80%, var(--ink) 84% 98%, transparent 100%) padding-box,
+      linear-gradient(var(--pad, #FFD60A), var(--pad, #FFD60A)) padding-box,
+      repeating-conic-gradient(color-mix(in srgb, var(--pad, #FFD60A) 55%, black) 0 6deg, color-mix(in srgb, var(--pad, #FFD60A) 75%, black) 6deg 12deg) border-box;
+    box-shadow: 0 6px 0 #0B0913;
+  }
+  .kids-pad.kids-pad.boing { animation: kids-spin 0.5s ease-out; }
+}
+@keyframes kids-spin { to { rotate: 1turn; } }
+@scope ([data-skin="jelly"]) to (:scope [data-skin]) {
+  .kids-pad.kids-pad {
+    border-radius: 40% 46% 42% 44% / 46% 40% 46% 42%;
+    background: radial-gradient(34% 24% at 32% 22%, rgb(255 255 255 / 0.55), transparent 70%), var(--pad, #FFD60A);
+    box-shadow: inset 0 -10px 16px color-mix(in srgb, var(--pad, #FFD60A) 30%, black), 0 6px 0 color-mix(in srgb, var(--pad, #FFD60A) 55%, black);
+  }
+  .kids-pad.kids-pad:active { scale: 1.08 0.88; }
+  .kids-pad.kids-pad.boing { animation: jelly-wobble 0.6s ease-out; }
+}
+@scope ([data-skin="googly"]) to (:scope [data-skin]) {
+  .kids-pad.kids-pad { position: relative; padding-top: 22%; font-size: calc(var(--kids-pad, 100px) * 0.44); }
+  .kids-pad.kids-pad::after {
+    content: "";
+    position: absolute;
+    top: 7%;
+    left: 50%;
+    width: 46%;
+    aspect-ratio: 2.2;
+    translate: -50% 0;
+    pointer-events: none;
+    background:
+      radial-gradient(closest-side, #141018 0 92%, transparent 100%) 19% 64% / 20% 45% no-repeat,
+      radial-gradient(closest-side, #141018 0 92%, transparent 100%) 81% 64% / 20% 45% no-repeat,
+      radial-gradient(closest-side, #fff 0 80%, var(--ink) 82% 96%, transparent 100%) 0 50% / 46% 100% no-repeat,
+      radial-gradient(closest-side, #fff 0 80%, var(--ink) 82% 96%, transparent 100%) 100% 50% / 46% 100% no-repeat;
+  }
+  .kids-pad.kids-pad.boing::after { animation: googly-dart 0.6s step-end; }
+}
+
+/* Nothing moves on its own: Jelly and Googly eyes hold still and Spinner
+   stops turning; playing shows as a glow instead. */
+@media (prefers-reduced-motion: reduce) {
+  @scope ([data-skin="spinner"]) to (:scope [data-skin]) {
+    .pad.pad.pad:not(.pad-add) .pad-emoji { rotate: none; }
+    .pad.pad.pad.playing .pad-emoji { box-shadow: 0 4px 0 #0B0913, 0 0 0 4px #FFE58A; }
+  }
+  @scope (:is([data-skin="jelly"], [data-skin="googly"])) to (:scope [data-skin]) {
+    .pad.pad.pad.playing:not(.looping) { box-shadow: 0 6px 0 var(--pad-edge), 0 0 0 4px #FFE58A; }
+    .kids-pad.kids-pad.boing { filter: brightness(1.2); }
+  }
+  @scope ([data-skin="googly"]) to (:scope [data-skin]) {
+    .pad.pad.pad.playing::after { background-position: 19% 24%, 81% 24%, 0 50%, 100% 50%; }
+  }
+}
