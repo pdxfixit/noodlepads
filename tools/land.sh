@@ -13,6 +13,15 @@
 #   tools/land.sh continue <worktree>
 set -euo pipefail
 
+# Removes the lines of a todo file up to and including commit $2. Portable:
+# GNU sed (Linux, cloud sessions) and BSD sed (macOS) disagree on in-place
+# editing, and the BSD form stopped every landing on Linux (2026-10-16).
+drop_done() {
+  local file=$1 c=$2 rest
+  rest=$(sed "1,/^$c\$/d" "$file")
+  printf '%s\n' "$rest" > "$file"
+}
+
 # Picks the commits listed in the worktree's state file that are not picked yet.
 pick_rest() {
   local wt=$1 c left f
@@ -26,7 +35,7 @@ pick_rest() {
           docs/questions.md) python3 tools/resolve_questions.py "$wt/$f" || return 1; git -C "$wt" add "$f" ;;
           *)
             # Keep the worktree and what is left to pick, for land-continue.
-            sed -i '' "1,/^$c\$/d" "$wt/.land/todo"
+            drop_done "$wt/.land/todo" "$c"
             echo "🛑 $c conflicts in: $(echo $left) (main unchanged)" >&2
             echo "   Resolve it in $wt (git -C $wt add …; GIT_EDITOR=true git -C $wt cherry-pick --continue)," >&2
             echo "   then: just land-continue $wt" >&2
@@ -35,7 +44,7 @@ pick_rest() {
       done
       GIT_EDITOR=true git -C "$wt" cherry-pick --continue > /dev/null
     fi
-    sed -i '' "1,/^$c\$/d" "$wt/.land/todo"
+    drop_done "$wt/.land/todo" "$c"
   done < <(cat "$wt/.land/todo")
 }
 
