@@ -435,17 +435,24 @@
         </div>
       </section>
 
+      <!-- What this device sends us: two checkboxes in one fold, the last before
+           About (Ben, 2026-10-16). What each sends is in the Privacy policy,
+           linked right under them. -->
+      <section class="set-section set-fold" id="set-data" aria-labelledby="set-data-title">
+        <h3><button type="button" class="set-head" aria-expanded="false" aria-controls="set-data-body"><span class="set-head-caret" aria-hidden="true">▸</span><span id="set-data-title">📊 Play data & reports</span><span class="set-head-chip" hidden></span></button></h3>
+        <div class="set-body" id="set-data-body" hidden>
+          <label class="set-check"><input type="checkbox" id="share-usage"> 📊 Share play data</label>
+          <label class="set-check"><input type="checkbox" id="send-logs" aria-describedby="send-logs-grownup"> 📮 Send problem reports</label>
+          <p class="field-hint set-check-hint" id="send-logs-grownup">Ask a grown-up before you turn this on.</p>
+          <p class="set-code" id="send-logs-code" hidden>This device's code: <b id="send-logs-device"></b></p>
+          <p class="field-hint" id="send-logs-where" hidden>Reports send only from noodlepads.com, not from this copy.</p>
+          <p class="set-policy"><a class="privacy-link" id="data-policy" href="https://privacy.pdxfixit.com/noodlepads/" target="_blank" rel="noopener">Privacy policy</a></p>
+        </div>
+      </section>
+
       <section class="set-section" aria-labelledby="set-about-title">
         <h3 id="set-about-title">About</h3>
         <p class="set-about" id="about-text"></p>
-        <!-- What this device sends us: two plain checkboxes at the bottom, not
-             folds (Ben, 2026-10-16). What each sends is in the Privacy policy,
-             linked right under them. -->
-        <label class="set-check"><input type="checkbox" id="share-usage"> 📊 Share play data</label>
-        <label class="set-check"><input type="checkbox" id="send-logs" aria-describedby="send-logs-grownup"> 📮 Send problem reports</label>
-        <p class="field-hint set-check-hint" id="send-logs-grownup">Ask a grown-up before you turn this on.</p>
-        <p class="set-code" id="send-logs-code" hidden>This device's code: <b id="send-logs-device"></b></p>
-        <p class="field-hint" id="send-logs-where" hidden>Reports send only from noodlepads.com, not from this copy.</p>
         <!-- The version, as the page footer shows it: always last (settings-ui.js). -->
         <p class="set-version">
           <span id="about-version"></span> ·

@@ -1,8 +1,8 @@
 // The ⚙️ Settings dialog: Backups (its buttons live here, its code is in
 // backup-ui.js; people are managed from the corner avatar, people.js), the
 // person's Level (🧸 Kids · Regular · Advanced, ADR 0019),
-// and About, which ends with the 📊 Share play data and 📮 Send problem reports
-// checkboxes (sending is log-send.js), then the version. The button sits in the top corner, small and away from the pads and
+// 📊 Play data & reports (the Share play data and Send problem reports
+// checkboxes; sending is log-send.js) and About. The button sits in the top corner, small and away from the pads and
 // the toolbar where thumbs play, so it isn't pressed by accident.
 //
 // Every section but About folds under its heading (Ben, 2026-10-11: "each
@@ -80,11 +80,17 @@ export const LEVEL_HINTS = {
   advanced: "Advanced: the extra tools too. In the beat maker: Overlap, each row's speed (½×, 1×, 2×), swing and a time signature for each beat; the sharps and flats in the presets.",
 };
 
+// 📊 Play data & reports' chip: the emoji of each one that is on, or Off.
+export const dataChip = (usage, reports) => (usage || reports ? `${usage ? '📊' : ''}${reports ? '📮' : ''} On` : 'Off');
+
 // A heading's chip says the section's state at a glance, where there is one.
 function chips() {
+  const on = (v) => (v ? 'On' : 'Off');
   const words = {
     'set-beats': LEVEL_NAMES[getSetting('level')],
     'set-keys': LAYOUT_NAMES[getSetting('djLayout')] ?? '',
+    // Which of the two are on, short enough for a 320 px heading: 📊 On, 📊📮 On, Off.
+    'set-data': dataChip(getSetting('sendUsage') === true, getSetting('sendLogs') === true),
   };
   for (const section of sections()) {
     const chip = section.querySelector('.set-head-chip');
@@ -106,8 +112,8 @@ export function syncSettingsControls() {
   el.code.hidden = !reports;
   el.device.textContent = reports ? deviceCode() : '';
   el.where.hidden = !reports || globalThis.location?.hostname === LIVE_HOST;
-  // Ben's wording, 2026-10-11; the version has its own line below it.
-  el.about.textContent = 'Noodle Pads. Tap a pad, hold it to loop, record your own sounds and make beats. Made by the Sandberg Family.';
+  // Ben's wording, 2026-10-11, without its opening "Noodle Pads." (2026-10-16); the version has its own line below it.
+  el.about.textContent = 'Tap a pad, hold it to loop, record your own sounds and make beats. Made by the Sandberg Family.';
   el.aboutVersion.textContent = el.version.textContent || 'dev copy';
   chips();
 }

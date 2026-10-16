@@ -145,7 +145,8 @@ test('notices fade away by themselves: a bar hides, a line empties; a finger on 
 });
 
 test('About says what the app is, and ends with the version on its own line', () => {
-  assert.match($('#about-text').textContent, /^Noodle Pads\. Tap a pad, hold it to loop, record your own sounds and make beats\. Made by the Sandberg Family\.$/);
+  // Ben, 2026-10-16: drop "Noodle Pads." from the start.
+  assert.match($('#about-text').textContent, /^Tap a pad, hold it to loop, record your own sounds and make beats\. Made by the Sandberg Family\.$/);
   assert.equal($('#about-version').textContent, 'dev copy');
 });
 
@@ -158,7 +159,7 @@ test('every Settings section but About folds under its heading, and the device r
   try {
     const dialog = $('#settings-dialog');
     const folds = dialog.querySelectorAll('.set-fold');
-    assert.deepEqual(folds.map((s) => s.id), ['set-sharing', 'set-backups', 'set-older', 'set-beats', 'set-keys']);
+    assert.deepEqual(folds.map((s) => s.id), ['set-sharing', 'set-backups', 'set-older', 'set-beats', 'set-keys', 'set-data']);
     assert.equal($('#about-text').closest('.set-fold'), null, 'About is always open');
     for (const s of folds) {
       const head = s.querySelector('.set-head');
@@ -251,7 +252,7 @@ test('Send problem reports is a checkbox under Share play data, off by default, 
   const sw = $('#send-logs');
   assert.equal($('#set-reports'), null, 'no Problem reports fold');
   assert.equal(sw.getAttribute('role'), null, 'a checkbox, not a switch');
-  assert.equal(sw.closest('.set-fold'), null);
+  assert.equal(sw.closest('.set-fold'), $('#set-data'), 'in 📊 Play data & reports');
   const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
   assert.match(html, /id="share-usage"> 📊 Share play data<\/label>\s*<label class="set-check"><input type="checkbox" id="send-logs" aria-describedby="send-logs-grownup"> 📮 Send problem reports<\/label>\s*<p class="field-hint set-check-hint" id="send-logs-grownup">Ask a grown-up before you turn this on\.<\/p>/);
   assert.doesNotMatch(html, /never hold sounds|go only to Ben/, 'what a report holds is in the policy');
@@ -283,27 +284,36 @@ test('Send problem reports is a checkbox under Share play data, off by default, 
   $('#settings-dialog').close();
 });
 
-// Ben, 2026-10-16: "use B and 'Share play data' everywhere"; then "play data
-// should be a check box at the bottom, not a collapsing pane". On by default;
-// off sends nothing; the Privacy policy is linked right under it.
-test('📊 Share play data is a plain checkbox in About, above the version and the Privacy policy, on by default', async () => {
-  assert.equal($('#set-usage'), null, 'no 📊 Play data fold');
+// Ben, 2026-10-16: "use B and 'Share play data' everywhere"; then "put the
+// choices in a collapsing pane": 📊 Play data & reports, the last fold before
+// About, holds both checkboxes and the Privacy policy link under them.
+test('📊 Share play data is a checkbox in 📊 Play data & reports, the last fold, on by default', async () => {
+  const fold = $('#set-data');
+  const folds = $('#settings-dialog').querySelectorAll('.set-fold');
+  assert.equal(folds[folds.length - 1], fold, 'the last fold, right above About');
+  assert.equal($('#set-data-title').textContent, '📊 Play data & reports');
   const sw = $('#share-usage');
   assert.equal(sw.getAttribute('type'), 'checkbox');
   assert.equal(sw.getAttribute('role'), null, 'a checkbox, not a switch');
-  assert.equal(sw.closest('.set-fold'), null, 'not inside a fold');
-  assert.ok($('#about-text').parent.contains(sw), 'in About, at the bottom');
+  assert.equal(sw.closest('.set-fold'), fold);
+  assert.ok(fold.contains($('#send-logs')), 'with 📮 Send problem reports');
   const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
   assert.match(html, /<label class="set-check"><input type="checkbox" id="share-usage"> 📊 Share play data<\/label>/, 'its name only');
-  const at = (s) => html.indexOf(s);
-  assert.ok(at('id="share-usage"') < at('id="send-logs"') && at('id="send-logs"') < at('<p class="set-version">'), 'then 📮 Send problem reports, then the version and the Privacy policy');
+  const body = html.slice(html.indexOf('id="set-data-body"'), html.indexOf('</section>', html.indexOf('id="set-data-body"')));
+  const at = (s) => body.indexOf(s);
+  assert.ok(at('id="share-usage"') >= 0 && at('id="share-usage"') < at('id="send-logs"') && at('id="send-logs"') < at('id="data-policy"'), 'then 📮 Send problem reports, then the Privacy policy');
+  assert.match(body, /<a class="privacy-link" id="data-policy" href="https:\/\/privacy\.pdxfixit\.com\/noodlepads\/" target="_blank" rel="noopener">Privacy policy<\/a>/);
   assert.equal(getSetting('sendUsage'), true);
   $('#settings-open').dispatch('click');
   assert.equal(sw.checked, true);
+  assert.equal($('#set-data').querySelector('.set-head-chip').textContent, '📊 On');
+  const { dataChip } = await import('../web/settings-ui.js');
+  assert.deepEqual([dataChip(true, true), dataChip(false, true), dataChip(false, false)], ['📊📮 On', '📮 On', 'Off']);
   sw.checked = false;
   sw.dispatch('change');
   await page.settle();
   assert.strictEqual(getSetting('sendUsage'), false);
+  assert.equal($('#set-data').querySelector('.set-head-chip').textContent, 'Off', 'the chip says both at a glance');
   sw.checked = true;
   sw.dispatch('change');
   await page.settle();
