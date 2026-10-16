@@ -38,11 +38,10 @@ Saving a beat as a sound (resampling) already exists.
 
 ## Options turned down
 
-- **A lessons mode or tutorials.** Ben wants learning through use, not instruction.
+- **A lessons mode.** Ben wants learning through use, not instruction. The first steps have a welcome and one-time tips ([ADR 0028](0028-welcome-and-tips.md)).
 - **Producer tools in the main view.** They would crowd out a 10-year-old.
 
 ## Consequences
 
 - Every new feature asks: does the simple path still sound good, and is the depth hidden until wanted?
 - Stored beats grow new fields (accents, swing, notes, song chains). Each needs `cleanPattern` support, and old beats and backups must keep loading.
-- Revisit if a kid gets stuck: some explicit help may earn its place.
