@@ -175,6 +175,8 @@ export const HELP = [
       { pic: [seg('S', 'M', 'L')], text: 'Pad size, on a phone or tablet.' },
       { pic: [seg('⌨️', '👆')], text: 'Play on the keys, laid out like a keyboard, or on 👆 big tiles in groups, no keyboard needed. This device remembers which; a phone starts on 👆. The same on 🥁 Beats with ⌨️ Keys on.' },
       { pic: [key('', '🦶', 'Kick'), key('', '🥁', 'Snare')], text: 'With 👆: tap a tile to play it; hold one (or Shift-click it) to keep it going. Each group has its own band, its name on top, its tiles all one size.' },
+      { pic: [tool('✏️ Edit layout')], text: 'With 👆, ✏️ in the corner builds the touch layout. Each group is a band: ⠿ moves it (drag it, or ↑ ↓), S M L sizes its tiles, ✕ takes it away (tap twice; ↩️ Undo brings it back). + Add a group puts one at the bottom, at most 8; + more adds more of its sounds. Tap a tile to swap its sound, or 🗑️ Take it out.' },
+      { pic: [word('⭐ My layout'), word('🎸 Band')], text: 'In ✏️ Edit layout, tap a layout to load it. The one you built is kept as ⭐ My layout, so nothing is lost. ⭐ Save this layout names yours. The same layout plays on 🥁 Beats with ⌨️ Keys on.' },
       { pic: [word('⚙️ ⌨️ Keyboard')], text: 'In ⚙️ Settings: pick your keyboard so the letters on the keys match yours.' },
       { pic: [tool('✏️ Edit keys')], text: 'Arrange the keys. Layouts on top load a whole keyboard; Sounds below go on one key at a time, or a group on a row. The same keys play on 🥁 Beats with ⌨️ Keys on.' },
       { pic: [word('⭐ My keys'), word('🥁 Beat lab')], text: 'Tap a layout to load it. Your own keys are kept as ⭐ My keys, so nothing is lost. ⭐ Save this layout names yours.' },

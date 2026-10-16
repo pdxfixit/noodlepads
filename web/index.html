@@ -834,6 +834,44 @@
     </div>
   </dialog>
 
+  <!-- ✏️ Edit layout: the 👆 touch layout's own focused view (ADR 0028), as ✏️ Edit keys is the keys'. -->
+  <dialog id="touch-edit" aria-labelledby="touch-edit-title">
+    <div class="ke-body te-body">
+      <div class="ke-head">
+        <h2 id="touch-edit-title">✏️ Edit layout</h2>
+        <button type="button" class="seq-tool ke-done" data-close>✅ Done</button>
+      </div>
+      <section class="ke-layouts" aria-labelledby="te-layouts-title">
+        <h3 class="ke-title" id="te-layouts-title">Layouts</h3>
+        <div class="ke-layout-list" id="te-layouts" role="group" aria-labelledby="te-layouts-title"></div>
+        <div class="ke-line" id="te-save-line" hidden>
+          <input class="beat-name" id="te-save-name" maxlength="24" autocomplete="off" placeholder="Name this layout" aria-label="Name this layout">
+          <button type="button" class="seq-tool" id="te-save-ok">⭐ Save</button>
+          <button type="button" class="seq-tool" id="te-save-cancel">Cancel</button>
+        </div>
+        <div class="ke-line" id="te-own-line" hidden>
+          <input class="beat-name" id="te-rename" maxlength="24" autocomplete="off" aria-label="This layout's name (type to rename it)">
+          <button type="button" class="seq-tool" id="te-delete">🗑️ Delete</button>
+        </div>
+      </section>
+      <section class="te-groups" aria-labelledby="te-bands-title">
+        <h3 class="ke-title" id="te-bands-title">Groups, top to bottom</h3>
+        <div class="te-bands" id="te-bands"></div>
+        <div class="ke-bar">
+          <p class="ke-note" id="te-note" role="status"></p>
+          <span class="ke-bar-buttons">
+            <button type="button" class="seq-tool" id="te-undo" disabled>↩️ Undo</button>
+          </span>
+        </div>
+      </section>
+      <section class="te-adding" aria-labelledby="te-add-title">
+        <h3 class="ke-title" id="te-add-title">+ Add a group</h3>
+        <p class="ke-hint" id="te-add-hint"></p>
+        <div class="ke-groups" id="te-add" role="group" aria-labelledby="te-add-title"></div>
+      </section>
+    </div>
+  </dialog>
+
   <dialog id="chooser" aria-labelledby="chooser-title">
     <div class="chooser-body">
       <div class="sheet-head">

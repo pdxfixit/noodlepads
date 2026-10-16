@@ -29,7 +29,7 @@ import { countPlay } from './play-count.js';
 import { makeVoice, fadeStop } from './audio.js';
 import { fingerTaps, isFinger } from './finger.js';
 import { soundsOf, defaultTouch, touchOrder, touchSounds } from './touch.js';
-import { drawBands } from './dj-touch.js';
+import { drawBands, createTouchEditor } from './dj-touch.js';
 
 const STOPS = tempoStops();   // the click track slider's positions (see sequencer.js)
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
@@ -127,6 +127,8 @@ export function createDJ({ el, deps }) {
     el.keys.hidden = touch;
     el.touch.hidden = !touch;
     for (const b of el.input.querySelectorAll('[data-input]')) b.setAttribute('aria-pressed', String(b.dataset.input === inputNow()));
+    // ✏️ in the corner edits what shows: the keys, or the touch layout.
+    el.change.textContent = touch ? '✏️ Edit layout' : '✏️ Edit keys';
     if (touch) drawBands(el.touch, touchNow(), { clipById: deps.clipById, family, kitGroups: () => deps.kitGroups?.() ?? [], isLooping: deps.isLooping });
     for (const b of el.size.querySelectorAll('[data-size]')) b.setAttribute('aria-pressed', String(b.dataset.size === size));
     el.keys.replaceChildren(...KEY_ROWS.map((codes, r) => {
@@ -412,9 +414,31 @@ export function createDJ({ el, deps }) {
       closed: () => render(),
     },
   });
+  // ── ✏️ Edit layout: the touch layout's own view (dj-touch.js, ADR 0028) ──
+  const touchEditor = createTouchEditor({
+    el: el.touchEdit,
+    deps: {
+      personId: deps.personId,
+      clipById: deps.clipById,
+      family,
+      kitGroups: () => deps.kitGroups?.() ?? [],
+      sounds: () => soundsNow(),
+      touch: () => touchNow(),
+      // The beat's rows follow the bands, so they redraw too.
+      saveTouch: (t) => { const pid = deps.personId(); deps.saveDeck(pid, deps.savedDeck(pid)?.keys ?? {}, { touch: t }); if (mode === 'beat') renderGrid(); },
+      mine: () => deps.savedDeck(deps.personId())?.touchMine ?? null,
+      saveMine: (t) => { const pid = deps.personId(); deps.saveDeck(pid, deps.savedDeck(pid)?.keys ?? {}, { touchMine: t }); },
+      layouts: (pid) => deps.touchLayouts?.(pid) ?? [],
+      saveLayout: (l) => deps.saveTouchLayout?.(l),
+      deleteLayout: (id) => deps.deleteTouchLayout?.(id),
+      preview: (clip) => deps.playOnce(clip),
+      closed: () => render(),
+    },
+  });
   el.change.addEventListener('click', () => {
     letGo();
-    editor.open();
+    if (touching()) touchEditor.open();
+    else editor.open();
   });
   el.tabs.addEventListener('click', (e) => {
     const t = e.target.closest('[data-row]');
