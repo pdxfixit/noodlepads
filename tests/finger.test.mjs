@@ -148,3 +148,34 @@ test('a mouse still plays on press', () => {
   page.winEvent('pointerup', { pointerType: 'mouse', pointerId: 39, clientX: 0, clientY: 0 });
   assert.equal(calls.length, 1);
 });
+
+// 🎤 Live's keys wait for the lift too (Ben, 2026-10-16: "to avoid confusion with scrolling").
+test('a finger on a Live key plays on the lift; a scroll or a cancel plays nothing; held, it loops', async () => {
+  $('#live-tab').dispatch('click');
+  const key = $('#dj-keys').querySelector('[data-code="KeyA"]');
+  calls.length = 0;
+  key.dispatch('pointerdown', touch({ pointerId: 41 }));
+  assert.deepEqual(calls, [], 'nothing on touch-down');
+  page.winEvent('pointerup', touch({ pointerId: 41, clientX: 104 }));
+  assert.equal(calls.length, 1, JSON.stringify(calls));
+  const [[what, id]] = calls;
+  assert.equal(what, 'play');
+  calls.length = 0;
+  key.dispatch('pointerdown', touch({ pointerId: 42 }));
+  page.winEvent('pointermove', touch({ pointerId: 42, clientY: 150 }));
+  page.winEvent('pointerup', touch({ pointerId: 42, clientY: 150 }));
+  key.dispatch('pointerdown', touch({ pointerId: 43 }));
+  page.winEvent('pointercancel', touch({ pointerId: 43 }));
+  page.winEvent('pointerup', touch({ pointerId: 43 }));
+  assert.deepEqual(calls, [], 'a scroll starting on a key stays silent');
+  key.dispatch('pointerdown', touch({ pointerId: 44 }));
+  await wait(400);   // past HOLD_TO_LOOP_MS (350)
+  assert.deepEqual(calls.at(-1), ['loop', id]);
+  const n = calls.length;
+  page.winEvent('pointerup', touch({ pointerId: 44 }));
+  assert.equal(calls.length, n, 'the lift adds nothing');
+  key.dispatch('pointerdown', touch({ pointerId: 45 }));
+  page.winEvent('pointerup', touch({ pointerId: 45 }));
+  assert.deepEqual(calls.at(-1), ['stop', id], 'a tap on the looping key stops it');
+  $('#pads-toggle')?.dispatch('click');
+});

@@ -1,6 +1,7 @@
-// A finger on a pad (Pads and 🧸 Kids): it sounds when it lifts where it
-// landed, so a scroll or a swipe that starts on a pad never plays it (Ben,
-// 2026-10-13: "dragging a finger should not trigger a sound"). A mouse and
+// A finger on a pad (Pads and 🧸 Kids) or a key (🎤 Live, Beats with ⌨️
+// Keys): it sounds when it lifts where it landed, so a scroll or a swipe
+// that starts on one never plays it (Ben, 2026-10-13: "dragging a finger
+// should not trigger a sound"; 2026-10-16 for the keys). A mouse and
 // the keyboard still play on press; the callers keep that path.
 // Each finger is followed on its own, by pointer id, so two thumbs work.
 
