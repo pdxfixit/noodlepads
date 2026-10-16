@@ -29,6 +29,7 @@ export const state = {
   cloud: new Map(),       // IndexedDB "cloud": person id -> {id, key, rev, sent, sounds, pin, remember, check}, this device's link to their profile (cloud.js)
   prefs: new Map(),       // IndexedDB "prefs": person id -> {personId, values: {advancedBeats, padSize, …}}, read through settings.js
   layouts: [],            // IndexedDB "layouts": {id, personId, name, created, keys: {KeyA: clipId | null}}, saved DJ key layouts (keyset.js)
+  touchLayouts: [],       // IndexedDB "touchLayouts": {id, personId, name, created, bands: [{group, size, sounds}]}, saved 👆 touch layouts (touch.js, ADR 0028)
   myVoices: [],           // IndexedDB "voices": {id, personId, name, emoji, knobs, created, used}, a kid's own voices (voice-knobs.js)
   version: 'dev',         // from version.json, written by `just deploy`
   screen: 'pads',         // which screen shows: 'pads', 'beats' (the beat maker) or 'dj'
@@ -48,7 +49,7 @@ const wouldNotSave = (err) => (storageWaiting
 // Reads every store into state; also used after loading a backup.
 export async function readStorage() {
   // `bases` is cloud sync's own (cloud.js), read only by the sync.
-  const [clips, overrides, orders, patterns, beats, peopleEdits, settings, decks, takes, songs, songbook, cloud, prefs, layouts, voices] = await Promise.all(
+  const [clips, overrides, orders, patterns, beats, peopleEdits, settings, decks, takes, songs, songbook, cloud, prefs, layouts, voices, touchLayouts] = await Promise.all(
     STORE_NAMES.filter((s) => s !== 'bases').map((s) => db.all(s)));
   state.userClips = clips;
   state.overrides = new Map(overrides.map((o) => [o.id, o]));
@@ -65,6 +66,7 @@ export async function readStorage() {
   state.prefs = new Map(prefs.map((p) => [p.personId, p]));
   state.layouts = layouts;
   state.myVoices = voices;
+  state.touchLayouts = touchLayouts;
 }
 
 // The stores as lists, the way a backup holds them (ids only matter here).
@@ -73,7 +75,7 @@ function storedLists() {
     people: [...state.peopleEdits.values()], clips: state.userClips, overrides: [...state.overrides.values()],
     orders: [...state.orders.values()], patterns: [...state.patterns.values()], beats: state.savedBeats,
     decks: [...state.decks.values()], takes: state.takes, songs: [...state.songs.values()], songbook: state.songbook,
-    prefs: [...state.prefs.values()], layouts: state.layouts, voices: state.myVoices,
+    prefs: [...state.prefs.values()], layouts: state.layouts, voices: state.myVoices, touchLayouts: state.touchLayouts,
   };
 }
 
@@ -298,6 +300,7 @@ export async function deletePerson(id) {
   for (const t of theirs(state.takes)) await db.remove('takes', t.id).catch(() => {});
   for (const l of theirs(state.layouts)) await db.remove('layouts', l.id).catch(() => {});
   for (const v of theirs(state.myVoices)) await db.remove('voices', v.id).catch(() => {});
+  for (const l of theirs(state.touchLayouts)) await db.remove('touchLayouts', l.id).catch(() => {});
   await db.remove('people', id).catch((err) => console.error('Deleting a person failed:', err));
   state.userClips = state.userClips.filter((c) => c.personId !== id);
   state.savedBeats = state.savedBeats.filter((b) => b.personId !== id);
@@ -310,6 +313,7 @@ export async function deletePerson(id) {
   state.takes = state.takes.filter((t) => t.personId !== id);
   state.layouts = state.layouts.filter((l) => l.personId !== id);
   state.myVoices = state.myVoices.filter((v) => v.personId !== id);
+  state.touchLayouts = state.touchLayouts.filter((l) => l.personId !== id);
   state.peopleEdits.delete(id);
   if (state.manifest.people.some((p) => p.id === id)) await setPersonEdit(id, { hidden: true });
   return goneClips;

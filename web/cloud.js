@@ -224,7 +224,7 @@ const storedLists = () => ({
   decks: [...state.decks.values()], takes: state.takes, songs: [...state.songs.values()], songbook: state.songbook,
   // Only the settings that travel: a person's DJ keyboard from before stays behind.
   prefs: [...state.prefs.values()].map(cleanPrefs),
-  layouts: state.layouts, voices: state.myVoices,
+  layouts: state.layouts, voices: state.myVoices, touchLayouts: state.touchLayouts,
 });
 
 async function sha256(blob) {

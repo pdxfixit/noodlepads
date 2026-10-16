@@ -23,6 +23,8 @@
 //              sync, the base of the three-way merge (merge3.js):
 //              {id: "<person>|<kind>:<record id>", personId, body}
 //              (never in backups, and never read into the app's state)
+//   touchLayouts  a person's saved 👆 touch layouts: {id, personId,  key id
+//              name, created, bands} (touch.js, ADR 0028)
 
 // Named when the app moved to noodlepads.com, where nothing was stored yet.
 // A database an older copy left under the old name is only read, by
@@ -49,6 +51,7 @@ export const SCHEMA = [
   { name: 'layouts', keyPath: 'id', since: 12 },     // DJ mode: a person's saved key layouts (ADR 0014)
   { name: 'voices', keyPath: 'id', since: 13 },      // a kid's own voices, knob settings with a name (voice-knobs.js)
   { name: 'bases', keyPath: 'id', since: 14 },       // cloud sync: each record as last synced, for the three-way merge (merge3.js)
+  { name: 'touchLayouts', keyPath: 'id', since: 15 }, // a person's saved 👆 touch layouts (ADR 0028)
 ];
 
 export const DB_VERSION = Math.max(...SCHEMA.map((s) => s.since));

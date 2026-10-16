@@ -677,6 +677,24 @@ test('saved DJ key layouts and ⭐ My keys round-trip in a backup, cleaned; stra
   assert.deepEqual((await read({})).layouts, [], 'a backup from before layouts loads');
 });
 
+test('👆 touch layouts round-trip in a backup, cleaned: the live one and ⭐ My layout on the deck, the saved ones; strangers\' and broken ones dropped; older backups load (ADR 0028)', async () => {
+  const saved = { id: 'touch-q-1', personId: 'pip', name: '  Jam   pads ', created: 3, bands: [{ group: 'drums', size: 'l', sounds: ['pip-kick', 'pip-kick', 7] }, { group: '<b>', size: 'm', sounds: [] }] };
+  const touch = { bands: [{ group: 'mine', size: 'x', sounds: ['pip-airhorn'] }] };
+  const state = {
+    people: [{ id: 'pip', name: 'Pipsqueak', color: '#1F3FA8' }], clips: [], overrides: [], orders: [], patterns: [], beats: [],
+    decks: [{ personId: 'pip', keys: {}, touch, touchMine: { bands: [] } }],
+    touchLayouts: [saved, { ...saved, id: 'touch-q-2', personId: 'A stranger' }, { ...saved, id: '../evil' }, { ...saved, id: 'touch-q-3', bands: 'nope' }],
+  };
+  const out = await readBackup(await makeBackup(state), bundled());
+  assert.deepEqual(out.touchLayouts, [{ id: 'touch-q-1', personId: 'pip', name: 'Jam pads', created: 3, bands: [{ group: 'drums', size: 'l', sounds: ['pip-kick'] }] }]);
+  assert.equal(out.skipped, 3);
+  assert.deepEqual(out.decks[0].touch, { bands: [{ group: 'mine', size: 'm', sounds: ['pip-airhorn'] }] }, 'an unknown size is M');
+  assert.deepEqual(out.decks[0].touchMine, { bands: [] });
+  assert.deepEqual((await read({})).touchLayouts, [], 'a backup from before touch layouts loads');
+  const older = await read({ people: [{ id: 'pip', name: 'Pipsqueak' }], decks: [{ personId: 'pip', keys: { KeyA: 'pip-kick' } }] });
+  assert.deepEqual(older.decks[0], { personId: 'pip', keys: { KeyA: 'pip-kick' } }, 'a deck from before has no touch layout: the default plays');
+});
+
 test("a kid's own voices round-trip in a backup, cleaned; strangers' and broken ones dropped; older backups load", async () => {
   const mine = { id: 'voice-q-1', personId: 'pip', name: 'Squeaky', emoji: '🦄', knobs: { pitch: 7, echo: 2, nonsense: 4 }, created: 3, used: 4 };
   const state = {

@@ -38,7 +38,7 @@ test('a held-up database: the board goes ahead with a note, and the data arrives
   assert.equal(late, 1);
   assert.equal(box.hidden, true);                                 // the note is put away
   assert.equal(state.settings.size, 0);                            // and storage was read
-  assert.equal(STORE_NAMES.length, 16);
+  assert.equal(STORE_NAMES.length, 17);
   db.handle = null;
 });
 

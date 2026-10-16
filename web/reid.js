@@ -15,7 +15,7 @@ export const isCloudId = (id) => typeof id === 'string' && CLOUD_ID.test(id);
 // The stores that hold or name people, as a backup holds them (`cloud`, the
 // device's links, is dropped for a renamed person, state.js; `settings`
 // names no one).
-export const PERSON_STORES = ['people', 'clips', 'overrides', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices'];
+export const PERSON_STORES = ['people', 'clips', 'overrides', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices', 'touchLayouts'];
 
 // One id after the rename: the person's own id, or one made from it (their
 // copy of the kit, `<from>-kick` -> `<to>-kick`). Anything else is unchanged.

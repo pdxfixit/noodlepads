@@ -57,7 +57,7 @@ const storedLists = () => ({
   settings: [...state.settings].map(([key, value]) => ({ key, value })),
   decks: [...state.decks.values()], takes: state.takes, songs: [...state.songs.values()], songbook: state.songbook,
   prefs: [...state.prefs.values()],
-  layouts: state.layouts, voices: state.myVoices,
+  layouts: state.layouts, voices: state.myVoices, touchLayouts: state.touchLayouts,
 });
 
 // A sound's audio as bytes in this page's memory. Audio read from another

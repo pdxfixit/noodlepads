@@ -10,8 +10,8 @@ const fakeDatabase = () => {
 
 test('the database is noodle-pads (new at noodlepads.com), at the version older data upgrades to', () => {
   assert.equal(DB_NAME, 'noodle-pads');
-  assert.equal(DB_VERSION, 14);
-  assert.deepEqual(STORE_NAMES, ['clips', 'overrides', 'orders', 'patterns', 'beats', 'people', 'settings', 'decks', 'takes', 'songs', 'songbook', 'cloud', 'prefs', 'layouts', 'voices', 'bases']);
+  assert.equal(DB_VERSION, 15);
+  assert.deepEqual(STORE_NAMES, ['clips', 'overrides', 'orders', 'patterns', 'beats', 'people', 'settings', 'decks', 'takes', 'songs', 'songbook', 'cloud', 'prefs', 'layouts', 'voices', 'bases', 'touchLayouts']);
 });
 
 test('a new database gets every store, with the keys older versions used', () => {
@@ -34,26 +34,28 @@ test('a new database gets every store, with the keys older versions used', () =>
     { name: 'layouts', keyPath: 'id' },
     { name: 'voices', keyPath: 'id' },
     { name: 'bases', keyPath: 'id' },
+    { name: 'touchLayouts', keyPath: 'id' },
   ]);
 });
 
 test('each older database gets only the stores that came after it', () => {
   const upgraded = (from) => { const d = fakeDatabase(); upgradeStores(d, from); return d.created.map((s) => s.name); };
-  const dj = ['decks', 'takes', 'songs', 'songbook', 'cloud', 'prefs', 'layouts', 'voices', 'bases'];
+  const dj = ['decks', 'takes', 'songs', 'songbook', 'cloud', 'prefs', 'layouts', 'voices', 'bases', 'touchLayouts'];
   assert.deepEqual(upgraded(1), ['orders', 'patterns', 'beats', 'people', 'settings', ...dj]);
   assert.deepEqual(upgraded(2), ['patterns', 'beats', 'people', 'settings', ...dj]);
   assert.deepEqual(upgraded(3), ['beats', 'people', 'settings', ...dj]);
   assert.deepEqual(upgraded(4), ['people', 'settings', ...dj]);
   assert.deepEqual(upgraded(5), ['settings', ...dj]);
   assert.deepEqual(upgraded(6), dj);
-  assert.deepEqual(upgraded(7), ['songs', 'songbook', 'cloud', 'prefs', 'layouts', 'voices', 'bases']);
-  assert.deepEqual(upgraded(8), ['songbook', 'cloud', 'prefs', 'layouts', 'voices', 'bases'], 'a database with one song per person keeps it; the app lists it on open');
-  assert.deepEqual(upgraded(9), ['cloud', 'prefs', 'layouts', 'voices', 'bases']);
-  assert.deepEqual(upgraded(10), ['prefs', 'layouts', 'voices', 'bases'], "a person's settings start empty: they read the device's older choices");
-  assert.deepEqual(upgraded(11), ['layouts', 'voices', 'bases'], 'saved DJ key layouts start empty');
-  assert.deepEqual(upgraded(12), ['voices', 'bases'], "a kid's own voices (⭐ Save voice) start empty; nothing else is touched");
-  assert.deepEqual(upgraded(13), ['bases'], 'sync bases start empty: the first sync after keeps them, and until then the hashes in `cloud` decide');
-  assert.deepEqual(upgraded(14), []);
+  assert.deepEqual(upgraded(7), ['songs', 'songbook', 'cloud', 'prefs', 'layouts', 'voices', 'bases', 'touchLayouts']);
+  assert.deepEqual(upgraded(8), ['songbook', 'cloud', 'prefs', 'layouts', 'voices', 'bases', 'touchLayouts'], 'a database with one song per person keeps it; the app lists it on open');
+  assert.deepEqual(upgraded(9), ['cloud', 'prefs', 'layouts', 'voices', 'bases', 'touchLayouts']);
+  assert.deepEqual(upgraded(10), ['prefs', 'layouts', 'voices', 'bases', 'touchLayouts'], "a person's settings start empty: they read the device's older choices");
+  assert.deepEqual(upgraded(11), ['layouts', 'voices', 'bases', 'touchLayouts'], 'saved DJ key layouts start empty');
+  assert.deepEqual(upgraded(12), ['voices', 'bases', 'touchLayouts'], "a kid's own voices (⭐ Save voice) start empty; nothing else is touched");
+  assert.deepEqual(upgraded(13), ['bases', 'touchLayouts'], 'sync bases start empty: the first sync after keeps them, and until then the hashes in `cloud` decide');
+  assert.deepEqual(upgraded(14), ['touchLayouts'], 'saved 👆 touch layouts start empty (ADR 0028); nothing else is touched');
+  assert.deepEqual(upgraded(15), []);
 });
 
 test('upgrading never creates a store twice, whichever version it starts from', () => {
@@ -66,7 +68,7 @@ test('upgrading never creates a store twice, whichever version it starts from', 
 
 test('stores were introduced in order, one version at a time', () => {
   const versions = [...new Set(SCHEMA.map((s) => s.since))];
-  assert.deepEqual(versions, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+  assert.deepEqual(versions, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
 });
 
 test('reading or writing before the database is open fails clearly, not silently', async () => {
