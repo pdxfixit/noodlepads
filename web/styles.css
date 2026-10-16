@@ -2736,7 +2736,8 @@ dialog.np-dialog .set-buttons .quiet { justify-content: center; }
   font-size: 0.75rem; line-height: 16px; opacity: 0.8;
 }
 .page-foot .privacy-link:hover { opacity: 1; }
-.set-version .privacy-link { display: inline-flex; align-items: center; min-height: 44px; }
+.set-version .privacy-link, .set-policy .privacy-link { display: inline-flex; align-items: center; min-height: 44px; }
+.set-policy { margin: 4px 0 0; }
 
 /* Pad size: one smooth slider beside ✏️ Edit sounds, a small and a big
    square at its ends. It takes the room Edit sounds leaves, up to 240 px. */
