@@ -57,11 +57,10 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **More kinds of music** (Ben, 2026-10-17: approved all four; the goal is both trying many styles and learning how music works). Waits on a design review of where it all goes (Ben has UI/UX concerns), then his OK on the mockups:
-  1. Hand-played percussion and mallets (steel drum, kalimba, marimba, taiko, djembe, tabla-like, dhol), made in `tools/make_placeholders.py`, and grooves they bring (bhangra, soca, taiko, Afrobeats/amapiano).
-  2. A pentatonic note set for 🧸 Kids: no wrong notes.
-  3. Grooves for R&B/soul, gospel, country/bluegrass, K-pop, chiptune, Jersey club.
-  4. Real instruments (piano, strings, brass, flute, guitar) from public-domain samples (check the license first), within the presets' size budget.
+- **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups). Waits on his answer to the emoji rule's exceptions. Grooves first, then:
+  1. Regroup 💃 Grooves into 7 style groups, one-line blurbs and "who plays" chips, 🆕 until first played; new grooves with today's sounds plus 🪘 Hand drums (taiko, djembe, log drum…; drop any that sound thin).
+  2. Instruments as who plays Notes, Chords, Bass (ADR 0030): generated mallets, chip, guitar; piano, strings, brass, flute from public-domain samples (check the license first); then give Motown, Lo-fi and Reggae real instruments, and add the grooves that need them (soca, chiptune).
+  3. 🧸 Kids: pentatonic toy keys and the round instrument button.
 
 
 
