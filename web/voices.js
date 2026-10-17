@@ -6,6 +6,7 @@ import { logEvent } from './log.js';
 import { stretchChannels } from './stretch.js';
 import { KINDS, kindById, cleanStep, stepKey, buildLive, tailOf, splitChain, isLive } from './steps.js';
 import { tweakSteps, tweakGain, tweaksKey, cleanTweaks } from './tweaks.js';
+import { softLimit } from './loudness.js';
 
 export const VOICES = [
   { id: 'normal', name: 'Normal', emoji: '🙂' },
@@ -717,12 +718,8 @@ export function audibleSpan(channels, rate, quiet = FINISH_QUIET, lead = LEAD_SE
   return { from: Math.max(0, first - Math.round(lead * rate)), to: Math.min(n, last + 1 + Math.round(tail * rate)) };
 }
 
-// A soft ceiling for audio that keeps its own level: under 0.9 it is
-// untouched; above, it bends smoothly toward 1 instead of clipping.
-export function softLimit(v) {
-  const a = Math.abs(v);
-  return a <= 0.9 ? v : Math.sign(v) * (0.9 + 0.1 * Math.tanh((a - 0.9) / 0.1));
-}
+// softLimit (loudness.js) is the soft ceiling for audio that keeps its own level.
+export { softLimit };
 
 function finish(buffer, { trim = true, level = true } = {}) {
   const channels = Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c));

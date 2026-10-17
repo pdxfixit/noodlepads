@@ -309,3 +309,78 @@ test('wave editor: Undo walks back through edits and fades to how the sheet open
   const saved = state.overrides.get(id) ?? state.userClips.find((c) => c.id === id);
   assert.ok(!saved?.edits && !saved?.fade, JSON.stringify(saved));
 });
+
+// ── 🔊 Even it out: on a kid's own sound only ──
+
+test('🔊 Even it out: presets never show it; a quiet recording of a kid\'s own comes out as loud as the presets, once, and Undo takes it back', async () => {
+  const { loudness, PRESET_LOUDNESS } = await import('../web/loudness.js');
+  const { currentPerson } = await import('../web/board.js');
+  const { renderPads } = await import('../web/pads.js');
+  await setSetting('advancedBeats', true);
+
+  // A preset: the trim editor, but no Even it out.
+  await openEditor();
+  $('#trim-btn').dispatch('click');
+  await page.settle();
+  view('part').dispatch('click');
+  assert.equal($('#cut-edits').hidden, false);
+  assert.equal($('#cut-even').hidden, true, 'presets never offer it');
+  $('#sheet').close();
+
+  // A kid's own recording: quiet talking (a soft hum) with one loud clap, which sets the peak.
+  const d = Array.from({ length: 2 * RATE }, (_, i) => 0.06 * Math.sin(2 * Math.PI * 300 * i / RATE));
+  for (let i = 0; i < 0.03 * RATE; i++) d[RATE + i] += 0.87 * Math.sin(2 * Math.PI * 1500 * i / RATE) * Math.exp(-i / (0.003 * RATE));
+  const quiet = fakeBuffer([d], RATE);
+  const clip = { id: 'user-even-1', personId: currentPerson().id, label: 'Hum', emoji: '🐝', color: 'red', created: 1, blob: new Blob(['x']), mime: 'audio/webm', voice: 'normal' };
+  state.userClips.push(clip);
+  renderPads();
+  const decoded = audio.decoded;
+  audio.decoded = async (c) => (c?.id === clip.id ? quiet : recording);
+  try {
+    if (!document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+    audio.forget(clip.id);
+    pads().find((p) => p.dataset.id === clip.id).parent.querySelector('[data-edit]').dispatch('click');
+    await page.settle();
+    $('#trim-btn').dispatch('click');
+    await page.settle();
+    view('part').dispatch('click');
+    assert.equal($('#cut-even').hidden, false, 'a kid\'s own sound has it');
+    assert.equal($('#cut-undo').disabled, true);
+
+    $('#cut-even').dispatch('click');
+    await page.settle();
+    assert.equal($('#cut-undo').disabled, false, 'one edit, which Undo takes back');
+    $('#cut-even').dispatch('click');   // again: already even, nothing added
+    await page.settle();
+    assert.equal($('#banner').hidden, false);
+    assert.match($('#banner-text').textContent, /already even/);
+    $('#cut-undo').dispatch('click');
+    await page.settle();
+    assert.equal($('#cut-undo').disabled, true, 'only the one edit was added');
+    $('#cut-even').dispatch('click');
+    await page.settle();
+    $('#cut-done').dispatch('click');
+    await page.settle();
+    $('#save-btn').closest('form').dispatch('submit');
+    await page.settle();
+
+    const saved = state.userClips.find((c) => c.id === clip.id);
+    assert.equal(saved.edits.length, 1);
+    const [e] = saved.edits;
+    assert.deepEqual([e.kind, e.start, e.end], ['gain', 0, 2], 'over the whole recording');
+    assert.ok(e.amount > 1 && e.amount < 8, `turned up: ${e.amount}`);
+    // What the voices start from, held under full scale as they play it, seems as loud as the presets.
+    audio.forget(clip.id);
+    const kept = await audio.original({ ...saved });
+    assert.equal(kept.keepLevel, true);
+    const before = loudness(quiet);   // its peak is already 0.9, as it played before
+    const after = loudness(kept, { limit: true });
+    assert.ok(before < PRESET_LOUDNESS - 6, `it started quiet: ${before}`);
+    assert.ok(Math.abs(after - PRESET_LOUDNESS) < 0.5, `${after} vs ${PRESET_LOUDNESS}`);
+  } finally {
+    audio.decoded = decoded;
+    if ($('#sheet').open) $('#sheet').close();
+    state.userClips = state.userClips.filter((c) => c.id !== clip.id);
+    renderPads();
+  }
+});

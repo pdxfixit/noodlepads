@@ -1935,6 +1935,8 @@ dialog#sheet .make :focus-visible { outline-color: #fff; }
 .cut-edits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 8px; }
 .cut-edits .chain-tool { padding: 4px 8px; line-height: 1.15; }
 .cut-edits .cut-keep { grid-column: 1 / -1; }
+/* 🔊 Even it out (a kid's own sound only) shares the last line with Keep only this. */
+.cut-edits .cut-even:not([hidden]) + .cut-keep { grid-column: auto; }
 .wave-handle[data-kind="fades"]::after { border-radius: 3px; transform: rotate(45deg); }
 
 .field { display: block; margin: 0 0 20px; padding: 0; border: 0; min-width: 0; }

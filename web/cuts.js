@@ -144,7 +144,9 @@ export const GAIN_STEP = 2;
 // turn a louder part into a quieter everything else. With a gain edit, the
 // kept audio is scaled by the *unedited* recording's peak instead, so the
 // rest sounds as it always does and the changed part really is louder or
-// quieter. `keepLevel` tells the voices not to level it again.
+// quieter. `keepLevel` tells the voices not to level it again. 🔊 Even it
+// out (chop.js) is a gain edit over the whole recording, so it keeps its
+// level the same way, and an older copy plays it as it is.
 export const hasGain = (edits) => Array.isArray(edits) && edits.some((e) => e?.kind === 'gain');
 export function levelForGain(kept, reference) {
   let peak = 0;
