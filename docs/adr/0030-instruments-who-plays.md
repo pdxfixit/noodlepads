@@ -1,6 +1,6 @@
 # 0030. 🎹 Instruments: who plays Notes, Chords and Bass
 
-- **Status:** Accepted, phase 1 built (the picker on Pads)
+- **Status:** Accepted, phases 1 and 2 built (the picker on Pads; then the sound chooser, 🎹 Add a tune and the roll, ✏️ Edit keys, 👆 bands, 🧸 Kids' instrument button)
 - **Date:** 2026-10-17
 - **Decided by:** Ben, 2026-10-17, accepting the design review (`docs/design/more-kinds-of-music.md`, section 1, option C) with his answers: instruments are a picker, remembered per person and synced; presets under 6 MB in all, 5 MB shown with Advanced off, one clip under 160 KB; a note keeps its fruit on every instrument, with a badge. Rows in [decisions.md](../decisions.md) (People and boards).
 
@@ -20,6 +20,7 @@
 - **Ids** never end in another kit id (`piano-am-chord`, not `piano-chord-am`), because lookups match `-<kit id>` at the end of a person's copy. A test holds this.
 - **Playing:** `audio.decoded` decodes a shared recording once (`audio.recordings`) and moves it by resampling, as a tune row's playbackRate does, summing a chord's notes and keeping the recording's peak (`instruments.js` `voice`). That is the preset's stored audio: trims, edits, voices and the mix work on it as on any sound.
 - **The pick** is three person settings, `instNotes`, `instChords`, `instBass` (`settings.js`), each defaulting to the group's own sound. They sync and ride in backups like every person setting. A value this copy doesn't know reads as the default.
+- **Everywhere else (phase 2):** the same picker, setting the same pick, on the beat row's sound chooser and ✏️ Edit keys; 🎹 Add a tune asks "Who plays it?". The piano roll's and a 👆 band's pickers also swap that tune row or band to the same notes on another instrument (`instruments.js` `versionFor`, by `plays`). The person's default keys and touch layout stay on the groups' own sounds (`clipsFor` `ownSounds`), because only keys that differ from the default are stored. 🧸 Kids' Keys has a round button stepping through Pluck, Piano, Marimba, Steel drum and Kalimba, as `instNotes`.
 - **What shows:** `board.js clipsFor` leaves out every other instrument's presets of those groups, wherever presets are listed (Pads, the sound chooser, ✏️ Edit keys, 👆 + more). Lookups that follow a reference (`allPresets`: a beat row, key, band or take) see every instrument's, so a sound already used keeps playing after another pick.
 - **The emoji rule's exception:** an instrument's preset wears its `plays` preset's emoji; every other preset's emoji is its own. The pad shows the instrument's emoji as a small badge at its top right.
 - **Problem reports** name an instrument's preset by its kit id, like any preset; the Worker's list (`worker/clean.js`) builds those ids with `kitIdsOf`.
@@ -36,4 +37,5 @@
 - A new note or chord for an instrument costs no bytes; a new instrument costs one or two recordings and a line in `kit_instruments.py`.
 - boards.json grows by 220 entries, all written by the tool; a test fails when it and the table disagree.
 - A recording moved far sounds stretched (a chipmunk up, a growl down). Piano and strings have two recordings each; the struck and plucked ones are generated and move cleanly. How each sounds is still to be heard on a phone.
-- Phase 2 (TODO.md): the picker in the beat row's sound chooser, 🎹 Add a tune and the roll, ✏️ Edit keys, 👆 bands, the groove cards' "who plays" chips, grooves with real instruments, Soca and Chiptune, and 🧸 Kids' instrument button. A tune row will want each instrument's preset to say its note (`root`), so the roll can swap instruments and keep every note.
+- The roll's swap needs no `root`: each instrument's preset plays exactly the note its `plays` preset plays, octave and all, so a tune row moved to the same note's preset sounds every note where it was. A `root` on the instrument presets alone would move a tune off a group's own note when swapped; on the groups' own presets too, it would move old tune rows on D to B.
+- Still to do (TODO.md): one ready-made key layout per family, the groove cards' "who plays" chips, grooves with real instruments, Soca and Chiptune.

@@ -81,6 +81,21 @@ export function instrumentKitId(inst, ownId) {
   return kind === 'chord' ? `${inst}-${rest.join('-')}-chord` : `${inst}-${rest.join('-')}`;
 }
 
+// The group's own preset an instrument's preset plays (`note-e` for
+// piano-e), or the preset itself when it is one of the group's own. `clip`
+// is a kit clip (boards.json's entry, or a person's copy with `kitId`).
+export const ownIdOf = (clip) => clip?.plays ?? clip?.kitId ?? clip?.id ?? null;
+
+// The kit id of `inst`'s copy of the group's own preset `ownId`: the same
+// note, chord or bass note on another instrument. The group's own sound
+// (Pluck, Synth) is `ownId` itself. Null when `inst` doesn't play `group`.
+// A tune row, key or band swapped this way keeps every note: each
+// instrument's preset plays exactly the note its `plays` preset plays.
+export function versionFor(ownId, group, inst) {
+  if (!Object.hasOwn(PLAYED, group) || !instrumentsFor(group).some((i) => i.id === inst)) return null;
+  return inst === PLAYED[group].default ? ownId : instrumentKitId(inst, ownId);
+}
+
 // Every instrument's preset ids, from the groups' own preset ids (`note-…`,
 // `chord-…`, `bass-…`; others are left out): the Worker's list of kit ids
 // (worker/clean.js), which cannot read boards.json.

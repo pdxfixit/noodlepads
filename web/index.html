@@ -358,6 +358,10 @@
       <div class="kids-beat" id="kids-beat" role="group" aria-label="Your beat"></div>
     </div>
     <div class="kids-view kids-keys-view" data-kids-view="keys" hidden>
+      <!-- 🎹 who plays the keys at the top left, as 🎨 is on Pads (kids.js). -->
+      <div class="kids-top kids-keys-top">
+        <button type="button" class="kids-skin kids-inst" id="kids-inst" aria-label="Next instrument"></button>
+      </div>
       <div class="kids-keys" id="kids-keys" role="group" aria-label="Keys"></div>
     </div>
     <nav class="kids-bar" aria-label="Kids screens">
@@ -789,6 +793,7 @@
       <div class="roll-bar">
         <button type="button" class="seq-play" data-roll="play" aria-pressed="false">▶ Play</button>
         <button type="button" class="seq-tool" data-roll="sound">🔊 Sound</button>
+        <span class="roll-inst" data-roll="inst" hidden></span>
         <span class="roll-octave" role="group" aria-label="Higher or lower notes">
           <button type="button" class="seq-tool" data-roll="up" aria-label="Higher notes">⌃</button>
           <button type="button" class="seq-tool" data-roll="down" aria-label="Lower notes">⌄</button>
@@ -797,6 +802,7 @@
         <button type="button" class="seq-tool" data-roll="half" aria-pressed="false" hidden>½ Half pills</button>
         <button type="button" class="seq-tool" data-roll="undo" disabled>↩️ Undo</button>
       </div>
+      <div class="roll-inst-list" data-roll="insts" hidden></div>
       <p class="roll-status" data-roll="status" role="status"></p>
       <div class="roll-scroll" data-roll="scroll">
         <div class="roll-grid" data-roll="grid" role="group" aria-label="Notes: the note names go up the side, the beat goes across"></div>
@@ -863,6 +869,7 @@
       <section class="ke-sounds" aria-labelledby="ke-sounds-title">
         <h3 class="ke-title" id="ke-sounds-title">Sounds</h3>
         <div class="ke-groups" id="ke-groups" role="group" aria-label="Groups of sounds"></div>
+        <div class="ke-inst" id="ke-inst" hidden></div>
         <p class="ke-hint" id="ke-picks-hint"></p>
         <div class="ke-picks" id="ke-picks" role="group" aria-label="Sounds"></div>
         <button type="button" class="seq-tool ke-clear" id="ke-clear-picks" hidden>✕ Unpick all</button>
@@ -929,6 +936,18 @@
         </div>
         <button type="button" class="primary" id="chooser-ok">Use this sound</button>
       </div>
+    </div>
+  </dialog>
+
+  <!-- 🎹 Add a tune asks who plays it (ADR 0030): the Notes instruments by
+       family; a tap on one makes the tune row on its C and opens the roll. -->
+  <dialog id="tune-who" aria-labelledby="tune-who-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="tune-who-title">🎹 Who plays it?</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <div class="tune-who-list" id="tune-who-list"></div>
     </div>
   </dialog>
 

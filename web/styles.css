@@ -1464,7 +1464,7 @@ dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
 
 /* ── Sheet (new / edit sound) ───────────────────────────────────────── */
 
-dialog#sheet, dialog#chooser, dialog#library, dialog#grooves, dialog#takes, dialog#pictures, dialog#people-dialog, dialog#settings-dialog {
+dialog#sheet, dialog#chooser, dialog#library, dialog#grooves, dialog#takes, dialog#pictures, dialog#people-dialog, dialog#settings-dialog, dialog#tune-who {
   width: min(560px, calc(100vw - 2 * var(--gutter)));
   max-height: calc(100dvh - 32px);
   padding: 0;
@@ -1473,11 +1473,11 @@ dialog#sheet, dialog#chooser, dialog#library, dialog#grooves, dialog#takes, dial
   background: var(--paper);
   color: var(--ink);
 }
-dialog#sheet::backdrop, dialog#chooser::backdrop, dialog#library::backdrop, dialog#grooves::backdrop, dialog#takes::backdrop, dialog#pictures::backdrop, dialog#people-dialog::backdrop, dialog#settings-dialog::backdrop { background: rgb(20 19 24 / 0.62); }
-dialog#sheet :focus-visible, dialog#chooser :focus-visible, dialog#library :focus-visible, dialog#grooves :focus-visible, dialog#takes :focus-visible, dialog#pictures :focus-visible, dialog#people-dialog :focus-visible, dialog#settings-dialog :focus-visible { outline-color: var(--board); }
+dialog#sheet::backdrop, dialog#chooser::backdrop, dialog#library::backdrop, dialog#grooves::backdrop, dialog#takes::backdrop, dialog#pictures::backdrop, dialog#people-dialog::backdrop, dialog#settings-dialog::backdrop, dialog#tune-who::backdrop { background: rgb(20 19 24 / 0.62); }
+dialog#sheet :focus-visible, dialog#chooser :focus-visible, dialog#library :focus-visible, dialog#grooves :focus-visible, dialog#takes :focus-visible, dialog#pictures :focus-visible, dialog#people-dialog :focus-visible, dialog#settings-dialog :focus-visible, dialog#tune-who :focus-visible { outline-color: var(--board); }
 
 @media (max-width: 600px) {
-  dialog#sheet, dialog#chooser, dialog#library, dialog#grooves, dialog#takes, dialog#pictures, dialog#people-dialog, dialog#settings-dialog {
+  dialog#sheet, dialog#chooser, dialog#library, dialog#grooves, dialog#takes, dialog#pictures, dialog#people-dialog, dialog#settings-dialog, dialog#tune-who {
     width: 100%;
     max-width: 100%;
     margin: auto 0 0;
@@ -3370,6 +3370,27 @@ body.editing .pads .pad-cell .pad-emoji { margin-left: 26px; }
 .inst-choice[aria-pressed="true"] { background: var(--fam); box-shadow: inset 0 0 0 2px #fff; }
 .inst-choice-emoji { font-size: 1.4rem; line-height: 1; }
 .inst-choice-tick { margin-left: auto; font-weight: 800; }
+/* The same picker on the other screens (ADR 0030). The beat row's sound
+   chooser: beside a group's name, as on Pads, its list under the name. */
+.chooser-inst-row { display: flex; align-items: center; gap: 8px; padding-right: 8px; }
+.chooser-inst-row > .chooser-toggle { flex: 1 1 auto; min-width: 0; width: auto; padding-right: 4px; }
+.chooser-group .inst-pick, .chooser-group .inst-list { --bed: var(--c); }
+.chooser-group > .inst-list { margin: 4px 8px 8px; }
+/* 🎹 Add a tune's "Who plays it?": the list on the dialog's dark bed. */
+.tune-who-list .inst-list { background: var(--bed); }
+/* The piano roll's top line: who plays the tune, its list under the line. */
+.roll-inst { display: contents; }
+.roll-inst[hidden] { display: none; }
+.roll-inst .inst-pick { max-width: 100%; }
+.roll-inst-list[hidden] { display: none; }
+/* ✏️ Edit keys, above an open Notes, Chords or Bass group's sounds. */
+.ke-inst { display: grid; gap: 8px; justify-items: start; }
+.ke-inst[hidden] { display: none; }
+.ke-inst .inst-list { justify-self: stretch; }
+.ke-inst .inst-pick, .te-band-inst .inst-pick { max-width: 100%; }
+/* A 👆 band of Notes, Chords or Bass in ✏️ Edit layout, under its name. */
+.te-band-inst { display: flex; }
+
 /* An instrument's note keeps its fruit, weather or animal; a small picture
    of who plays it sits at its top right. */
 .pad-inst {
@@ -3980,7 +4001,7 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
 /* The Pads screen's top bar, in the room above the pads beside the floating
    ⚙️ (and the level lights from 700 px): 🎨 the next pad skin at its left.
    Its right end stops short of ⚙️ and the lights. */
-.kids-pads-view { position: relative; }
+.kids-pads-view, .kids-keys-view { position: relative; }
 .kids-top {
   --kids-top-room: 56px;
   position: absolute;

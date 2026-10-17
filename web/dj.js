@@ -69,10 +69,12 @@ export function createDJ({ el, deps }) {
   // a sound looping by itself.
   const held = new Map();
 
-  // The person's keys before any was changed (rhythm.js defaultDeck).
+  // The person's keys before any was changed (rhythm.js defaultDeck), on
+  // the groups' own sounds whatever instrument is picked (ADR 0030): only
+  // the keys that differ from these are stored, so they must not move.
   function baseDeck() {
     const pid = deps.personId();
-    const clips = deps.clipsFor(pid);
+    const clips = deps.clipsFor(pid, { ownSounds: true });
     const own = clips.filter((c) => !c.kit);
     const kit = clips.filter((c) => c.kit).map((c) => ({ ...c, kitId: c.id.slice(pid.length + 1) }));
     return defaultDeck(own, kit);
@@ -107,9 +109,12 @@ export function createDJ({ el, deps }) {
   const inputNow = () => input ?? (narrow() ? 'touch' : 'keys');
   const touching = () => inputNow() === 'touch';
   // The person's touch layout: the one they made, else the default (🎸 Band
-  // under their newest sounds), worked out afresh so new sounds show.
+  // under their newest sounds), worked out afresh so new sounds show. The
+  // default plays the groups' own sounds, as the default keys do; the
+  // sounds to edit with are the picked instrument's (ADR 0030).
   const soundsNow = () => soundsOf(deps.clipsFor(deps.personId()), deps.personId());
-  const touchNow = () => deps.savedDeck(deps.personId())?.touch ?? defaultTouch(soundsNow());
+  const touchNow = () => deps.savedDeck(deps.personId())?.touch
+    ?? defaultTouch(soundsOf(deps.clipsFor(deps.personId(), { ownSounds: true }), deps.personId()));
 
   function family(clip) {
     if (!clip.kit) return { name: 'mine', color: deps.personColor() };

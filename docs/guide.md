@@ -120,7 +120,12 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   note sounds wrong: C D E G A, then high C, high D, high E. A high key plays
   its low note's kit sound an octave up (twice as fast, as a tune row's note
   does; `kids-logic.js` `KIDS_KEYS`) and wears the same fruit a size
-  smaller, with a small ✦. Lying down like a xylophone on a phone.
+  smaller, with a small ✦. Lying down like a xylophone on a phone. The round
+  button at the top left, like Pads' skin button, shows who plays them by
+  its picture; each tap moves to the next of Pluck, Piano, Marimba, Steel
+  drum and Kalimba (`KIDS_INSTRUMENTS`; round again) and keeps it as the
+  person's `instNotes`, so each key plays its note on that instrument
+  (`keyKitId`), keeping its fruit.
 
 ⏹️ stops everything. The ⚙️ gear asks a grown-up sum (two numbers from 6 to
 9, big number keys); right opens Settings and the regular app until the page
@@ -262,7 +267,20 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   Marimba, Steel drum, Kalimba, Guitar, Strings, Brass, Flute. Chords: Synth
   (its own), Piano, Organ, Guitar, Strings. Bass: Synth (its own), 808,
   Upright. The pick is the person's (settings `instNotes`, `instChords`,
-  `instBass`): synced and in backups. Each instrument's notes are presets of
+  `instBass`): synced and in backups. The same picker sits on Notes, Chords
+  and Bass in the beat row's sound chooser and above an open group in ✏️ Edit
+  keys (filling a row with the group puts the picked instrument's notes on
+  it); every picker sets the same pick. 🎹 Add a tune asks "Who plays it?"
+  (the Notes instruments, the pick ticked) and starts the tune row on that
+  instrument's C. Two pickers also change what they sit on, keeping every
+  note: the piano roll's, beside 🔊 Sound, swaps the tune row to the same
+  note on another instrument (`instruments.js` `versionFor`, by `plays`), and
+  a 👆 band of Notes, Chords or Bass in ✏️ Edit layout has one under its
+  name that swaps every tile (↩️ Undo). The default keys and touch layout
+  (nothing changed yet) always play the groups' own sounds (`board.js`
+  `clipsFor` `ownSounds`): only the keys that differ from them are stored, so
+  they never move under a kid. A ready-made layout loads on the picked
+  instrument. Each instrument's notes are presets of
   their own, `piano-e` for `note-e`, `piano-am-chord` for `chord-am`, `808-c`
   for `bass-c`, wearing the same fruit, weather or animal, with the
   instrument's emoji as a small badge at the pad's top right. Wherever presets

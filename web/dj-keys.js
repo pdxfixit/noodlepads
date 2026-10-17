@@ -18,6 +18,8 @@ import {
 import { groupKit } from './model.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { newId } from './util.js';
+import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
+import { instrumentById } from './instruments.js';
 
 const DRAG_PX = 6;          // a mouse or pen moved this far is dragging, not tapping
 const HOLD_MS = 280;        // a finger held this long without moving starts a drag
@@ -34,6 +36,7 @@ export function createKeysEditor({ el, deps }) {
   let undo = [];              // earlier keyboards, newest last
   let asking = null;          // 'save' | 'delete' | 'reset' while a line or a second tap waits
   let focusCode = null;       // the key to focus after a redraw
+  let instOpen = false;       // the open group's instrument list (Notes, Chords, Bass) is open
 
   const pid = () => deps.personId();
   const clip = (id) => (id ? deps.clipById(id) : null);
@@ -51,9 +54,14 @@ export function createKeysEditor({ el, deps }) {
 
   // ── Layouts ──
 
+  // A ready-made layout's kit ids as this person's sounds. A note, chord or
+  // bass note is the picked instrument's (ADR 0030): its preset stands for
+  // the group's own one it plays.
   const kitClip = () => {
     const p = pid();
-    const ids = new Map(deps.clipsFor(p).filter((c) => c.kit).map((c) => [c.id.slice(p.length + 1), c.id]));
+    const kit = deps.clipsFor(p).filter((c) => c.kit);
+    const ids = new Map(kit.filter((c) => c.plays).map((c) => [c.plays, c.id]));
+    for (const c of kit) ids.set(c.id.slice(p.length + 1), c.id);
     return (kitId) => ids.get(kitId) ?? null;
   };
   const own = () => deps.layouts(pid()).slice().sort((a, b) => a.created - b.created);
@@ -148,6 +156,7 @@ export function createKeysEditor({ el, deps }) {
       return b;
     }));
     const group = all.find((g) => g.id === openGroup);
+    renderInstrument(group);
     el.picks.replaceChildren(...(group?.clips ?? []).map((c) => {
       const b = document.createElement('button');
       b.type = 'button';
@@ -181,6 +190,32 @@ export function createKeysEditor({ el, deps }) {
         ? 'No sounds of your own yet. Make one on 🔊 Pads with ➕ New sound, and it shows up here.'
         : 'Tap sounds to pick them, then tap a key. Or drag a sound or a group onto the keys.';
     el.clearPicks.hidden = !picks.length;
+  }
+
+  // Notes, Chords and Bass, open: who plays them, above their sounds, the
+  // same picker as on 🔊 Pads (inst-picker.js, ADR 0030). A row filled
+  // with the group gets the picked instrument's notes; keys already on
+  // the board keep theirs.
+  const instBox = el.inst ?? document.createElement('div');   // index.html #ke-inst
+  const kitGroupOf = (group) => {
+    const id = group?.id.startsWith('kit-') ? group.id.slice(4) : null;
+    if (!id || !hasPicker(id)) return null;
+    return { id, name: deps.kitGroups().find((g) => g.id === id)?.name ?? id };
+  };
+  function renderInstrument(group) {
+    const g = kitGroupOf(group);
+    if (!g) instOpen = false;
+    instBox.hidden = !g;
+    instBox.replaceChildren(...(g ? [pickerButton(g, instOpen, { where: 'keys' }), ...(instOpen ? [pickerList(g, { where: 'keys' })] : [])] : []));
+  }
+  async function chooseInstrument(group, inst) {
+    instOpen = false;
+    await pickInstrument(group, inst);
+    const g = groups().find((x) => x.id === `kit-${group}`);
+    const who = instrumentById(inst);
+    say(g && who ? `${who.emoji} ${who.name} plays ${g.label} now. Tap ${g.label} again to put them on a row.` : '');
+    renderSounds();
+    instBox.querySelector('[data-inst-pick]')?.focus();
   }
 
   // ── The keyboard ──
@@ -297,6 +332,14 @@ export function createKeysEditor({ el, deps }) {
   el.dialog.addEventListener('click', (e) => {
     if (justDragged) { justDragged = false; return; }
     const t = e.target;
+    if (t.closest('[data-inst-pick]')) {
+      instOpen = !instOpen;
+      renderSounds();
+      instBox.querySelector('[data-inst-pick]')?.focus();
+      return;
+    }
+    const inst = t.closest('[data-inst]');
+    if (inst) { chooseInstrument(inst.dataset.instGroup, inst.dataset.inst); return; }
     const key = t.closest('[data-code]');
     if (key && el.keys.contains(key)) { tapKey(key.dataset.code); return; }
     const sound = t.closest('[data-sound]');
@@ -381,6 +424,15 @@ export function createKeysEditor({ el, deps }) {
   // Keys: Delete on a focused key clears it; a keyboard's own letter key
   // works as a tap on its key.
   el.dialog.addEventListener('keydown', (e) => {
+    // Esc in the open instrument list closes it, not Edit keys.
+    if (e.key === 'Escape' && instOpen && e.target.closest?.('.ke-inst')) {
+      e.preventDefault();
+      e.stopPropagation();
+      instOpen = false;
+      renderSounds();
+      instBox.querySelector('[data-inst-pick]')?.focus();
+      return;
+    }
     if (e.target.closest?.('input') || e.metaKey || e.ctrlKey || e.altKey) return;
     const focused = e.target.closest?.('[data-code]');
     if (focused && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); clear(focused.dataset.code); return; }

@@ -8,8 +8,10 @@
 
 import {
   MINE, SIZES, SIZE_NAMES, MAX_BANDS, READY_TOUCH, readyTouch, newBand, addBand, removeBand, moveBand, setSize,
-  remainingSounds, addSounds, swapTile, removeTile, sameTouch, keepAsMine, touchName, MAX_TOUCH_NAME, cleanTouch,
+  remainingSounds, addSounds, swapTile, swapBand, removeTile, sameTouch, keepAsMine, touchName, MAX_TOUCH_NAME, cleanTouch,
 } from './touch.js';
+import { hasPicker, pickerButton, pickerList, pickedFor, pickInstrument } from './inst-picker.js';
+import { presetInstrument, versionFor, ownIdOf, instrumentById } from './instruments.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { newId } from './util.js';
 
@@ -114,6 +116,7 @@ export function createTouchEditor({ el, deps }) {
   let askTimer = 0;
   let picking = null;         // {band, tile (null: + more, adding), group}: the picker under a band
   let focusAfter = null;      // a selector to focus after a redraw
+  let instBand = null;        // the band whose instrument list is open, or null
 
   const pid = () => deps.personId();
   const clip = (id) => (id ? deps.clipById(id) : null);
@@ -125,6 +128,7 @@ export function createTouchEditor({ el, deps }) {
 
   function set(next, note, { keepUndo = false } = {}) {
     if (!keepUndo) undo = [...undo, now()].slice(-UNDO_MAX);
+    instBand = null;   // the bands may have moved
     deps.saveTouch(cleanTouch(next));
     say(note);
     render();
@@ -226,9 +230,49 @@ export function createTouchEditor({ el, deps }) {
     const more = button('te-more', '+ more', { more: i }, `Add more sounds to ${name}`);
     more.setAttribute('aria-expanded', String(picking?.band === i && picking.tile == null));
     tiles.append(more);
-    sec.append(head, tiles);
+    sec.append(head, ...instLine(b, i), tiles);
     if (picking?.band === i) sec.append(pickerEl(b, i));
     return sec;
+  }
+
+  // A band of Notes, Chords or Bass: who plays it, under its name (ADR
+  // 0030). The button shows the band's own instrument; a pick plays every
+  // tile's note on another one, and is the person's pick too.
+  const kitName = (group) => deps.kitGroups().find((g) => g.id === group)?.name ?? group;
+  function bandInstrument(b) {
+    const first = b.sounds.map(clip).find((c) => c?.kit && c.group === b.group);
+    return instrumentById(presetInstrument(first)) ?? pickedFor(b.group);
+  }
+  function instLine(b, i) {
+    if (!hasPicker(b.group)) return [];
+    const g = { id: b.group, name: kitName(b.group) };
+    const open = instBand === i;
+    const line = document.createElement('div');
+    line.className = 'te-band-inst';
+    const pick = pickerButton(g, open, { where: `band-${i}`, inst: bandInstrument(b), title: `Who plays this band: pick an instrument, and every tile keeps its note` });
+    pick.dataset.instBand = i;
+    line.append(pick);
+    if (!open) return [line];
+    const list = pickerList(g, { where: `band-${i}`, now: bandInstrument(b).id, label: `Who plays ${label(b.group)}` });
+    for (const c of list.querySelectorAll('[data-inst]')) c.dataset.instBand = i;
+    return [line, list];
+  }
+  async function swapInstrument(i, inst) {
+    const cur = now();
+    const b = cur.bands[i];
+    if (!b) return;
+    instBand = null;
+    const swap = (id) => {
+      const c = clip(id);
+      if (!c?.kit || c.group !== b.group) return id;
+      const kitId = versionFor(ownIdOf(c), c.group, inst);
+      return (kitId && clip(`${c.personId}-${kitId}`)?.id) || id;
+    };
+    const who = instrumentById(inst);
+    focusAfter = `[data-inst-pick][data-inst-band="${i}"]`;
+    set(swapBand(cur, i, swap), `${who.emoji} ${who.name} plays ${label(b.group)} now, each tile the same note.`);
+    await pickInstrument(b.group, inst);
+    render();
   }
 
   // Under a band: swap a tile's sound (from its group or any), take it out,
@@ -333,6 +377,16 @@ export function createTouchEditor({ el, deps }) {
       return;
     }
     const cur = now();
+    const who = at('inst-pick');
+    if (who && who.dataset.instBand != null) {
+      const i = Number(who.dataset.instBand);
+      instBand = instBand === i ? null : i;
+      focusAfter = `[data-inst-pick][data-inst-band="${i}"]`;
+      render();
+      return;
+    }
+    const inst = at('inst');
+    if (inst && inst.dataset.instBand != null) { swapInstrument(Number(inst.dataset.instBand), inst.dataset.inst); return; }
     const size = at('size');
     if (size && size.dataset.band != null) {
       const i = Number(size.dataset.band);
@@ -404,6 +458,16 @@ export function createTouchEditor({ el, deps }) {
       focusAfter = `[data-handle="${cur.bands.length}"]`;
       set(addBand(cur, newBand(g, deps.sounds())), `Added ${label(g)} at the bottom.`);
     }
+  });
+
+  // Esc in an open instrument list closes it, not Edit layout.
+  el.bands.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || instBand == null || !e.target.closest?.('.inst-list, [data-inst-pick]')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    focusAfter = `[data-inst-pick][data-inst-band="${instBand}"]`;
+    instBand = null;
+    render();
   });
 
   // ⠿ with the keys: ↑ and ↓ move its band.
@@ -524,6 +588,7 @@ export function createTouchEditor({ el, deps }) {
   function open() {
     undo = [];
     picking = null;
+    instBand = null;
     asking = null;
     say('');
     render();

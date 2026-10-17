@@ -37,12 +37,19 @@ async function setLevel(level) {
   await page.settle();
 }
 
-test('🎹 Add a tune makes a tune row of the C note and opens its roll: two octaves of white keys, C rows brighter', () => {
+test('🎹 Add a tune asks who plays it, then makes a tune row of the C note and opens its roll: two octaves of white keys, C rows brighter', () => {
   keysOff(page);
   newBeat();
   $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');                  // a drum row first, for the strip
   rows()[0].querySelectorAll('.pill')[0].dispatch('click');
   $('#seq-add-tune').dispatch('click');
+  assert.equal($('#tune-who').open, true, 'it asks who plays it first');
+  assert.equal(roll().open, false);
+  const who = $('#tune-who-list').querySelectorAll('[data-inst]');
+  assert.ok(who.length >= 10, 'the Notes instruments');
+  assert.deepEqual(who.filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.inst), ['pluck'], 'the person\'s pick ticked');
+  who.find((b) => b.dataset.inst === 'pluck').dispatch('click');
+  assert.equal($('#tune-who').open, false);
   assert.equal(roll().open, true, 'the roll opens');
   assert.match(btn('title').textContent, /🎹 .* C$/, 'named after its sound');
   assert.deepEqual(names(), ['C', 'B', 'A', 'G', 'F', 'E', 'D', 'C', 'B', 'A', 'G', 'F', 'E', 'D', 'C'], 'scale lock on: white keys, highest on top');

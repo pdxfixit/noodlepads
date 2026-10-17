@@ -451,7 +451,7 @@ function makeSequencer() {
       empty: $('#seq-empty'), noRows: $('#seq-no-rows'),
       chooser: $('#chooser'), chooserTitle: $('#chooser-title'), chooserGrid: $('#chooser-grid'),
       chooserOk: $('#chooser-ok'), chooserTools: $('#chooser-tools'), chooserMelody: $('#chooser-melody'),
-      chooserRate: $('#chooser-rate'),
+      chooserRate: $('#chooser-rate'), tuneWho: $('#tune-who'), tuneWhoList: $('#tune-who-list'),
       library: $('#library'), beatBars: document.querySelectorAll('.beat-bar'), chipLines: document.querySelectorAll('[data-beat-chips]'),
       mixer: $('#mixer'), mixerStrips: $('#mixer-strips'), mixerButtons: document.querySelectorAll('[data-mixer]'),
       libNote: $('#lib-note'), libList: $('#lib-list'), libEmpty: $('#lib-empty'),
@@ -480,7 +480,7 @@ function makeSequencer() {
       const ordered = [list.find((p) => p.id === state.personId), ...list.filter((p) => p.id !== state.personId)].filter(Boolean);
       // The kit is in its groups; each can open and close, shared with the pads screen.
       const kit = groupKit(clipsFor(state.personId).filter(isKitClip), state.manifest.kitGroups)
-        .map((g) => ({ id: `kit-${g.id}`, groupId: g.id, name: `${g.emoji ?? ''} ${g.name}`.trim(), color: COMMON_COLOR, clips: g.clips, collapsible: true }));
+        .map((g) => ({ id: `kit-${g.id}`, groupId: g.id, name: `${g.emoji ?? ''} ${g.name}`.trim(), plain: g.name, color: COMMON_COLOR, clips: g.clips, collapsible: true }));
       // Each person's own sounds open and close too; they start open.
       return [...kit, ...ordered.map((p) => ({ id: p.id, groupId: `person:${p.id}`, name: p.name, color: p.color, clips: clipsFor(p.id).filter((c) => !isKitClip(c)), collapsible: true }))]
         .filter((g) => g.clips.length);
@@ -791,7 +791,7 @@ async function start() {
       change: $('#dj-change'),
       keysEdit: { dialog: $('#keys-edit'), layouts: $('#ke-layouts'), saveLine: $('#ke-save-line'), saveName: $('#ke-save-name'), saveOk: $('#ke-save-ok'), saveCancel: $('#ke-save-cancel'),
         ownLine: $('#ke-own-line'), rename: $('#ke-rename'), remove: $('#ke-delete'), keys: $('#ke-keys'), note: $('#ke-note'), undo: $('#ke-undo'), reset: $('#ke-reset'),
-        groups: $('#ke-groups'), picks: $('#ke-picks'), picksHint: $('#ke-picks-hint'), clearPicks: $('#ke-clear-picks') },
+        groups: $('#ke-groups'), inst: $('#ke-inst'), picks: $('#ke-picks'), picksHint: $('#ke-picks-hint'), clearPicks: $('#ke-clear-picks') },
       touchEdit: { dialog: $('#touch-edit'), layouts: $('#te-layouts'), saveLine: $('#te-save-line'), saveName: $('#te-save-name'), saveOk: $('#te-save-ok'), saveCancel: $('#te-save-cancel'),
         ownLine: $('#te-own-line'), rename: $('#te-rename'), remove: $('#te-delete'), bands: $('#te-bands'), note: $('#te-note'), undo: $('#te-undo'), add: $('#te-add'), addHint: $('#te-add-hint') },
       record: $('#dj-record'), status: $('#dj-status'), done: $('#dj-done'), nameFlash: $('#dj-name-flash'),
@@ -805,7 +805,7 @@ async function start() {
     deps: {
       personId: () => state.personId,
       personColor: () => person(state.personId)?.color ?? '#333040',
-      clipsFor: (id) => clipsFor(id),
+      clipsFor: (id, opts) => clipsFor(id, opts),
       clipById: (id) => anyClip(id),
       savedDeck: (id) => state.decks.get(id),
       tap: (clip, opts) => tapPad(clip, opts),

@@ -72,18 +72,24 @@ export const READY_TOUCH = [
 // The person's sounds, as these rules need them. `clips` is what the person
 // plays (board.js clipsFor): their own sounds and their copies of the kit
 // (`<pid>-<kit id>`, with `kit` and `group`). Returns {kit: kit id -> clip
-// id, groups: group -> clip ids in board order, MINE newest first}.
+// id, groups: group -> clip ids in board order, MINE newest first}. An
+// instrument's preset (ADR 0030) also stands for the group's own preset it
+// plays (`plays`), when that one isn't listed: with Piano picked, a band of
+// Notes starts on the piano's C D E.
 export function soundsOf(clips, pid) {
   const kit = new Map();
   const groups = new Map();
   const own = [];
+  const plays = new Map();
   for (const c of clips ?? []) {
     if (!c?.id) continue;
     if (!c.kit) { own.push(c); continue; }
+    if (c.plays) plays.set(c.plays, plays.get(c.plays) ?? c.id);
     kit.set(c.id.startsWith(`${pid}-`) ? c.id.slice(pid.length + 1) : c.id, c.id);
     if (!groups.has(c.group)) groups.set(c.group, []);
     groups.get(c.group).push(c.id);
   }
+  for (const [ownId, id] of plays) if (!kit.has(ownId)) kit.set(ownId, id);
   own.sort((a, b) => (b.created ?? 0) - (a.created ?? 0));
   groups.set(MINE, own.map((c) => c.id));
   return { kit, groups };
@@ -184,6 +190,15 @@ export function swapTile(t, i, k, id) {
   const there = tiles.indexOf(id);
   if (there >= 0) tiles[there] = tiles[k];
   tiles[k] = id;
+  return out;
+}
+
+// Band `i` with each sound put through `swap(id) -> id`: who plays it
+// changed (ADR 0030), each tile the same note on the new instrument. A
+// sound the swap leaves alone stays; two that become one keep one tile.
+export function swapBand(t, i, swap) {
+  const out = copy(t);
+  if (at(out, i) >= 0) out.bands[i].sounds = unique(out.bands[i].sounds.map((id) => swap(id) ?? id));
   return out;
 }
 

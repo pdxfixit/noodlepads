@@ -1,16 +1,21 @@
-// The instrument picker (ADR 0030): "who plays" a group. On 🔊 Pads it sits
-// on the Notes, Chords and Bass headers as one button, "💧 Pluck ▾", that
-// opens the list of instruments by family (Keys, Mallets, Strings, Wind).
-// A tap on one picks it and closes the list (open, it fills most of a
-// phone), and the group's pads become that instrument's notes. The pick is
+// The instrument picker (ADR 0030): "who plays" a group. It sits on the
+// Notes, Chords and Bass headers as one button, "💧 Pluck ▾", that opens the
+// list of instruments by family (Keys, Mallets, Strings, Wind). A tap on one
+// picks it and closes the list (open, it fills most of a phone). The pick is
 // the person's setting (instNotes, instChords, instBass), so it goes with
-// them to every device. Nothing already made changes: a beat row, key or
-// band keeps the preset it was given.
+// them to every device, and every picker shows it: 🔊 Pads, the beat row's
+// sound chooser, ✏️ Edit keys. Nothing already made changes: a beat row,
+// key or band keeps the preset it was given. Two pickers also change the
+// thing they sit on, keeping every note: 🎹 the piano roll's (its tune row)
+// and a 👆 band's in ✏️ Edit layout (its tiles).
 //
-// Draws only; pads.js puts the parts in place and handles the taps.
+// Draws only; each screen puts the parts in place and handles the taps
+// (`data-inst-pick` on the button, `data-inst` and `data-inst-group` on a
+// choice). `where` names the screen, so two lists open at once never share
+// an id.
 
 import { PLAYED, FAMILIES, instrumentsFor, instrumentById } from './instruments.js';
-import { getSetting } from './settings.js';
+import { getSetting, setSetting } from './settings.js';
 
 export const hasPicker = (group) => Object.hasOwn(PLAYED, group);
 
@@ -19,20 +24,25 @@ export function pickedFor(group) {
   return instrumentById(getSetting(PLAYED[group].setting)) ?? instrumentById(PLAYED[group].default);
 }
 
-const listId = (group) => `inst-list-${group}`;
+// Pads' lists keep their first ids (`inst-list-notes`); the others say where.
+// Picks who plays `group` for the person showing (app.js redraws whatever
+// lists the presets).
+export const pickInstrument = (group, inst) => setSetting(PLAYED[group].setting, inst);
+
+const listId = (group, where) => (where === 'pads' ? `inst-list-${group}` : `inst-list-${where}-${group}`);
 
 // The button on a group's header: the instrument's picture and name, and ▾.
-// `g` is the kit group ({id, name}).
-export function pickerButton(g, open) {
-  const inst = pickedFor(g.id);
+// `g` is the kit group ({id, name}). `inst`: who it shows, when that is not
+// the person's pick (a tune row's own instrument); `title`: its tooltip.
+export function pickerButton(g, open, { where = 'pads', inst = pickedFor(g.id), title } = {}) {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'inst-pick';
   b.dataset.instPick = g.id;
   b.setAttribute('aria-expanded', String(open));
-  b.setAttribute('aria-controls', listId(g.id));
+  b.setAttribute('aria-controls', listId(g.id, where));
   b.setAttribute('aria-label', `Who plays ${g.name}: ${inst.name}`);
-  b.title = `Who plays ${g.name}: pick an instrument`;
+  b.title = title ?? `Who plays ${g.name}: pick an instrument`;
   const pic = document.createElement('span');
   pic.className = 'inst-pick-emoji';
   pic.setAttribute('aria-hidden', 'true');
@@ -49,14 +59,15 @@ export function pickerButton(g, open) {
 }
 
 // The open list under the header: each family that has an instrument for
-// this group, under its name and color, the one playing now marked ✓.
-export function pickerList(g) {
-  const now = pickedFor(g.id).id;
+// this group, under its name and color, the one playing now (`now`, an
+// instrument id; the person's pick unless given) marked ✓. `label`: the
+// list's name for a screen reader.
+export function pickerList(g, { where = 'pads', now = pickedFor(g.id).id, label = `Who plays ${g.name}` } = {}) {
   const wrap = document.createElement('div');
   wrap.className = 'inst-list';
-  wrap.id = listId(g.id);
+  wrap.id = listId(g.id, where);
   wrap.setAttribute('role', 'group');
-  wrap.setAttribute('aria-label', `Who plays ${g.name}`);
+  wrap.setAttribute('aria-label', label);
   for (const f of FAMILIES) {
     const here = instrumentsFor(g.id).filter((i) => i.family === f.id);
     if (!here.length) continue;

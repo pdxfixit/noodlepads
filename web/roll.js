@@ -17,6 +17,7 @@
 
 import { openDialog, setupDialog } from './dialogs.js';
 import { viewRows, homeView, moveView, addNote, removeNote, resizeNote, noteAt, noteLabel, isC, inScale, VIEW } from './notes.js';
+import { pickerButton, pickerList } from './inst-picker.js';
 
 const SWIPE_PX = 40;     // a vertical swipe this long moves an octave
 const DRAG_PX = 8;       // a note moved this far sideways is being stretched, not tapped
@@ -27,13 +28,17 @@ const UNDO_STEPS = 30;   // changes ↩️ Undo can take back, per visit
 // saves and redraws the rows behind), preview(i, p, pills) (hears a note
 // while the beat is stopped), playing(), togglePlay(), openSound(i, returnTo)
 // (the row's sound chooser), clipById(id), colorOf(clip), placed() (a note
-// was placed: counted, play-count.js).
+// was placed: counted, play-count.js), instrument(i) (who plays the row:
+// {group: {id, name}, inst}, or null for a sound no instrument plays) and
+// swapInstrument(i, inst) (the same notes on another instrument, ADR 0030).
 export function createRoll(dialog, deps) {
   const q = (name) => dialog.querySelector(`[data-roll="${name}"]`);
   const el = {
     title: q('title'), play: q('play'), sound: q('sound'), up: q('up'), down: q('down'), scale: q('scale'),
     half: q('half'), undo: q('undo'), status: q('status'), scroll: q('scroll'), grid: q('grid'), done: q('done'),
+    inst: q('inst'), insts: q('insts'),
   };
+  let instOpen = false;    // 🎹 the row's instrument list is open
   let at = -1;             // the row being edited
   let lo = 0;              // the lowest pitch in view
   let all = false;         // the scale lock off: all twelve notes
@@ -51,6 +56,7 @@ export function createRoll(dialog, deps) {
     if (!r?.melody) return;
     at = i;
     history = [];
+    instOpen = false;
     lo = homeView(r.tune);
     // Opened from a pill: the cursor starts there, on the lowest note's row.
     cursor = { p: r.tune.find((n) => Math.floor(n.s) === step)?.p ?? lo, s: step };
@@ -85,7 +91,24 @@ export function createRoll(dialog, deps) {
     el.half.setAttribute('aria-pressed', String(unit() === 0.5));
     el.undo.disabled = !history.length;
     showPlay();
+    showInstrument();
     drawGrid(r, clip);
+  }
+
+  // 🎹 Who plays the tune, on the top line beside 🔊 Sound, for a row on a
+  // Notes, Chords or Bass preset: a tap opens the instruments under the
+  // line; a pick plays every note of the tune on that one instead.
+  function showInstrument() {
+    if (!el.inst || !el.insts) return;
+    const who = deps.instrument?.(at) ?? null;
+    if (!who) instOpen = false;
+    el.inst.hidden = !who;
+    el.insts.hidden = !instOpen;
+    if (!who) { el.inst.replaceChildren(); el.insts.replaceChildren(); return; }
+    el.inst.replaceChildren(pickerButton(who.group, instOpen, {
+      where: 'roll', inst: who.inst, title: 'Who plays this tune: pick an instrument, and every note stays',
+    }));
+    el.insts.replaceChildren(...(instOpen ? [pickerList(who.group, { where: 'roll', now: who.inst.id, label: 'Who plays this tune' })] : []));
   }
 
   function showPlay() {
@@ -382,6 +405,31 @@ export function createRoll(dialog, deps) {
   el.undo.addEventListener('click', undo);
   el.play.addEventListener('click', () => { deps.togglePlay(); showPlay(); });
   el.sound.addEventListener('click', () => deps.openSound(at, () => el.sound));
+  el.inst?.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-inst-pick]')) return;
+    instOpen = !instOpen;
+    showInstrument();
+    el.inst.querySelector('[data-inst-pick]')?.focus();
+  });
+  el.insts?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-inst]');
+    if (!b) return;
+    instOpen = false;
+    deps.swapInstrument?.(at, b.dataset.inst);
+    render();
+    const now = deps.instrument?.(at)?.inst;
+    if (now) say(`${now.emoji} ${now.name} plays the tune now, every note where it was.`);
+    el.inst.querySelector('[data-inst-pick]')?.focus();
+  });
+  // Esc in the open list closes it, not the roll.
+  dialog.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !instOpen || !e.target.closest?.('.inst-list, [data-inst-pick]')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    instOpen = false;
+    showInstrument();
+    el.inst.querySelector('[data-inst-pick]')?.focus();
+  });
   el.done.addEventListener('click', close);
   setupDialog(dialog);
 
