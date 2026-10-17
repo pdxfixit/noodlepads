@@ -115,9 +115,12 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   else is open. A kids beat from before (`beat-kids-…`) becomes the scratch,
   or a beat in 🗂️ My beats when the scratch already has hits.
   Across on a wide screen; down the screen on a phone.
-- **🎹 Keys**: eight colored keys, C to high C, that play while held, several
-  fingers at once (A S D F G H J K on a keyboard). Lying down like a
-  xylophone on a phone.
+- **🎹 Keys**: eight colored keys that play while held, several fingers at
+  once (A S D F G H J K on a keyboard). They are pentatonic, always, so no
+  note sounds wrong: C D E G A, then high C, high D, high E. A high key plays
+  its low note's kit sound an octave up (twice as fast, as a tune row's note
+  does; `kids-logic.js` `KIDS_KEYS`) and wears the same fruit a size
+  smaller, with a small ✦. Lying down like a xylophone on a phone.
 
 ⏹️ stops everything. The ⚙️ gear asks a grown-up sum (two numbers from 6 to
 9, big number keys); right opens Settings and the regular app until the page

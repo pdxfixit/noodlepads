@@ -164,3 +164,25 @@ test('a live preview: start() puts nodes between the sound and its fader; unloop
   audio.playing.clear();
   audio.ctx = null;
 });
+
+test('a sound at a rate: twice as fast is an octave up and lasts half as long, under the name it is given', async () => {
+  const { audio } = await import('../web/audio.js');
+  const sources = [];
+  const node = () => ({ connect(n) { return n; }, disconnect() {} });
+  const ctx = {
+    state: 'running', currentTime: 10,
+    createBufferSource: () => { const s = Object.assign(node(), { stops: [], start() {}, stop(t) { s.stops.push(t); }, playbackRate: { value: 1 } }); sources.push(s); return s; },
+    createGain: () => Object.assign(node(), { gain: { value: 1, cancelScheduledValues() {}, setValueAtTime() {}, linearRampToValueAtTime() {} } }),
+  };
+  Object.assign(audio, { ctx, master: node() });
+  audio.start('note-c', { buffer: {}, duration: 2 }, {});
+  audio.start('note-c+12', { buffer: {}, duration: 2 }, { rate: 2 });
+  assert.equal(sources[0].playbackRate.value, 1);
+  assert.equal(sources[1].playbackRate.value, 2);
+  assert.equal(sources[1].loopEnd, 2, 'the whole sound, played faster');
+  assert.equal(sources[1].stops.at(-1), 11, 'one pass is a second at twice the speed');
+  assert.equal(audio.playing.get('note-c+12').duration, 1);
+  assert.ok(audio.playing.has('note-c'), 'the low note still sounds beside it');
+  audio.playing.clear();
+  audio.ctx = null;
+});

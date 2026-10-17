@@ -32,7 +32,7 @@ import { kidsHint, markSeen } from './tips.js';
 import {
   makeSum, typeDigit, kidsPadPx, kidsSliderAt, shareOf, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder,
   KIDS_DRUMS, KIDS_SQUARES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds,
-  kidsVoiceFields, voiceAfter, MAX_RECORD_SECONDS, MIN_RECORD_SECONDS, pictureFor, KIDS_KEYS, beatLayout, cleanTab,
+  kidsVoiceFields, voiceAfter, MAX_RECORD_SECONDS, MIN_RECORD_SECONDS, pictureFor, KIDS_KEYS, keyRate, keyPlayId, isHighKey, beatLayout, cleanTab,
 } from './kids-logic.js';
 
 const el = {};
@@ -552,12 +552,19 @@ function keyClip(i) {
   return all.find((c) => c.kitId === KIDS_KEYS[i].note) ?? null;
 }
 
+// A high key wears its low note's fruit a size smaller, with a small ✦:
+// the same note, higher.
 function renderKeys() {
   el.keys.replaceChildren(...KIDS_KEYS.map((k, i) => {
     const clip = keyClip(i);
-    const b = make('button', 'kids-key', { type: 'button', textContent: clip?.emoji ?? '🎵' });
+    const high = isHighKey(k);
+    const b = make('button', high ? 'kids-key high' : 'kids-key', { type: 'button' });
+    const face = make('span', 'kids-key-face', { textContent: clip?.emoji ?? '🎵' });
+    if (high) face.append(make('span', 'kids-key-star', { textContent: '✦' }));
+    b.append(face);
     b.dataset.key = String(i);
-    b.setAttribute('aria-label', clip?.label ?? 'Note');
+    const label = clip?.label ?? 'Note';
+    b.setAttribute('aria-label', high ? `High ${label}` : label);
     b.style.setProperty('--key', k.color);
     b.style.setProperty('--n', String(i));
     return b;
@@ -570,7 +577,7 @@ function press(id, i) {
   if (held.has(id)) lift(id);
   held.set(id, i);
   const clip = keyClip(i);
-  if (clip) audio.play(clip);
+  if (clip) audio.play(clip, { rate: keyRate(KIDS_KEYS[i]), id: keyPlayId(KIDS_KEYS[i], clip.id) });
   el.keys.querySelector(`[data-key="${i}"]`)?.classList.add('down');
 }
 
@@ -580,7 +587,7 @@ function lift(id) {
   held.delete(id);
   if ([...held.values()].includes(i)) return;   // another finger still holds it
   const clip = keyClip(i);
-  if (clip) audio.stop(clip.id);
+  if (clip) audio.stop(keyPlayId(KIDS_KEYS[i], clip.id));
   el.keys.querySelector(`[data-key="${i}"]`)?.classList.remove('down');
 }
 
