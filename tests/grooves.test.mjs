@@ -34,7 +34,7 @@ test('hip hop has its own presets and playful grooves built from them (Ben, 2026
     assert.ok(!advanced.has(id), `${id} shows with Advanced off`);
   }
   const hiphop = GROOVES.filter((g) => g.group === 'hiphop');
-  for (const id of ['bounce', 'wonky', 'hopscotch', 'lullaby', 'drill', 'dusty']) assert.ok(hiphop.some((g) => g.id === id), `${id} is a hip hop groove`);
+  for (const id of ['bounce', 'wonky', 'hopscotch', 'lullaby', 'drill', 'dusty', 'snacktime']) assert.ok(hiphop.some((g) => g.id === id), `${id} is a hip hop groove`);
   const used = new Set(hiphop.flatMap((g) => g.rows.map(([id]) => id)));
   assert.ok(presets.filter((id) => used.has(id)).length >= 8, 'the grooves play most of the new presets');
 });
