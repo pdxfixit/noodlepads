@@ -573,6 +573,67 @@ def rewind():
     hiss = noise(0.7, lambda t: 0.3 * math.sin(math.pi * t / 0.7), seed=55)
     return lowpass(mix(swipe, hiss), 0.25)
 
+# ── 🪘 Hand drums (Ben, 2026-10-17: more kinds of music): drums played with
+# hands or big sticks, from Japan, West Africa, Punjab, South Africa, Peru and
+# the Caribbean. Struck sounds, so a recipe gets close; a tabla's bending
+# "ge" did not, so there is no tabla.
+
+def skin(f0, f1, length, decay, slap=0.0, seed=60):
+    """A hand drum's head: a pitch that drops as the skin settles, and a
+    slap of noise where the hand lands."""
+    body = osc(lambda t: f1 + (f0 - f1) * math.exp(-30 * t), length, "sine", lambda t: math.exp(-decay * t))
+    hit = noise(min(length, 0.05), lambda t: slap * math.exp(-120 * t), seed=seed)
+    return mix(body, hit)
+
+
+def taiko():
+    """A taiko: a huge drum, a deep boom that rolls on."""
+    boom = skin(95, 52, 1.2, 3.2, slap=0.5, seed=61)
+    rumble = lowpass(noise(1.2, lambda t: 0.3 * math.exp(-4 * t), seed=62, highpass=False), 0.05)
+    return drive(mix(boom, rumble), 1.6)
+
+
+def djembe():
+    """A djembe's tone: the hand flat near the edge, round and ringing."""
+    return mix(skin(340, 260, 0.4, 11, slap=0.35, seed=63),
+               osc(lambda t: 90, 0.4, "sine", lambda t: 0.4 * math.exp(-14 * t)))
+
+
+def djembe_slap():
+    """A djembe slap: fingers snapping on the edge, a sharp crack."""
+    crack = lowpass(noise(0.15, lambda t: math.exp(-40 * t), seed=64), 0.7)
+    return mix(crack, skin(520, 420, 0.15, 30, seed=65))
+
+
+def log_drum():
+    """An amapiano log drum: a round, woody bass note that bends and wobbles."""
+    tone = osc(lambda t: 110 + 30 * math.exp(-25 * t), 0.7, "triangle", lambda t: math.exp(-4.5 * t))
+    knock = osc(lambda t: 660, 0.05, "sine", lambda t: 0.3 * math.exp(-80 * t))
+    return lowpass(drive(mix(tone, knock), 2.0), 0.3)
+
+
+def dhol():
+    """A dhol's big side, hit with a bent stick: dhuk."""
+    return drive(skin(120, 68, 0.6, 6, slap=0.6, seed=66), 1.8)
+
+
+def dhol_high():
+    """A dhol's small side, hit with a thin cane: a dry tik."""
+    return mix(lowpass(noise(0.1, lambda t: 0.8 * math.exp(-55 * t), seed=67), 0.6),
+               osc(lambda t: 620, 0.1, "triangle", lambda t: 0.6 * math.exp(-45 * t)))
+
+
+def bongo():
+    """A bongo: the small, high drum of a pair."""
+    return skin(560, 470, 0.22, 20, slap=0.3, seed=68)
+
+
+def cajon():
+    """A cajón: a wooden box you sit on; the low thump of its middle."""
+    thump = skin(130, 85, 0.35, 12, slap=0.4, seed=69)
+    wires = bright(noise(0.2, lambda t: 0.25 * math.exp(-25 * t), seed=70))
+    return mix(thump, wires)
+
 KIT = {
     "kick": kick, "snare": snare, "hihat": hihat, "open-hat": open_hat, "clap": clap,
     "tom-high": tom(270, 190), "tom-low": tom(150, 100), "crash": crash, "cowbell": cowbell, "shaker": shaker,
@@ -600,6 +661,8 @@ KIT = {
     "kick-dusty": kick_dusty, "snare-dusty": snare_dusty, "glide": glide, "hat-roll": hat_roll,
     "woodblock": woodblock, "plink": plink, "bloop": bloop, "vinyl": vinyl, "horn-stab": horn_stab,
     "rewind": rewind,
+    "taiko": taiko, "djembe": djembe, "djembe-slap": djembe_slap, "log-drum": log_drum, "dhol": dhol,
+    "dhol-high": dhol_high, "bongo": bongo, "cajon": cajon,
 }
 
 # The sharps and flats (Advanced-only presets, Ben 2026-10-11): the same

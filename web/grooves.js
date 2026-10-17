@@ -17,6 +17,9 @@
 //   a pill is an eighth note, so the tempo is half what a musician would say.
 // No groove uses the beat's Swing setting: it plays only with Advanced on.
 //
+// `about` is the line under a groove's name in the chooser: where it comes
+// from and what to listen for, in words a kid knows (Ben, 2026-10-17).
+//
 // Bass and chords use the kit's natural notes (shown with Advanced off), in
 // C major and A minor; the kit has no bass B. tests/grooves.test.mjs checks
 // every groove's shape and sounds.
@@ -25,18 +28,23 @@
 export const GROOVE_GROUPS = [
   { id: 'dance', name: 'Dance', emoji: '💃' },
   { id: 'hiphop', name: 'Hip hop', emoji: '🎤' },
-  { id: 'rock', name: 'Rock & pop', emoji: '🎸' },
-  { id: 'latin', name: 'Latin', emoji: '🌴' },
-  { id: 'world', name: 'World', emoji: '🌍' },
+  { id: 'rock', name: 'Rock, pop & country', emoji: '🎸' },
+  { id: 'soul', name: 'Soul & gospel', emoji: '🙌' },
+  { id: 'latin', name: 'Latin & Caribbean', emoji: '🌴' },
+  { id: 'world', name: 'Drums of the world', emoji: '🌍' },
   { id: 'swing', name: 'Swing & odd times', emoji: '🎷' },
 ];
 
 export const GROOVES = [
-  { id: 'four', name: 'Four on the floor', emoji: '🪩', group: 'dance', bpm: 120, rows: [
+  { id: 'four', name: 'Four on the floor', emoji: '🪩', group: 'dance', bpm: 120,
+    about: 'The heartbeat of the dance floor: a kick on every beat. Count 1, 2, 3, 4.',
+    rows: [
     ['kick', 'x...x...x...x...'],
     ['clap', '....x.......x...'],
     ['hihat', '..x...x...x...x.']] },
-  { id: 'house', name: 'House', emoji: '🏠', group: 'dance', bpm: 124, rows: [
+  { id: 'house', name: 'House', emoji: '🏠', group: 'dance', bpm: 124,
+    about: 'Born in Chicago clubs. The kick never stops, and the open hat goes tss in between.',
+    rows: [
     ['kick', 'x...x...x...x... x...x...x...x...'],
     ['clap', '....x.......x... ....x.......x...'],
     ['open-hat', '..x...x...x...x. ..x...x...x...x.'],
@@ -45,13 +53,17 @@ export const GROOVES = [
     ['chord-f', '................ x..x..x...x.....'],
     ['bass-a', '..x...x...x...x. ................'],
     ['bass-f', '................ ..x...x...x...x.']] },
-  { id: 'techno', name: 'Techno', emoji: '🤖', group: 'dance', bpm: 130, rows: [
+  { id: 'techno', name: 'Techno', emoji: '🤖', group: 'dance', bpm: 130,
+    about: 'From Detroit: robots dancing. The same beat over and over, with a buzzing bass.',
+    rows: [
     ['kick', 'x...x...x...x...'],
     ['clap', '....x.......x...'],
     ['ride', '..x...x...x...x.'],
     ['hihat', 'xxxxxxxxxxxxxxxx'],
     ['bass-e', '.xxx.xxx.xxx.xxx']] },
-  { id: 'disco', name: 'Disco', emoji: '🕺', group: 'dance', bpm: 116, rows: [
+  { id: 'disco', name: 'Disco', emoji: '🕺', group: 'dance', bpm: 116,
+    about: '1970s party music. Listen for the hat going tss on every “and”.',
+    rows: [
     ['kick', 'x...x...x...x... x...x...x...x...'],
     ['snare', '....x.......x... ....x.......x...'],
     ['open-hat', '..x...x...x...x. ..x...x...x...x.'],
@@ -60,7 +72,9 @@ export const GROOVES = [
     ['chord-g', '................ ..x...x...x...x.'],
     ['bass-d', 'x.x.x.x.x.x.x.x. ................'],
     ['bass-g', '................ x.x.x.x.x.x.x.x.']] },
-  { id: 'dnb', name: 'Drum & bass', emoji: '⚡', group: 'dance', bpm: 172, rows: [
+  { id: 'dnb', name: 'Drum & bass', emoji: '⚡', group: 'dance', bpm: 172,
+    about: 'Super fast drums from the UK. The kick lands where you don’t expect it.',
+    rows: [
     ['kick', 'x.........x..... x.........x.....'],
     ['snare', '....x.......x... ....x.......x...'],
     ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
@@ -68,12 +82,16 @@ export const GROOVES = [
     ['chord-f', '................ x...............'],
     ['bass-a', 'x.........x..... ................'],
     ['bass-f', '................ x.........x.....']] },
-  { id: 'dubstep', name: 'Dubstep', emoji: '🫨', group: 'dance', bpm: 140, rows: [
+  { id: 'dubstep', name: 'Dubstep', emoji: '🫨', group: 'dance', bpm: 140,
+    about: 'Slow and heavy: the snare waits until the middle of the bar.',
+    rows: [
     ['kick', 'x.....x.........'],
     ['snare', '........x.......'],
     ['hihat', 'x.x.x.x.x.x.x.x.'],
     ['bass-e', 'x..x..x.x..x..x.']] },
-  { id: 'boombap', name: 'Boom bap', emoji: '📼', group: 'hiphop', bpm: 90, rows: [
+  { id: 'boombap', name: 'Boom bap', emoji: '📼', group: 'hiphop', bpm: 90,
+    about: 'Classic 1990s New York hip hop: boom is the kick, bap is the snare.',
+    rows: [
     ['kick', 'x......x..x..... x......x..x.....'],
     ['snare', '....x.......x... ....x.......x...'],
     ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
@@ -81,17 +99,23 @@ export const GROOVES = [
     ['chord-dm', '................ x.......x.......'],
     ['bass-a', 'x......x..x..... ................'],
     ['bass-d', '................ x......x..x.....']] },
-  { id: 'trap', name: 'Trap', emoji: '🔥', group: 'hiphop', bpm: 140, rows: [
+  { id: 'trap', name: 'Trap', emoji: '🔥', group: 'hiphop', bpm: 140,
+    about: 'From Atlanta: big booming bass and hi-hats that go double fast.',
+    rows: [
     ['boom', 'x......x..x..... x.........x..x..'],
     ['clap', '........x....... ........x.......'],
     ['hihat', 'x.x.x.x.x.xxx.x. x.x.x.x.xxxxx.x.'],
     ['chord-am', 'x.......x....... ................'],
     ['chord-em', '................ x.......x.......']] },
-  { id: 'halftime', name: 'Half-time', emoji: '🐢', group: 'hiphop', bpm: 140, rows: [
+  { id: 'halftime', name: 'Half-time', emoji: '🐢', group: 'hiphop', bpm: 140,
+    about: 'Feels slow though the hats are fast: the clap waits for beat 3.',
+    rows: [
     ['kick', 'x.....x...x.....'],
     ['clap', '........x.......'],
     ['hihat', 'xxxxxxxxxxxxxxxx']] },
-  { id: 'lofi', name: 'Lo-fi', emoji: '☕', group: 'hiphop', bpm: 80, rows: [
+  { id: 'lofi', name: 'Lo-fi', emoji: '☕', group: 'hiphop', bpm: 80,
+    about: 'Sleepy study music: soft drums and cozy chords.',
+    rows: [
     ['kick', 'x.....x.x....... x.....x.x.......'],
     ['rim', '....x.......x... ....x.......x...'],
     ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
@@ -99,7 +123,9 @@ export const GROOVES = [
     ['chord-em', '................ x.......x.......'],
     ['bass-f', 'x.....x......... ................'],
     ['bass-e', '................ x.....x.........']] },
-  { id: 'oldschool', name: 'Old school', emoji: '📻', group: 'hiphop', bpm: 100, rows: [
+  { id: 'oldschool', name: 'Old school', emoji: '📻', group: 'hiphop', bpm: 100,
+    about: 'Early hip hop from the 1980s, with a cowbell on top.',
+    rows: [
     ['kick', 'x.....x...x..x..'],
     ['clap', '....x.......x...'],
     ['hihat', 'x.x.x.x.x.x.x.x.'],
@@ -108,7 +134,9 @@ export const GROOVES = [
   // Hip hop's playful ones (Ben, 2026-10-17, after listening to Tierra Whack):
   // bouncy, a bit wonky, sparse, with the 🧢 Hip hop presets' plinks, bloops
   // and woodblock. Then Drill and Dusty, staples built from the same presets.
-  { id: 'bounce', name: 'Bounce', emoji: '🏀', group: 'hiphop', bpm: 92, rows: [
+  { id: 'bounce', name: 'Bounce', emoji: '🏀', group: 'hiphop', bpm: 92,
+    about: 'Bouncy and playful: a woodblock and a plink hop between the kicks.',
+    rows: [
     ['kick-dusty', 'x..x..x...x..... x..x..x...x..x..'],
     ['clap', '....x.......x... ....x.......x...'],
     ['woodblock', '..x...x..x...x.. ..x...x..x....x.'],
@@ -118,7 +146,9 @@ export const GROOVES = [
     ['bass-c', 'x..x..x......... ................'],
     ['bass-g', '..........x..... ................'],
     ['bass-a', '................ x..x..x...x..x..']] },
-  { id: 'wonky', name: 'Wonky', emoji: '🥴', group: 'hiphop', bpm: 78, rows: [
+  { id: 'wonky', name: 'Wonky', emoji: '🥴', group: 'hiphop', bpm: 78,
+    about: 'A little off balance on purpose: the snaps come late.',
+    rows: [
     ['kick-dusty', 'x......x.x...... x.....x....x....'],
     ['snap', '.....x.......x.. ....x........x..'],
     ['hihat', 'x..x.x..x..x.x.. x..x.x..x..x.x..'],
@@ -127,7 +157,9 @@ export const GROOVES = [
     ['chord-dm', 'x.......x....... ................'],
     ['chord-am', '................ x.......x.......'],
     ['glide', 'x............... x...........x...']] },
-  { id: 'hopscotch', name: 'Hopscotch', emoji: '👟', group: 'hiphop', bpm: 100, rows: [
+  { id: 'hopscotch', name: 'Hopscotch', emoji: '👟', group: 'hiphop', bpm: 100,
+    about: 'A sing-song tune, like a playground game.',
+    rows: [
     ['kick', 'x.......x.x..... x.......x.x.....'],
     ['clap', '....x.......x... ....x.......x...'],
     ['woodblock', '..x...x...x...x. ..x...x...x...x.'],
@@ -139,7 +171,9 @@ export const GROOVES = [
     ['bloop', '..............x. ..............x.'],
     ['bass-c', 'x.......x....... ................'],
     ['bass-g', '................ x.......x.......']] },
-  { id: 'lullaby', name: 'Lullaby', emoji: '🌛', group: 'hiphop', bpm: 72, rows: [
+  { id: 'lullaby', name: 'Lullaby', emoji: '🌛', group: 'hiphop', bpm: 72,
+    about: 'Soft and slow, with an old record crackling.',
+    rows: [
     ['kick', 'x.........x..... x.........x.....'],
     ['snap', '....x.......x... ....x.......x...'],
     ['shaker', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
@@ -149,7 +183,9 @@ export const GROOVES = [
     ['chord-am', '................ x.......x.......'],
     ['bass-c', 'x............... ................'],
     ['bass-a', '................ x...............']] },
-  { id: 'drill', name: 'Drill', emoji: '🧊', group: 'hiphop', bpm: 142, rows: [
+  { id: 'drill', name: 'Drill', emoji: '🧊', group: 'hiphop', bpm: 142,
+    about: 'From London and Chicago: sliding 808 bass and hats that skip.',
+    rows: [
     ['kick', 'x.........x..... ..x.......x.....'],
     ['snare', '........x....... ........x.....x.'],
     ['hihat', 'x..x..x.x..x..x. x..x..x.x.x..x..'],
@@ -157,7 +193,9 @@ export const GROOVES = [
     ['glide', 'x.....x......... x.........x.....'],
     ['chord-am', 'x............... ................'],
     ['chord-dm', '................ x...............']] },
-  { id: 'dusty', name: 'Dusty', emoji: '🎞️', group: 'hiphop', bpm: 88, rows: [
+  { id: 'dusty', name: 'Dusty', emoji: '🎞️', group: 'hiphop', bpm: 88,
+    about: 'Crunchy drums like an old record, with a horn and a scratch.',
+    rows: [
     ['kick-dusty', 'x......x.x...... x.x....x..x.....'],
     ['snare-dusty', '....x.......x... ....x.......x..x'],
     ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
@@ -166,11 +204,15 @@ export const GROOVES = [
     ['scratch', '................ ............x...'],
     ['bass-c', 'x......x.x...... ................'],
     ['bass-a', '................ x.x....x..x.....']] },
-  { id: 'backbeat', name: 'Backbeat', emoji: '🥁', group: 'rock', bpm: 100, rows: [
+  { id: 'backbeat', name: 'Backbeat', emoji: '🥁', group: 'rock', bpm: 100,
+    about: 'The beat under most rock songs: kick on 1 and 3, snare on 2 and 4.',
+    rows: [
     ['kick', 'x.......x.x.....'],
     ['snare', '....x.......x...'],
     ['hihat', 'x.x.x.x.x.x.x.x.']] },
-  { id: 'pop', name: 'Pop', emoji: '🍭', group: 'rock', bpm: 110, rows: [
+  { id: 'pop', name: 'Pop', emoji: '🍭', group: 'rock', bpm: 110,
+    about: 'Four chords that a thousand songs use. Can you hum a tune over them?',
+    rows: [
     ['kick', 'x.......x.x..... x.......x.x..... x.......x.x..... x.......x.x.....'],
     ['snare', '....x.......x... ....x.......x... ....x.......x... ....x.......x...'],
     ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
@@ -182,7 +224,9 @@ export const GROOVES = [
     ['bass-g', '................ x.....x.....x... ................ ................'],
     ['bass-a', '................ ................ x.....x.....x... ................'],
     ['bass-f', '................ ................ ................ x.....x.....x...']] },
-  { id: 'motown', name: 'Motown', emoji: '🚗', group: 'rock', bpm: 120, rows: [
+  { id: 'motown', name: 'Motown', emoji: '🚗', group: 'soul', bpm: 120,
+    about: 'From Detroit in the 1960s: the snare and tambourine hit every beat.',
+    rows: [
     ['snare', 'x...x...x...x... x...x...x...x...'],
     ['tambourine', '....x.......x... ....x.......x...'],
     ['kick', 'x.....x.x.....x. x.....x.x.....x.'],
@@ -194,7 +238,9 @@ export const GROOVES = [
     ['bass-a', '............x... ....x...........'],
     ['bass-f', '................ x...............'],
     ['bass-d', '................ ............x...']] },
-  { id: 'punk', name: 'Punk', emoji: '🤘', group: 'rock', bpm: 172, rows: [
+  { id: 'punk', name: 'Punk', emoji: '🤘', group: 'rock', bpm: 172,
+    about: 'Fast and loud! Everything as hard as you can.',
+    rows: [
     ['kick', 'x...x...x...x... x...x...x...x...'],
     ['snare', '..x...x...x...x. ..x...x...x...x.'],
     ['crash', 'x............... ................'],
@@ -202,7 +248,9 @@ export const GROOVES = [
     ['chord-c', '................ x...x...x...x...'],
     ['bass-g', 'x.x.x.x.x.x.x.x. ................'],
     ['bass-c', '................ x.x.x.x.x.x.x.x.']] },
-  { id: 'funk', name: 'Funk', emoji: '🕶️', group: 'rock', bpm: 100, rows: [
+  { id: 'funk', name: 'Funk', emoji: '🕶️', group: 'soul', bpm: 100,
+    about: 'Every hit lands just right, so you have to move. Follow the bass.',
+    rows: [
     ['kick', 'x.x.......x..x..'],
     ['snare', '....X..x.x..X..x'],
     ['hihat', 'xxxxxxxxxxxxxxxx'],
@@ -210,7 +258,9 @@ export const GROOVES = [
     ['bass-e', 'x.....x.x.......'],
     ['bass-g', '...........x....'],
     ['bass-a', '..............x.']] },
-  { id: 'dembow', name: 'Dembow', emoji: '🍍', group: 'latin', bpm: 96, rows: [
+  { id: 'dembow', name: 'Dembow', emoji: '🍍', group: 'latin', bpm: 96,
+    about: 'From Jamaica and Panama to Puerto Rico: the beat under reggaeton.',
+    rows: [
     ['kick', 'x...x...x...x... x...x...x...x...'],
     ['snare', '...x..x....x..x. ...x..x....x..x.'],
     ['shaker', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
@@ -218,7 +268,9 @@ export const GROOVES = [
     ['chord-f', '................ x.......x.......'],
     ['bass-a', 'x...x...x...x... ................'],
     ['bass-f', '................ x...x...x...x...']] },
-  { id: 'bossa', name: 'Bossa nova', emoji: '🏖️', group: 'latin', bpm: 70, rows: [
+  { id: 'bossa', name: 'Bossa nova', emoji: '🏖️', group: 'latin', bpm: 70,
+    about: 'Gentle music from Rio de Janeiro. The rim clicks a secret pattern.',
+    rows: [
     ['kick', 'x..xx..xx..xx..x x..xx..xx..xx..x'],
     ['rim', 'x..x..x...x..x.. x..x..x...x..x..'],
     ['shaker', 'xxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxx'],
@@ -229,7 +281,9 @@ export const GROOVES = [
     ['bass-a', '....x........... ................'],
     ['bass-g', '........x....... ....x.......x...'],
     ['bass-c', '................ x.......x.......']] },
-  { id: 'samba', name: 'Samba', emoji: '🎊', group: 'latin', bpm: 100, rows: [
+  { id: 'samba', name: 'Samba', emoji: '🎊', group: 'latin', bpm: 100,
+    about: 'Carnival in Brazil! The big drum is loudest on beat 2.',
+    rows: [
     ['kick', 'x...X...x...X... x...X...x...X...'],
     ['shaker', 'xxxXxxxXxxxXxxxX xxxXxxxXxxxXxxxX'],
     ['rim', 'x.x..x.x..x.x... x.x..x.x..x.x...'],
@@ -238,7 +292,9 @@ export const GROOVES = [
     ['bass-c', 'x.......x....... ................'],
     ['bass-g', '....x.......x... x.......x.......'],
     ['bass-d', '................ ....x.......x...']] },
-  { id: 'salsa', name: 'Salsa', emoji: '🌶️', group: 'latin', bpm: 90, rows: [
+  { id: 'salsa', name: 'Salsa', emoji: '🌶️', group: 'latin', bpm: 90,
+    about: 'From Cuba and New York. The clave plays 3 then 2, and everyone follows it.',
+    rows: [
     ['clave', 'x..x..x...x.x...'],
     ['cowbell', 'x.x.x.x.x.x.x.x.'],
     ['conga', '......xx......xx'],
@@ -247,7 +303,9 @@ export const GROOVES = [
     ['bass-g', '...x..........x.'],
     ['bass-c', '......x.........'],
     ['bass-d', '...........x....']] },
-  { id: 'cumbia', name: 'Cumbia', emoji: '🪗', group: 'latin', bpm: 95, rows: [
+  { id: 'cumbia', name: 'Cumbia', emoji: '🪗', group: 'latin', bpm: 95,
+    about: 'From Colombia: a shaker that goes chik-chika-chik.',
+    rows: [
     ['shaker', 'x.xxx.xxx.xxx.xx x.xxx.xxx.xxx.xx'],
     ['kick', 'x.......x....... x.......x.......'],
     ['conga', '..x...x...x...x. ..x...x...x...x.'],
@@ -257,7 +315,9 @@ export const GROOVES = [
     ['bass-e', '........x....... ................'],
     ['bass-g', '................ x...............'],
     ['bass-d', '................ ........x.......']] },
-  { id: 'afrobeat', name: 'Afrobeat', emoji: '☀️', group: 'world', bpm: 110, rows: [
+  { id: 'afrobeat', name: 'Afrobeat', emoji: '☀️', group: 'world', bpm: 110,
+    about: 'From Lagos, Nigeria, in the 1970s: many drums, each with its own part.',
+    rows: [
     ['kick', 'x.....x...x..x..'],
     ['snare', '....x..x....x.x.'],
     ['shaker', 'xxxxxxxxxxxxxxxx'],
@@ -266,7 +326,9 @@ export const GROOVES = [
     ['bass-a', 'x.....x.........'],
     ['bass-g', '........x.......'],
     ['bass-e', '...........x..x.']] },
-  { id: 'reggae', name: 'Reggae one-drop', emoji: '🏝️', group: 'world', bpm: 76, rows: [
+  { id: 'reggae', name: 'Reggae one-drop', emoji: '🏝️', group: 'latin', bpm: 76,
+    about: 'From Jamaica. One drop: the kick skips beat 1 and lands on beat 3.',
+    rows: [
     ['kick', '........x....... ........x.......'],
     ['rim', '........x....... ........x.......'],
     ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
@@ -274,7 +336,9 @@ export const GROOVES = [
     ['chord-dm', '................ ....x.......x...'],
     ['bass-a', 'x..x..x......... ................'],
     ['bass-d', '................ x..x..x.........']] },
-  { id: 'ska', name: 'Ska', emoji: '🏁', group: 'world', bpm: 160, rows: [
+  { id: 'ska', name: 'Ska', emoji: '🏁', group: 'latin', bpm: 160,
+    about: 'Jamaica before reggae: the chords jump on every “and”.',
+    rows: [
     ['kick', 'x.......x....... x.......x.......'],
     ['snare', '....x.......x... ....x.......x...'],
     ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
@@ -285,19 +349,25 @@ export const GROOVES = [
     ['bass-g', '........x....... x.......x.......'],
     ['bass-a', '................ ....x...........'],
     ['bass-d', '................ ............x...']] },
-  { id: 'secondline', name: 'Second line', emoji: '☂️', group: 'world', bpm: 104, rows: [
+  { id: 'secondline', name: 'Second line', emoji: '☂️', group: 'soul', bpm: 104,
+    about: 'A New Orleans street parade: march and dance at the same time.',
+    rows: [
     ['kick', 'x.....x.....x...'],
     ['snare', '..x.X.x...x.X.xx'],
     ['tambourine', '....x.......x...'],
     ['bass-c', 'x.....x.........'],
     ['bass-g', '........x.....x.']] },
-  { id: 'maqsum', name: 'Maqsum', emoji: '🏺', group: 'world', bpm: 100, rows: [
+  { id: 'maqsum', name: 'Maqsum', emoji: '🏺', group: 'world', bpm: 100,
+    about: 'From Egypt and around: dum is low, tek is high.',
+    rows: [
     ['tom-low', 'x.......x.......'],
     ['rim', '..x...x.....x...'],
     ['tambourine', 'x.x.x.x.x.x.x.x.'],
     ['chord-dm', 'x.......x.......'],
     ['bass-d', 'x.......x.......']] },
-  { id: 'swing', name: 'Swing', emoji: '🎺', group: 'swing', bpm: 168, signature: '6/8', rows: [
+  { id: 'swing', name: 'Swing', emoji: '🎺', group: 'swing', bpm: 168, signature: '6/8',
+    about: 'Jazz from the 1930s: each beat is long-short, doo-ba doo-ba.',
+    rows: [
     ['ride', 'x.....x...x. x.....x...x. x.....x...x. x.....x...x.'],
     ['hihat', '......x..... ......x..... ......x..... ......x.....'],
     ['kick', 'x.....x..... x.....x..... x.....x..... x.....x.....'],
@@ -310,7 +380,9 @@ export const GROOVES = [
     ['bass-a', '............ ......x..... ............ ............'],
     ['bass-d', '............ ............ x........... ............'],
     ['bass-f', '............ ............ ......x..... ............']] },
-  { id: 'shuffle', name: 'Shuffle', emoji: '🚂', group: 'swing', bpm: 144, signature: '6/8', rows: [
+  { id: 'shuffle', name: 'Shuffle', emoji: '🚂', group: 'swing', bpm: 144, signature: '6/8',
+    about: 'Long-short, long-short, like a train rolling along.',
+    rows: [
     ['hihat', 'x...x.x...x. x...x.x...x. x...x.x...x. x...x.x...x.'],
     ['snare', '......x..... ......x..... ......x..... ......x.....'],
     ['kick', 'x........... x........... x........... x...........'],
@@ -322,14 +394,18 @@ export const GROOVES = [
     ['bass-a', '............ ......x...x. ......x...x. ............'],
     ['bass-f', '............ ............ x...x....... ............'],
     ['bass-d', '............ ............ ............ ......x...x.']] },
-  { id: 'waltz', name: 'Waltz', emoji: '🩰', group: 'swing', bpm: 150, signature: '3/4', rows: [
+  { id: 'waltz', name: 'Waltz', emoji: '🩰', group: 'swing', bpm: 150, signature: '3/4',
+    about: 'Three beats: ONE two three, ONE two three. Dance in a circle.',
+    rows: [
     ['kick', 'x........... x...........'],
     ['hihat', '....x...x... ....x...x...'],
     ['chord-c', '....x...x... ............'],
     ['chord-g7', '............ ....x...x...'],
     ['bass-c', 'x........... ............'],
     ['bass-g', '............ x...........']] },
-  { id: 'sixeight', name: 'Six-eight', emoji: '⛵', group: 'swing', bpm: 96, signature: '6/8', rows: [
+  { id: 'sixeight', name: 'Six-eight', emoji: '⛵', group: 'swing', bpm: 96, signature: '6/8',
+    about: 'Two big beats, each split in three: rock-a-bye.',
+    rows: [
     ['hihat', 'x.x.x.x.x.x. x.x.x.x.x.x.'],
     ['kick', 'x........... x...........'],
     ['snare', '......x..... ......x.....'],
@@ -337,7 +413,9 @@ export const GROOVES = [
     ['chord-f', '............ x.....x.....'],
     ['bass-a', 'x.....x..... ............'],
     ['bass-f', '............ x.....x.....']] },
-  { id: 'march', name: 'March', emoji: '🥾', group: 'swing', bpm: 116, rows: [
+  { id: 'march', name: 'March', emoji: '🥾', group: 'swing', bpm: 116,
+    about: 'Left, right, left, right: a parade’s snare.',
+    rows: [
     ['kick', 'x.......x....... x.......x.......'],
     ['snare', 'X.xxx.x.X.xxx.x. X.xxx.x.X.xxx.x.'],
     ['chord-c', '....x.......x... ................'],
@@ -345,7 +423,9 @@ export const GROOVES = [
     ['bass-c', 'x............... ................'],
     ['bass-g', '........x....... x...............'],
     ['bass-d', '................ ........x.......']] },
-  { id: 'five', name: 'Five', emoji: '🖐️', group: 'swing', bpm: 168, signature: '5/4', rows: [
+  { id: 'five', name: 'Five', emoji: '🖐️', group: 'swing', bpm: 168, signature: '5/4',
+    about: 'Five beats in a bar. Count 1 2 3 4 5: odd and fun!',
+    rows: [
     ['ride', 'x...x...x...x...x...'],
     ['kick', 'x...........x.......'],
     ['snare', '........x.......x...'],
@@ -353,11 +433,105 @@ export const GROOVES = [
     ['chord-em', '............x...x...'],
     ['bass-a', 'x.......x...........'],
     ['bass-e', '............x...x...']] },
-  { id: 'seven', name: 'Seven', emoji: '🎻', group: 'swing', bpm: 140, signature: '7/8', rows: [
+  { id: 'seven', name: 'Seven', emoji: '🎻', group: 'swing', bpm: 140, signature: '7/8',
+    about: 'Seven beats: count 1 2 3, 1 2, 1 2.',
+    rows: [
     ['kick', 'X.......X.....'],
     ['rim', '....x.........'],
     ['tambourine', 'x.x.x.x.x.x.x.'],
     ['chord-dm', 'x...x...x.....'],
     ['bass-d', 'x...x.........'],
     ['bass-a', '........x.....']] },
+  { id: 'jerseyclub', name: 'Jersey club', emoji: '🛏️', group: 'dance', bpm: 140,
+    about: 'From New Jersey: kicks bounce in a run of five, and the bed squeaks.',
+    rows: [
+    ['kick', 'x..x..x...x.x... x..x..x...x.x.x.'],
+    ['clap', '....x.......x... ....x.......x...'],
+    ['hihat', '..x...x...x...x. ..x...x...x...x.'],
+    ['squeak', '..............x. ......x.........'],
+    ['chord-am', 'x............... ................'],
+    ['chord-f', '................ x...............'],
+    ['bass-a', 'x..x..x...x.x... ................'],
+    ['bass-f', '................ x..x..x...x.x...']] },
+  { id: 'amapiano', name: 'Amapiano', emoji: '🌅', group: 'dance', bpm: 112,
+    about: 'From South Africa: a shaker that never stops and a log drum that wobbles.',
+    rows: [
+    ['kick', 'x...x...x...x... x...x...x...x...'],
+    ['shaker', 'xxXxxxXxxxXxxxXx xxXxxxXxxxXxxxXx'],
+    ['rim', '....x.......x... ....x.......x..x'],
+    ['log-drum', '..x..x....x..x.x ..x..x...x...x..'],
+    ['chord-dm', 'x.......x....... ................'],
+    ['chord-am', '................ x.......x.......']] },
+  { id: 'kpop', name: 'K-pop', emoji: '💖', group: 'rock', bpm: 124,
+    about: 'Bright, shiny pop from Korea, made for dancing in step.',
+    rows: [
+    ['kick', 'x...x...x...x... x...x...x...x...'],
+    ['clap', '....x.......x... ....x.......x..x'],
+    ['open-hat', '..x...x...x...x. ..x...x...x...x.'],
+    ['snap', '........x....... ........x.......'],
+    ['chord-f', 'x..x..x...x..... ................'],
+    ['chord-g', '................ x..x..x...x.....'],
+    ['bass-f', 'x..x..x...x..x.. ................'],
+    ['bass-g', '................ x..x..x...x..x..']] },
+  { id: 'country', name: 'Country', emoji: '🤠', group: 'rock', bpm: 110,
+    about: 'Boom-chick: the bass goes boom, the chord goes chick.',
+    rows: [
+    ['kick', 'x.......x....... x.......x.......'],
+    ['snare', '....x.......x... ....x.......x...'],
+    ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
+    ['chord-g', '....x.......x... ................'],
+    ['chord-c', '................ ....x.......x...'],
+    ['bass-g', 'x............... ........x.......'],
+    ['bass-d', '........x....... ................'],
+    ['bass-c', '................ x...............']] },
+  { id: 'rnb', name: 'R&B', emoji: '🕯️', group: 'soul', bpm: 72,
+    about: 'A smooth, slow groove with finger snaps.',
+    rows: [
+    ['kick', 'x......x..x..... x......x.x......'],
+    ['snap', '....x.......x... ....x.......x...'],
+    ['hihat', 'x.x.xxx.x.x.xxx. x.x.xxx.x.x.xxx.'],
+    ['chord-am', 'x............... ................'],
+    ['chord-em', '................ x.......x.......'],
+    ['bass-a', 'x......x..x..... ................'],
+    ['bass-e', '................ x......x.x......']] },
+  { id: 'gospel', name: 'Gospel', emoji: '🕊️', group: 'soul', bpm: 132, signature: '6/8',
+    about: 'Church music with a clap on 2 and 4. Clap along!',
+    rows: [
+    ['kick', 'x.....x..... x.....x..... x.....x..... x.....x.....'],
+    ['clap', '......x..... ......x..... ......x..... ......x.....'],
+    ['tambourine', 'x...x.x...x. x...x.x...x. x...x.x...x. x...x.x...x.'],
+    ['chord-c', 'x.....x..... ............ ............ x.....x.....'],
+    ['chord-f', '............ x.....x..... ............ ............'],
+    ['chord-g', '............ ............ x.....x..... ............'],
+    ['bass-c', 'x........... ............ ............ x........x..'],
+    ['bass-f', '............ x........... ............ ............'],
+    ['bass-g', '............ ............ x........... ............']] },
+  { id: 'afrobeats', name: 'Afrobeats', emoji: '🐆', group: 'world', bpm: 104,
+    about: 'Today’s pop from Nigeria and Ghana: a rolling rim over a shaker.',
+    rows: [
+    ['kick', 'x.....x...x..... x.....x...x.....'],
+    ['rim', '...x..x....x..x. ...x..x....x..x.'],
+    ['shaker', 'x.xxx.xxx.xxx.xx x.xxx.xxx.xxx.xx'],
+    ['clap', '........x....... ........x.......'],
+    ['conga', '......xx......x. ......xx.....xx.'],
+    ['chord-am', 'x.......x....... ................'],
+    ['chord-dm', '................ x.......x.......'],
+    ['bass-a', 'x.....x...x..... ................'],
+    ['bass-d', '................ x.....x...x.....']] },
+  { id: 'bhangra', name: 'Bhangra', emoji: '🦚', group: 'world', bpm: 100,
+    about: 'From Punjab: the dhol goes dhuk (low) and tik (high). Shout hoy!',
+    rows: [
+    ['dhol', 'x.....x.x.....x. x.....x.x...x.x.'],
+    ['dhol-high', '..x.x...x.x.x.x. ..x.x...x.x.x...'],
+    ['tambourine', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
+    ['clap', '................ ............x...'],
+    ['bass-d', 'x.....x......... x.....x.........'],
+    ['bass-a', '........x.....x. ........x.......']] },
+  { id: 'taiko', name: 'Taiko', emoji: '🏯', group: 'world', bpm: 100,
+    about: 'Huge drums from Japan, played with your whole body.',
+    rows: [
+    ['taiko', 'X.....x.x...X... X.x.x.x.X...x.x.'],
+    ['woodblock', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
+    ['tom-low', '....x.......x... ....x...x.x.x.x.'],
+    ['cowbell', 'x.......x....... x.......x.......']] },
 ];

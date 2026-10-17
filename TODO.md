@@ -57,10 +57,9 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups). Waits on his answer to the emoji rule's exceptions. Grooves first, then:
-  1. Regroup 💃 Grooves into 7 style groups, one-line blurbs and "who plays" chips, 🆕 until first played; new grooves with today's sounds plus 🪘 Hand drums (taiko, djembe, log drum…; drop any that sound thin).
-  2. Instruments as who plays Notes, Chords, Bass (ADR 0030): generated mallets, chip, guitar; piano, strings, brass, flute from public-domain samples (check the license first); then give Motown, Lo-fi and Reggae real instruments, and add the grooves that need them (soca, chiptune).
-  3. 🧸 Kids: pentatonic toy keys and the round instrument button.
+- **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (`docs/design/more-kinds-of-music.md`; decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups, the emoji rule's exceptions). The grooves are built; next:
+  1. Instruments as who plays Notes, Chords, Bass (ADR 0030): generated mallets, chip, guitar; piano, strings, brass, flute and an organ (for gospel and R&B) from public-domain samples (check the license first); "who plays" chips on the groove cards; then give Motown, Lo-fi, Reggae, Gospel and R&B real instruments, and add Soca (steel drum) and Chiptune (chip).
+  2. 🧸 Kids: pentatonic toy keys and the round instrument button.
 
 
 

@@ -13,9 +13,10 @@ const kitIds = new Set(kit.map((s) => s.id));
 const advanced = new Set(kit.filter((s) => s.advanced).map((s) => s.id));
 const lit = (steps) => steps.flatMap((on, i) => (on ? [i] : []));
 
-test('about 30 grooves in six style groups, and the first six keep their ids', () => {
-  assert.ok(GROOVES.length >= 30, `${GROOVES.length} grooves`);
-  assert.deepEqual(GROOVE_GROUPS.map((g) => g.name), ['Dance', 'Hip hop', 'Rock & pop', 'Latin', 'World', 'Swing & odd times']);
+test('about 50 grooves in seven style groups (Ben, 2026-10-17: regroup), and the first six keep their ids', () => {
+  assert.ok(GROOVES.length >= 45, `${GROOVES.length} grooves`);
+  assert.deepEqual(GROOVE_GROUPS.map((g) => g.name),
+    ['Dance', 'Hip hop', 'Rock, pop & country', 'Soul & gospel', 'Latin & Caribbean', 'Drums of the world', 'Swing & odd times']);
   const ids = GROOVES.map((g) => g.id);
   assert.equal(new Set(ids).size, ids.length, 'ids are unique');
   assert.equal(new Set(GROOVES.map((g) => g.name)).size, ids.length, 'names are unique');
@@ -36,6 +37,28 @@ test('hip hop has its own presets and playful grooves built from them (Ben, 2026
   for (const id of ['bounce', 'wonky', 'hopscotch', 'lullaby', 'drill', 'dusty']) assert.ok(hiphop.some((g) => g.id === id), `${id} is a hip hop groove`);
   const used = new Set(hiphop.flatMap((g) => g.rows.map(([id]) => id)));
   assert.ok(presets.filter((id) => used.has(id)).length >= 8, 'the grooves play most of the new presets');
+});
+
+test('every groove says where it comes from or what to listen for, in one short line', () => {
+  for (const g of GROOVES) {
+    assert.equal(typeof g.about, 'string', g.id);
+    assert.ok(g.about.length >= 20 && g.about.length <= 90, `${g.id}: ${g.about.length} characters`);
+    assert.doesNotMatch(g.about, /BPM|sixteenth|syncopat|downbeat/i, `${g.id}: no music words a kid doesn't know`);
+  }
+});
+
+test('🪘 Hand drums are presets, and the new styles play them (Ben, 2026-10-17)', () => {
+  const inGroup = kit.filter((k) => k.group === 'handdrums').map((k) => k.id);
+  for (const id of ['taiko', 'djembe', 'djembe-slap', 'log-drum', 'dhol', 'dhol-high', 'bongo', 'cajon']) assert.ok(inGroup.includes(id), id);
+  const uses = (id, sound) => GROOVES.find((g) => g.id === id).rows.some(([s]) => s === sound);
+  assert.ok(uses('taiko', 'taiko'));
+  assert.ok(uses('bhangra', 'dhol') && uses('bhangra', 'dhol-high'));
+  assert.ok(uses('amapiano', 'log-drum'), 'amapiano needs its log drum');
+  const group = (id) => GROOVES.find((g) => g.id === id).group;
+  for (const [id, g] of [['jerseyclub', 'dance'], ['amapiano', 'dance'], ['kpop', 'rock'], ['country', 'rock'], ['rnb', 'soul'], ['gospel', 'soul'],
+    ['motown', 'soul'], ['funk', 'soul'], ['secondline', 'soul'], ['reggae', 'latin'], ['ska', 'latin'], ['afrobeats', 'world'], ['bhangra', 'world'], ['taiko', 'world']]) {
+    assert.equal(group(id), g, id);
+  }
 });
 
 test('every groove is a shape the beat maker plays: whole bars of its time signature, 1, 2 or 4 of them', () => {

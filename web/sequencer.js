@@ -2415,10 +2415,18 @@ export function createSequencer(deps) {
     const name = document.createElement('span');
     name.className = 'lib-name';
     name.textContent = `${g.emoji} ${g.name}`;
-    const info = document.createElement('span');
-    info.className = 'lib-info';
-    info.textContent = grooveInfo(g, beat);
-    text.append(name, info);
+    // Under the name, where it comes from and what to listen for; the
+    // sounds, bars and tempo only with Advanced (Ben, 2026-10-17).
+    const about = document.createElement('span');
+    about.className = 'lib-info groove-about';
+    about.textContent = g.about;
+    text.append(name, about);
+    if (advanced) {
+      const info = document.createElement('span');
+      info.className = 'lib-info groove-parts';
+      info.textContent = grooveInfo(g, beat);
+      text.append(info);
+    }
     b.append(thumbnail(beat), text);
     // ▶ beside the card plays a short sample without opening it (Ben, 2026-10-12).
     const hear = document.createElement('button');
