@@ -210,17 +210,30 @@ export const pictureFor = (used) => KIDS_EMOJI.find((e) => !used.has(e)) ?? KIDS
 
 // ── Live keys ──
 
-// Eight keys, C to high C, from the kit's notes; bright colors, left to right.
+// Eight keys, pentatonic, always (Ben, 2026-10-17: no wrong notes for a
+// small kid): C D E G A, then high C, high D, high E; bright colors, left to
+// right. A key plays one of the kit's notes `up` semitones higher: a high key
+// plays its low note's sound an octave up (twice as fast, as a tune row's
+// note does), so it wears the same fruit, smaller, with ✦.
 export const KIDS_KEYS = [
-  { note: 'note-c', color: '#E5383B', key: 'a' },
-  { note: 'note-d', color: '#F77F00', key: 's' },
-  { note: 'note-e', color: '#FCBF49', key: 'd' },
-  { note: 'note-f', color: '#2BB24C', key: 'f' },
-  { note: 'note-g', color: '#1FC7B0', key: 'g' },
-  { note: 'note-a', color: '#3A86FF', key: 'h' },
-  { note: 'note-b', color: '#8338EC', key: 'j' },
-  { note: 'note-c-high', color: '#FF4FA3', key: 'k' },
+  { note: 'note-c', up: 0, color: '#E5383B', key: 'a' },
+  { note: 'note-d', up: 0, color: '#F77F00', key: 's' },
+  { note: 'note-e', up: 0, color: '#FCBF49', key: 'd' },
+  { note: 'note-g', up: 0, color: '#2BB24C', key: 'f' },
+  { note: 'note-a', up: 0, color: '#1FC7B0', key: 'g' },
+  { note: 'note-c', up: 12, color: '#3A86FF', key: 'h' },
+  { note: 'note-d', up: 12, color: '#8338EC', key: 'j' },
+  { note: 'note-e', up: 12, color: '#FF4FA3', key: 'k' },
 ];
+// Each kit note's pitch above its C, in semitones.
+const NOTE_PITCH = { 'note-c': 0, 'note-d': 2, 'note-e': 4, 'note-f': 5, 'note-g': 7, 'note-a': 9, 'note-b': 11 };
+// The pitch a key plays, in semitones above the low C.
+export const keyPitch = (k) => NOTE_PITCH[k.note] + (k.up || 0);
+// How fast its sound plays: 2 for an octave up.
+export const keyRate = (k) => 2 ** ((k.up || 0) / 12);
+// A high key plays under a name of its own, so it and its low key can sound at once.
+export const keyPlayId = (k, clipId) => (k.up ? `${clipId}+${k.up}` : clipId);
+export const isHighKey = (k) => (k.up || 0) >= 12;
 
 // The kid's beat squares on a phone: eight across leaves squares narrower
 // than a finger, so they turn and run down the screen instead.

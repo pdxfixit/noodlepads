@@ -11,8 +11,9 @@ import { testManifest } from './test-board.mjs';
 import {
   makeSum, typeDigit, kidsRange, kidsAutoPx, kidsPadPx, kidsShare, shareOf, kidsSliderAt, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder,
   newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds, KIDS_TEMPOS,
-  kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS,
+  kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS, keyPitch, keyRate, keyPlayId, isHighKey,
 } from '../web/kids-logic.js';
+import { MELODY_NOTES } from '../web/notes.js';
 import { BEAT_ID, cleanPattern } from '../web/sequencer.js';
 import { isScratch, scratchId } from '../web/scratch.js';
 
@@ -166,6 +167,18 @@ test('small things: a new pad\'s picture, the beat\'s shape, the remembered tab,
   assert.equal(new Set(KIDS_KEYS.map((k) => k.color)).size, 8);
 });
 
+test('the toy keys are pentatonic: C D E G A, then high C D E, the high ones the low notes an octave up', () => {
+  assert.deepEqual(KIDS_KEYS.map(keyPitch), [0, 2, 4, 7, 9, 12, 14, 16]);
+  assert.deepEqual(KIDS_KEYS.map(keyPitch), MELODY_NOTES, 'the same notes as the old melody rows');
+  assert.deepEqual(KIDS_KEYS.map((k) => k.note), ['note-c', 'note-d', 'note-e', 'note-g', 'note-a', 'note-c', 'note-d', 'note-e']);
+  assert.deepEqual(KIDS_KEYS.map(isHighKey), [false, false, false, false, false, true, true, true]);
+  assert.deepEqual(KIDS_KEYS.map(keyRate), [1, 1, 1, 1, 1, 2, 2, 2]);
+  assert.deepEqual(KIDS_KEYS.map((k) => k.key).join(''), 'asdfghjk');
+  // A high key plays under its own name, so a low C and a high C can sound together.
+  assert.equal(keyPlayId(KIDS_KEYS[0], 'note-c'), 'note-c');
+  assert.notEqual(keyPlayId(KIDS_KEYS[5], 'note-c'), 'note-c');
+});
+
 // ── The app, with a person on the Kids level ──
 
 let page;
@@ -288,10 +301,27 @@ test('Beats: four drums of eight squares; a tap turns one on and saves the kid\'
   assert.equal($('#kids-beat').querySelectorAll('.kids-square')[10].getAttribute('aria-pressed'), 'true');
 });
 
-test('Keys: eight colored keys; a held key plays', () => {
+test('Keys: eight colored keys; a held key plays', async () => {
   $('[data-kids-tab="keys"]').dispatch('click');
   const keys = $('#kids-keys').querySelectorAll('.kids-key');
   assert.equal(keys.length, 8);
+  // High C D E wear the low notes' fruit, with ✦, and play them an octave up.
+  const face = (k) => k.querySelectorAll('.kids-key-face')[0].textContent;
+  assert.deepEqual([5, 6, 7].map((i) => face(keys[i])), [0, 1, 2].map((i) => face(keys[i])));
+  assert.deepEqual(keys.map((k) => k.classList.contains('high')), [false, false, false, false, false, true, true, true]);
+  assert.deepEqual(keys.map((k) => k.querySelectorAll('.kids-key-star').length), [0, 0, 0, 0, 0, 1, 1, 1]);
+  assert.equal(keys[5].getAttribute('aria-label'), `High ${keys[0].getAttribute('aria-label')}`);
+  const { audio } = await import('../web/audio.js');
+  const plain = audio.play;
+  const heard = [];
+  audio.play = async (clip, opts) => { heard.push({ kit: clip.kitId, rate: opts?.rate ?? 1, id: opts?.id ?? clip.id }); };
+  keys[0].dispatch('pointerdown', { pointerId: 9 });
+  keys[5].dispatch('pointerdown', { pointerId: 8 });
+  keys[0].dispatch('pointerup', { pointerId: 9 });
+  keys[5].dispatch('pointerup', { pointerId: 8 });
+  audio.play = plain;
+  assert.deepEqual(heard.map((h) => [h.kit, h.rate]), [['note-c', 1], ['note-c', 2]]);
+  assert.notEqual(heard[0].id, heard[1].id, 'a low C and a high C ring at once');
   played.length = 0;
   keys[0].dispatch('pointerdown', { pointerId: 1 });
   keys[4].dispatch('pointerdown', { pointerId: 2 });

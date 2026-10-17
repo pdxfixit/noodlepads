@@ -4073,6 +4073,19 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
   transition: transform 50ms, box-shadow 50ms, filter 50ms;
 }
 .kids-key.down { filter: brightness(1.25); }
+/* A high key: its low note's fruit a size smaller, with a small ✦ at its
+   top right: the same note, higher. */
+.kids-key-face { position: relative; display: inline-block; }
+.kids-key.high .kids-key-face { font-size: 0.72em; }
+.kids-key-star {
+  position: absolute;
+  top: -0.45em;
+  right: -0.6em;
+  font-size: 0.6em;
+  color: #fff;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.55);
+  pointer-events: none;
+}
 @media (max-width: 599px) {
   .kids-keys { flex-direction: column; align-items: center; }
   .kids-key { width: calc(100% - var(--n) * 4%); align-items: center; justify-content: flex-end; padding: 0 20px; font-size: 1.8rem; box-shadow: 0 5px 0 color-mix(in srgb, var(--key) 55%, black); }

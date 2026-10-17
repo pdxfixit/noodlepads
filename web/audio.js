@@ -294,8 +294,10 @@ export const audio = {
   },
 
   // `ring` (🔔 Overlap on 🎤 Live): the clip's earlier hits ring on under
-  // this one instead of being cut off (rhythm.js ringOver).
-  async play(clip, { loop = false, ring = false } = {}) {
+  // this one instead of being cut off (rhythm.js ringOver). `rate` plays it
+  // faster (higher) or slower, as a tune row's note does: 2 is an octave up
+  // (🧸 Kids' high keys). `id` names what plays, when it is not the clip's own.
+  async play(clip, { loop = false, ring = false, rate = 1, id = clip.id } = {}) {
     this.wake();
     let loaded;
     try {
@@ -306,7 +308,7 @@ export const audio = {
         : 'Delete it in Edit sounds and record it again.'}`);
       return;
     }
-    this.start(clip.id, loaded, { loop, clip, ring });
+    this.start(id, loaded, { loop, clip, ring, rate });
   },
 
   // Every source is set to loop over the clip, and a scheduled stop decides how
@@ -315,7 +317,7 @@ export const audio = {
   // (the sound sheet's live preview) and returns the last of them.
   // With `ring`, a hit of the same clip still sounding (not looping) rings
   // on under the new one, up to MAX_RINGING at once; else it is cut off.
-  start(id, { buffer, duration }, { loop = false, clip = null, via = null, ring = false } = {}) {
+  start(id, { buffer, duration }, { loop = false, clip = null, via = null, ring = false, rate = 1 } = {}) {
     const ctx = this.wake();
     const before = this.playing.get(id);
     if (ring && before && !before.loop) {
@@ -331,9 +333,11 @@ export const audio = {
     }
     src.loop = true;
     src.loopEnd = duration;
-    const entry = { src, gain, t0: ctx.currentTime, duration, loop, clip };  // clip: so syncLoops can restart it
+    if (rate !== 1) src.playbackRate.value = rate;
+    const heard = duration / rate;   // how long one pass lasts at that rate
+    const entry = { src, gain, t0: ctx.currentTime, duration: heard, loop, clip };  // clip: so syncLoops can restart it
     src.start(entry.t0);
-    src.stop(entry.t0 + (loop ? MAX_LOOP_SECONDS : duration));
+    src.stop(entry.t0 + (loop ? MAX_LOOP_SECONDS : heard));
     this.playing.set(id, entry);
     this.on.looping(id, loop);
     src.onended = () => {
