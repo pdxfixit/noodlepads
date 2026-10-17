@@ -57,6 +57,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
+- **🔊 Even it out** (Ben, 2026-10-17; decisions.md): a button for every sound a kid made, matching how loud it seems to the presets, as an edit with Undo; presets don't offer it. A background agent is building it.
 - **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (`docs/design/more-kinds-of-music.md`; decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups, the emoji rule's exceptions). The grooves, 🧸 Kids' pentatonic toy keys and instruments' phase 1 are built; next:
   1. Instruments, phase 3 (ADR 0030; the pickers everywhere, 🧸 Kids' instrument button, the grooves' instruments and chips, Soca and Chiptune are built): one ready-made key layout per family in ✏️ Edit keys.
 
@@ -82,6 +83,8 @@ Other work:
 ### Offered, not approved
 
 Agents suggested these; nothing happens until Ben says yes.
+
+- **Even out the presets' loudness** (about 1 h): a measured turn-up or turn-down per preset in boards.json, applied after the app's evening-out, so the quiet callouts ("Boom!", "Bruh", 20 to 30 dB under the rest) and the loud alarms and game sounds meet the middle; hi-hats, shakers and Vinyl stay quieter on purpose. Ben, 2026-10-17: "not sure yet, keep dialoguing".
 
 - **Spoken prompts in 🧸 Kids** (a recorded "tap a pad!" for kids who can't read yet; the clip would be public). Ben, 2026-10-16: "Maybe… some of it should just be found by poking. I'm not closed to it."
 

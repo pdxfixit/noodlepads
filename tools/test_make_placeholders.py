@@ -38,6 +38,20 @@ class Presets(unittest.TestCase):
         self.assertFalse(made & OLD_STARTERS, "an old starter's clip is never regenerated")
         self.assertFalse(made & recorded, "a recording is never made here")
 
+    def test_the_low_sounds_carry_on_a_phone(self):
+        """A phone plays almost nothing under 180 Hz (Ben, 2026-10-17: the 808s
+        were nearly silent on his phone): every bass, kick and boom keeps
+        about a fifth of its energy above that, like the real upright bass."""
+        import array, wave
+        low = ["kick", "kick-dusty", "boom", "glide", "808-40", "taiko", "dhol", "log-drum", "cajon", "heartbeat",
+               "explosion", "tom-low", "bass-c", "bass-d", "bass-e", "bass-f", "bass-g", "bass-a",
+               "bass-cs", "bass-ds", "bass-fs", "bass-gs", "bass-as"]
+        for name in low:
+            with wave.open(str(WEB / "clips/kit" / (name + ".wav"))) as w:
+                self.assertEqual(w.getframerate(), mp.RATE, name)
+                samples = [v / 32768 for v in array.array("h", w.readframes(w.getnframes()))]
+            self.assertGreaterEqual(mp.share_above(samples), 0.17, name)
+
     def test_naming_clips_makes_only_those(self):
         with tempfile.TemporaryDirectory() as tmp:
             old_out = mp.KIT_OUT
