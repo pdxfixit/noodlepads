@@ -40,14 +40,17 @@ export function paletteNames() {
 // playing when Advanced is turned off.
 // The Notes, Chords and Bass presets are those of the instrument the person
 // showing picked (ADR 0030); `allPresets` keeps every instrument's too.
-export function clipsFor(personId, { includeHidden = false, allPresets = false } = {}) {
+// `ownSounds` shows the groups' own sounds (Pluck, Synth) whatever the
+// pick: for the person's default keys and touch layout, which never change
+// under them when they pick another instrument.
+export function clipsFor(personId, { includeHidden = false, allPresets = false, ownSounds = false } = {}) {
   return clipsForPerson(person(personId), {
     overrides: state.overrides,
     userClips: state.userClips,
     order: state.orders.get(personId)?.ids,
     includeHidden,
     advanced: allPresets || getSetting('advancedBeats') === true,
-    picks: allPresets ? null : instrumentPicks(),
+    picks: allPresets ? null : ownSounds ? {} : instrumentPicks(),
   });
 }
 

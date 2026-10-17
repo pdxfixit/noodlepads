@@ -33,7 +33,9 @@ import {
   makeSum, typeDigit, kidsPadPx, kidsSliderAt, shareOf, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder,
   KIDS_DRUMS, KIDS_SQUARES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds,
   kidsVoiceFields, voiceAfter, MAX_RECORD_SECONDS, MIN_RECORD_SECONDS, pictureFor, KIDS_KEYS, keyRate, keyPlayId, isHighKey, beatLayout, cleanTab,
+  nextKidsInstrument, keyKitId,
 } from './kids-logic.js';
+import { instrumentById, PLAYED } from './instruments.js';
 
 const el = {};
 let deps = null;
@@ -547,9 +549,34 @@ function wireBeat() {
 
 const held = new Map();   // pointer id (or 'kb-<letter>') -> key index
 
+// A key's sound: its note on the instrument the round button shows, else
+// the kit's own note (a board without that instrument's notes).
 function keyClip(i) {
   const all = deps.clips({ includeHidden: true, allPresets: true });
-  return all.find((c) => c.kitId === KIDS_KEYS[i].note) ?? null;
+  const k = KIDS_KEYS[i];
+  const want = keyKitId(k, getSetting('instNotes'));
+  return all.find((c) => c.kitId === want) ?? all.find((c) => c.kitId === k.note) ?? null;
+}
+
+// 🎹 The instrument button shows who plays the keys, by its picture; a tap
+// moves to the next one (kids-logic.js KIDS_INSTRUMENTS), kept as the
+// person's `instNotes`. No words: its name is only for a screen reader.
+const keysInstrument = () => instrumentById(getSetting('instNotes')) ?? instrumentById(PLAYED.notes.default);
+function showInstButton() {
+  const inst = keysInstrument();
+  el.inst.textContent = inst.emoji;
+  el.inst.dataset.inst = inst.id;
+  el.inst.setAttribute('aria-label', `Next instrument (now ${inst.name})`);
+}
+
+async function nextInstrument() {
+  boing(el.inst);
+  releaseKeys();
+  try {
+    await setSetting('instNotes', nextKidsInstrument(getSetting('instNotes')));
+  } catch (err) {
+    console.error('Changing the instrument failed:', err);
+  }
 }
 
 // A high key wears its low note's fruit a size smaller, with a small ✦:
@@ -708,7 +735,7 @@ export function initKids(d) {
     pages: q('#kids-pages'), turn: q('#kids-turn'), dots: q('#kids-dots'), arrows: document.querySelectorAll('[data-turn]'),
     mic: q('#kids-mic'), last: q('#kids-last'), voices: document.querySelectorAll('[data-kids-voice]'),
     beat: q('#kids-beat'), play: q('#kids-play'), slow: q('#kids-slow'), fast: q('#kids-fast'),
-    keys: q('#kids-keys'),
+    keys: q('#kids-keys'), inst: q('#kids-inst'),
     sum: q('#kids-sum'), sumBox: q('#kids-sum-box'), sumA: q('#kids-sum-a'), sumB: q('#kids-sum-b'), sumTyped: q('#kids-sum-typed'), sumKeys: q('#kids-sum-keys'),
   });
   for (const b of el.tabs) b.addEventListener('click', () => { boing(b); setTab(b.dataset.kidsTab); });
@@ -716,6 +743,11 @@ export function initKids(d) {
   el.skin.addEventListener('click', nextLook);
   showSkinButton();
   onSetting('padSkin', showSkinButton);
+  el.inst.addEventListener('click', nextInstrument);
+  showInstButton();
+  // A new instrument: the button shows it, and the keys play it (each key
+  // the same note, so its fruit stays).
+  onSetting('instNotes', () => { showInstButton(); if (showing && tab === 'keys') renderKeys(); });
   wirePads();
   wireSize();
   wireRecord();

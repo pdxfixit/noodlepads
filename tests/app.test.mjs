@@ -727,8 +727,11 @@ test('a beat row can use any person\'s sound: the kit once, in groups, then a se
   const kitSections = sections.slice(0, BOARDS.kitGroups.length);
   const personSections = sections.slice(BOARDS.kitGroups.length);
   // The kit's groups first, each a button that opens it, Drums open; then people.
-  assert.deepEqual(kitSections.map((g) => g.children[0].dataset.toggleGroup), BOARDS.kitGroups.map((g) => g.id));
-  assert.deepEqual(kitSections.map((g) => g.children[0].getAttribute('aria-expanded')), BOARDS.kitGroups.map((_, i) => String(i === 0)));
+  // Notes, Chords and Bass have who plays them beside the name (ADR 0030).
+  const toggle = (g) => g.querySelector('[data-toggle-group]');
+  assert.deepEqual(kitSections.map((g) => toggle(g).dataset.toggleGroup), BOARDS.kitGroups.map((g) => g.id));
+  assert.deepEqual(kitSections.map((g) => toggle(g).getAttribute('aria-expanded')), BOARDS.kitGroups.map((_, i) => String(i === 0)));
+  assert.deepEqual(kitSections.filter((g) => g.querySelector('[data-inst-pick]')).map((g) => toggle(g).dataset.toggleGroup), ['notes', 'chords', 'bass']);
   // Each person's own sounds are a section that opens and closes too, open to start.
   assert.deepEqual(personSections.map((g) => g.children[0].dataset.toggleGroup), ['person:pip', 'person:juno', 'person:toby', 'person:wren']);
   assert.ok(personSections.every((g) => g.children[0].getAttribute('aria-expanded') === 'true'));

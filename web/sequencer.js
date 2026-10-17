@@ -35,6 +35,8 @@ import { MAX_RINGING, ringOver } from './rhythm.js';
 import { cleanFx, masterLevel, silencedBySolo, mixKey, buildMix, createMixer } from './mixer.js';
 import { MELODY_NOTES, cleanNotes, fromLegacy, legacy, startsIn, addNote, lineOf, sameNotes, multiplyNotes } from './notes.js';
 import { createRoll } from './roll.js';
+import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
+import { presetInstrument, versionFor, ownIdOf, instrumentById } from './instruments.js';
 
 export const STEPS = 16;         // a bar of 4/4, the simple beat maker
 export const MAX_STEPS = 20;     // the longest bar (5/4)
@@ -1647,6 +1649,7 @@ export function createSequencer(deps) {
   let picked = null;   // the sound marked in it, not used until "Use"
   let ticks = [];      // new rows: the sounds ticked, in the order tapped
   let opened = new Map();  // group id -> open, set in this dialog (it wins over the shared state)
+  let instOpen = null;     // the group whose instrument list is open (one at a time), or null
 
   function openFor(next, current, returnTo) {
     target = next;
@@ -1656,6 +1659,7 @@ export function createSequencer(deps) {
     // The group holding the current sound starts open, but can still be closed.
     const home = deps.groups().find((g) => g.collapsible && g.clips.some((c) => c.id === picked));
     opened = new Map(home ? [[home.groupId, true]] : []);
+    instOpen = null;
     renderChooser();
     openDialog(el.chooser, {
       focus: el.chooserGrid.querySelector('[aria-pressed="true"]') || el.chooserGrid.querySelector('[data-choose], [data-toggle-group]'),
@@ -1679,6 +1683,7 @@ export function createSequencer(deps) {
       section.style.setProperty('--c', g.color);
       const open = !g.collapsible || isOpen(g.groupId);
       let heading;
+      let list = null;
       if (g.collapsible) {
         heading = document.createElement('button');
         heading.type = 'button';
@@ -1686,6 +1691,16 @@ export function createSequencer(deps) {
         heading.dataset.toggleGroup = g.groupId;
         heading.setAttribute('aria-expanded', String(open));
         heading.textContent = `${open ? '▾' : '▸'} ${g.name} (${g.clips.length})`;
+        // Notes, Chords and Bass: who plays them beside the name, as on
+        // 🔊 Pads (inst-picker.js, ADR 0030), its list under it while open.
+        if (hasPicker(g.groupId)) {
+          const kit = { id: g.groupId, name: g.plain ?? g.name };
+          const line = document.createElement('div');
+          line.className = 'chooser-inst-row';
+          line.append(heading, pickerButton(kit, instOpen === g.groupId, { where: 'chooser' }));
+          heading = line;
+          if (instOpen === g.groupId) list = pickerList(kit, { where: 'chooser' });
+        }
       } else {
         heading = document.createElement('h3');
         heading.textContent = g.name;
@@ -1700,7 +1715,7 @@ export function createSequencer(deps) {
         return b;
       }));
       grid.hidden = !open;
-      section.append(heading, grid);
+      section.append(...[heading, list, grid].filter(Boolean));
       return section;
     }));
     renderChooserTools();
@@ -2110,19 +2125,51 @@ export function createSequencer(deps) {
       openSound: (i, returnTo) => openFor({ row: i, title: `Row ${i + 1}` }, pattern.rows[i]?.clipId, returnTo),
       clipById: deps.clipById, colorOf: deps.colorOf,
       placed: () => countPlay('notes'),
+      instrument: rowInstrument, swapInstrument,
     });
+  }
+  // Who plays a tune row (ADR 0030): {group: {id, name}, inst}, for a row
+  // on one of Notes', Chords' or Bass' presets; null for any other sound.
+  function rowInstrument(i) {
+    const clip = deps.clipById(pattern?.rows[i]?.clipId);
+    const inst = clip?.kit ? instrumentById(presetInstrument(clip)) : null;
+    if (!inst) return null;
+    const name = deps.groups().find((g) => g.groupId === clip.group)?.plain ?? clip.group;
+    return { group: { id: clip.group, name }, inst };
+  }
+  // The roll's 🎹 swaps the row to another instrument's copy of the same
+  // note (or chord), so every note of the tune sounds where it was. It is
+  // the person's pick too, as every picker is.
+  function swapInstrument(i, inst) {
+    const row = pattern?.rows[i];
+    const clip = deps.clipById(row?.clipId);
+    if (!row || !clip?.kit) return;
+    const kitId = versionFor(ownIdOf(clip), clip.group, inst);
+    const next = kitId ? deps.clipById(`${clip.personId}-${kitId}`) : null;
+    if (next && next.id !== row.clipId) {
+      pattern.rows[i] = cleanRow({ ...row, clipId: next.id });
+      if (playing()) prepare(next);
+      save();
+      render();
+      deps.onBeatChange?.();
+    }
+    pickInstrument(clip.group, inst).catch((err) => console.error('Keeping the instrument failed:', err));
   }
   function openRoll(i, step = 0) {
     if (!roll || !pattern?.rows[i]?.melody) return;
     const returnTo = () => el.rows.querySelector(`.seq-row[data-row="${i}"] [data-pick]`) ?? el.add;
     roll.open(i, { step, returnTo });
   }
-  // 🎹 Add a tune: a tune row of the kit's C note (a piano-ish pluck), or
-  // the first sound there is, and the roll opens on it.
-  el.addTune?.addEventListener('click', () => {
+  // 🎹 Add a tune asks "Who plays it?" (ADR 0030): the Notes instruments by
+  // family, the person's pick ticked. A tap makes a tune row of that
+  // instrument's C (the first sound there is, if the board has none), keeps
+  // it as the person's pick, and the roll opens on it.
+  let tuneWho = null;   // the instrument tapped, until the dialog has closed
+  function addTune(inst) {
     if (!pattern || pattern.rows.length >= MAX_ROWS) return;
     const clips = [...deps.clips(), ...deps.groups().flatMap((g) => g.clips)];
-    const next = clips.find((c) => c.id === `${personId}-note-c`) || clips[0];
+    const kitId = (inst && versionFor('note-c', 'notes', inst)) || 'note-c';
+    const next = deps.clipById(`${personId}-${kitId}`) || clips.find((c) => c.id === `${personId}-note-c`) || clips[0];
     if (!next) return;
     pattern.rows.push(cleanRow({ clipId: next.id, melody: true, tune: [] }));
     if (playing()) prepare(next);
@@ -2130,7 +2177,31 @@ export function createSequencer(deps) {
     render();
     deps.onBeatChange?.();
     openRoll(pattern.rows.length - 1);
+    if (inst) pickInstrument('notes', inst).catch((err) => console.error('Keeping the instrument failed:', err));
+  }
+  el.addTune?.addEventListener('click', () => {
+    if (!pattern || pattern.rows.length >= MAX_ROWS) return;
+    if (!el.tuneWho) { addTune(null); return; }
+    const notes = deps.groups().find((g) => g.groupId === 'notes');
+    el.tuneWhoList.replaceChildren(pickerList({ id: 'notes', name: notes?.plain ?? 'Notes' }, { where: 'tune', label: 'Who plays it?' }));
+    tuneWho = null;
+    openDialog(el.tuneWho, { focus: el.tuneWhoList.querySelector('[aria-pressed="true"]'), returnTo: () => el.addTune });
   });
+  if (el.tuneWho) {
+    setupDialog(el.tuneWho);
+    el.tuneWho.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-inst]');
+      if (!b) return;
+      tuneWho = b.dataset.inst;
+      el.tuneWho.close();
+    });
+    // After the dialog has handed focus back, so the roll keeps its own.
+    el.tuneWho.addEventListener('close', () => {
+      const inst = tuneWho;
+      tuneWho = null;
+      if (inst) addTune(inst);
+    });
+  }
 
   // 🎚️ on the control bar, Beats and the keys view alike.
   function openMixer(from) {
@@ -2364,8 +2435,39 @@ export function createSequencer(deps) {
       el.chooserGrid.querySelector(`[data-toggle-group="${CSS.escape(toggle.dataset.toggleGroup)}"]`)?.focus();
       return;
     }
+    // Who plays Notes, Chords or Bass: the button opens or closes its list;
+    // a tap on an instrument picks it (the person's, as on 🔊 Pads), closes
+    // the list and opens the group on that instrument's sounds.
+    const who = e.target.closest('[data-inst-pick]');
+    if (who) {
+      instOpen = instOpen === who.dataset.instPick ? null : who.dataset.instPick;
+      renderChooser();
+      el.chooserGrid.querySelector(`[data-inst-pick="${CSS.escape(who.dataset.instPick)}"]`)?.focus();
+      return;
+    }
+    const inst = e.target.closest('[data-inst]');
+    if (inst) { chooseInstrument(inst.dataset.instGroup, inst.dataset.inst); return; }
     const pick = e.target.closest('[data-choose]');
     if (pick) mark(pick.dataset.choose);
+  });
+  async function chooseInstrument(group, inst) {
+    instOpen = null;
+    opened.set(group, true);
+    if (!deps.isGroupOpen?.(group)) deps.toggleGroup?.(group);   // the pads screen follows, as a header tap does
+    await pickInstrument(group, inst);
+    if (!el.chooser.open) return;
+    renderChooser();
+    el.chooserGrid.querySelector(`[data-inst-pick="${CSS.escape(group)}"]`)?.focus();
+  }
+  // Esc in an open instrument list closes the list, not the chooser.
+  el.chooser.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !instOpen || !e.target.closest?.('.inst-list, [data-inst-pick]')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const group = instOpen;
+    instOpen = null;
+    renderChooser();
+    el.chooserGrid.querySelector(`[data-inst-pick="${CSS.escape(group)}"]`)?.focus();
   });
   el.chooserOk.addEventListener('click', () => (target?.adding ? addTicked() : useMarked()));
   // 🎹 Tune: the row plays notes from 🎹 the piano roll (ADR 0023). On, its

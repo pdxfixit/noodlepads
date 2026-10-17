@@ -7,6 +7,7 @@
 import { cleanRow, STEPS } from './sequencer.js';
 import { chainFields, voiceStep } from './voices.js';
 import { SCRATCH_NAME } from './scratch.js';
+import { versionFor } from './instruments.js';
 
 // ── The grown-up sum ──
 
@@ -234,6 +235,17 @@ export const keyRate = (k) => 2 ** ((k.up || 0) / 12);
 // A high key plays under a name of its own, so it and its low key can sound at once.
 export const keyPlayId = (k, clipId) => (k.up ? `${clipId}+${k.up}` : clipId);
 export const isHighKey = (k) => (k.up || 0) >= 12;
+
+// Who plays the toy keys (ADR 0030): the round button at the top left moves
+// along this kid-sized list of the Notes instruments, round to Pluck again.
+// The pick is the person's own `instNotes`, the same one 🎹 Who plays on
+// Notes keeps, so an instrument picked elsewhere plays here too; a tap from
+// one not in this list starts it again at Pluck.
+export const KIDS_INSTRUMENTS = ['pluck', 'piano', 'marimba', 'steel', 'kalimba'];
+export const nextKidsInstrument = (now) => KIDS_INSTRUMENTS[(KIDS_INSTRUMENTS.indexOf(now) + 1) % KIDS_INSTRUMENTS.length];
+// The kit id a key plays on instrument `inst`: its note on that instrument
+// (`piano-e` for note-e), or the note itself on Pluck or one that plays no Notes.
+export const keyKitId = (k, inst) => versionFor(k.note, 'notes', inst) ?? k.note;
 
 // The kid's beat squares on a phone: eight across leaves squares narrower
 // than a finger, so they turn and run down the screen instead.
