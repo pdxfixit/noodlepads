@@ -50,7 +50,18 @@ closing the tab) with unsaved changes, a sound not yet saved, or a recording
 in progress asks first: **Keep editing** or **Throw away**. With Advanced on (Settings), ✂️ **Trim and edit** drags a sound's
 start and end in (same pad, Undo works), drags fades in from either end, and
 changes just a selected part (Backwards, Silence it, Louder, Quieter, Keep
-only this). 🧩 **Chop into pads** cuts it where
+only this). Beside them, on a sound a kid made (never a preset), 🔊 **Even it
+out** turns the whole sound up or down until it seems as loud as the presets:
+every sound already plays with the same loudest moment, but quiet talking with
+one loud clap stays quiet, because the clap sets that peak. It measures how
+loud a sound seems (`loudness.js`: BS.1770 K-weighting, the loudest 400 ms,
+channels averaged) against `PRESET_LOUDNESS`, the median of the presets shown
+with Advanced off as the app plays them (a test recomputes it from
+`web/clips/kit/`), and adds one gain edit over the whole recording, up to 8×
+either way, so it is kept, backed up and synced like Louder and an older copy
+plays it the same. Like Louder it keeps the sound's own level, its peaks held
+under full scale by the voices' soft ceiling. Within 1 dB already, the banner
+says so and nothing is added; ↩️ Undo takes it back. 🧩 **Chop into pads** cuts it where
 each sound starts and makes each piece a new pad ("Baby Burp", "Burp Jr.").
 The **pad size slider** at the top left of the pads makes them smoothly
 smaller (more on a line) or bigger (fewer). Its ends are the smallest and

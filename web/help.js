@@ -103,6 +103,7 @@ export const HELP = [
       { adv: true, pic: [tool('✂️ Trim and edit'), lit('✂️ Ends')], text: 'Drag the handles to cut the quiet off the start or end. The sound gets shorter; ↩️ Undo puts it back.' },
       { adv: true, pic: [lit('📐 Fades')], text: 'Drag a handle in from an end to make the sound fade in or fade out.' },
       { adv: true, pic: [lit('👆 Select part'), tool('🔄 Backwards'), tool('🔇 Silence it')], text: 'Drag the handles around a part, then change just that part: backwards, silent, 🔊 Louder or 🔉 Quieter.' },
+      { adv: true, pic: [tool('🔊 Even it out')], text: 'On a sound you made: turns all of it up or down until it seems as loud as the ready-made sounds, even a quiet one with one loud clap. ↩️ Undo takes it back.' },
       { adv: true, pic: [tool('✂️ Keep only this')], text: 'Keeps just the part you picked. Your recording stays as it was, and ↩️ Undo steps back.' },
       { adv: true, pic: [tool('🧩 Chop into pads')], text: 'Finds where each sound starts. Drag, add or remove the marks, then 🧩 Make pads turns each piece into a new pad.' },
     ],

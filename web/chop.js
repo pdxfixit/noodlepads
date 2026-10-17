@@ -6,6 +6,9 @@
 //                   first and fades out from the second.
 //   👆 Select part  two handles around a part, then change just that part:
 //                   Backwards, Silence it, Louder, Quieter, Keep only this.
+//                   Beside them, on a kid's own sound, 🔊 Even it out turns
+//                   the whole sound up or down until it seems as loud as the
+//                   presets (loudness.js).
 // The sound keeps the same pad and the recording is never changed: the trim,
 // the edits and the fade are settings (cuts.js) applied every time the sound
 // renders, before its voices. Undo steps back through all of them.
@@ -24,8 +27,9 @@ import { newId } from './util.js';
 import { chopName } from './names.js';
 import {
   cleanTrim, onsets, cleanMarks, pieces, newMark, MIN_PIECE,
-  cleanEdits, cleanFade, addEdit, applyEdits, applyFade, GAIN_STEP, hasGain, levelForGain,
+  cleanEdits, cleanFade, addEdit, applyEdits, applyFade, GAIN_STEP, hasGain, levelForGain, editsKey,
 } from './cuts.js';
+import { loudness, peakOf, evenGain, PRESET_LOUDNESS, EVEN_ENOUGH } from './loudness.js';
 import { logEvent } from './log.js';
 import { WAVE_PAD } from './wave.js';
 
@@ -48,7 +52,7 @@ export function createCut(sheet) {
     box: $('#cut'), start: $('#cut-start'), trimBtn: $('#trim-btn'), chopBtn: $('#chop-btn'),
     panel: $('#cut-panel'), hint: $('#cut-hint'), add: $('#cut-add'), remove: $('#cut-remove'),
     undo: $('#cut-undo'), all: $('#cut-all'), nofade: $('#cut-nofade'), done: $('#cut-done'), make: $('#cut-make'),
-    views: $('#cut-views'), edits: $('#cut-edits'),
+    views: $('#cut-views'), edits: $('#cut-edits'), even: $('#cut-even'),
     marks: $('#wave-marks'), from: $('#cut-from'), canvas: $('#wave'),
   };
   const cut = {
@@ -73,6 +77,11 @@ export function createCut(sheet) {
   const shown = () => getSetting('advancedBeats') === true;
   const length = () => (cut.mode === 'trim' ? cut.full.duration : cut.source.duration);
   const sameRange = (a, b) => a.start === b.start && a.end === b.end;
+  // A kid's own sound: a new one, or a saved one of theirs. Presets don't get 🔊 Even it out.
+  const own = () => {
+    const { mode, clip } = sheet.now();
+    return mode === 'new' || clip?.source === 'user';
+  };
 
   function render() {
     const { ready } = sheet.now();
@@ -88,6 +97,7 @@ export function createCut(sheet) {
     el.views.hidden = !trim;
     for (const b of el.views.children) b.setAttribute('aria-pressed', String(b.dataset.view === cut.view));
     el.edits.hidden = !trim || cut.view !== 'part';
+    el.even.hidden = !own();
     el.undo.hidden = !trim;
     el.all.hidden = !trim || cut.view === 'fades';
     el.nofade.hidden = !trim || cut.view !== 'fades';
@@ -280,6 +290,36 @@ export function createCut(sheet) {
       return;
     }
     applyCut({ ...now, edits }, { around: true });
+  }
+
+  // 🔊 Even it out: one gain edit over the whole recording that makes the
+  // sound, as the voices start from it, seem as loud as the presets. The
+  // gain edit keeps the sound's own level (levelForGain) with its peaks
+  // held under full scale (softLimit), so a quiet recording with one loud
+  // clap comes up and the clap is squashed instead of clipping. Already
+  // within about 1 dB, it says so and adds nothing.
+  function evenOut() {
+    const now = saved();
+    const d = cut.full.duration;
+    const { start, end } = cut.range;
+    const kept = applyFade(slice(applyEdits(slice(cut.full, 0, d), cut.edits), start, end - start), cut.fade);
+    const peak = peakOf(kept);
+    if (!peak) { showNotice('🔊 There is no sound here to even out.'); return; }
+    // How loud it seems now: scaled to its own peak, or (with Louder or
+    // Quieter in it) to the recording's, under the soft ceiling.
+    const gained = hasGain(cut.edits);
+    const plain = gained ? 0 : loudness(kept, { scale: 0.9 / peak });
+    const base = levelForGain(kept, slice(cut.full, start, end - start));
+    const heard = gained ? loudness(base, { limit: true }) : plain;
+    const already = () => showNotice('🔊 It is already even: as loud as the ready-made sounds.');
+    if (Math.abs(heard - PRESET_LOUDNESS) < EVEN_ENOUGH) { already(); return; }
+    const edits = addEdit(now.edits, { kind: 'gain', start: 0, end: d, amount: evenGain(base) });
+    if (edits === undefined) {
+      el.hint.textContent = 'That is as many changes as one sound holds. Undo one first.';
+      return;
+    }
+    if (editsKey(edits) === editsKey(now.edits)) { already(); return; }
+    applyCut({ ...now, edits });
   }
 
   function setView(view) {
@@ -480,6 +520,7 @@ export function createCut(sheet) {
     if (b === el.trimBtn) startTrim();
     else if (b === el.chopBtn) startChop();
     else if (b.dataset.view) setView(b.dataset.view);
+    else if (b === el.even) evenOut();
     else if (b.dataset.edit) editPart(b.dataset.edit);
     else if (b === el.undo && cut.undo.length) applyCut(cut.undo.pop(), { remember: false });
     else if (b === el.all && cut.view === 'part') {
