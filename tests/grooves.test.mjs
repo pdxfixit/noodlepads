@@ -24,6 +24,20 @@ test('about 30 grooves in six style groups, and the first six keep their ids', (
   for (const group of GROOVE_GROUPS) assert.ok(GROOVES.filter((g) => g.group === group.id).length >= 4, `${group.name} has grooves`);
 });
 
+test('hip hop has its own presets and playful grooves built from them (Ben, 2026-10-17)', () => {
+  const groups = JSON.parse(readFileSync(new URL('../web/boards.json', import.meta.url), 'utf8')).kitGroups;
+  assert.deepEqual(groups.slice(0, 2).map((g) => g.id), ['drums', 'hiphop'], 'Hip hop sits right after Drums');
+  const presets = kit.filter((k) => k.group === 'hiphop').map((k) => k.id);
+  for (const id of ['kick-dusty', 'snare-dusty', 'glide', 'hat-roll', 'woodblock', 'plink', 'bloop', 'vinyl', 'horn-stab', 'rewind']) {
+    assert.ok(presets.includes(id), `${id} is a Hip hop preset`);
+    assert.ok(!advanced.has(id), `${id} shows with Advanced off`);
+  }
+  const hiphop = GROOVES.filter((g) => g.group === 'hiphop');
+  for (const id of ['bounce', 'wonky', 'hopscotch', 'lullaby', 'drill', 'dusty']) assert.ok(hiphop.some((g) => g.id === id), `${id} is a hip hop groove`);
+  const used = new Set(hiphop.flatMap((g) => g.rows.map(([id]) => id)));
+  assert.ok(presets.filter((id) => used.has(id)).length >= 8, 'the grooves play most of the new presets');
+});
+
 test('every groove is a shape the beat maker plays: whole bars of its time signature, 1, 2 or 4 of them', () => {
   for (const g of GROOVES) {
     const { bar, bars, signature } = grooveShape(g);
