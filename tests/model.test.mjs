@@ -541,8 +541,9 @@ test('the presets (Ben, 2026-10-11): the old starters, a full octave of notes, A
   assert.deepEqual(inGroup('notes').filter((id) => !boards.kit.find((k) => k.id === id).advanced),
     ['note-c', 'note-d', 'note-e', 'note-f', 'note-g', 'note-a', 'note-b', 'note-c-high']);
   for (const g of ['animals', 'sci-fi']) assert.ok(inGroup(g).length >= 6 && inGroup(g).length <= 8, g);
-  // What a board loads with Advanced off stays under 4 MB; the Advanced-only
-  // presets (loaded only once shown or used) may add up to 1 MB more.
+  // What a board loads with Advanced off stays under 5 MB; the Advanced-only
+  // presets (loaded only once shown or used) may add up to 1 MB more (Ben,
+  // 2026-10-17: 6 MB in all, for real instruments).
   let bytes = 0, simple = 0;
   for (const k of boards.kit) {
     const size = readFileSync(new URL(`../web/${k.file}`, import.meta.url)).length;
@@ -550,8 +551,8 @@ test('the presets (Ben, 2026-10-11): the old starters, a full octave of notes, A
     bytes += size;
     if (!k.advanced) simple += size;
   }
-  assert.ok(simple < 4 * 1024 * 1024, `the presets shown with Advanced off are ${simple} bytes in all`);
-  assert.ok(bytes < 5 * 1024 * 1024, `the presets are ${bytes} bytes in all`);
+  assert.ok(simple < 5 * 1024 * 1024, `the presets shown with Advanced off are ${simple} bytes in all`);
+  assert.ok(bytes < 6 * 1024 * 1024, `the presets are ${bytes} bytes in all`);
 });
 
 test('every kit sound has its own emoji, so a sound is told apart by its picture alone', async () => {
