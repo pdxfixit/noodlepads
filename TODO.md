@@ -57,6 +57,11 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
+- **More kinds of music** (Ben, 2026-10-17: approved all four; the goal is both trying many styles and learning how music works). Waits on a design review of where it all goes (Ben has UI/UX concerns), then his OK on the mockups:
+  1. Hand-played percussion and mallets (steel drum, kalimba, marimba, taiko, djembe, tabla-like, dhol), made in `tools/make_placeholders.py`, and grooves they bring (bhangra, soca, taiko, Afrobeats/amapiano).
+  2. A pentatonic note set for 🧸 Kids: no wrong notes.
+  3. Grooves for R&B/soul, gospel, country/bluegrass, K-pop, chiptune, Jersey club.
+  4. Real instruments (piano, strings, brass, flute, guitar) from public-domain samples (check the license first), within the presets' size budget.
 
 
 
