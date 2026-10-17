@@ -67,7 +67,7 @@ const SONG_DROP = `const chip = (i) => document.querySelectorAll('#song-beats [d
   const drop = (i, lane, bar) => { if (chip(i).getAttribute('aria-pressed') !== 'true') chip(i).click();
     document.querySelector('#song-lanes [data-track="' + lane + '"] [data-bar="' + bar + '"]').click(); };`;
 const GROOVE_KEEP = (group, id) => q('#seq-grooves') + GROOVE_GROUPS_OPEN(group) + q(`[data-groove="${id}"]`) + nap + q('.beat-bar [data-beat-keep]') + nap;
-const PLAYLIST = `${q('#beats-toggle') + GROOVE_KEEP('world', 'ska') + GROOVE_KEEP('dance', 'house') + GROOVE_KEEP('rock', 'pop')}
+const PLAYLIST = `${q('#beats-toggle') + GROOVE_KEEP('latin', 'ska') + GROOVE_KEEP('dance', 'house') + GROOVE_KEEP('rock', 'pop')}
   ${q('#song-tab') + nap + q('#song-new') + nap} ${SONG_DROP}
   drop(0, 0, 0); ${q('#song-more')} drop(1, 1, 0); drop(1, 1, 4); drop(2, 2, 2); ${q('#song-sel-close')}`;
 // Six made-up sounds of the kid's own (silent audio), four of them in two
@@ -179,13 +179,13 @@ const VIEWS = {
     + 'document.querySelector(".seq-head").scrollIntoView({ block: "center" }); await new Promise((r) => setTimeout(r, 200));' + q('.seq-head [data-more]') + nap },
   'beat-groove': { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('rock') + q('[data-groove="pop"]') + 'await new Promise((r) => setTimeout(r, 300));' },
   // The scratch beat with Ska loaded (ADR 0020): "Ska (scratch)", 💾 Keep where ✏️ was, and the Undo line.
-  keep: { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('world') + q('[data-groove="ska"]') + 'await new Promise((r) => setTimeout(r, 300));' },
+  keep: { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('latin') + q('[data-groove="ska"]') + 'await new Promise((r) => setTimeout(r, 300));' },
   // A fresh device has the empty scratch beat open (ADR 0020). 🆕 New opens it blank (Ben, 2026-10-12);
   // KEEP_NEW is New, + Add a row and 💾 Keep: a named beat in 🗂️ My beats.
   beat: { screen: 'beats', js: q('.beat-bar [data-beat-new]') },
   // 🆕 New over a scratch with hits (Ska loaded): the blank scratch and the Undo line;
   // keys-new-full is the same with ⌨️ Keys on (the keys' line), song-new-full on Song (a kept beat, twice).
-  'new-full': { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('world') + q('[data-groove="ska"]') + nap + q('.beat-bar [data-beat-new]') + nap },
+  'new-full': { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('latin') + q('[data-groove="ska"]') + nap + q('.beat-bar [data-beat-new]') + nap },
   'keys-new-full': { screen: 'beats', keys: true, js: q('#dj-beatbar [data-beat-grooves]') + GROOVE_GROUPS_OPEN('dance') + q('[data-groove="house"]') + nap
     + q('#dj-beatbar [data-beat-new]') + nap },
   'song-new-full': { screen: 'song', js: `${q('#beats-toggle') + KEEP_NEW + q('#song-tab') + nap + q('#song-new')} ${SONG_DROP} drop(0, 0, 0); drop(0, 0, 1); ${q('#song-new') + nap}` },

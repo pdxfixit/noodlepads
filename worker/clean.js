@@ -28,6 +28,8 @@ export const KIT_IDS = [
   // The 🧢 Hip hop presets.
   'kick-dusty', 'snare-dusty', 'glide', 'hat-roll', 'woodblock', 'plink', 'bloop', 'vinyl', 'horn-stab',
   'rewind',
+  // The 🪘 Hand drums presets.
+  'taiko', 'djembe', 'djembe-slap', 'log-drum', 'dhol', 'dhol-high', 'bongo', 'cajon',
 ];
 
 const KNOWN = { kitIds: new Set(KIT_IDS), origin: 'https://noodlepads.com' };

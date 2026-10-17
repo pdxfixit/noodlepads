@@ -59,7 +59,7 @@ test('the dialog lists the grooves by style, each group folding open and shut', 
   assert.equal($('#grooves').open, true);
   const heads = $('#groove-list').querySelectorAll('[data-groove-group]');
   assert.deepEqual(heads.map((h) => h.querySelector('.emoji-all-name').textContent),
-    ['💃 Dance', '🎤 Hip hop', '🎸 Rock & pop', '🌴 Latin', '🌍 World', '🎷 Swing & odd times']);
+    ['💃 Dance', '🎤 Hip hop', '🎸 Rock, pop & country', '🙌 Soul & gospel', '🌴 Latin & Caribbean', '🌍 Drums of the world', '🎷 Swing & odd times']);
   assert.ok(heads.every((h) => h.getAttribute('aria-expanded') === 'false'), 'a short menu of styles at first');
   const latin = groupHead('latin');
   const list = $('#groove-list').querySelector(`#${latin.getAttribute('aria-controls')}`);
@@ -68,10 +68,26 @@ test('the dialog lists the grooves by style, each group folding open and shut', 
   latin.dispatch('click');
   assert.equal(latin.getAttribute('aria-expanded'), 'true');
   assert.equal(list.hidden, false);
-  assert.match(list.querySelector('[data-groove="bossa"] .lib-info').textContent, /\+ bass \+ chords · 2 bars · 70 BPM$/);
+  // Under each name, where it comes from; the sounds, bars and tempo only with Advanced (Ben, 2026-10-17).
+  assert.match(list.querySelector('[data-groove="bossa"] .groove-about').textContent, /^Gentle music from Rio de Janeiro/);
+  assert.equal(list.querySelector('[data-groove="bossa"] .groove-parts'), null);
   latin.dispatch('click');
   assert.equal(list.hidden, true, 'and shut again');
   $('#grooves').close();
+});
+
+test('with Advanced on, a groove\'s card also names its sounds, bars and tempo', async () => {
+  const { setSetting } = await import('../web/settings.js');
+  await setSetting('advancedBeats', true);
+  try {
+    $('#seq-grooves').dispatch('click');
+    const card = $('#groove-list').querySelector('[data-groove="bossa"]');
+    assert.match(card.querySelector('.groove-parts').textContent, /\+ bass \+ chords · 2 bars · 70 BPM$/);
+    assert.match(card.querySelector('.groove-about').textContent, /^Gentle music/, 'and keeps its line');
+    $('#grooves').close();
+  } finally {
+    await setSetting('advancedBeats', false);
+  }
 });
 
 test('with ⌨️ Keys on, a groove loads into the scratch, stopped, copying nothing; ▶ Play plays it behind you; ↩️ My beat brings back the beat that was open', async () => {
