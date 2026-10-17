@@ -80,7 +80,7 @@ the cloud database show what they would do, or ask, before they do it.
 | Bring problem reports and metrics home | `python3 ~/src/telemetry/telemetry.py pull`: the telemetry runner (pdxfixit/telemetry) harvests them, and this copies its store to `~/.local/state/telemetry/telemetry.sqlite3` |
 | Problem reports | `just logs`, `--errors`, `--digest` read them from that copy |
 | Move the old Mac archives into the runner (once) | `just runner-export all LOGS METRICS OUT` (both in the one file to import), `just runner-export check FILE` (docs/how-to.md, "Retire the old Mac archives") |
-| Make sounds and emoji lists | `just placeholders`, `just emoji` |
+| Make sounds and emoji lists | `just placeholders`, `just emoji`, `just preset-loudness` (how loud each preset plays on a phone) |
 
 Agents use the rest: `just ship`, `just land`, `just land-continue`,
 `just archive-agent`, `just prove`, and the steps a deploy runs itself

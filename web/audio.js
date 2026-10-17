@@ -295,7 +295,7 @@ export const audio = {
       // An exact-length clip in its normal voice keeps its full length, silent
       // tail included, so looping it keeps time.
       const plain = recipeKey(clip) === 'normal:null';
-      const job = this.original(clip).then((buffer) => applyChain(buffer, chainOf(clip), clip.tweaks))
+      const job = this.original(clip).then((buffer) => applyChain(buffer, chainOf(clip), clip.tweaks, clip.level))
         .then((r) => (clip.exact && plain ? { ...r, duration: r.buffer.duration } : r));
       job.catch((err) => {
         console.error(`Clip ${clip.id} (${recipeKey(clip)}) did not load:`, err);
