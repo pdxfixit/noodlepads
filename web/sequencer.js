@@ -26,7 +26,7 @@ import { soundKind } from './log-clean.js';
 import { rootShift } from './pitch.js';
 import { downloadBlob } from './download.js';
 import { GROOVES, GROOVE_GROUPS } from './grooves.js';
-import { FAMILIES, instrumentById, instrumentsFor, presetInstrument, PLAYED } from './instruments.js';
+import { FAMILIES, instrumentById, instrumentsFor, presetInstrument, PLAYED, versionFor, ownIdOf } from './instruments.js';
 import { isScratch, isHiddenBeat, scratchOf, scratchId, scratchLabel, grooveOf, hasHits, SCRATCH_NAME } from './scratch.js';
 import { cleanVolume, rowLevel, setRowLevel, drawSpeaker, speakerControls, percent } from './row-volume.js';
 import { rowParts, rowSpeaker, rowEmoji, twinRows } from './beat-row.js';
@@ -36,7 +36,6 @@ import { cleanFx, masterLevel, silencedBySolo, mixKey, buildMix, createMixer } f
 import { MELODY_NOTES, cleanNotes, fromLegacy, legacy, startsIn, addNote, lineOf, sameNotes, multiplyNotes } from './notes.js';
 import { createRoll } from './roll.js';
 import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
-import { presetInstrument, versionFor, ownIdOf, instrumentById } from './instruments.js';
 
 export const STEPS = 16;         // a bar of 4/4, the simple beat maker
 export const MAX_STEPS = 20;     // the longest bar (5/4)
