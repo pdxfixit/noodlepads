@@ -155,6 +155,16 @@ const VIEWS = {
   // Use --scroll-to '.pad-group-inst' to see them on a phone.
   'inst-list': { screen: 'pads', js: `${OPEN_KIT('notes')} ${q('[data-inst-pick="notes"]')} ${nap}` },
   'inst-piano': { screen: 'pads', js: `${OPEN_KIT('notes')} ${q('[data-inst-pick="notes"]')} ${nap} ${q('#inst-list-notes [data-inst="piano"]')} ${nap}` },
+  // The same picker everywhere else (phase 2): a row's sound chooser with
+  // Notes' list open (--scroll-to '.chooser-inst-row'); 🎹 Add a tune's Who
+  // plays it?; the roll on House's bass line with its instrument list open;
+  // ✏️ Edit keys with Notes open and its list open; ✏️ Edit layout with the
+  // Chords band's list open. kids-keys shows 🧸 Kids' round instrument button.
+  'chooser-inst': { screen: 'beats', js: q('.beat-bar [data-beat-new]') + ADD_ROW + q('.seq-row [data-pick]') + q('#chooser-grid [data-inst-pick="notes"]') + nap },
+  'tune-who': { screen: 'beats', js: q('.beat-bar [data-beat-new]') + q('#seq-add-tune') + nap },
+  'roll-inst': { screen: 'beats', js: ROLL_GROOVE + q('.seq-row.tune [data-pick]') + q('[data-roll="inst"] [data-inst-pick]') + nap },
+  'keys-inst': { screen: 'live', js: q('#dj-input [data-input="keys"]') + q('#dj-change') + q('[data-group="kit-notes"]') + q('#ke-inst [data-inst-pick]') + nap },
+  'touch-inst': { screen: 'live', js: q('#dj-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-inst-pick]') + nap },
   sheet: { screen: 'pads', js: q('.pad-add') },
   'sheet-edit': { screen: 'pads', js: `${q('#edit-toggle')} ${q('#pads .pad-cell [data-edit]')}` },
   // ✏️ Edit sounds with six made-up sounds of the kid's own, four in two
