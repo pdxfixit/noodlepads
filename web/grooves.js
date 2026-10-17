@@ -21,8 +21,12 @@
 // from and what to listen for, in words a kid knows (Ben, 2026-10-17).
 //
 // Bass and chords use the kit's natural notes (shown with Advanced off), in
-// C major and A minor; the kit has no bass B. tests/grooves.test.mjs checks
-// every groove's shape and sounds.
+// C major and A minor; the kit has no bass B. A row may name an
+// instrument's preset (ADR 0030: `piano-am-chord`, `steel-e`, `upright-a`):
+// that instrument plays it, whoever the person picked, and the card's "who
+// plays" chips name it. A groove's bass rows share one instrument, since
+// they load as one tune row (sequencer.js grooveBeat). tests/grooves.test.mjs
+// checks every groove's shape and sounds.
 
 // The dialog's groups, in order.
 export const GROOVE_GROUPS = [
@@ -119,10 +123,10 @@ export const GROOVES = [
     ['kick', 'x.....x.x....... x.....x.x.......'],
     ['rim', '....x.......x... ....x.......x...'],
     ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
-    ['chord-f', 'x.......x....... ................'],
-    ['chord-em', '................ x.......x.......'],
-    ['bass-f', 'x.....x......... ................'],
-    ['bass-e', '................ x.....x.........']] },
+    ['piano-f-chord', 'x.......x....... ................'],
+    ['piano-em-chord', '................ x.......x.......'],
+    ['upright-f', 'x.....x......... ................'],
+    ['upright-e', '................ x.....x.........']] },
   { id: 'oldschool', name: 'Old school', emoji: '📻', group: 'hiphop', bpm: 100,
     about: 'Early hip hop from the 1980s, with a cowbell on top.',
     rows: [
@@ -245,8 +249,8 @@ export const GROOVES = [
     ['snare', 'x...x...x...x... x...x...x...x...'],
     ['tambourine', '....x.......x... ....x.......x...'],
     ['kick', 'x.....x.x.....x. x.....x.x.....x.'],
-    ['chord-c', '..x...x...x...x. ................'],
-    ['chord-f', '................ ..x...x...x...x.'],
+    ['piano-c-chord', '..x...x...x...x. ................'],
+    ['piano-f-chord', '................ ..x...x...x...x.'],
     ['bass-c', 'x............... ................'],
     ['bass-e', '....x........... ................'],
     ['bass-g', '........x....... ........x.......'],
@@ -347,8 +351,8 @@ export const GROOVES = [
     ['kick', '........x....... ........x.......'],
     ['rim', '........x....... ........x.......'],
     ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
-    ['chord-am', '....x.......x... ................'],
-    ['chord-dm', '................ ....x.......x...'],
+    ['guitar-am-chord', '....x.......x... ................'],
+    ['guitar-dm-chord', '................ ....x.......x...'],
     ['bass-a', 'x..x..x......... ................'],
     ['bass-d', '................ x..x..x.........']] },
   { id: 'ska', name: 'Ska', emoji: '🏁', group: 'latin', bpm: 160,
@@ -364,6 +368,22 @@ export const GROOVES = [
     ['bass-g', '........x....... x.......x.......'],
     ['bass-a', '................ ....x...........'],
     ['bass-d', '................ ............x...']] },
+  { id: 'soca', name: 'Soca', emoji: '🌺', group: 'latin', bpm: 150,
+    about: 'From Trinidad: steel drums dance over a kick on every beat. Jump up!',
+    rows: [
+    ['kick', 'x...x...x...x... x...x...x...x...'],
+    ['snare', '....x..x....x..x ....x..x....x..x'],
+    ['cowbell', '..x...x...x...x. ..x...x...x...x.'],
+    ['shaker', 'xxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxx'],
+    ['steel-e', 'x..........x.... ................'],
+    ['steel-g', '...x....x.....x. ...........x....'],
+    ['steel-c-high', '......x......... ......x.........'],
+    ['steel-f', '................ x...............'],
+    ['steel-a', '................ ...x....x.......'],
+    ['steel-d', '................ ..............x.'],
+    ['bass-c', 'x..x..x.x....... ................'],
+    ['bass-f', '................ x..x..x.........'],
+    ['bass-g', '................ ........x.......']] },
   { id: 'secondline', name: 'Second line', emoji: '☂️', group: 'soul', bpm: 104,
     about: 'A New Orleans street parade: march and dance at the same time.',
     rows: [
@@ -477,6 +497,21 @@ export const GROOVES = [
     ['log-drum', '..x..x....x..x.x ..x..x...x...x..'],
     ['chord-dm', 'x.......x....... ................'],
     ['chord-am', '................ x.......x.......']] },
+  { id: 'chiptune', name: 'Chiptune', emoji: '👾', group: 'dance', bpm: 150,
+    about: 'Music from old video games: beepy notes run up and down. Grab the coin!',
+    rows: [
+    ['kick', 'x.......x.x..... x.......x.x.....'],
+    ['snare', '....x.......x... ....x.......x...'],
+    ['hihat', 'x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.'],
+    ['chip-c', 'x.......x....... ................'],
+    ['chip-e', '..x.......x..... ....x.......x...'],
+    ['chip-g', '....x.......x... ................'],
+    ['chip-c-high', '......x.......x. ..x.......x.....'],
+    ['chip-a', '................ x.....x.x.....x.'],
+    ['jump', '................ ...............x'],
+    ['coin', '...............x ................'],
+    ['bass-c', 'x...x...x...x... ................'],
+    ['bass-a', '................ x...x...x...x...']] },
   { id: 'kpop', name: 'K-pop', emoji: '💖', group: 'rock', bpm: 124,
     about: 'Bright, shiny pop from Korea, made for dancing in step.',
     rows: [
@@ -505,8 +540,8 @@ export const GROOVES = [
     ['kick', 'x......x..x..... x......x.x......'],
     ['snap', '....x.......x... ....x.......x...'],
     ['hihat', 'x.x.xxx.x.x.xxx. x.x.xxx.x.x.xxx.'],
-    ['chord-am', 'x............... ................'],
-    ['chord-em', '................ x.......x.......'],
+    ['piano-am-chord', 'x............... ................'],
+    ['piano-em-chord', '................ x.......x.......'],
     ['bass-a', 'x......x..x..... ................'],
     ['bass-e', '................ x......x.x......']] },
   { id: 'gospel', name: 'Gospel', emoji: '🕊️', group: 'soul', bpm: 132, signature: '6/8',
@@ -515,9 +550,9 @@ export const GROOVES = [
     ['kick', 'x.....x..... x.....x..... x.....x..... x.....x.....'],
     ['clap', '......x..... ......x..... ......x..... ......x.....'],
     ['tambourine', 'x...x.x...x. x...x.x...x. x...x.x...x. x...x.x...x.'],
-    ['chord-c', 'x.....x..... ............ ............ x.....x.....'],
-    ['chord-f', '............ x.....x..... ............ ............'],
-    ['chord-g', '............ ............ x.....x..... ............'],
+    ['organ-c-chord', 'x.....x..... ............ ............ x.....x.....'],
+    ['organ-f-chord', '............ x.....x..... ............ ............'],
+    ['organ-g-chord', '............ ............ x.....x..... ............'],
     ['bass-c', 'x........... ............ ............ x........x..'],
     ['bass-f', '............ x........... ............ ............'],
     ['bass-g', '............ ............ x........... ............']] },

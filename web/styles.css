@@ -1722,6 +1722,10 @@ dialog#sheet :focus-visible, dialog#chooser :focus-visible, dialog#library :focu
 .groove-hear { flex: none; width: 52px; min-height: 52px; padding: 0; font-size: 1.2rem; }
 .groove-hear[aria-pressed="true"] { background: var(--ink); }
 .lib-text { display: grid; min-width: 0; }
+/* Who plays a groove (ADR 0030): a small chip per instrument, white on its
+   family's color as in the instrument picker; they wrap on a phone. */
+.groove-who { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.groove-player { padding: 1px 8px; border-radius: 999px; background: var(--fam); color: #fff; font: 700 0.8rem/1.4 var(--font-ui); white-space: nowrap; }
 /* In every list (beats, grooves, songs), a long name wraps instead of hiding behind "…". */
 .lib-name { font-weight: 800; overflow-wrap: break-word; hyphens: auto; }
 .lib-info { color: var(--muted); font-size: 0.9rem; }

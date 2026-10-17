@@ -26,6 +26,7 @@ import { soundKind } from './log-clean.js';
 import { rootShift } from './pitch.js';
 import { downloadBlob } from './download.js';
 import { GROOVES, GROOVE_GROUPS } from './grooves.js';
+import { FAMILIES, instrumentById, instrumentsFor, presetInstrument } from './instruments.js';
 import { isScratch, isHiddenBeat, scratchOf, scratchId, scratchLabel, grooveOf, hasHits, SCRATCH_NAME } from './scratch.js';
 import { cleanVolume, rowLevel, setRowLevel, drawSpeaker, speakerControls, percent } from './row-volume.js';
 import { rowParts, rowSpeaker, rowEmoji, twinRows } from './beat-row.js';
@@ -406,25 +407,48 @@ export function rowSlot(rows, max, avoid = new Set()) {
 // Rows whose sound the board doesn't have are left out.
 // A groove's bass rows (one row per note: "bass-a", "bass-f") become one
 // tune row of the kit's Bass C, played at each note (ADR 0023), where the
-// first bass row was. Chord rows stay rows of pills: a chord moved to
-// another note would change from minor to major.
+// first bass row was. An instrument's bass ("upright-a", ADR 0030) becomes
+// a tune row of that instrument's C. Chord rows stay rows of pills: a chord
+// moved to another note would change from minor to major.
 export const BASS_NOTES = { 'bass-c': 0, 'bass-cs': 1, 'bass-d': 2, 'bass-ds': 3, 'bass-e': 4, 'bass-f': 5, 'bass-fs': 6, 'bass-g': 7, 'bass-gs': 8, 'bass-a': 9, 'bass-as': 10 };
+// A bass preset's kit id as {base, p}: the C its tune row plays and the
+// note above it. Null for any other sound.
+export function bassNote(kit) {
+  const m = /^(.+)-(c|cs|d|ds|e|f|fs|g|gs|a|as)$/.exec(kit ?? '');
+  if (!m || !(m[1] === 'bass' || instrumentsFor('bass').some((i) => i.id === m[1]))) return null;
+  return { base: `${m[1]}-c`, p: BASS_NOTES[`bass-${m[2]}`] };
+}
 export function grooveBeat(groove, personId, hasClip = () => true) {
   const { signature, bars, bar } = grooveShape(groove);
   const rows = [];
   const bass = [];
+  let base = 'bass-c';
   for (const [kit, hits] of groove.rows) {
     const pills = grooveHits(hits);
-    if (Object.hasOwn(BASS_NOTES, kit)) {
-      if (!bass.length) rows.push('bass');
-      bass.push({ p: BASS_NOTES[kit], steps: pills.map(([on]) => on) });
+    const note = bassNote(kit);
+    if (note) {
+      if (!bass.length) { rows.push('bass'); base = note.base; }
+      bass.push({ p: note.p, steps: pills.map(([on]) => on) });
       continue;
     }
     rows.push({ clipId: `${personId}-${kit}`, steps: pills.map(([on]) => on), accents: pills.map(([, loud]) => loud) });
   }
-  const line = { clipId: `${personId}-bass-c`, melody: true, steps: Array(bar * bars).fill(false), tune: lineOf(bass, bar * bars) };
+  const line = { clipId: `${personId}-${base}`, melody: true, steps: Array(bar * bars).fill(false), tune: lineOf(bass, bar * bars) };
   const out = rows.map((r) => (r === 'bass' ? line : r)).filter((r) => hasClip(r.clipId));
   return cleanPattern({ name: '', bpm: groove.bpm, bars, signature, rows: out }, personId);
+}
+
+// Who plays a groove beyond its drums (ADR 0030), for its card's chips: each
+// instrument once, in the order its rows come, with its family. `kitOf`
+// finds a kit preset by its kit id (null when the board lacks it); rows of
+// sounds no instrument plays (drums, game sounds) are left out.
+export function groovePlayers(groove, kitOf) {
+  const seen = new Map();
+  for (const [kit] of groove.rows) {
+    const inst = instrumentById(presetInstrument(kitOf(kit)));
+    if (inst && !seen.has(inst.id)) seen.set(inst.id, { ...inst, family: FAMILIES.find((f) => f.id === inst.family) });
+  }
+  return [...seen.values()];
 }
 
 // The tempo at each slider position, from MIN_BPM to MAX_BPM: a common tempo
@@ -2393,11 +2417,11 @@ export function createSequencer(deps) {
   // "chords" if it has them, its length if over a bar, its time signature
   // if not 4/4, and its tempo.
   function grooveInfo(g, beat) {
-    const kits = beat.rows.map((r) => r.clipId.slice(personId.length + 1));
-    const drums = beat.rows.filter((_, i) => !/^(bass|chord)-/.test(kits[i])).map((r) => deps.clipById(r.clipId)?.label).filter(Boolean);
+    const groups = beat.rows.map((r) => deps.clipById(r.clipId)?.group);
+    const drums = beat.rows.filter((_, i) => !['bass', 'chords'].includes(groups[i])).map((r) => deps.clipById(r.clipId)?.label).filter(Boolean);
     const parts = [drums.join(', ')];
-    if (kits.some((k) => k.startsWith('bass-'))) parts.push('bass');
-    if (kits.some((k) => k.startsWith('chord-'))) parts.push('chords');
+    if (groups.includes('bass')) parts.push('bass');
+    if (groups.includes('chords')) parts.push('chords');
     const { signature, bars } = grooveShape(g);
     return [parts.filter(Boolean).join(' + '), bars > 1 ? `${bars} bars` : '', signature === '4/4' ? '' : signature, `${g.bpm} BPM`]
       .filter(Boolean).join(' · ');
@@ -2421,6 +2445,23 @@ export function createSequencer(deps) {
     about.className = 'lib-info groove-about';
     about.textContent = g.about;
     text.append(name, about);
+    // Who plays it, beyond the drums: a chip per instrument in its family's
+    // color, as in the picker (ADR 0030).
+    const players = groovePlayers(g, (kit) => deps.clipById(`${personId}-${kit}`) ?? null);
+    if (players.length) {
+      const who = document.createElement('span');
+      who.className = 'groove-who';
+      for (const i of players) {
+        const chip = document.createElement('span');
+        chip.className = 'groove-player';
+        chip.dataset.inst = i.id;
+        chip.dataset.family = i.family.id;
+        chip.style.setProperty('--fam', i.family.color);
+        chip.textContent = `${i.emoji} ${i.name}`;
+        who.append(chip);
+      }
+      text.append(who);
+    }
     if (advanced) {
       const info = document.createElement('span');
       info.className = 'lib-info groove-parts';

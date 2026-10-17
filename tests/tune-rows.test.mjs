@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  cleanRow, cleanPattern, planHits, pillHits, samePattern, multiplyRows, mergeGroove, grooveBeat, grooveShape, beatToFile, beatFromFile, GROOVES, BASS_NOTES,
+  cleanRow, cleanPattern, planHits, pillHits, samePattern, multiplyRows, mergeGroove, grooveBeat, grooveShape, beatToFile, beatFromFile, GROOVES, BASS_NOTES, bassNote,
 } from '../web/sequencer.js';
 import { readBackup, makeBackup } from '../web/backup.js';
 import { shareBundle, shareDoc } from '../web/cloud-sync.js';
@@ -70,13 +70,14 @@ test('💃 Grooves: the bass rows become one tune row of Bass C, where the first
   assert.deepEqual([...new Set(bass.tune.map((x) => x.p))].sort((a, b) => a - b), [BASS_NOTES['bass-f'], BASS_NOTES['bass-a']], 'A and F');
   assert.deepEqual(bass.tune.slice(0, 2), [n(9, 2, 4), n(9, 6, 4)], 'each note lasts until the next');
   assert.ok(beat.rows.filter((r) => r.clipId.includes('chord-')).every((r) => !r.melody));
-  // Every groove with bass has one tune row; without the kit's Bass C it is left out, as any missing sound is.
+  // Every groove with bass has one tune row; without its C (the kit's Bass C,
+  // or an instrument's: `upright-c`, ADR 0030) it is left out, as any missing sound is.
   for (const g of GROOVES) {
-    const has = g.rows.some(([kit]) => Object.hasOwn(BASS_NOTES, kit));
+    const base = g.rows.map(([kit]) => bassNote(kit)?.base).find(Boolean);
     const b = grooveBeat(g, 'p-a');
-    assert.equal(b.rows.filter((r) => r.melody).length, has ? 1 : 0, g.id);
+    assert.equal(b.rows.filter((r) => r.melody).length, base ? 1 : 0, g.id);
     assert.ok(b.rows.every((r) => r.steps.length >= grooveShape(g).bar * grooveShape(g).bars || !r.melody), g.id);
-    assert.equal(grooveBeat(g, 'p-a', (id) => !id.endsWith('bass-c')).rows.some((r) => r.melody), false, g.id);
+    assert.equal(grooveBeat(g, 'p-a', (id) => !id.endsWith(`-${base}`)).rows.some((r) => r.melody), false, g.id);
   }
 });
 

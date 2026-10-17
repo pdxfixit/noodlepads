@@ -90,6 +90,21 @@ test('with Advanced on, a groove\'s card also names its sounds, bars and tempo',
   }
 });
 
+test('each groove card names who plays it beyond the drums, a chip per instrument in its family\'s color (ADR 0030)', async () => {
+  const { FAMILIES } = await import('../web/instruments.js');
+  $('#seq-grooves').dispatch('click');
+  const chips = (id) => $('#groove-list').querySelector(`[data-groove="${id}"]`).querySelectorAll('.groove-player');
+  const soca = chips('soca');
+  assert.deepEqual(soca.map((c) => c.dataset.inst), ['steel', 'synth']);
+  assert.equal(soca[0].textContent, '🛢️ Steel drum');
+  assert.equal(soca[0].dataset.family, 'mallets');
+  assert.equal(soca[0].style.props['--fam'], FAMILIES.find((f) => f.id === 'mallets').color);
+  assert.ok(chips('gospel').some((c) => c.dataset.inst === 'organ'), 'Gospel: the organ');
+  assert.ok(chips('chiptune').some((c) => c.dataset.inst === 'chip'), 'Chiptune: the chip');
+  assert.equal($('#groove-list').querySelector('[data-groove="halftime"] .groove-who'), null, 'drums alone: no chips');
+  $('#grooves').close();
+});
+
 test('with ⌨️ Keys on, a groove loads into the scratch, stopped, copying nothing; ▶ Play plays it behind you; ↩️ My beat brings back the beat that was open', async () => {
   keysOn(page);
   await newBuilderBeatWithRow(page);   // a beat of the kid's own, in 🗂️ My beats
