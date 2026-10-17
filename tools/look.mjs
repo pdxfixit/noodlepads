@@ -44,6 +44,8 @@ const KEYS = (on) => `if (document.body.classList.contains('keys-on') !== ${on})
 // at every screen is one command (just look pads settings help sheet ...).
 const q = (sel) => `document.querySelector(${JSON.stringify(sel)}).click();`;
 const nap = 'await new Promise((r) => setTimeout(r, 150));';
+// Opens a kit group on Pads only if it is shut: the widths share localStorage.
+const OPEN_KIT = (id) => `{ const h = document.querySelector('.pad-group[data-group="${id}"]'); if (h.getAttribute('aria-expanded') !== 'true') h.click(); } ${nap}`;
 // Opens 💃 Grooves' style groups by id, each only if shut (a click toggles).
 const GROOVE_GROUPS_OPEN = (...ids) => ids.map((id) => `{ const h = document.querySelector('[data-groove-group="${id}"]'); if (h.getAttribute('aria-expanded') !== 'true') h.click(); }`).join(' ');
 // House loaded into the scratch on Beats: its bass line is a tune row (🎹).
@@ -148,6 +150,11 @@ const VIEWS = {
     });
     (await import('/people.js')).renderPeopleEditor();` },
   help: { screen: 'pads', js: q('#help-open') },
+  // 🎹 Who plays (ADR 0030): Notes open with its instrument list open, and
+  // Notes picked as Piano (the list closed, the pads with their 🎹 badge).
+  // Use --scroll-to '.pad-group-inst' to see them on a phone.
+  'inst-list': { screen: 'pads', js: `${OPEN_KIT('notes')} ${q('[data-inst-pick="notes"]')} ${nap}` },
+  'inst-piano': { screen: 'pads', js: `${OPEN_KIT('notes')} ${q('[data-inst-pick="notes"]')} ${nap} ${q('#inst-list-notes [data-inst="piano"]')} ${nap}` },
   sheet: { screen: 'pads', js: q('.pad-add') },
   'sheet-edit': { screen: 'pads', js: `${q('#edit-toggle')} ${q('#pads .pad-cell [data-edit]')}` },
   // ✏️ Edit sounds with six made-up sounds of the kid's own, four in two
