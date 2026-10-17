@@ -26,7 +26,7 @@ import { soundKind } from './log-clean.js';
 import { rootShift } from './pitch.js';
 import { downloadBlob } from './download.js';
 import { GROOVES, GROOVE_GROUPS } from './grooves.js';
-import { FAMILIES, instrumentById, instrumentsFor, presetInstrument } from './instruments.js';
+import { FAMILIES, instrumentById, instrumentsFor, presetInstrument, PLAYED } from './instruments.js';
 import { isScratch, isHiddenBeat, scratchOf, scratchId, scratchLabel, grooveOf, hasHits, SCRATCH_NAME } from './scratch.js';
 import { cleanVolume, rowLevel, setRowLevel, drawSpeaker, speakerControls, percent } from './row-volume.js';
 import { rowParts, rowSpeaker, rowEmoji, twinRows } from './beat-row.js';
@@ -441,12 +441,15 @@ export function grooveBeat(groove, personId, hasClip = () => true) {
 // Who plays a groove beyond its drums (ADR 0030), for its card's chips: each
 // instrument once, in the order its rows come, with its family. `kitOf`
 // finds a kit preset by its kit id (null when the board lacks it); rows of
-// sounds no instrument plays (drums, game sounds) are left out.
+// sounds no instrument plays (drums, game sounds) are left out, and so are
+// the default sounds (💧 Pluck, ⚡ Synth): on nearly every card, a chip of
+// them hid the grooves that have a real instrument.
+const DEFAULT_PLAYERS = new Set(Object.values(PLAYED).map((p) => p.default));
 export function groovePlayers(groove, kitOf) {
   const seen = new Map();
   for (const [kit] of groove.rows) {
     const inst = instrumentById(presetInstrument(kitOf(kit)));
-    if (inst && !seen.has(inst.id)) seen.set(inst.id, { ...inst, family: FAMILIES.find((f) => f.id === inst.family) });
+    if (inst && !DEFAULT_PLAYERS.has(inst.id) && !seen.has(inst.id)) seen.set(inst.id, { ...inst, family: FAMILIES.find((f) => f.id === inst.family) });
   }
   return [...seen.values()];
 }
