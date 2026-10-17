@@ -1,4 +1,4 @@
-// The groove library (web/grooves.js, Ben 2026-10-12): about 30 grooves,
+// The groove library (web/grooves.js, Ben 2026-10-12): about 50 grooves,
 // grouped by style, many with a bass line and chords, every one a shape the
 // beat maker can play. Whether each sounds right needs ears: this checks
 // what can go wrong in the data.
@@ -6,12 +6,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { GROOVES, GROOVE_GROUPS, grooveBeat, grooveShape, mergeGroove, cleanRow, barSteps, BAR_CHOICES } from '../web/sequencer.js';
+import { GROOVES, GROOVE_GROUPS, grooveBeat, grooveShape, mergeGroove, cleanRow, barSteps, BAR_CHOICES, bassNote, groovePlayers } from '../web/sequencer.js';
+import { FAMILIES } from '../web/instruments.js';
 
 const kit = JSON.parse(readFileSync(new URL('../web/boards.json', import.meta.url), 'utf8')).kit;
 const kitIds = new Set(kit.map((s) => s.id));
 const advanced = new Set(kit.filter((s) => s.advanced).map((s) => s.id));
 const lit = (steps) => steps.flatMap((on, i) => (on ? [i] : []));
+const kitById = new Map(kit.map((s) => [s.id, s]));
+const kitOf = (id) => kitById.get(id) ?? null;
+const groupOf = (id) => kitOf(id)?.group;
+const groove = (id) => GROOVES.find((g) => g.id === id);
 
 test('about 50 grooves in seven style groups (Ben, 2026-10-17: regroup), and the first six keep their ids', () => {
   assert.ok(GROOVES.length >= 45, `${GROOVES.length} grooves`);
@@ -81,8 +86,8 @@ test('every groove is a shape the beat maker plays: whole bars of its time signa
 });
 
 test('many grooves bring a bass line and chords; the odd times use their own time signatures', () => {
-  const has = (g, prefix) => g.rows.some(([id]) => id.startsWith(prefix));
-  const both = GROOVES.filter((g) => has(g, 'bass-') && has(g, 'chord-'));
+  const has = (g, group) => g.rows.some(([id]) => groupOf(id) === group);
+  const both = GROOVES.filter((g) => has(g, 'bass') && has(g, 'chords'));
   assert.ok(both.length >= GROOVES.length / 2, `${both.length} with bass and chords`);
   const sig = (id) => grooveShape(GROOVES.find((g) => g.id === id)).signature;
   assert.equal(sig('waltz'), '3/4');
@@ -110,4 +115,49 @@ test('➕ Add to this beat: a 2-bar groove fills a 4-bar beat bar by bar, round 
   const groove = [{ clipId: 'k', steps: [...Array(16)].map((_, i) => i === 0).concat([...Array(16)].map((_, i) => i === 4)) }];
   const { rows } = mergeGroove([cleanRow({ clipId: 'k', steps: [] })], groove, 16, 4, { bar: 16, bars: 2 });
   assert.deepEqual(lit(rows[0].steps), [0, 20, 32, 52]);
+});
+
+// Phase 2 of instruments (ADR 0030): grooves name an instrument's presets,
+// so the instrument plays them whoever the person picked.
+test('real instruments play Motown, Lo-fi, Reggae, Gospel and R&B; Soca has steel drums and Chiptune the chip', () => {
+  const players = (id) => groovePlayers(groove(id), kitOf).map((i) => i.id);
+  assert.ok(players('motown').includes('piano'), 'Motown: piano');
+  assert.ok(players('lofi').includes('piano'), 'Lo-fi: piano');
+  assert.ok(players('reggae').some((i) => ['guitar', 'organ'].includes(i)), 'Reggae: a guitar or organ skank');
+  assert.ok(players('gospel').includes('organ'), 'Gospel: organ');
+  assert.ok(players('rnb').some((i) => ['piano', 'organ'].includes(i)), 'R&B: piano or organ');
+  for (const id of ['motown', 'lofi', 'reggae', 'gospel', 'rnb']) {
+    assert.ok(!groove(id).rows.some(([k]) => /^chord-/.test(k)), `${id}: no synth chords left`);
+  }
+  assert.equal(groove('soca').group, 'latin');
+  assert.ok(players('soca').includes('steel'));
+  assert.ok(groove('soca').bpm >= 140, 'soca is fast');
+  assert.equal(groove('chiptune').group, 'dance');
+  assert.ok(players('chiptune').includes('chip'));
+  assert.ok(groove('chiptune').rows.some(([k]) => groupOf(k) === 'game'), 'with a game sound');
+  assert.deepEqual(players('halftime'), [], 'drums alone: no one to name');
+  assert.deepEqual(players('soca'), ['steel', 'synth'], 'each once, in the order the rows come');
+  const [steel] = groovePlayers(groove('soca'), kitOf);
+  assert.equal(steel.name, 'Steel drum');
+  assert.equal(steel.family, FAMILIES.find((f) => f.id === 'mallets'), 'with its family, for the chip\'s color');
+});
+
+test('a groove\'s bass rows are one instrument, and load as one tune row of its C', () => {
+  assert.deepEqual(bassNote('bass-a'), { base: 'bass-c', p: 9 });
+  assert.deepEqual(bassNote('upright-f'), { base: 'upright-c', p: 5 });
+  assert.deepEqual(bassNote('808-d'), { base: '808-c', p: 2 });
+  for (const id of ['piano-a', 'note-c', 'chord-c', 'kick', 'organ-c-chord', undefined]) assert.equal(bassNote(id), null, String(id));
+  for (const g of GROOVES) {
+    const bases = new Set(g.rows.map(([k]) => bassNote(k)?.base).filter(Boolean));
+    assert.ok(bases.size <= 1, `${g.id}: ${[...bases]}`);
+    for (const b of bases) assert.ok(kitIds.has(b), `${g.id}: ${b} is a kit sound`);
+    for (const [k] of g.rows) if (groupOf(k) === 'bass') assert.ok(bassNote(k), `${g.id}: ${k} loads into the tune row`);
+  }
+  const lofi = grooveBeat(groove('lofi'), 'juno');
+  const tune = lofi.rows.filter((r) => r.melody);
+  assert.equal(tune.length, 1);
+  assert.equal(tune[0].clipId, 'juno-upright-c', 'the upright plays Lo-fi\'s bass');
+  assert.deepEqual([...new Set(tune[0].tune.map((n) => n.p))].sort(), [4, 5], 'its F and E');
+  assert.ok(!lofi.rows.some((r) => /upright-[ef]$/.test(r.clipId)), 'no pill rows of single bass notes');
+  assert.ok(lofi.rows.some((r) => r.clipId === 'juno-piano-f-chord'), 'the piano\'s chords stay rows of pills');
 });
