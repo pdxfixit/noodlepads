@@ -12,8 +12,8 @@ import {
 } from '../web/touch.js';
 
 const BOARDS = JSON.parse(readFileSync(new URL('../web/boards.json', import.meta.url), 'utf8'));
-// Pip's sounds as board.js clipsFor gives them: their own, then their copy of the kit (Advanced off).
-const kit = BOARDS.kit.filter((k) => !k.advanced).map((k) => ({ id: `pip-${k.id}`, kit: true, group: k.group, label: k.label }));
+// Pip's sounds as board.js clipsFor gives them: their own, then their copy of the kit (Advanced off, no instrument picked).
+const kit = BOARDS.kit.filter((k) => !k.advanced && !k.inst).map((k) => ({ id: `pip-${k.id}`, kit: true, group: k.group, label: k.label }));
 const own = [{ id: 'user-1', label: 'Burp', created: 1 }, { id: 'user-2', label: 'Moo', created: 3 }, { id: 'user-3', label: 'Ha', created: 2 }];
 const sounds = soundsOf([...own, ...kit], 'pip');
 const noOwn = soundsOf(kit, 'pip');

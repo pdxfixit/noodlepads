@@ -41,7 +41,7 @@ test('every screen in the toolbar has its own part of Help, in toolbar order', (
 // line can't be dropped or left behind). Add a line here with a new control.
 const MUST_MENTION = [
   // Pads
-  '✏️ Edit sounds', '✅ Done', 'Stop all', '👥 People', '⬆️',
+  '✏️ Edit sounds', '✅ Done', 'Stop all', '👥 People', '⬆️', 'Who plays',
   // Making a sound
   'New sound', 'Record', 'Choose a file', '✨ Make one', '🎲 Surprise me', '👂 Plain', 'Save sound', 'Keep editing', 'Throw away', 'All emoji', 'Layers', 'Deeper ↔ higher', 'Slower ↔ faster', '+ Add a layer', '🔈', 'Backwards', 'Warble', '⭐ Save voice', 'My voices ▾', '↩️ Reset voice', '⤢ Turn into knobs', '↩️ The old way', 'Muffled ↔ Bright', 'Crunch', 'Stutter',
   '🎲 Surprise steps', '⚙️ Advanced', '⤢', '🥁 On the beat', 'Smooth', 'Buzzy', 'Hiss', '🎵 Find its note', '➕ Mix with another sound', '✂️ Trim and edit', '✂️ Ends', '📐 Fades',

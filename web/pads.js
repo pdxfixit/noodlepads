@@ -15,6 +15,8 @@ import { groupOwn, cleanGroups, UNGROUPED } from './groups.js';
 import { getSetting, setSetting, onSetting } from './settings.js';
 import { padWidth, sliderAt } from './pad-size.js';
 import { fingerTaps, isFinger } from './finger.js';
+import { hasPicker, pickerButton, pickerList, instrumentBadge } from './inst-picker.js';
+import { PLAYED } from './instruments.js';
 
 const HOLD_TO_LOOP_MS = 350;  // hold a pad this long and it keeps repeating; a tap stops it
 
@@ -151,6 +153,12 @@ export function makePad(clip) {
   label.textContent = clip.label;
   b.append(emoji, label);
 
+  // Who plays it, for an instrument's note (ADR 0030): a small picture at
+  // the top right, since the note keeps its fruit on every instrument.
+  const inst = instrumentBadge(clip);
+  if (inst) b.append(inst.tag);
+  const said = [clip.label, ...(inst ? [inst.name] : [])];
+
   // The voice's emoji in the corner; a chain shows each step's.
   const chain = chainOf(clip).filter((s) => s.voice !== 'normal');
   if (chain.length) {
@@ -162,8 +170,9 @@ export function makePad(clip) {
     const amount = amountText(v.id, chain[0].amount);
     tag.title = !one ? `Voices: ${chainText(chain)}` : amount ? `${v.name} voice, ${amount}` : `${v.name} voice`;
     b.append(tag);
-    b.setAttribute('aria-label', `${clip.label}, ${tag.title}`);
+    said.push(tag.title);
   }
+  if (said.length > 1) b.setAttribute('aria-label', said.join(', '));
   return b;
 }
 
@@ -192,6 +201,7 @@ export function renderPads() {
   const focusedAdd = focused?.classList?.contains('pad-add');
   const focusedGroupEdit = focused?.dataset?.groupEdit;
   const focusedGroup = focused?.classList?.contains('pad-group') ? focused.dataset.group : undefined;
+  const focusedPick = focused?.dataset?.instPick ?? focused?.dataset?.instGroup;
 
   // Two sections: this person's own sounds (recordings, uploads, their
   // boards.json sounds), in their groups when they have some, ending with
@@ -239,7 +249,7 @@ export function renderPads() {
   // dimmed and saying so, as the way back to its sounds.
   const open = kitOpen();
   const kitParts = groupKit(kit, state.manifest.kitGroups).flatMap((g) => [
-    groupHeader(g, open.has(g.id)),
+    ...kitGroupHead(g, open.has(g.id)),
     ...(open.has(g.id) ? g.clips.map((c) => pads.get(c.id)) : []),
   ]);
   el.pads.classList.toggle('choosing', state.editing && chosen.size > 0);
@@ -258,6 +268,7 @@ export function renderPads() {
   } else if (focusedAdd) el.pads.querySelector('.pad-add')?.focus({ preventScroll: true });
   else if (focusedGroupEdit) el.pads.querySelector(`[data-group-edit="${CSS.escape(focusedGroupEdit)}"]`)?.focus({ preventScroll: true });
   else if (focusedGroup !== undefined) el.pads.querySelector(`.pad-group[data-group="${CSS.escape(focusedGroup)}"]`)?.focus({ preventScroll: true });
+  else if (focusedPick !== undefined) el.pads.querySelector(`[data-inst-pick="${CSS.escape(focusedPick)}"]`)?.focus({ preventScroll: true });
 }
 
 // ── Edit sounds: a pad with its badges ─────────────────────────────────
@@ -452,6 +463,31 @@ export function toggleKitGroup(id) {
   const open = kitOpen();
   if (open.has(id)) open.delete(id); else open.add(id);
   remember('kit-open', JSON.stringify([...open]));
+}
+
+// A kit group's header. Notes, Chords and Bass have who plays them beside
+// it (inst-picker.js, ADR 0030), and its list under it while open.
+function kitGroupHead(g, isOpen) {
+  if (!hasPicker(g.id)) return [groupHeader(g, isOpen)];
+  const row = document.createElement('div');
+  row.className = 'pad-group-row pad-group-inst';
+  const listOpen = pickerOpen === g.id;
+  row.append(groupHeader(g, isOpen), pickerButton(g, listOpen));
+  return listOpen ? [row, pickerList(g)] : [row];
+}
+
+// Which group's instrument list is open (one at a time), or null.
+let pickerOpen = null;
+
+// A tap on who plays a group: opens or closes its list. A tap on an
+// instrument in it picks it, closes the list and opens the group, so the
+// kid sees and can play the new notes at once.
+async function pickInstrument(group, inst) {
+  pickerOpen = null;
+  if (!kitOpen().has(group)) toggleKitGroup(group);
+  await setSetting(PLAYED[group].setting, inst);   // app.js redraws what shows the presets
+  renderPads();
+  el.pads.querySelector(`[data-inst-pick="${CSS.escape(group)}"]`)?.focus({ preventScroll: true });
 }
 
 // A kit group's header: a full-width button that opens or closes the group.
@@ -742,6 +778,14 @@ export function initPads(hooks) {
   el.pads.addEventListener('click', (e) => {
     const edit = e.target.closest('[data-group-edit]');
     if (edit) { bulk.editGroup(edit.dataset.groupEdit); return; }
+    const pick = e.target.closest('[data-inst-pick]');
+    if (pick) {
+      pickerOpen = pickerOpen === pick.dataset.instPick ? null : pick.dataset.instPick;
+      renderPads();
+      return;
+    }
+    const choice = e.target.closest('[data-inst]');
+    if (choice) { pickInstrument(choice.dataset.instGroup, choice.dataset.inst); return; }
     const header = e.target.closest('.pad-group');
     if (!header) return;
     if (header.dataset.own !== undefined) toggleOwnGroup(header.dataset.group);
@@ -834,6 +878,16 @@ export function initPads(hooks) {
     }
   });
   el.pads.addEventListener('contextmenu', (e) => { if (e.target.closest('.pad')) e.preventDefault(); });
+  // Esc in an open instrument list closes it, back on its button.
+  el.pads.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !pickerOpen || !e.target.closest?.('.inst-list, [data-inst-pick]')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const group = pickerOpen;
+    pickerOpen = null;
+    renderPads();
+    el.pads.querySelector(`[data-inst-pick="${CSS.escape(group)}"]`)?.focus({ preventScroll: true });
+  });
   // Alt+← / Alt+→ on a pad in Edit sounds moves it (the page's own arrows
   // change person; it leaves Alt alone).
   el.pads.addEventListener('keydown', (e) => {

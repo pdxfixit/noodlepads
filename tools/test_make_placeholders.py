@@ -12,6 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import make_placeholders as mp  # noqa: E402
+import make_samples  # noqa: E402
 
 WEB = Path(__file__).resolve().parent.parent / "web"
 # The old app's starter sounds: presets since 2026-10-11, kept as the old
@@ -23,11 +24,19 @@ class Presets(unittest.TestCase):
     def test_every_preset_is_made_here_or_is_an_old_starter(self):
         kit = json.loads((WEB / "boards.json").read_text())["kit"]
         made = set(mp.KIT) | {n for n, _, _ in mp.KIT_CALLOUTS} | {"cackle"}
+        recorded = {s[0] for s in make_samples.SAMPLES}
         for k in kit:
-            self.assertEqual(k["file"], "clips/kit/%s.wav" % k["id"])
             self.assertTrue((WEB / k["file"]).exists(), k["file"])
-            self.assertTrue(k["id"] in made or k["id"] in OLD_STARTERS, k["id"])
+            stem = Path(k["file"]).stem
+            if "inst" in k:
+                # An instrument's preset plays one of its recordings (ADR 0030).
+                self.assertTrue(stem.startswith(k["inst"] + "-"), k["id"])
+                self.assertTrue(stem in made or stem in recorded, k["file"])
+            else:
+                self.assertEqual(k["file"], "clips/kit/%s.wav" % k["id"])
+                self.assertTrue(k["id"] in made or k["id"] in OLD_STARTERS, k["id"])
         self.assertFalse(made & OLD_STARTERS, "an old starter's clip is never regenerated")
+        self.assertFalse(made & recorded, "a recording is never made here")
 
     def test_naming_clips_makes_only_those(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -19,6 +19,7 @@ import { LAYOUT_NAMES } from './rhythm.js';
 import { PAD_STOPS, fromOldSize } from './pad-size.js';
 import { SKIN_IDS } from './skins.js';
 import { cleanSeen, cleanReaches } from './firsts.js';
+import { PLAYED, instrumentIds } from './instruments.js';
 
 // A person's level (ADR 0019): 🧸 Kids, Regular or Advanced.
 export const LEVELS = ['kids', 'regular', 'advanced'];
@@ -61,6 +62,12 @@ export const SETTINGS = {
   // Lit pads, Switch, Spinner, Jelly or Googly eyes. ⚙️ Settings → 🎨 Look,
   // and 🧸 Kids' skin button. Each person their own, at every level.
   padSkin: { default: 'tiles', values: SKIN_IDS, scope: 'person' },
+  // Who plays Notes, Chords and Bass (instruments.js, ADR 0030; Ben,
+  // 2026-10-17: remembered per person and synced): the picker on each
+  // group's header. Each person their own, at every level.
+  instNotes: { default: PLAYED.notes.default, values: instrumentIds('notes'), scope: 'person' },
+  instChords: { default: PLAYED.chords.default, values: instrumentIds('chords'), scope: 'person' },
+  instBass: { default: PLAYED.bass.default, values: instrumentIds('bass'), scope: 'person' },
   // What this person has seen of a new person's first steps (ADR 0028,
   // firsts.js): one-time tips, hint dots, the 🧸 hand. Free-form, so it has
   // `clean` in place of a list of values; `quiet`: a change is not logged

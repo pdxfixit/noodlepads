@@ -43,6 +43,12 @@ const KIT = [
   'tambourine', 'teleport', 'tom-fill', 'tom-high', 'tom-low', 'toot', 'tweet', 'ufo', 'vinyl', 'warp', 'whoosh',
   'woodblock', 'woof', 'wow', 'yes', 'zap', 'zip',
 ];
+// The instruments' recordings (ADR 0030): every note and chord of one plays
+// one of these, so none of them has a file of its own.
+const INSTRUMENT_FILES = [
+  '808-40', 'brass-67', 'chip-66', 'flute-64', 'guitar-57', 'guitar-66', 'kalimba-66', 'marimba-66', 'organ-63',
+  'piano-61', 'piano-69', 'steel-66', 'strings-62', 'strings-69', 'upright-40',
+];
 const BG = [
   'bolts', 'bubbles', 'checks', 'confetti', 'diamonds', 'dots', 'drops', 'flowers', 'grid', 'hearts', 'moons',
   'noodles', 'notes', 'plus', 'rings', 'scales', 'smiles', 'sparkles', 'stars', 'stripes', 'triangles', 'waves',
@@ -51,7 +57,7 @@ const BG = [
 const MODULES = [
   'agent', 'app', 'audio', 'backdrop', 'backup-ui', 'backup', 'beat-row', 'board', 'bulk', 'chop', 'cloud-api',
   'cloud-sync', 'cloud-ui', 'cloud', 'contact', 'contrast', 'cuts', 'device-meta', 'dialogs', 'dj-keys', 'dj-touch', 'dj',
-  'download', 'emoji-all', 'emoji-check', 'emoji-more', 'events-client', 'finger', 'firsts', 'grooves', 'groups', 'help',
+  'download', 'emoji-all', 'emoji-check', 'emoji-more', 'events-client', 'finger', 'firsts', 'grooves', 'groups', 'help', 'inst-picker', 'instruments',
   'keyset', 'kids-logic', 'kids', 'leftover', 'lines', 'log-clean', 'log-send', 'log', 'merge', 'merge3', 'meter',
   'mix', 'mixer', 'model', 'names', 'notes', 'nudge', 'offline', 'old-backup', 'overflow', 'pad-size', 'pads', 'people',
   'pitch', 'play-count', 'playlist', 'privacy', 'reid', 'rhythm', 'roll', 'row-volume', 'scratch', 'sequencer',
@@ -75,6 +81,7 @@ const SHELL = [
   ...MODULES.map((m) => `${m}.js`),
   ...BG.map((b) => `bg/${b}.svg`),
   ...KIT.map((k) => `clips/kit/${k}.wav`),
+  ...INSTRUMENT_FILES.map((k) => `clips/kit/${k}.wav`),
 ];
 
 // What to do with a request. Pure.

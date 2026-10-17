@@ -36,6 +36,10 @@ export const SETTING_VALUES = {
   timeSignature: SIGNATURE_IDS,
   padSize: ['auto', ...Array.from({ length: 101 }, (_, i) => i / 100)],   // 'auto', or 0 to 1 between the screen's smallest and biggest pads
   padSkin: ['tiles', 'slam', 'lit', 'switch', 'spinner', 'jelly', 'googly'],   // skins.js SKIN_IDS
+  // instruments.js: who plays Notes, Chords and Bass.
+  instNotes: ['pluck', 'piano', 'organ', 'chip', 'marimba', 'steel', 'kalimba', 'guitar', 'strings', 'brass', 'flute'],
+  instChords: ['synth', 'piano', 'organ', 'guitar', 'strings'],
+  instBass: ['synth', '808', 'upright'],
   djLayout: ['qwerty', 'dvorak'],
   sendLogs: [false, true],
   sendUsage: [false, true],

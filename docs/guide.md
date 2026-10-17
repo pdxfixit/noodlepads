@@ -238,7 +238,7 @@ and included in backups, `sendLogs` too; the device code is in localStorage
 - **Bundled clips** are files under `web/clips/`, listed in `web/boards.json`.
   It lists no people today, so every bundled sound is a preset (called the
   kit in the code and in boards.json): `web/clips/kit/` holds the presets on
-  every board: 145 sounds in 12 groups (Drums, Hip hop, Hand drums, Notes, Chords, Bass, Game,
+  every board: 145 sounds in 12 groups, plus every instrument's own copy of Notes, Chords and Bass (220 more, below) (Drums, Hip hop, Hand drums, Notes, Chords, Bass, Game,
   Effects, Animals, Sci-fi, Voices, Silly), listed in boards.json `kitGroups`.
   All are generated (`just placeholders`), except the old app's eight starter
   sounds (airhorn, laser, boing…), kept as they were. Notes are a full octave
@@ -253,6 +253,31 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   sections, the person's own sounds (with New sound) then Presets, and a pad only
   moves within its section. Preset groups open and close (Drums starts open; each device remembers in
   localStorage `kit-open`), on the pads and in the beat sound chooser alike.
+- **🎹 Who plays** ([ADR 0030](adr/0030-instruments-who-plays.md), `instruments.js`,
+  `inst-picker.js`): Notes, Chords and Bass can each be played by an
+  instrument. Each group's header on 🔊 Pads has a button saying who plays it
+  ("💧 Pluck ▾"); a tap opens the instruments by family (Keys, Mallets,
+  Strings, Wind, each in its color), and a tap on one picks it, closes the
+  list and opens the group. Notes: Pluck (its own sound), Piano, Organ, Chip,
+  Marimba, Steel drum, Kalimba, Guitar, Strings, Brass, Flute. Chords: Synth
+  (its own), Piano, Organ, Guitar, Strings. Bass: Synth (its own), 808,
+  Upright. The pick is the person's (settings `instNotes`, `instChords`,
+  `instBass`): synced and in backups. Each instrument's notes are presets of
+  their own, `piano-e` for `note-e`, `piano-am-chord` for `chord-am`, `808-c`
+  for `bass-c`, wearing the same fruit, weather or animal, with the
+  instrument's emoji as a small badge at the pad's top right. Wherever presets
+  are listed (Pads, the beat sound chooser, ✏️ Edit keys, 👆 + more) the picked
+  instrument's show; a beat row, key, band or take keeps the exact preset it
+  was given, so a new pick changes nothing already made. In boards.json such a
+  preset has `inst`, `plays` (the group's own preset it matches) and a `file`
+  that is one of the instrument's one or two recordings
+  (`clips/kit/<inst>-<MIDI note>.wav`), moved by `shift` semitones or played as
+  a `chord` of several notes at once: `audio.js` decodes the recording once and
+  resamples it, as a tune row moves a sound, so extra notes and chords cost no
+  bytes. `tools/kit_instruments.py` writes these entries; marimba, steel drum,
+  kalimba, chip, guitar and 808 are generated (`make_placeholders.py`), piano,
+  strings, brass, flute, organ and the upright bass are cut from CC0 libraries
+  (`make_samples.py`, `web/clips/kit/LICENSE-samples.txt`).
 - **Sounds made in the app** (recorded or uploaded) live in that browser's
   IndexedDB, so they stay on the device they were made on. Edit sounds →
   a sound's ✏️ → Download saves a copy.
@@ -726,7 +751,7 @@ no install button.
 **With no network.** After one visit, the app opens with no network,
 installed or not: the service worker (`web/sw.js`, registered by
 `web/offline.js` once the page has loaded) keeps a copy of the whole app,
-the ready-made sounds (about 4.5 MB of the 6 MB) and the fonts and
+the ready-made sounds (about 5.5 MB of the 6 MB) and the fonts and
 patterns included. Online it changes nothing: every file comes from the
 network first, and the kept copy is used only when that fails, so a new
 version shows on the next load as before. Each file that comes in refreshes

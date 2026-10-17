@@ -634,6 +634,112 @@ def cajon():
     wires = bright(noise(0.2, lambda t: 0.25 * math.exp(-25 * t), seed=70))
     return mix(thump, wires)
 
+# ── Instruments (ADR 0030): who plays Notes, Chords and Bass. Each is one
+# note (two for guitar), named by its MIDI number (`marimba-66` is F♯4);
+# boards.json plays every other note and chord by moving it (`shift`,
+# `chord`), so a new note costs no bytes. These recipes are struck or
+# plucked, which move cleanly; piano, strings, brass, flute, organ and the
+# upright bass are recordings (tools/make_samples.py).
+
+def hz_of(midi):
+    return 440 * 2 ** ((midi - 69) / 12)
+
+
+def marimba(midi):
+    """A marimba bar: a round fundamental, its 4th and 10th partials (a tuned
+    bar's), which die away fast, and the soft knock of a mallet."""
+    f = hz_of(midi)
+    def make():
+        body = osc(lambda t: f, 1.0, "sine", lambda t: math.exp(-4.2 * t))
+        fourth = osc(lambda t: 4 * f, 1.0, "sine", lambda t: 0.35 * math.exp(-16 * t))
+        tenth = osc(lambda t: 9.9 * f, 0.2, "sine", lambda t: 0.12 * math.exp(-40 * t))
+        knock = lowpass(noise(0.02, lambda t: 0.25 * math.exp(-200 * t), seed=80), 0.4)
+        return mix(body, fourth, tenth, knock)
+    return make
+
+
+def steel(midi):
+    """A steel pan's note: the fundamental, its octave and twelfth, a touch
+    out of tune with each other so they shimmer, on a quick bright attack."""
+    f = hz_of(midi)
+    def make():
+        return mix(
+            osc(lambda t: f, 1.4, "sine", lambda t: min(t / 0.004, 1) * math.exp(-2.6 * t)),
+            osc(lambda t: 2.004 * f, 1.4, "sine", lambda t: 0.55 * math.exp(-3.6 * t)),
+            osc(lambda t: 2.997 * f, 0.8, "sine", lambda t: 0.25 * math.exp(-7 * t)),
+            osc(lambda t: 4.01 * f, 0.3, "sine", lambda t: 0.15 * math.exp(-16 * t)),
+        )
+    return make
+
+
+def kalimba(midi):
+    """A kalimba's tine: nearly a pure tone, with the tine's own high,
+    out-of-tune ring at the start and a little thumb click."""
+    f = hz_of(midi)
+    def make():
+        return mix(
+            osc(lambda t: f, 1.3, "sine", lambda t: min(t / 0.003, 1) * math.exp(-3.2 * t)),
+            osc(lambda t: 5.4 * f, 0.25, "sine", lambda t: 0.3 * math.exp(-28 * t)),
+            osc(lambda t: 2 * f, 1.0, "sine", lambda t: 0.1 * math.exp(-6 * t)),
+            lowpass(noise(0.015, lambda t: 0.2 * math.exp(-300 * t), seed=81), 0.5),
+        )
+    return make
+
+
+def chip(midi):
+    """An old game console's tune voice: a thin square (a 25% pulse), held,
+    with a little wobble once it settles."""
+    f = hz_of(midi)
+    def make():
+        out, phase = [], 0.0
+        length = 0.55
+        for i in range(int(length * RATE)):
+            t = i / RATE
+            phase = (phase + f * (1 + (0.006 * math.sin(2 * math.pi * 6 * t) if t > 0.18 else 0)) / RATE) % 1.0
+            amp = min(t / 0.004, 1) * (1 if t < 0.42 else max(0.0, (length - t) / (length - 0.42)))
+            out.append((1.0 if phase < 0.25 else -0.33) * amp)
+        return lowpass(out, 0.6)
+    return make
+
+
+def guitar(midi):
+    """A plucked nylon string (Karplus-Strong): a burst of noise round a loop
+    as long as one wave, softened a little each time round."""
+    f = hz_of(midi)
+    def make():
+        rng = random.Random(82 + midi)
+        period = RATE / f - 0.5          # the averaging adds half a sample
+        n = int(period)
+        frac = period - n
+        line = lowpass([rng.uniform(-1, 1) for _ in range(n + 2)], 0.5)
+        length = int(1.6 * RATE)
+        # The loop: each sample is the mean of the two one period back (with
+        # the fraction between them), a little quieter.
+        buf = line + [0.0] * (length - len(line))
+        for i in range(n + 2, length):
+            a = buf[i - n] * (1 - frac) + buf[i - n - 1] * frac
+            b = buf[i - n - 1] * (1 - frac) + buf[i - n - 2] * frac
+            buf[i] = 0.996 * 0.5 * (a + b)
+        return lowpass(buf, 0.7)
+    return make
+
+
+def bass_808(midi):
+    """An 808 bass: a long sine that starts a little sharp and settles,
+    pushed into a soft growl."""
+    f = hz_of(midi)
+    def make():
+        tone = osc(lambda t: f * (1 + 0.25 * math.exp(-35 * t)), 1.2, "sine", lambda t: min(t / 0.003, 1, (1.2 - t) / 0.3) * math.exp(-1.6 * t))
+        return drive(tone, 1.8)
+    return make
+
+
+INSTRUMENT_CLIPS = {
+    "marimba-66": marimba(66), "steel-66": steel(66), "kalimba-66": kalimba(66), "chip-66": chip(66),
+    "guitar-57": guitar(57), "guitar-66": guitar(66), "808-40": bass_808(40),
+}
+
+
 KIT = {
     "kick": kick, "snare": snare, "hihat": hihat, "open-hat": open_hat, "clap": clap,
     "tom-high": tom(270, 190), "tom-low": tom(150, 100), "crash": crash, "cowbell": cowbell, "shaker": shaker,
@@ -681,6 +787,7 @@ SHARPS_AND_FLATS = {
     "bass-gs": (bass, [103.8]), "bass-as": (bass, [116.5]),
 }
 KIT.update({name: make(*hz) for name, (make, hz) in SHARPS_AND_FLATS.items()})
+KIT.update(INSTRUMENT_CLIPS)
 
 # Spoken callouts in the kit: (file name, words, macOS voice).
 KIT_CALLOUTS = [

@@ -25,13 +25,15 @@ before(async () => {
   await page.settle();
 });
 
-// How many sounds the shared kit has (boards.json `kit`), so adding one doesn't break these tests.
+// How many sounds the shared kit shows (boards.json `kit`), so adding one doesn't break these tests:
+// Notes, Chords and Bass as their own sound plays them (no instrument picked, ADR 0030).
 const BOARDS = JSON.parse(readFileSync(new URL('../web/boards.json', import.meta.url), 'utf8'));
-const KIT = BOARDS.kit.length;
-const SIMPLE_KIT = BOARDS.kit.filter((k) => !k.advanced).length;   // Advanced off: no sharps or flats
+const SHOWN = BOARDS.kit.filter((k) => !k.inst);
+const KIT = SHOWN.length;
+const SIMPLE_KIT = SHOWN.filter((k) => !k.advanced).length;   // Advanced off: no sharps or flats
 // The kit's first group (Drums) is the only one open to begin with.
 const FIRST_GROUP = BOARDS.kit.filter((k) => k.group === BOARDS.kitGroups[0].id).length;
-const groupHeaders = () => $('#pads').children.filter((c) => c.classList.contains('pad-group'));
+const groupHeaders = () => $('#pads').querySelectorAll('.pad-group');   // Notes, Chords and Bass sit in a row with who plays them
 const pads = () => $('#pads').querySelectorAll('.pad');   // not the section headings; in Edit sounds each pad sits in a cell with its badges
 const headings = () => $('#pads').children.filter((c) => c.classList.contains('pad-section')).map((h) => h.textContent);
 const labelOf = (pad) => pad.children.find((c) => c.classList.contains('pad-label')).textContent;

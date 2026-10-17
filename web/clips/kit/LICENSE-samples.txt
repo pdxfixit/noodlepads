@@ -1,0 +1,29 @@
+Recorded instruments in this folder
+
+These clips are cut from two sample libraries released under CC0 1.0
+Universal (public domain dedication), checked 2026-10-17:
+
+  VS Chamber Orchestra: Community Edition (VSCO 2 CE)
+  https://github.com/sgossner/VSCO-2-CE
+  Recorded by Sam Gossner and Simon Dalzell (Versilian Studios, Ivy Audio)
+
+  Versilian Community Sample Library (VCSL)
+  https://github.com/sgossner/VCSL
+  Versilian Studios
+
+  piano-61.wav    VSCO 2 CE  Keys/Upright Piano/Player_dyn2_rr1_020.wav
+  piano-69.wav    VSCO 2 CE  Keys/Upright Piano/Player_dyn2_rr1_024.wav
+  strings-62.wav  VSCO 2 CE  Strings/Violin Section/susVib/VlnEns_susVib_D3_v2.wav
+  strings-69.wav  VSCO 2 CE  Strings/Violin Section/susVib/VlnEns_susVib_A3_v2.wav
+  brass-67.wav    VSCO 2 CE  Brass/Trumpet/sus/Sum_SHTrumpet_sus_G3_v1_rr1.wav
+  flute-64.wav    VSCO 2 CE  Woodwinds/Flute/susvib/LDFlute_susvib_E3_v1_1.wav
+  upright-40.wav  VSCO 2 CE  Strings/Solo Contrabass/Pizz/BKCtbss_Pizz_E1_v3_rr1.wav
+  organ-63.wav    VCSL       Aerophones/Edge-blown Aerophones/Pipe Organ/Quiet/NT5_Man3Quiet_D#3_rr1.wav
+
+Each was made mono, 22050 Hz, 16-bit, cut to a second or two from where it
+starts, and faded out (tools/make_samples.py). The number in each name is
+the MIDI note it plays (60 is middle C). Credit to the original authors and
+Versilian Studios is encouraged by the libraries, not required.
+
+Every other clip in this folder is made by tools/make_placeholders.py, or
+is one of the old app's starter sounds.

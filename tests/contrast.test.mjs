@@ -48,6 +48,12 @@ test('white text reads on every DJ key family color', async () => {
   }
 });
 
+// The instrument picker (inst-picker.js): white names on each family's color.
+test('white text reads on every instrument family color', async () => {
+  const { FAMILIES } = await import('../web/instruments.js');
+  for (const f of FAMILIES) assert.ok(contrastRatio('#FFFFFF', f.color) >= 4.5, `${f.id} ${f.color}: ${contrastRatio('#FFFFFF', f.color).toFixed(2)}`);
+});
+
 // Pad skins (styles.css "Pad skins"; Ben, 2026-10-16): the name sits on a
 // dark plate in Slam buttons, Switch and Spinner, and on dark rubber in Lit
 // pads until it lights up (then it is ink on the pad's color, as on tiles).

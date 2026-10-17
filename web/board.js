@@ -6,6 +6,7 @@ import { getSetting } from './settings.js';
 import {
   mergePeople, colorName as paletteColorName, padColor as paletteColor, clipsForPerson,
 } from './model.js';
+import { PLAYED } from './instruments.js';
 
 // People: boards.json's, with any rename, recolor or hide applied, then the
 // people added in the app. Hidden people are left out unless asked for.
@@ -37,6 +38,8 @@ export function paletteNames() {
 // on. `allPresets` keeps them whatever the switch says: for looking up a
 // sound something already uses (a beat's row, a DJ key), which must keep
 // playing when Advanced is turned off.
+// The Notes, Chords and Bass presets are those of the instrument the person
+// showing picked (ADR 0030); `allPresets` keeps every instrument's too.
 export function clipsFor(personId, { includeHidden = false, allPresets = false } = {}) {
   return clipsForPerson(person(personId), {
     overrides: state.overrides,
@@ -44,7 +47,13 @@ export function clipsFor(personId, { includeHidden = false, allPresets = false }
     order: state.orders.get(personId)?.ids,
     includeHidden,
     advanced: allPresets || getSetting('advancedBeats') === true,
+    picks: allPresets ? null : instrumentPicks(),
   });
+}
+
+// Who plays each group for the person showing: {notes: 'piano', …}.
+export function instrumentPicks() {
+  return Object.fromEntries(Object.entries(PLAYED).map(([group, p]) => [group, getSetting(p.setting)]));
 }
 
 // Any sound on any board by id, Advanced-only presets included: what a beat,

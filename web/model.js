@@ -8,6 +8,7 @@ import { isHex, whiteReadsOn } from './contrast.js';
 import { cleanTrim, cleanEdits, cleanFade } from './cuts.js';
 import { funName } from './names.js';
 import { songHasBeats } from './playlist.js';
+import { showsFor, instrumentProblem } from './instruments.js';
 
 // Deep colors white text reads on: a board's casing. The first four are the
 // boards.json defaults.
@@ -91,7 +92,10 @@ export function orderClips(clips, ids = []) {
 // flats) are left out unless `advanced` is true. Lookups that follow a
 // reference (a beat's row, a DJ key, a take) pass true, so a sound already
 // used keeps playing with Advanced off.
-export function clipsForPerson(person, { overrides, userClips, order, includeHidden = false, advanced = true }) {
+// `picks` ({notes: 'piano', …}, the person's instruments, ADR 0030) leaves
+// out the Notes, Chords and Bass presets of every other instrument; without
+// it, every instrument's presets are there, as a lookup needs them.
+export function clipsForPerson(person, { overrides, userClips, order, includeHidden = false, advanced = true, picks = null }) {
   const bundled = person.clips.map((c) => ({ ...c, ...overrides.get(c.id), personId: person.id, source: 'bundled' }));
   const mine = userClips
     .filter((c) => c.personId === person.id)
@@ -99,7 +103,8 @@ export function clipsForPerson(person, { overrides, userClips, order, includeHid
     .map((c) => ({ ...c, source: 'user' }));
   return orderClips([...bundled, ...mine], order && withNewPresets(order, bundled))
     .filter((c) => includeHidden || !c.hidden)
-    .filter((c) => advanced || !(c.kit && c.advanced));
+    .filter((c) => advanced || !(c.kit && c.advanced))
+    .filter((c) => !picks || !c.kit || showsFor(c, picks));
 }
 
 // A saved pad order names only the pads that were on screen when it was
@@ -242,7 +247,13 @@ export function validateManifest(m) {
     if (kitIds.has(c.id)) return `the kit sound id "${c.id}" is used twice`;
     if (c.voice && !VOICES.some((v) => v.id === c.voice)) return `the kit sound "${c.id}" has an unknown voice "${c.voice}"`;
     if (c.advanced !== undefined && typeof c.advanced !== 'boolean') return `the kit sound "${c.id}" has an "advanced" that isn't true or false`;
+    const inst = instrumentProblem(c);
+    if (inst) return inst;
     kitIds.add(c.id);
+  }
+  // An instrument's preset plays what one of its group's own presets plays.
+  for (const c of kit) {
+    if (c.plays !== undefined && !kit.some((k) => k.id === c.plays && k.group === c.group && k.inst === undefined)) return `the kit sound "${c.id}" plays "${c.plays}", which isn't one of ${c.group}'s own`;
   }
   for (const p of m.people) {
     if (!p.id || !p.name || !p.color) return `a person is missing "id", "name" or "color"`;

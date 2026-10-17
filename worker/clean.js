@@ -4,6 +4,7 @@
 // payload the app builds passes unchanged (tests/worker-clean.test.mjs).
 
 import { cleanPayload } from '../web/log-clean.js';
+import { kitIdsOf } from '../web/instruments.js';
 
 // Kit sound ids from web/boards.json. Public already, so they pass as they
 // are; any other sound arrives as a kind (bundled, made, recorded). A test
@@ -31,6 +32,9 @@ export const KIT_IDS = [
   // The 🪘 Hand drums presets.
   'taiko', 'djembe', 'djembe-slap', 'log-drum', 'dhol', 'dhol-high', 'bongo', 'cajon',
 ];
+// Every instrument's own copy of Notes, Chords and Bass (ADR 0030): `piano-e`
+// for note-e, `piano-am-chord` for chord-am, `808-c` for bass-c.
+KIT_IDS.push(...kitIdsOf(KIT_IDS));
 
 const KNOWN = { kitIds: new Set(KIT_IDS), origin: 'https://noodlepads.com' };
 

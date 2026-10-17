@@ -233,7 +233,8 @@ test('clipsForPerson: a preset new to a saved order goes after the one before it
 });
 
 test('the sharps and flats: Advanced only, named both ways, in keyboard order in Notes and Bass', () => {
-  const extra = boards.kit.filter((k) => k.advanced);
+  const own = boards.kit.filter((k) => !k.inst);   // each group's own sound; every instrument has the same (instruments.test.mjs)
+  const extra = own.filter((k) => k.advanced);
   assert.equal(extra.length, 20);
   for (const k of extra) {
     assert.match(k.id, /^[a-z0-9-]+$/, 'ids are ASCII');
@@ -241,15 +242,15 @@ test('the sharps and flats: Advanced only, named both ways, in keyboard order in
   }
   // Every sharp names its flat too, so kids learn both names.
   for (const k of extra.filter((x) => x.group !== 'chords')) assert.match(k.label, /^(Bass )?[A-G]♯ · [A-G]♭$/, k.id);
-  const bass = boards.kit.filter((k) => k.group === 'bass').map((k) => k.label.replace('Bass ', '').split(' ')[0]);
+  const bass = own.filter((k) => k.group === 'bass').map((k) => k.label.replace('Bass ', '').split(' ')[0]);
   assert.deepEqual(bass, ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯']);
   // Enough chords to play songs in G, D, F and B♭ (and A).
-  const chords = new Set(boards.kit.filter((k) => k.group === 'chords').map((k) => k.label.replace(' chord', '')));
+  const chords = new Set(own.filter((k) => k.group === 'chords').map((k) => k.label.replace(' chord', '')));
   for (const key of [['G', 'C', 'D', 'Em', 'Am', 'Bm'], ['D', 'G', 'A', 'Bm', 'F♯m', 'Em'], ['F', 'B♭', 'C', 'Dm', 'Gm', 'Am'], ['B♭', 'E♭', 'F', 'Gm', 'Cm', 'Dm'], ['A', 'D', 'E', 'F♯m', 'Bm', 'C♯m']]) {
     for (const c of key) assert.ok(chords.has(c), `${c} (key of ${key[0]})`);
   }
   // Everything Advanced off shows is as it was before them.
-  assert.equal(boards.kit.filter((k) => !k.advanced && ['notes', 'chords', 'bass'].includes(k.group)).length, 21);
+  assert.equal(own.filter((k) => !k.advanced && ['notes', 'chords', 'bass'].includes(k.group)).length, 21);
 });
 
 test('validateManifest: "advanced" is true or false', () => {
@@ -535,7 +536,7 @@ test('the real kit: every sound is in a listed group, and each group has sounds'
 test('the presets (Ben, 2026-10-11): the old starters, a full octave of notes, Animals and Sci-fi, each clip small', () => {
   const ids = new Set(boards.kit.map((k) => k.id));
   for (const id of ['airhorn', 'laser', 'boing', 'rimshot', 'drumroll', 'tada', 'slide-whistle', 'sad-trombone']) assert.ok(ids.has(id), id);
-  const inGroup = (g) => boards.kit.filter((k) => k.group === g).map((k) => k.id);
+  const inGroup = (g) => boards.kit.filter((k) => k.group === g && !k.inst).map((k) => k.id);   // the group's own sound
   // A full octave, with its sharps and flats (Advanced only) in keyboard order.
   assert.deepEqual(inGroup('notes'), ['note-c', 'note-cs', 'note-d', 'note-ds', 'note-e', 'note-f', 'note-fs', 'note-g', 'note-gs', 'note-a', 'note-as', 'note-b', 'note-c-high']);
   assert.deepEqual(inGroup('notes').filter((id) => !boards.kit.find((k) => k.id === id).advanced),
@@ -543,25 +544,49 @@ test('the presets (Ben, 2026-10-11): the old starters, a full octave of notes, A
   for (const g of ['animals', 'sci-fi']) assert.ok(inGroup(g).length >= 6 && inGroup(g).length <= 8, g);
   // What a board loads with Advanced off stays under 5 MB; the Advanced-only
   // presets (loaded only once shown or used) may add up to 1 MB more (Ben,
-  // 2026-10-17: 6 MB in all, for real instruments).
+  // 2026-10-17: 6 MB in all, for real instruments). Each file counts once:
+  // an instrument's notes and chords all play one or two recordings (ADR 0030).
+  const files = new Map();   // file -> shown with Advanced off
+  for (const k of boards.kit) files.set(k.file, files.get(k.file) || !k.advanced);
   let bytes = 0, simple = 0;
-  for (const k of boards.kit) {
-    const size = readFileSync(new URL(`../web/${k.file}`, import.meta.url)).length;
-    assert.ok(size < 160 * 1024, `${k.id} is ${size} bytes`);
+  for (const [file, shown] of files) {
+    const size = readFileSync(new URL(`../web/${file}`, import.meta.url)).length;
+    assert.ok(size < 160 * 1024, `${file} is ${size} bytes`);
     bytes += size;
-    if (!k.advanced) simple += size;
+    if (shown) simple += size;
   }
   assert.ok(simple < 5 * 1024 * 1024, `the presets shown with Advanced off are ${simple} bytes in all`);
   assert.ok(bytes < 6 * 1024 * 1024, `the presets are ${bytes} bytes in all`);
 });
 
-test('every kit sound has its own emoji, so a sound is told apart by its picture alone', async () => {
+// The one exception (Ben, 2026-10-17): an instrument's note keeps its fruit,
+// a chord its weather, a bass note its animal, so "a C is a C, whoever
+// plays it". The instrument shows as a badge (pads.js).
+test('every kit sound has its own emoji, so a sound is told apart by its picture alone, except an instrument\'s, which has its note\'s', async () => {
   const { readFileSync } = await import('node:fs');
   const boards = JSON.parse(readFileSync(new URL('../web/boards.json', import.meta.url), 'utf8'));
   const seen = new Map();
-  for (const k of boards.kit) {
+  for (const k of boards.kit.filter((x) => !x.inst)) {
     assert.ok(!seen.has(k.emoji), `${k.label} and ${seen.get(k.emoji)} share ${k.emoji}`);
     seen.set(k.emoji, k.label);
+  }
+  const byId = new Map(boards.kit.map((k) => [k.id, k]));
+  for (const k of boards.kit.filter((x) => x.inst)) assert.equal(k.emoji, byId.get(k.plays)?.emoji, `${k.id} wears the picture of ${k.plays}`);
+});
+
+// Lookups find a person's copy of a preset by its ending, `-<kit id>`, the
+// first match in boards.json order (app.js, backup.js, sequencer.js,
+// starters.js): `p-x-piano-chord-c` would also end in `-chord-c`. So an
+// instrument's id never ends in another kit id, and where an older one does
+// (`lets-go`, `go`) the longer comes first, so it is found first.
+test('no instrument\'s kit id ends in another kit id, and an older one that does comes first', () => {
+  const ids = boards.kit.map((k) => k.id);
+  for (const [i, id] of ids.entries()) {
+    for (const [j, other] of ids.entries()) {
+      if (id === other || !id.endsWith(`-${other}`)) continue;
+      assert.ok(!boards.kit[i].inst, `${id} ends in -${other}`);
+      assert.ok(i < j, `${id} ends in -${other}, so it must come before it`);
+    }
   }
 });
 

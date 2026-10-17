@@ -15,7 +15,7 @@ Nothing to install, no accounts.
 
 ## What you can do
 
-- **🔊 Pads:** tap to play, hold to loop (several at once); a scroll never plays one. Record a sound or add a file, then trim it, chop it into pads, or give it a voice: Chipmunk, Monster, Robot, Underwater and more, stacked and tweaked with knobs.
+- **🔊 Pads:** tap to play, hold to loop (several at once); a scroll never plays one. Record a sound or add a file, then trim it, chop it into pads, or give it a voice: Chipmunk, Monster, Robot, Underwater and more, stacked and tweaked with knobs. Pick who plays the notes, chords and bass: piano, strings, marimba, steel drum, flute and more.
 - **🥁 Beats:** tap pills on a grid. ⌨️ Keys plays sounds like a keyboard and records into the beat, 💃 Grooves gives 49 ready-made beats, 🎹 the piano roll writes tunes, and 🎚️ the mixer sets each row's loudness and effect.
 - **🎼 Song:** line beats up in lanes, like a playlist, and play the whole song.
 - **🎤 Live:** play the keys over a click track and keep each take.
