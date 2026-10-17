@@ -112,6 +112,13 @@ case "${1:-}" in
       busy=$(held $touched)
       if [ -n "$busy" ]; then echo "🛑 uncommitted edits here in: $(echo $busy); nothing landed (just land --wait waits for them)" >&2; exit 1; fi
     fi
+    # A push to main from another branch or checkout leaves this main behind
+    # GitHub, and a landing built on it is refused at the push, or lands on
+    # stale files (2026-10-17). Offline, it goes on with what it has.
+    if git fetch -q origin main 2>/dev/null && ! git merge-base --is-ancestor origin/main main; then
+      echo "🛑 main here is behind GitHub: git pull --ff-only (or, from another branch, git fetch origin main:main), then land again" >&2
+      exit 1
+    fi
     # Read only now: what landed while it waited is the base.
     old=$(git rev-parse main)
     wt=.worktrees/land-$(date +%s)-$$

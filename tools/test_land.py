@@ -52,6 +52,21 @@ class Land(unittest.TestCase):
         return subprocess.run(['bash', 'tools/land.sh', 'start', *args, self.sha], cwd=self.repo,
                               capture_output=True, text=True, env={**os.environ, **env}, timeout=60)
 
+    def test_a_main_behind_github_stops_it(self):
+        """2026-10-17: a push to main from another branch left main here behind,
+        and the landing worktree was built on the stale main."""
+        other = self.tmp / 'other'
+        subprocess.run(['git', 'clone', '-q', str(self.tmp / 'origin.git'), str(other)], check=True)
+        for k, v in (('user.name', 'Test'), ('user.email', 'test'), ('commit.gpgsign', 'false')):
+            git(other, 'config', k, v)
+        (other / 'b.txt').write_text('one\nfrom elsewhere\n')
+        git(other, 'commit', '-q', '-am', 'pushed from elsewhere')
+        git(other, 'push', '-q', 'origin', 'main')
+        out = self.land()
+        self.assertEqual(out.returncode, 1)
+        self.assertIn('behind GitHub', out.stderr)
+        self.assertEqual(git(self.repo, 'rev-parse', 'main'), self.start, 'nothing landed')
+
     def test_an_edit_here_stops_it_and_names_wait(self):
         (self.repo / 'a.txt').write_text('one\nanother session\n')
         out = self.land()
