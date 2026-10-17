@@ -84,8 +84,6 @@ Other work:
 
 Agents suggested these; nothing happens until Ben says yes.
 
-- **Even out the presets' loudness** (about 1 h): a measured turn-up or turn-down per preset in boards.json, applied after the app's evening-out, so the quiet callouts ("Boom!", "Bruh", 20 to 30 dB under the rest) and the loud alarms and game sounds meet the middle; hi-hats, shakers and Vinyl stay quieter on purpose. Ben, 2026-10-17: "not sure yet, keep dialoguing".
-
 - **Spoken prompts in 🧸 Kids** (a recorded "tap a pad!" for kids who can't read yet; the clip would be public). Ben, 2026-10-16: "Maybe… some of it should just be found by poking. I'm not closed to it."
 
 - **A `just secret <domain> NAME` recipe in flarepress** (10 min): `wrangler secret put` with flarepress's own Keychain auth, so a Worker secret is set the same way every site's D1 is, not by a hand-typed `npx wrangler` line.

@@ -261,8 +261,16 @@ export function livePlan(chain, tweaks = null) {
 // clip is about as loud, with the silent ends cut off, and its knobs
 // (`tweaks`) where renderPlan puts them. Each render is timed in the event
 // log, so a problem report from a phone says how slow voices are there.
-export async function applyChain(buffer, chain, tweaks = null) {
-  const { steps, gain } = renderPlan(chain, tweaks);
+// A preset's `level` in dB as a gain: 0 (or anything not a number at or
+// under 0, down to -24) is 1.
+export const presetGain = (db) => (typeof db === 'number' && db < 0 && db >= -24 ? 10 ** (db / 20) : 1);
+
+// `presetLevel` (dB, never above 0) turns a preset down after its evening-out:
+// boards.json's `level`, for the few that blasted on a phone (Ben,
+// 2026-10-17; tools/preset_loudness.py measures them).
+export async function applyChain(buffer, chain, tweaks = null, presetLevel = 0) {
+  const { steps, gain: voiceGain } = renderPlan(chain, tweaks);
+  const gain = voiceGain * presetGain(presetLevel);
   const started = performance.now();
   let out = { buffer, duration: buffer.duration };
   // Audio with 🔊 Louder / 🔉 Quieter in it is already levelled (cuts.js
@@ -271,8 +279,9 @@ export async function applyChain(buffer, chain, tweaks = null) {
   // Normal keeps the sound as it is, its length included: a beat or a DJ
   // take made into a sound must keep its silent tail to loop in time.
   for (const s of steps) out = finish(await renderStep(out.buffer, s), { trim: !(s.type === 'voice' && s.voice === 'normal'), level });
-  // Quiet and Quietest: every step is levelled to the same peak, so softer
-  // is the finished sound turned down (a fresh buffer from finish()).
+  // Quiet and Quietest (and a preset's `level`): every step is levelled to
+  // the same peak, so softer is the finished sound turned down (a fresh
+  // buffer from finish()).
   if (gain !== 1) for (let c = 0; c < out.buffer.numberOfChannels; c++) { const d = out.buffer.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= gain; }
   const amounts = steps.map((s) => s.amount ?? null);
   // Normal is only a copy, and every pad renders one at start-up: logging

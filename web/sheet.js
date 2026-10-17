@@ -1150,7 +1150,7 @@ function rendered() {
   const chain = sheet.chain.map((s) => ({ ...s }));
   const tweaks = storedTweaks();
   const key = recipeKey({ fx: chain, tweaks });
-  if (!sheet.previews.has(key)) sheet.previews.set(key, sheet.original.then((buffer) => applyChain(buffer, chain, tweaks)));
+  if (!sheet.previews.has(key)) sheet.previews.set(key, sheet.original.then((buffer) => applyChain(buffer, chain, tweaks, sheet.clip?.level)));
   return sheet.previews.get(key);
 }
 
@@ -1239,7 +1239,7 @@ function startLive() {
     const { head: steps, headTweaks: knobs } = split;
     const key = `head:${steps.length || knobs ? recipeKey({ fx: steps, tweaks: knobs }) : ''}`;
     if (!sheet.previews.has(key)) {
-      sheet.previews.set(key, sheet.original.then((b) => (steps.length || knobs ? applyChain(b, steps, knobs) : { buffer: b, duration: b.duration })));
+      sheet.previews.set(key, sheet.original.then((b) => (steps.length || knobs ? applyChain(b, steps, knobs, sheet.clip?.level) : { buffer: b, duration: b.duration })));
     }
     const expected = sheet.original;
     const head = await sheet.previews.get(key);
