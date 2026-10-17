@@ -51,6 +51,7 @@ export const HELP = [
       { pic: [toolbar('Stop all')], text: 'Stops every sound and the beat.' },
       { pic: [slider('Pad size', '')], text: 'Pad size, at the top beside ✏️ Edit sounds: slide left for smaller pads (more on a line), right for bigger ones. All the way left is the smallest this screen shows; all the way right, the biggest. The pads change as you slide. The size is yours, and 🧸 Kids uses it too.' },
       { pic: [word('▾ 🥁 Drums')], text: 'Tap a group of presets to open or close it.' },
+      { pic: [word('▾ 🎹 Notes'), word('💧 Pluck ▾')], text: 'Who plays: on Notes, Chords and Bass, the button beside the name says which instrument plays them. Tap it for the instruments, in families: Keys, Mallets, Strings and Wind. Pick one and the pads play it: each note keeps its fruit (a chord its weather, a bass note its animal), with a small picture of the instrument. Beats and keys you made keep the sound they had. Your pick goes with you to every device.' },
       { adv: true, pic: [pad('🍑', 'C♯ · D♭', '#1FC7B0')], text: 'Notes, Chords and Bass get the sharps and flats, in order between the others. C♯ and D♭ are two names for the same black key, between C and D.' },
       { pic: [person('C', '#7C3AED')], text: 'Whose sounds: the round picture (or letter) at the top right. Tap it to switch to someone else’s pads, or 👥 People to add someone.' },
       { pic: [tool('⬆️')], text: 'Once you scroll, the top shrinks to one slim line: the round picture, ❓ and ⚙️ move to the left, with ⬆️ to jump back to the top.' },

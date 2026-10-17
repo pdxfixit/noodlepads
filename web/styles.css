@@ -3309,6 +3309,90 @@ body.editing .pads .pad-cell .pad-emoji { margin-left: 26px; }
   cursor: pointer;
 }
 
+/* Who plays Notes, Chords and Bass (inst-picker.js, ADR 0030): a button at
+   the right of the group's header, "💧 Pluck ▾", and the list it opens
+   under it, by family, each family in its own color. On a phone the list
+   is one column of families; wider, they sit side by side. */
+.inst-pick {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  max-width: 55%;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, #fff 14%, var(--bed));
+  color: #fff;
+  font: 800 1rem/1.1 var(--font-ui);
+  cursor: pointer;
+}
+.inst-pick[aria-expanded="true"] { background: color-mix(in srgb, #fff 24%, var(--bed)); }
+.inst-pick-emoji { font-size: 1.3rem; line-height: 1; }
+.inst-pick-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inst-list {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 12px 16px;
+  padding: 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, #fff 8%, var(--bed));
+}
+.inst-family-name {
+  margin: 0 0 8px;
+  padding-left: 10px;
+  border-left: 6px solid var(--fam);
+  color: #fff;
+  font: 800 1rem/1.2 var(--font-display);
+  letter-spacing: 0.02em;
+}
+.inst-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 108px), 1fr)); gap: 8px; }
+.inst-choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 2px solid var(--fam);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--fam) 30%, var(--bed));
+  color: #fff;
+  font: 700 1rem/1.1 var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+.inst-choice[aria-pressed="true"] { background: var(--fam); box-shadow: inset 0 0 0 2px #fff; }
+.inst-choice-emoji { font-size: 1.4rem; line-height: 1; }
+.inst-choice-tick { margin-left: auto; font-weight: 800; }
+/* An instrument's note keeps its fruit, weather or animal; a small picture
+   of who plays it sits at its top right. */
+.pad-inst {
+  position: absolute;
+  top: 7%;
+  right: 7%;
+  font-size: 1.1rem;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 0 rgb(255 255 255 / 0.7));
+}
+.pads .pad .pad-inst { font-size: clamp(0.8rem, 11cqw, 1.6rem); }
+.pad.pad-mini .pad-inst { top: 4px; right: 4px; font-size: 0.8rem; }
+/* A phone: the header and who plays it share one line, so both get tighter. */
+@media (max-width: 419px) {
+  .pad-group-inst > .pad-group { gap: 6px; padding: 0 10px; }
+  .pad-group-inst > .pad-group > span:nth-child(2) { white-space: nowrap; }
+  .inst-pick { gap: 4px; padding: 0 8px; }
+  .inst-list { padding: 10px; }
+  .inst-choice { gap: 6px; padding: 0 8px; }
+}
+/* Too narrow for the count beside a long instrument's name ("Steel drum"):
+   the count goes, the name stays whole. */
+@media (max-width: 359px) {
+  .pad-group-inst > .pad-group > .pad-group-count { display: none; }
+}
+
 /* The bar for what is chosen, floating above the toolbar like the update
    bar: "2 selected · Clear", a reason when presets are in it, and the five
    actions, icon over word on a phone and in a line from 700 px. */
@@ -4454,6 +4538,7 @@ body[data-hints~="mixer"] [data-mixer]::before {
     background-position: 0 100%, 50% 22%, 0 0;
   }
   .pad.pad.pad:not(.pad-add) .pad-key { grid-area: auto; position: absolute; top: 10px; right: calc(28% + 6px); }
+  .pad.pad.pad:not(.pad-add) .pad-inst { right: calc(28% + 6px); }   /* who plays it, beside the lever */
   .pad.pad.pad:not(.pad-add) .pad-label { margin-right: 4px; }
   .pad.pad.pad.help-pad::before { border-width: 2px; border-radius: 6px; }
 }

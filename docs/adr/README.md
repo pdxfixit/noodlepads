@@ -54,6 +54,7 @@ A small rule (a label, a color, a layout) needs only its row in `decisions.md`.
 | [0027](0027-retire-feature-counts-and-visits.md) | Retire the feature-use counts and visit summaries now the shared events are live; keep devices and activity | Accepted |
 | [0028](0028-welcome-and-tips.md) | New people get a welcome (Who's playing?), a stage name and one-time tips; a level-up nudge | Accepted, to build |
 | [0029](0029-touch-layouts.md) | 👆 Touch layouts: bands of sounds on the deck (`decks.touch`), named saves as their own records (`touchLayouts`) | Proposed |
+| [0030](0030-instruments-who-plays.md) | 🎹 Instruments: who plays Notes, Chords and Bass, a view over the kit (`inst`, `plays`, `shift`, `chord` in boards.json; a person setting each) | Accepted, phase 1 built |
 
 ## Template
 

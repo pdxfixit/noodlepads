@@ -23,6 +23,7 @@ const NOT_LOADED = new Map([
   ['version.json', 'written at deploy, and network only'],
   ['fonts/OFL-anybody.txt', 'a license, beside the font'],
   ['fonts/OFL-atkinson-next.txt', 'a license, beside the font'],
+  ['clips/kit/LICENSE-samples.txt', 'where the recorded instruments came from, beside them'],
 ]);
 
 function filesIn(dir) {

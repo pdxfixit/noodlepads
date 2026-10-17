@@ -17,6 +17,7 @@ import { audio } from './audio.js';
 import { meter, buildGrille } from './meter.js';
 import { createSequencer } from './sequencer.js';
 import { people, person, currentPerson, clipsFor, anyClip, padColor, nextClipColor } from './board.js';
+import { PLAYED } from './instruments.js';
 import { groupOwn, UNGROUPED } from './groups.js';
 import { validateManifest, isKitClip, boardTitle, soloPerson, SOLO_NAME, groupKit, overrideWithEmoji } from './model.js';
 
@@ -920,6 +921,16 @@ async function start() {
     if (keysShow()) dj?.render();
     refitLines();
   });
+  // Who plays Notes, Chords and Bass (ADR 0030): the group shows that
+  // instrument's notes, ready to play at once.
+  for (const [group, { setting }] of Object.entries(PLAYED)) {
+    onSetting(setting, () => {
+      if (!currentPerson()) return;
+      renderPads();
+      if (keysShow()) dj?.render();
+      for (const clip of clipsFor(state.personId).filter((c) => c.kit && c.group === group)) audio.load(clip).catch(() => {});
+    });
+  }
   fitLines();
   // Every notice fades by itself. The banner over the top of the screen fades
   // on its own (ui.js showBanner); the take card after a take, when it shows,

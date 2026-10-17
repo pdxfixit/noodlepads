@@ -10,6 +10,7 @@ import { applyChain, chainOf, recipeKey } from './voices.js';
 import { showNotice } from './ui.js';
 import { ringOver } from './rhythm.js';
 import { cleanTrim, cleanEdits, applyEdits, applyFade, cutKey, hasGain, levelForGain } from './cuts.js';
+import { voicingOf, voice } from './instruments.js';
 
 const MAX_LOOP_SECONDS = 600;
 
@@ -223,8 +224,18 @@ export const audio = {
   },
 
   // The clip's stored audio, decoded whole: nothing trimmed. Not cached;
-  // the trim screen holds it while it is open.
+  // the trim screen holds it while it is open. An instrument's preset (ADR
+  // 0030) is its recording moved to its note, or several notes of it at
+  // once for a chord (boards.json `shift`, `chord`): that is its stored
+  // audio, so a trim, an edit or a voice works on it as on any sound.
   async decoded(clip) {
+    if (clip.source === 'bundled' && voicingOf(clip)) {
+      const whole = await this.recording(clip.file);
+      const channels = Array.from({ length: whole.numberOfChannels }, (_, c) => voice(whole.getChannelData(c), voicingOf(clip)));
+      const moved = new AudioBuffer({ length: channels[0].length, numberOfChannels: channels.length, sampleRate: whole.sampleRate });
+      channels.forEach((d, c) => moved.copyToChannel(d, c));
+      return moved;
+    }
     let data;
     if (clip.source === 'bundled') {
       const res = await fetch(clip.file);
@@ -234,6 +245,22 @@ export const audio = {
       data = await clip.blob.arrayBuffer();
     }
     return this.decode(data);
+  },
+
+  // A bundled file decoded once, however many presets play it (an
+  // instrument's recording: every note and chord of it reads this). Never
+  // handed out to be changed: decoded() reads it and makes its own.
+  recordings: new Map(),   // file -> Promise<AudioBuffer>
+  recording(file) {
+    if (!this.recordings.has(file)) {
+      const job = fetch(file).then((res) => {
+        if (!res.ok) throw new Error(`${file}: HTTP ${res.status}`);
+        return res.arrayBuffer();
+      }).then((data) => this.decode(data));
+      job.catch(() => this.recordings.delete(file));   // a failed fetch is tried again next time
+      this.recordings.set(file, job);
+    }
+    return this.recordings.get(file);
   },
 
   // The clip's audio as its voices start from (keptAudio): its trim, or
