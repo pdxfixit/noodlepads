@@ -101,6 +101,55 @@ def adsr(attack, release, length):
 
 # ── The kit, on every board: drums, notes and game sounds for making beats ─
 
+def highpass(samples, hz):
+    """Two gentle highpasses in a row: keeps what is above `hz`."""
+    a = math.exp(-2 * math.pi * hz / RATE)
+    for _ in range(2):
+        out, prev, y = [], 0.0, 0.0
+        for x in samples:
+            y = a * (y + x - prev)
+            prev = x
+            out.append(y)
+        samples = out
+    return samples
+
+
+# A phone's speaker plays almost nothing under about 180 Hz, so on a phone a
+# deep 808 or bass note was nearly silent beside a clap with the same peak
+# (Ben, 2026-10-17, listening on his phone). The producer's trick: overtones
+# of the sound itself, which a small speaker does play, and the ear fills in
+# the low note. CARRY of a sound's energy above CARRY_HZ is the aim; the real
+# upright bass recording has about that and carries.
+CARRY, CARRY_HZ = 0.2, 180
+
+
+def share_above(samples, hz=CARRY_HZ):
+    """How much of a sound's energy is above `hz` (0 to 1)."""
+    whole = sum(s * s for s in samples) or 1.0
+    return sum(s * s for s in highpass(samples, hz)) / whole
+
+
+def carry(samples, aim=CARRY):
+    """Adds a sound's own overtones until `aim` of it is above CARRY_HZ:
+    the shape bent by tanh (odd overtones) and folded by abs (even ones,
+    an octave up), only its top kept, mixed in at the level that reaches
+    the aim. A sound already there is left as it is."""
+    if share_above(fade(list(samples))) >= aim:
+        return samples
+    peak = max(abs(s) for s in samples) or 1.0
+    top = highpass([math.tanh(3 * s / peak) + 0.6 * abs(s / peak) for s in samples], CARRY_HZ)
+    lo, hi = 0.0, 16.0 * peak
+    for _ in range(18):
+        mid = (lo + hi) / 2
+        # Measured as written: write_wav fades the first and last 5 ms,
+        # where a kick's overtones mostly are.
+        if share_above(fade([s + mid * t for s, t in zip(samples, top)])) < aim:
+            lo = mid
+        else:
+            hi = mid
+    return [s + hi * t for s, t in zip(samples, top)]
+
+
 def bright(samples):
     """Keeps the hiss: noise minus its own low end, for cymbals and hats."""
     return [a - b for a, b in zip(samples, lowpass(samples, 0.25))]
@@ -109,7 +158,7 @@ def bright(samples):
 def kick():
     body = osc(lambda t: 45 + 110 * math.exp(-28 * t), 0.45, "sine", lambda t: math.exp(-6.5 * t))
     click = noise(0.012, lambda t: 0.6 * math.exp(-300 * t), seed=11)
-    return mix(body, click)
+    return carry(mix(body, click))
 
 
 def snare():
@@ -154,7 +203,7 @@ def pluck(freq):
 
 
 def bass(freq):
-    return lambda: lowpass(osc(lambda t: freq, 0.8, "square", adsr(0.01, 0.3, 0.8)), 0.07)
+    return lambda: carry(lowpass(osc(lambda t: freq, 0.8, "square", adsr(0.01, 0.3, 0.8)), 0.07))
 
 
 def coin():
@@ -176,7 +225,7 @@ def jump():
 def explosion():
     rumble = lowpass(noise(1.5, lambda t: math.exp(-2.8 * t), seed=22, highpass=False), 0.06)
     thump = osc(lambda t: 40 + 60 * math.exp(-8 * t), 0.6, "sine", lambda t: math.exp(-5 * t))
-    return mix(rumble, thump)
+    return carry(mix(rumble, thump))
 
 
 def siren():
@@ -215,7 +264,7 @@ def buzzer():
 
 def heartbeat():
     thump = lambda: osc(lambda t: 55 + 25 * math.exp(-20 * t), 0.18, "sine", lambda t: math.exp(-18 * t))
-    return mix(thump(), at(0.24, thump()), silence(0.9))
+    return carry(mix(thump(), at(0.24, thump()), silence(0.9)))
 
 
 def countdown():
@@ -254,7 +303,7 @@ def ride():
 
 def boom():
     """An 808-style long, deep kick."""
-    return osc(lambda t: 42 + 90 * math.exp(-22 * t), 1.0, "sine", lambda t: math.exp(-2.6 * t))
+    return carry(osc(lambda t: 42 + 90 * math.exp(-22 * t), 1.0, "sine", lambda t: math.exp(-2.6 * t)))
 
 
 def conga():
@@ -507,7 +556,7 @@ def kick_dusty():
     """A boom bap kick: short and punchy, a little crushed, the top rolled off."""
     body = osc(lambda t: 52 + 140 * math.exp(-40 * t), 0.32, "sine", lambda t: math.exp(-11 * t))
     knock = noise(0.02, lambda t: 0.8 * math.exp(-220 * t), seed=50)
-    return lowpass(drive(mix(body, knock), 2.2), 0.35)
+    return carry(lowpass(drive(mix(body, knock), 2.2), 0.35))
 
 
 def snare_dusty():
@@ -520,7 +569,7 @@ def snare_dusty():
 def glide():
     """An 808 glide: a long sub that slides down from E onto A and growls."""
     sub = osc(lambda t: 55 + 27.4 * math.exp(-14 * t), 1.1, "sine", lambda t: min(t / 0.004, 1) * math.exp(-2.2 * t))
-    return drive(sub, 3.0)
+    return carry(drive(sub, 3.0))
 
 
 def hat_roll():
@@ -590,7 +639,7 @@ def taiko():
     """A taiko: a huge drum, a deep boom that rolls on."""
     boom = skin(95, 52, 1.2, 3.2, slap=0.5, seed=61)
     rumble = lowpass(noise(1.2, lambda t: 0.3 * math.exp(-4 * t), seed=62, highpass=False), 0.05)
-    return drive(mix(boom, rumble), 1.6)
+    return carry(drive(mix(boom, rumble), 1.6))
 
 
 def djembe():
@@ -609,12 +658,12 @@ def log_drum():
     """An amapiano log drum: a round, woody bass note that bends and wobbles."""
     tone = osc(lambda t: 110 + 30 * math.exp(-25 * t), 0.7, "triangle", lambda t: math.exp(-4.5 * t))
     knock = osc(lambda t: 660, 0.05, "sine", lambda t: 0.3 * math.exp(-80 * t))
-    return lowpass(drive(mix(tone, knock), 2.0), 0.3)
+    return carry(lowpass(drive(mix(tone, knock), 2.0), 0.3))
 
 
 def dhol():
     """A dhol's big side, hit with a bent stick: dhuk."""
-    return drive(skin(120, 68, 0.6, 6, slap=0.6, seed=66), 1.8)
+    return carry(drive(skin(120, 68, 0.6, 6, slap=0.6, seed=66), 1.8))
 
 
 def dhol_high():
@@ -632,7 +681,7 @@ def cajon():
     """A cajón: a wooden box you sit on; the low thump of its middle."""
     thump = skin(130, 85, 0.35, 12, slap=0.4, seed=69)
     wires = bright(noise(0.2, lambda t: 0.25 * math.exp(-25 * t), seed=70))
-    return mix(thump, wires)
+    return carry(mix(thump, wires))
 
 # ── Instruments (ADR 0030): who plays Notes, Chords and Bass. Each is one
 # note (two for guitar), named by its MIDI number (`marimba-66` is F♯4);
@@ -730,7 +779,7 @@ def bass_808(midi):
     f = hz_of(midi)
     def make():
         tone = osc(lambda t: f * (1 + 0.25 * math.exp(-35 * t)), 1.2, "sine", lambda t: min(t / 0.003, 1, (1.2 - t) / 0.3) * math.exp(-1.6 * t))
-        return drive(tone, 1.8)
+        return carry(drive(tone, 1.8))
     return make
 
 
@@ -742,7 +791,7 @@ INSTRUMENT_CLIPS = {
 
 KIT = {
     "kick": kick, "snare": snare, "hihat": hihat, "open-hat": open_hat, "clap": clap,
-    "tom-high": tom(270, 190), "tom-low": tom(150, 100), "crash": crash, "cowbell": cowbell, "shaker": shaker,
+    "tom-high": tom(270, 190), "tom-low": lambda: carry(tom(150, 100)()), "crash": crash, "cowbell": cowbell, "shaker": shaker,
     "note-c": pluck(261.6), "note-d": pluck(293.7), "note-e": pluck(329.6), "note-g": pluck(392.0),
     "note-a": pluck(440.0), "note-c-high": pluck(523.3), "bass-c": bass(65.4), "bass-g": bass(98.0),
     "coin": coin, "power-up": power_up, "jump": jump, "explosion": explosion, "siren": siren,
