@@ -493,6 +493,86 @@ def squeak():
                       adsr(0.01, 0.04, 0.18))
     return one() + silence(0.1) + one()
 
+# ── Hip hop presets (Ben, 2026-10-17: "more sounds for hip hop beats"):
+# dusty drums for boom bap, trap and drill parts, and the bouncy, quirky
+# little sounds of a playful beat (plinks, bloops, a woodblock).
+
+def drive(samples, amount):
+    """Soft clipping: pushes a sound into tanh so it grows a growl of
+    harmonics, the way a sub 808 is heard on a phone speaker."""
+    return [math.tanh(amount * s) / math.tanh(amount) for s in samples]
+
+
+def kick_dusty():
+    """A boom bap kick: short and punchy, a little crushed, the top rolled off."""
+    body = osc(lambda t: 52 + 140 * math.exp(-40 * t), 0.32, "sine", lambda t: math.exp(-11 * t))
+    knock = noise(0.02, lambda t: 0.8 * math.exp(-220 * t), seed=50)
+    return lowpass(drive(mix(body, knock), 2.2), 0.35)
+
+
+def snare_dusty():
+    """A boom bap snare: a fat crack, crushed and muffled like an old record."""
+    tone = osc(lambda t: 200 - 30 * t, 0.3, "triangle", lambda t: 0.8 * math.exp(-20 * t))
+    crack = noise(0.3, lambda t: math.exp(-11 * t), seed=51)
+    return lowpass(drive(mix(tone, crack), 2.5), 0.3)
+
+
+def glide():
+    """An 808 glide: a long sub that slides down from E onto A and growls."""
+    sub = osc(lambda t: 55 + 27.4 * math.exp(-14 * t), 1.1, "sine", lambda t: min(t / 0.004, 1) * math.exp(-2.2 * t))
+    return drive(sub, 3.0)
+
+
+def hat_roll():
+    """A trap hi-hat roll: six quick ticks, getting louder."""
+    tick = lambda i: bright(noise(0.03, lambda t: (0.4 + 0.12 * i) * math.exp(-90 * t), seed=52 + i))
+    return mix(*(at(i * 0.036, tick(i)) for i in range(6)))
+
+
+def woodblock():
+    """A woodblock: a hollow, bouncy tock."""
+    return mix(osc(lambda t: 1050, 0.12, "sine", lambda t: math.exp(-45 * t)),
+               osc(lambda t: 2900, 0.12, "sine", lambda t: 0.3 * math.exp(-80 * t)))
+
+
+def plink():
+    """A plink: one mallet note (C), round like a marimba bar."""
+    return mix(osc(lambda t: 523.3, 0.6, "sine", lambda t: math.exp(-9 * t)),
+               osc(lambda t: 2093, 0.6, "sine", lambda t: 0.25 * math.exp(-30 * t)))
+
+
+def bloop():
+    """A bloop: a bubble popping up, quick and silly."""
+    return osc(lambda t: 260 * 2 ** (t * 18), 0.13, "sine", lambda t: min(t / 0.005, 1) * (1 - t / 0.13))
+
+
+def vinyl():
+    """A record's crackle: soft hiss with pops, for lo-fi beats."""
+    rng = random.Random(53)
+    hiss = lowpass(noise(2.0, lambda t: 0.12, seed=54), 0.3)
+    pops = [0.0] * len(hiss)
+    for _ in range(40):
+        i = rng.randrange(len(pops) - 40)
+        size = rng.uniform(0.2, 0.7)
+        for j in range(30):
+            pops[i + j] += size * rng.uniform(-1, 1) * math.exp(-j / 4)
+    return mix(hiss, pops)
+
+
+def horn_stab():
+    """A horn stab: brassy C major, hit hard and cut short."""
+    notes = [osc(lambda t, f=f: f * (1 + 0.004 * math.sin(2 * math.pi * 5 * t)), 0.4, "saw", adsr(0.015, 0.12, 0.4))
+             for f in (261.6, 329.6, 392.0, 523.3)]
+    return sweep_lowpass(mix(*notes), lambda t: 0.08 + 0.3 * math.exp(-12 * t))
+
+
+def rewind():
+    """A DJ rewind: a record spun backwards fast, then let go."""
+    swipe = osc(lambda t: 900 - 700 * t / 0.7 + 200 * math.sin(2 * math.pi * 11 * t), 0.7, "saw",
+                lambda t: math.sin(math.pi * t / 0.7))
+    hiss = noise(0.7, lambda t: 0.3 * math.sin(math.pi * t / 0.7), seed=55)
+    return lowpass(mix(swipe, hiss), 0.25)
+
 KIT = {
     "kick": kick, "snare": snare, "hihat": hihat, "open-hat": open_hat, "clap": clap,
     "tom-high": tom(270, 190), "tom-low": tom(150, 100), "crash": crash, "cowbell": cowbell, "shaker": shaker,
@@ -517,6 +597,9 @@ KIT = {
     "computer": computer,
     "burp": burp, "toot": toot, "splat": splat, "zip": zip_away, "kazoo": kazoo, "bonk": bonk,
     "squeak": squeak,
+    "kick-dusty": kick_dusty, "snare-dusty": snare_dusty, "glide": glide, "hat-roll": hat_roll,
+    "woodblock": woodblock, "plink": plink, "bloop": bloop, "vinyl": vinyl, "horn-stab": horn_stab,
+    "rewind": rewind,
 }
 
 # The sharps and flats (Advanced-only presets, Ben 2026-10-11): the same

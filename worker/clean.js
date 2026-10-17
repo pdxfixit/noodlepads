@@ -25,6 +25,9 @@ export const KIT_IDS = [
   'note-cs', 'note-ds', 'note-fs', 'note-gs', 'note-as', 'chord-csm', 'chord-cm', 'chord-d',
   'chord-eb', 'chord-e', 'chord-fsm', 'chord-gm', 'chord-a', 'chord-bb', 'chord-bm', 'bass-cs',
   'bass-ds', 'bass-fs', 'bass-gs', 'bass-as',
+  // The 🧢 Hip hop presets.
+  'kick-dusty', 'snare-dusty', 'glide', 'hat-roll', 'woodblock', 'plink', 'bloop', 'vinyl', 'horn-stab',
+  'rewind',
 ];
 
 const KNOWN = { kitIds: new Set(KIT_IDS), origin: 'https://noodlepads.com' };
