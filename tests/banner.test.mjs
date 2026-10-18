@@ -118,10 +118,16 @@ test('a notice said again within a minute never pushes an Undo away', () => {
   $('#banner-close').dispatch('click');
 });
 
+// Waits until `done()` holds, up to `limit` ms: a fixed wait loses on a busy
+// machine (2026-10-18, a full CPU made a 60 ms margin miss).
+const until = async (done, limit = 3000) => {
+  for (const end = Date.now() + limit; !done() && Date.now() < end;) await new Promise((r) => setTimeout(r, 20));
+};
+
 test('the banner fades by itself, and a finger on it holds it', async () => {
   const { FADE_MS } = ui;
   ui.showBanner('Fading.', { ms: 30 });
-  await new Promise((r) => setTimeout(r, 30 + FADE_MS + 60));
+  await until(() => $('#banner').hidden);
   assert.equal($('#banner').hidden, true, 'gone by itself');
   let closed = 0;
   ui.showBanner('Held.', { ms: 30, onClose: () => closed++ });
@@ -129,7 +135,7 @@ test('the banner fades by itself, and a finger on it holds it', async () => {
   await new Promise((r) => setTimeout(r, 30 + FADE_MS + 60));
   assert.equal($('#banner').hidden, false, 'held');
   $('#banner').dispatch('pointerleave');
-  await new Promise((r) => setTimeout(r, 30 + FADE_MS + 60));
+  await until(() => $('#banner').hidden);
   assert.equal($('#banner').hidden, true, 'the wait started again');
   assert.equal(closed, 1);
 });
