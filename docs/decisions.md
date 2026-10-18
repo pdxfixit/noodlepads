@@ -295,6 +295,7 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | Mockups first for a new screen, a new layout or a moved control; fixes and restyles inside an agreed design go straight to building. | Ben: "Yes, for new screens and layouts". | 2026-10-12 |
 | Human-run tests are kept to a minimum. Agents check with tests, `just look` and the live checks; TODO's "Ben does" gets no device tries. What only a person can judge stays in state.md as "not yet tried on a phone". | Ben, 2026-10-16: "human-run tests should be kept to a minimum"; he reports tries as he goes. | 2026-10-16 |
 | Agents delegate independent work to background agents in worktrees and land it with `just land`. | Ben keeps talking while work runs. | 2026-10-12 |
+| `just land` is flarepress's shared tool, the same in every flarepress app, and it pulls `main` from GitHub before it lands. | A main left behind GitHub was landed on; one tool keeps every repo's fixes in one place (Ben). | 2026-10-17 |
 | Agents may read the live database (stats, problem reports) without asking; writes stay Ben's, except the deploy checks' own. | Ben: "read-only is fine". | 2026-10-12 |
 | Every commit to `main` is deployed and checked live. | The live site is always the latest work. | 2026-10-10 |
 | A deploy refuses uncommitted changes (`ALLOW_DIRTY=1` overrides). | The live site is always a commit on `main`. | 2026-10-10 |
