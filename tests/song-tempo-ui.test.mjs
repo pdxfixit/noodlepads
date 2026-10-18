@@ -97,7 +97,7 @@ test('＋ Tempo change: a bar and a BPM; a chip shows above its bar; ↩️ Undo
   assert.equal(chipAt(2).querySelector('.tempo-chip-bpm').textContent, '140');
   assert.equal(chipAt(2).style.props['--at'], '1', 'above bar 2');
   assert.ok($('#song-lanes').classList.contains('has-marks'));
-  assert.equal($('#song-tempo-open').querySelector('.tempo-open-marks').textContent, ' · 1 change');
+  assert.equal($('#song-tempo-open').querySelector('.tempo-open-marks').textContent, '1 change', 'its own words: on a phone they sit under the tempo, with no dot');
   $('#tempo-sheet').close();
   tap('#song-step-undo');
   assert.equal(songNow().tempos, undefined, 'Undo takes the mark back; no marks is no field');

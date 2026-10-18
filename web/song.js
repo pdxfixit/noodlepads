@@ -874,7 +874,7 @@ export function createSong(deps) {
     if (!adv) return;
     const n = tempoMarks().length;
     const changes = `${n} tempo ${n === 1 ? 'change' : 'changes'}`;
-    el.tempoOpen.replaceChildren(make('span', 'tempo-open-bpm', `${song.tempo} BPM`), ...(n ? [make('span', 'tempo-open-marks', ` · ${n} ${n === 1 ? 'change' : 'changes'}`)] : []));
+    el.tempoOpen.replaceChildren(make('span', 'tempo-open-bpm', `${song.tempo} BPM`), ...(n ? [make('span', 'tempo-open-marks', `${n} ${n === 1 ? 'change' : 'changes'}`)] : []));
     el.tempoOpen.setAttribute('aria-label', `Song tempo ${song.tempo} BPM${n ? `, ${changes}` : ''}: tap to change it or add a tempo change`);
   }
 
