@@ -43,6 +43,8 @@ const KEYS = (on) => `if (document.body.classList.contains('keys-on') !== ${on})
 // Named states past a screen: a dialog or mode, opened by script, so a look
 // at every screen is one command (just look pads settings help sheet ...).
 const q = (sel) => `document.querySelector(${JSON.stringify(sel)}).click();`;
+// ⇆ Move on, unless a wider shot of the same page already turned it on.
+const MOVE_OPEN = 'if (document.querySelector("#seq-deck [data-move-open]").getAttribute("aria-pressed") !== "true") document.querySelector("#seq-deck [data-move-open]").click(); await new Promise((r) => setTimeout(r, 100));';
 const nap = 'await new Promise((r) => setTimeout(r, 150));';
 // Opens a kit group on Pads only if it is shut: the widths share localStorage.
 const OPEN_KIT = (id) => `{ const h = document.querySelector('.pad-group[data-group="${id}"]'); if (h.getAttribute('aria-expanded') !== 'true') h.click(); } ${nap}`;
@@ -215,6 +217,15 @@ const VIEWS = {
   'row-more': { screen: 'beats', still: true, js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('rock') + q('[data-groove="pop"]') + 'await new Promise((r) => setTimeout(r, 300));'
     + 'document.querySelector(".seq-head").scrollIntoView({ block: "center" }); await new Promise((r) => setTimeout(r, 200));' + q('.seq-head [data-more]') + nap },
   'beat-groove': { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('rock') + q('[data-groove="pop"]') + 'await new Promise((r) => setTimeout(r, 300));' },
+  // ⇆ Move on Pop (beat-move.js): the whole beat picked, the Move bar at the foot. Opened only if shut (the widths share the page's beat, not the mode).
+  'beat-move': { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('rock') + q('[data-groove="pop"]') + 'await new Promise((r) => setTimeout(r, 300));' + MOVE_OPEN },
+  // Mid-slide: a hold on the kick's third pill lifted the pick, and the finger is two pills left, so the dashed shadows show. The drag is left in the air for the shot.
+  'beat-move-slide': { screen: 'beats', still: true, js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('rock') + q('[data-groove="pop"]') + 'await new Promise((r) => setTimeout(r, 300));' + MOVE_OPEN
+    + `const pill = (s) => document.querySelector('#seq-rows .seq-row[data-row="0"] .pill[data-step="' + s + '"]');
+       pill(2).scrollIntoView({ block: 'center' }); await new Promise((r) => setTimeout(r, 100));
+       const at = (el, type) => { const b = el.getBoundingClientRect(); return new PointerEvent(type, { bubbles: true, pointerId: 9, pointerType: 'touch', clientX: b.x + b.width / 2, clientY: b.y + b.height / 2 }); };
+       pill(2).dispatchEvent(at(pill(2), 'pointerdown')); await new Promise((r) => setTimeout(r, 600));
+       document.querySelector('#seq-rows').dispatchEvent(at(pill(0), 'pointermove')); await new Promise((r) => setTimeout(r, 100));` },
   // The scratch beat with Ska loaded (ADR 0020): "Ska (scratch)", 💾 Keep where ✏️ was, and the Undo line.
   keep: { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('latin') + q('[data-groove="ska"]') + 'await new Promise((r) => setTimeout(r, 300));' },
   // A fresh device has the empty scratch beat open (ADR 0020). 🆕 New opens it blank (Ben, 2026-10-12);
