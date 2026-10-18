@@ -265,6 +265,9 @@ one of these:" leads to the grooves. Listen closes Grooves and opens one sheet
    bar count can step back by one and it has no bars while it finds the new
    tempo: the bars shown stay until the new part's come. Each row's closest
    sound is picked at ■ Stop (the hits' fingerprints come with `finish()`).
+   Once it has heard something, only ✕ or ■ Stop ends it: a tap beside the
+   sheet (coming back from the song's tab, say) or Esc would lose what it
+   heard, so they do nothing.
 3. **What I heard**, at ■ Stop (or when sharing stops in the browser, or the
    file ends): a sentence ("1:52 of music, in 3 parts. 4/4 at 92 BPM, then 120
    from 0:52. The hats swing a lot (Shuffle)."), a card per part with its
