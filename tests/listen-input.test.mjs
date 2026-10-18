@@ -105,6 +105,7 @@ test('captureError: a sentence a grown-up can act on, for every way it fails', (
   assert.match(captureError('tab', err('NotAllowedError', 'Permission denied')), /Nothing was shared.*Also share tab audio/);
   assert.match(captureError('tab', err('NotAllowedError', 'Permission denied by system')), /Privacy & Security/);
   assert.match(captureError('mic', err('NotAllowedError')), /microphone is blocked/);
+  assert.match(captureError('mic', err('NotAllowedError', 'Permission denied by system')), /Privacy & Security, Microphone/);
   assert.match(captureError('mic', err('NotFoundError')), /No microphone/);
   assert.match(captureError('mic', err('NotReadableError')), /busy in another app/);
   assert.match(captureError('tab', err('NotReadableError')), /couldn't capture/);
@@ -240,6 +241,31 @@ test('startCapture: a tab shared with no sound, a refusal, or no way at all reje
   const phone = fakeBrowser({ kind: 'mic-only' });
   await assert.rejects(startCapture('tab', {}, phone), /Chrome or Edge on a computer/);
   await assert.rejects(startCapture('song', {}, phone), /no kind song/);
+});
+
+test('startCapture: a sleeping context is woken before the browser asks, while the tap is fresh, and never waited on', async () => {
+  const b = fakeBrowser();
+  const order = [];
+  const ctx = new b.AudioContext();
+  ctx.state = 'suspended';
+  // A resume that never settles: iOS Safari's, once the tap is used up.
+  ctx.resume = () => { order.push('resume'); return new Promise(() => {}); };
+  const ask = b.navigator.mediaDevices.getDisplayMedia;
+  b.navigator.mediaDevices.getDisplayMedia = (c) => { order.push('ask'); return ask(c); };
+  const cap = await startCapture('tab', { context: ctx }, b);
+  assert.deepEqual(order, ['resume', 'ask']);
+  cap.stop();
+
+  const none = fakeBrowser();
+  none.AudioContext = undefined;
+  const saved = globalThis.AudioContext;
+  delete globalThis.AudioContext;
+  try {
+    await assert.rejects(startCapture('tab', {}, none), /Listening couldn't start in this browser/);
+  } finally {
+    if (saved) globalThis.AudioContext = saved;
+  }
+  assert.equal(none.asked.length, 0, 'nothing is shared when it could not be heard');
 });
 
 test('startCapture mic: asks getUserMedia for the plain sound', async () => {
