@@ -3799,6 +3799,19 @@ dialog.np-dialog.sheet-warn {
 dialog#sheet legend.field-name, dialog#sheet h3.field-name { width: 100%; margin-bottom: 8px; padding: 0; }
 .sheet-fold { font-weight: 800; font-size: 1.05rem; }
 .fold-body[hidden] { display: none; }
+/* Each folding section of the sheet is one bordered panel, so on a long
+   phone page it is clear where Voice ends and Layers begins (Ben,
+   2026-10-18). A legend would cut into a fieldset's top border: floated,
+   it sits inside the panel like Layers' heading does. */
+dialog#sheet .fold-panel {
+  min-width: 0;
+  margin-inline: 0;
+  padding: 6px 8px 10px;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+}
+dialog#sheet .fold-panel > legend.field-name { float: left; }
+dialog#sheet .fold-panel > legend.field-name + * { clear: both; }
 
 /* ── Pad badges scale with the pad (Ben, 2026-10-11: "hovering edit button
    (all badges) should scale with the tile") ──

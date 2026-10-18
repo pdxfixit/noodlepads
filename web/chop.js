@@ -22,7 +22,7 @@ import { currentPerson, clipsFor, nextClipColor } from './board.js';
 import { renderPads } from './pads.js';
 import { encodeWav } from './sequencer.js';
 import { getSetting, onSetting } from './settings.js';
-import { showNotice } from './ui.js';
+import { showNotice, showBanner } from './ui.js';
 import { newId } from './util.js';
 import { chopName } from './names.js';
 import {
@@ -97,7 +97,10 @@ export function createCut(sheet) {
     el.views.hidden = !trim;
     for (const b of el.views.children) b.setAttribute('aria-pressed', String(b.dataset.view === cut.view));
     el.edits.hidden = !trim || cut.view !== 'part';
+    // 🔊 Even it out sits with 👂 Plain, for everyone, on a kid's own sound
+    // (Ben, 2026-10-18: a sound sheet button, not inside the Advanced editor).
     el.even.hidden = !own();
+    el.even.disabled = !ready;
     el.undo.hidden = !trim;
     el.all.hidden = !trim || cut.view === 'fades';
     el.nofade.hidden = !trim || cut.view !== 'fades';
@@ -195,20 +198,28 @@ export function createCut(sheet) {
 
   // ── Trim, fades and edits ──
 
-  async function startTrim() {
+  // The stored recording and the sheet's trim, edits and fade, as the trim
+  // editor works on them; false if the recording would not open.
+  async function loadTrim() {
     const { mode, clip, trim, edits, fade } = sheet.now();
     let full;
     try {
       full = mode === 'edit' ? await audio.decoded(clip) : cut.recorded;
     } catch (err) {
       console.error('Trim could not open the recording:', err);
-      return;
+      return false;
     }
-    if (!full || !sheet.now().ready) return;
-    audio.stop('preview');
-    Object.assign(cut, { mode: 'trim', full, exact: !!clip?.exact, edits: cleanEdits(edits, full.duration), fade: cleanFade(fade) });
+    if (!full || !sheet.now().ready) return false;
+    Object.assign(cut, { full, exact: !!clip?.exact, edits: cleanEdits(edits, full.duration), fade: cleanFade(fade) });
     cut.range = rangeOf(trim);
     fitSel();
+    return true;
+  }
+
+  async function startTrim() {
+    if (!(await loadTrim())) return;
+    audio.stop('preview');
+    cut.mode = 'trim';
     rebuild();
     render();
     el.done.focus({ preventScroll: true });
@@ -297,8 +308,10 @@ export function createCut(sheet) {
   // gain edit keeps the sound's own level (levelForGain) with its peaks
   // held under full scale (softLimit), so a quiet recording with one loud
   // clap comes up and the clap is squashed instead of clipping. Already
-  // within about 1 dB, it says so and adds nothing.
-  function evenOut() {
+  // within about 1 dB, it says so and adds nothing. It sits on the sheet,
+  // outside the trim editor, so the banner's ↩️ Undo takes it back.
+  async function evenOut() {
+    if (!cut.mode && !(await loadTrim())) return;
     const now = saved();
     const d = cut.full.duration;
     const { start, end } = cut.range;
@@ -319,7 +332,21 @@ export function createCut(sheet) {
       return;
     }
     if (editsKey(edits) === editsKey(now.edits)) { already(); return; }
-    applyCut({ ...now, edits });
+    if (cut.mode === 'trim') { applyCut({ ...now, edits }); return; }
+    setQuietly({ ...now, edits });
+    playPart(cut.shown, cut.range.start, cut.range.end);
+    showBanner('🔊 Evened out: as loud as the ready-made sounds.', { action: { label: '↩️ Undo', fn: () => setQuietly(now) }, ms: EVEN_UNDO_MS });
+  }
+  const EVEN_UNDO_MS = 8000;
+  // New settings kept with the trim editor shut (🔊 Even it out on the sheet).
+  function setQuietly(next) {
+    const d = cut.full.duration;
+    const clean = { trim: cleanTrim(next.trim, d), edits: cleanEdits(next.edits, d), fade: cleanFade(next.fade) };
+    cut.range = rangeOf(clean.trim);
+    cut.edits = clean.edits;
+    cut.fade = clean.fade;
+    fitSel();
+    sheet.setCut(clean, rebuild());
   }
 
   function setView(view) {

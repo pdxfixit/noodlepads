@@ -1000,6 +1000,7 @@
         <div class="cut" id="cut" hidden>
           <div class="cut-tools" id="cut-start">
             <button type="button" class="chain-tool" id="plain-btn" aria-pressed="false" title="Play it with no voice, to hear what the voice changes. Tap again to stop."><span aria-hidden="true">👂</span> Plain</button>
+            <button type="button" class="chain-tool cut-even" id="cut-even" title="Turns all of the sound up or down until it seems as loud as the ready-made sounds. ↩️ Undo takes it back." hidden><span aria-hidden="true">🔊</span> Even it out</button>
             <button type="button" class="chain-tool" id="trim-btn"><span aria-hidden="true">✂️</span> Trim and edit</button>
             <button type="button" class="chain-tool" id="chop-btn"><span aria-hidden="true">🧩</span> Chop into pads</button>
           </div>
@@ -1015,7 +1016,6 @@
               <button type="button" class="chain-tool" data-edit="silence"><span aria-hidden="true">🔇</span> Silence it</button>
               <button type="button" class="chain-tool" data-edit="louder"><span aria-hidden="true">🔊</span> Louder</button>
               <button type="button" class="chain-tool" data-edit="quieter"><span aria-hidden="true">🔉</span> Quieter</button>
-              <button type="button" class="chain-tool cut-even" id="cut-even" title="Turns all of the sound up or down until it seems as loud as the ready-made sounds. ↩️ Undo takes it back." hidden><span aria-hidden="true">🔊</span> Even it out</button>
               <button type="button" class="chain-tool cut-keep" data-edit="keep"><span aria-hidden="true">✂️</span> Keep only this</button>
             </div>
             <div class="cut-tools">
@@ -1037,7 +1037,7 @@
            saying what the lit one is, ⭐ Save voice · ↩️ Reset voice (sticky while
            the layers scroll by), then the layers. One box, so the row sticks over them. -->
       <div class="voice-box" id="voice-box">
-      <fieldset class="field">
+      <fieldset class="field fold-panel">
         <legend class="field-name"><button type="button" class="set-head sheet-fold" data-fold="voice" aria-expanded="true" aria-controls="voice-body"><span class="set-head-caret" aria-hidden="true">▾</span>Voice</button></legend>
         <div class="fold-body" id="voice-body">
         <p class="field-hint" id="voice-hint">Record something first, then tap a voice to hear it.</p>
@@ -1074,7 +1074,7 @@
       <!-- Layers (Ben, 2026-10-11, Q42c: Knobs and Shape it merged, "an interface
            similar to beats"): one row per layer, top to bottom as they play
            (shape.js draws them). Inside the voice box, so ⭐ Save voice · ↩️ Reset voice sticks over them. -->
-      <section class="field layers" id="layers" aria-labelledby="layers-name">
+      <section class="field layers fold-panel" id="layers" aria-labelledby="layers-name">
         <h3 class="field-name" id="layers-name"><button type="button" class="set-head sheet-fold" data-fold="layers" aria-expanded="true" aria-controls="layers-body"><span class="set-head-caret" aria-hidden="true">▾</span>Layers</button></h3>
         <div class="fold-body" id="layers-body">
         <p class="field-hint layer-hint" id="layer-hint">Top plays first. 🔈 mutes a layer and keeps it.</p>
