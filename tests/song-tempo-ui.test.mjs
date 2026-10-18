@@ -138,6 +138,21 @@ test('a chip opens its mark: change it, or remove it (asks first) with ↩️ Un
   assert.equal(chips().length, 2);
 });
 
+test('a tempo out of range typed in 🎼 Tempo shows what it became, Enter or not', async () => {
+  tap('#song-tempo-open');
+  const was = songNow().tempo;
+  $('#tempo-base').value = '999';
+  $('#tempo-base').dispatch('keydown', { key: 'Enter' });
+  assert.equal(songNow().tempo, 180);
+  assert.equal($('#tempo-base').value, '180', 'the field keeps focus, and says 180');
+  $('#tempo-base').value = '999';
+  $('#tempo-base').dispatch('keydown', { key: 'Enter' });
+  assert.equal($('#tempo-base').value, '180', 'already 180: still says it');
+  $('#tempo-sheet').close();
+  tap('#song-step-undo');
+  assert.equal(songNow().tempo, was);
+});
+
 test('▶ Play song plays with marks, from bar 1 or a bar tapped in the ruler', async () => {
   tap('#song-play');
   await page.settle();
