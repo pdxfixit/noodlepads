@@ -134,3 +134,14 @@ test('🎧 From a song\'s words read: on the blue card, the night sheet, the tem
   const err = css.match(/\.listen-error\s*\{[^}]*background:\s*(#[0-9a-fA-F]{6});\s*color:\s*(#[0-9a-fA-F]{6})/);
   check('a problem starting', err[2], err[1]);
 });
+
+// The rolling bars' oldest line fades as it rolls off: a hit that fits must
+// still look brighter than a one-off, for the kick and snare's blue and the
+// hats' teal. (At 0.55 a faded fit was the one-off's color.)
+test('🎧 the oldest rolling bar fades, but a hit that fits there still outshines a one-off', () => {
+  const NIGHT = token('listen-night');
+  const fade = Math.round(Number(css.match(/\.listen-line\.oldest\s*\{\s*opacity:\s*([\d.]+)/)[1]) * 100);
+  for (const [fit, odd] of [['listen-fit', 'listen-odd'], ['listen-hat-fit', 'listen-hat-odd']]) {
+    check(`faded ${fit} beside ${odd}`, mix(token(fit), fade, NIGHT), token(odd), 1.75);
+  }
+});
