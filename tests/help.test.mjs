@@ -129,8 +129,10 @@ test('Advanced-only items say so', () => {
   const tune = HELP.flatMap((s) => shownItems(s)).filter((i) => /🎹 (Tune|Add a tune)/.test(i.pic[0].t ?? ''));
   assert.equal(tune.length, 2);
   assert.ok(tune.every((i) => !i.adv));
-  // 🎼 Song is for everyone since ADR 0017: none of its lines needs Advanced.
-  assert.ok(shownItems(HELP.find((s) => s.id === 'song')).every((i) => !i.adv));
+  // 🎼 Song is for everyone since ADR 0017: only changing its tempo marks
+  // needs Advanced (ADR 0031; Ben, 2026-10-18); everyone sees and hears them.
+  const songAdv = shownItems(HELP.find((s) => s.id === 'song')).filter((i) => i.adv);
+  assert.deepEqual(songAdv.map((i) => i.pic.at(-1).t), ['＋ Tempo change']);
 });
 
 // ── The real app ──────────────────────────────────────────────────────

@@ -1,11 +1,12 @@
 // 🎼 Song as a playlist (ADR 0024): the pure part. A song has a tempo of its
 // own and up to 8 lanes; a lane holds blocks, each a saved beat placed at a
 // bar and repeated a whole number of times. Lanes play together, every block
-// at the song's tempo. No DOM, no audio, no storage: song.js draws and plays
-// what this works out.
+// at the song's tempo, which tempo marks may change from a bar on (ADR
+// 0031). No DOM, no audio, no storage: song.js draws and plays what this
+// works out.
 //
-// Time is counted in song bars: one bar of 4/4 at the song's tempo (16
-// pills). A beat plays as it loops on Beats, pass after pass with no gap, so
+// Time is counted in song bars: one bar of 4/4 (16 pills), each bar at the
+// tempo playing there. A beat plays as it loops on Beats, pass after pass with no gap, so
 // a 2-bar beat takes 2 song bars a pass and a 3/4 beat three quarters of one.
 // A block covers the whole bars it reaches into. `stepsOf(beatId)` says how
 // many pills one pass of a beat is (its bars × its bar's pills), or null when
@@ -30,6 +31,7 @@ export const BAR_STEPS = 16;             // pills in a song bar: one bar of 4/4
 export const MIN_TEMPO = 60;
 export const MAX_TEMPO = 180;
 export const DEFAULT_TEMPO = 100;
+export const MAX_TEMPO_MARKS = 32;       // tempo changes in one song
 // Older copies read `slots` (ADR 0006, 0007): a song saves a list of its
 // blocks in that shape too, at most this many, each played at most 4 times.
 const LEGACY_SLOTS = 16;
@@ -79,6 +81,104 @@ export function cleanLane(raw, i = 0) {
 export function cleanLanes(raw) {
   const list = Array.isArray(raw) ? raw.slice(0, MAX_LANES) : [];
   return list.length ? list.map((l, i) => cleanLane(l, i)) : newLanes();
+}
+
+// ── Tempo marks (ADR 0031) ──
+//
+// A song plays at its own `tempo` from bar 1. Marks change it from a bar on:
+// `tempos: [{bar, bpm}]`, bars counted from 1 as the ruler shows them, so a
+// mark's bar is 2 or later. Every lane plays at the tempo of the bar it is
+// in, so bar lines stay lined up across lanes. Absent or empty: one tempo.
+
+// A song's marks, made safe: each a whole bar from 2 to MAX_SONG_BARS and a
+// whole BPM in the song tempo range; in bar order, one per bar (the first
+// kept), at most MAX_TEMPO_MARKS. Anything else is dropped, never moved.
+// `song` is the record they belong to: a song from before the playlist
+// (slots, no lanes) has no bars, so it has no marks. Loading, merging and
+// backups all clean marks with this.
+export function cleanTempos(raw, song = null) {
+  if (!Array.isArray(raw) || (song && !Array.isArray(song.lanes))) return [];
+  const seen = new Set();
+  const out = [];
+  for (const m of raw) {
+    const bar = m?.bar;
+    const bpm = Number.isFinite(m?.bpm) ? Math.round(m.bpm) : NaN;
+    if (!Number.isInteger(bar) || bar < 2 || bar > MAX_SONG_BARS || seen.has(bar)) continue;
+    if (!(bpm >= MIN_TEMPO && bpm <= MAX_TEMPO)) continue;
+    seen.add(bar);
+    out.push({ bar, bpm });
+  }
+  return out.sort((a, b) => a.bar - b.bar).slice(0, MAX_TEMPO_MARKS);
+}
+
+// The tempo playing in `bar` (counted from 1) of `song`: its own tempo, or
+// the last mark at or before that bar.
+export function tempoAt(song, bar) {
+  let bpm = cleanTempo(song?.tempo);
+  for (const m of cleanTempos(song?.tempos)) {
+    if (m.bar > bar) break;
+    bpm = m.bpm;
+  }
+  return bpm;
+}
+
+// Marks with one put in: `mark` ({bar, bpm}) replaces any mark at its bar,
+// and the mark at `fromBar` (the one being changed) goes. Made safe.
+export function putTempo(tempos, mark, fromBar = null) {
+  const rest = (Array.isArray(tempos) ? tempos : []).filter((m) => m?.bar !== mark?.bar && m?.bar !== fromBar);
+  return cleanTempos([mark, ...rest]);
+}
+export const removeTempo = (tempos, bar) => cleanTempos((Array.isArray(tempos) ? tempos : []).filter((m) => m?.bar !== bar));
+
+// The song's clock: where each bar starts, every bar at its own tempo.
+// Positions are in pills from the song's start (16 a bar), so a 3/4 beat's
+// pass that runs across a mark speeds up where the bar does.
+//   steady         no marks: the arithmetic of one tempo
+//   pill           seconds a pill lasts at bar 1's tempo (beats are planned at it)
+//   barSeconds     how long bar 1 lasts
+//   tempoOf(i)     the BPM of bar i (from 0)
+//   barStart(i)    seconds to the start of bar i (from 0)
+//   at(p)          seconds to pill position p (a fraction is fine)
+//   barAt(t)       the bar position (from 0, a fraction) `t` seconds in
+export function songClock(song) {
+  const base = cleanTempo(song?.tempo);
+  const marks = cleanTempos(song?.tempos);
+  const pill = 60 / base / 4;
+  const barSeconds = BAR_STEPS * pill;
+  if (!marks.length) {
+    return {
+      steady: true, pill, barSeconds, tempoOf: () => base,
+      barStart: (i) => i * barSeconds, at: (p) => p * pill, barAt: (t) => t / barSeconds,
+    };
+  }
+  // Bar i's tempo, for every bar a block can reach and one past it.
+  const tempos = [];
+  let bpm = base;
+  for (let i = 0, m = 0; i <= MAX_SONG_BARS; i++) {
+    while (m < marks.length && marks[m].bar - 1 <= i) bpm = marks[m++].bpm;
+    tempos.push(bpm);
+  }
+  const length = (i) => (BAR_STEPS * 15) / tempos[Math.min(MAX_SONG_BARS, i)];   // a bar's seconds
+  const starts = [0];
+  for (let i = 0; i < MAX_SONG_BARS; i++) starts.push(starts[i] + length(i));
+  const tempoOf = (i) => tempos[Math.min(MAX_SONG_BARS, Math.max(0, Math.floor(i)))];
+  const barStart = (i) => (i <= MAX_SONG_BARS ? starts[Math.max(0, i)] : starts[MAX_SONG_BARS] + (i - MAX_SONG_BARS) * length(MAX_SONG_BARS));
+  const at = (p) => {
+    if (p <= 0) return p * pill;
+    const i = Math.min(MAX_SONG_BARS, Math.floor(p / BAR_STEPS));
+    return barStart(i) + ((p - i * BAR_STEPS) * 15) / tempos[i];
+  };
+  const barAt = (t) => {
+    if (t <= 0) return t / barSeconds;
+    let lo = 0;
+    let hi = MAX_SONG_BARS;
+    while (lo < hi) {   // the last bar starting at or before t
+      const mid = (lo + hi + 1) >> 1;
+      if (starts[mid] <= t) lo = mid; else hi = mid - 1;
+    }
+    return lo + (t - starts[lo]) / length(lo);
+  };
+  return { steady: false, pill, barSeconds, tempoOf, barStart, at, barAt };
 }
 
 // ── Time ──
@@ -158,13 +258,14 @@ export function viewBars(lanes, stepsOf) {
   return Math.min(MAX_SONG_BARS, Math.ceil(want / 4) * 4);
 }
 
-// The song in time at `tempo`: one part per pass of each block, every lane,
-// in start order. A pass is cut where the next block on its lane starts.
-// Returns {parts: [{lane, block, beatId, pass, times, start, end}], seconds,
-// barSeconds}; times in seconds. Blocks of a gone beat are left out.
-export function playParts(lanes, stepsOf, tempo) {
-  const step = 60 / cleanTempo(tempo) / 4;
-  const barSeconds = BAR_STEPS * step;
+// The song in time: one part per pass of each block, every lane, in start
+// order. A pass is cut where the next block on its lane starts. `clock` is
+// songClock(song), or a plain tempo for one with no marks. Returns {parts:
+// [{lane, block, beatId, pass, times, start, end, from, to}], seconds,
+// barSeconds, clock}: start and end in seconds, from and to in pills from
+// the song's start. Blocks of a gone beat are left out.
+export function playParts(lanes, stepsOf, clock) {
+  const c = typeof clock?.at === 'function' ? clock : songClock({ tempo: clock });
   const parts = [];
   let seconds = 0;
   lanes.forEach((lane, li) => {
@@ -172,32 +273,43 @@ export function playParts(lanes, stepsOf, tempo) {
       const steps = stepsOf(b.beatId);
       if (!(steps > 0)) return;
       const next = lane.blocks.filter((x) => x.bar > b.bar).reduce((m, x) => Math.min(m, x.bar), Infinity);
-      const stop = next === Infinity ? Infinity : next * barSeconds;
+      const stop = next === Infinity ? Infinity : next * BAR_STEPS;
       for (let pass = 0; pass < b.times; pass++) {
-        const start = b.bar * barSeconds + pass * steps * step;
-        if (start >= stop - 1e-9) break;
-        const end = Math.min(stop, start + steps * step);
-        parts.push({ lane: li, block: bi, beatId: b.beatId, pass: pass + 1, times: b.times, start, end });
-        seconds = Math.max(seconds, end);
+        const from = b.bar * BAR_STEPS + pass * steps;
+        if (from >= stop - 1e-9) break;
+        const to = Math.min(stop, from + steps);
+        const part = { lane: li, block: bi, beatId: b.beatId, pass: pass + 1, times: b.times, start: c.at(from), end: c.at(to), from, to };
+        parts.push(part);
+        seconds = Math.max(seconds, part.end);
       }
     });
   });
   parts.sort((a, b) => a.start - b.start || a.lane - b.lane);
-  return { parts, seconds, barSeconds };
+  return { parts, seconds, barSeconds: c.barSeconds, clock: c };
 }
 
 // Every hit of the song, in time order: each part's beat's hits (planned at
-// the song tempo: `plans` maps a beat id to {hits: [{row, time, loud, note,
-// len}]}), moved to where the part starts, and cut at its end. `from` (in
-// seconds) leaves out what comes before it and starts the clock there.
-export function playEvents(parts, plans, { from = 0, skipLanes = new Set() } = {}) {
+// bar 1's tempo: `plans` maps a beat id to {hits: [{row, time, loud, note,
+// len}]}), moved to where the part starts, and cut at its end. With tempo
+// marks (`clock`, from playParts), a hit lands where its pill falls on the
+// song's clock, and a held note stretches or shrinks with the bars it
+// covers. `from` (in seconds) leaves out what comes before it and starts the
+// clock there.
+export function playEvents(parts, plans, { from = 0, skipLanes = new Set(), clock = null } = {}) {
+  const marked = !!clock && !clock.steady;
   const events = [];
   for (const part of parts) {
     if (skipLanes.has(part.lane) || part.end <= from) continue;
     for (const h of plans.get(part.beatId)?.hits ?? []) {
-      const time = part.start + h.time;
+      let time = part.start + h.time;
+      let len = h.len;
+      if (marked) {
+        const at = part.from + h.time / clock.pill;
+        time = clock.at(at);
+        if (h.len) len = clock.at(at + h.len / clock.pill) - time;
+      }
       if (time >= part.end - 1e-9 || time < from - 1e-9) continue;
-      events.push({ time: time - from, lane: part.lane, beatId: part.beatId, row: h.row, loud: h.loud, note: h.note, len: h.len });
+      events.push({ time: time - from, lane: part.lane, beatId: part.beatId, row: h.row, loud: h.loud, note: h.note, len });
     }
   }
   return events.sort((a, b) => a.time - b.time || a.lane - b.lane || a.row - b.row);

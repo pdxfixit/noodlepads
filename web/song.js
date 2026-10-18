@@ -4,8 +4,10 @@
 // your beats, then tap a spot on a lane to drop it there; tap a block to
 // select it, drag its end (or ➖ ➕) to repeat it, 🗑️ to take it out, ↩️ Undo
 // for any of it. ▶ Play song plays every lane together at the song's tempo,
-// from bar 1 or from a bar number tapped in the ruler. 🔊 Save as a sound
-// renders it to a new pad. The pure part (placing, repeats, time) is
+// from bar 1 or from a bar number tapped in the ruler. Tempo marks (ADR
+// 0031) change the tempo from a bar on, for every lane: a BPM chip over
+// their bar in the ruler, changed in the 🎼 Tempo sheet with Advanced on.
+// 🔊 Save as a sound renders it to a new pad. The pure part (placing, repeats, time) is
 // playlist.js.
 //
 // Songs work like beats: each person has a list of them, one is open, and
@@ -32,10 +34,12 @@ import { newId } from './util.js';
 import { isScratchSong, songScratchOf, songScratchId, SCRATCH_NAME } from './scratch.js';
 import { speakerControls, makeSpeaker, drawSpeaker, cleanVolume } from './row-volume.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
+import { getSetting, onSetting } from './settings.js';
 import {
   MAX_LANES, MAX_LANE_NAME, LANE_EMOJI, LANE_DEFAULTS, DEFAULT_TEMPO, MIN_TEMPO, MAX_TEMPO,
   cleanTempo, cleanLanes, defaultLane, slotsToLanes, legacySlots, blockSpan, blockAt, placeBlock, setTimes, maxTimes,
   timesForEnd, removeBlock, viewBars, playParts, playEvents, playingAt, MAX_SONG_BARS,
+  cleanTempos, tempoAt, putTempo, removeTempo, songClock, MAX_TEMPO_MARKS,
 } from './playlist.js';
 
 export const MAX_SONG_SECONDS = 180;     // the longest song that can be saved as a sound
@@ -56,9 +60,11 @@ export function beatSteps(beat) {
 }
 
 // A song as stored (or read from a backup), made safe to use: {id?,
-// personId, name, tempo, lanes, slots}. Null when it belongs to nobody. A
-// song from before the playlist has only slots: they become blocks on lane
-// 1, one after another, and the song's tempo is its first beat's.
+// personId, name, tempo, tempos?, lanes, slots}. `tempos` (its tempo marks,
+// ADR 0031) is left out when there are none, as a song from before them is.
+// Null when it belongs to nobody. A song from before the playlist has only
+// slots: they become blocks on lane 1, one after another, and the song's
+// tempo is its first beat's.
 // `beatOf(beatId)` finds a saved beat, for those lengths and that tempo.
 // `slots` is written for older copies of the app (playlist.js legacySlots).
 // A song from before the list (one per person) has no id; linkSong gives it one.
@@ -75,7 +81,8 @@ export function cleanSong(raw, nameFor = () => 'Song', beatOf = () => null) {
     const first = lanes[0].blocks[0];
     tempo = cleanTempo(Number(beatOf(first?.beatId)?.bpm) || DEFAULT_TEMPO);
   }
-  const song = { personId: raw.personId.slice(0, 64), name, tempo, lanes, slots: legacySlots(lanes) };
+  const tempos = cleanTempos(raw.tempos, raw);
+  const song = { personId: raw.personId.slice(0, 64), name, tempo, ...(tempos.length ? { tempos } : {}), lanes, slots: legacySlots(lanes) };
   return SONG_ID.test(raw.id) ? { id: raw.id, ...song } : song;
 }
 
@@ -101,7 +108,8 @@ export function uniqueSongName(name, list, exceptId) {
 const blockCount = (song) => song.lanes.reduce((n, l) => n + l.blocks.length, 0);
 
 // The song planned to play: each beat it uses planned once at the song's
-// tempo (`seq.beatPlan`), its parts, and its hits from `from` seconds on.
+// tempo (`seq.beatPlan`), its parts, and its hits from `from` seconds on,
+// every bar at the tempo marked for it (`clock`, playlist.js songClock).
 // `beatOf(beatId)` finds a saved beat. Used to play, to save as a sound,
 // and for a share's preview (share-render.js).
 export function planSong(song, beatOf, seq, { from = 0, skipMuted = false } = {}) {
@@ -112,9 +120,10 @@ export function planSong(song, beatOf, seq, { from = 0, skipMuted = false } = {}
       if (beat && !plans.has(beat.id)) plans.set(beat.id, seq.beatPlan({ ...beat, bpm: song.tempo }));
     }
   }
-  const { parts, seconds, barSeconds } = playParts(song.lanes, (id) => (plans.has(id) ? beatSteps(beatOf(id)) : null), song.tempo);
+  const clock = songClock(song);
+  const { parts, seconds, barSeconds } = playParts(song.lanes, (id) => (plans.has(id) ? beatSteps(beatOf(id)) : null), clock);
   const skipLanes = new Set(skipMuted ? song.lanes.flatMap((l, i) => (l.muted || cleanVolume(l.volume) === 0 ? [i] : [])) : []);
-  return { plans, parts, seconds, barSeconds, events: playEvents(parts, plans, { from, skipLanes }) };
+  return { plans, parts, seconds, barSeconds, clock, events: playEvents(parts, plans, { from, skipLanes, clock }) };
 }
 
 // Sounds every event of a planned song into `dest` from `t0`, each lane
@@ -146,7 +155,7 @@ export function createSong(deps) {
   let starting = false;
   let t0 = 0;
   let from = 0;              // where this play started, in seconds
-  let planned = null;        // {plans, parts, events, seconds, barSeconds} while playing
+  let planned = null;        // {plans, parts, events, seconds, barSeconds, clock} while playing
   let next = 0;
   let voices = new Map();    // `${lane}:${beatId}:${row}` -> its sounding voices
   let laneGains = [];
@@ -175,6 +184,12 @@ export function createSong(deps) {
     return clean({ id: songScratchId(personId), personId, name: SCRATCH_NAME, tempo: DEFAULT_TEMPO, lanes: [] });
   }
   const onScratch = () => !!song && isScratchSong(song);
+  // The open song's tempo marks (ADR 0031): none is no field at all, so a
+  // song with none is stored as before them.
+  const tempoMarks = () => song?.tempos ?? [];
+  function setMarks(list) { if (list.length) song.tempos = list; else delete song.tempos; }
+  // Only Advanced changes marks; everyone hears and sees them.
+  const advanced = () => getSetting('advancedBeats') === true;
   // What the title shows: the name, or the scratch's label (or the name typed for it).
   const titleOf = () => (onScratch() ? wantedName ?? 'Scratch song' : song.name);
   // A name typed into the scratch song's title (Ben, 2026-10-16): it keeps
@@ -207,6 +222,7 @@ export function createSong(deps) {
   // What belongs to one open song only: the selection, the Undo steps, where
   // it plays from.
   function forget() {
+    if (el.tempoSheet.open) el.tempoSheet.close();
     sel = null;
     removeAsked = false;
     undoSteps = [];
@@ -274,9 +290,10 @@ export function createSong(deps) {
     if (wantedName && onScratch() && blockCount(song)) queueMicrotask(() => { if (wantedName) keep(); });
   }
 
-  // An edit to the song's tempo or lanes: kept for ↩️ Undo first.
+  // An edit to the song's tempo, tempo marks or lanes: kept for ↩️ Undo first.
+  const snapshot = () => structuredClone({ tempo: song.tempo, tempos: tempoMarks(), lanes: song.lanes });
   function edit(change) {
-    undoSteps.push(structuredClone({ tempo: song.tempo, lanes: song.lanes }));
+    undoSteps.push(snapshot());
     if (undoSteps.length > MAX_UNDO) undoSteps.shift();
     change();
     save();
@@ -287,6 +304,7 @@ export function createSong(deps) {
     stop();
     disarm(false);
     song.tempo = before.tempo;
+    setMarks(before.tempos ?? []);
     song.lanes = before.lanes;
     if (sel && !song.lanes[sel.lane]?.blocks[sel.block]) sel = null;
     save();
@@ -357,6 +375,8 @@ export function createSong(deps) {
     if (document.activeElement !== el.tempo) el.tempo.value = String(song.tempo);
     el.tempoDown.disabled = song.tempo <= MIN_TEMPO;
     el.tempoUp.disabled = song.tempo >= MAX_TEMPO;
+    renderTempoOpen();
+    if (el.tempoSheet.open) renderTempoSheet();
     if (picked && !beatById(picked)) picked = null;
     renderStrip();
     const list = beats();
@@ -404,9 +424,11 @@ export function createSong(deps) {
   }
 
   function renderLanes() {
-    const bars = Math.max(viewBars(song.lanes, stepsOf), fillBars());
+    const lastMark = tempoMarks().at(-1)?.bar ?? 0;
+    const bars = Math.min(MAX_SONG_BARS, Math.max(viewBars(song.lanes, stepsOf), fillBars(), Math.ceil(lastMark / 4) * 4));
     el.lanes.style.setProperty('--bars', String(bars));
     el.lanes.style.setProperty('--lanes', String(song.lanes.length));
+    el.lanes.classList.toggle('has-marks', tempoMarks().length > 0);
     const ruler = make('div', 'song-ruler');
     const corner = make('span', 'lane-corner', 'Bar');
     corner.setAttribute('aria-hidden', 'true');
@@ -478,17 +500,41 @@ export function createSong(deps) {
     head.setAttribute('aria-hidden', 'true');
     head.hidden = !playing();
     const grid = make('div', 'song-grid');
-    grid.append(ruler, ...rows, head);
+    grid.append(...(tempoMarks().length ? [renderMarks()] : []), ruler, ...rows, head);
     const keep = document.activeElement;
     const focusKey = keep?.dataset?.track !== undefined ? `[data-track="${keep.dataset.track}"]`
       : keep?.dataset?.block ? `[data-block="${keep.dataset.block}"]`
         : keep?.dataset?.startBar !== undefined ? `[data-start-bar="${keep.dataset.startBar}"]`
+          : keep?.dataset?.tempoBar !== undefined ? `[data-tempo-bar="${keep.dataset.tempoBar}"]`
           : keep?.dataset?.lanePick !== undefined ? `[data-lane-pick="${keep.dataset.lanePick}"]`
             : keep?.dataset?.speaker !== undefined && el.lanes.contains(keep) ? `[data-speaker="${keep.dataset.speaker}"]` : null;
     el.lanes.replaceChildren(grid);
     if (focusKey) el.lanes.querySelector(focusKey)?.focus({ preventScroll: true });
     speakers.refresh();
     showPlayhead();
+  }
+
+  // The tempo marks, over the ruler: a BPM chip above each one's bar. With
+  // Advanced, a chip opens its mark to change or remove; else it only says.
+  function renderMarks() {
+    const row = make('div', 'song-marks');
+    const corner = make('span', 'lane-corner', 'BPM');
+    corner.setAttribute('aria-hidden', 'true');
+    const track = make('div', 'marks-track');
+    track.setAttribute('role', 'group');
+    track.setAttribute('aria-label', 'Tempo changes');
+    const edits = advanced();
+    for (const m of tempoMarks()) {
+      const words = `From bar ${m.bar}: ${m.bpm} BPM`;
+      const chip = edits ? button('tempo-chip', undefined, `${words}. Tap to change it`) : make('span', 'tempo-chip');
+      if (!edits) { chip.setAttribute('role', 'img'); chip.setAttribute('aria-label', words); chip.title = words; }
+      chip.dataset.tempoBar = m.bar;
+      chip.style.setProperty('--at', String(m.bar - 1));
+      chip.append(make('span', 'tempo-chip-bpm', String(m.bpm)));
+      track.append(chip);
+    }
+    row.append(corner, track);
+    return row;
   }
 
   function trackLabel(li) {
@@ -523,7 +569,7 @@ export function createSong(deps) {
     line.hidden = !on;
     if (!on) return;
     const t = audio.context().currentTime - t0 + from;
-    line.style.setProperty('--at', String(Math.max(0, t) / planned.barSeconds));
+    line.style.setProperty('--at', String(planned.clock.barAt(Math.max(0, t))));
   }
 
   // ── Editing ──
@@ -616,6 +662,8 @@ export function createSong(deps) {
   el.lanes.addEventListener('click', (e) => {
     if (swallow) { swallow = false; return; }
     if (e.target.closest('[data-speaker]')) return;   // the speakers' own controls
+    const chip = e.target.closest('button[data-tempo-bar]');
+    if (chip) { openTempo(Number(chip.dataset.tempoBar)); return; }
     const start = e.target.closest('[data-start-bar]');
     if (start) {
       startBar = Number(start.dataset.startBar);
@@ -700,7 +748,7 @@ export function createSong(deps) {
     e.preventDefault();
     stop();
     const block = song.lanes[li].blocks[bi];
-    drag = { li, bi, x: e.clientX, end: blockSpan(block, stepsOf).end, barW: width / bars, before: structuredClone({ tempo: song.tempo, lanes: song.lanes }), moved: false };
+    drag = { li, bi, x: e.clientX, end: blockSpan(block, stepsOf).end, barW: width / bars, before: snapshot(), moved: false };
   });
   window.addEventListener('pointermove', (e) => {
     if (!drag) return;
@@ -800,6 +848,184 @@ export function createSong(deps) {
   el.tempo.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.tempo.blur(); setTempo(Number(el.tempo.value)); } });
   el.tempoDown.addEventListener('click', () => setTempo(song.tempo - TEMPO_STEP));
   el.tempoUp.addEventListener('click', () => setTempo(song.tempo + TEMPO_STEP));
+
+  // ── 🎼 Tempo (Advanced): the song's own tempo and its tempo marks ──
+  //
+  // With Advanced on, the tempo on the deck is a button that opens this
+  // sheet: the tempo from bar 1 (typed), each mark (tap to change), and ＋
+  // Tempo change, a bar (2 on) and a BPM. A chip in the ruler opens its mark
+  // straight away. 🗑️ Remove asks first and offers ↩️ Undo; every change is
+  // a step of the song's ↩️ Undo. Without Advanced the deck keeps its typed
+  // tempo, and marks only show (renderMarks).
+  let editing = null;         // the mark open: {bar} to change, {bar: null} for a new one; null shows the list
+  let fromChip = false;       // opened from a chip: Done and Remove close the sheet
+  let markRemoveAsked = false;
+  let markArm = 0;
+
+  // The deck's tempo: typed (Regular), or a button saying it (Advanced).
+  function renderTempoOpen() {
+    const adv = advanced();
+    el.tempoField.hidden = adv;
+    el.tempoOpen.hidden = !adv;
+    if (!adv) return;
+    const n = tempoMarks().length;
+    const changes = `${n} tempo ${n === 1 ? 'change' : 'changes'}`;
+    el.tempoOpen.replaceChildren(make('span', 'tempo-open-bpm', `${song.tempo} BPM`), ...(n ? [make('span', 'tempo-open-marks', ` · ${n} ${n === 1 ? 'change' : 'changes'}`)] : []));
+    el.tempoOpen.setAttribute('aria-label', `Song tempo ${song.tempo} BPM${n ? `, ${changes}` : ''}: tap to change it or add a tempo change`);
+  }
+
+  function renderTempoSheet() {
+    const list = !editing;
+    el.tempoListView.hidden = !list;
+    el.tempoEditView.hidden = list;
+    el.tempoTitle.textContent = list ? '🎼 Tempo' : editing.bar ? `Tempo change at bar ${editing.bar}` : '＋ Tempo change';
+    if (list) {
+      if (document.activeElement !== el.tempoBase) el.tempoBase.value = String(song.tempo);
+      el.tempoMarks.replaceChildren(...tempoMarks().map((m) => {
+        const li = make('li');
+        const b = button('tempo-mark', undefined, `From bar ${m.bar}: ${m.bpm} BPM. Tap to change it`);
+        b.dataset.mark = m.bar;
+        b.append(make('span', 'tempo-mark-bar', `From bar ${m.bar}`), make('span', 'tempo-mark-bpm', `${m.bpm} BPM`));
+        li.append(b);
+        return li;
+      }));
+      el.tempoMarks.hidden = !tempoMarks().length;
+      el.tempoAdd.disabled = tempoMarks().length >= MAX_TEMPO_MARKS;
+      return;
+    }
+    el.tempoRemove.hidden = !editing.bar;
+    el.tempoRemove.textContent = markRemoveAsked ? 'Remove?' : '🗑️ Remove';
+    el.tempoRemove.classList.toggle('armed', markRemoveAsked);
+    el.tempoRemove.setAttribute('aria-label', markRemoveAsked ? `Tap again to take out the tempo change at bar ${editing.bar}` : `Take out the tempo change at bar ${editing.bar}`);
+    el.tempoDone.textContent = editing.bar ? '✓ Done' : '＋ Add';
+  }
+
+  // Opens the sheet: on its list, or (from a chip) on the mark at `bar`.
+  function openTempo(bar) {
+    if (!advanced() || !song) return;
+    fromChip = bar !== undefined;
+    if (fromChip) editMark(bar); else { editing = null; disarmMark(); }
+    renderTempoSheet();
+    openDialog(el.tempoSheet, {
+      focus: fromChip ? el.tempoBpm : el.tempoBase,
+      returnTo: () => (fromChip && el.lanes.querySelector(`[data-tempo-bar="${bar}"]`)) || el.tempoOpen,
+    });
+  }
+
+  // Where a new mark goes first: the bar ▶ Play song starts at (tapped in
+  // the ruler), else four bars after the last mark; the next free bar from there.
+  function freeBar() {
+    const taken = new Set(tempoMarks().map((m) => m.bar));
+    let bar = Math.min(MAX_SONG_BARS, Math.max(2, startBar > 0 ? startBar + 1 : (tempoMarks().at(-1)?.bar ?? 1) + 4));
+    for (let i = 0; i < MAX_SONG_BARS && taken.has(bar); i++) bar = bar >= MAX_SONG_BARS ? 2 : bar + 1;
+    return bar;
+  }
+  // The mark at `bar` (or a new one, null) in the sheet's fields.
+  function editMark(bar) {
+    const m = tempoMarks().find((x) => x.bar === bar);
+    editing = { bar: m ? m.bar : null };
+    const at = m ? m.bar : freeBar();
+    el.tempoBar.value = String(at);
+    el.tempoBpm.value = String(m ? m.bpm : tempoAt(song, at));
+    el.tempoHint.textContent = '';
+    disarmMark();
+  }
+  function disarmMark() {
+    clearTimeout(markArm);
+    markRemoveAsked = false;
+  }
+  // Back to the list, or shut when it came from a chip.
+  function finishMark() {
+    editing = null;
+    disarmMark();
+    if (fromChip) el.tempoSheet.close();
+    render();
+    if (el.tempoSheet.open) el.tempoAdd.focus();
+  }
+
+  function doneMark() {
+    if (!editing) return;
+    const bar = Number(el.tempoBar.value);
+    const bpm = Math.round(Number(el.tempoBpm.value));
+    if (!Number.isInteger(bar) || bar < 2 || bar > MAX_SONG_BARS) {
+      el.tempoHint.textContent = `Pick a bar from 2 to ${MAX_SONG_BARS}. Bar 1 plays at the song’s own tempo.`;
+      el.tempoBar.focus();
+      return;
+    }
+    if (!(bpm >= MIN_TEMPO && bpm <= MAX_TEMPO)) {
+      el.tempoHint.textContent = `Pick a tempo from ${MIN_TEMPO} to ${MAX_TEMPO} BPM.`;
+      el.tempoBpm.focus();
+      return;
+    }
+    const was = editing.bar;
+    const next = putTempo(tempoMarks(), { bar, bpm }, was);
+    if (JSON.stringify(next) !== JSON.stringify(tempoMarks())) {
+      stop();
+      edit(() => setMarks(next));
+      logEvent('song', { action: 'tempo', marks: next.length });
+      deps.announce?.(`From bar ${bar}, the song plays at ${bpm} BPM.`);
+    }
+    finishMark();
+  }
+
+  // 🗑️ Remove: the first tap asks, the second takes the mark out, with ↩️
+  // Undo in the banner (the song's own Undo step, while nothing else changed).
+  function removeMark() {
+    if (!editing?.bar) return;
+    if (!markRemoveAsked) {
+      markRemoveAsked = true;
+      clearTimeout(markArm);
+      markArm = setTimeout(() => { markRemoveAsked = false; if (el.tempoSheet.open && editing) renderTempoSheet(); }, ARM_MS);
+      renderTempoSheet();
+      return;
+    }
+    const { bar } = editing;
+    stop();
+    edit(() => setMarks(removeTempo(tempoMarks(), bar)));
+    logEvent('song', { action: 'tempo', marks: tempoMarks().length });
+    const depth = undoSteps.length;
+    finishMark();
+    noteBanner = showBanner(`Took out the tempo change at bar ${bar}.`, {
+      action: { label: '↩️ Undo', fn: () => { if (undoSteps.length === depth) undoStep(); } },
+      ms: UNDO_MS,
+      focusBack: () => (el.tempoSheet.open ? el.tempoAdd : el.tempoOpen),
+    });
+  }
+
+  el.tempoOpen.addEventListener('click', () => openTempo());
+  el.tempoBase.addEventListener('change', () => setTempo(Number(el.tempoBase.value)));
+  el.tempoBase.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); setTempo(Number(el.tempoBase.value)); } });
+  el.tempoMarks.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mark]');
+    if (!b) return;
+    editMark(Number(b.dataset.mark));
+    renderTempoSheet();
+    el.tempoBpm.focus();
+  });
+  el.tempoAdd.addEventListener('click', () => {
+    editMark(null);
+    renderTempoSheet();
+    el.tempoBar.focus();
+  });
+  el.tempoDone.addEventListener('click', doneMark);
+  el.tempoRemove.addEventListener('click', removeMark);
+  el.tempoBack.addEventListener('click', () => {
+    editing = null;
+    fromChip = false;
+    disarmMark();
+    renderTempoSheet();
+    el.tempoAdd.focus();
+  });
+  for (const field of [el.tempoBar, el.tempoBpm]) {
+    field.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doneMark(); } });
+  }
+  el.tempoSheet.addEventListener('close', () => { editing = null; disarmMark(); });
+  setupDialog(el.tempoSheet);
+  // Advanced on or off: the deck's tempo and the chips change with it.
+  onSetting('advancedBeats', () => {
+    if (!advanced() && el.tempoSheet.open) el.tempoSheet.close();
+    render();
+  });
 
   // A name typed into the scratch song's title: kept under it now if it
   // has blocks; an empty scratch holds the name until its first block (save).
@@ -967,7 +1193,7 @@ export function createSong(deps) {
     starting = true;
     const ctx = audio.wake();
     const plan0 = planSong(song, beatById, seq);
-    from = Math.min(startBar * plan0.barSeconds, plan0.seconds);
+    from = Math.min(plan0.clock.barStart(startBar), plan0.seconds);
     const plan = from > 0 ? planSong(song, beatById, seq, { from }) : plan0;
     if (!plan.parts.length || from >= plan.seconds) { starting = false; return; }
     await seq.prepareBeats([...plan.plans.values()].map((p) => p.pattern));
@@ -979,7 +1205,7 @@ export function createSong(deps) {
     shown = new Set();
     laneGains = laneGainsFor(ctx, audio.master, { live: true });
     t0 = ctx.currentTime + 0.1;
-    logEvent('song', { action: 'play', lanes: song.lanes.length, blocks: blockCount(song), seconds: Math.round((plan.seconds - from) * 10) / 10 });
+    logEvent('song', { action: 'play', lanes: song.lanes.length, blocks: blockCount(song), marks: tempoMarks().length, seconds: Math.round((plan.seconds - from) * 10) / 10 });
     timer = setInterval(tick, TICK_MS);
     tick();
     raf = requestAnimationFrame(follow);
