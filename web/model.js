@@ -247,6 +247,7 @@ export function validateManifest(m) {
     if (kitIds.has(c.id)) return `the kit sound id "${c.id}" is used twice`;
     if (c.voice && !VOICES.some((v) => v.id === c.voice)) return `the kit sound "${c.id}" has an unknown voice "${c.voice}"`;
     if (c.advanced !== undefined && typeof c.advanced !== 'boolean') return `the kit sound "${c.id}" has an "advanced" that isn't true or false`;
+    if (c.level !== undefined && !(typeof c.level === 'number' && c.level <= 0 && c.level >= -24)) return `the kit sound "${c.id}" has a "level" that isn't a number of dB from -24 to 0`;
     const inst = instrumentProblem(c);
     if (inst) return inst;
     kitIds.add(c.id);

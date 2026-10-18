@@ -376,6 +376,24 @@ main {
   box-shadow: 0 0 0 4px var(--bed), 12px 0 0 var(--bed), -12px 0 0 var(--bed);
 }
 .pad-group { background: color-mix(in srgb, #fff 8%, var(--bed)); }
+/* A group and its pads in one box with a light stroke round it (Ben,
+   2026-10-18: like the light dialogs' bordered panels). The stroke is an
+   outline, so it takes no room: the pads inside lay out exactly as the
+   bed's own, the same columns at every pad size. Inside it a stuck header
+   covers only out to the stroke. */
+.pad-fold {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: inherit;
+  justify-content: inherit;
+  column-gap: inherit;
+  row-gap: 16px;
+  margin: 6px 0;
+  border-radius: 14px;
+  outline: 2px solid rgb(255 255 255 / 0.22);
+  outline-offset: 5px;
+}
+.pad-fold > .pad-group, .pad-fold > .pad-group-row { box-shadow: 0 0 0 5px var(--bed); }
 .pad-group[aria-expanded="true"] { background: color-mix(in srgb, #fff 14%, var(--bed)); }
 .pad-group-caret { width: 1em; }
 .pad-group-count { margin-left: auto; padding: 2px 10px; border-radius: 999px; background: rgb(255 255 255 / 0.15); font-size: 0.9rem; }
@@ -1945,6 +1963,8 @@ dialog#sheet .make :focus-visible { outline-color: #fff; }
 .cut-edits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 8px; }
 .cut-edits .chain-tool { padding: 4px 8px; line-height: 1.15; }
 .cut-edits .cut-keep { grid-column: 1 / -1; }
+/* 🔊 Even it out (a kid's own sound only) shares the last line with Keep only this. */
+.cut-edits .cut-even:not([hidden]) + .cut-keep { grid-column: auto; }
 .wave-handle[data-kind="fades"]::after { border-radius: 3px; transform: rotate(45deg); }
 
 .field { display: block; margin: 0 0 20px; padding: 0; border: 0; min-width: 0; }
@@ -3862,6 +3882,32 @@ dialog.np-dialog.sheet-warn {
 dialog#sheet legend.field-name, dialog#sheet h3.field-name { width: 100%; margin-bottom: 8px; padding: 0; }
 .sheet-fold { font-weight: 800; font-size: 1.05rem; }
 .fold-body[hidden] { display: none; }
+/* Every folding section on the light sheets and dialogs is one bordered
+   panel, so on a long phone page it is clear where one ends and the next
+   begins (Ben, 2026-10-18): the sound sheet's Voice and Layers, ⚙️
+   Settings' folds, 💃 Grooves' styles and the "…" emoji groups. A legend
+   would cut into a fieldset's top border: floated, it sits inside the
+   panel like Layers' heading does. */
+dialog#sheet .fold-panel, .set-fold, .emoji-all-sec {
+  min-width: 0;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+}
+dialog#sheet .fold-panel { margin-inline: 0; padding: 6px 8px 10px; }
+dialog#sheet .fold-panel > legend.field-name { float: left; }
+dialog#sheet .fold-panel > legend.field-name + * { clear: both; }
+.set-fold { padding: 6px 8px; }
+.set-fold .set-body { padding: 10px 4px 6px; }
+.emoji-all-sec { margin-bottom: 8px; padding: 0 6px; }
+/* A line of buttons between two things sits in the middle of the space
+   (Ben, 2026-10-18): 14 px above and below 👂 Plain · 🔊 Even it out (the
+   wave above, Voice below) and ⭐ Save voice · ↩️ Reset voice (Voice above,
+   Layers below; its own 8 px padding counts, as it sticks over the layers). */
+dialog#sheet #cut { margin-top: 14px; }
+dialog#sheet #wave-box { margin-bottom: 14px; }
+dialog#sheet #voice-box > .fold-panel { margin-bottom: 0; }
+dialog#sheet #voice-actions { margin-top: 6px; }
+dialog#sheet #voice-box > #layers { margin-top: 6px; }
 
 /* ── Pad badges scale with the pad (Ben, 2026-10-11: "hovering edit button
    (all badges) should scale with the tile") ──
@@ -4809,7 +4855,9 @@ body[data-hints~="mixer"] [data-mixer]::before {
    the choice, and the tile shows the keyboard's focus. */
 #set-look-body { container-type: inline-size; }
 .set-skins { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 8px 0 4px; }
-@container (min-width: 300px) { .set-skins { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* Four across only where a name like "Spinner" fits whole: inside Settings'
+   bordered fold a phone's line is about 307 px (2026-10-18). */
+@container (min-width: 330px) { .set-skins { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .set-skin {
   position: relative;
   display: flex;

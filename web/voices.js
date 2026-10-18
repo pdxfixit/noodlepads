@@ -6,6 +6,7 @@ import { logEvent } from './log.js';
 import { stretchChannels } from './stretch.js';
 import { KINDS, kindById, cleanStep, stepKey, buildLive, tailOf, splitChain, isLive } from './steps.js';
 import { tweakSteps, tweakGain, tweaksKey, cleanTweaks } from './tweaks.js';
+import { softLimit } from './loudness.js';
 
 export const VOICES = [
   { id: 'normal', name: 'Normal', emoji: '🙂' },
@@ -261,8 +262,16 @@ export function livePlan(chain, tweaks = null) {
 // clip is about as loud, with the silent ends cut off, and its knobs
 // (`tweaks`) where renderPlan puts them. Each render is timed in the event
 // log, so a problem report from a phone says how slow voices are there.
-export async function applyChain(buffer, chain, tweaks = null) {
-  const { steps, gain } = renderPlan(chain, tweaks);
+// A preset's `level` in dB as a gain: 0 (or anything not a number at or
+// under 0, down to -24) is 1.
+export const presetGain = (db) => (typeof db === 'number' && db < 0 && db >= -24 ? 10 ** (db / 20) : 1);
+
+// `presetLevel` (dB, never above 0) turns a preset down after its evening-out:
+// boards.json's `level`, for the few that blasted on a phone (Ben,
+// 2026-10-17; tools/preset_loudness.py measures them).
+export async function applyChain(buffer, chain, tweaks = null, presetLevel = 0) {
+  const { steps, gain: voiceGain } = renderPlan(chain, tweaks);
+  const gain = voiceGain * presetGain(presetLevel);
   const started = performance.now();
   let out = { buffer, duration: buffer.duration };
   // Audio with 🔊 Louder / 🔉 Quieter in it is already levelled (cuts.js
@@ -271,8 +280,9 @@ export async function applyChain(buffer, chain, tweaks = null) {
   // Normal keeps the sound as it is, its length included: a beat or a DJ
   // take made into a sound must keep its silent tail to loop in time.
   for (const s of steps) out = finish(await renderStep(out.buffer, s), { trim: !(s.type === 'voice' && s.voice === 'normal'), level });
-  // Quiet and Quietest: every step is levelled to the same peak, so softer
-  // is the finished sound turned down (a fresh buffer from finish()).
+  // Quiet and Quietest (and a preset's `level`): every step is levelled to
+  // the same peak, so softer is the finished sound turned down (a fresh
+  // buffer from finish()).
   if (gain !== 1) for (let c = 0; c < out.buffer.numberOfChannels; c++) { const d = out.buffer.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= gain; }
   const amounts = steps.map((s) => s.amount ?? null);
   // Normal is only a copy, and every pad renders one at start-up: logging
@@ -708,12 +718,8 @@ export function audibleSpan(channels, rate, quiet = FINISH_QUIET, lead = LEAD_SE
   return { from: Math.max(0, first - Math.round(lead * rate)), to: Math.min(n, last + 1 + Math.round(tail * rate)) };
 }
 
-// A soft ceiling for audio that keeps its own level: under 0.9 it is
-// untouched; above, it bends smoothly toward 1 instead of clipping.
-export function softLimit(v) {
-  const a = Math.abs(v);
-  return a <= 0.9 ? v : Math.sign(v) * (0.9 + 0.1 * Math.tanh((a - 0.9) / 0.1));
-}
+// softLimit (loudness.js) is the soft ceiling for audio that keeps its own level.
+export { softLimit };
 
 function finish(buffer, { trim = true, level = true } = {}) {
   const channels = Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c));

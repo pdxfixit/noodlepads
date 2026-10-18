@@ -88,6 +88,7 @@ export const HELP = [
       { pic: [slider('Speed', '6×')], text: 'An older voice has its setting: tap its name to see it. A setting with only a few choices shows them as keys; with no room for them, a slider.' },
       { pic: [tool('▶︎'), tool('■')], text: '▶︎ at the top left of the sheet plays the sound as it sounds now, every layer and change included; ■ stops it. Space does the same.' },
       { pic: [tool('👂 Plain')], text: 'Under the wave: plays it with no voice, so you can hear what the voice changes. Tap ▶︎ to hear the voice again. It wakes up once a voice or a layer is on.' },
+      { pic: [tool('🔊 Even it out')], text: 'On a sound you made: turns all of it up or down until it seems as loud as the ready-made sounds, even a quiet one with one loud clap. ↩️ Undo takes it back.' },
       { pic: [word('Burp')], text: 'Its name is at the top of the sheet, over a dashed line: tap it to rename the sound.' },
       { pic: [word('▾ Layers')], text: 'Tap Voice or Layers to fold it away, and again to open it. ⭐ Save voice and ↩️ Reset voice stay where you can reach them.' },
       { pic: [play('Save sound')], text: 'Pick a picture and a color, then save it.' },

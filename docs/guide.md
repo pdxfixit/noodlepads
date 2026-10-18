@@ -50,7 +50,23 @@ closing the tab) with unsaved changes, a sound not yet saved, or a recording
 in progress asks first: **Keep editing** or **Throw away**. With Advanced on (Settings), ✂️ **Trim and edit** drags a sound's
 start and end in (same pad, Undo works), drags fades in from either end, and
 changes just a selected part (Backwards, Silence it, Louder, Quieter, Keep
-only this). 🧩 **Chop into pads** cuts it where
+only this). On the sheet itself, beside 👂 Plain and at every level, on a
+sound a kid made (never a preset), 🔊 **Even it out** turns the whole sound up
+or down until it seems as loud as the presets:
+every sound already plays with the same loudest moment, but quiet talking with
+one loud clap stays quiet, because the clap sets that peak. It measures how
+loud a sound seems (`loudness.js`: BS.1770 K-weighting, the loudest 400 ms,
+channels averaged) against `PRESET_LOUDNESS`, the median of the presets shown
+with Advanced off as the app plays them (a test recomputes it from
+`web/clips/kit/`), and adds one gain edit over the whole recording, up to 8×
+either way, so it is kept, backed up and synced like Louder and an older copy
+plays it the same. Like Louder it keeps the sound's own level, its peaks held
+under full scale by the voices' soft ceiling. Within 1 dB already, the banner
+says so and nothing is added; ↩️ Undo in the banner takes it back. Every
+folding section on a light sheet or dialog (the sheet's Voice and Layers,
+⚙️ Settings, 💃 Grooves, the "…" emoji list) is a bordered panel, and on 🔊
+Pads each group sits with its pads inside a light outline (`.pad-fold`; an
+outline takes no room, so the pads keep their columns). 🧩 **Chop into pads** cuts it where
 each sound starts and makes each piece a new pad ("Baby Burp", "Burp Jr.").
 The **pad size slider** at the top left of the pads makes them smoothly
 smaller (more on a line) or bigger (fewer). Its ends are the smallest and
@@ -252,7 +268,7 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   flats, labelled both ways ("C♯ · D♭"), the five in Notes and in Bass between
   the naturals, and ten chords for songs in G, D, F, B♭ and A after the first
   seven. A beat row, key or take that already uses one keeps playing it
-  with Advanced off (`anyClip` in `board.js`). boards.json lists the presets once, as top-level `kit`; every board (people
+  with Advanced off (`anyClip` in `board.js`). Every sound plays with the same loudest moment; a preset's `level` (dB, at most 0) turns it down after that, for the few that blasted on a phone (`just preset-loudness` measures them), and the kicks, booms, 808s and bass notes carry their own overtones so a phone speaker plays them (`carry` in `tools/make_placeholders.py`). boards.json lists the presets once, as top-level `kit`; every board (people
   added in the app too) gets its own copy with ids like `<person>-kick`, so each
   board can hide, rename or reorder presets separately. The pads show two
   sections, the person's own sounds (with New sound) then Presets, and a pad only

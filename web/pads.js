@@ -237,10 +237,10 @@ export function renderPads() {
   const groups = ownGroups();
   const closed = ownClosed();
   const ownParts = cleanGroups(groups)
-    ? groupOwn(own, groups).flatMap((g) => [
+    ? groupOwn(own, groups).map((g) => fold([
       ownGroupHeader(g, !closed.has(g.id)),
       ...(closed.has(g.id) ? [] : g.clips.map((c) => pads.get(c.id))),
-    ])
+    ]))
     : own.map((c) => pads.get(c.id));
 
   // The kit, in its groups; a closed group shows just its header. A group
@@ -248,10 +248,10 @@ export function renderPads() {
   // Edit sounds (groupKit leaves it out); in Edit sounds its heading stays,
   // dimmed and saying so, as the way back to its sounds.
   const open = kitOpen();
-  const kitParts = groupKit(kit, state.manifest.kitGroups).flatMap((g) => [
+  const kitParts = groupKit(kit, state.manifest.kitGroups).map((g) => fold([
     ...kitGroupHead(g, open.has(g.id)),
     ...(open.has(g.id) ? g.clips.map((c) => pads.get(c.id)) : []),
-  ]);
+  ]));
   el.pads.classList.toggle('choosing', state.editing && chosen.size > 0);
   el.pads.replaceChildren(
     sectionHeading(ownSoundsTitle(people(), person(state.personId))),
@@ -410,6 +410,16 @@ export function toggleOwnGroup(id) {
 
 // An own group's header: a kit group's, with ✏️ beside it in Edit sounds
 // to rename, move or delete the group ("Not in a group" has none).
+// A group, its header and its pads, in one box with a light stroke round it
+// (Ben, 2026-10-18: the dark screens get "a similar contrasting stroke" to
+// the light dialogs' bordered panels). Its pads lay out as the bed's do.
+function fold(parts) {
+  const box = document.createElement('div');
+  box.className = 'pad-fold';
+  box.append(...parts);
+  return box;
+}
+
 function ownGroupHeader(g, isOpen) {
   const h = groupHeader(g, isOpen);
   h.dataset.own = '';
@@ -610,7 +620,7 @@ function dragMove(e) {
   e.preventDefault();
   const over = movingAt(e.clientX, e.clientY);
   if (over && over !== drag.pad && sameSection(over, drag.pad)) {
-    const all = [...el.pads.children];
+    const all = [...drag.pad.parentElement.children];
     const before = all.indexOf(over) < all.indexOf(drag.pad);
     slide(() => over.insertAdjacentElement(before ? 'beforebegin' : 'afterend', drag.pad));
   }
@@ -628,7 +638,7 @@ function followPointer(x, y) {
 // Moves the other pads to their new slots smoothly (FLIP). Uses the
 // `translate` property so it never fights the edit-mode wobble's transform.
 function slide(change) {
-  const others = [...el.pads.children].filter((p) => p !== drag.pad);
+  const others = [...drag.pad.parentElement.children].filter((p) => p !== drag.pad);
   const before = new Map(others.map((p) => [p, p.getBoundingClientRect()]));
   change();
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -678,7 +688,7 @@ export function mergeOrder(all, shown) {
 // place within its section (a drag's keyboard twin).
 async function nudge(pad, by) {
   const cell = pad.closest('.pad-cell') ?? pad;
-  const all = [...el.pads.children];
+  const all = [...cell.parentElement.children];
   let i = all.indexOf(cell) + by;
   while (all[i] && !all[i].classList.contains('pad-cell')) i += by;
   const other = all[i];

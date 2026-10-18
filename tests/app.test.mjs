@@ -2567,3 +2567,15 @@ test('🎤 Live: 🔔 Overlap right of ⏲️ Click track makes every key ring o
   assert.equal(audio.playing.has('ring-test'), false);
   $('#pads-tab').dispatch('click');
 });
+
+// Pads' groups have a light stroke round them, like the light dialogs'
+// bordered panels (Ben, 2026-10-18: "so long as there's a similar
+// contrasting stroke"): each group's header and its pads sit in one .pad-fold.
+test('each group on Pads sits with its pads in one .pad-fold', () => {
+  const folds = $('#pads').querySelectorAll('.pad-fold');
+  assert.ok(folds.length >= 1, `${folds.length} folds`);
+  for (const f of folds) assert.ok(f.querySelector('.pad-group'), 'its header is inside it');
+  assert.equal($('#pads').children.filter((c) => c.classList.contains('pad-group')).length, 0, 'no group header outside a fold');
+  const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
+  assert.match(css.match(/\.pad-fold \{[^}]*\}/)?.[0] ?? '', /outline: 2px solid/, 'an outline, which takes no room from the pads');
+});
