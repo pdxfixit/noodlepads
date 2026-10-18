@@ -2932,6 +2932,61 @@ body[data-locked] main { visibility: hidden; }
 .pin-new { display: block; width: 100%; min-height: 44px; margin-top: 10px; }
 .pin-new[hidden] { display: none; }
 
+/* ── ⇆ Move (beat-move.js) ───────────────────────────────────────────── */
+
+/* The Move bar: what is picked, ◀ ▶ side by side (Ben, 2026-10-18), then
+   All · None · Invert, ↩️ Undo, ✓ Done.
+   It sits at the foot of the screen, over the toolbar, while the rows scroll
+   under it, so its keys are in reach of a thumb at any row. */
+.beat-move {
+  position: sticky;
+  bottom: calc(var(--toolbar-h) + env(safe-area-inset-bottom) + 8px);
+  z-index: 6;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "what left right" "picks picks picks" "undo done done";
+  gap: 8px;
+  margin: 14px -4px 0;
+  padding: 10px;
+  border: 2px solid var(--led);
+  border-radius: 16px;
+  background: var(--deck);
+  box-shadow: 0 8px 18px rgb(0 0 0 / 0.4);
+}
+.beat-move[hidden] { display: none; }
+.move-step[data-move-step="-1"] { grid-area: left; }
+.move-step[data-move-step="1"] { grid-area: right; }
+.move-step:disabled { opacity: 0.35; }
+.move-what { grid-area: what; display: flex; flex-direction: column; justify-content: center; margin: 0; padding-left: 4px; min-width: 0; color: #fff; font-weight: 800; line-height: 1.2; }
+.move-what small { font-weight: 400; font-size: 0.85rem; color: rgb(255 255 255 / 0.75); }
+.move-picks { grid-area: picks; display: grid; grid-template-columns: repeat(3, 1fr); }
+.move-picks button + button { border-left: 2px solid rgb(255 255 255 / 0.25); }
+.move-picks button:disabled { opacity: 0.35; }
+.move-undo { grid-area: undo; }
+.move-done { grid-area: done; }
+.move-undo, .move-done { min-height: 48px; justify-content: center; }
+/* With room, one line: what · ◀ ▶ · All None Invert · Undo · Done. */
+@media (min-width: 900px) {
+  .beat-move { grid-template-columns: minmax(12rem, 1fr) auto auto auto auto auto; grid-template-areas: "what left right picks undo done"; align-items: center; }
+  .move-picks { min-width: 15rem; }
+}
+.move-open[aria-pressed="true"] { background: var(--led); border-color: var(--led); color: var(--ink); }
+
+/* In Move the pills are locked: a finger on them picks or slides, never
+   scrolls. Picked pills wear a yellow ring, the rest dim. The rows' own
+   tools rest, and + Add a row waits for ✓ Done. */
+.seq-rows.moving .pill { touch-action: none; opacity: 0.45; cursor: crosshair; }
+.seq-rows.moving .pill.picked { opacity: 1; cursor: grab; outline: 3px solid var(--led); outline-offset: 1px; }
+.seq-rows.moving.sliding .pill.picked { cursor: grabbing; }
+.seq-rows.moving .seq-grip, .seq-rows.moving .seq-fold, .seq-rows.moving .row-tools { visibility: hidden; }
+.seq:has(.seq-rows.moving) .seq-foot { display: none; }
+/* Sliding: the picked pills lift over the grid, and a dashed shadow in the
+   row's color marks where each lit pill started (Ben: "show the shadow"). */
+.seq-rows.moving .pill.lifted { position: relative; z-index: 1; transform: translateY(-4px) scale(1.06); box-shadow: 0 10px 14px rgb(0 0 0 / 0.5); transition: transform 120ms; }
+.seq-rows.moving .pill.shadow { opacity: 1; background-image: none; box-shadow: inset 0 0 0 3px var(--pill); outline: 2px dashed rgb(255 255 255 / 0.7); outline-offset: -8px; }
+.seq-rows.moving .pill.shadow.picked { outline: 3px solid var(--led); outline-offset: 1px; box-shadow: inset 0 0 0 3px var(--pill), inset 0 0 0 7px rgb(0 0 0 / 0.35); }
+@media (prefers-reduced-motion: reduce) { .seq-rows.moving .pill.lifted { transform: none; transition: none; } }
+
 /* ── Wide screens: fill, then split ─────────────────────────────────── */
 /* Ben, 2026-10-11: "fill, then split. still reasonable to have upper/lower
    limits". Every screen fills the width up to --max (2400 px), centered
