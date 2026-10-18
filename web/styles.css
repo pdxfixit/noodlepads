@@ -626,6 +626,16 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
   .beat-go:has(> .seq-play:not([hidden]) + .dj-rec) > :is(.seq-play, .dj-rec) { flex: 1 1 40%; width: auto; }
   .beat-go:has(> .seq-play:not([hidden]) + .dj-rec) > .beat-tempo { flex: 1 1 calc(100% - 60px); }
 }
+/* Beats with ⌨️ Keys has ● Record too, so its bar runs out of room before a
+   phone's does: up to 760 px its bars take a line of their own, as on a phone
+   (at 610–700 px ⏲️ ran over the bars, and ⇆ Move stuck out). */
+@media (min-width: 601px) and (max-width: 760px) {
+  .dj-bar.beat-deck { flex-wrap: wrap; }
+  .dj-bar > .beat-go { flex: 1 1 100%; }
+  .dj-bar > .beat-shape { flex: 1 1 100%; margin-left: 0; }
+  .dj-bar > .beat-shape .seq-barsel { display: flex; flex: 1 0 auto; }
+  .dj-bar > .beat-shape .seq-barsel button { flex: 1 0 auto; }
+}
 /* The smallest phones: Play, ⏲️ and the number squeeze so the tempo keeps room. */
 @media (max-width: 400px) {
   .beat-go > .seq-play { width: 4.6rem; padding: 0 6px; font-size: 1rem; }
