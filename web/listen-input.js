@@ -20,8 +20,10 @@ export { FRAME };
 export const KINDS = ['tab', 'screen', 'mic', 'file'];
 
 // A song file: at most this big (a 5-minute WAV is about 50 MB; an MP3 of
-// the same song about 5), and only its first MAX_SONG_SECONDS are heard. A
-// decoded file is held whole in memory, so both caps keep a phone's tab alive.
+// the same song about 5), and only its first MAX_SONG_SECONDS are heard. The
+// browser decodes the whole file into memory first, about 21 MB a minute of
+// stereo: a 5-minute song takes about 100 MB. The size cap does not bound a
+// long compressed file (a 50 MB MP3 is near an hour, over 1 GB decoded).
 export const MAX_SONG_FILE_BYTES = 50 * 1024 * 1024;
 export const MAX_SONG_SECONDS = 15 * 60;
 // The rate a file is decoded at: hats reach 15 kHz, and 44.1 kHz keeps them.
@@ -112,6 +114,9 @@ export function captureError(kind, err) {
     if (shared && /system/i.test(why)) {
       return "This computer's settings stop the browser sharing the screen. On a Mac: System Settings, Privacy & Security, Screen & System Audio Recording, turn on the browser, then try again.";
     }
+    if (kind === 'mic' && /system/i.test(why)) {
+      return "This computer's settings stop the browser using the microphone. On a Mac: System Settings, Privacy & Security, Microphone, turn on the browser, then try again.";
+    }
     if (kind === 'tab') return 'Nothing was shared. Try again: pick the tab playing the song, and leave Also share tab audio ticked.';
     if (kind === 'screen') return 'Nothing was shared. Try again: pick Entire screen, and tick Also share system audio.';
     return "The microphone is blocked. Allow it for this site in the browser's settings (the icon left of the address), then try again.";
@@ -166,10 +171,15 @@ export async function startCapture(kind, { onFrames, onLevel, onEnd, context } =
   const ask = shared ? md?.getDisplayMedia : md?.getUserMedia;
   if (typeof ask !== 'function') throw fail(kind, named('Unsupported'));
 
-  // Made now, while the tap that asked is still fresh, so it may start.
+  // Made and woken now, while the tap that asked is still fresh, so it may
+  // start: after the browser's question the tap is used up, and a resume
+  // then can wait for another tap that never comes (iOS Safari). Not waited
+  // for: a context still asleep only means the frames start a little later.
   const Ctx = env.AudioContext ?? g.AudioContext ?? g.webkitAudioContext;
+  if (!context && typeof Ctx !== 'function') throw fail(kind, named('WorkletFailed', 'no AudioContext'));
   const own = !context;
   const ctx = context ?? new Ctx({ latencyHint: 'playback' });
+  if (ctx.state === 'suspended') ctx.resume?.()?.catch?.(() => {});
   const closeOwn = () => { if (own) ctx.close?.().catch?.(() => {}); };
 
   let stream;
@@ -191,7 +201,6 @@ export async function startCapture(kind, { onFrames, onLevel, onEnd, context } =
   let source;
   let node;
   try {
-    if (ctx.state === 'suspended') await ctx.resume?.();
     if (!workletIn.has(ctx)) {
       await ctx.audioWorklet.addModule(new URL('./listen-worklet.js', import.meta.url).href);
       workletIn.add(ctx);
