@@ -79,6 +79,7 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | When a newer version is live, the app says "🆕 An update for Noodle Pads is ready." ("🆕 An update is ready." under 560 px) with Reload and ✕. It checks `version.json` on focus and every 10 minutes, and waits while anything records, plays or is open. It floats over the bottom; ✕ hides it until the next check. | Ben: "it should be over the bottom. x hides until next version or until next 10m / return cycle"; 2026-10-16: smaller screens drop "Noodle Pads". | 2026-10-16 |
 | Settings: 🔗 Sharing comes first and holds Shared with me. Every section folds, closed at first; the device remembers. 📊 Data sharing is the last fold. About is last, always open: "Tap a pad, hold it to loop, record your own sounds and make beats. Made by the Sandberg Family." (Ben, 2026-10-16: drop "Noodle Pads."), then the version, centered. | Ben: the rest "All closed (as built)" (Q22); 🔓 What's private, once first and open, left Settings 2026-10-16. | 2026-10-16 |
 | Opt-in automatic problem reports (below) are how what happened gets back to an agent. Settings has no Diagnostics section. | Ben, 2026-10-11: "if the cloudflare logging is working, stow/hide/getridof the diagnostics bit in settings". Reports were verified live in D1. | 2026-10-11 |
+| A song 🎧 From a song listens to is analysed as it plays in the browser and never saved, synced or sent; only the beats are kept. (to build) | Copyright: a synced sound gets a public link. Ben agreed. | 2026-10-18 |
 
 ## People and boards
 
@@ -239,6 +240,11 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | Knobs and Shape it are one **Layers** section, rows like Beats': emoji, name, keys or slider, 🔈 mute (keeps its setting), ✕ (two taps; not the main five). With Advanced, the kid's own steps are rows after the knobs, from + Add a layer. | Ben (Q42c): "permanently merged if it makes sense… I'd like to have an interface similar to beats". | 2026-10-11 |
 | ⚙️ Advanced is also a switch at the bottom of Layers. | Ben: "maybe have the advanced toggle at the bottom? not a big deal". | 2026-10-11 |
 | An Echo step (Advanced) has 🥁 On the beat: the How far apart slider picks a note length (1/16, 1/8, dotted 1/8, 1/4, 1/2) at the tempo of the beat open on Beats when it was turned on (100 BPM if none), kept on the step. Off, an echo is stored exactly as before. | The design's tempo sync; echoes that land in time. | 2026-10-11 |
+| 🎧 From a song (Regular and Advanced, never 🧸 Kids) listens to another tab, the computer's sound, the microphone or a file, and turns what it hears into beats. (to build) | Ben: get a song's beat, Spotify's web player first, to learn from and change. `docs/design/beat-from-a-song.md` | 2026-10-18 |
+| It transcribes live, in rolling bars: each instrument shows its last 3 bars (2 on a phone), a hit that fits the part bright, a one-off dim. It listens until ■ Stop. (to build) | Ben: "we don't always know when the repeat is going to happen". | 2026-10-18 |
+| A part ends where the tempo or the pattern changes. Each part becomes a beat, a part that comes back is reused, and two or more parts also make a 🎼 Song with tempo marks. (to build) | Ben: music changes tempo, and he wants to learn about that. | 2026-10-18 |
+| It writes kick, snare and closed hat rows, each with the app's closest sound, plus tempo, time signature and swing. Triplets, polyrhythm and a row for other hits wait. (to build) | Ben: "not looking to boil the ocean; just be thorough in what we do complete". | 2026-10-18 |
+| A 🎼 Song can change tempo with marks on its timeline (from a bar on, every lane plays at the new tempo). (to build) | Ben chose marks over each block keeping its beat's tempo: bars stay lined up. | 2026-10-18 |
 
 ## Screens
 
@@ -274,6 +280,8 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | The tempo slider pulls toward common tempos (every 10 from 60 to 180, and 128); every tempo between is still reachable, and tapping the number lets you type one. | Kids land on standard tempos without knowing them. | 2026-10-10 |
 | Under 900 px, Play and Tempo stay pinned at the top while beat rows scroll. | Play must stay in reach. | 2026-10-10 |
 | A chooser section is one box in its color: name on top, sounds below. | Reads as one group. | 2026-10-10 |
+| 🎧 From a song is a card at the top of 💃 Grooves. (to build) | Ben picked it over a 🎧 button on the beat bar (mockup, 2026-10-18). | 2026-10-18 |
+| On a phone the beat bar puts 💃 Grooves, ⌨️ Keys and 🗂️ My beats, with their words, on a row above the title; 💾 Keep and 🆕 New stay beside the title. (to build) | Ben: today three of them lose their words (mockup, 2026-10-18). | 2026-10-18 |
 
 ## Working
 
