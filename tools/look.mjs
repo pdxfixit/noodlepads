@@ -194,6 +194,16 @@ const VIEWS = {
   'keys-inst': { screen: 'live', js: q('#dj-input [data-input="keys"]') + q('#dj-change') + q('[data-group="kit-notes"]') + q('#ke-inst [data-inst-pick]') + nap },
   'touch-inst': { screen: 'live', js: q('#dj-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-inst-pick]') + nap },
   sheet: { screen: 'pads', js: q('.pad-add') },
+  // The tab-audio check page for 🎧 From a song (web/check-tab-audio.html), not the app:
+  // as it opens, hearing sound (a made-up level), and a problem (the no-sound message).
+  'check-tab': { page: 'check-tab-audio.html' },
+  'check-tab-heard': { page: 'check-tab-audio.html', js: `const c = await import('/check-tab-audio.js');
+    c.show('heard', 'Hearing sound ✓'); c.showLevel(0.72);
+    document.querySelector('#share').textContent = '■ Stop'; document.querySelector('#share').classList.add('stop');
+    document.querySelector('#detail').textContent = 'Sharing “Tab audio” · 48000 Hz · loudest so far -3 dB';` },
+  'check-tab-error': { page: 'check-tab-audio.html', js: `const c = await import('/check-tab-audio.js');
+    c.show('error', 'No sound came with that tab: share it again and leave Also share tab audio ticked.');
+    document.querySelector('#detail').textContent = 'What the browser said (NotAllowedError: Permission denied)';` },
   'sheet-edit': { screen: 'pads', js: `${q('#edit-toggle')} ${q('#pads .pad-cell [data-edit]')}` },
   // ✏️ Edit sounds with six made-up sounds of the kid's own, four in two
   // groups (MINE): as it opens, with two chosen (the bar), with a preset
@@ -590,28 +600,35 @@ async function lookOnce(screen, w, bg = '', skin = '') {
     }));
     // The first-steps hook (web/firsts.js), set before the app's scripts run.
     const hook = await send('Page.addScriptToEvaluateOnNewDocument', { source: `globalThis.noodleFirstSteps = ${!!VIEWS[screen].firstSteps};` });
-    await send('Page.navigate', { url: bg ? `${base}?bg=${bg}` : base });
+    // A view with `page` opens that page of the site instead of the app (a dev check page).
+    const page = VIEWS[screen].page ?? '';
+    await send('Page.navigate', { url: `${base}${page}${bg ? `?bg=${bg}` : ''}` });
     await loaded;
     await send('Page.removeScriptToEvaluateOnNewDocument', { identifier: hook.identifier });
     await sleep(400);
     const row = { screen: [screen, bg, skin].filter(Boolean).join(' '), w, extra: [] };
     try {
-      // --advanced turns on the Advanced switch first, so every control is on the page.
-      if (!VIEWS[screen].kids) {
-        await evaluate(`(async () => { const s = await import('/settings.js'); if (s.getSetting('level') === 'kids') { await s.setSetting('level', 'regular'); await new Promise((r) => setTimeout(r, 150)); } })()`);
+      if (page) {
+        if (VIEWS[screen].js) await evaluate(`(async () => { ${VIEWS[screen].js} })()`);
+        if (opts.js) await evaluate(`(async () => { ${opts.js} })()`);
+      } else {
+        if (!VIEWS[screen].kids) {
+          await evaluate(`(async () => { const s = await import('/settings.js'); if (s.getSetting('level') === 'kids') { await s.setSetting('level', 'regular'); await new Promise((r) => setTimeout(r, 150)); } })()`);
+        }
+        // --skin: the person's pad skin, before the view (the widths share storage, so it is set each time).
+        if (skin) {
+          await evaluate(`(async () => { await (await import('/settings.js')).setSetting('padSkin', ${JSON.stringify(skin)}); await new Promise((r) => setTimeout(r, 100)); })()`);
+        }
+        // --advanced turns on the Advanced switch first, so every control is on the page.
+        if (opts.advanced) {
+          await evaluate(`(async () => { (await import('/settings.js')).setSetting('advancedBeats', true); await new Promise((r) => setTimeout(r, 200)); })()`);
+        }
+        const view = VIEWS[screen];
+        await evaluate(`document.querySelector(${JSON.stringify(SCREENS[view.screen])}).click()`);
+        if (view.screen === 'beats') await evaluate(KEYS(!!view.keys));
+        if (view.js) { await sleep(150); await evaluate(`(async () => { ${view.js} })()`); }
+        if (opts.js) await evaluate(`(async () => { ${opts.js} })()`);
       }
-      // --skin: the person's pad skin, before the view (the widths share storage, so it is set each time).
-      if (skin) {
-        await evaluate(`(async () => { await (await import('/settings.js')).setSetting('padSkin', ${JSON.stringify(skin)}); await new Promise((r) => setTimeout(r, 100)); })()`);
-      }
-      if (opts.advanced) {
-        await evaluate(`(async () => { (await import('/settings.js')).setSetting('advancedBeats', true); await new Promise((r) => setTimeout(r, 200)); })()`);
-      }
-      const view = VIEWS[screen];
-      await evaluate(`document.querySelector(${JSON.stringify(SCREENS[view.screen])}).click()`);
-      if (view.screen === 'beats') await evaluate(KEYS(!!view.keys));
-      if (view.js) { await sleep(150); await evaluate(`(async () => { ${view.js} })()`); }
-      if (opts.js) await evaluate(`(async () => { ${opts.js} })()`);
     } catch (err) {
       row.extra.push(`script failed: ${err.message.split('\n')[0]}`);
     }
