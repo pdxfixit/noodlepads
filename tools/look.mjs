@@ -284,10 +284,13 @@ const VIEWS = {
   touch: { screen: 'live', js: q('#dj-input [data-input="touch"]') },
   'live-keys': { screen: 'live', js: q('#dj-input [data-input="keys"]') },
   'touch-beats': { screen: 'beats', keys: true, js: q('#dj-input [data-input="touch"]') },
-  // ✏️ Edit layout: as it opens, with a tile's picker open (swap or take out), and + more on Drums.
+  // ✏️ Edit layout: as it opens, with a tile's picker open (swap or take out), + more on
+  // Drums, + more with its ▾ list of groups open, and Drums sized down to S.
   'touch-edit': { screen: 'live', js: q('#dj-input [data-input="touch"]') + q('#dj-change') },
   'touch-edit-swap': { screen: 'live', js: q('#dj-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-tile="0"]') },
   'touch-edit-more': { screen: 'live', js: q('#dj-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-more="1"]') },
+  'touch-edit-groups': { screen: 'live', js: q('#dj-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-more="1"]') + q('#te-bands [data-group-pick]') },
+  'touch-edit-small': { screen: 'live', js: q('#dj-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-size="s"][data-band="1"]') },
   'keys-layout': { screen: 'live', js: q('#dj-input [data-input="keys"]') + q('#dj-change') + q('[data-layout="ready-space-band"]') + q('#ke-save') },
   'keys-picked': { screen: 'live', js: `${q('#dj-input [data-input="keys"]')} ${q('#dj-change')} ${q('[data-group="kit-animals"]')} for (let i = 0; i < 3; i++) document.querySelectorAll('#ke-picks [data-sound]')[i].click();` },
   'song-new': { screen: 'song', js: q('#song-new') },
