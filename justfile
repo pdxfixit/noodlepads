@@ -277,18 +277,24 @@ deploy:
     just deploy-verify
     just deploy-checks
 
-# Cherry-picks in a throwaway worktree (TODO.md conflicts resolved by
-# tools/resolve_todo.py; any other conflict stops), tests the result, moves
-# main, brings this checkout's copies of the touched files up to date and
-# pushes; GitHub deploys the push. On 2026-10-12 a hand-run landing left this
-# checkout's files stale.
-[doc("Land an agent's commits on main and push (GitHub deploys): just land [--wait] <sha>... Run it from the main checkout. --wait waits (up to an hour) for another session's uncommitted edits to the same files")]
-land +commits:
-    @bash tools/land.sh start {{commits}}
+# flarepress's shared tool (tools/land.sh there; land.conf here): pulls main
+# from GitHub first, cherry-picks in a throwaway worktree, resolves the list
+# files land.conf names, tests, pushes, moves main and brings the main
+# checkout's copies of the touched files up to date. It runs from the
+# flarepress checkout beside this one, $FLAREPRESS, or a clone in ~/.cache.
+[doc("Land commits on main and push (GitHub deploys): just land [--wait] [<sha>...]. With no sha, from a worktree: that branch's commits. --wait waits (up to an hour) for another session's uncommitted edits to the same files")]
+[positional-arguments]
+land *args:
+    #!/usr/bin/env bash
+    set -eu
+    fp=${FLAREPRESS:-$(cd "$(git rev-parse --git-common-dir)/../.." && pwd)/flarepress}
+    [ -e "$fp/tools/land.sh" ] || fp=${XDG_CACHE_HOME:-$HOME/.cache}/flarepress
+    [ -e "$fp/tools/land.sh" ] || git clone -q https://github.com/pdxfixit/flarepress "$fp"
+    exec bash "$fp/tools/land.sh" "$@"
 
 [doc("Finish a landing that stopped on a conflict, once it is resolved in its worktree: just land-continue <worktree>")]
 land-continue worktree:
-    @bash tools/land.sh continue {{worktree}}
+    @just land --continue {{worktree}}
 
 # Removes a finished agent's worktree and branch once its work is on main:
 # refuses a dirty worktree or a commit main lacks (by patch, as cherry-picks
