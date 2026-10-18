@@ -13,8 +13,10 @@ const csp = Object.fromEntries(value('Content-Security-Policy').split(';').map((
   return [name, sources];
 }));
 
-test('the microphone stays allowed for this site only', () => {
+test('the microphone and screen sharing stay allowed for this site only', () => {
   assert.match(value('Permissions-Policy'), /microphone=\(self\)/);
+  // 🎧 From a song listens to another tab, or the whole screen's sound.
+  assert.match(value('Permissions-Policy'), /display-capture=\(self\)/);
   assert.match(value('Permissions-Policy'), /camera=\(\)/);
 });
 
