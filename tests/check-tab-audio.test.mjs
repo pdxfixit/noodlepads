@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { FRAME } from '../web/listen-input.js';
-import { hear, HEARD_FRAMES } from '../web/check-tab-audio.js';
+import { hear, HEARD_FRAMES, browserSaid } from '../web/check-tab-audio.js';
 import { contrastRatio } from '../web/contrast.js';
 
 test('heard after a third of a second of sound, never on silence', () => {
@@ -20,6 +20,15 @@ test('heard after a third of a second of sound, never on silence', () => {
   assert.equal(s.heard, true);
   s = hear(s, new Float32Array(FRAME));
   assert.equal(s.heard, true, 'stays heard');
+});
+
+test("the browser's words show only when the browser said something", () => {
+  const err = (name, message) => new Error('a sentence', { cause: Object.assign(new Error(message), { name }) });
+  assert.equal(browserSaid(err('NotAllowedError', 'Permission denied')), 'What the browser said (NotAllowedError: Permission denied)');
+  assert.equal(browserSaid(err('AbortError', '')), 'What the browser said (AbortError)');
+  assert.equal(browserSaid(err('NoAudio', 'NoAudio')), '', 'no sound came: the browser said nothing');
+  assert.equal(browserSaid(err('Unsupported', 'Unsupported')), '');
+  assert.equal(browserSaid(new Error('plain')), '');
 });
 
 test('its own script and styles only, every id it uses is there, its colors read', () => {
