@@ -52,15 +52,19 @@ drop_done() {
 }
 
 # Picks the commits listed in the worktree's state file that are not picked yet.
+# The resolvers read a conflict's base section, which git writes only in the
+# zdiff3 style: a cloud session's git has none set, so it is set here
+# (2026-10-18). A resolver that fails stops the landing: once its file was
+# staged with the markers still in, and only the tests caught it.
 pick_rest() {
   local wt=$1 c left f
   while read -r c; do
     [ -n "$c" ] || continue
-    if ! git -C "$wt" cherry-pick "$c" > /dev/null 2>&1; then
+    if ! git -C "$wt" -c merge.conflictStyle=zdiff3 cherry-pick "$c" > /dev/null 2>&1; then
       left=$(git -C "$wt" diff --name-only --diff-filter=U)
       for f in $left; do
         case "$f" in
-          TODO.md|docs/adr/README.md) python3 tools/resolve_todo.py "$wt/$f"; git -C "$wt" add "$f" ;;
+          TODO.md|docs/adr/README.md) python3 tools/resolve_todo.py "$wt/$f" || return 1; git -C "$wt" add "$f" ;;
           docs/questions.md) python3 tools/resolve_questions.py "$wt/$f" || return 1; git -C "$wt" add "$f" ;;
           *)
             # Keep the worktree and what is left to pick, for land-continue.
