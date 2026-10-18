@@ -3263,6 +3263,34 @@ body.head-slim.screen-pads .pads-bar { padding-left: calc(4 * 44px + 3 * 6px + 1
   body.head-slim .title-tools { gap: 4px; }
   body.head-slim.screen-pads .pads-bar { padding-left: calc(4 * 44px + 3 * 4px + 8px); }
 }
+/* 🥁 Beats with ⌨️ Keys: scrolled, ✏️ Edit keys (✏️ Edit layout with 👆)
+   rides at the right of the slim bar, as Edit sounds does on Pads, so it is
+   in reach while the rows and keys scroll (Ben, 2026-10-18). It is a twin of
+   the one at the foot of the keys, which stays. Every width: the slim bar is
+   the one thing that sticks there. On a phone it says ✏️ Edit, like Pads'. */
+.slim-edit { display: none; }
+body.head-slim.keys-on .slim-edit {
+  position: fixed;
+  z-index: 9;
+  top: calc(var(--slim-top) + (var(--slim-h) - 44px) / 2);
+  right: max(var(--gutter), calc((100% - var(--max)) / 2 + var(--gutter)));
+  display: block;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 2px solid rgb(255 255 255 / 0.6);
+  border-radius: 12px;
+  background: var(--bed);
+  color: #fff;
+  font-weight: 800;
+  white-space: nowrap;
+  animation: head-slim-in 160ms ease-out;
+}
+@media (max-width: 429px) {
+  body.head-slim.keys-on .slim-edit .edit-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+@media (max-width: 359px) {
+  body.head-slim.keys-on .slim-edit { padding: 0 12px; }
+}
 
 
 /* ── How much each person has, in 👥 People (Ben, 2026-10-11) ──

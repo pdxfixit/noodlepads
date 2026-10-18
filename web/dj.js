@@ -136,8 +136,11 @@ export function createDJ({ el, deps }) {
     // Q / D hang under ⌨️ while the keys show their letters.
     el.layout.hidden = touch || !letters;
     showLayout();
-    // ✏️ in the corner edits what shows: the keys, or the touch layout.
+    // ✏️ in the corner edits what shows: the keys, or the touch layout. Its
+    // twin in the slim bar (Beats with ⌨️ Keys, scrolled) says the same.
     el.change.textContent = touch ? '✏️ Edit layout' : '✏️ Edit keys';
+    const more = el.changeTop?.querySelector('.edit-more');
+    if (more) more.textContent = touch ? ' layout' : ' keys';
     if (touch) drawBands(el.touch, touchNow(), { clipById: deps.clipById, family, kitGroups: () => deps.kitGroups?.() ?? [], isLooping: deps.isLooping });
     for (const b of el.size.querySelectorAll('[data-size]')) b.setAttribute('aria-pressed', String(b.dataset.size === size));
     el.keys.replaceChildren(...KEY_ROWS.map((codes, r) => {
@@ -437,11 +440,13 @@ export function createDJ({ el, deps }) {
       closed: () => render(),
     },
   });
-  el.change.addEventListener('click', () => {
+  const openEditor = () => {
     letGo();
     if (touching()) touchEditor.open();
     else editor.open();
-  });
+  };
+  el.change.addEventListener('click', openEditor);
+  el.changeTop?.addEventListener('click', openEditor);
   el.tabs.addEventListener('click', (e) => {
     const t = e.target.closest('[data-row]');
     if (!t) return;
