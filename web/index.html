@@ -130,11 +130,25 @@
             </div>
           </div>
           <button type="button" class="seq-click mixer-open" data-mixer aria-label="🎚️ Mixer: each row's loudness, mute, solo and effect" title="Mixer">🎚️</button>
+          <button type="button" class="seq-click move-open" data-move-open aria-pressed="false" aria-label="⇆ Move: pick pills and slide them along, the whole beat or a part" title="⇆ Move: slide pills along">⇆</button>
         </div>
       </div>
       <p class="seq-empty" id="seq-empty" hidden>This board has no sounds yet. Tap 🔊 Pads, then New sound.</p>
       <p class="seq-empty" id="seq-no-rows" hidden>No rows yet. Tap + Add a row for a sound, or 💃 Grooves at the top for a ready-made beat.</p>
       <div class="seq-rows" id="seq-rows"></div>
+      <!-- ⇆ Move (beat-move.js): stays at the foot of the screen while the rows scroll. -->
+      <div class="beat-move" id="seq-move" role="group" aria-label="⇆ Move: pick pills and slide them along" hidden>
+        <p class="move-what" role="status"><span data-move-what></span><small data-move-hint></small></p>
+        <button type="button" class="seq-click move-step" data-move-step="-1" aria-label="Slide the picked pills one pill left">◀</button>
+        <button type="button" class="seq-click move-step" data-move-step="1" aria-label="Slide the picked pills one pill right">▶</button>
+        <div class="seq-barsel move-picks" role="group" aria-label="Pick">
+          <button type="button" data-move-pick="all" aria-label="Pick all: every pill of the beat">All</button>
+          <button type="button" data-move-pick="none" aria-label="Pick none">None</button>
+          <button type="button" data-move-pick="invert" aria-label="Invert: pick the pills not picked, and none that are">Invert</button>
+        </div>
+        <button type="button" class="seq-tool move-undo" data-move-undo aria-label="Undo the last slide">↩️ Undo</button>
+        <button type="button" class="seq-tool move-done" data-move-done>✓ Done</button>
+      </div>
       <div class="seq-foot">
         <button type="button" class="seq-add" id="seq-add">+ Add a row</button>
         <button type="button" class="seq-add" id="seq-add-tune">🎹 Add a tune</button>
@@ -188,6 +202,7 @@
             <select class="seq-pick" aria-label="Time signature"></select>
           </div>
           <button type="button" class="seq-click mixer-open" data-mixer aria-label="🎚️ Mixer: each row's loudness, mute, solo and effect" title="Mixer">🎚️</button>
+          <button type="button" class="seq-click move-open" data-move-open aria-pressed="false" aria-label="⇆ Move: pick pills and slide them along, the whole beat or a part. The big rows show until ✓ Done." title="⇆ Move: slide pills along">⇆</button>
         </div>
       </div>
       <p class="seq-empty" id="dj-no-rows" hidden>No rows yet. Tap ● Record and play the sounds below: each one you play gets a row.</p>

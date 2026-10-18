@@ -35,6 +35,7 @@ import { MAX_RINGING, ringOver } from './rhythm.js';
 import { cleanFx, masterLevel, silencedBySolo, mixKey, buildMix, createMixer } from './mixer.js';
 import { MELODY_NOTES, cleanNotes, fromLegacy, legacy, startsIn, addNote, lineOf, sameNotes, multiplyNotes } from './notes.js';
 import { createRoll } from './roll.js';
+import { createBeatMove } from './beat-move.js';
 import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
 
 export const STEPS = 16;         // a bar of 4/4, the simple beat maker
@@ -628,6 +629,7 @@ export function createSequencer(deps) {
   let rowMenus = null;       // the header lines' ⋯ menus (overflow.js), and
   let rowRoom = null;        // what decides they show: a line short of room
   let mixer = null;          // the 🎚️ Mixer sheet (mixer.js), set once the rows listen
+  let move = null;           // ⇆ Move (beat-move.js), set once the rows listen
 
   const playing = () => timer !== 0;
   const baseStep = () => 60 / shape().bpm / STEPS_PER_BEAT;
@@ -793,7 +795,7 @@ export function createSequencer(deps) {
   // remix, 🧸 Kids' squares in the scratch) or went (deleted: then the
   // scratch opens). Live has none.
   function show(which) {
-    if (which !== slot) { stop(); offerUndo(null); speakers?.close(); rowMenus?.close(); slot = which; }
+    if (which !== slot) { stop(); offerUndo(null); speakers?.close(); rowMenus?.close(); slot = which; move?.end(); }
     if (doc && isScratch(doc.pattern)) {
       if (scratchSaved() !== doc.seen) { doc = scratchDoc(); loaded = null; }
     } else if (doc) {
@@ -1413,6 +1415,7 @@ export function createSequencer(deps) {
       el.empty.hidden = true;
       el.noRows.hidden = true;
       if (undo && undo.pattern !== pattern) offerUndo(null);
+      move?.decorate(pills);
       return;
     }
     showTempo();
@@ -1446,6 +1449,7 @@ export function createSequencer(deps) {
     rowMenus?.refresh();   // and an open ⋯ menu shows its row as it is now
     if (mixer?.isOpen()) mixer.render();   // another beat, or a row gone: the open mixer follows
     roll?.refresh();       // and 🎹 the roll, or it closes when its row is gone
+    move?.decorate(pills); // ⇆ Move's pick on the pills
   }
 
   // A pill's look and its spoken state: off, on, or on and loud.
@@ -1459,7 +1463,8 @@ export function createSequencer(deps) {
   let twins = new Set();   // rows whose emoji another row shows too: a letter tells them apart
   function renderRow(row, i, clips) {
     const clip = deps.clipById(row.clipId);
-    if (row.collapsed) { pills[i] = []; return renderSlimRow(row, i, clip); }
+    // ⇆ Move shows every row open: a whole-beat slide moves collapsed rows too.
+    if (row.collapsed && !move?.on()) { pills[i] = []; return renderSlimRow(row, i, clip); }
     const wrap = document.createElement('div');
     wrap.className = 'seq-row';
     wrap.dataset.row = i;
@@ -1825,7 +1830,7 @@ export function createSequencer(deps) {
 
   function rowDragDown(e) {
     const grip = e.target.closest('[data-grip]');
-    if (!grip || e.button !== 0 || rowDrag.row) return;
+    if (!grip || e.button !== 0 || rowDrag.row || move?.on()) return;
     e.preventDefault();
     const row = grip.closest('.seq-row');
     Object.assign(rowDrag, { row, pointerId: e.pointerId, grabY: e.clientY - row.getBoundingClientRect().top });
@@ -2306,6 +2311,8 @@ export function createSequencer(deps) {
 
   let afterHold = () => false;   // set below, once the hold listener is on
   el.rows.addEventListener('click', (e) => {
+    // In ⇆ Move the pills are locked: a tap changes the pick (beat-move.js).
+    if (move?.on()) { afterHold(); move.click(e); return; }
     const rowEl = e.target.closest('.seq-row');
     if (!rowEl) return;
     const i = Number(rowEl.dataset.row);
@@ -2364,6 +2371,7 @@ export function createSequencer(deps) {
 
   // Holding a pill makes it a loud hit (or a loud one normal).
   afterHold = pillHolds(el.rows, (t) => t.closest?.('.pill'), (pill) => {
+    if (move?.on()) return;   // in ⇆ Move a hold lifts the pick instead
     const rowEl = pill.closest('.seq-row');
     const row = pattern?.rows[Number(rowEl?.dataset.row)];
     if (!row) return;
@@ -2396,7 +2404,7 @@ export function createSequencer(deps) {
   // Arrow keys move between pills (they are one Tab stop, not 128).
   el.rows.addEventListener('keydown', (e) => {
     const pill = e.target.closest('.pill');
-    if (!pill || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (!pill || e.altKey || e.ctrlKey || e.metaKey || (e.shiftKey && move?.on())) return;   // Shift + ← → slides in ⇆ Move
     const row = Number(pill.closest('.seq-row').dataset.row);
     let to = pillTarget(e.key, row, Number(pill.dataset.step), pattern.rows.length, countOf);
     if (!to) return;
@@ -3112,6 +3120,31 @@ export function createSequencer(deps) {
     return lit;
   }
   const snapshot = () => structuredClone(pattern);
+
+  // ⇆ Move (beat-move.js): pick pills and slide them along their rows.
+  // putRows writes slid rows into the open beat's own row objects, so a
+  // playing beat plays them from its next pill; a tune row's pills follow
+  // its notes again (cleanRow).
+  function putRows(rows) {
+    rows.forEach((r, i) => {
+      const row = pattern?.rows[i];
+      if (row && r !== row) Object.assign(row, r.melody ? cleanRow(r) : r);
+    });
+    render();
+  }
+  const moveBar = el.moveBar;
+  move = moveBar ? createBeatMove({
+    el: {
+      rows: el.rows, bar: moveBar,
+      what: moveBar.querySelector('[data-move-what]'), hint: moveBar.querySelector('[data-move-hint]'),
+      left: moveBar.querySelector('[data-move-step="-1"]'), right: moveBar.querySelector('[data-move-step="1"]'),
+      all: moveBar.querySelector('[data-move-pick="all"]'), none: moveBar.querySelector('[data-move-pick="none"]'),
+      invert: moveBar.querySelector('[data-move-pick="invert"]'),
+      undo: moveBar.querySelector('[data-move-undo]'), done: moveBar.querySelector('[data-move-done]'),
+    },
+    beat: () => pattern, total: () => countOf(), render, save, putRows, holdMs: HOLD_MS,
+    onChange: (on) => deps.onMove?.(on),
+  }) : null;
   function restore(copy) {
     const was = playing();
     stop();
@@ -3182,5 +3215,6 @@ export function createSequencer(deps) {
     beatPlan, prepareBeats, soundHit, thumbnail, levelOf, setLevel, putLevel, toggleMute, levelState,
     trying, putTrialAway, keep, onScratch, sampling: () => sample?.id ?? null,
     lockChips, queuedBeat: () => (queued ? { ...queued } : null), openMixer, toggleSolo, setFx: setRowFx, setMaster, setMasterFx,
-    openRoll, rollRow: () => roll?.row() ?? -1 };
+    openRoll, rollRow: () => roll?.row() ?? -1,
+    toggleMove: (opts) => move?.toggle(opts), endMove: () => move?.end(), moving: () => !!move?.on() };
 }
