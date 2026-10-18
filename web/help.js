@@ -123,6 +123,7 @@ export const HELP = [
       { pic: [tool('⏲️')], text: 'The click track: a tick on every beat while the beat plays, to keep time. It is never saved.' },
       { pic: [seg('1 bar', '2 bars', '4 bars')], text: 'How long the beat is.' },
       { pic: [tool('🎚️'), word('Mute'), word('Solo')], text: 'The 🎚️ Mixer, after the bars: a column for each row with a fader (slide it up for louder), Mute, Solo (only the solo rows play) and one effect, like 🏛️ Room or 🤖 Robot. The Master column at the end is the whole beat. On a phone, swipe sideways for more rows. Mute and Solo save with the beat; All on brings every row back.' },
+      { pic: [tool('⇆'), word('All'), word('None'), word('Invert')], text: '⇆ Move, after the 🎚️ Mixer: slide pills along, so a beat that starts late starts on the "1". The pills lock and the whole beat is picked; hold a pill until it lifts, then drag sideways (with a mouse, just drag), or tap ◀ ▶. Tap pills or drag across them to change what is picked; a row\'s emoji or name picks that row. What slides off one end comes round the other. ↩️ Undo takes a slide back; ✓ Done unlocks.' },
       { adv: true, pic: [seg('4/4', '3/4', '6/8')], text: 'Time signature, beside the bars: how this beat counts. 4/4 is most songs; 3/4 is a waltz.' },
       { adv: true, pic: [seg('Straight', 'Swing', 'Shuffle')], text: 'Swing makes the beat bounce: every second pill plays a little late. Shuffle bounces most.' },
       { adv: true, pic: [word('4/4 ▾')], text: 'When the line runs out of room, these turn into pickers. Tap one to choose.' },
