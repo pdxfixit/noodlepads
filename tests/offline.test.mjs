@@ -24,9 +24,6 @@ const NOT_LOADED = new Map([
   ['fonts/OFL-anybody.txt', 'a license, beside the font'],
   ['fonts/OFL-atkinson-next.txt', 'a license, beside the font'],
   ['clips/kit/LICENSE-samples.txt', 'where the recorded instruments came from, beside them'],
-  ['check-tab-audio.html', 'a dev check page for 🎧 From a song (does a tab share its sound?), not part of the app'],
-  ['check-tab-audio.js', 'the check page\'s script, with it'],
-  ['check-tab-audio.css', 'the check page\'s styles, with it'],
 ]);
 
 function filesIn(dir) {

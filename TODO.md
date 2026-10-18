@@ -57,12 +57,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **Delete the tab-audio check page once 🎧 From a song's screens land** (Ben, 2026-10-18: "delete the test when it's time"): `web/check-tab-audio.*`, its `just look` views, its `tests/offline.test.mjs` NOT_LOADED line, its tests and doc mentions. It did its job (Spotify's tab audio comes through).
 
 
-
-
-- **🎧 From a song** (Ben, 2026-10-18; `docs/design/beat-from-a-song.md`): every stream is built. Left: flarepress's `just secret` recipe.
 
 - **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (`docs/design/more-kinds-of-music.md`; decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups, the emoji rule's exceptions). The grooves, 🧸 Kids' pentatonic toy keys and instruments' phase 1 are built; next:
   1. Instruments, phase 3 (ADR 0030; the pickers everywhere, 🧸 Kids' instrument button, the grooves' instruments and chips, Soca and Chiptune are built): one ready-made key layout per family in ✏️ Edit keys.
