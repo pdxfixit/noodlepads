@@ -57,6 +57,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
+- **Delete the tab-audio check page once 🎧 From a song's screens land** (Ben, 2026-10-18: "delete the test when it's time"): `web/check-tab-audio.*`, its `just look` views, its `tests/offline.test.mjs` NOT_LOADED line, its tests and doc mentions. It did its job (Spotify's tab audio comes through).
+
 
 
 
