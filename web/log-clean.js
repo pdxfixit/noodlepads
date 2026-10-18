@@ -142,6 +142,13 @@ export const RULES = {
   // 👋 The welcome (welcome.js, ADR 0028): shown, the level a card set, skipped.
   welcome: { shown: bool, level: oneOf(['kids', 'regular', 'advanced']), skipped: bool },
   backup: { saved: bool, loaded: bool, sounds: num, beats: num, bytes: num, settings: num, already: num, skipped: num, error: text },
+  // 🎧 From a song (listen-ui.js): listening started and stopped, what it
+  // made (beats, a song), and how it ended: opened as a song or a beat,
+  // thrown away or cancelled. Never the song, its name or its sound.
+  listen: {
+    action: oneOf(['start', 'stop', 'made', 'song', 'beat', 'thrown', 'cancelled']), source: oneOf(['tab', 'screen', 'mic', 'file']),
+    seconds: num, parts: num, tempos: num, beats: num, song: bool,
+  },
   song: { action: oneOf(['play', 'stop', 'sound', 'keep', 'new', 'tempo']), replaced: bool, slots: num, parts: num, lanes: num, blocks: num, marks: num, seconds: num },
   render: { voice: chain, amount: nums, seconds: num, out: num, ms: num },
   storage: { opened: bool, late: bool, waiting: bool },

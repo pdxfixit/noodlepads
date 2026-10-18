@@ -820,6 +820,16 @@
         <h2 id="grooves-title">💃 Grooves</h2>
         <button type="button" class="close" data-close aria-label="Close">✕</button>
       </div>
+      <!-- 🎧 From a song (listen-ui.js): Regular and Advanced only, never 🧸 Kids. -->
+      <div class="listen-card" id="listen-card">
+        <span class="listen-card-pic" aria-hidden="true">🎧</span>
+        <span class="listen-card-text">
+          <span class="listen-card-name">From a song</span>
+          <span class="listen-card-about" id="listen-card-about">Play a song in another tab, or near the mic. Its beat appears here as it plays.</span>
+        </span>
+        <button type="button" class="listen-go" id="listen-open" aria-label="Listen: get a song’s beat">🎧 Listen</button>
+      </div>
+      <p class="groove-or" id="groove-or">Or start from one of these:</p>
       <div class="seq-barsel groove-how" id="groove-how" role="group" aria-label="What a groove does">
         <button type="button" data-how="load" aria-pressed="true"><span class="key-icon" aria-hidden="true">📝</span> Into my scratch</button>
         <button type="button" data-how="add" aria-pressed="false"><span class="key-icon" aria-hidden="true">➕</span> Add to this beat</button>
@@ -827,6 +837,58 @@
       <p class="field-hint" id="groove-hint">Loads the groove into your scratch beat to play with. 💾 Keep saves it in 🗂️ My beats.</p>
       <p class="lib-note" id="groove-note" role="status"></p>
       <div class="groove-groups" id="groove-list"></div>
+    </div>
+  </dialog>
+
+  <!-- 🎧 From a song (listen-ui.js): what to listen to, listening live, what it heard. -->
+  <dialog id="listen" class="listen" aria-labelledby="listen-title">
+    <div class="chooser-body listen-body">
+      <div class="sheet-head">
+        <h2 id="listen-title">🎧 From a song</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <div class="listen-view" data-view="sources">
+        <p class="listen-ask">What should I listen to?</p>
+        <p class="listen-error" id="listen-error" role="alert" hidden></p>
+        <div class="listen-sources" id="listen-sources" role="group" aria-label="What to listen to"></div>
+        <p class="listen-how" id="listen-how"></p>
+        <p class="listen-private">The song stays on this device and is never saved. Only the beat is kept.</p>
+      </div>
+      <div class="listen-view listen-live" data-view="listening" hidden>
+        <div class="listen-top">
+          <span class="listen-clock"><span class="listen-dot" aria-hidden="true"></span><span id="listen-time">0:00</span></span>
+          <button type="button" class="listen-stop" id="listen-stop">■ Stop</button>
+        </div>
+        <div class="listen-parts">
+          <span class="listen-parts-label" id="listen-parts-label" hidden>Parts so far:</span>
+          <span class="listen-chips" id="listen-chips"></span>
+          <span class="listen-feel" id="listen-feel" role="status"></span>
+        </div>
+        <p class="listen-wait" id="listen-wait">Listening…</p>
+        <div class="listen-rows" id="listen-rows"></div>
+        <p class="listen-change" id="listen-change" hidden></p>
+        <p class="listen-key"><span class="listen-key-text">Each line is one bar. New bars come in at the bottom; the oldest roll off the top.</span>
+          <span class="listen-key-item"><span class="cell v2" aria-hidden="true"></span>Fits the part</span>
+          <span class="listen-key-item"><span class="cell v1" aria-hidden="true"></span>One-off</span>
+          <span class="listen-key-item"><span class="cell vn" aria-hidden="true"></span>Not played yet</span></p>
+      </div>
+      <div class="listen-view" data-view="result" hidden>
+        <p class="listen-sentence" id="listen-sentence"></p>
+        <ul class="listen-cards" id="listen-cards"></ul>
+        <p class="listen-sounds" id="listen-sounds"></p>
+        <div class="listen-actions" id="listen-actions">
+          <button type="button" class="primary listen-as-song" id="listen-as-song">🎼 Open it as a song</button>
+          <div class="listen-pair">
+            <button type="button" class="listen-btn" id="listen-as-beat">🥁 Open part A</button>
+            <button type="button" class="listen-btn listen-throw" id="listen-throw">🗑️ Throw away</button>
+          </div>
+        </div>
+      </div>
+      <div class="listen-view" data-view="nothing" hidden>
+        <p class="listen-sentence"><b>I couldn’t hear a beat in that.</b> Nothing was kept.</p>
+        <p class="listen-how">Try a song with drums, played a little louder. In another tab, check Also share tab audio was ticked.</p>
+        <button type="button" class="primary listen-again" id="listen-again">🎧 Try again</button>
+      </div>
     </div>
   </dialog>
 

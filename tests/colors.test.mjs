@@ -114,3 +114,23 @@ test('on a person\'s row in the People dialog, white text and the white-on-ink "
   for (const board of BOARDS) check('person row', WHITE, board);
   check('badge', WHITE, INK);
 });
+
+// 🎧 From a song (listen-ui.js): the blue card, the dark listening sheet with
+// its chips, legend and labels, the yellow tempo line, and the first choice's
+// light blue.
+test('🎧 From a song\'s words read: on the blue card, the night sheet, the tempo line and the picked choice', () => {
+  const BLUE = token('listen-blue');
+  const NIGHT = token('listen-night');
+  check('card name, letters, ▶', WHITE, BLUE);
+  check('card line', CHALK, BLUE);
+  check('Listen', INK, LED);
+  check('listening: title, chips, tempo', WHITE, NIGHT);
+  check('listening: labels, legend, row sound', CHALK, NIGHT);
+  check('the chip playing now, the tempo line', INK, LED);
+  check('■ Stop', WHITE, RECORD);
+  const PICKED = css.match(/\.listen-source:first-child\s*\{[^}]*background:\s*(#[0-9a-fA-F]{6})/)[1];
+  check('the first choice', INK, PICKED);
+  check('the first choice\'s line', MUTED, PICKED);
+  const err = css.match(/\.listen-error\s*\{[^}]*background:\s*(#[0-9a-fA-F]{6});\s*color:\s*(#[0-9a-fA-F]{6})/);
+  check('a problem starting', err[2], err[1]);
+});

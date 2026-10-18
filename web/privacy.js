@@ -21,6 +21,7 @@ export const PRIVACY = [
   'A PIN is not security. It only stops someone opening or changing a profile in the app.',
   'The app collects no real names, emails or accounts. Profile names are made up by the app; nobody types one.',
   'People set 📴 Offline stay on this device only.',
+  'A song 🎧 From a song listens to is heard only in this browser, as it plays: it is never saved, synced or sent. Only the beats made from it are kept.',
   "Problem reports, if you turn them on, send this device's cleaned event log (no sounds and no names), its settings, how many sounds, beats and songs it has, its browser, system and device type (never the full browser string), its screen size, time zone and sound timing, and a random code for this device. They are deleted from the cloud after 14 days.",
   'To delete a profile and everything in it: 👥 People, tap them, ☁️ Cloud, then 📴 Offline (this device only), and its PIN if it has one. It is gone from the cloud at once, except what it shared; this device keeps its own copy.',
 ];

@@ -43,6 +43,7 @@ import { initBackups, storeLoaded, whatIsHere } from './backup-ui.js';
 import { initSettingsUI, showSettings } from './settings-ui.js';
 import { initKids, showKids, refreshKids, kidsShowing, kidsBusy, askGrownUp, kidsKeydown, kidsKeyup } from './kids.js';
 import { initHelp } from './help.js';
+import { initListen, showCard } from './listen-ui.js';
 import { initLogSend } from './log-send.js';
 import { initLeftover } from './leftover.js';
 import { installErrorLog, logEvent, onLog } from './log.js';
@@ -456,6 +457,43 @@ async function addMadeSound({ label, blob, emoji }) {
   return { ...clip, source: 'user' };
 }
 
+// Every saved beat (🗂️ My beats, and the scratch beats) and every song
+// (🗂️ My songs), as the beat maker, 🎼 Song and 🎧 From a song keep them.
+const beatLibrary = {
+  list: (personId) => state.savedBeats
+    .filter((b) => b.personId === personId)
+    .sort((a, b) => b.saved - a.saved),
+  put: (beat) => {
+    state.savedBeats = [...state.savedBeats.filter((b) => b.id !== beat.id), beat];
+    persist('beats', structuredClone(beat));
+  },
+  remove: async (id) => {
+    state.savedBeats = state.savedBeats.filter((b) => b.id !== id);
+    try {
+      await db.remove('beats', id);
+    } catch (err) {
+      console.error('Deleting a saved beat failed:', err);
+      showNotice(`That beat is gone for now, but this browser wouldn't delete it (${err.message || err.name}), so it may come back after a reload.`);
+    }
+  },
+};
+const songBook = {
+  list: (personId) => state.songbook.filter((s) => s.personId === personId).sort((a, b) => b.saved - a.saved),
+  put: (record) => {
+    state.songbook = [...state.songbook.filter((s) => s.id !== record.id), record];
+    persist('songbook', structuredClone(record));
+  },
+  remove: async (id) => {
+    state.songbook = state.songbook.filter((s) => s.id !== id);
+    try {
+      await db.remove('songbook', id);
+    } catch (err) {
+      console.error('Deleting a song failed:', err);
+      showNotice(`That song is gone for now, but this browser wouldn't delete it (${err.message || err.name}), so it may come back after a reload.`);
+    }
+  },
+};
+
 // The beat maker, wired to the board: its sounds, its saved beat, its library.
 function makeSequencer() {
   return createSequencer({
@@ -484,6 +522,7 @@ function makeSequencer() {
     // The keys panel draws the open beat only while it shows.
     onBeatChange: () => { if (keysShow()) dj?.renderGrid(); song?.render(); },
     onPlay: () => song?.stop(),
+    onGroovesOpen: () => showCard(),   // 🎧 From a song's card, for this person's level
     // ⇆ Move on or off: the ⇆ keys show it.
     onMove: (on) => { for (const b of document.querySelectorAll('[data-move-open]')) b.setAttribute('aria-pressed', String(on)); },
     onStop: () => dj?.beatStopped(),
@@ -532,24 +571,7 @@ function makeSequencer() {
       }
     },
     kitIds: () => state.manifest.kit.map((k) => k.id),   // for beat files: kit sounds travel, recorded ones don't
-    library: {
-      list: (personId) => state.savedBeats
-        .filter((b) => b.personId === personId)
-        .sort((a, b) => b.saved - a.saved),
-      put: (beat) => {
-        state.savedBeats = [...state.savedBeats.filter((b) => b.id !== beat.id), beat];
-        persist('beats', structuredClone(beat));
-      },
-      remove: async (id) => {
-        state.savedBeats = state.savedBeats.filter((b) => b.id !== id);
-        try {
-          await db.remove('beats', id);
-        } catch (err) {
-          console.error('Deleting a saved beat failed:', err);
-          showNotice(`That beat is gone for now, but this browser wouldn't delete it (${err.message || err.name}), so it may come back after a reload.`);
-        }
-      },
-    },
+    library: beatLibrary,
   });
 }
 
@@ -605,22 +627,7 @@ function makeSong() {
     close: (personId) => {
       if (state.songs.delete(personId)) db.remove('songs', personId).catch((err) => console.error('Closing the open song failed:', err));
     },
-    songs: {
-      list: (personId) => state.songbook.filter((s) => s.personId === personId).sort((a, b) => b.saved - a.saved),
-      put: (record) => {
-        state.songbook = [...state.songbook.filter((s) => s.id !== record.id), record];
-        persist('songbook', structuredClone(record));
-      },
-      remove: async (id) => {
-        state.songbook = state.songbook.filter((s) => s.id !== id);
-        try {
-          await db.remove('songbook', id);
-        } catch (err) {
-          console.error('Deleting a song failed:', err);
-          showNotice(`That song is gone for now, but this browser wouldn't delete it (${err.message || err.name}), so it may come back after a reload.`);
-        }
-      },
-    },
+    songs: songBook,
     songName: (taken) => songName(taken),
     announce: (text) => announce(text),
     // The song's own name, unless a pad already has it; then a remix of it.
@@ -891,6 +898,20 @@ async function start() {
         persist('decks', record);
       },
     },
+  });
+  // 🎧 From a song: its card in 💃 Grooves and its sheet (listen-ui.js).
+  initListen({
+    audio,
+    seq,
+    song,
+    personId: () => state.personId,
+    clipById: (id) => anyClip(id),
+    library: beatLibrary,
+    songs: songBook,
+    showScreen: (name) => setScreen(name),
+    stopAll: () => stopEverything(),
+    refresh: () => { seq.render(); song.render(); },
+    announce: (text) => announce(text),
   });
   initKids({
     personId: () => state.personId,

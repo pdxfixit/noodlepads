@@ -134,6 +134,45 @@ const WELCOME = `const w = await import('/welcome.js'); const { state } = await 
 // share one device).
 const FRESH = `{ const d = document.querySelector('#welcome'); if (d.open) d.close(); }
   await (await import('/settings.js')).setSetting('seen', ''); ${nap}`;
+// 🎧 From a song's test hook (listen-ui.js listenEnv): which ways to listen
+// this device offers (all four, or a phone's 🎤 and 📁), and no prints, so
+// every row keeps its plain sound.
+const LISTEN = (kinds = "['tab', 'screen', 'mic', 'file']") => `const L = await import('/listen-ui.js');
+  L.listenEnv.sources = () => ${kinds}; L.listenEnv.printOf = async () => null; L.showCard();`;
+// A made-up capture that sends a frame every 60 ms, and a listener whose
+// snapshots step through `which` (finding: the tempo settling; live: parts
+// A, B, A again, then C after a speed-up at bar 22; nothing: no beat), one
+// per frame, then stay on the last; finish() gives three parts (or none).
+const LISTEN_FAKE = (which) => `const cells = (p, upto = 99) => [...p].map((c, i) => (i > upto ? -1 : c === 'x' ? 2 : c === 'o' ? 1 : 0));
+  const K = ['x.....x...x.....', 'x.....x.o.x.....', 'x.....x...x.....'];
+  const S = ['....x.......x...', '....x.......x..o', '....x.......x...'];
+  const H = ['x.x.x.x.x.x.x.x.', 'x.x.x.x.x.x.x.xo', 'x.x.x.x.x.x.x.x.'];
+  const recent = (step) => ({ kick: K.map((p, i) => cells(p, i === 2 ? step : 99)), snare: S.map((p, i) => cells(p, i === 2 ? step : 99)), hat: H.map((p, i) => cells(p, i === 2 ? step : 99)) });
+  const parts = [{ id: 'A', bpm: 92, signature: '4/4', swing: 0, bars: 1 }, { id: 'B', bpm: 92, signature: '4/4', swing: 0, bars: 2 }, { id: 'C', bpm: 120, signature: '4/4', swing: 0, bars: 1 }];
+  const live = (bar, partId, n, step = 15, tempoChange = null) => ({ status: 'listening', seconds: bar * 2.4, bpm: partId === 'C' ? 120 : 92, signature: '4/4', swing: 0,
+    parts: parts.slice(0, n), current: { partId, bar, step, recent: recent(step) }, tempoChange });
+  const finding = { status: 'finding-tempo', seconds: 3, bpm: 96, signature: null, swing: 0, parts: [], current: { partId: null, bar: 1, step: 0, recent: { kick: [], snare: [], hat: [] } }, tempoChange: null };
+  const snaps = ${JSON.stringify(which)} === 'live'
+    ? [live(6, 'A', 1), live(10, 'B', 2), live(14, 'A', 2), live(24, 'C', 3, 9, { atBar: 22, from: 92, to: 120 })]
+    : [finding];
+  const steps = (bars, rows) => Object.fromEntries(Object.entries(rows).map(([r, p]) => [r, [...p.repeat(bars)].map((c) => c === 'x')]));
+  const result = ${JSON.stringify(which)} === 'nothing' ? { seconds: 12, parts: [], order: [], tempos: [] } : {
+    seconds: 112,
+    parts: [
+      { ...parts[0], steps: steps(1, { kick: K[0], snare: S[0], hat: H[0] }), prints: { kick: null, snare: null, hat: null } },
+      { ...parts[1], steps: steps(1, { kick: K[0] + K[1], snare: S[0] + S[1], hat: H[0] + H[0] }), prints: { kick: null, snare: null, hat: null } },
+      { ...parts[2], steps: steps(1, { kick: 'x...x...x...x...', snare: S[0], hat: 'xxxxxxxxxxxxxxxx' }), prints: { kick: null, snare: null, hat: null } },
+    ],
+    order: [{ partId: 'A', startBar: 1, bars: 8 }, { partId: 'B', startBar: 9, bars: 4 }, { partId: 'A', startBar: 13, bars: 8 }, { partId: 'C', startBar: 22, bars: 16 }],
+    tempos: [{ bar: 22, bpm: 120 }],
+  };
+  let fed = 0;
+  L.listenEnv.createListener = () => ({ feed() { fed++; }, snapshot: () => snaps[Math.min(fed, snaps.length) - 1], finish: () => result });
+  L.listenEnv.startCapture = async (kind, { onFrames, onEnd }) => {
+    let k = 0;
+    const t = setInterval(() => { onFrames(new Float32Array(2048), 48000); if (++k >= snaps.length) clearInterval(t); }, 60);
+    return { stop() { clearInterval(t); onEnd('stopped'); }, label: '', sampleRate: 48000 };
+  };`;
 const VIEWS = {
   // Who's playing?: the three picture cards.
   welcome: { screen: 'pads', firstSteps: true, js: WELCOME },
@@ -338,6 +377,22 @@ const VIEWS = {
   'song-tempos-regular': { screen: 'song', js: `${TEMPO_MARKS} (await import('/settings.js')).setSetting('advancedBeats', false); ${nap}` },
   'tempo-sheet': { screen: 'song', js: `${TEMPO_MARKS} ${q('#song-tempo-open')} ${nap}` },
   'tempo-mark': { screen: 'song', js: `${TEMPO_MARKS} ${q('#song-lanes [data-tempo-bar="9"]')} ${nap}` },
+  // 🎧 From a song (listen-ui.js): a look device has no song, so these swap
+  // in a made-up capture and listener through its test hook (listenEnv).
+  // listen-card: the card at the top of 💃 Grooves; listen-sources: what to
+  // listen to on a computer (four ways), listen-phone on a phone (🎤 and 📁
+  // only); listen-finding: before the tempo is found; listen-live: parts
+  // A, B, A again and C with a tempo change, the bars rolling; listen-result:
+  // What I heard after ■ Stop (three parts, a song); listen-nothing: no beat heard.
+  'listen-card': { screen: 'beats', js: `${LISTEN()} ${q('#seq-grooves')}` },
+  'listen-sources': { screen: 'beats', js: `${LISTEN()} ${q('#seq-grooves')} ${q('#listen-open')} ${nap}` },
+  'listen-phone': { screen: 'beats', js: `${LISTEN("['mic', 'file']")} ${q('#seq-grooves')} ${q('#listen-open')} ${nap}` },
+  'listen-finding': { screen: 'beats', js: `${LISTEN()} ${LISTEN_FAKE('finding')} ${q('#seq-grooves')} ${q('#listen-open')} ${q('[data-source="tab"]')} await new Promise((r) => setTimeout(r, 500));` },
+  'listen-live': { screen: 'beats', js: `${LISTEN()} ${LISTEN_FAKE('live')} ${q('#seq-grooves')} ${q('#listen-open')} ${q('[data-source="tab"]')} await new Promise((r) => setTimeout(r, 700));` },
+  'listen-result': { screen: 'beats', js: `${LISTEN()} ${LISTEN_FAKE('live')} ${q('#seq-grooves')} ${q('#listen-open')} ${q('[data-source="tab"]')} await new Promise((r) => setTimeout(r, 700));
+    ${q('#listen-stop')} await new Promise((r) => setTimeout(r, 300));` },
+  'listen-nothing': { screen: 'beats', js: `${LISTEN()} ${LISTEN_FAKE('nothing')} ${q('#seq-grooves')} ${q('#listen-open')} ${q('[data-source="mic"]')} await new Promise((r) => setTimeout(r, 400));
+    ${q('#listen-stop')} await new Promise((r) => setTimeout(r, 300));` },
   // Cloud profiles (cloud-ui.js). The look server has no /api, so these show
   // the screens as a device sees them with the cloud out of reach, and
   // cloud-in fakes this device's link to draw the in-the-cloud sheet.

@@ -62,7 +62,7 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 
 
-- **🎧 From a song** (Ben, 2026-10-18: "go on all streams"; `docs/design/beat-from-a-song.md`, decisions.md rows marked to build). Streams: the phone beat bar; tempo marks in 🎼 Song (ADR); the listener (`web/listen.js`, pure); capture (tab, screen, mic, file) and the tab-audio check page; then the screens that join them. Extras: usage events for listening (telemetry repo's `events.toml`), and flarepress's `just secret` recipe.
+- **🎧 From a song** (Ben, 2026-10-18; `docs/design/beat-from-a-song.md`): every stream is built. Left: flarepress's `just secret` recipe.
 
 - **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (`docs/design/more-kinds-of-music.md`; decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups, the emoji rule's exceptions). The grooves, 🧸 Kids' pentatonic toy keys and instruments' phase 1 are built; next:
   1. Instruments, phase 3 (ADR 0030; the pickers everywhere, 🧸 Kids' instrument button, the grooves' instruments and chips, Soca and Chiptune are built): one ready-made key layout per family in ✏️ Edit keys.

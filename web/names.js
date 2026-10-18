@@ -84,6 +84,26 @@ export const beatName = (taken = [], random = Math.random) => pick(BEAT_NAMES, t
 export const soundName = (taken = [], random = Math.random) => pick(SOUND_NAMES, taken, MAX_LABEL, random);
 export const takeName = (taken = [], random = Math.random) => pick(TAKE_NAMES, taken, MAX_LABEL, random);
 export const songName = (taken = [], random = Math.random) => pick(SONG_NAMES, taken, MAX_LABEL, random);
+// 🎧 From a song's beats (docs/design/beat-from-a-song.md): one fun name
+// for the whole song, each part's beat that name and its letter, "Zippy
+// Noodle · A". `letters` are the parts' ids; the name chosen is one whose
+// every lettered name nobody has and fits MAX_LABEL. → { base, names }, the
+// names in `letters` order. With every name taken, a number joins the base.
+export function partNames(letters, taken = [], random = Math.random) {
+  const used = new Set([...taken].map(key));
+  const tail = (l) => ` · ${l}`;
+  const room = MAX_LABEL - Math.max(1, ...letters.map((l) => tail(l).length));
+  const free = (base) => base.length <= room && letters.every((l) => !used.has(key(base + tail(l))));
+  const open = BEAT_NAMES.filter(free);
+  let base = open.length ? open[Math.floor(random() * open.length) % open.length] : null;
+  if (!base) {
+    const short = BEAT_NAMES.filter((n) => n.length <= room - 3);
+    const seed = short[Math.floor(random() * short.length) % short.length];
+    for (let n = 2; !base; n++) if (free(`${seed} ${n}`)) base = `${seed} ${n}`;
+  }
+  return { base, names: letters.map((l) => base + tail(l)) };
+}
+
 // A scratch beat kept with 💾 Keep (ADR 0020) after it came from a groove:
 // a fun name and the groove, "Sleepy Squid (Ska version)". Beat names hold
 // MAX_LABEL characters and most grooves' names are long, so the first of

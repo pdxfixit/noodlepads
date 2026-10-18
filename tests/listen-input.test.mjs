@@ -329,7 +329,10 @@ test('readFile: a file over the cap is refused before it is read; one with no so
   const big = { size: MAX_SONG_FILE_BYTES + 1, arrayBuffer: async () => { read = true; return new ArrayBuffer(1); } };
   await assert.rejects(readFile(big, { decode: async () => decoded([new Float32Array(1)], 44100) }), { message: fileTooBig(big.size) });
   assert.equal(read, false);
-  assert.equal(fileTooBig(72.4 * 1048576), 'That file is 72.4 MB. Choose one under 50 MB.');
+  assert.equal(fileTooBig(72.4 * 1048576), 'That file is 72.4 MB. Choose one under 20 MB.');
+  // 20 MB (the lead's call, 2026-10-18): a 50 MB MP3 decoded is over 1 GB, enough to crash a phone's tab.
+  assert.equal(MAX_SONG_FILE_BYTES, 20 * 1024 * 1024);
+  await assert.rejects(readFile({ size: 21 * 1048576, arrayBuffer: async () => new ArrayBuffer(1) }, { decode: async () => decoded([new Float32Array(1)], 44100) }), /21\.0 MB/);
   await assert.rejects(readFile(fakeFile(10), { decode: async () => { throw new Error('EncodingError'); } }), /no sound this browser can read/);
   await assert.rejects(readFile(fakeFile(10), { decode: async () => decoded([new Float32Array(0)], 44100) }), /no sound in it/);
   await assert.rejects(readFile(null), /Choose a song file/);
