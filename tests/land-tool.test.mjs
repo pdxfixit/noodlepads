@@ -15,6 +15,16 @@ test('land.sh never uses sed -i, which GNU and BSD sed read differently', () => 
   assert.doesNotMatch(script, /sed\s+-i/);
 });
 
+// The resolvers need each conflict's base section (zdiff3), which a cloud
+// session's git does not write by default: resolve_todo.py failed there, and
+// land.sh staged TODO.md with its conflict markers in (2026-10-18).
+test('land.sh cherry-picks in the zdiff3 style and stops when a resolver fails', () => {
+  assert.match(script, /-c merge\.conflictStyle=zdiff3 cherry-pick/);
+  for (const line of script.split('\n').filter((l) => /python3 tools\/resolve_/.test(l))) {
+    assert.match(line, /resolve_\w+\.py "\$wt\/\$f" \|\| return 1;/, line.trim());
+  }
+});
+
 test('drop_done removes the picked commits from the todo list, on this machine\'s sed', () => {
   const fn = script.match(/^drop_done\(\) \{[\s\S]*?^\}/m)?.[0];
   assert.ok(fn, 'land.sh has drop_done');
