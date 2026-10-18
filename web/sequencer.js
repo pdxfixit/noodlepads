@@ -398,10 +398,13 @@ export function pillHolds(root, match, onHold) {
 
 // Where a new sound goes in a beat's rows: a new row at the end while there
 // is room (`max`), else the first row with no hits that isn't in `avoid`,
-// reused in place so no row moves. -1 when every row has hits.
-export function rowSlot(rows, max, avoid = new Set()) {
-  if (rows.length < max) return rows.length;
-  return rows.findIndex((r, k) => !avoid.has(k) && !r.steps.some(Boolean));
+// reused in place so no row moves. While ● Record runs (`emptyFirst`), that
+// empty row comes before a new one (Ben, 2026-10-18); outside it, a kid may
+// be setting up empty rows on purpose. -1 when no row can take it.
+export function rowSlot(rows, max, avoid = new Set(), emptyFirst = false) {
+  const empty = rows.findIndex((r, k) => !avoid.has(k) && !r.steps.some(Boolean));
+  if (emptyFirst && empty >= 0) return empty;
+  return rows.length < max ? rows.length : empty;
 }
 
 // A groove as a beat for one person: each row plays that person's copy of the
@@ -3068,10 +3071,11 @@ export function createSequencer(deps) {
     return { t0, step: baseStep(), total: total(), rates: (pattern?.rows ?? []).map((r) => (playMode() === 'speed' ? r.rate : 1)) };
   }
   // The row for a sound: its first unmuted row, else a muted one (unmuted:
-  // the kid is playing it), else a new row. -1 when the beat is full.
-  // When the beat is full, a row with no hits makes way for the new sound
-  // (Ben, 2026-10-11), unless it is in `avoid` (rows hit in this recording
-  // that haven't landed yet). It is reused in place, so no row moves.
+  // the kid is playing it), else a row with no hits, else a new row; -1 when
+  // there is neither. It is only asked while recording, when a row with no
+  // hits makes way for the new sound (Ben, 2026-10-18), unless it is in
+  // `avoid` (rows taken or hit in this recording). It is reused in place, so
+  // no row moves.
   function rowFor(clipId, avoid = new Set()) {
     let i = pattern.rows.findIndex((r) => r.clipId === clipId && !r.muted);
     if (i < 0) {
@@ -3079,7 +3083,7 @@ export function createSequencer(deps) {
       if (i >= 0) pattern.rows[i].muted = false;
     }
     if (i < 0) {
-      i = rowSlot(pattern.rows, MAX_ROWS, avoid);
+      i = rowSlot(pattern.rows, MAX_ROWS, avoid, true);
       if (i < 0) return -1;
       pattern.rows[i] = cleanRow({ clipId, steps: [] });
       if (playing()) prepare(deps.clipById(clipId));
@@ -3088,12 +3092,13 @@ export function createSequencer(deps) {
   }
   // The keys view: the row for this sound, made now (empty) if it has none, and
   // saved (Ben, 2026-10-12: pressing an instrument makes its row appear). A
-  // full beat reuses an empty row not in `avoid`; -1 when there is none.
-  function addRowFor(clipId, avoid = new Set()) {
+  // full beat, or any beat while `recording`, reuses an empty row not in
+  // `avoid`; -1 when there is none.
+  function addRowFor(clipId, avoid = new Set(), recording = false) {
     if (!pattern) return -1;
     let i = pattern.rows.findIndex((r) => r.clipId === clipId);
     if (i >= 0) return i;
-    i = rowSlot(pattern.rows, MAX_ROWS, avoid);
+    i = rowSlot(pattern.rows, MAX_ROWS, avoid, recording);
     if (i < 0) return -1;
     pattern.rows[i] = cleanRow({ clipId, steps: [] });
     if (playing()) prepare(deps.clipById(clipId));
