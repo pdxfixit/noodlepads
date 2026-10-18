@@ -1,12 +1,19 @@
 // ✏️ Edit layout (ADR 0029): the 👆 touch layout's own view. Bands with ⠿
 // (drag, or ↑ ↓), S M L and ✕ (two taps, ↩️ Undo); + Add a group; + more;
 // a tile swapped or taken out; layouts loaded (⭐ My layout kept), saved,
-// renamed and deleted; at most 8 bands.
+// renamed and deleted; at most 8 bands. + more and a swap pick the group
+// with one ▾ picker and offer only sounds not on the board yet; sizing a
+// band down fills its line.
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { installPage } from './fake-dom.mjs';
+import { readFileSync } from 'node:fs';
 import { testManifest } from './test-board.mjs';
+
+const BOARDS = JSON.parse(readFileSync(new URL('../web/boards.json', import.meta.url), 'utf8'));
+// How many sounds a kit group has on a fresh board (Advanced off, no instrument picked).
+const inGroup = (g) => BOARDS.kit.filter((k) => k.group === g && !k.advanced && !k.inst).length;
 
 const remembered = new Map();
 const storage = {
@@ -53,9 +60,15 @@ test('✏️ in the corner says Edit layout with 👆 and opens its own view of 
 });
 
 test('S M L sets a band\'s tiles; ✕ asks first, then removes, and ↩️ Undo brings it back', () => {
+  const chords = ['pip-chord-c', 'pip-chord-am', 'pip-chord-f', 'pip-chord-g'];   // the band's starters
   q('[data-size="s"][data-band="1"]').dispatch('click');
   assert.equal(touch().bands[1].size, 's', 'saved with the person\'s keys (decks.touch)');
   assert.equal(q('[data-size="s"][data-band="1"]').getAttribute('aria-pressed'), 'true');
+  assert.equal(touch().bands[1].sounds.length, 5, 'four chords, and a fifth fills the line of five');
+  assert.deepEqual(touch().bands[1].sounds.slice(0, 4), chords);
+  assert.match($('#te-note').textContent, /^🎶 Chords: small tiles\. 1 more sound fills the line\.$/);
+  q('[data-size="m"][data-band="1"]').dispatch('click');
+  assert.equal(touch().bands[1].sounds.length, 5, 'bigger tiles keep every sound, wrapping');
   q('[data-remove="2"]').dispatch('click');
   assert.equal(q('[data-remove="2"]').textContent, '✕?', 'the first tap only asks, in red');
   assert.ok(q('[data-remove="2"]').classList.contains('armed'));
@@ -74,11 +87,14 @@ test('+ Add a group puts it at the bottom with its starting sounds; + more adds 
   q('[data-more="4"]').dispatch('click');
   assert.ok(q('.te-picker'), 'the picker opens under the band');
   assert.match(q('.te-picker .ke-hint').textContent, /^Add to 🐵 Animals:/);
-  assert.equal(q('[data-pick-group="animals"]').getAttribute('aria-pressed'), 'true', 'its own group first');
+  assert.equal(q('.te-picker [data-pick-group]'), null, 'no wall of groups: one picker');
+  assert.equal(q('[data-group-pick]').getAttribute('aria-label'), 'Sounds from 🐵 Animals: 4 to add. Tap to pick another group', 'its own group, with what is left');
+  assert.equal(q('[data-group-pick]').getAttribute('aria-expanded'), 'false');
   assert.equal(q('.te-picker [data-pick-sound="pip-moo"]'), null, 'what is in the band already is not offered');
   q('.te-picker [data-pick-sound="pip-meow"]').dispatch('click');
   assert.ok(touch().bands[4].sounds.includes('pip-meow'));
   assert.ok(q('.te-picker'), 'still open, to add another');
+  assert.equal(q('[data-add-all]').textContent, '+ Add all 3');
   q('[data-add-all]').dispatch('click');
   assert.equal(touch().bands[4].sounds.length, 8, 'every animal');
   assert.equal(q('.te-picker'), null);
@@ -87,7 +103,18 @@ test('+ Add a group puts it at the bottom with its starting sounds; + more adds 
 test('a tile tapped: swap its sound for one from any group, or take it out', () => {
   q('[data-band="2"][data-tile="0"]').dispatch('click');   // Drums: Kick
   assert.match(q('.te-picker .ke-hint').textContent, /^Swap 🦶 Kick for:/);
+  assert.equal(q('.te-picker [data-pick-sound="pip-kick"]').getAttribute('aria-pressed'), 'true', 'its own sound, picked');
+  assert.equal(q('.te-picker [data-pick-sound="pip-snare"]'), null, 'a sound on the board already is not offered');
+  assert.ok(q('.te-picker [data-pick-sound="pip-open-hat"]'));
+  q('[data-group-pick]').dispatch('click');
+  assert.equal(q('[data-group-pick]').getAttribute('aria-expanded'), 'true');
+  assert.equal(q('.te-picker [data-pick-sound]'), null, 'the list of groups shows in place of the sounds');
+  const choices = q('.te-group-list').querySelectorAll('[data-pick-group]');
+  assert.equal(choices[0].dataset.pickGroup, 'drums', 'the band\'s own group first');
+  assert.equal(choices[0].getAttribute('aria-pressed'), 'true');
   q('[data-pick-group="silly"]').dispatch('click');
+  assert.equal(q('.te-group-list'), null, 'a pick closes the list');
+  assert.match(q('[data-group-pick]').getAttribute('aria-label'), /^Sounds from 🤪 Silly: \d+ to pick\./);
   q('.te-picker [data-pick-sound="pip-honk"]').dispatch('click');
   assert.equal(touch().bands[2].sounds[0], 'pip-honk');
   assert.equal(q('.te-picker'), null, 'a swap closes the picker');
@@ -154,4 +181,50 @@ test('a layout holds 8 groups at most; ✅ Done shows the new layout on 🎤 Liv
   assert.equal($('#touch-edit').open, false);
   assert.equal($('#dj-touch').querySelectorAll('.touch-band').length, 8);
   assert.equal($('#dj-touch').querySelectorAll('.touch-head')[3].textContent, '🐵 Animals');
+});
+
+test('+ more offers only what is not on the board: a group\'s count, the empty line, Esc closes the groups; a new band starts after the old one', () => {
+  $('#dj-change').dispatch('click');
+  $('#te-layouts').querySelector('[data-layout="ready-band"]').dispatch('click');
+  assert.deepEqual(groupsOf(touch()), ['chords', 'drums', 'bass']);
+  $('#te-add').querySelector('[data-add-group="drums"]').dispatch('click');
+  const [, drums, , more] = touch().bands;
+  assert.equal(more.sounds.length, 4);
+  assert.deepEqual(more.sounds.filter((id) => drums.sounds.includes(id)), [], 'a second band of Drums starts with other drums');
+
+  q('[data-more="3"]').dispatch('click');
+  assert.equal(q('[data-group-pick]').getAttribute('aria-label'), `Sounds from 🥁 Drums: ${inGroup('drums') - 8} to add. Tap to pick another group`);
+  for (const id of [...drums.sounds, ...more.sounds]) assert.equal(q(`.te-picker [data-pick-sound="${id}"]`), null, id);
+  q('[data-group-pick]').dispatch('click');
+  assert.equal(q('[data-pick-group="chords"]').getAttribute('aria-label'), `🎶 Chords: ${inGroup('chords') - 4} to add`);
+  q('.te-group-list').dispatch('keydown', { key: 'Escape' });
+  assert.equal(q('.te-group-list'), null, 'Esc closes the groups');
+  assert.equal($('#touch-edit').open, true, 'and not Edit layout');
+  q('[data-group-pick]').dispatch('click');
+  q('[data-pick-group="chords"]').dispatch('click');
+  assert.equal(q('.te-picker [data-pick-sound="pip-chord-c"]'), null, 'in the Chords band');
+  q('[data-add-all]').dispatch('click');
+  assert.equal(touch().bands[3].sounds.length, 4 + inGroup('chords') - 4);
+
+  q('[data-more="0"]').dispatch('click');
+  assert.equal(q('.te-picker [data-pick-sound]'), null);
+  const empty = q('.te-picker').querySelectorAll('.ke-hint').find((p) => /on the board/.test(p.textContent));
+  assert.equal(empty.textContent, 'Every sound in 🎶 Chords is on the board already. Pick another group.');
+  assert.equal(empty.hidden, false);
+  assert.equal(q('[data-add-all]'), null, 'nothing to add all of');
+  q('[data-pick-close]').dispatch('click');
+
+  // Drums at L (2 across) holds 4: M (4 across) is a full line; S (5) takes one more drum not on the board.
+  q('[data-size="m"][data-band="1"]').dispatch('click');
+  assert.equal(touch().bands[1].sounds.length, 4);
+  q('[data-size="s"][data-band="1"]').dispatch('click');
+  const five = touch().bands[1].sounds;
+  assert.equal(five.length, 5);
+  assert.ok(!touch().bands.slice(2).some((b) => b.sounds.includes(five[4])), 'never one already on the board');
+  q('[data-size="l"][data-band="1"]').dispatch('click');
+  assert.deepEqual(touch().bands[1].sounds, five, 'bigger keeps them all');
+  $('#te-undo').dispatch('click');
+  $('#te-undo').dispatch('click');
+  assert.deepEqual([touch().bands[1].size, touch().bands[1].sounds.length], ['m', 4], '↩️ Undo takes back the filled line');
+  q('[data-close]').dispatch('click');
 });

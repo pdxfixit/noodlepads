@@ -76,23 +76,30 @@ export const READY_TOUCH = [
 // instrument's preset (ADR 0030) also stands for the group's own preset it
 // plays (`plays`), when that one isn't listed: with Piano picked, a band of
 // Notes starts on the piano's C D E.
+//
+// `same` maps a kit sound to the group's own preset it plays (`note-c` for
+// the piano's C too), so the layout offers a note once whoever plays it;
+// `pid` is the person's id.
 export function soundsOf(clips, pid) {
   const kit = new Map();
   const groups = new Map();
   const own = [];
   const plays = new Map();
+  const same = new Map();
   for (const c of clips ?? []) {
     if (!c?.id) continue;
     if (!c.kit) { own.push(c); continue; }
     if (c.plays) plays.set(c.plays, plays.get(c.plays) ?? c.id);
-    kit.set(c.id.startsWith(`${pid}-`) ? c.id.slice(pid.length + 1) : c.id, c.id);
+    const kitId = c.id.startsWith(`${pid}-`) ? c.id.slice(pid.length + 1) : c.id;
+    same.set(c.id, c.plays ?? kitId);
+    kit.set(kitId, c.id);
     if (!groups.has(c.group)) groups.set(c.group, []);
     groups.get(c.group).push(c.id);
   }
   for (const [ownId, id] of plays) if (!kit.has(ownId)) kit.set(ownId, id);
   own.sort((a, b) => (b.created ?? 0) - (a.created ?? 0));
   groups.set(MINE, own.map((c) => c.id));
-  return { kit, groups };
+  return { kit, groups, same, pid };
 }
 
 const groupSounds = (sounds, group) => sounds.groups.get(group) ?? [];
@@ -105,8 +112,16 @@ export function startingSounds(group, sounds) {
   return fromKit.length ? fromKit : all.slice(0, SIZES[startSize(group)]);
 }
 
-export function newBand(group, sounds) {
-  return { group, size: startSize(group), sounds: startingSounds(group, sounds) };
+// A new band of `group`. Added to layout `t`, it starts with the starters
+// not on the board yet, topped up with the group's next free sounds, so a
+// second band of Drums starts where the first one ends.
+export function newBand(group, sounds, t = null) {
+  const start = startingSounds(group, sounds);
+  if (!t) return { group, size: startSize(group), sounds: start };
+  const free = offeredSounds(t, group, sounds);
+  const kept = start.filter((id) => free.includes(id));
+  const more = free.filter((id) => !kept.includes(id)).slice(0, start.length - kept.length);
+  return { group, size: startSize(group), sounds: [...kept, ...more] };
 }
 
 // A ready-made layout as one person's: kit ids become their copies; a kit
@@ -164,12 +179,43 @@ export function setSize(t, i, size) {
   return out;
 }
 
-// The group's sounds not in band `i` yet, in the group's order.
+// What a sound is, for "already on the board": the group's own preset it
+// plays (an instrument's C is the C), else its id.
+function sameAs(sounds) {
+  const pre = sounds?.pid ? `${sounds.pid}-` : null;
+  return (id) => sounds?.same?.get(id) ?? (pre && id.startsWith(pre) ? id.slice(pre.length) : id);
+}
+
+// The sounds of `group` that + more or a tile's swap offers: those not
+// anywhere in the layout yet (Ben, 2026-10-18: "anything already on the
+// board wouldn't be available"), in the group's order. `keep`, the tile
+// being swapped, still shows, as the one picked.
+export function offeredSounds(t, group, sounds, keep = null) {
+  const key = sameAs(sounds);
+  const taken = new Set(touchSounds(t).filter((id) => id !== keep).map(key));
+  return groupSounds(sounds, group).filter((id) => id === keep || !taken.has(key(id)));
+}
+
+// The group's sounds band `i` could still add: none already in the layout.
 export function remainingSounds(t, i, sounds) {
-  if (at(t, i) < 0) return [];
-  const band = t.bands[i];
-  const have = new Set(band.sounds);
-  return groupSounds(sounds, band.group).filter((id) => !have.has(id));
+  return at(t, i) < 0 ? [] : offeredSounds(t, t.bands[i].group, sounds);
+}
+
+// Band `i` at a new size. Smaller tiles fit more on a line (L 2, M 4, S 5
+// across on a phone), so its last line is filled with the group's next
+// sounds not in the layout yet, and no hole is left; bigger tiles keep
+// every sound, wrapping onto more lines. A sound that is gone takes no
+// place, as it shows none.
+export function resizeBand(t, i, size, sounds) {
+  const out = setSize(t, i, size);
+  if (at(out, i) < 0 || !SIZES[size] || SIZES[size] <= SIZES[t.bands[i].size]) return out;
+  const band = out.bands[i];
+  const live = new Set([...(sounds?.groups?.values() ?? [])].flat());
+  const shown = band.sounds.filter((id) => live.has(id)).length;
+  const across = SIZES[size];
+  const want = Math.min(MAX_BAND_SOUNDS - band.sounds.length, (Math.ceil(shown / across) || 1) * across - shown);
+  if (want > 0) band.sounds.push(...remainingSounds(out, i, sounds).slice(0, want));
+  return out;
 }
 
 // Sounds added at the end of band `i` (each once, up to MAX_BAND_SOUNDS).
