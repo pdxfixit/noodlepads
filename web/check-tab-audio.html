@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#1F3FA8">
+  <title>Can it hear a tab? · Noodle Pads</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231F3FA8'/%3E%3Crect x='6' y='5' width='20' height='21' rx='4' fill='%23866F00'/%3E%3Crect x='6' y='5' width='20' height='18' rx='4' fill='%23FFD60A'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="check-tab-audio.css">
+  <script type="module" src="check-tab-audio.js"></script>
+</head>
+<body>
+  <!-- A check for 🎧 From a song (docs/design/beat-from-a-song.md): does this
+       browser hand a page another tab's sound? Not linked from the app. -->
+  <main class="check">
+    <h1>🎧 Can it hear a tab?</h1>
+    <p class="lede">Play a song in another tab (Spotify's web player is the one to try), then share that tab here. In the browser's window, pick the tab and leave <b>Also share tab audio</b> ticked.</p>
+    <button type="button" class="share" id="share">🗂️ Share a tab's sound</button>
+    <div class="meter" id="meter" role="meter" aria-label="How loud the tab is" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <span class="meter-fill" id="meter-fill"></span>
+    </div>
+    <p class="status" id="status" role="status" aria-live="polite">Not listening yet.</p>
+    <p class="detail" id="detail"></p>
+    <p class="detail" id="offers"></p>
+    <p class="note">The sound stays on this device and is never saved or sent.</p>
+  </main>
+</body>
+</html>
