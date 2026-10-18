@@ -50,6 +50,20 @@ test('fitLine counts a key overflowing inside its own box as not fitting', () =>
   assert.equal(line.classList.contains('fit-stack'), true);
 });
 
+// A text field scrolls its own text: a long beat name in a short box must not
+// push the beat bar onto its phone lines on a wide screen.
+test('fitLine never counts a text field\'s own long text as the line not fitting', () => {
+  const line = new FakeElement('div');
+  const name = new FakeElement('input');
+  line.append(name);
+  Object.defineProperty(line, 'clientWidth', { get: () => 600 });
+  Object.defineProperty(line, 'scrollWidth', { get: () => 600 });
+  Object.defineProperty(name, 'clientWidth', { get: () => 120 });
+  Object.defineProperty(name, 'scrollWidth', { get: () => 250 });
+  fitLine(line, ['fit-split']);
+  assert.equal(line.classList.contains('fit-split'), false);
+});
+
 test('fitLine leaves a hidden line alone: it is fitted when it shows', () => {
   const line = new FakeElement('div');
   Object.defineProperty(line, 'clientWidth', { get: () => 0 });
