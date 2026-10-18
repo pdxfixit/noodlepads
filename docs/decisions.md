@@ -241,7 +241,7 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 
 | Rule | Why | Since |
 |---|---|---|
-| Each folding section of the sound sheet (Voice, Layers) is a panel with a rounded border, so a long phone page shows where one ends. | Ben, 2026-10-18: "a little more clear, the sections for such a long phone page". | 2026-10-18 |
+| Every folding section on a light sheet or dialog (the sound sheet, ⚙️ Settings, 💃 Grooves, the "…" emoji list) is a panel with a rounded border; a line of buttons between two things sits in the middle of the space. | Ben, 2026-10-18: "a little more clear… for such a long phone page"; "centered in their available space". | 2026-10-18 |
 | Pad skins: Tiles, Slam buttons, Lit pads, Switch, Spinner, Jelly, Googly eyes. Each person picks one in ⚙️ Settings → 🎨 Look, at every level, and every pad everywhere takes it. Slam's name sits on the plate under the dome. | Ben: his first idea was big round slam buttons; "the kid version could get silly". | 2026-10-16 |
 | 🧸 Kids' Pads screen has a round skin button at the top left: each tap moves to the next skin and keeps it as the person's. No words, no menu. | Ben, 2026-10-16: Kids can't open ⚙️ Settings without a grown-up's sum. | 2026-10-16 |
 | Notices float in one banner over the top of the screen, never in the page, and fade away; the newest replaces the one showing, and Undo rides in it. The take card and the 🆕 update bar stay where they are. | Ben, 2026-10-16: "notifications should not appear in the primary UI space; they should appear as a hovering, fadeaway thing over the top of the screen". | 2026-10-16 |
