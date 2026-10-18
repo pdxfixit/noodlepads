@@ -730,6 +730,9 @@ keeps its audio. A person's avatar must be exactly one emoji from the full
 list (`web/emoji-check.js`), in a backup and at the Worker; a sound's picture
 is at most 8 characters. A chosen sound
 file must be under 10 MB and 120 seconds. Rendered voices are cut at 180 s.
+A song file 🎧 From a song listens to must be under 50 MB (a 5-minute WAV), and
+only its first 15 minutes are heard: it is decoded whole, in memory
+(`web/listen-input.js`).
 
 ## Notices and Undo
 
