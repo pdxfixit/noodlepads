@@ -21,7 +21,9 @@ test('land.sh never uses sed -i, which GNU and BSD sed read differently', () => 
 test('land.sh cherry-picks in the zdiff3 style and stops when a resolver fails', () => {
   assert.match(script, /-c merge\.conflictStyle=zdiff3 cherry-pick/);
   for (const line of script.split('\n').filter((l) => /python3 tools\/resolve_/.test(l))) {
-    assert.match(line, /resolve_\w+\.py "\$wt\/\$f" \|\| return 1;/, line.trim());
+    // Either the landing stops (return 1), or a resolver that leaves a clash
+    // hands it to a person (resolve_words.py: stop_here, return 2).
+    assert.match(line, /resolve_\w+\.py "\$wt\/\$f" \|\| return 1;|if python3 tools\/resolve_\w+\.py "\$wt\/\$f"; then git -C "\$wt" add "\$f"; else stop_here [^;]+; return 2; fi/, line.trim());
   }
 });
 
