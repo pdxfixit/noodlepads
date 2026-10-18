@@ -223,3 +223,19 @@ test('the privacy policy is linked beside the version, in the footer and in Abou
   assert.doesNotMatch(html, /id="set-privacy"/, 'no "What\'s private" section in Settings');
   assert.ok(readme.includes(`(${PRIVACY_URL})`), 'README links it');
 });
+
+// 🎧 From a song (Ben, 2026-10-18): the song is heard in the browser and
+// never saved, synced or sent. Its modules keep nothing and send nothing:
+// none reaches storage, the cloud or the network; only the beats made from
+// it are saved, through the app's own paths (listen-ui.js deps).
+test('"A song 🎧 From a song listens to ... is never saved, synced or sent": its modules touch no storage, cloud or network', () => {
+  claim('never saved, synced or sent');
+  for (const name of ['listen.js', 'listen-dsp.js', 'listen-input.js', 'listen-worklet.js', 'listen-make.js', 'listen-ui.js']) {
+    const code = readFileSync(new URL(`../web/${name}`, import.meta.url), 'utf8');
+    const imports = [...code.matchAll(/from '\.\/([a-z0-9-]+)\.js'/g)].map((m) => m[1]);
+    for (const banned of ['state', 'store', 'cloud', 'cloud-api', 'cloud-sync', 'log-send', 'zip', 'backup']) {
+      assert.ok(!imports.includes(banned), `${name} imports ${banned}.js`);
+    }
+    assert.doesNotMatch(code, /\bfetch\(|XMLHttpRequest|sendBeacon|indexedDB|localStorage/, `${name} reaches no network or storage`);
+  }
+});

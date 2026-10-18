@@ -61,6 +61,12 @@ export const EVENTS = {
   // The person's level (kids, regular or advanced), once a page load, right
   // after app.open: setting.change shows only a change, this shows everyone.
   'noodlepads.level': ['level'],
+  // 🎧 From a song (listen-ui.js): listening started, from a tab, the
+  // screen, the mic or a file; and how it ended, once: its song or a beat
+  // kept (opened, or kept by closing), thrown away, or cancelled with
+  // nothing made.
+  'noodlepads.listen_start': ['source'],
+  'noodlepads.listen_end': ['source', 'seconds', 'parts', 'tempo_changes', 'outcome'],
 };
 
 export const MAX_TEXT = 60;        // a string value's length

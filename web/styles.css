@@ -4181,6 +4181,206 @@ dialog#mixer :focus-visible { outline-color: var(--board); }
 .dj-grid-row.silenced .row-emoji { opacity: 0.4; }
 .seq-row.solo .row-emoji, .dj-grid-row.solo .row-emoji { border-radius: 12px; box-shadow: 0 0 0 3px var(--led); }
 
+/* ── 🎧 From a song (listen-ui.js; mockups Ben said yes to, 2026-10-18) ──
+   A blue card at the top of 💃 Grooves, then one sheet: what to listen to
+   (light), listening (dark, the rolling bars), what it heard (light). */
+:root {
+  --listen-blue: #1F3FA8;     /* the card, the letters and ▶ on the result */
+  --listen-night: #171E3B;    /* the listening sheet */
+  --listen-well: #0E1325;     /* behind each beat's cells */
+  --listen-quiet: #3A3F5C;    /* a step with no hit */
+  --listen-ahead: #262B45;    /* a step not played yet */
+  --listen-fit: #4A8CFF;      /* a hit that fits the part */
+  --listen-odd: #2E4C8F;      /* a one-off hit */
+  --listen-hat-fit: #20C9A8;  /* the hats' own colors */
+  --listen-hat-odd: #17766A;
+}
+.listen-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 12px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--listen-blue);
+  color: #fff;
+}
+.listen-card-pic {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: var(--listen-well);
+  font-size: 2.1rem;
+}
+.listen-card-text { display: grid; flex: 1 1 auto; gap: 4px; min-width: 0; }
+.listen-card-name { font-weight: 800; font-size: 1.1rem; }
+.listen-card-about { color: var(--chalk); font-size: 0.9rem; line-height: 1.35; }
+.listen-go, .listen-stop {
+  flex: none;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--led);
+  color: var(--ink);
+  font: 800 1rem/1.1 var(--font-ui);
+}
+.groove-or { margin: 0 2px 8px; color: var(--muted); font-size: 0.85rem; }
+/* A phone: Listen takes its own line under the words. */
+@media (max-width: 480px) {
+  .listen-card { flex-wrap: wrap; gap: 12px; }
+  .listen-card-pic { width: 52px; height: 52px; font-size: 1.75rem; }
+  .listen-card-text { flex-basis: calc(100% - 64px); }
+  .listen-go { flex: 1 0 100%; }
+}
+
+dialog#listen {
+  width: min(560px, calc(100vw - 2 * var(--gutter)));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: 24px;
+  background: var(--paper);
+  color: var(--ink);
+}
+dialog#listen::backdrop { background: rgb(20 19 24 / 0.62); }
+dialog#listen :focus-visible { outline-color: var(--board); }
+dialog#listen.listening { width: min(1120px, calc(100vw - 2 * var(--gutter))); background: var(--listen-night); color: #fff; }
+dialog#listen.listening :focus-visible { outline-color: #fff; }
+dialog#listen.listening .close { background: rgb(255 255 255 / 0.12); color: #fff; }
+dialog#listen.listening .chooser-body > .sheet-head:first-child { background: var(--listen-night); box-shadow: 0 2px 0 rgb(255 255 255 / 0.12); }
+@media (max-width: 600px) {
+  dialog#listen, dialog#listen.listening { width: 100%; max-width: 100%; margin: auto 0 0; border-radius: 24px 24px 0 0; }
+}
+.listen-body .sheet-head { margin-bottom: 12px; }
+.listen-view { display: grid; gap: 10px; }
+.listen-view[hidden] { display: none; }
+.listen-view p { margin: 0; }
+.listen-ask { font-size: 1rem; }
+.listen-error { padding: 10px 12px; border-radius: 12px; background: #FCE8E6; color: #8C1D18; font-weight: 700; }
+
+/* 1 · What to listen to: big choices, a file one being its picker's label. */
+.listen-sources { display: grid; gap: 10px; }
+.listen-source {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 12px 14px;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.listen-source:first-child { border: 3px solid var(--listen-blue); background: #EEF1FC; }
+.listen-source:focus-within { outline: 3px solid var(--board); outline-offset: 2px; }
+.listen-source input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.listen-source-pic { flex: none; width: 40px; font-size: 1.9rem; text-align: center; }
+.listen-source-text { display: grid; gap: 3px; min-width: 0; }
+.listen-source-name { font-weight: 800; font-size: 1.05rem; }
+.listen-source-about { color: var(--muted); font-size: 0.85rem; line-height: 1.35; }
+.listen-how { padding: 12px 14px; border-radius: 14px; background: var(--chalk); font-size: 0.85rem; line-height: 1.45; }
+.listen-private { padding: 0 2px; color: var(--muted); font-size: 0.85rem; line-height: 1.45; }
+
+/* 2 · Listening: dark, the rolling bars. */
+.listen-top { display: flex; align-items: center; gap: 14px; }
+.listen-clock { display: inline-flex; flex: 1 1 auto; align-items: center; gap: 8px; font-weight: 800; }
+.listen-dot { width: 12px; height: 12px; border-radius: 6px; background: var(--record); }
+.listen-stop { background: var(--record); color: #fff; padding: 0 22px; }
+.listen-parts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.listen-parts-label { color: var(--chalk); font-size: 0.9rem; }
+.listen-chips { display: contents; }
+.listen-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--chalk-edge);
+  border-radius: 16px;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+.listen-chip.now { border-color: var(--led); background: var(--led); color: var(--ink); }
+.listen-feel { margin-left: auto; font-weight: 800; }
+.listen-wait { color: var(--chalk); }
+.listen-rows { display: grid; gap: 14px; }
+.listen-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px; }
+.listen-row-head { display: grid; grid-template-columns: auto 1fr; align-content: center; column-gap: 10px; }
+.listen-row-pic { grid-row: span 2; font-size: 1.6rem; }
+.listen-row-name { font-weight: 800; }
+.listen-row-sound { color: var(--chalk); font-size: 0.75rem; }
+.listen-lines { display: grid; gap: 6px; }
+.listen-line { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 10px; }
+.listen-line[hidden] { display: none; }
+.listen-line.oldest { opacity: 0.55; }
+.listen-line-label { color: var(--chalk); font-weight: 800; font-size: 0.75rem; white-space: nowrap; }
+.listen-line-label .ll-short { display: none; }
+.listen-bar { display: flex; gap: 8px; }
+.listen-beat { display: flex; flex: var(--n, 4) 1 0; gap: 4px; min-width: 0; padding: 4px; border-radius: 10px; background: var(--listen-well); }
+.listen-bar .cell { flex: 1 1 0; min-width: 0; height: 26px; }
+.cell { display: inline-block; border-radius: 7px; background: var(--listen-quiet); }
+.cell.vn { background: var(--listen-ahead); }
+.cell.v1 { background: var(--listen-odd); }
+.cell.v2 { background: var(--listen-fit); }
+.listen-row[data-row="hat"] .cell.v1 { background: var(--listen-hat-odd); }
+.listen-row[data-row="hat"] .cell.v2 { background: var(--listen-hat-fit); }
+.cell.now { outline: 3px solid #fff; outline-offset: -3px; }
+.listen-change { padding: 10px 14px; border-radius: 12px; background: var(--led); color: var(--ink); font-size: 0.9rem; }
+.listen-key { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; color: var(--chalk); font-size: 0.8rem; }
+.listen-key-item { display: inline-flex; align-items: center; gap: 6px; }
+.listen-key .cell { width: 16px; height: 16px; border-radius: 5px; }
+/* A phone: two bars per instrument, the name above them, and small pills
+   (nothing is tapped while it listens). */
+@media (max-width: 599px) {
+  .listen-row { grid-template-columns: minmax(0, 1fr); gap: 5px; }
+  .listen-row-head { grid-template-columns: auto auto 1fr; align-items: center; column-gap: 8px; }
+  .listen-row-pic { grid-row: auto; font-size: 1.25rem; }
+  .listen-line[data-line="0"] { display: none; }
+  .listen-line { grid-template-columns: 24px minmax(0, 1fr); gap: 6px; }
+  .listen-line-label .ll-long { display: none; }
+  .listen-line-label .ll-short { display: inline; }
+  .listen-bar { gap: 4px; }
+  .listen-beat { gap: 2px; padding: 3px; border-radius: 7px; }
+  .listen-bar .cell { height: 22px; border-radius: 4px; }
+  .cell.now { outline-width: 2px; outline-offset: -2px; }
+  .listen-feel { margin-left: 0; flex-basis: 100%; }
+}
+
+/* 3 · What I heard. */
+.listen-sentence { font-size: 1rem; line-height: 1.45; }
+.listen-cards { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.listen-card-part { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--chalk); }
+.listen-letter {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--listen-blue);
+  color: #fff;
+  font: 900 1.25rem/1 var(--font-display);
+}
+.listen-part-text { display: grid; flex: 1 1 auto; gap: 2px; min-width: 0; }
+.listen-part-name { font-weight: 800; overflow-wrap: anywhere; }
+.listen-part-detail { color: var(--muted); font-size: 0.85rem; }
+.listen-hear { flex: none; width: 44px; height: 44px; border: 0; border-radius: 22px; background: var(--listen-blue); color: #fff; font-size: 1rem; }
+.listen-sounds { color: var(--muted); font-size: 0.85rem; line-height: 1.45; }
+.listen-actions { display: grid; gap: 8px; margin-top: 4px; }
+.listen-actions[hidden] { display: none; }
+.listen-as-song, .listen-again { width: 100%; background: var(--led); color: var(--ink); box-shadow: 0 5px 0 #C9A93A; }
+.listen-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.listen-btn { min-height: 48px; padding: 0 10px; border: 1px solid var(--chalk-edge); border-radius: 14px; background: var(--paper); color: var(--ink); font: 800 0.95rem/1.15 var(--font-ui); }
+.listen-btn.primary { min-height: 48px; border: 0; background: var(--led); color: var(--ink); box-shadow: none; font-size: 0.95rem; padding: 0 10px; }
+.listen-throw.armed { border-color: #B3261E; background: #B3261E; color: #fff; }
+
 /* ── 🧸 Kids (ADR 0019; kids.js) ─────────────────────────────────────────
    The screens a person on the Kids level sees. Pictures only, big shapes,
    bright fills, a bounce on every tap. The whole screen is one fixed frame:

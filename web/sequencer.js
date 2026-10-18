@@ -2632,7 +2632,9 @@ export function createSequencer(deps) {
   // second player. One thing plays at a time: the beat stops (a groove tried
   // in the keys view stays on screen) and a song stops. ■, another ▶, picking
   // a groove or closing the dialog ends it.
-  let sample = null;   // {id, voices: Map(row → list), timer}
+  // 🎧 From a song's ▶ on each part plays a beat of its own the same way
+  // (hearBeat): one thing at a time, and its `onEnd` hears when it stops.
+  let sample = null;   // {id, voices: Map(row → list), timer, onEnd}
   function showHearKey(b) {
     const g = GROOVES.find((x) => x.id === b.dataset.hear);
     const on = sample?.id === b.dataset.hear;
@@ -2646,24 +2648,28 @@ export function createSequencer(deps) {
     clearTimeout(sample.timer);
     const now = audio.context().currentTime;
     for (const list of sample.voices.values()) for (const v of list) fadeStop(v, now);
+    const { onEnd } = sample;
     sample = null;
     showHearKeys();
+    onEnd?.();
   }
-  async function playSample(g) {
-    const again = sample?.id === g.id;
+  // Plays one pass of a beat (`raw`, as stored), at most `seconds` of it,
+  // as `id`; the same id again stops it.
+  async function hearBeat(id, raw, { seconds: most = SAMPLE_SECONDS, onEnd } = {}) {
+    const again = sample?.id === id;
     stopSample();
     if (again) return;   // ■: the same ▶ again stops it
     if (playing()) stop({ keepTrial: true });
     deps.onPlay?.();     // a song playing stops
-    const mine = { id: g.id, voices: new Map(), timer: 0 };
+    const mine = { id, voices: new Map(), timer: 0, onEnd };
     sample = mine;
     showHearKeys();
-    const plan = beatPlan(grooveBeat(g, personId, hasClip));
+    const plan = beatPlan(raw);
     await prepareBeats([plan.pattern]);
     if (sample !== mine) return;   // stopped while its sounds loaded
     const ctx = audio.wake();
     const t0 = ctx.currentTime + 0.05;
-    const seconds = sampleSeconds(plan.seconds);
+    const seconds = Math.min(plan.seconds, most);
     for (const h of plan.hits) {
       if (h.time >= seconds) continue;
       if (!mine.voices.has(h.row)) mine.voices.set(h.row, []);
@@ -2672,6 +2678,7 @@ export function createSequencer(deps) {
     logEvent('beat', { action: 'sample', bpm: plan.pattern.bpm, bars: plan.pattern.bars, seconds: Math.round(seconds * 10) / 10 });
     mine.timer = setTimeout(() => { if (sample === mine) stopSample(); }, (seconds + 0.4) * 1000);
   }
+  const playSample = (g) => hearBeat(g.id, grooveBeat(g, personId, hasClip));
   function showFold(sec, open) {
     sec.head.setAttribute('aria-expanded', String(open));
     sec.head.querySelector('.emoji-all-caret').textContent = open ? '▾' : '▸';
@@ -2716,6 +2723,7 @@ export function createSequencer(deps) {
     el.grooveNote.textContent = '';
     showGrooveHow();
     renderGrooves();
+    deps.onGroovesOpen?.();   // 🎧 From a song's card shows for this person's level
     openDialog(el.grooves, from ? { returnTo: () => from } : undefined);
   }
 
@@ -3254,7 +3262,9 @@ export function createSequencer(deps) {
   return { setPerson, show, tempo: () => shape().bpm, render, play, stop, playing, grid, beatClock, rowFor, addRowFor, addSnaps, snapshot, restore, setClick, beat,
     cyclePill, clearRow, dropRow, toggleRing, ringTool, openLibrary, metronome, clickAt, setGrow, setTempo, setBars, setSignature, signature: () => sigOf(), advanced: () => advanced,
     beatPlan, prepareBeats, soundHit, thumbnail, levelOf, setLevel, putLevel, toggleMute, levelState,
-    trying, putTrialAway, keep, onScratch, sampling: () => sample?.id ?? null,
+    trying, putTrialAway, keep, onScratch, sampling: () => sample?.id ?? null, hearBeat, stopHearing: stopSample,
+    // A beat in 🗂️ My beats opened by id (🎧 From a song's 🥁 Open part A); false when it is not there.
+    openSaved: (id) => { const saved = library().find((b) => b.id === id); if (saved) openBeat(cleanPattern(saved, personId), { resume: false }); return !!saved; },
     lockChips, queuedBeat: () => (queued ? { ...queued } : null), openMixer, toggleSolo, setFx: setRowFx, setMaster, setMasterFx,
     openRoll, rollRow: () => roll?.row() ?? -1,
     toggleMove: (opts) => move?.toggle(opts), endMove: () => move?.end(), moving: () => !!move?.on() };

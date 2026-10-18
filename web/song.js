@@ -1316,5 +1316,13 @@ export function createSong(deps) {
   }
   el.sound.addEventListener('click', saveAsSound);
 
-  return { setPerson, render, play, stop, playing, song: () => song };
+  // A song in 🗂️ My songs opened by id (🎧 From a song's 🎼 Open it as a
+  // song); false when it is not there.
+  function openSaved(id) {
+    const saved = songs().find((x) => x.id === id);
+    if (saved) openSong(clean(saved));
+    return !!saved;
+  }
+
+  return { setPerson, render, play, stop, playing, song: () => song, openSaved };
 }

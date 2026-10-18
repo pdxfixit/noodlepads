@@ -19,12 +19,14 @@ export { FRAME };
 // The ways to listen, in the order they are offered.
 export const KINDS = ['tab', 'screen', 'mic', 'file'];
 
-// A song file: at most this big (a 5-minute WAV is about 50 MB; an MP3 of
-// the same song about 5), and only its first MAX_SONG_SECONDS are heard. The
-// browser decodes the whole file into memory first, about 21 MB a minute of
-// stereo: a 5-minute song takes about 100 MB. The size cap does not bound a
-// long compressed file (a 50 MB MP3 is near an hour, over 1 GB decoded).
-export const MAX_SONG_FILE_BYTES = 50 * 1024 * 1024;
+// A song file: at most this big (an MP3 of a 5-minute song is about 5 MB, a
+// WAV of it about 50, so a long WAV needs making an MP3 first), and only its
+// first MAX_SONG_SECONDS are heard. The browser decodes the whole file into
+// memory first, about 21 MB a minute of stereo: a 5-minute song takes about
+// 100 MB. 20 MB, not more (the lead's call, 2026-10-18): a 20 MB MP3 is
+// about 20 minutes, some 400 MB decoded, while a 50 MB one was near an hour,
+// over 1 GB, enough to crash a phone's tab.
+export const MAX_SONG_FILE_BYTES = 20 * 1024 * 1024;
 export const MAX_SONG_SECONDS = 15 * 60;
 // The rate a file is decoded at: hats reach 15 kHz, and 44.1 kHz keeps them.
 export const FILE_RATE = 44100;

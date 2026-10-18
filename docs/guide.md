@@ -8,6 +8,7 @@ things in one line per control.
 - [Pads and the sound sheet](#pads-and-the-sound-sheet)
 - [Wide screens](#wide-screens)
 - [🧸 Kids](#-kids)
+- [🎧 From a song](#-from-a-song): a song's beat, heard live
 - [Help](#help) and [Settings](#settings)
 - [How sounds are stored](#how-sounds-are-stored): the kit, Edit sounds, voices, the keys, Beats, Song, people, backups
 - [Cloud profiles](#cloud-profiles) and [For grown-ups](#for-grown-ups)
@@ -228,6 +229,81 @@ For the tests and `just look`, the app's test hook `noodleFirstSteps = false`
 (`web/firsts.js`) turns every first step off, so a fresh device there opens on
 the app as before. The `welcome`, `welcome-stage` and `welcome-kids-stage` look
 views turn them on, `tip-beats` shows a tip, `hint-dots` the dots, `kids-hand` the 👆 hand and `nudge` the level-up nudge.
+
+## 🎧 From a song
+
+A song's beat, heard live (`docs/design/beat-from-a-song.md`). A blue card at
+the top of 💃 Grooves, 🎧 From a song with **Listen**, for Regular and
+Advanced; 🧸 Kids never sees it, even with a grown-up let into the regular app
+(its level hides it whenever Grooves opens). Under the card, "Or start from
+one of these:" leads to the grooves. Listen closes Grooves and opens one sheet
+(`web/listen-ui.js`; its pure parts are `web/listen-make.js`):
+
+1. **What to listen to.** The ways this device can listen
+   (`web/listen-input.js` `sources()`), as large choices: 🗂️ Another tab
+   (Chrome or Edge on a computer), 🖥️ Everything on this computer (Windows),
+   🎤 The microphone, 📁 A song file (through the browser's file picker,
+   under 20 MB). A phone shows only 🎤 and 📁, with a line that another tab
+   needs Chrome or Edge on a computer; a computer gets a line on the
+   browser's own question (leave Also share tab audio ticked). Last: "The
+   song stays on this device and is never saved. Only the beat is kept." If
+   the browser says no, the reason shows over the choices.
+2. **Listening** (a dark sheet): ● and the time (a file adds how far it has
+   read), ■ Stop in red, the parts so far as chips in the order heard (A · 92
+   BPM, B · 92 BPM, A again, then the playing one, yellow, "· listening…"),
+   and the tempo, signature and swing. Then a row each for the kick, snare
+   and hi-hat, its last 3 bars one per line (2 on a phone under 600 px), each
+   labelled with its part and bar ("C · bar 22"; the bar alone on a phone):
+   new bars come in at the bottom and the oldest roll off the top. A hit that
+   fits the part is bright, a one-off dim, the step just heard has a white
+   ring, steps not played yet are darker; the hats have their own teal. A
+   tempo change shows a yellow line ("Sped up at bar 22. 92 → 120 BPM, so part
+   C started there"). Before the tempo is found it says "Listening…" with the
+   tempo settling ("About 96 BPM…"). The screen is drawn from the listener's
+   `snapshot()` at most once an animation frame, only when new sound came,
+   and changes only the cells that changed. At a tempo change the listener's
+   bar count can step back by one and it has no bars while it finds the new
+   tempo: the bars shown stay until the new part's come. Each row's closest
+   sound is picked at ■ Stop (the hits' fingerprints come with `finish()`).
+3. **What I heard**, at ■ Stop (or when sharing stops in the browser, or the
+   file ends): a sentence ("1:52 of music, in 3 parts. 4/4 at 92 BPM, then 120
+   from 0:52. The hats swing a lot (Shuffle)."), a card per part with its
+   letter, name, tempo, bars and how often heard, and ▶ (one pass, at most
+   12 s, played as a groove's sample is), the sounds picked, then 🎼 Open it as
+   a song (two or more parts), 🥁 Open part A and 🗑️ Throw away (asks first:
+   the first tap turns it red, the second deletes everything it made).
+   Closing the sheet keeps what it made. If no step of any part is on: "I
+   couldn't hear a beat in that", 🎧 Try again, and nothing is saved.
+
+**What it makes, at ■ Stop.** Each part with hits becomes a beat in 🗂️ My
+beats, named one fun name and the part's letter ("Zippy Noodle · A", a name
+none of whose lettered names is taken, `names.js` `partNames`), with its
+tempo, time signature, swing, bars and a row for each instrument that hits.
+Each row gets the app's closest sound by fingerprint (`closestSound`) from
+the drum-like sounds of Drums, Hip hop, Hand drums and Effects
+(`ROW_SOUNDS`: a kick from Kick, Dusty kick, Boom, Taiko…), the kit's clips
+decoded once a visit; the plain Kick, Snare or Hi-hat when a print is
+missing. With two or more parts it also makes a 🎼 Song named with the fun
+name alone: its parts' beats in song order on the first lane, each at its
+first bar and repeated over its stretch (never into the next), at the first
+part's tempo, with a tempo mark where the tempo changed (ADR 0031). They are
+saved as every beat and song is, so they sync, back up and show in the
+chips and the song strip. Opening goes to 🎼 Song with the song open, or to
+Beats with part A open.
+
+**Nothing of the song is kept.** Frames go from the capture into the
+listener and are dropped; only the hits and their timing are kept, and only
+the beats are saved. Usage events: `noodlepads.listen_start` (its source)
+and `noodlepads.listen_end` once (source, seconds, parts, tempo changes and
+the outcome: `song` or `beat` for what it kept, opened or kept by closing,
+`thrown`, or `cancelled` with nothing made). Problem reports log `listen`
+entries (start, stop, made, and how it ended), never the song or a name.
+
+For the tests and `just look`, `listenEnv` in `web/listen-ui.js` holds the
+inputs, the listener, the animation frame and the kit's prints, so a made-up
+capture and listener stand in: the `listen-card`, `listen-sources`,
+`listen-phone`, `listen-finding`, `listen-live`, `listen-result` and
+`listen-nothing` views show each state.
 
 ## Help
 
@@ -730,7 +806,7 @@ keeps its audio. A person's avatar must be exactly one emoji from the full
 list (`web/emoji-check.js`), in a backup and at the Worker; a sound's picture
 is at most 8 characters. A chosen sound
 file must be under 10 MB and 120 seconds. Rendered voices are cut at 180 s.
-A song file 🎧 From a song listens to must be under 50 MB (a 5-minute WAV), and
+A song file 🎧 From a song listens to must be under 20 MB (a 20-minute MP3; a long WAV is made an MP3 first), and
 only its first 15 minutes are heard: it is decoded whole, in memory
 (`web/listen-input.js`).
 
