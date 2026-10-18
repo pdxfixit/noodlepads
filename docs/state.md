@@ -70,6 +70,7 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 
 - Real sound clips, phone and tablet tries, and the v2 voices question: `TODO.md` "Ben does".
 - Offers he has not answered: `TODO.md` "Offered, not approved".
+- 🎧 From a song: designed and mocked up with Ben (2026-10-18, `docs/design/beat-from-a-song.md`); building waits on his go.
 
 ## Known quirks
 
