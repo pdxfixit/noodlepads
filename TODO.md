@@ -57,6 +57,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
+- **🎧 From a song** (Ben, 2026-10-18: "go on all streams"; `docs/design/beat-from-a-song.md`, decisions.md rows marked to build). Streams: the phone beat bar; tempo marks in 🎼 Song (ADR); the listener (`web/listen.js`, pure); capture (tab, screen, mic, file) and the tab-audio check page; then the screens that join them. Extras: usage events for listening (telemetry repo's `events.toml`), and flarepress's `just secret` recipe.
+
 - **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (`docs/design/more-kinds-of-music.md`; decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups, the emoji rule's exceptions). The grooves, 🧸 Kids' pentatonic toy keys and instruments' phase 1 are built; next:
   1. Instruments, phase 3 (ADR 0030; the pickers everywhere, 🧸 Kids' instrument button, the grooves' instruments and chips, Soca and Chiptune are built): one ready-made key layout per family in ✏️ Edit keys.
 
@@ -83,9 +85,5 @@ Other work:
 
 Agents suggested these; nothing happens until Ben says yes.
 
-- **🎧 From a song** (Ben, 2026-10-17/18): listen to a song (Spotify's web player in another tab first; also the computer's sound, the mic or a file) and write its beat live, part by part, into beats and a 🎼 Song with tempo marks. Ben answered every design question and said yes to the mockups (`docs/design/beat-from-a-song.md`, decisions.md rows marked to build). About 10½–12 days in 7 steps that land one by one; step 1 is a ½-day check that Chrome hands over Spotify's tab audio. Waits on Ben's go to build.
-
 - **Spoken prompts in 🧸 Kids** (a recorded "tap a pad!" for kids who can't read yet; the clip would be public). Ben, 2026-10-16: "Maybe… some of it should just be found by poking. I'm not closed to it."
-
-- **A `just secret <domain> NAME` recipe in flarepress** (10 min): `wrangler secret put` with flarepress's own Keychain auth, so a Worker secret is set the same way every site's D1 is, not by a hand-typed `npx wrangler` line.
 

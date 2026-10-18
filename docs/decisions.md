@@ -244,7 +244,9 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | It transcribes live, in rolling bars: each instrument shows its last 3 bars (2 on a phone), a hit that fits the part bright, a one-off dim. It listens until ■ Stop. (to build) | Ben: "we don't always know when the repeat is going to happen". | 2026-10-18 |
 | A part ends where the tempo or the pattern changes. Each part becomes a beat, a part that comes back is reused, and two or more parts also make a 🎼 Song with tempo marks. (to build) | Ben: music changes tempo, and he wants to learn about that. | 2026-10-18 |
 | It writes kick, snare and closed hat rows, each with the app's closest sound, plus tempo, time signature and swing. Triplets, polyrhythm and a row for other hits wait. (to build) | Ben: "not looking to boil the ocean; just be thorough in what we do complete". | 2026-10-18 |
+| 🎧 From a song ships once its synthesized tests pass; Ben then tries real songs and reports what it gets wrong. (to build) | Ben, 2026-10-18: agents can't test on real songs in a public repo. | 2026-10-18 |
 | A 🎼 Song can change tempo with marks on its timeline (from a bar on, every lane plays at the new tempo). (to build) | Ben chose marks over each block keeping its beat's tempo: bars stay lined up. | 2026-10-18 |
+| A tempo mark shows as a BPM chip above its bar in 🎼 Song's ruler. With Advanced, tapping the song's tempo offers ＋ Tempo change (a bar and a BPM), and a chip taps to change or remove (asks first, Undo). (to build) | Ben, 2026-10-18: everyone hears marks; only Advanced edits them. | 2026-10-18 |
 
 ## Screens
 

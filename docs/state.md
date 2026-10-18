@@ -55,6 +55,7 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 
 ## In flight
 
+- 🎧 From a song (TODO "Agents do", 2026-10-18): building, in parallel streams (`docs/design/beat-from-a-song.md`). Nothing of it is live yet.
 - More kinds of music (TODO "Agents do", 2026-10-17): the design review is done (`docs/design/more-kinds-of-music.md`) and Ben answered it. Built: the grooves (with real instruments and "who plays" chips), 🧸 Kids' pentatonic toy keys and round instrument button, and instruments' phases 1 and 2 (the picker on Pads, the sound chooser, 🎹 Add a tune and the roll, ✏️ Edit keys and 👆 bands, ADR 0030). Next: one ready-made key layout per family.
 - Noodle Pads 1.0 (2026-10-13): this repo, `pdxfixit/noodlepads` (public), started from one commit; the old repo is archived. Live from here.
 - Player metrics (ADR 0016, narrowed by ADR 0027), for people in the cloud: each device and each make/open/pull/push/share/PIN/wrong-PIN event with its country (nothing finer, nothing of the IP), in `worker/metrics.js`. Migration 004 (country only) is applied (2026-10-16). D1 keeps 14 days (a device's row 90). Live since 2026-10-15 (`6ab2630`, migration 003 applied). **The feature-use counts and visits are retired (ADR 0027):** the app stopped counting and sending them (`3e00f1c`, live 2026-10-16), the Worker stopped keeping them, and Ben applied migration 005, which dropped both tables the same day, before any harvest had copied them (52 and 25 rows lost). `perf.latency` and `noodlepads.play` events replace what they answered, and `app.open`'s `browser`, `noodlepads.level` and `screen.view`'s `to` carry what the old devices and visits summaries said of browser, level and screen (all in `events.toml`; not yet seen on live data). `activity` and `devices` have not been harvested yet: the runner's `noodlepads` job has run once, the import. The telemetry runner (pdxfixit/telemetry) is the only harvester (daily, flarepress's `tools/harvest.py` on `site/`); the Mac reads it with `telemetry.py pull`. `just cloud-stats` reads its store as `telemetry.py pull` leaves it (`~/.local/state/telemetry/telemetry.sqlite3`, read only). Not yet seen on live data.
@@ -70,7 +71,6 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 
 - Real sound clips, phone and tablet tries, and the v2 voices question: `TODO.md` "Ben does".
 - Offers he has not answered: `TODO.md` "Offered, not approved".
-- 🎧 From a song: designed and mocked up with Ben (2026-10-18, `docs/design/beat-from-a-song.md`); building waits on his go.
 
 ## Known quirks
 
