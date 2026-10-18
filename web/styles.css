@@ -1445,13 +1445,22 @@ dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
 }
 .tempo-chip-bpm { padding: 4px 7px; border-radius: 999px; background: #fff; color: var(--ink); font: 800 0.78rem/1 var(--font-ui); }
 button.tempo-chip:focus-visible { outline: 3px solid var(--led); outline-offset: -3px; }
-/* With Advanced, the deck's tempo is a button that opens 🎼 Tempo. */
-.song-tempo-open { flex: 1 1 auto; min-height: 52px; gap: 6px; font-weight: 800; }
+/* With Advanced, the deck's tempo is a button that opens 🎼 Tempo: "110 BPM
+   · 2 changes" on one line, or the changes under the tempo on a phone, so
+   ➖ ➕ stay inside the deck at 320 px. */
+.song-tempo-open { flex: 1 1 auto; min-width: 0; min-height: 52px; padding: 4px 8px; font-weight: 800; line-height: 1.15; white-space: normal; }
 .song-tempo-open[hidden], .song-tempo-field[hidden] { display: none; }
+.tempo-open-bpm, .tempo-open-marks { display: inline-block; white-space: nowrap; }
 .tempo-open-marks { font-size: 0.85rem; font-weight: 700; opacity: 0.85; }
+.tempo-open-marks::before { content: '·'; margin: 0 6px; }
+@media (max-width: 420px) {
+  .tempo-open-marks { display: block; }
+  .tempo-open-marks::before { content: none; }
+}
 /* 🎼 Tempo: the tempo from bar 1, each tempo change, and one being set. */
 .tempo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; color: var(--ink); font-weight: 800; }
-.tempo-row > span:first-child { flex: 0 1 6.5em; min-width: 0; white-space: nowrap; }
+/* Every label as wide as the longest ("From bar 1"), so the fields line up. */
+.tempo-row > span:first-child { flex: none; width: 5.6em; white-space: nowrap; }
 .tempo-row .set-field { flex: none; width: 4.5em; min-height: 48px; padding: 0 6px; text-align: center; }
 .tempo-marks { display: grid; gap: 8px; margin: 0 0 16px; padding: 0; list-style: none; }
 .tempo-marks[hidden] { display: none; }
