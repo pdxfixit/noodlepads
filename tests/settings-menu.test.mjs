@@ -126,12 +126,18 @@ test('the footer how-tos are worded for the device: tap and hold on a touch scre
   assert.doesNotMatch(screenHint('beats', false, false), /again for a loud/, 'one tap is on or off now');
 });
 
+// Waits until `done()` holds, up to `limit` ms: a fixed wait loses on a busy
+// machine (2026-10-18, a full CPU made a 60 ms margin miss).
+const until = async (done, limit = 3000) => {
+  for (const end = Date.now() + limit; !done() && Date.now() < end;) await new Promise((r) => setTimeout(r, 20));
+};
+
 test('notices fade away by themselves: a bar hides, a line empties; a finger on it holds it', async () => {
   const { fadeAway, FADE_MS } = await import('../web/ui.js');
   const bar = document.createElement('div');
   bar.hidden = false;
   fadeAway(bar, 30);
-  await new Promise((r) => setTimeout(r, 30 + FADE_MS + 60));
+  await until(() => bar.hidden);
   assert.equal(bar.hidden, true);
   const line = document.createElement('p');
   line.textContent = 'Saved.';
@@ -140,7 +146,7 @@ test('notices fade away by themselves: a bar hides, a line empties; a finger on 
   await new Promise((r) => setTimeout(r, 30 + FADE_MS + 60));
   assert.equal(line.textContent, 'Saved.');
   line.dispatch('pointerleave');                      // and the wait starts again
-  await new Promise((r) => setTimeout(r, 30 + FADE_MS + 60));
+  await until(() => line.textContent === '');
   assert.equal(line.textContent, '');
 });
 
