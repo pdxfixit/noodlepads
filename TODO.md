@@ -57,6 +57,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
+- **⌨️ Keys recording** (Ben, 2026-10-18): (1) while ● Record runs, a new sound takes a row with no hits before a new row is added; (2) the playhead lags behind the click track while recording (seen at desktop width, 16 rows, 4 bars): find the cause and fix it.
+
 - **🎧 From a song** (Ben, 2026-10-18: "go on all streams"; `docs/design/beat-from-a-song.md`, decisions.md rows marked to build). Streams: the phone beat bar; tempo marks in 🎼 Song (ADR); the listener (`web/listen.js`, pure); capture (tab, screen, mic, file) and the tab-audio check page; then the screens that join them. Extras: usage events for listening (telemetry repo's `events.toml`), and flarepress's `just secret` recipe.
 
 - **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (`docs/design/more-kinds-of-music.md`; decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups, the emoji rule's exceptions). The grooves, 🧸 Kids' pentatonic toy keys and instruments' phase 1 are built; next:
