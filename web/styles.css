@@ -376,6 +376,24 @@ main {
   box-shadow: 0 0 0 4px var(--bed), 12px 0 0 var(--bed), -12px 0 0 var(--bed);
 }
 .pad-group { background: color-mix(in srgb, #fff 8%, var(--bed)); }
+/* A group and its pads in one box with a light stroke round it (Ben,
+   2026-10-18: like the light dialogs' bordered panels). The stroke is an
+   outline, so it takes no room: the pads inside lay out exactly as the
+   bed's own, the same columns at every pad size. Inside it a stuck header
+   covers only out to the stroke. */
+.pad-fold {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: inherit;
+  justify-content: inherit;
+  column-gap: inherit;
+  row-gap: 16px;
+  margin: 6px 0;
+  border-radius: 14px;
+  outline: 2px solid rgb(255 255 255 / 0.22);
+  outline-offset: 5px;
+}
+.pad-fold > .pad-group, .pad-fold > .pad-group-row { box-shadow: 0 0 0 5px var(--bed); }
 .pad-group[aria-expanded="true"] { background: color-mix(in srgb, #fff 14%, var(--bed)); }
 .pad-group-caret { width: 1em; }
 .pad-group-count { margin-left: auto; padding: 2px 10px; border-radius: 999px; background: rgb(255 255 255 / 0.15); font-size: 0.9rem; }

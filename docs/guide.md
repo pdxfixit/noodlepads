@@ -64,7 +64,9 @@ plays it the same. Like Louder it keeps the sound's own level, its peaks held
 under full scale by the voices' soft ceiling. Within 1 dB already, the banner
 says so and nothing is added; ↩️ Undo in the banner takes it back. Every
 folding section on a light sheet or dialog (the sheet's Voice and Layers,
-⚙️ Settings, 💃 Grooves, the "…" emoji list) is a bordered panel. 🧩 **Chop into pads** cuts it where
+⚙️ Settings, 💃 Grooves, the "…" emoji list) is a bordered panel, and on 🔊
+Pads each group sits with its pads inside a light outline (`.pad-fold`; an
+outline takes no room, so the pads keep their columns). 🧩 **Chop into pads** cuts it where
 each sound starts and makes each piece a new pad ("Baby Burp", "Burp Jr.").
 The **pad size slider** at the top left of the pads makes them smoothly
 smaller (more on a line) or bigger (fewer). Its ends are the smallest and
