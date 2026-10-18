@@ -836,10 +836,14 @@ export function createSong(deps) {
     if (el.stepUndo.hidden) el.addLane.focus();
   });
 
-  // The song's tempo: typed, or ➖ ➕ by 5.
+  // The song's tempo: typed (on the deck, or in 🎼 Tempo), or ➖ ➕ by 5.
+  // Both fields show the tempo kept, so a number out of range typed with
+  // Enter (the field keeps focus) shows what it became.
   function setTempo(v) {
     const t = cleanTempo(v);
-    if (t === song.tempo) { el.tempo.value = String(t); return; }
+    el.tempo.value = String(t);
+    el.tempoBase.value = String(t);
+    if (t === song.tempo) return;
     stop();
     edit(() => { song.tempo = t; });
     render();
