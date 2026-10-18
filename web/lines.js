@@ -29,7 +29,8 @@ function apply(line, classes, n) {
 // refits it.
 export function fitLine(line, classes, watch = line) {
   // The line, and each thing on it: a key can overflow inside its own box.
-  const over = (e) => e.scrollWidth > e.clientWidth + 1;
+  // A text field scrolls its own text (a long beat name), so it never counts.
+  const over = (e) => e.tagName !== 'INPUT' && e.scrollWidth > e.clientWidth + 1;
   const fits = () => !over(line) && ![...line.children].some(over);
   // A line taken off the page for good (a redrawn card) stops being watched.
   let ro = null;
