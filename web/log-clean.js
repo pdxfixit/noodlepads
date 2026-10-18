@@ -142,7 +142,7 @@ export const RULES = {
   // 👋 The welcome (welcome.js, ADR 0028): shown, the level a card set, skipped.
   welcome: { shown: bool, level: oneOf(['kids', 'regular', 'advanced']), skipped: bool },
   backup: { saved: bool, loaded: bool, sounds: num, beats: num, bytes: num, settings: num, already: num, skipped: num, error: text },
-  song: { action: oneOf(['play', 'stop', 'sound', 'keep', 'new']), replaced: bool, slots: num, parts: num, lanes: num, blocks: num, seconds: num },
+  song: { action: oneOf(['play', 'stop', 'sound', 'keep', 'new', 'tempo']), replaced: bool, slots: num, parts: num, lanes: num, blocks: num, marks: num, seconds: num },
   render: { voice: chain, amount: nums, seconds: num, out: num, ms: num },
   storage: { opened: bool, late: bool, waiting: bool },
   setting: { key: oneOf(Object.keys(SETTING_VALUES)), value: settingValue, was: settingValue },

@@ -1421,6 +1421,58 @@ dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
   pointer-events: none;
 }
 .song-playhead[hidden] { display: none; }
+/* Tempo marks (ADR 0031): a row over the ruler, only when the song has
+   some, with a small BPM chip above each mark's bar. The chip's button is a
+   whole bar wide and 44 px tall; the pill inside it is what shows. */
+.song-lanes { --marks-h: 44px; }
+.song-lanes.has-marks { max-height: calc(var(--marks-h) + var(--ruler-h) + 4 * var(--lane-h) + 12px); }
+.song-marks { position: sticky; top: 0; z-index: 3; display: flex; height: var(--marks-h); background: var(--deck); }
+.has-marks .song-ruler { top: var(--marks-h); }
+.marks-track { position: relative; flex: none; width: calc(var(--bars) * var(--bar-w)); }
+.tempo-chip {
+  position: absolute;
+  top: 0;
+  left: calc(var(--at) * var(--bar-w));
+  display: grid;
+  place-items: center start;
+  width: var(--bar-w);
+  height: var(--marks-h);
+  padding: 0 0 0 2px;
+  border: 0;
+  border-left: 2px solid #fff;
+  background: transparent;
+  color: var(--ink);
+}
+.tempo-chip-bpm { padding: 4px 7px; border-radius: 999px; background: #fff; color: var(--ink); font: 800 0.78rem/1 var(--font-ui); }
+button.tempo-chip:focus-visible { outline: 3px solid var(--led); outline-offset: -3px; }
+/* With Advanced, the deck's tempo is a button that opens 🎼 Tempo. */
+.song-tempo-open { flex: 1 1 auto; min-height: 52px; gap: 6px; font-weight: 800; }
+.song-tempo-open[hidden], .song-tempo-field[hidden] { display: none; }
+.tempo-open-marks { font-size: 0.85rem; font-weight: 700; opacity: 0.85; }
+/* 🎼 Tempo: the tempo from bar 1, each tempo change, and one being set. */
+.tempo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; color: var(--ink); font-weight: 800; }
+.tempo-row > span:first-child { flex: 0 1 6.5em; min-width: 0; white-space: nowrap; }
+.tempo-row .set-field { flex: none; width: 4.5em; min-height: 48px; padding: 0 6px; text-align: center; }
+.tempo-marks { display: grid; gap: 8px; margin: 0 0 16px; padding: 0; list-style: none; }
+.tempo-marks[hidden] { display: none; }
+.tempo-mark {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 800 1rem/1.1 var(--font-ui);
+  text-align: left;
+}
+.tempo-hint:empty { display: none; }
+.tempo-remove { margin-right: auto; }
+.tempo-remove[hidden] { display: none; }
 /* The selected block: what it is, ➖ ➕, 🗑️ and ✕, in one line under the lanes. */
 .song-sel { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding: 6px 6px 6px 12px; border-radius: 12px; background: rgb(255 255 255 / 0.12); }
 .song-sel[hidden] { display: none; }
@@ -1444,7 +1496,7 @@ dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
 @media (min-width: 601px) { .song-deck > * { flex: none; } }
 /* Wider: room for every lane's name, and all eight lanes without scrolling down. */
 @media (min-width: 700px) {
-  .song-lanes { --head-w: 168px; --bar-w: 56px; max-height: none; }
+  .song-lanes, .song-lanes.has-marks { --head-w: 168px; --bar-w: 56px; max-height: none; }
 }
 
 /* ── Toolbar ────────────────────────────────────────────────────────── */

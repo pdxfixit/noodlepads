@@ -295,7 +295,9 @@
         <button type="button" class="seq-play song-play" id="song-play" aria-pressed="false">▶ Play song</button>
         <div class="song-tempo" role="group" aria-label="The song's tempo: every beat in it plays this fast">
           <button type="button" class="seq-tool tempo-nudge" id="song-tempo-down" aria-label="Slower">➖</button>
-          <label class="song-tempo-field"><input type="number" id="song-tempo" min="60" max="180" step="1" inputmode="numeric" aria-label="Song tempo in BPM"><span class="song-tempo-unit">BPM</span></label>
+          <label class="song-tempo-field" id="song-tempo-field"><input type="number" id="song-tempo" min="60" max="180" step="1" inputmode="numeric" aria-label="Song tempo in BPM"><span class="song-tempo-unit">BPM</span></label>
+          <!-- With Advanced: the tempo says itself, and a tap opens 🎼 Tempo (its tempo changes, ADR 0031). -->
+          <button type="button" class="seq-tool song-tempo-open" id="song-tempo-open" aria-label="Song tempo: tap to change it or add a tempo change" hidden>BPM</button>
           <button type="button" class="seq-tool tempo-nudge" id="song-tempo-up" aria-label="Faster">➕</button>
         </div>
         <button type="button" class="seq-tool" id="song-sound">🔊 Save as a sound</button>
@@ -765,6 +767,37 @@
       <input class="set-field lane-name-field" id="lane-name" maxlength="16" autocomplete="off">
       <p class="field-hint">Its picture:</p>
       <div class="pictures-grid" id="lane-grid"></div>
+    </div>
+  </dialog>
+
+  <!-- 🎼 Tempo (Advanced, ADR 0031): the song's tempo from bar 1, its tempo
+       changes, and ＋ Tempo change; a change opens here to set or remove. -->
+  <dialog id="tempo-sheet" aria-labelledby="tempo-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="tempo-title">🎼 Tempo</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <div id="tempo-list-view">
+        <p class="field-hint">Every lane plays at this tempo. A tempo change makes the whole song faster or slower from a bar on.</p>
+        <label class="tempo-row tempo-base"><span>From bar 1</span><input type="number" class="set-field" id="tempo-base" min="60" max="180" step="1" inputmode="numeric" aria-label="The song's tempo from bar 1, in BPM"><span>BPM</span></label>
+        <ul class="tempo-marks" id="tempo-marks"></ul>
+        <div class="sheet-actions">
+          <button type="button" class="primary" id="tempo-add">＋ Tempo change</button>
+        </div>
+      </div>
+      <div id="tempo-edit-view" hidden>
+        <div class="tempo-fields">
+          <label class="tempo-row"><span>From bar</span><input type="number" class="set-field" id="tempo-bar" min="2" max="128" step="1" inputmode="numeric"></label>
+          <label class="tempo-row"><span>Tempo</span><input type="number" class="set-field" id="tempo-bpm" min="60" max="180" step="1" inputmode="numeric"><span>BPM</span></label>
+        </div>
+        <p class="field-hint tempo-hint" id="tempo-hint" role="status"></p>
+        <div class="sheet-actions">
+          <button type="button" class="quiet danger tempo-remove" id="tempo-remove">🗑️ Remove</button>
+          <button type="button" class="quiet" id="tempo-back">Back</button>
+          <button type="button" class="primary" id="tempo-done">＋ Add</button>
+        </div>
+      </div>
     </div>
   </dialog>
 

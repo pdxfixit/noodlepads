@@ -272,6 +272,16 @@ function mergeLanes(b, l, r, ctx) {
   return out;
 }
 
+// A song's tempo marks (ADR 0031): mark by mark, by the bar each is at, so a
+// mark added on each side both stay, and one both changed takes the newer
+// BPM. None at all is no field (cleanTempos reads the result in bar order).
+function mergeTempos(b, l, r, ctx) {
+  const list = (x) => (Array.isArray(x) ? x : []);
+  const out = mergeKeyed(list(b), list(l), list(r), ctx, barKey, (bb, ll, rr, c) => mergeFields(bb ?? {}, ll, rr, c));
+  if (out === UNSAFE) return UNSAFE;
+  return out.length ? [...out].sort((x, y) => x.bar - y.bar) : undefined;
+}
+
 const mergeIds = (b, l, r, ctx) => mergeKeyed(b, l, r, ctx, (x) => (typeof x === 'string' ? x : null), (bb, ll) => ll);
 const mergeGroups = (b, l, r, ctx) => mergeKeyed(b, l, r, ctx, (g) => g?.id ?? null, (bb, ll, rr, c) => mergeFields(bb ?? {}, ll, rr, c));
 
@@ -280,8 +290,8 @@ const mergeGroups = (b, l, r, ctx) => mergeKeyed(b, l, r, ctx, (g) => g?.id ?? n
 export const KIND_RULES = {
   beats: { rows: mergeRows },
   patterns: { rows: mergeRows },
-  songbook: { slots: mergeSlots, lanes: mergeLanes },
-  songs: { slots: mergeSlots, lanes: mergeLanes },
+  songbook: { slots: mergeSlots, lanes: mergeLanes, tempos: mergeTempos },
+  songs: { slots: mergeSlots, lanes: mergeLanes, tempos: mergeTempos },
   orders: { ids: mergeIds, groups: mergeGroups },
   decks: { keys: mergeMap, mine: mergeMap },
   layouts: { keys: mergeMap },
