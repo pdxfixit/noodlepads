@@ -853,11 +853,14 @@ export function createDJ({ el, deps }) {
     tick();
     showRec();
     renderGrid();   // 🗑️ Remove a row and the shape keys come back
-    if (!done.added) return;
+    // An empty row reused with no note landing (a key in the count-in) can
+    // be undone too: the kid may have set it up.
+    if (!done.added && !done.reused) return;
     // The beat saved itself as each note landed; Undo takes them out. The
     // news also shows over the beat's name and fades (Ben, 2026-10-12).
-    const text = `Added ${done.added} ${done.added === 1 ? 'note' : 'notes'} to ${seq.onScratch?.() ? 'your scratch beat' : `“${seq.beat().name}”`}.`;
-    if (el.nameFlash) {
+    const where = seq.onScratch?.() ? 'your scratch beat' : `“${seq.beat().name}”`;
+    const text = done.added ? `Added ${done.added} ${done.added === 1 ? 'note' : 'notes'} to ${where}.` : `Changed the rows of ${where}.`;
+    if (el.nameFlash && done.added) {
       el.nameFlash.textContent = `✅ ${done.added} ${done.added === 1 ? 'note' : 'notes'} added`;
       el.nameFlash.hidden = false;
       fadeAway(el.nameFlash, 3500);
@@ -894,13 +897,17 @@ export function createDJ({ el, deps }) {
   // builder should cause its row to appear"). It comes quietly, with no
   // notice (Ben, 2026-10-16: "drop the notification that a new row has been
   // added to beats"): the row's ✕ takes it out; while recording, the take's
-  // own Undo does.
+  // own Undo does. While recording, a row with no hits takes the sound before
+  // a new row is added, and is then kept from the next new sound.
   function showRow(clip) {
     const seq = deps.seq;
     const beat = mode === 'beat' && seq.beat();
     if (!beat || beat.rows.some((r) => r.clipId === clip.id)) return;
     if (seq.trying?.() && !beatRec) return;   // jamming over a groove changes nothing
-    if (seq.addRowFor(clip.id, beatRec?.rows) < 0) { (deps.notice ?? deps.announce)?.(FULL); return; }
+    const had = beat.rows.length;
+    const row = seq.addRowFor(clip.id, beatRec?.rows, !!beatRec);
+    if (row < 0) { (deps.notice ?? deps.announce)?.(FULL); return; }
+    if (beatRec) { beatRec.rows.add(row); if (row < had) beatRec.reused = true; }
     renderGrid();
   }
   // A live hit while recording into the beat: snapped once, as it arrives,
