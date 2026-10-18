@@ -186,6 +186,33 @@ test('2 · Listening: the parts so far, the tempo, each instrument\'s last 3 bar
   $('#listen').close();
 });
 
+test('a 7/8 bar\'s beats are as wide as their steps: its group of six wider than the fours', async () => {
+  const { cap, lis } = await listening();
+  const s = snap({ bar: 6, partId: 'A', parts: PARTS.slice(0, 1) });
+  s.signature = '7/8';
+  for (const row of Object.keys(s.current.recent)) s.current.recent[row] = s.current.recent[row].map((b) => b.slice(0, 14));
+  feed(cap, lis, s);
+  const line = $('#listen-rows').querySelector('[data-row="kick"]').querySelectorAll('.listen-line')[2];
+  const beats = line.querySelectorAll('.listen-beat');
+  assert.deepEqual(beats.map((b) => b.children.length), [4, 4, 6]);
+  assert.deepEqual(beats.map((b) => b.style.props['--n']), ['4', '4', '6'], 'each beat\'s width follows its steps');
+  $('#listen').close();
+});
+
+test('no beat heard with the microphone: the tip is about the microphone, never another tab', async () => {
+  fakeCapture();
+  fakeListener(SILENT);
+  await openSources();
+  $('#listen-sources').querySelector('[data-source="mic"]').dispatch('click');
+  await wait();
+  $('#listen-stop').dispatch('click');
+  await page.settle();
+  assert.equal(view(), 'nothing');
+  assert.match($('#listen-nothing-tip').textContent, /microphone/);
+  assert.doesNotMatch($('#listen-nothing-tip').textContent, /tab/);
+  $('#listen').close();
+});
+
 test('a new step redraws only the cells that changed; nothing redraws without new frames', async () => {
   const { cap, lis } = await listening();
   feed(cap, lis, snap({ bar: 24, partId: 'C', step: 9, parts: PARTS }));
@@ -313,6 +340,7 @@ test('no beat heard: "I couldn\'t hear a beat in that", nothing saved, Try again
   await page.settle();
   assert.equal(view(), 'nothing');
   assert.equal($('#listen').querySelector('[data-view="nothing"] .listen-sentence b').textContent, 'I couldn’t hear a beat in that.');
+  assert.match($('#listen-nothing-tip').textContent, /Also share tab audio/, 'a tab: check its audio was shared');
   assert.equal(state.savedBeats.length, before);
   $('#listen-again').dispatch('click');
   assert.equal(view(), 'sources');

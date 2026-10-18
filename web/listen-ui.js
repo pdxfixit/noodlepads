@@ -59,6 +59,14 @@ const WAITING = {
   mic: 'Say yes when the browser asks to use the microphone, then play the song out loud nearby.',
   file: 'Reading the file…',
 };
+// What to try after hearing no beat, for the way it listened: a phone has
+// no other tab, so it never hears about one.
+const NOTHING_TIP = {
+  tab: 'Try a song with drums, played a little louder. Check Also share tab audio was ticked in the browser’s box.',
+  screen: 'Try a song with drums, played a little louder. Check Also share system audio was ticked in the browser’s box.',
+  mic: 'Try a song with drums, played a little louder and closer to the microphone.',
+  file: 'Try a song with drums.',
+};
 const ARM_MS = 3000;   // how long 🗑️ Throw away? waits for its second tap
 
 const LINES = 3;       // bars shown per instrument (2 on a phone: styles.css)
@@ -279,6 +287,9 @@ function buildCells(count, signature) {
       slot.was = [];
       for (const g of groups) {
         const beat = make('span', 'listen-beat');
+        // A beat's width follows its steps, so 7/8's group of six is as
+        // wide as six steps, not squeezed into the width of four.
+        beat.style.setProperty('--n', String(g));
         for (let k = 0; k < g; k++) {
           const c = make('span', 'cell');
           slot.cells.push(c);
@@ -369,6 +380,7 @@ async function finish() {
   s.result = result;
   logEvent('listen', { action: 'stop', source: s.kind, ...counts(result) });
   if (!heardABeat(result)) {
+    el.nothingTip.textContent = NOTHING_TIP[s.kind];
     showView('nothing', '🎧 From a song');
     el.again.focus?.();
     return;
@@ -574,6 +586,7 @@ export function initListen(d) {
     asBeat: $('#listen-as-beat'),
     throw: $('#listen-throw'),
     again: $('#listen-again'),
+    nothingTip: $('#listen-nothing-tip'),
     lines: [],
   });
   // Once it has heard something, only ✕ (or ■ Stop) ends listening: a stray

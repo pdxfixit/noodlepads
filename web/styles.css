@@ -4319,7 +4319,9 @@ dialog#listen.listening .chooser-body > .sheet-head:first-child { background: va
 .listen-lines { display: grid; gap: 6px; }
 .listen-line { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 10px; }
 .listen-line[hidden] { display: none; }
-.listen-line.oldest { opacity: 0.55; }
+/* The oldest line fades a little, never so far that a faded hit that fits
+   looks like a one-off (colors.test.mjs). */
+.listen-line.oldest { opacity: 0.8; }
 .listen-line-label { color: var(--chalk); font-weight: 800; font-size: 0.75rem; white-space: nowrap; }
 .listen-line-label .ll-short { display: none; }
 .listen-bar { display: flex; gap: 8px; }
@@ -4334,6 +4336,8 @@ dialog#listen.listening .chooser-body > .sheet-head:first-child { background: va
 .cell.now { outline: 3px solid #fff; outline-offset: -3px; }
 .listen-change { padding: 10px 14px; border-radius: 12px; background: var(--led); color: var(--ink); font-size: 0.9rem; }
 .listen-key { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; color: var(--chalk); font-size: 0.8rem; }
+/* The three keys wrap as one: beside the line when they fit, else under it. */
+.listen-key-items { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
 .listen-key-item { display: inline-flex; align-items: center; gap: 6px; }
 .listen-key .cell { width: 16px; height: 16px; border-radius: 5px; }
 /* A phone: two bars per instrument, the name above them, and small pills

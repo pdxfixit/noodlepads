@@ -256,7 +256,9 @@ one of these:" leads to the grooves. Listen closes Grooves and opens one sheet
    labelled with its part and bar ("C · bar 22"; the bar alone on a phone):
    new bars come in at the bottom and the oldest roll off the top. A hit that
    fits the part is bright, a one-off dim, the step just heard has a white
-   ring, steps not played yet are darker; the hats have their own teal. A
+   ring, steps not played yet are darker; the hats have their own teal. The
+   oldest line fades a little (never so far that a faded fit looks like a
+   one-off), and each beat is as wide as its steps (7/8's six wider than its fours). A
    tempo change shows a yellow line ("Sped up at bar 22. 92 → 120 BPM, so part
    C started there"). Before the tempo is found it says "Listening…" with the
    tempo settling ("About 96 BPM…"). The screen is drawn from the listener's
@@ -276,7 +278,9 @@ one of these:" leads to the grooves. Listen closes Grooves and opens one sheet
    a song (two or more parts), 🥁 Open part A and 🗑️ Throw away (asks first:
    the first tap turns it red, the second deletes everything it made).
    Closing the sheet keeps what it made. If no step of any part is on: "I
-   couldn't hear a beat in that", 🎧 Try again, and nothing is saved.
+   couldn't hear a beat in that", a tip for the way it listened (louder,
+   closer to the microphone, or check the browser's box shared the sound),
+   🎧 Try again, and nothing is saved.
 
 **What it makes, at ■ Stop.** Each part with hits becomes a beat in 🗂️ My
 beats, named one fun name and the part's letter ("Zippy Noodle · A", a name
