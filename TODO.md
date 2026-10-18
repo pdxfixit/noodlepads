@@ -57,8 +57,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **Sticky control bar with ⌨️ Keys, and ✏️ Edit on 🎤 Live** (Ben, 2026-10-18): on Beats with ⌨️ Keys on, the control bar (▶ Play, ● Record, tempo…) sticks while the keys scroll, as with Keys off: only its first line on a phone; 🎤 Live gets the scrolled ✏️ Edit in the slim bar, as Beats has.
-
 
 
 

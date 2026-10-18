@@ -25,7 +25,7 @@
         <button type="button" class="settings-btn to-top" id="to-top" aria-label="Back to the top">⬆️</button>
       </div>
       <!-- ✏️ Edit keys (✏️ Edit layout with 👆) at the right of the slim bar, on 🥁 Beats with ⌨️ Keys
-           on once scrolled, as ✏️ Edit sounds is on Pads (Ben, 2026-10-18). A twin of #dj-change. -->
+           on and 🎤 Live once scrolled, as ✏️ Edit sounds is on Pads (Ben, 2026-10-18). A twin of #dj-change. -->
       <button type="button" class="slim-edit" id="dj-change-top">✏️ Edit<span class="edit-more"> keys</span></button>
     </div>
   </header>
@@ -176,19 +176,26 @@
       <!-- The same control bar as Beats': ▶ Play, ● Record, the tempo, ⏲️, the
            bars. Freestyle shows only ● Record, what is happening and 🎬 Takes. -->
       <div class="beat-deck deck deck-end dj-bar">
+        <!-- .beat-run and .beat-more lay out as if they were not there, except
+             on a phone with ⌨️ Keys on, where ▶ Play · ● Record (.beat-run) is
+             the line that sticks while the keys scroll (Ben, 2026-10-18). -->
         <div class="beat-go">
-          <button type="button" class="seq-play" id="dj-play" aria-pressed="false" hidden>▶ Play</button>
-          <button type="button" class="dj-rec" id="dj-record" aria-pressed="false">● Record</button>
-          <div class="beat-tempo tempo-box" id="dj-tempo" role="group" aria-label="Tempo" hidden>
-            <button type="button" class="tempo-step down" data-tempo-step="-1" aria-label="Slower"></button>
-            <input type="range" id="dj-bpm-slider" step="1" aria-label="Tempo">
-            <button type="button" class="seq-bpm-num" id="dj-bpm" aria-label="Tempo 100 BPM. Tap to type a tempo.">100 BPM</button>
-            <input type="number" class="seq-bpm-type" id="dj-bpm-type" inputmode="numeric" aria-label="Tempo in BPM" hidden>
-            <button type="button" class="tempo-step up" data-tempo-step="1" aria-label="Faster"></button>
+          <div class="beat-run">
+            <button type="button" class="seq-play" id="dj-play" aria-pressed="false" hidden>▶ Play</button>
+            <button type="button" class="dj-rec" id="dj-record" aria-pressed="false">● Record</button>
           </div>
-          <button type="button" class="seq-click" id="dj-beat-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never recorded. Tap it three times in time to set the tempo." title="Click track: a tick on every beat to keep time" hidden>⏲️</button>
-          <span class="dj-status" id="dj-status" role="status"></span>
-          <button type="button" class="seq-tool" id="dj-takes-open">🎬 Takes</button>
+          <div class="beat-more">
+            <div class="beat-tempo tempo-box" id="dj-tempo" role="group" aria-label="Tempo" hidden>
+              <button type="button" class="tempo-step down" data-tempo-step="-1" aria-label="Slower"></button>
+              <input type="range" id="dj-bpm-slider" step="1" aria-label="Tempo">
+              <button type="button" class="seq-bpm-num" id="dj-bpm" aria-label="Tempo 100 BPM. Tap to type a tempo.">100 BPM</button>
+              <input type="number" class="seq-bpm-type" id="dj-bpm-type" inputmode="numeric" aria-label="Tempo in BPM" hidden>
+              <button type="button" class="tempo-step up" data-tempo-step="1" aria-label="Faster"></button>
+            </div>
+            <button type="button" class="seq-click" id="dj-beat-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never recorded. Tap it three times in time to set the tempo." title="Click track: a tick on every beat to keep time" hidden>⏲️</button>
+            <span class="dj-status" id="dj-status" role="status"></span>
+            <button type="button" class="seq-tool" id="dj-takes-open">🎬 Takes</button>
+          </div>
         </div>
         <div class="beat-shape" id="dj-setup" role="group" aria-label="The beat: bars and time signature" hidden>
           <div class="seq-barsel" id="dj-bars" role="group" aria-label="How many bars the beat is">
