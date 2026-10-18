@@ -1145,9 +1145,10 @@ dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
 /* The open document's name bar: a beat on Beats and in Beat Builder, a song
    on 🎼 Song. It comes first on its screen, in a zone of its own a shade
    lighter than the panel. With room it is one line: icon, name (a text
-   field: tap to rename), ✏️, 🆕 New, 🗂️ My beats (🗂️ My songs). Short of room, two balanced
-   lines: icon, name and ✏️ over New and Open, which share the width; the
-   icon and ✏️ columns are the same width, so the halves match. */
+   field: tap to rename), ✏️, 🆕 New, 🗂️ My beats (🗂️ My songs). Short of
+   room, the song bar takes two balanced lines: icon, name and ✏️ over New
+   and Open, which share the width; the icon and ✏️ columns are the same
+   width, so the halves match. The beat bar's own lines follow below. */
 .seq, .dj, .song { container: panel / inline-size; }
 .doc-bar {
   display: flex;
@@ -1232,7 +1233,7 @@ dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
 .deck-end { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 3px solid rgb(255 255 255 / 0.3); }
 .deck .seq-tool { min-height: 52px; padding: 0 14px; border-radius: 12px; font-size: 1rem; }
 @container panel (max-width: 30rem) {
-  .doc-bar {
+  .doc-bar:not(.beat-bar) {
     display: grid;
     grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 44px;
     grid-template-areas: "icon name name rename" "new new open open";
@@ -1240,41 +1241,34 @@ dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
   .doc-bar .beat-bar-icon { grid-area: icon; }
   .doc-bar .beat-name { grid-area: name; }
   .doc-bar .doc-rename, .doc-bar .doc-keep { grid-area: rename; }
-  .doc-bar .doc-keep::after { content: none; }
+  .doc-bar:not(.beat-bar) .doc-keep::after { content: none; }
   .doc-bar .doc-new { grid-area: new; }
   .doc-bar .doc-open { grid-area: open; }
   /* Nothing open (ADR 0008): no name or ✏️, so one line: the icon, then
-     🆕 New and 🗂️ My beats sharing the width. */
-  .doc-bar:has(.beat-name[hidden]) { grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "icon new open"; }
+     🆕 New and 🗂️ My songs sharing the width. */
+  .doc-bar:not(.beat-bar):has(.beat-name[hidden]) { grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "icon new open"; }
 }
-/* A beat bar (both have ⌨️ Keys beside 💃, ADR 0017) needs the two lines
-   sooner than the song bar: 🥁 name ✏️ over 💃 ⌨️ 🆕 📂, with 🆕 New and
-   🗂️ My beats matching: New's column is half of what is left after the three
-   44 px columns and gaps, Open's the rest under ✏️. 💃 and ⌨️ are emoji
-   alone here, and so is 🗂️ on a phone; New and My beats take less padding. Up to 46rem, so the
-   name keeps room beside the worded 💾 Keep and 🗂️ My beats (ADR 0020). */
-@container panel (max-width: 46rem) {
-  .doc-bar:has(.doc-keys) {
-    display: grid;
-    grid-template-columns: 44px 44px calc((100% - 112px) / 2) minmax(0, 1fr) 44px;
-    grid-template-areas: "icon name name name rename" "grooves keys new open open";
-  }
-  .doc-bar:has(.doc-keys) .beat-bar-icon { grid-area: icon; }
-  .doc-bar:has(.doc-keys) .beat-name { grid-area: name; }
-  .doc-bar:has(.doc-keys) :is(.doc-rename, .doc-keep) { grid-area: rename; }
-  .doc-bar:has(.doc-keys) .doc-grooves { grid-area: grooves; }
-  .doc-bar:has(.doc-keys) .doc-keys { grid-area: keys; }
-  .doc-bar:has(.doc-keys) .doc-new { grid-area: new; }
-  .doc-bar:has(.doc-keys) .doc-open { grid-area: open; }
-  .doc-bar:has(.doc-keys) :is(.doc-grooves, .doc-keys, .doc-keep)::after { content: none; }
-  .doc-bar:has(.doc-keys) :is(.doc-new, .doc-open) { padding: 0 4px; }
-  /* Nothing open: no room for all five on one line, so two balanced
-     lines: the icon, 💃 and ⌨️ sharing the rest, over 🆕 New and 🗂️ My beats
-     in halves. */
-  .doc-bar:has(.doc-keys):has(.beat-name[hidden]) { display: flex; flex-wrap: wrap; }
-  .doc-bar:has(.doc-keys):has(.beat-name[hidden]) :is(.doc-grooves, .doc-keys) { flex: 1 1 44px; }
-  .doc-bar:has(.doc-keys):has(.beat-name[hidden]) :is(.doc-new, .doc-open) { flex: 1 1 calc(50% - 4px); }
-}
+/* The beat bar (Beats, ⌨️ Keys off and on; ADR 0017). With room it is one
+   line, every tool with its word: 🥁 name ✏️ (or 💾 Keep) · 💃 Grooves ·
+   ⌨️ Keys · 🆕 New · 🗂️ My beats. When the five with words no longer fit
+   beside a name of 9em (measured on the bar itself: fitLine, from
+   sequencer.js), the bar takes `fit-split`: 💃 Grooves, ⌨️ Keys and
+   🗂️ My beats move to a row of their own above the title, with their words,
+   in thirds; the title line keeps ✏️ or 💾 and 🆕 beside the name, emoji
+   alone (Ben, 2026-10-18). With no beat open, 🆕 New fills the title line
+   with its word. Then `fit-tight` trims the top row's padding, and on the
+   narrowest phones (320 px) `fit-stack` puts each word under its emoji. */
+.beat-bar .seq-tool[data-word]::after { content: " " attr(data-word); }
+.beat-bar:not(.fit-split) .beat-name { min-width: 9em; }
+.beat-bar.fit-split { flex-wrap: wrap; }
+.beat-bar.fit-split .beat-name { flex: 1 1 0; }
+.beat-bar.fit-split :is(.doc-grooves, .doc-keys, .doc-open) { order: -1; flex: 1 1 calc((100% - 17px) / 3); min-width: 0; }
+.beat-bar.fit-split :is(.doc-keep, .doc-new)::after { content: none; }
+.beat-bar.fit-split:has(.beat-name[hidden]) .doc-new { flex: 1 1 0; }
+.beat-bar.fit-split:has(.beat-name[hidden]) .doc-new::after { content: " " attr(data-word); }
+.beat-bar.fit-split .name-flash { top: auto; bottom: 8px; }
+.beat-bar.fit-tight :is(.doc-grooves, .doc-keys, .doc-open) { padding: 0 4px; }
+.beat-bar.fit-stack :is(.doc-grooves, .doc-keys, .doc-open) { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 0.8rem; }
 /* The take card and the groove line with ⌨️ Keys (#dj-done, #dj-trying). */
 .seq-undo { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding: 8px 8px 8px 16px; border-radius: 12px; background: rgb(255 255 255 / 0.12); font-weight: 800; }
 .seq-undo[hidden] { display: none; }

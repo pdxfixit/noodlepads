@@ -286,7 +286,7 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | On Beats with ⌨️ Keys on, the control bar sticks while the keys scroll, as with Keys off; on a phone only its first line. | Ben, 2026-10-18: "yes to both, first line only on phone". | 2026-10-18 |
 | A chooser section is one box in its color: name on top, sounds below. | Reads as one group. | 2026-10-10 |
 | 🎧 From a song is a card at the top of 💃 Grooves. (to build) | Ben picked it over a 🎧 button on the beat bar (mockup, 2026-10-18). | 2026-10-18 |
-| On a phone the beat bar puts 💃 Grooves, ⌨️ Keys and 🗂️ My beats, with their words, on a row above the title; 💾 Keep and 🆕 New stay beside the title. (to build) | Ben: today three of them lose their words (mockup, 2026-10-18). | 2026-10-18 |
+| On a phone the beat bar puts 💃 Grooves, ⌨️ Keys and 🗂️ My beats, with their words, on a row above the title; 💾 Keep and 🆕 New stay beside the title. | Ben: today three of them lose their words (mockup, 2026-10-18). | 2026-10-18 |
 
 ## Working
 
