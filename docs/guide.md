@@ -62,8 +62,9 @@ with Advanced off as the app plays them (a test recomputes it from
 either way, so it is kept, backed up and synced like Louder and an older copy
 plays it the same. Like Louder it keeps the sound's own level, its peaks held
 under full scale by the voices' soft ceiling. Within 1 dB already, the banner
-says so and nothing is added; ↩️ Undo in the banner takes it back. The
-sheet's folding sections (Voice, Layers) are bordered panels. 🧩 **Chop into pads** cuts it where
+says so and nothing is added; ↩️ Undo in the banner takes it back. Every
+folding section on a light sheet or dialog (the sheet's Voice and Layers,
+⚙️ Settings, 💃 Grooves, the "…" emoji list) is a bordered panel. 🧩 **Chop into pads** cuts it where
 each sound starts and makes each piece a new pad ("Baby Burp", "Burp Jr.").
 The **pad size slider** at the top left of the pads makes them smoothly
 smaller (more on a line) or bigger (fewer). Its ends are the smallest and
