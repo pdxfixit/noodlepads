@@ -17,7 +17,7 @@ A web page cannot get audio from a Spotify or YouTube link: neither hands a page
 
 A phone shows only 🎤 and 📁, with a line saying another tab needs Chrome or Edge on a computer.
 
-**Unproven, and it decides the main case:** that Chrome hands over Spotify's tab audio, which is copy protected. Tab recorders work on it, so likely yes. The first step of the build checks it before anything else.
+**Proven (Ben, 2026-10-18):** Chrome hands over Spotify's tab audio, though it is copy protected: the check page (`/check-tab-audio.html`) heard a Spotify tab.
 
 ## How listening works
 
