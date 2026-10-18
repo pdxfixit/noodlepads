@@ -54,6 +54,7 @@ stress *args:
 #   just look pads --wide           adds the wide screens: 1366, 1920, 2560 and 3440 px
 #   just look pads --skin all       one shot per pad skin (or --skin slam,googly), set before the view
 #   just look pads --reduced-motion  as a device that asks for less motion sees it
+#   just look keys-on --cpu 4 --js-file t.js   the page's CPU 4 times slower, for timing checks
 #   just look beats --top 500      keeps only the top 500 px of each screenshot
 #   just look edit --scroll 700    one 800 px window scrolled down 700 px (an open sheet too), to see what sticks
 #   just look beat-groove --scroll-to '.seq-row'   the same, with that element near the top
