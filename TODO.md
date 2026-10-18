@@ -59,7 +59,6 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 - **👆 Edit layout's sound list** (Ben, 2026-10-18): (1) + more's list starts with a long wall of group chips; make the group a ▾ picker (the band's group first) over the sounds it offers; (2) a sound already anywhere in the layout isn't offered again, in + more or a tile's swap; (3) sizing a band down fills its line with the group's next sounds (bigger keeps every sound and wraps).
 
-- **✏️ Edit keys / Edit layout in Beats' sticky bar** (Ben, 2026-10-18): on 🥁 Beats with ⌨️ Keys on, when the rows scroll, ✏️ Edit keys (✏️ Edit layout with 👆) sits in the sticky top bar instead of only at the foot of the keys.
 
 - **⌨️ Keys recording** (Ben, 2026-10-18): (1) while ● Record runs, a new sound takes a row with no hits before a new row is added; (2) the playhead lags behind the click track while recording (seen at desktop width, 16 rows, 4 bars): find the cause and fix it.
 

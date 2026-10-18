@@ -804,7 +804,7 @@ async function start() {
   audio.grid = () => seq.grid();
   dj = createDJ({
     el: { keys: $('#dj-keys'), touch: $('#dj-touch'), input: $('#dj-input'), tabs: $('#dj-tabs'), layout: $('#dj-layout-keys'), legend: $('#dj-legend'), panel: $('#dj'),
-      change: $('#dj-change'),
+      change: $('#dj-change'), changeTop: $('#dj-change-top'),
       keysEdit: { dialog: $('#keys-edit'), layouts: $('#ke-layouts'), saveLine: $('#ke-save-line'), saveName: $('#ke-save-name'), saveOk: $('#ke-save-ok'), saveCancel: $('#ke-save-cancel'),
         ownLine: $('#ke-own-line'), rename: $('#ke-rename'), remove: $('#ke-delete'), keys: $('#ke-keys'), note: $('#ke-note'), undo: $('#ke-undo'), reset: $('#ke-reset'),
         groups: $('#ke-groups'), inst: $('#ke-inst'), picks: $('#ke-picks'), picksHint: $('#ke-picks-hint'), clearPicks: $('#ke-clear-picks') },
