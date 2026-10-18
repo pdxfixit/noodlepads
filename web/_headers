@@ -4,7 +4,8 @@
 #
 # no-cache means "check with the server before using a stored copy", so an
 # edited app.js reaches the tablets on their next load, as with `just serve`.
-# The microphone is allowed for this site only; recording needs it.
+# The microphone is allowed for this site only; recording needs it. So is
+# display-capture: 🎧 From a song listens to another tab or the screen.
 #
 # The policy allows exactly what the page loads: its own scripts and styles,
 # its own fonts (web/fonts/), blob: URLs for downloads and data: for the tab
@@ -12,7 +13,7 @@
 # Adding a new origin or inline code means changing this line on purpose.
 /*
   Cache-Control: no-cache
-  Permissions-Policy: microphone=(self), accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), payment=(), usb=()
+  Permissions-Policy: microphone=(self), display-capture=(self), accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), payment=(), usb=()
   Cross-Origin-Opener-Policy: same-origin
   X-Content-Type-Options: nosniff
   Referrer-Policy: same-origin
