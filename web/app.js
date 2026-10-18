@@ -233,10 +233,12 @@ function setScreen(name) {
   if (!SCREENS.includes(name)) name = 'pads';
   if (name !== 'pads' && state.editing) setEditing(false);
   if (keysShow() && state.screen !== name) dj.leave();   // a recording ends with the screen
-  if (state.screen === 'beats' && name !== 'beats') seq.stop();
+  const leftBeats = state.screen === 'beats' && name !== 'beats';
+  if (leftBeats) seq.stop();
   if (state.screen === 'song' && name !== 'song') song.stop();
   state.screen = name;
   state.beats = name === 'beats';
+  if (leftBeats) seq.endMove();   // ⇆ Move ends with the screen
   for (const s of SCREENS) document.body.classList.toggle(`screen-${s}`, s === name);
   for (const b of el.screens.querySelectorAll('[data-screen]')) b.setAttribute('aria-pressed', String(b.dataset.screen === name));
   showView();
@@ -269,11 +271,12 @@ function showView() {
 
 // ⌨️ Keys on Beats: on or off. Not while recording into the beat (● Record's
 // ■ Stop ends that first), as DJ's Live · the keys view switch waited.
-function setKeys(on) {
+// `keep: false` changes the view only, as ⇆ Move does for a moment (moveBeat).
+function setKeys(on, { keep = true } = {}) {
   if (on === keysOn || dj.recording()) return;
   if (keysShow()) dj.leave();
   keysOn = on;
-  remember('beat-keys', on ? '1' : '');
+  if (keep) remember('beat-keys', on ? '1' : '');
   if (state.screen === 'beats') showView();
 }
 
@@ -347,6 +350,17 @@ function bindEvents() {
   });
   // ⌨️ Keys in the beat bar, with Keys off (Beats' rows) and on (the keys).
   for (const b of document.querySelectorAll('[data-beat-keys]')) b.addEventListener('click', () => setKeys(!keysOn));
+// ⇆ Move (beat-move.js) works on the big rows: with ⌨️ Keys on they show
+// until ✓ Done, then the keys come back (Ben, 2026-10-18: "go ahead";
+// the compact rows' pills are too small to pick with a finger).
+function moveBeat() {
+  if (seq.moving()) { seq.endMove(); return; }
+  if (!keysOn) { seq.toggleMove(); return; }
+  if (dj.recording()) return;
+  setKeys(false, { keep: false });
+  seq.toggleMove({ done: () => { keysOn = true; if (state.screen === 'beats') showView(); } });
+}
+for (const b of document.querySelectorAll('[data-move-open]')) b.addEventListener('click', moveBeat);
   // The keys: the number row and the letter rows play them, only while they are on screen.
   document.addEventListener('keyup', (e) => { if (kidsShowing()) kidsKeyup(e); else if (keysShow()) dj.keyup(e); });
 
@@ -447,7 +461,7 @@ function makeSequencer() {
   return createSequencer({
     el: {
       play: $('#seq-play'), bpm: $('#seq-bpm'), bpmOut: $('#seq-bpm-out'), bpmType: $('#seq-bpm-type'),
-      rows: $('#seq-rows'), add: $('#seq-add'), addTune: $('#seq-add-tune'), roll: $('#roll'), top: $('#seq-deck'), controls: $('#seq-shape-line'), djPlay: $('#dj-play'),
+      rows: $('#seq-rows'), moveBar: $('#seq-move'), add: $('#seq-add'), addTune: $('#seq-add-tune'), roll: $('#roll'), top: $('#seq-deck'), controls: $('#seq-shape-line'), djPlay: $('#dj-play'),
       empty: $('#seq-empty'), noRows: $('#seq-no-rows'),
       chooser: $('#chooser'), chooserTitle: $('#chooser-title'), chooserGrid: $('#chooser-grid'),
       chooserOk: $('#chooser-ok'), chooserTools: $('#chooser-tools'), chooserMelody: $('#chooser-melody'),
@@ -470,6 +484,8 @@ function makeSequencer() {
     // The keys panel draws the open beat only while it shows.
     onBeatChange: () => { if (keysShow()) dj?.renderGrid(); song?.render(); },
     onPlay: () => song?.stop(),
+    // ⇆ Move on or off: the ⇆ keys show it.
+    onMove: (on) => { for (const b of document.querySelectorAll('[data-move-open]')) b.setAttribute('aria-pressed', String(on)); },
     onStop: () => dj?.beatStopped(),
     // 🆕 New with ⌨️ Keys on: its Undo is on the keys' line.
     offerKeysUndo: (text, fn) => dj?.offerUndo(text, fn),
