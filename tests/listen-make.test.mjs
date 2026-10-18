@@ -135,13 +135,16 @@ test('with two or more parts, a song: the parts in order on lane 1 at their bars
   const id = (p) => beats.find((b) => b.partId === p).beat.id;
   assert.equal(song.name, base);
   assert.equal(song.tempo, 92);
-  assert.deepEqual(song.tempos, [{ bar: 22, bpm: 120 }]);
+  // B is 3/4: its 4 bars are 3 of 🎼 Song's (48 pills), so A comes back at
+  // song bar 11, not 12, and C and its tempo mark a bar sooner too.
+  assert.deepEqual(song.tempos, [{ bar: 21, bpm: 120 }]);
   assert.deepEqual(song.lanes[0].blocks, [
     { beatId: id('A'), bar: 0, times: 8 },
     { beatId: id('B'), bar: 8, times: 2 },
-    { beatId: id('A'), bar: 12, times: 8 },
-    { beatId: id('C'), bar: 21, times: 16 },
+    { beatId: id('A'), bar: 11, times: 8 },
+    { beatId: id('C'), bar: 20, times: 16 },
   ]);
+  assert.equal(song.tempos[0].bar - 1, song.lanes[0].blocks[3].bar, 'the mark is where C starts');
   assert.equal(song.lanes.length, 4);
   // As 🎼 Song reads it: nothing changed by cleaning, and no block runs into the next.
   const beatOf = (bid) => beats.find((b) => b.beat.id === bid)?.beat;
@@ -150,6 +153,7 @@ test('with two or more parts, a song: the parts in order on lane 1 at their bars
   assert.deepEqual(clean.tempos, song.tempos);
   const spans = song.lanes[0].blocks.map((b) => blockSpan(b, (bid) => beatSteps(beatOf(bid))));
   for (let i = 1; i < spans.length; i++) assert.ok(spans[i - 1].end <= spans[i].start, `block ${i} starts after the one before ends`);
+  assert.equal(spans[1].end, spans[2].start, 'no silence after the 3/4 part');
   assert.equal(makeSong(RESULT, beats.slice(0, 1), { personId: 'p-x', name: base, newId: ids() }), null, 'one part: no song');
   assert.equal(makeSong(RESULT, beats, { personId: 'p-x', name: base, songNames: [base], newId: ids() }).name, `${base} 2`, 'a name songs have already');
 });

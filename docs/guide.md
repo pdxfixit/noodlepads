@@ -288,7 +288,8 @@ the drum-like sounds of Drums, Hip hop, Hand drums and Effects
 decoded once a visit; the plain Kick, Snare or Hi-hat when a print is
 missing. With two or more parts it also makes a 🎼 Song named with the fun
 name alone: its parts' beats in song order on the first lane, each at its
-first bar and repeated over its stretch (never into the next), at the first
+first bar and repeated over its stretch (never into the next; bars as 🎼
+Song counts them, 16 pills, so a 3/4 part leaves no silence), at the first
 part's tempo, with a tempo mark where the tempo changed (ADR 0031). They are
 saved as every beat and song is, so they sync, back up and show in the
 chips and the song strip. Opening goes to 🎼 Song with the song open, or to
