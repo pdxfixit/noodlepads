@@ -322,7 +322,6 @@ export function createHitFinder(sampleRate, onHit) {
   const amps = Array.from({ length: 16 }, () => new Float64Array(BANDS));
   const rise = new Float64Array(BANDS);
   const parts = new Float64Array(3);
-  const act = ROWS.map(() => series());
   const env = series();
   const actPeak = [0, 0, 0];            // each row's recent loudest part, frame by frame
   const hitPeak = [0, 0, 0];            // ... and hit by hit
@@ -352,7 +351,6 @@ export function createHitFinder(sampleRate, onHit) {
     splitter.split(rise, parts);
     let e = 0;
     for (let i = 0; i < 3; i++) {
-      act[i].push(parts[i]);
       actPeak[i] = Math.max(actPeak[i] * PEAK_DECAY, parts[i]);
       e += (ENV_WEIGHT[i] * parts[i]) / Math.max(actPeak[i], QUIET);
     }
@@ -456,8 +454,8 @@ export function createHitFinder(sampleRate, onHit) {
 
   // A clean hit (no other row in it) pulls its row's shape a little toward
   // its own rise. The snare's shape follows the least bright of its recent
-  // hits instead, band by band, so a hat played with a snare stays a hat
-  // rather than teaching the snare to sound like one.
+  // hits, band by band, so a hat played with a snare stays a hat and the
+  // snare's shape never learns a hat's highs.
   function learn(r, found, rel) {
     const u = unit(Array.from(r));
     const clean = found.length === 1 && [0, 1, 2].every((j) => j === found[0] || rel[j] < 0.15);
@@ -486,7 +484,7 @@ export function createHitFinder(sampleRate, onHit) {
   }
 
   return {
-    frameRate, hop, n, env, act, shapes,
+    frameRate, hop, n, env, shapes,
     push: (samples) => frames.push(samples),
     get horizon() { return horizon; },
     frameAt: (t) => Math.round((t * sampleRate + n / 2) / hop - 1),
