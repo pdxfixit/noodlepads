@@ -360,7 +360,9 @@ test('a song file: under 20 MB, read through the listener, finished at its end',
   };
   const again = $('#listen-file');
   again.files = [{ size: 5 * 1048576, name: 'song.mp3' }];
+  again.value = 'C:\\fakepath\\song.mp3';
   again.dispatch('change');
+  assert.equal(again.value, '', 'the picker lets go of the song at once');
   await page.settle();
   assert.equal(lis.rate, 44100);
   assert.ok(signal, 'it can be stopped early');
@@ -369,4 +371,45 @@ test('a song file: under 20 MB, read through the listener, finished at its end',
   $('#listen-throw').dispatch('click');
   $('#listen-throw').dispatch('click');
   assert.equal(ended().at(-1).source, 'file');
+});
+
+test('once it has heard something, a tap beside the sheet or Esc keeps it listening; ✕ still ends it', async () => {
+  const { cap, lis } = await listening();
+  feed(cap, lis, snap({ bar: 6, partId: 'A', parts: PARTS.slice(0, 1) }));
+  const sheet = $('#listen');
+  sheet.dispatch('pointerdown');
+  sheet.dispatch('click');
+  assert.equal(sheet.open, true, 'a tap on the backdrop keeps it');
+  assert.equal(cap.stopped, false);
+  assert.equal(sheet.dispatch('cancel').defaultPrevented, true, 'Esc keeps it');
+  assert.deepEqual(ended(), []);
+  sheet.querySelector('[data-close]').dispatch('click');
+  assert.equal(sheet.open, false, '✕ closes it');
+  assert.equal(cap.stopped, true);
+  assert.equal(ended().at(-1).outcome, 'cancelled');
+  // Before anything was heard, the backdrop closes it as usual.
+  const second = await listening();
+  assert.equal(second.lis.fed, 0);
+  sheet.dispatch('pointerdown');
+  sheet.dispatch('click');
+  assert.equal(sheet.open, false);
+});
+
+test('▶ on one part while another plays: the new one shows ■, the old one ▶', async () => {
+  const { cap, lis } = await listening();
+  feed(cap, lis, snap({ bar: 24, partId: 'C', parts: PARTS }));
+  $('#listen-stop').dispatch('click');
+  await page.settle();
+  const keys = () => $('#listen-cards').querySelectorAll('[data-hear]');
+  keys()[0].dispatch('click');
+  await page.settle();
+  assert.deepEqual(keys().map((b) => b.textContent), ['■', '▶', '▶']);
+  keys()[1].dispatch('click');
+  await page.settle();
+  assert.deepEqual(keys().map((b) => b.textContent), ['▶', '■', '▶'], 'part B plays, and says so');
+  assert.deepEqual(keys().map((b) => b.getAttribute('aria-pressed')), ['false', 'true', 'false']);
+  keys()[1].dispatch('click');
+  await page.settle();
+  assert.deepEqual(keys().map((b) => b.textContent), ['▶', '▶', '▶'], 'the same ▶ again stops it');
+  $('#listen').close();
 });

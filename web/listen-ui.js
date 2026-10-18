@@ -479,8 +479,11 @@ function hear(button) {
   if (!beat) return;
   const id = `listen-${beat.id}`;
   const on = button.getAttribute('aria-pressed') === 'true';
-  showHearing(on ? null : beat.id);
+  // hearBeat stops what plays at once (calling its onEnd), before it awaits
+  // the sounds: the keys show what plays after that, or part B's ■ would be
+  // undone by part A's end.
   deps.seq.hearBeat(id, beat, { seconds: 12, onEnd: () => showHearing(null) });
+  showHearing(on ? null : beat.id);
 }
 
 function disarm() {
@@ -573,7 +576,18 @@ export function initListen(d) {
     again: $('#listen-again'),
     lines: [],
   });
-  setupDialog(el.dialog);
+  // Once it has heard something, only ✕ (or ■ Stop) ends listening: a stray
+  // tap beside the sheet, as on coming back from the song's tab, or Esc,
+  // would throw away everything heard so far.
+  let byX = false;
+  el.dialog.querySelector('[data-close]').addEventListener('click', () => { byX = true; });
+  setupDialog(el.dialog, {
+    beforeClose: () => {
+      const x = byX;
+      byX = false;
+      return x || !session?.listener || session.finished;
+    },
+  });
   el.dialog.addEventListener('close', closed);
   showCard();
   onSetting('level', showCard);
@@ -587,6 +601,9 @@ export function initListen(d) {
   });
   el.sources.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
+    // The picker lets go of the file at once: nothing of the song stays in
+    // the page once it has been read (and the same file can be picked again).
+    e.target.value = '';
     if (file) listenToFile(file);
   });
   el.stop.addEventListener('click', stop);
