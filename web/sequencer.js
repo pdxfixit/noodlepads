@@ -31,6 +31,7 @@ import { isScratch, isHiddenBeat, scratchOf, scratchId, scratchLabel, grooveOf, 
 import { cleanVolume, rowLevel, setRowLevel, drawSpeaker, speakerControls, percent } from './row-volume.js';
 import { rowParts, rowSpeaker, rowEmoji, twinRows } from './beat-row.js';
 import { moreMenu, fitMore } from './overflow.js';
+import { fitLine } from './lines.js';
 import { MAX_RINGING, ringOver } from './rhythm.js';
 import { cleanFx, masterLevel, silencedBySolo, mixKey, buildMix, createMixer } from './mixer.js';
 import { MELODY_NOTES, cleanNotes, fromLegacy, legacy, startsIn, addNote, lineOf, sameNotes, multiplyNotes } from './notes.js';
@@ -42,6 +43,10 @@ export const STEPS = 16;         // a bar of 4/4, the simple beat maker
 export const MAX_STEPS = 20;     // the longest bar (5/4)
 export const BAR_CHOICES = [1, 2, 4];                   // how many bars a beat can be
 export const MAX_PILLS = MAX_STEPS * Math.max(...BAR_CHOICES);  // the most pills a row can hold
+// What the beat bar gives way to, in order (lines.js fitLine): its tools'
+// own row above the title, then tighter words on that row, then each word
+// under its emoji.
+export const BEAT_BAR_STEPS = ['fit-split', 'fit-tight', 'fit-stack'];
 
 // Time signatures, one per beat (pattern.signature; chosen with Advanced on):
 // the bar's pills, grouped by the beat. A pill is always a sixteenth and BPM
@@ -893,6 +898,7 @@ export function createSequencer(deps) {
   // The scratch shows "Scratch beat" (or "Ska (scratch)"), in italics: not
   // kept yet. 💾 Keep stands where ✏️ is and names it as it keeps it; a
   // name typed into the title keeps it under that name (nameScratch).
+  let refitBars = [];   // each beat bar's refit (fitLine), set up once the bars are wired
   function showBeatBars() {
     const scratch = onScratch();
     for (const bar of el.beatBars ?? []) {
@@ -908,6 +914,7 @@ export function createSequencer(deps) {
       }
       if (pattern && document.activeElement !== name) name.value = titleOf();
     }
+    for (const refit of refitBars) refit();   // 💾 Keep (worded) or ✏️, a name or none: what fits changes
     showChips();
   }
 
@@ -1082,6 +1089,11 @@ export function createSequencer(deps) {
     bar.querySelector('[data-beat-open]').addEventListener('click', () => openLibrary(bar.querySelector('[data-beat-open]')));
     bar.querySelector('[data-beat-keep]')?.addEventListener('click', () => keep());
   }
+  // On a phone the five tools with their words don't fit beside the name:
+  // the bar splits, 💃 Grooves, ⌨️ Keys and 🗂️ My beats on a row of their own
+  // above the title, still worded (styles.css, "The beat bar"). Measured on
+  // the bar, so it switches where the words really stop fitting.
+  refitBars = [...(el.beatBars ?? [])].map((bar) => fitLine(bar, BEAT_BAR_STEPS));
 
   // ── Playback ──
 
