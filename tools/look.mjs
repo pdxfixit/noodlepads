@@ -84,9 +84,10 @@ const MINE = `const { state } = await import('/state.js'); const pid = state.per
   const pads = await import('/pads.js'); pads.ownClosed().clear(); localStorage.removeItem('groups-closed');
   pads.renderPads();`;
 // A kid's own sound with real audio (two seconds of hum and one clap, made
-// in the page), its sheet open on ✂️ Trim and edit's 👆 Select part.
-const WAVE_OWN = `const { state } = await import('/state.js'); const pid = state.personId;
-  await (await import('/settings.js')).setSetting('advancedBeats', true);
+// in the page), its sheet open: SHEET_OWN at Regular (🔊 Even it out beside
+// 👂 Plain), WAVE_OWN on ✂️ Trim and edit's 👆 Select part (Advanced).
+const OWN_SOUND = (advanced) => `const { state } = await import('/state.js'); const pid = state.personId;
+  await (await import('/settings.js')).setSetting('advancedBeats', ${advanced});
   const rate = 22050; const b = new AudioBuffer({ length: 2 * rate, numberOfChannels: 1, sampleRate: rate }); const d = b.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = 0.06 * Math.sin(2 * Math.PI * 300 * i / rate);
   for (let i = 0; i < 0.03 * rate; i++) d[rate + i] += 0.87 * Math.sin(2 * Math.PI * 1500 * i / rate) * Math.exp(-i / (0.003 * rate));
@@ -94,7 +95,9 @@ const WAVE_OWN = `const { state } = await import('/state.js'); const pid = state
   state.userClips.push({ id: 'user-look-wave', personId: pid, label: 'Hum', emoji: '🐝', color: 'red', voice: 'normal', blob, mime: blob.type, created: 1 });
   (await import('/pads.js')).renderPads();
   ${q('#edit-toggle')} ${q('#pads .pad-cell:has([data-id="user-look-wave"]) [data-edit]')}
-  await new Promise((r) => setTimeout(r, 600)); ${q('#trim-btn')}
+  await new Promise((r) => setTimeout(r, 600));`;
+const SHEET_OWN = `${OWN_SOUND(false)} ${nap}`;
+const WAVE_OWN = `${OWN_SOUND(true)} ${q('#trim-btn')}
   await new Promise((r) => setTimeout(r, 400)); ${q('#cut-views [data-view="part"]')} ${nap}`;
 // Taps the made-up sound `i` in Edit sounds: it is chosen.
 const CHOOSE = (i) => q(`#pads .pad[data-id="user-look-${i}"]`);
@@ -188,6 +191,7 @@ const VIEWS = {
   // ✂️ Trim and edit on a kid's own sound (a made-up hum with one clap),
   // Advanced on, on 👆 Select part: 🔊 Even it out shows beside 🔉 Quieter.
   'wave-own': { screen: 'pads', js: WAVE_OWN },
+  'sheet-own': { screen: 'pads', js: SHEET_OWN },
   'edit-chosen': { screen: 'pads', js: `${MINE} ${q('#edit-toggle')} ${CHOOSE(0)} ${CHOOSE(3)}` },
   'edit-presets': { screen: 'pads', js: `${MINE} ${q('#edit-toggle')} ${CHOOSE(0)} ${q('#pads .pad-cell [data-id$="-kick"]')}` },
   'edit-closed': { screen: 'pads', js: `${MINE} ${q('#edit-toggle')} ${q('#pads .pad-group[data-group="g-farm"]')} ${CHOOSE(3)}` },

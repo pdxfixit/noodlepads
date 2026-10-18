@@ -316,14 +316,11 @@ test('🔊 Even it out: presets never show it; a quiet recording of a kid\'s own
   const { loudness, PRESET_LOUDNESS } = await import('../web/loudness.js');
   const { currentPerson } = await import('../web/board.js');
   const { renderPads } = await import('../web/pads.js');
-  await setSetting('advancedBeats', true);
+  // Regular, not Advanced: it is on the sheet for everyone (Ben, 2026-10-18).
+  await setSetting('advancedBeats', false);
 
-  // A preset: the trim editor, but no Even it out.
+  // A preset: no Even it out.
   await openEditor();
-  $('#trim-btn').dispatch('click');
-  await page.settle();
-  view('part').dispatch('click');
-  assert.equal($('#cut-edits').hidden, false);
   assert.equal($('#cut-even').hidden, true, 'presets never offer it');
   $('#sheet').close();
 
@@ -341,26 +338,20 @@ test('🔊 Even it out: presets never show it; a quiet recording of a kid\'s own
     audio.forget(clip.id);
     pads().find((p) => p.dataset.id === clip.id).parent.querySelector('[data-edit]').dispatch('click');
     await page.settle();
-    $('#trim-btn').dispatch('click');
-    await page.settle();
-    view('part').dispatch('click');
-    assert.equal($('#cut-even').hidden, false, 'a kid\'s own sound has it');
-    assert.equal($('#cut-undo').disabled, true);
+    assert.equal($('#trim-btn').hidden, true, 'the trim editor is Advanced');
+    assert.equal($('#cut-even').hidden, false, 'a kid\'s own sound has it, on the sheet');
 
     $('#cut-even').dispatch('click');
     await page.settle();
-    assert.equal($('#cut-undo').disabled, false, 'one edit, which Undo takes back');
-    $('#cut-even').dispatch('click');   // again: already even, nothing added
+    assert.match($('#banner-text').textContent, /Evened out/);
+    $('#banner-action').dispatch('click');   // ↩️ Undo in the banner
     await page.settle();
-    assert.equal($('#banner').hidden, false);
-    assert.match($('#banner-text').textContent, /already even/);
-    $('#cut-undo').dispatch('click');
-    await page.settle();
-    assert.equal($('#cut-undo').disabled, true, 'only the one edit was added');
     $('#cut-even').dispatch('click');
     await page.settle();
-    $('#cut-done').dispatch('click');
+    assert.match($('#banner-text').textContent, /Evened out/, 'Undo took it back, so it evens out again');
+    $('#cut-even').dispatch('click');   // again: already even, nothing added
     await page.settle();
+    assert.match($('#banner-text').textContent, /already even/);
     $('#save-btn').closest('form').dispatch('submit');
     await page.settle();
 
