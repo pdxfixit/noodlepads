@@ -476,13 +476,16 @@ export function toggleKitGroup(id) {
 }
 
 // A kit group's header. Notes, Chords and Bass have who plays them beside
-// it (inst-picker.js, ADR 0030), and its list under it while open.
+// it (inst-picker.js, ADR 0030), and its list under it while open. Their
+// count goes after who plays them, at the line's end, so every group's
+// count lines up (Ben, 2026-10-18); the header's label still says it.
 function kitGroupHead(g, isOpen) {
   if (!hasPicker(g.id)) return [groupHeader(g, isOpen)];
   const row = document.createElement('div');
   row.className = 'pad-group-row pad-group-inst';
   const listOpen = pickerOpen === g.id;
-  row.append(groupHeader(g, isOpen), pickerButton(g, listOpen));
+  const head = groupHeader(g, isOpen);
+  row.append(head, pickerButton(g, listOpen), head.querySelector('.pad-group-count'));
   return listOpen ? [row, pickerList(g)] : [row];
 }
 
@@ -518,7 +521,10 @@ function groupHeader(g, isOpen) {
   const allHidden = g.clips.every((c) => c.hidden);
   b.classList.toggle('all-hidden', allHidden);
   count.textContent = allHidden ? `${g.clips.length} hidden` : `${g.clips.length}`;
-  count.setAttribute('aria-label', `${g.clips.length} sounds${allHidden ? ', all hidden' : ''}`);
+  count.setAttribute('aria-hidden', 'true');
+  // Its label, and so its tooltip: "🎮 Game: 9 sounds", not the text run
+  // together ("▸🎮 Game9"; Ben, 2026-10-18).
+  b.setAttribute('aria-label', `${g.emoji ? `${g.emoji} ` : ''}${g.name}: ${g.clips.length} ${g.clips.length === 1 ? 'sound' : 'sounds'}${allHidden ? ', all hidden' : ''}. Tap to ${isOpen ? 'close' : 'open'}.`);
   b.append(caret, label, count);
   return b;
 }

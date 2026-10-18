@@ -394,6 +394,10 @@ main {
   outline-offset: 5px;
 }
 .pad-fold > .pad-group, .pad-fold > .pad-group-row { box-shadow: 0 0 0 5px var(--bed); }
+/* A closed group is one box (Ben, 2026-10-18: no double outline): the
+   stroke is its header's own edge. */
+.pad-fold:not(:has(.pad-group[aria-expanded="true"])) { outline-offset: 0; border-radius: 12px; }
+.pad-fold:not(:has(.pad-group[aria-expanded="true"])) > :is(.pad-group, .pad-group-row) { box-shadow: none; }
 .pad-group[aria-expanded="true"] { background: color-mix(in srgb, #fff 14%, var(--bed)); }
 .pad-group-caret { width: 1em; }
 .pad-group-count { margin-left: auto; padding: 2px 10px; border-radius: 999px; background: rgb(255 255 255 / 0.15); font-size: 0.9rem; }
@@ -3500,8 +3504,17 @@ body.editing .pads .pad-cell .pad-emoji { margin-left: 26px; }
 /* Too narrow for the count beside a long instrument's name ("Steel drum"):
    the count goes, the name stays whole. */
 @media (max-width: 359px) {
-  .pad-group-inst > .pad-group > .pad-group-count { display: none; }
+  .pad-group-inst > .pad-group-count { display: none; }
 }
+/* Notes, Chords and Bass: the header, who plays it, then the count, in one
+   box the header's color, so the count sits where every group's does. */
+.pad-group-inst { align-items: center; padding-right: 14px; border-radius: 12px; background: color-mix(in srgb, #fff 8%, var(--bed)); }
+.pad-group-inst:has(> .pad-group[aria-expanded="true"]) { background: color-mix(in srgb, #fff 14%, var(--bed)); }
+.pad-group-inst > .pad-group { background: transparent; }
+.pad-group-inst > .pad-group-count { flex: none; margin-left: 0; color: #fff; font: 800 0.9rem/1.2 var(--font-ui); }
+/* Inside the 48 px box with a little room round it, still a 44 px target. */
+.pad-group-inst > .inst-pick { min-height: 44px; border-radius: 10px; background: rgb(255 255 255 / 0.12); }
+.pad-group-inst > .inst-pick[aria-expanded="true"] { background: rgb(255 255 255 / 0.24); }
 
 /* The bar for what is chosen, floating above the toolbar like the update
    bar: "2 selected · Clear", a reason when presets are in it, and the five
