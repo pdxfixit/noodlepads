@@ -59,7 +59,6 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 
 
-- **⌨️ Keys recording** (Ben, 2026-10-18): (1) while ● Record runs, a new sound takes a row with no hits before a new row is added; (2) the playhead lags behind the click track while recording (seen at desktop width, 16 rows, 4 bars): find the cause and fix it.
 
 - **🎧 From a song** (Ben, 2026-10-18: "go on all streams"; `docs/design/beat-from-a-song.md`, decisions.md rows marked to build). Streams: the phone beat bar; tempo marks in 🎼 Song (ADR); the listener (`web/listen.js`, pure); capture (tab, screen, mic, file) and the tab-audio check page; then the screens that join them. Extras: usage events for listening (telemetry repo's `events.toml`), and flarepress's `just secret` recipe.
 

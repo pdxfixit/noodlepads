@@ -85,9 +85,13 @@ export function createDJ({ el, deps }) {
     const base = baseDeck();
     const changed = deps.savedDeck(pid)?.keys ?? {};
     const out = {};
+    // The defaults are the board's own sounds, so only a changed key is looked
+    // up (every board's sounds are gone through for each lookup, and a key
+    // press asks for the deck more than once): a sound since deleted gives
+    // the key back its default.
     for (const code of KEY_CODES) {
       const id = Object.hasOwn(changed, code) ? changed[code] : base[code];
-      out[code] = id && deps.clipById(id) ? id : (id === null ? null : base[code]);
+      out[code] = id === base[code] || (id && deps.clipById(id)) ? id : (id === null ? null : base[code]);
     }
     return out;
   }
@@ -252,7 +256,7 @@ export function createDJ({ el, deps }) {
   }
   // The panel's glow follows how loud the sound is now (0 to 1).
   function level(l) {
-    el.panel?.style.setProperty('--level', calm() ? Math.min(l, 0.3).toFixed(2) : l.toFixed(2));
+    el.panel?.style.setProperty('--glow-level', calm() ? Math.min(l, 0.3).toFixed(2) : l.toFixed(2));
   }
   // A sound playing elsewhere (a beat's hit, scheduled `ms` from now): its
   // keys light in time, and a freestyle take records it.
@@ -534,10 +538,16 @@ export function createDJ({ el, deps }) {
     el.count.classList.add('pop');
   }
 
+  // showRec runs every 40 ms while recording, so it writes only what changed:
+  // each text or label written again is work for the whole page (laid out
+  // again, and every control's tooltip looked at again, tooltips.js), and on
+  // a slower computer that work held the playhead back (2026-10-18).
+  function putText(node, text) { if (node.textContent !== text) node.textContent = text; }
+  function putAttr(node, name, value) { if (node.getAttribute(name) !== value) node.setAttribute(name, value); }
   function showRec() {
     const on = !!rec || !!beatRec;
-    el.record.textContent = on ? '■ Stop' : '● Record';
-    el.record.setAttribute('aria-pressed', String(on));
+    putText(el.record, on ? '■ Stop' : '● Record');
+    putAttr(el.record, 'aria-pressed', String(on));
     el.record.classList.toggle('recording', on);
     showSetup();
     if (beatRec) {
@@ -548,12 +558,12 @@ export function createDJ({ el, deps }) {
       // After the count-in, no status line: ■ Stop already says it is
       // recording, the playhead shows the bar and the grid grows in sight
       // (Ben, 2026-10-12: "isn't that indicated by the record / stop button").
-      el.status.textContent = at && at !== 'go' ? `Get ready… ${at.n}` : '';
+      putText(el.status, at && at !== 'go' ? `Get ready… ${at.n}` : '');
       return;
     }
     showCount(null);
-    el.status.textContent = !rec ? '' : !rec.started ? 'Play something!'
-      : `● ${clockText(deps.now() - rec.from)}`;
+    putText(el.status, !rec ? '' : !rec.started ? 'Play something!'
+      : `● ${clockText(deps.now() - rec.from)}`);
   }
 
   // Plays a take back on the audio clock's timing, lighting its keys.
@@ -751,6 +761,7 @@ export function createDJ({ el, deps }) {
   let beatRec = null;   // {copy, from, snap, rows, added, startedBeat, growing, lastBar, mirror}
   let beatTimer = 0;
   let lastShown = [];   // the step each row's playhead is on (steps), for a redrawn grid
+  const litPill = new WeakMap();   // a grid line -> its pill marked .now (steps)
 
   function showMode() {
     for (const b of [el.click, el.beatClick]) b?.setAttribute('aria-pressed', String(clickWanted));
@@ -916,6 +927,9 @@ export function createDJ({ el, deps }) {
   function intoBeat(clip, earlier = false) {
     if (!beatRec?.snap || deps.now() < beatRec.from - 2 * deps.seq.beatClock().step) return;
     const seq = deps.seq;
+    // A sound already playing in a row of its own: its pills are drawn in
+    // place. A row new or unmuted for it: everything is drawn again.
+    const kept = seq.beat().rows.some((r) => r.clipId === clip.id && !r.muted);
     const row = seq.rowFor(clip.id, beatRec.rows);
     if (row < 0) { (deps.notice ?? deps.announce)?.(FULL); return; }
     beatRec.rows.add(row);
@@ -923,15 +937,32 @@ export function createDJ({ el, deps }) {
     const pill = clock.step / (clock.rates[row] || 1);
     const k = beatRec.snap({ t: deps.now() - deps.latency() - (earlier ? pill : 0), row }, clock);
     if (!k) return;
-    beatRec.added += seq.addSnaps([k], { skipAfter: deps.now() + 0.1 });
+    beatRec.added += seq.addSnaps([k], { skipAfter: deps.now() + 0.1, draw: !kept });
+    const snaps = [k];
+    // The new bars started as a copy: a hit still landing in the old bars
+    // (the last beat before the playhead gets there) goes in the copy too.
+    if (beatRec.mirror && k.n < beatRec.mirror.before) {
+      snaps.push({ row: k.row, step: k.step + beatRec.mirror.offset, n: k.n + beatRec.mirror.offset });
+      seq.addSnaps([snaps[1]], { draw: !kept });
+    }
     // A hit in the last bar on the first pass: the beat keeps growing.
     const bar = clock.total / (seq.beat()?.bars || 1);
     if (k.n >= clock.total - bar && k.n < clock.total) beatRec.lastBar = true;
-    // The new bars started as a copy: a hit still landing in the old bars
-    // (the last beat before the playhead gets there) goes in the copy too.
-    if (beatRec.mirror && k.n < beatRec.mirror.before) seq.addSnaps([{ row: k.row, step: k.step + beatRec.mirror.offset, n: k.n + beatRec.mirror.offset }]);
-    renderGrid();
+    if (!kept || !snaps.every((s) => showHit(s.row, s.step))) renderGrid();
     showRec();
+  }
+  // A pill turned on while recording, drawn in place: drawing the whole grid
+  // again for each hit (over a thousand pills with 16 rows of 4 bars) held
+  // the playhead up. False when it can't be (a tune row, or bars not drawn
+  // yet), so the grid is drawn again.
+  function showHit(row, step) {
+    const r = deps.seq.beat()?.rows[row];
+    const line = !r?.melody && el.grid.querySelector(`.dj-grid-row[data-row="${row}"]`);
+    const p = line?.querySelector('.dj-grid-pills')?.children[step];
+    if (!p || p.tagName.toLowerCase() !== 'i') return false;
+    p.classList.add('on');
+    p.classList.toggle('loud', !!r.accents?.[step]);
+    return true;
   }
 
   // Asked by the beat as its last beat starts, on the first pass: grow if a
@@ -1083,11 +1114,17 @@ export function createDJ({ el, deps }) {
   function steps(shown) {
     lastShown = [...shown];
     if (el.grid.hidden) return;
-    [...el.grid.children].forEach((line) => {
+    // Only the pills that change: the one each row leaves and the one it
+    // reaches (16 rows of 4 bars are over a thousand pills).
+    for (const line of [...el.grid.children]) {
       const i = Number(line.dataset.row);   // lines are in keyboard order, not the beat's
-      const pills = line.querySelector('.dj-grid-pills')?.children ?? [];
-      for (let k = 0; k < pills.length; k++) pills[k].classList.toggle('now', k === shown[i]);
-    });
+      const p = line.querySelector('.dj-grid-pills')?.children[shown[i]] ?? null;
+      const was = litPill.get(line);
+      if (was === p) continue;
+      was?.classList.remove('now');
+      p?.classList.add('now');
+      litPill.set(line, p);
+    }
   }
 
   // The grid takes taps too (mouse or touch), as in Beats: a tap switches a
@@ -1219,22 +1256,22 @@ export function createDJ({ el, deps }) {
     // tempo for this visit (100 BPM to start).
     const bpm = deps.seq.tempo();
     if (document.activeElement !== el.clickBpm) el.clickBpm.value = stopFor(bpm, STOPS);   // not under a dragging thumb
-    el.clickBpmOut.textContent = `${bpm} BPM`;
-    el.clickBpm.setAttribute('aria-valuetext', `${bpm} BPM`);
+    putText(el.clickBpmOut, `${bpm} BPM`);
+    putAttr(el.clickBpm, 'aria-valuetext', `${bpm} BPM`);
     const beat = deps.seq.beat();
     if (!beat) return;
-    el.bpm.textContent = `${beat.bpm} BPM`;
-    el.bpm.setAttribute('aria-label', `Tempo ${beat.bpm} BPM. Tap to type a tempo.`);
+    putText(el.bpm, `${beat.bpm} BPM`);
+    putAttr(el.bpm, 'aria-label', `Tempo ${beat.bpm} BPM. Tap to type a tempo.`);
     if (document.activeElement !== el.bpmSlider) el.bpmSlider.value = stopFor(beat.bpm, STOPS);   // not under a dragging thumb
-    el.bpmSlider.setAttribute('aria-valuetext', `${beat.bpm} BPM`);
+    putAttr(el.bpmSlider, 'aria-valuetext', `${beat.bpm} BPM`);
     const locked = countingIn();
     el.bpmSlider.disabled = locked;
-    for (const b of el.bars.querySelectorAll('[data-bars]')) b.setAttribute('aria-pressed', String(Number(b.dataset.bars) === beat.bars));
+    for (const b of el.bars.querySelectorAll('[data-bars]')) putAttr(b, 'aria-pressed', String(Number(b.dataset.bars) === beat.bars));
     for (const b of [...el.tempo.querySelectorAll('button'), ...el.setup.querySelectorAll('button')]) b.disabled = b.closest('.beat-tempo') ? locked : !!beatRec;
     // The beat's shape can't change once hits are landing on its grid, so
     // the bars and time signature go away while recording.
     el.bars.hidden = !!beatRec;
-    for (const b of el.sigs.querySelectorAll('[data-sig]')) b.setAttribute('aria-pressed', String(b.dataset.sig === deps.seq.signature()));
+    for (const b of el.sigs.querySelectorAll('[data-sig]')) putAttr(b, 'aria-pressed', String(b.dataset.sig === deps.seq.signature()));
     el.sigs.hidden = !deps.seq.advanced() || !!beatRec;
   }
   // The click track's tempo slider (Live): Live's own tempo for the visit (no beat is open there), with

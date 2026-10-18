@@ -71,6 +71,23 @@ export const BEAT_ID = /^beat-[a-z0-9-]{1,48}$/;
 export const swingDelay = (step, dt, swing) => (step % 2 === 1 ? (swing / 100) * dt : 0);
 const TICK_MS = 25;
 const LOOKAHEAD = 0.1;
+// The output's delay: how long after the audio clock's time a sound comes
+// out of the speaker (outputLatency + baseLatency), at most 0.2 s, as app.js
+// takes it off a kid's hits.
+export const outputDelay = (ctx) => Math.min(0.2, Math.max(0, (ctx?.outputLatency || 0) + (ctx?.baseLatency || 0)));
+// The playhead: takes every booked pill ({row, step, time}, `queue` sorted by
+// time) heard by audio time `now` from the front of the queue, and puts its
+// step in `shown` (per row). Sounds are booked ahead and heard `late` seconds
+// after their time, so a pill lights as it is heard, never before. True when
+// a row's step changed.
+export function stepsHeard(queue, shown, now, late = 0) {
+  let changed = false;
+  while (queue.length && queue[0].time <= now - late) {
+    const { row, step } = queue.shift();
+    if (shown[row] !== step) { shown[row] = step; changed = true; }
+  }
+  return changed;
+}
 export const ROW_RATES = [1, 2, 0.5];   // a row's speeds (its keys in the sound picker: ½× 1× 2×)
 // Tune rows (🎹 the piano roll, ADR 0023): the row's sound plays notes of
 // any pitch and length (notes.js). They were melody rows, one note per pill
@@ -622,6 +639,7 @@ export function createSequencer(deps) {
   let clocks = [];       // per row: {next, step}, the row's next step and when it plays
   let queue = [];        // scheduled {row, step, time}, for moving the playhead
   let shown = [];        // per row: the step its playhead is on, or -1
+  let litPills = [];     // per row: the pill marked .now for it (showSteps)
   let voices = [];       // per row: its sounding voices ({src, gain, end})
   let ringing = [];      // a beat's voices after a chip switched away from it, still ringing out
   let stats = null;      // this play's numbers, logged when it stops
@@ -1321,24 +1339,28 @@ export function createSequencer(deps) {
     stats.maxRinging = Math.max(stats.maxRinging, voices[i].length);
   }
 
+  // Every frame: the pills being heard now, from the audio clock less the
+  // output's delay, so the playhead keeps with the click a kid hears.
   function follow() {
-    const now = audio.context().currentTime;
-    let changed = false;
-    while (queue.length && queue[0].time <= now) {
-      const { row, step } = queue.shift();
-      if (shown[row] !== step) { shown[row] = step; changed = true; }
-    }
-    if (changed) { showSteps(); deps.onSteps?.(shown); }
+    const ctx = audio.context();
+    if (stepsHeard(queue, shown, ctx.currentTime, outputDelay(ctx))) { showSteps(); deps.onSteps?.(shown); }
     // How hard the limiter is holding the output down (dB, negative): the
     // event log keeps the worst, a sign that sounds stacked up.
     if (stats && audio.limiter) stats.limiterDb = Math.min(stats.limiterDb, audio.limiter.reduction || 0);
     raf = requestAnimationFrame(follow);
   }
 
+  // Only the pills that change: the one each row leaves and the one it reaches
+  // (16 rows of 4 bars are over a thousand pills).
   function showSteps() {
     pills.forEach((row, i) => {
-      for (const p of row) p.classList.toggle('now', Number(p.dataset.step) === shown[i]);
+      const p = row[shown[i]] ?? null;
+      if (litPills[i] === p) return;
+      litPills[i]?.classList.remove('now');
+      p?.classList.add('now');
+      litPills[i] = p;
     });
+    litPills.length = pills.length;
     drawPlayhead();
     roll?.step(shown);
   }
@@ -1516,7 +1538,7 @@ export function createSequencer(deps) {
         showPill(p, row, s);
         if (held?.has(s)) p.classList.add('held');
         p.hidden = s >= count;
-        if (s === shown[i]) p.classList.add('now');
+        if (s === shown[i]) { p.classList.add('now'); litPills[i] = p; }
         beat.append(p);
         rowPills.push(p);
       }
@@ -3107,8 +3129,10 @@ export function createSequencer(deps) {
     return i;
   }
   // Turns snapped pills on (never off), saves, redraws. A pill still to come
-  // in this pass was just heard live, so the beat skips it once.
-  function addSnaps(snaps, { skipAfter = Infinity } = {}) {
+  // in this pass was just heard live, so the beat skips it once. `draw:
+  // false` leaves Beats' rows as they are: the keys draw their own pill, and
+  // the rows, hidden under the keys, are drawn again when they show (show()).
+  function addSnaps(snaps, { skipAfter = Infinity, draw = true } = {}) {
     let lit = 0;   // pills that were off: what the kid added
     for (const { row, step, n } of snaps) {
       const r = pattern.rows[row];
@@ -3121,7 +3145,7 @@ export function createSequencer(deps) {
       if (playing() && at > skipAfter) skips.push({ row, at });
     }
     save();
-    render();
+    if (draw) render();
     return lit;
   }
   const snapshot = () => structuredClone(pattern);
