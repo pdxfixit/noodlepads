@@ -604,7 +604,11 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
    the bars line (lines.js). On a phone the bars take a line of their own. */
 .beat-deck { display: flex; flex-wrap: nowrap; align-items: center; gap: 12px; }
 .beat-go { display: flex; flex: 1 1 auto; align-items: center; gap: 12px; min-width: 0; }
-.beat-go > .seq-play, .beat-go > .dj-rec { flex: none; }
+.beat-go .seq-play, .beat-go .dj-rec { flex: none; }
+/* With ⌨️ Keys, ▶ Play · ● Record and the rest of that line sit in two
+   boxes that lay out as if they were not there, except on a phone, where
+   the first line sticks on its own (below). */
+.beat-run, .beat-more { display: contents; }
 /* Its keys start at its left edge, so an overflow runs right, where lines.js measures it. */
 .beat-shape { display: flex; flex: 0 1 auto; flex-wrap: nowrap; align-items: center; gap: 12px; min-width: 0; margin-left: auto; }
 /* The click track as one emoji key: lit while it ticks. */
@@ -613,7 +617,7 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
 /* Tap tempo on Beat Builder's ⏲️: "keep tapping…", then "👆 96", for a moment. */
 .seq-click.tapping { width: auto; padding: 0 10px; font-size: 0.95rem; white-space: nowrap; }
 @media (max-width: 899px) {
-  .beat-go > .seq-play, .beat-go > .dj-rec { min-width: 0; padding: 0 16px; }
+  .beat-go .seq-play, .beat-go .dj-rec { min-width: 0; padding: 0 16px; }
 }
 @media (max-width: 600px) {
   /* A phone: ▶ Play (● Record), the tempo and ⏲️ on the first line, the bars filling the next. */
@@ -622,13 +626,13 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
   .beat-shape { flex: 1 1 100%; margin-left: 0; }
   .beat-shape .seq-barsel, .seq-shape > .seq-barsel { display: flex; flex: 1 0 auto; }
   .beat-shape .seq-barsel button { flex: 1 0 auto; }   /* never narrower than its word */
-  .beat-go > .seq-play { width: 6.5rem; padding: 0 12px; }
-  .beat-go > .dj-rec { padding: 0 14px; }
+  .beat-go .seq-play { width: 6.5rem; padding: 0 12px; }
+  .beat-go .dj-rec { padding: 0 14px; }
   /* Beat Builder has ● Record too: ▶ Play and ● Record share the first line,
      the tempo and ⏲️ the next, in the same order (provisional, questions.md). */
-  .beat-go:has(> .seq-play:not([hidden]) + .dj-rec) { flex-wrap: wrap; }
-  .beat-go:has(> .seq-play:not([hidden]) + .dj-rec) > :is(.seq-play, .dj-rec) { flex: 1 1 40%; width: auto; }
-  .beat-go:has(> .seq-play:not([hidden]) + .dj-rec) > .beat-tempo { flex: 1 1 calc(100% - 60px); }
+  .beat-go:has(.seq-play:not([hidden]) + .dj-rec) { flex-wrap: wrap; }
+  .beat-go:has(.seq-play:not([hidden]) + .dj-rec) :is(.seq-play, .dj-rec) { flex: 1 1 40%; width: auto; }
+  .beat-go:has(.seq-play:not([hidden]) + .dj-rec) .beat-tempo { flex: 1 1 calc(100% - 60px); }
 }
 /* Beats with ⌨️ Keys has ● Record too, so its bar runs out of room before a
    phone's does: up to 760 px its bars take a line of their own, as on a phone
@@ -642,9 +646,9 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
 }
 /* The smallest phones: Play, ⏲️ and the number squeeze so the tempo keeps room. */
 @media (max-width: 400px) {
-  .beat-go > .seq-play { width: 4.6rem; padding: 0 6px; font-size: 1rem; }
-  .beat-go > .dj-rec { padding: 0 10px; font-size: 1rem; }
-  .beat-go > .seq-click { width: 44px; font-size: 1.2rem; }
+  .beat-go .seq-play { width: 4.6rem; padding: 0 6px; font-size: 1rem; }
+  .beat-go .dj-rec { padding: 0 10px; font-size: 1rem; }
+  .beat-go .seq-click { width: 44px; font-size: 1.2rem; }
   .beat-go .seq-bpm-num { font-size: 0.9rem; }
 }
 /* Beats keeps ▶ Play and the tempo in reach while its rows scroll (under 900 px):
@@ -657,6 +661,24 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
   .seq .beat-go, .seq .beat-shape { margin-inline: -12px; padding: 10px 12px; background: var(--deck); }
   .seq .beat-go { position: sticky; top: 0; z-index: 6; }
   .seq .beat-shape { padding-top: 0; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 3px solid rgb(255 255 255 / 0.3); }
+}
+/* Beats with ⌨️ Keys does the same while the keys scroll (Ben, 2026-10-18),
+   under the slim bar (--head-h, "The header slims"): the whole bar under
+   900 px; on a phone only its first line, ▶ Play · ● Record (the tempo and ⏲️
+   are its second line there, the bars its third), so the keys keep the room.
+   Over the keys, the beat's rows and their playhead; the count-in's disc
+   (z-index 8) stays over it. 🎤 Live's bar (● Record, 🎬 Takes) scrolls. */
+@media (max-width: 899px) {
+  body.keys-on .dj-bar { position: sticky; top: var(--head-h, 0px); z-index: 6; }
+}
+@media (max-width: 600px) {
+  body.keys-on .dj-bar, body.keys-on .dj-bar > .beat-go { display: contents; }
+  body.keys-on .dj-bar :is(.beat-run, .beat-more), body.keys-on .dj-bar > .beat-shape { display: flex; align-items: center; gap: 8px; margin-inline: -12px; padding: 10px 12px; background: var(--deck); }
+  body.keys-on .dj-bar .beat-run { position: sticky; top: var(--head-h, 0px); z-index: 6; }
+  body.keys-on .dj-bar .beat-more, body.keys-on .dj-bar > .beat-shape { padding-top: 0; }
+  /* The last line ends the deck: the bars, or the tempo's while recording hides them. */
+  body.keys-on .dj-bar > .beat-shape,
+  body.keys-on .dj-bar:has(> .beat-shape[hidden]) .beat-more { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 3px solid rgb(255 255 255 / 0.3); }
 }
 .seq-play {
   min-height: 52px;
@@ -2741,7 +2763,7 @@ dialog#help :focus-visible { outline-color: var(--board); }
 @media (prefers-reduced-motion: reduce) { .dj-count.pop { animation: none; } }
 
 /* The narrowest phones: a slimmer ▶ Play, so ⌄ number ⌃ and ⏲️ fit beside it. */
-@media (max-width: 340px) { .beat-go > .seq-play { width: 4rem; padding: 0 4px; font-size: 0.95rem; } }
+@media (max-width: 340px) { .beat-go .seq-play { width: 4rem; padding: 0 4px; font-size: 0.95rem; } }
 
 /* Pills answer the first tap on a phone (no double-tap zoom wait), and a
    hold makes a loud hit without the phone's text-select or callout menu. */
@@ -3268,13 +3290,14 @@ body.head-slim.screen-pads .pads-bar { padding-left: calc(4 * 44px + 3 * 6px + 1
   body.head-slim .title-tools { gap: 4px; }
   body.head-slim.screen-pads .pads-bar { padding-left: calc(4 * 44px + 3 * 4px + 8px); }
 }
-/* 🥁 Beats with ⌨️ Keys: scrolled, ✏️ Edit keys (✏️ Edit layout with 👆)
-   rides at the right of the slim bar, as Edit sounds does on Pads, so it is
-   in reach while the rows and keys scroll (Ben, 2026-10-18). It is a twin of
-   the one at the foot of the keys, which stays. Every width: the slim bar is
-   the one thing that sticks there. On a phone it says ✏️ Edit, like Pads'. */
+/* 🥁 Beats with ⌨️ Keys, and 🎤 Live: scrolled, ✏️ Edit keys (✏️ Edit
+   layout with 👆) rides at the right of the slim bar, as Edit sounds does on
+   Pads, so it is in reach while the rows and keys scroll (Ben, 2026-10-18).
+   It is a twin of the one at the foot of the keys, which stays. Every width;
+   under 900 px Beats' control bar sticks under the slim bar, never over it.
+   On a phone it says ✏️ Edit, like Pads'. */
 .slim-edit { display: none; }
-body.head-slim.keys-on .slim-edit {
+body.head-slim:is(.keys-on, .screen-live) .slim-edit {
   position: fixed;
   z-index: 9;
   top: calc(var(--slim-top) + (var(--slim-h) - 44px) / 2);
@@ -3291,10 +3314,10 @@ body.head-slim.keys-on .slim-edit {
   animation: head-slim-in 160ms ease-out;
 }
 @media (max-width: 429px) {
-  body.head-slim.keys-on .slim-edit .edit-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  body.head-slim:is(.keys-on, .screen-live) .slim-edit .edit-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 @media (max-width: 359px) {
-  body.head-slim.keys-on .slim-edit { padding: 0 12px; }
+  body.head-slim:is(.keys-on, .screen-live) .slim-edit { padding: 0 12px; }
 }
 
 

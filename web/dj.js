@@ -141,7 +141,7 @@ export function createDJ({ el, deps }) {
     el.layout.hidden = touch || !letters;
     showLayout();
     // ✏️ in the corner edits what shows: the keys, or the touch layout. Its
-    // twin in the slim bar (Beats with ⌨️ Keys, scrolled) says the same.
+    // twin in the slim bar (Beats with ⌨️ Keys and Live, scrolled) says the same.
     el.change.textContent = touch ? '✏️ Edit layout' : '✏️ Edit keys';
     const more = el.changeTop?.querySelector('.edit-more');
     if (more) more.textContent = touch ? ' layout' : ' keys';
