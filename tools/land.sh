@@ -56,6 +56,15 @@ drop_done() {
 # zdiff3 style: a cloud session's git has none set, so it is set here
 # (2026-10-18). A resolver that fails stops the landing: once its file was
 # staged with the markers still in, and only the tests caught it.
+# Keep the worktree and what is left to pick, for land-continue.
+stop_here() {
+  local wt=$1 c=$2 left=$3
+  drop_done "$wt/.land/todo" "$c"
+  echo "🛑 $c conflicts in: $(echo $left) (main unchanged)" >&2
+  echo "   Resolve it in $wt (git -C $wt add …; GIT_EDITOR=true git -C $wt cherry-pick --continue)," >&2
+  echo "   then: just land-continue $wt" >&2
+}
+
 pick_rest() {
   local wt=$1 c left f
   while read -r c; do
@@ -66,13 +75,11 @@ pick_rest() {
         case "$f" in
           TODO.md|docs/adr/README.md) python3 tools/resolve_todo.py "$wt/$f" || return 1; git -C "$wt" add "$f" ;;
           docs/questions.md) python3 tools/resolve_questions.py "$wt/$f" || return 1; git -C "$wt" add "$f" ;;
-          *)
-            # Keep the worktree and what is left to pick, for land-continue.
-            drop_done "$wt/.land/todo" "$c"
-            echo "🛑 $c conflicts in: $(echo $left) (main unchanged)" >&2
-            echo "   Resolve it in $wt (git -C $wt add …; GIT_EDITOR=true git -C $wt cherry-pick --continue)," >&2
-            echo "   then: just land-continue $wt" >&2
-            return 2 ;;
+          # The docs keep a paragraph on one line, so edits to different
+          # sentences clash as whole lines: merge those word by word.
+          docs/*.md|AGENTS.md|README.md)
+            if python3 tools/resolve_words.py "$wt/$f"; then git -C "$wt" add "$f"; else stop_here "$wt" "$c" "$left"; return 2; fi ;;
+          *) stop_here "$wt" "$c" "$left"; return 2 ;;
         esac
       done
       GIT_EDITOR=true git -C "$wt" cherry-pick --continue > /dev/null

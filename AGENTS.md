@@ -42,7 +42,7 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 | [TODO.md](TODO.md) | The one to-do list: "Agents do" (approved work, in order, then work offered but not approved) and "Ben does" (decisions, recordings, steps only Ben can run). |
 | `web/` | The app. Each module opens with a comment saying what it owns. |
 | `tests/` | `node --test` suites. `fake-dom.mjs` builds the page from `index.html` so `app.test.mjs` runs the real app. |
-| `tools/` | One line each in [docs/layout.md](docs/layout.md): `doctor.sh` (`just doctor`), `serve.py` (dev server, sends the live headers), `look.mjs` (`just look`, and the live checks), `land.sh` (`just land`, `land-continue`), `resolve_todo.py`/`resolve_questions.py` (its conflict resolvers), `cloud_admin.py` and `logs.py` (the cloud database and problem reports). `just --list` says what every recipe does. |
+| `tools/` | One line each in [docs/layout.md](docs/layout.md): `doctor.sh` (`just doctor`), `serve.py` (dev server, sends the live headers), `look.mjs` (`just look`, and the live checks), `land.sh` (`just land`, `land-continue`), `resolve_todo.py`/`resolve_questions.py`/`resolve_words.py` (its conflict resolvers), `cloud_admin.py` and `logs.py` (the cloud database and problem reports). `just --list` says what every recipe does. |
 
 ## Verify
 
@@ -87,7 +87,7 @@ git reset -q && git worktree remove "$WT" && git push -q origin main
 
 **An agent's new ADR or new `web/` file can clash with what landed meanwhile.** `just land` stops on either: `tests/docs.test.mjs` on two ADRs with one number (renumber the later one, and every "ADR NNNN" naming it), `tests/offline.test.mjs` on a `web/` file missing from `web/sw.js` (2026-10-16).
 
-**TODO.md conflicts on landing** are routine (each agent deletes its own line while others add theirs): `python3 tools/resolve_todo.py TODO.md` keeps main's lines and applies the commit's own deletions and additions. It also works for end-of-file appends in `styles.css`. Read the result before continuing. `docs/questions.md` has its own: `python3 tools/resolve_questions.py docs/questions.md` keeps both sides' cards; `just land` runs both.
+**TODO.md conflicts on landing** are routine (each agent deletes its own line while others add theirs): `python3 tools/resolve_todo.py TODO.md` keeps main's lines and applies the commit's own deletions and additions. It also works for end-of-file appends in `styles.css`. Read the result before continuing. `docs/questions.md` has its own: `python3 tools/resolve_questions.py docs/questions.md` keeps both sides' cards. The docs keep a paragraph on one line, so two edits to it clash as whole lines: `python3 tools/resolve_words.py docs/guide.md` merges them word by word and leaves a clash on the same words. `just land` runs all three.
 
 **Cleaning up after agents: `just archive-agent <agent-id>`**, only once the agent has finished (never a live one: a new worktree looks almost empty). It refuses a dirty worktree or a commit not on `main` (matched by patch, then by subject, since landings cherry-pick), tags the tip `archive/<branch>`, then removes the worktree and branch. By hand, cleanups chained after a failed step deleted branches twice (2026-10-11, 2026-10-12).
 
