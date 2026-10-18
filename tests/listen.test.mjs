@@ -277,6 +277,18 @@ test('a snapshot after finish() answers at once, listing only the parts finish()
   assert.equal(listener.finish(), result);
 });
 
+test('a whole song fed at once (a decoded file) is heard as if it streamed', () => {
+  const sr = 44100;
+  const song = render({ sampleRate: sr, lead: 0.5, seed: 2, sections: [{ bars: 6, bpm: 100, ...GROOVE.rock }, { bars: 6, bpm: 100, ...GROOVE.chorus }] });
+  const once = createListener({ sampleRate: sr });
+  once.feed(song.samples);
+  const result = once.finish();
+  assert.deepEqual(result.order, [{ partId: 'A', startBar: 1, bars: 6 }, { partId: 'B', startBar: 7, bars: 6 }]);
+  assertBeat(result.parts[0], GROOVE.rock, 'A');
+  assertBeat(result.parts[1], GROOVE.chorus, 'B');
+  assert.ok(Math.abs(result.seconds - song.seconds) < 0.01);
+});
+
 test('it keeps up: a minute of song is listened to in a small share of a minute', () => {
   const { samples, seconds } = render({ sampleRate: 48000, seed: 1, sections: [{ bars: 30, bpm: 120, ...GROOVE.chorus }] });
   const listener = createListener({ sampleRate: 48000 });
