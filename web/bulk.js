@@ -367,7 +367,7 @@ function openVoice() {
     try {
       audio.wake();
       const after = withBulkChanges(clip, { knobs: pick.knobs });
-      audio.start('preview', await applyChain(await audio.original(clip), chainOf(after), after.tweaks));
+      audio.start('preview', await applyChain(await audio.original(clip), chainOf(after), after.tweaks, clip.level));
     } catch (err) {
       console.error('The voice did not render:', err);
     }

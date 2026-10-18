@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { VOICES, voiceById, amountFor, amountText } from '../web/voices.js';
+import { VOICES, voiceById, amountFor, amountText, presetGain } from '../web/voices.js';
 
 test('every voice has a unique id, a name and an emoji', () => {
   const ids = VOICES.map((v) => v.id);
@@ -226,4 +226,15 @@ test('livePlan: knobs that play first go in the head; knobs after join the live 
   assert.deepEqual(after.tail.map((s) => s.type), ['echo', 'room'], 'a room after the steps plays live');
   assert.equal(after.gain, 0.5, 'Quiet turns the loop down');
   assert.equal(livePlan(chain, { volume: -2 }).gain, 0.25);
+});
+
+// A preset's boards.json `level` turns it down after the evening-out (Ben,
+// 2026-10-17: the few that blasted on a phone); it never turns one up.
+test('a preset\'s level is a turn-down in dB, and nothing else changes a sound', () => {
+  assert.equal(presetGain(undefined), 1);
+  assert.equal(presetGain(0), 1);
+  assert.ok(Math.abs(presetGain(-6) - 0.501) < 0.001, '-6 dB is about half');
+  assert.equal(presetGain(4), 1, 'never louder');
+  assert.equal(presetGain(-40), 1, 'out of range: left alone');
+  assert.equal(presetGain('quiet'), 1);
 });

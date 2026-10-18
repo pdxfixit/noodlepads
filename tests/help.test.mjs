@@ -45,7 +45,7 @@ const MUST_MENTION = [
   // Making a sound
   'New sound', 'Record', 'Choose a file', '✨ Make one', '🎲 Surprise me', '👂 Plain', 'Save sound', 'Keep editing', 'Throw away', 'All emoji', 'Layers', 'Deeper ↔ higher', 'Slower ↔ faster', '+ Add a layer', '🔈', 'Backwards', 'Warble', '⭐ Save voice', 'My voices ▾', '↩️ Reset voice', '⤢ Turn into knobs', '↩️ The old way', 'Muffled ↔ Bright', 'Crunch', 'Stutter',
   '🎲 Surprise steps', '⚙️ Advanced', '⤢', '🥁 On the beat', 'Smooth', 'Buzzy', 'Hiss', '🎵 Find its note', '➕ Mix with another sound', '✂️ Trim and edit', '✂️ Ends', '📐 Fades',
-  '👆 Select part', '🔄 Backwards', '🔇 Silence it', '🔊 Louder', '🔉 Quieter', '✂️ Keep only this', '🧩 Chop into pads', '🧩 Make pads',
+  '👆 Select part', '🔄 Backwards', '🔇 Silence it', '🔊 Louder', '🔉 Quieter', '🔊 Even it out', '✂️ Keep only this', '🧩 Chop into pads', '🧩 Make pads',
   // Beats
   '🆕 New', '🗂️ My beats', '🗂️ My songs', '▶ Play', '⏲️', 'Straight', 'Swing', 'Shuffle', '4/4', '+ Add a row', 'loudness', '🧹?',
   'Who plays it?', '💃 Grooves', '📝 Into my scratch', '➕ Add to this beat', '💾 Keep', '🔊 Make the open beat a sound', '📥 Load a beat file', '🔔 Overlap', '🎹 Tune', '🎹 Add a tune', '♯ All notes', '½ Half pills', '🎚️ Mixer', 'All on',

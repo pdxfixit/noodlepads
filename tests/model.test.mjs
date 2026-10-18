@@ -356,6 +356,9 @@ test('validateManifest names what is wrong', () => {
   assert.match(bad((m) => { delete m.kit[0].file; }), /kit sound is missing/);
   assert.match(bad((m) => { m.kit[1].id = m.kit[0].id; }), /kit sound id "kick" is used twice/);
   assert.match(bad((m) => { m.kit[0].file = '../x.wav'; }), /outside this site/);
+  assert.match(bad((m) => { m.kit[0].level = 3; }), /"level" that isn't a number of dB from -24 to 0/);   // only ever turned down
+  assert.match(bad((m) => { m.kit[0].level = 'loud'; }), /"level"/);
+  assert.equal(bad((m) => { m.kit[0].level = -6; }), null);
   // A person's own clip may not take the name of their copy of a kit sound.
   assert.match(bad((m) => { m.people[0].clips[0].id = `${m.people[0].id}-kick`; }), /used twice/);
   assert.equal(bad((m) => { delete m.kit; }), null);   // a boards.json without a kit is fine
