@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createListener, fingerprint, closestSound, barLikeness, fillHats, MIN_BPM, MAX_BPM } from '../web/listen.js';
+import { createListener, fingerprint, closestSound, barLikeness, fillHats, bpmFor, MIN_BPM, MAX_BPM } from '../web/listen.js';
 import { fftSize } from '../web/listen-dsp.js';
 import { barSteps } from '../web/sequencer.js';
 import { render, feedAll, drumSounds, rng, GROOVE } from './listen-synth.mjs';
@@ -246,6 +246,35 @@ test('the finished result keeps the contract the screens build on', () => {
   quiet.feed(new Float32Array(44100 * 3));
   assert.deepEqual(quiet.finish(), { seconds: 3, parts: [], order: [], tempos: [] });
   assert.throws(() => createListener({}));
+});
+
+test('a tempo is a whole BPM in the app\'s range; a length that is no tempo is null, never a hang', () => {
+  assert.equal(bpmFor(15 / 100), 100);
+  assert.equal(bpmFor(15 / 200), 100);
+  assert.equal(bpmFor(15 / 40), 80);
+  assert.equal(bpmFor(15 / 99.6), 100);
+  // A part with no bars left (merged into another at the end) has no tempo:
+  // halving an endless BPM never reaches the range (2026-10-18).
+  for (const s of [0, Infinity, null, NaN, -1]) assert.equal(bpmFor(s), null, String(s));
+});
+
+test('a snapshot after finish() answers at once, listing only the parts finish() kept, lettered A, B, C', () => {
+  // A bass line and a pad with no drums: what it takes for hits merge into
+  // one part at the end, which once left a part with no bars, whose tempo
+  // the snapshot then halved forever.
+  const sr = 44100;
+  const song = render({ sampleRate: sr, lead: 0.5, seed: 4, sections: [{ bars: 10, bpm: 100, kick: [], snare: [], hat: [] }] });
+  const listener = createListener({ sampleRate: sr });
+  feedAll(listener, song.samples);
+  const result = listener.finish();
+  // Parts merged away leave no gap in the letters (this song once gave A, B, E).
+  assert.ok(result.parts.length >= 2, 'this song makes parts to merge');
+  assert.deepEqual(result.parts.map((p) => p.id), [...'ABCDEFGH'].slice(0, result.parts.length));
+  for (const o of result.order) assert.ok(result.parts.some((p) => p.id === o.partId), o.partId);
+  const s = listener.snapshot();
+  assert.deepEqual(s.parts.map((p) => p.id), result.parts.map((p) => p.id));
+  for (const p of s.parts) assert.ok(p.bpm >= MIN_BPM && p.bpm <= MAX_BPM);
+  assert.equal(listener.finish(), result);
 });
 
 test('it keeps up: a minute of song is listened to in a small share of a minute', () => {

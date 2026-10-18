@@ -37,6 +37,10 @@
 //     tempos: [{ bar, bpm }],                song bars (>= 2) where the
 //                                            tempo changed
 //   }
+//   finish()'s part ids run A, B, C in the order first heard, with no gap:
+//   two parts found alike at the end become one, so a later part's letter
+//   may differ from the one snapshot() gave it. A snapshot after finish()
+//   lists finish()'s parts.
 //   fingerprint(samples, sampleRate) → Float32Array, a sound's shape
 //   closestSound(print, [{ id, print }]) → the closest id
 //
@@ -102,6 +106,17 @@ const partName = (n) => (n < 26 ? String.fromCharCode(65 + n) : partName(Math.fl
 // Group starts within a bar: [0, 4, 8, 12] for 4/4, [0, 6] for 6/8.
 const groupStarts = (sig) => SIGNATURES[sig].reduce((out, g) => [...out, out.at(-1) + g], [0]).slice(0, -1);
 const emptyCells = (B) => ROWS.map(() => new Uint8Array(B));
+
+// The app's tempo for a sixteenth s seconds long: whole BPM within the
+// beat tempo range, halved or doubled to fit. null for a length that is no
+// tempo (none, zero or endless), which would otherwise halve forever.
+export function bpmFor(s) {
+  let bpm = 15 / s;
+  if (!(Number.isFinite(bpm) && bpm > 0)) return null;
+  while (bpm > MAX_BPM + 0.5) bpm /= 2;
+  while (bpm < MIN_BPM - 0.5) bpm *= 2;
+  return Math.round(clamp(bpm, MIN_BPM, MAX_BPM));
+}
 
 // How alike two bars are (rows of cells), from 1 (the same) down: the
 // cells that differ, weighted by row, against an allowance for a hit
@@ -450,16 +465,9 @@ export function createListener({ sampleRate } = {}) {
     const D = seg.iStart - 1 + ((((m.offset - seg.iStart + 1) % m.B) + m.B) % m.B);
     seg.meter = { signature: m.signature, B: m.B, D };
     for (const h of seg.hits) toBar(h);
-    const bpm = bpmOf(seg.grid.s);
+    const bpm = bpmFor(seg.grid.s);
     if (lastBpm !== null && Math.abs(bpm / lastBpm - 1) >= 0.03) tempoChange = { atBar: seg.firstBar, from: lastBpm, to: bpm };
   }
-
-  const bpmOf = (s) => {
-    let bpm = 15 / s;
-    while (bpm > MAX_BPM + 0.5) bpm /= 2;
-    while (bpm < MIN_BPM - 0.5) bpm *= 2;
-    return Math.round(clamp(bpm, MIN_BPM, MAX_BPM));
-  };
 
   // ---- 4. Parts --------------------------------------------------------------
 
@@ -577,7 +585,7 @@ export function createListener({ sampleRate } = {}) {
     pending = [];
     cur = null;
     if (settled.length) nextBar = settled.at(-1).song + 1;
-    if (seg?.meter) lastBpm = bpmOf(seg.grid.s);
+    if (seg?.meter) lastBpm = bpmFor(seg.grid.s);
   }
 
   // A part's beat length: the shortest of 1, 2 or 4 bars that repeats as
@@ -648,7 +656,7 @@ export function createListener({ sampleRate } = {}) {
   // A part's tempo is where it starts (its first 4 bars), so a song that
   // speeds up starts right and its tempo marks follow it up.
   function partBpm(part) {
-    return bpmOf(15 / median(part.voters.slice(0, 4).map((v) => v.tempo)));
+    return bpmFor(15 / median(part.voters.slice(0, 4).map((v) => v.tempo)));
   }
 
   function partSteps(part) {
@@ -682,7 +690,7 @@ export function createListener({ sampleRate } = {}) {
       // The bar's tempo, steadied by its neighbours in the same segment.
       const near = [];
       for (let j = Math.max(0, b - 1); j < bars.length && j <= b + 2; j++) if (bars[j].seg === bar.seg) near.push(bars[j].tempo);
-      const bpm = bpmOf(15 / median(near));
+      const bpm = bpmFor(15 / median(near));
       const newSeg = bar.seg !== prevSeg;
       prevSeg = bar.seg;
       if (bar.song < 2) continue;
@@ -760,10 +768,10 @@ export function createListener({ sampleRate } = {}) {
     return {
       status: listening ? 'listening' : 'finding-tempo',
       seconds: heard / sampleRate,
-      bpm: seg ? bpmOf(seg.grid.s) : guess ? bpmOf(guess.s) : null,
+      bpm: seg ? bpmFor(seg.grid.s) : guess ? bpmFor(guess.s) : null,
       signature: seg?.meter?.signature ?? null,
       swing: SWINGS.includes(swing) ? swing : swingFor(swing / 100),
-      parts: parts.map((p) => ({ id: p.id, bpm: partBpm(p), signature: p.signature, swing: partSwing(p), bars: p.cycle })),
+      parts: parts.filter((p) => p.voters.length).map((p) => ({ id: p.id, bpm: partBpm(p), signature: p.signature, swing: partSwing(p), bars: p.cycle })),
       current: { partId: part?.id ?? null, bar, step: at, recent },
       tempoChange,
     };
@@ -783,6 +791,9 @@ export function createListener({ sampleRate } = {}) {
     while (lastStretch?.bars.length && lastStretch.bars.at(-1).rest) lastStretch.bars.pop();
     if (lastStretch && !lastStretch.bars.length) order.pop();
     const used = parts.filter((p) => p.voters.length);
+    // Letters run A, B, C with no gap: a part merged away gives its letter
+    // to the next, so the parts heard live may have had other letters.
+    used.forEach((p, n) => { p.id = partName(n); });
     result = {
       seconds: end,
       parts: used.map((p) => ({
