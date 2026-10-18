@@ -95,6 +95,7 @@ const SETTLE = 1.5;                   // bars after a bar ends before its part i
 const ANCHORS = 32;                   // hits the grid's line is fitted through
 const ANCHOR_HALF = 12;               // ... each counting half as much this many sixteenths back
 const DRIFT_MARK = 0.06;              // a drift this far from the last tempo makes a tempo mark
+const FEED_SLICE = 4096;              // samples heard between steps, however long a feed (about 90 ms)
 // How likely each signature is before hearing anything: most songs are 4/4.
 const METER_PRIOR = { '4/4': 0.06, '3/4': 0, '6/8': 0, '5/4': -0.04, '7/8': -0.04 };
 
@@ -727,11 +728,18 @@ export function createListener({ sampleRate } = {}) {
 
   // ---- The contract ------------------------------------------------------------
 
+  // A long feed (a whole decoded file at once) is heard a slice at a time,
+  // as if it streamed: the tempo search and the bar lines look at what has
+  // been heard so far, so one step at the end of a long feed would see only
+  // its last few seconds.
   function feed(samples) {
     if (result || !samples?.length) return;
-    heard += samples.length;
-    finder.push(samples);
-    step(finder.horizon);
+    for (let i = 0; i < samples.length; i += FEED_SLICE) {
+      const slice = samples.subarray(i, Math.min(samples.length, i + FEED_SLICE));
+      heard += slice.length;
+      finder.push(slice);
+      step(finder.horizon);
+    }
   }
 
   function snapshot() {
