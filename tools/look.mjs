@@ -44,6 +44,9 @@ const KEYS = (on) => `if (document.body.classList.contains('keys-on') !== ${on})
 // Named states past a screen: a dialog or mode, opened by script, so a look
 // at every screen is one command (just look pads settings help sheet ...).
 const q = (sel) => `document.querySelector(${JSON.stringify(sel)}).click();`;
+// 🆕 New in a beat bar, then a 24-character name typed into its title (the scratch holds it).
+const LONG_NAME = (bar) => `${q(`${bar} [data-beat-new]`)} { const n = document.querySelector(${JSON.stringify(`${bar} [data-beat-name]`)});
+  n.value = 'Wobbly Noodle Jamboree 9'; n.dispatchEvent(new Event('change')); } await new Promise((r) => setTimeout(r, 300));`;
 // ⇆ Move on, unless a wider shot of the same page already turned it on.
 const MOVE_OPEN = 'if (document.querySelector("#seq-deck [data-move-open]").getAttribute("aria-pressed") !== "true") document.querySelector("#seq-deck [data-move-open]").click(); await new Promise((r) => setTimeout(r, 100));';
 const nap = 'await new Promise((r) => setTimeout(r, 150));';
@@ -232,6 +235,10 @@ const VIEWS = {
   // A fresh device has the empty scratch beat open (ADR 0020). 🆕 New opens it blank (Ben, 2026-10-12);
   // KEEP_NEW is New, + Add a row and 💾 Keep: a named beat in 🗂️ My beats.
   beat: { screen: 'beats', js: q('.beat-bar [data-beat-new]') },
+  // The beat bar with the longest name (24 characters) typed into the scratch's title: one
+  // line on a wide screen, 💃 ⌨️ 🗂️ on their own row above it on a phone; keys-long-name with ⌨️ Keys on.
+  'beat-long-name': { screen: 'beats', js: LONG_NAME('.beat-bar') },
+  'keys-long-name': { screen: 'beats', keys: true, js: LONG_NAME('#dj-beatbar') },
   // 🆕 New over a scratch with hits (Ska loaded): the blank scratch and the Undo line;
   // keys-new-full is the same with ⌨️ Keys on (the keys' line), song-new-full on Song (a kept beat, twice).
   'new-full': { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('latin') + q('[data-groove="ska"]') + nap + q('.beat-bar [data-beat-new]') + nap },
