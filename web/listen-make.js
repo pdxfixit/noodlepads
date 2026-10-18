@@ -8,7 +8,7 @@
 
 import { SIGNATURES, barSteps, cleanPattern } from './sequencer.js';
 import { closestSound } from './listen-dsp.js';
-import { cleanTempos, cleanLanes, newLanes, legacySlots, blockBars, MAX_SONG_BARS, MAX_BLOCKS, MAX_TIMES } from './playlist.js';
+import { cleanTempos, cleanLanes, newLanes, legacySlots, blockBars, MAX_SONG_BARS, MAX_BLOCKS, MAX_TIMES, BAR_STEPS } from './playlist.js';
 import { partNames } from './names.js';
 
 export const ROWS = ['kick', 'snare', 'hat'];
@@ -172,17 +172,21 @@ export function makeBeats(result, { personId, sounds = {}, taken = [], newId, no
 // The 🎼 Song, with two or more parts: the parts' beats in song order on
 // the first lane, each at its bar and repeated over its stretch (never into
 // the next one), at the first part's tempo with a mark where the tempo
-// changed. Null with fewer than two beats.
+// changed. Null with fewer than two beats. The listener counts bars in each
+// part's own time signature, and 🎼 Song counts bars of 16 pills, so the
+// blocks and marks go where their bars fall in pills (songBar): a 3/4 part
+// leaves no silence before the next one.
 //   name   the beats' fun name; songs' names, to stay unique
 export function makeSong(result, beats, { personId, name, songNames = [], newId, now = Date.now() }) {
   if (beats.length < 2) return null;
   const beatOf = new Map(beats.map((b) => [b.partId, b.beat]));
-  const stretches = (result.order ?? []).filter((s) => beatOf.has(s.partId) && s.startBar - 1 < MAX_SONG_BARS);
+  const at = (bar) => songBar(result, bar);
+  const stretches = (result.order ?? []).filter((s) => beatOf.has(s.partId) && at(s.startBar) < MAX_SONG_BARS);
   const blocks = [];
   stretches.forEach((s, i) => {
     const beat = beatOf.get(s.partId);
-    const bar = s.startBar - 1;
-    const next = Math.min(MAX_SONG_BARS, stretches[i + 1] ? stretches[i + 1].startBar - 1 : MAX_SONG_BARS);
+    const bar = at(s.startBar);
+    const next = Math.min(MAX_SONG_BARS, stretches[i + 1] ? at(stretches[i + 1].startBar) : MAX_SONG_BARS);
     const steps = barSteps(beat.signature) * beat.bars;
     let times = Math.min(MAX_TIMES, Math.max(1, Math.ceil(s.bars / beat.bars)));
     while (times > 1 && bar + blockBars(steps, times) > next) times--;
@@ -192,7 +196,7 @@ export function makeSong(result, beats, { personId, name, songNames = [], newId,
   const lanes = cleanLanes(newLanes());
   lanes[0].blocks = blocks.slice(0, MAX_BLOCKS).map(({ beatId, bar, times }) => ({ beatId, bar, times }));
   const first = beatOf.get(stretches[0]?.partId) ?? beats[0].beat;
-  const tempos = cleanTempos(result.tempos);
+  const tempos = cleanTempos((result.tempos ?? []).map((m) => ({ bar: at(m?.bar) + 1, bpm: m?.bpm })));
   return {
     id: newId('song'), personId, name: uniqueName(name, songNames), tempo: first.bpm,
     ...(tempos.length ? { tempos } : {}), lanes, slots: legacySlots(lanes), created: now, saved: now,
@@ -210,21 +214,40 @@ function uniqueName(name, list) {
 
 // ── "What I heard" ──
 
+// The part playing in the listener's bar k (counted from 1): its
+// stretch's; a bar between stretches (a tempo change, dropped) the stretch
+// before's. Undefined with no stretches.
+function partAt(result) {
+  const partOf = new Map((result?.parts ?? []).map((p) => [p.id, p]));
+  const order = result?.order ?? [];
+  return (k) => {
+    let s = order[0];
+    for (const x of order) if (x.startBar <= k) s = x;
+    return partOf.get(s?.partId);
+  };
+}
+
 // Seconds into the song where `bar` (counted from 1) starts: each bar at
 // its stretch's tempo and signature; bars between stretches (a tempo
 // change, dropped) at the tempo of the stretch before.
 export function barTime(result, bar) {
-  const partOf = new Map((result?.parts ?? []).map((p) => [p.id, p]));
-  const order = result?.order ?? [];
-  const at = (k) => {
-    let s = order[0];
-    for (const x of order) if (x.startBar <= k) s = x;
-    const p = partOf.get(s?.partId);
-    return p ? (barSteps(p.signature) * 15) / p.bpm : 2;
-  };
+  const part = partAt(result);
   let t = 0;
-  for (let k = 1; k < bar; k++) t += at(k);
+  for (let k = 1; k < bar; k++) {
+    const p = part(k);
+    t += p ? (barSteps(p.signature) * 15) / p.bpm : 2;
+  }
   return t;
+}
+
+// The 🎼 Song bar (counted from 0, 16 pills each) where the listener's bar
+// `bar` (counted from 1, in its part's signature) starts: the pills of every
+// bar before it, rounded up to a whole song bar. The same bar in 4/4.
+export function songBar(result, bar) {
+  const part = partAt(result);
+  let pills = 0;
+  for (let k = 1; k < bar; k++) pills += barSteps(part(k)?.signature ?? '4/4');
+  return Math.max(0, Math.ceil(pills / BAR_STEPS - 1e-9));
 }
 
 const times = (n) => (n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`);
