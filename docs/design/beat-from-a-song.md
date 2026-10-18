@@ -50,7 +50,7 @@ Tests: synthesize audio in the test (clicks and noise bursts at known times, a t
 
 Today a song has one tempo. Ben chose marks on the timeline ("from bar 17, 120 BPM") over each block keeping its beat's tempo: every lane follows the mark, so bars stay lined up. The listener's song is its parts in order, with a mark wherever the tempo changed. A gradual change as a ramp between two marks can come later.
 
-It changes how songs are stored, so it needs an ADR: an older copy plays the song at its first tempo, a 1.x backup still loads (ADR 0011), and the cloud's merge and share previews follow the marks. `playlist.js` (pure) and `song.js`. A way to add and move marks by hand in 🎼 Song comes with it. Useful on its own, so it can ship before the listener.
+It changes how songs are stored, so it needs an ADR: an older copy plays the song at its first tempo, a 1.x backup still loads (ADR 0011), and the cloud's merge and share previews follow the marks. `playlist.js` (pure) and `song.js`. Marks show as BPM chips above their bars in the ruler, for everyone. With Advanced, tapping the song's tempo offers ＋ Tempo change (a bar and a BPM), and a chip taps to change or remove (asks first, Undo) (Ben, 2026-10-18). Useful on its own, so it can ship before the listener.
 
 ## Left for later
 
@@ -71,6 +71,6 @@ It changes how songs are stored, so it needs an ADR: an older copy plays the son
 | 6. Closest sounds and swing | 1 |
 | 7. The screens, with rolling bars | ½ (in 4–6) |
 
-About 10½–12 days in all. Each step lands on its own.
+About 10½–12 days in all. Each step lands on its own. It ships once the synthesized tests pass; Ben then tries real songs (2026-10-18).
 
 Every step also: `docs/guide.md`, a ❓ Help line (`web/help.js`), `just look` views for the new sheets, `web/_headers`' Permissions-Policy gets `display-capture=(self)` on purpose, a `logEvent` kind gets its rule in `web/log-clean.js` and any new usage event its line in the telemetry repo's `events.toml`, and `web/privacy.js` says the song is never saved or sent.
