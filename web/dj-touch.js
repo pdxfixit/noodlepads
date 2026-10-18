@@ -7,19 +7,25 @@
 // + Add a group. The rules are in touch.js.
 
 import {
-  MINE, SIZES, SIZE_NAMES, MAX_BANDS, READY_TOUCH, readyTouch, newBand, addBand, removeBand, moveBand, setSize,
-  remainingSounds, addSounds, swapTile, swapBand, removeTile, sameTouch, keepAsMine, touchName, MAX_TOUCH_NAME, cleanTouch,
+  MINE, SIZES, SIZE_NAMES, MAX_BANDS, READY_TOUCH, readyTouch, newBand, addBand, removeBand, moveBand, resizeBand,
+  offeredSounds, addSounds, swapTile, swapBand, removeTile, sameTouch, keepAsMine, touchName, MAX_TOUCH_NAME, cleanTouch,
 } from './touch.js';
 import { hasPicker, pickerButton, pickerList, pickedFor, pickInstrument } from './inst-picker.js';
 import { presetInstrument, versionFor, ownIdOf, instrumentById } from './instruments.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { newId } from './util.js';
 
+// A group's emoji and name: 🎤 My sounds, a kit group's own, or 🔊 Sounds.
+function groupParts(group, kitGroups = []) {
+  if (group === MINE) return { emoji: '🎤', name: 'My sounds' };
+  const g = kitGroups.find((x) => x.id === group);
+  return g ? { emoji: g.emoji || '🔊', name: g.name } : { emoji: '🔊', name: 'Sounds' };
+}
+
 // A band's heading: the group's emoji and name, or 🎤 My sounds.
 export function groupLabel(group, kitGroups = []) {
-  if (group === MINE) return '🎤 My sounds';
-  const g = kitGroups.find((x) => x.id === group);
-  return g ? `${g.emoji || '🔊'} ${g.name}` : '🔊 Sounds';
+  const { emoji, name } = groupParts(group, kitGroups);
+  return `${emoji} ${name}`;
 }
 
 // Draws `touch` into `box` for playing: a heading and a grid of tiles per
@@ -114,7 +120,7 @@ export function createTouchEditor({ el, deps }) {
   let undo = [];              // earlier layouts, newest last
   let asking = null;          // 'save' | 'delete' | {remove: band}: a line or a second tap waits
   let askTimer = 0;
-  let picking = null;         // {band, tile (null: + more, adding), group}: the picker under a band
+  let picking = null;         // {band, tile (null: + more, adding), group, groupsOpen}: the picker under a band
   let focusAfter = null;      // a selector to focus after a redraw
   let instBand = null;        // the band whose instrument list is open, or null
 
@@ -275,49 +281,102 @@ export function createTouchEditor({ el, deps }) {
     render();
   }
 
-  // Under a band: swap a tile's sound (from its group or any), take it out,
-  // or (+ more) add the group's other sounds, all at once or one by one.
+  // Under a band: swap a tile's sound, take it out, or (+ more) add more,
+  // all at once or one by one. One ▾ picker says which group's sounds show
+  // (the band's own first); its list of groups opens only on a tap (Ben,
+  // 2026-10-18: the wall of group chips "went on so long that at first
+  // glance I misunderstood what was happening"). A sound already anywhere
+  // in the layout is not offered; a swap shows its tile's own as picked.
   function pickerEl(b, i) {
     const swapping = picking.tile != null;
+    const t = now();
+    const s = deps.sounds();
+    const keep = swapping ? b.sounds[picking.tile] : null;
+    const count = (g) => offeredSounds(t, g, s, keep).filter((id) => id !== keep).length;
     const box = document.createElement('div');
     box.className = 'te-picker';
     box.setAttribute('role', 'group');
     const line = document.createElement('p');
     line.className = 'ke-hint';
-    line.textContent = swapping ? `Swap ${soundText(b.sounds[picking.tile])} for:` : `Add to ${label(b.group)}:`;
+    line.textContent = swapping ? `Swap ${soundText(keep)} for:` : `Add to ${label(b.group)}:`;
     box.setAttribute('aria-label', line.textContent);
-    const chips = document.createElement('div');
-    chips.className = 'ke-groups';
-    chips.append(...[b.group, ...groups().filter((g) => g !== b.group)].map((g) => {
-      const c = button('ke-group', label(g), { pickGroup: g });
-      c.setAttribute('aria-pressed', String(g === picking.group));
-      return c;
-    }));
-    const have = new Set(b.sounds);
-    const ids = (deps.sounds().groups.get(picking.group) ?? []).filter((id) => swapping || !have.has(id));
+
+    const from = document.createElement('div');
+    from.className = 'te-pick-from';
+    const fromText = document.createElement('span');
+    fromText.className = 'te-from';
+    fromText.textContent = 'Sounds from';
+    fromText.setAttribute('aria-hidden', 'true');
+    const open = !!picking.groupsOpen;
+    const listId = `te-group-list-${i}`;
+    const n = count(picking.group);
+    const g = groupParts(picking.group, deps.kitGroups());
+    const pick = button('inst-pick te-group-pick', '', { groupPick: i });
+    pick.setAttribute('aria-expanded', String(open));
+    pick.setAttribute('aria-controls', listId);
+    pick.setAttribute('aria-label', `Sounds from ${g.emoji} ${g.name}: ${n} to ${swapping ? 'pick' : 'add'}. Tap to pick another group`);
+    pick.title = 'Pick which group\'s sounds show';
+    pick.append(...groupBits(g, n), part('inst-pick-caret', open ? '▴' : '▾'));
+    from.append(fromText, pick);
+
+    if (open) {
+      const list = document.createElement('div');
+      list.className = 'inst-list te-group-list';
+      list.id = listId;
+      list.setAttribute('role', 'group');
+      list.setAttribute('aria-label', 'Pick a group');
+      const row = document.createElement('div');
+      row.className = 'inst-choices';
+      row.append(...[b.group, ...groups().filter((x) => x !== b.group)].map((id) => {
+        const c = button('inst-choice te-group-choice', '', { pickGroup: id });
+        const on = id === picking.group;
+        const left = count(id);
+        c.setAttribute('aria-pressed', String(on));
+        c.setAttribute('aria-label', `${label(id)}: ${left === 0 ? 'none left' : `${left} to ${swapping ? 'pick' : 'add'}`}`);
+        if (!left) c.classList.add('te-none-left');
+        c.append(...groupBits(groupParts(id, deps.kitGroups()), left));
+        if (on) c.append(part('inst-choice-tick', '✓'));
+        return c;
+      }));
+      list.append(row);
+      box.append(line, from, list);
+      return box;
+    }
+
+    const ids = offeredSounds(t, picking.group, s, keep);
     const list = document.createElement('div');
     list.className = 'ke-picks';
     list.append(...ids.map(clip).filter(Boolean).map((c) => {
-      const s = soundButton(c, deps.family, { pickSound: c.id });
-      s.setAttribute('aria-pressed', String(swapping && c.id === b.sounds[picking.tile]));
-      return s;
+      const btn = soundButton(c, deps.family, { pickSound: c.id });
+      btn.setAttribute('aria-pressed', String(c.id === keep));
+      return btn;
     }));
     const empty = document.createElement('p');
     empty.className = 'ke-hint';
-    empty.hidden = ids.length > 0;
-    empty.textContent = picking.group === MINE && !(deps.sounds().groups.get(MINE)?.length)
+    empty.hidden = n > 0;
+    empty.textContent = picking.group === MINE && !(s.groups.get(MINE)?.length)
       ? 'No sounds of your own yet. Make one on 🔊 Pads with ➕ New sound, and it shows up here.'
-      : 'Every sound of this group is in the band already.';
+      : `Every sound in ${label(picking.group)} is on the board already. Pick another group.`;
     const actions = document.createElement('div');
     actions.className = 'te-pick-actions';
     if (swapping) actions.append(button('seq-tool', '🗑️ Take it out', { takeOut: '' }), button('seq-tool', 'Cancel', { pickClose: '' }));
     else {
-      if (ids.length) actions.append(button('seq-tool', `+ Add all ${ids.length}`, { addAll: '' }));
+      if (n) actions.append(button('seq-tool', `+ Add all ${n}`, { addAll: '' }));
       actions.append(button('seq-tool', '✅ Done adding', { pickClose: '' }));
     }
-    box.append(line, chips, list, empty, actions);
+    box.append(line, from, list, empty, actions);
     return box;
   }
+  // A span with a class and text, hidden from a screen reader (the button says it all).
+  function part(cls, text) {
+    const sp = document.createElement('span');
+    sp.className = cls;
+    sp.setAttribute('aria-hidden', 'true');
+    sp.textContent = text;
+    return sp;
+  }
+  // A group's picture, name and how many of its sounds are left to offer.
+  const groupBits = (g, n) => [part('inst-pick-emoji', g.emoji), part('inst-pick-name', g.name), part('te-group-count', String(n))];
 
   function renderBands() {
     const t = now();
@@ -390,8 +449,11 @@ export function createTouchEditor({ el, deps }) {
     const size = at('size');
     if (size && size.dataset.band != null) {
       const i = Number(size.dataset.band);
-      focusAfter = `[data-size="${size.dataset.size}"][data-band="${i}"]`;
-      set(setSize(cur, i, size.dataset.size), `${label(cur.bands[i].group)}: ${SIZE_NAMES[size.dataset.size].toLowerCase()} tiles.`);
+      const k = size.dataset.size;
+      const next = resizeBand(cur, i, k, deps.sounds());
+      const added = next.bands[i].sounds.length - cur.bands[i].sounds.length;
+      focusAfter = `[data-size="${k}"][data-band="${i}"]`;
+      set(next, `${label(cur.bands[i].group)}: ${SIZE_NAMES[k].toLowerCase()} tiles.${added > 0 ? ` ${added === 1 ? '1 more sound fills' : `${added} more sounds fill`} the line.` : ''}`);
       return;
     }
     const rm = at('remove');
@@ -418,8 +480,19 @@ export function createTouchEditor({ el, deps }) {
       render();
       return;
     }
+    if (at('group-pick') && picking) {
+      picking = { ...picking, groupsOpen: !picking.groupsOpen };
+      focusAfter = '[data-group-pick]';
+      render();
+      return;
+    }
     const group = at('pick-group');
-    if (group && picking) { picking = { ...picking, group: group.dataset.pickGroup }; render(); return; }
+    if (group && picking) {
+      picking = { ...picking, group: group.dataset.pickGroup, groupsOpen: false };
+      focusAfter = '[data-group-pick]';
+      render();
+      return;
+    }
     const sound = at('pick-sound');
     if (sound && picking) {
       const id = sound.dataset.pickSound;
@@ -442,8 +515,7 @@ export function createTouchEditor({ el, deps }) {
       return;
     }
     if (t.closest('[data-add-all]') && picking) {
-      const have = new Set(cur.bands[picking.band].sounds);
-      const ids = (deps.sounds().groups.get(picking.group) ?? []).filter((id) => !have.has(id));
+      const ids = offeredSounds(cur, picking.group, deps.sounds());
       const i = picking.band;
       picking = null;
       set(addSounds(cur, i, ids), `Added ${ids.length === 1 ? '1 sound' : `${ids.length} sounds`} to ${label(cur.bands[i].group)}.`);
@@ -456,12 +528,21 @@ export function createTouchEditor({ el, deps }) {
       if (cur.bands.length >= MAX_BANDS) return;
       picking = null;
       focusAfter = `[data-handle="${cur.bands.length}"]`;
-      set(addBand(cur, newBand(g, deps.sounds())), `Added ${label(g)} at the bottom.`);
+      set(addBand(cur, newBand(g, deps.sounds(), cur)), `Added ${label(g)} at the bottom.`);
     }
   });
 
-  // Esc in an open instrument list closes it, not Edit layout.
+  // Esc in an open instrument list closes it, not Edit layout; so does Esc
+  // in the picker's open list of groups.
   el.bands.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && picking?.groupsOpen && e.target.closest?.('.te-group-list, [data-group-pick]')) {
+      e.preventDefault();
+      e.stopPropagation();
+      picking = { ...picking, groupsOpen: false };
+      focusAfter = '[data-group-pick]';
+      render();
+      return;
+    }
     if (e.key !== 'Escape' || instBand == null || !e.target.closest?.('.inst-list, [data-inst-pick]')) return;
     e.preventDefault();
     e.stopPropagation();

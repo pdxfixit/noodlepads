@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   MINE, SIZES, MAX_BANDS, MAX_BAND_SOUNDS, READY_TOUCH, STARTERS, soundsOf, startingSounds, newBand, readyTouch, defaultTouch,
-  addBand, removeBand, moveBand, setSize, remainingSounds, addSounds, swapTile, removeTile, sameTouch, keepAsMine,
+  addBand, removeBand, moveBand, setSize, resizeBand, remainingSounds, offeredSounds, addSounds, swapTile, removeTile, sameTouch, keepAsMine,
   touchSounds, touchOrder, cleanBand, cleanTouch, cleanTouchLayout, touchName,
 } from '../web/touch.js';
 
@@ -39,6 +39,8 @@ test('every starter and ready-made sound is a real kit sound, never an Advanced-
       for (const id of b.sounds ?? []) { assert.ok(known.has(id), `${r.id}: ${id}`); assert.ok(!known.get(id).advanced, id); }
       assert.equal(new Set(b.sounds ?? []).size, (b.sounds ?? []).length, `${r.id}: no sound twice in a band`);
     }
+    const all = readyTouch(r, noOwn).bands.flatMap((b) => b.sounds);
+    assert.equal(new Set(all).size, all.length, `${r.id}: no sound twice on the board`);
   }
 });
 
@@ -94,6 +96,9 @@ test('+ more adds the group\'s other sounds; a tile swaps its sound (trading pla
   const more = addSounds(t, 0, rest);
   assert.equal(more.bands[0].sounds.length, 4 + rest.length);
   assert.deepEqual(remainingSounds(more, 0, sounds), []);
+  const two = { bands: [newBand('animals', sounds), newBand('drums', sounds)] };
+  assert.ok(!remainingSounds(two, 1, sounds).includes('pip-kick'), 'not what its own band holds');
+  assert.deepEqual(remainingSounds(addSounds(two, 0, ['pip-snare']), 1, sounds).slice(0, 1), ['pip-open-hat'], 'nor what another band holds');
   assert.equal(addSounds(t, 0, ['pip-kick']).bands[0].sounds.length, 4, 'a sound already there is not added twice');
   assert.deepEqual(swapTile(t, 0, 0, 'pip-moo').bands[0].sounds, ['pip-moo', 'pip-snare', 'pip-hihat', 'pip-clap'], 'any sound, from any group');
   assert.deepEqual(swapTile(t, 0, 0, 'pip-clap').bands[0].sounds, ['pip-clap', 'pip-snare', 'pip-hihat', 'pip-kick']);
@@ -133,4 +138,54 @@ test('cleaning: safe groups and sizes, short ids, each sound once, at most 8 ban
   assert.equal(cleanTouchLayout({ ...l, name: '  ' }).name, 'Layout');
   assert.equal(touchName('   '), null);
   assert.equal(touchName(' Jam '), 'Jam');
+});
+
+test('+ more and a swap offer only sounds not on the board yet; a swap keeps its own tile\'s sound; an instrument\'s note is the note', () => {
+  const t = { bands: [newBand('drums', sounds), { group: 'animals', size: 'm', sounds: ['pip-moo', 'pip-hihat'] }] };
+  const drums = offeredSounds(t, 'drums', sounds);
+  for (const id of ['pip-kick', 'pip-snare', 'pip-hihat', 'pip-clap']) assert.ok(!drums.includes(id), id);
+  assert.equal(drums[0], 'pip-open-hat');
+  assert.ok(!offeredSounds(t, 'animals', sounds).includes('pip-moo'));
+  assert.deepEqual(offeredSounds(t, 'drums', sounds, 'pip-kick').slice(0, 2), ['pip-kick', 'pip-open-hat'], 'the swapped tile\'s own shows, in the group\'s order');
+  assert.deepEqual(offeredSounds(t, MINE, sounds), ['user-2', 'user-3', 'user-1']);
+  assert.deepEqual(offeredSounds(t, 'nope', sounds), []);
+  // The piano's C plays the Notes' own C: with one on the board, the other is not offered.
+  const piano = soundsOf([...kit.filter((c) => c.group !== 'notes'), { id: 'pip-piano-c', kit: true, group: 'notes', plays: 'note-c' }, { id: 'pip-piano-d', kit: true, group: 'notes', plays: 'note-d' }], 'pip');
+  assert.deepEqual(offeredSounds({ bands: [{ group: 'notes', size: 'm', sounds: ['pip-note-c'] }] }, 'notes', piano), ['pip-piano-d']);
+});
+
+test('a new band added to a layout starts with what is not on the board: its starters left, then the group\'s next', () => {
+  const t = { bands: [newBand('drums', sounds)] };
+  const second = newBand('drums', sounds, t).sounds;
+  assert.deepEqual(second, offeredSounds(t, 'drums', sounds).slice(0, 4), 'a second Drums: the next four');
+  assert.equal(second[0], 'pip-open-hat');
+  const half = { bands: [{ group: 'chords', size: 'm', sounds: ['pip-chord-c', 'pip-chord-f'] }] };
+  const next = newBand('chords', sounds, half).sounds;
+  assert.deepEqual(next.slice(0, 2), ['pip-chord-am', 'pip-chord-g'], 'the starters still free first');
+  assert.equal(next.length, 4);
+  assert.ok(!next.includes('pip-chord-c') && !next.includes('pip-chord-f'));
+  const used = { bands: [{ group: 'bass', size: 's', sounds: noOwn.groups.get('bass') }] };
+  assert.deepEqual(newBand('bass', noOwn, used).sounds, [], 'a group all on the board starts empty');
+});
+
+test('sizing a band down fills its last line with the group\'s next free sounds; sizing up keeps them all', () => {
+  const t = { bands: [newBand('drums', sounds), { group: 'animals', size: 'm', sounds: ['pip-open-hat'] }] };   // L, 4 drums
+  assert.deepEqual(resizeBand(t, 0, 'm', sounds).bands[0].sounds.length, 4, 'four at four across: the line is full');
+  const s = resizeBand(t, 0, 's', sounds).bands[0];
+  assert.equal(s.size, 's');
+  assert.equal(s.sounds.length, 5);
+  assert.notEqual(s.sounds[4], 'pip-open-hat', 'never one already on the board');
+  assert.equal(s.sounds[4], offeredSounds(t, 'drums', sounds)[0]);
+  const six = { bands: [{ group: 'chords', size: 'l', sounds: ['pip-chord-c', 'pip-chord-am', 'pip-chord-f', 'pip-chord-g', 'pip-chord-dm', 'pip-chord-em'].filter((id) => sounds.groups.get('chords').includes(id)) }] };
+  const n = six.bands[0].sounds.length;
+  const m = resizeBand(six, 0, 'm', sounds).bands[0].sounds;
+  assert.equal(m.length, Math.min(Math.ceil(n / 4) * 4, sounds.groups.get('chords').length), 'filled to the end of its line, as far as the group goes');
+  assert.deepEqual(resizeBand(resizeBand(t, 0, 's', sounds), 0, 'l', sounds).bands[0].sounds, s.sounds, 'bigger tiles keep every sound');
+  assert.deepEqual(resizeBand(t, 0, 'l', sounds), t, 'the same size changes nothing');
+  // A sound that is gone takes no place: two drums and a gone one fill a line of four with two more.
+  const gone = { bands: [{ group: 'drums', size: 'l', sounds: ['pip-kick', 'pip-gone', 'pip-snare'] }] };
+  assert.equal(resizeBand(gone, 0, 'm', sounds).bands[0].sounds.length, 5);
+  const empty = { bands: [{ group: MINE, size: 'l', sounds: [] }] };
+  assert.deepEqual(resizeBand(empty, 0, 's', sounds).bands[0].sounds, ['user-2', 'user-3', 'user-1'], 'an empty band fills one line, as far as it goes');
+  assert.equal(JSON.stringify(t), JSON.stringify({ bands: [newBand('drums', sounds), { group: 'animals', size: 'm', sounds: ['pip-open-hat'] }] }), 'unchanged');
 });

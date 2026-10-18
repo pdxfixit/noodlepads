@@ -3796,8 +3796,19 @@ dialog#keys-edit::backdrop, dialog#touch-edit::backdrop { background: var(--bed)
 .te-more[aria-expanded="true"] { border-style: solid; border-color: var(--led); }
 .te-picker { display: grid; gap: 8px; padding: 10px; border-radius: 12px; background: rgb(0 0 0 / 0.25); }
 .te-picker .ke-hint { margin: 0; }
-.te-picker .ke-groups { gap: 6px; }
-.te-picker .ke-group { flex: 0 1 auto; padding: 0 10px; font-size: 0.85rem; }
+/* Which group's sounds show: "Sounds from 🥁 Drums 17 ▾", the instrument
+   picker's button (inst-picker.js), with how many are left to offer. Its
+   list of groups opens under it, in place of the sounds. */
+.te-pick-from { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.te-from { flex: none; color: rgb(255 255 255 / 0.85); font-size: 0.95rem; }
+.te-picker .te-group-pick { flex: 0 1 auto; max-width: 100%; min-width: 0; }
+.te-group-count { flex: none; min-width: 1.6em; padding: 2px 6px; border-radius: 10px; background: rgb(0 0 0 / 0.3); font: 800 0.85rem/1.2 var(--font-ui); text-align: center; }
+.te-group-list { --fam: rgb(255 255 255 / 0.5); display: block; padding: 10px; }
+.te-group-list .inst-choices { grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); }
+.te-group-choice { min-width: 0; }
+.te-group-choice .te-group-count { margin-left: auto; }
+.te-group-choice .inst-choice-tick { margin-left: 0; }
+.te-group-choice.te-none-left { opacity: 0.6; }
 .te-pick-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .te-pick-actions .seq-tool { flex: 1 1 auto; }
 .te-adding .ke-hint { margin: 0 0 8px; }
