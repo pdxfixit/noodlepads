@@ -1,7 +1,7 @@
-# Daily: is https://noodlepads.com up (/, /version.json, /api/cloud), and does it
-# serve main's web/ and worker/? A down or broken site fails (after 3
-# retries, 20 s apart); live behind main passes with a notice for the first hour
-# after main changed those paths (a deploy in flight), then fails.
+# Daily: is https://noodlepads.com up and working? /, /version.json and
+# /api/cloud must answer (and /api/cloud say ok); a miss fails after 3 retries,
+# 20 s apart. Which commit is live is not checked: deploy.yml deploys every push
+# to main, and a failed deploy is a red run there.
 # tools/live_check.py. Read-only GETs, no secrets; GitHub never deploys.
 name: live
 on:
@@ -16,7 +16,5 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0  # the live commit and when main last changed web/, worker/
-      - name: Live site against main
+      - name: Live site is up
         run: python3 tools/live_check.py

@@ -1,4 +1,4 @@
-"""The daily live check's rules, with a fake network, git and clock (tools/live_check.py)."""
+"""The daily live check's rule, with a fake network and clock (tools/live_check.py)."""
 import unittest
 
 import live_check as lc
@@ -8,56 +8,42 @@ GOOD = {"/": (200, "<!doctype html>"), "/version.json": (200, '{"version":"abc12
 
 
 class Decide(unittest.TestCase):
-    def test_live_serves_main(self):
-        ok, lines, notice = lc.decide(GOOD, "abc1234", True, True, 10 * 86400)
+    def test_a_healthy_site_passes(self):
+        ok, lines = lc.decide(GOOD)
         self.assertTrue(ok)
-        self.assertIsNone(notice)
+        self.assertEqual(lines, ["✅ / 200", "✅ /version.json 200", "✅ /api/cloud 200"])
 
-    def test_behind_by_ten_minutes_passes_with_a_notice(self):
-        ok, _, notice = lc.decide(GOOD, "abc1234", True, False, 10 * 60)
-        self.assertTrue(ok)
-        self.assertIn("deploy in flight", notice)
-        self.assertIn("10 min", notice)
+    def test_any_live_version_passes(self):
+        for v in ("fff0000", "v1.0-3-gabc1234", "abc1234-dirty", "not-a-commit"):
+            ok, _ = lc.decide({**GOOD, "/version.json": (200, f'{{"version":"{v}"}}')})
+            self.assertTrue(ok, v)
 
-    def test_behind_by_two_hours_fails_naming_the_version_and_age(self):
-        ok, lines, _ = lc.decide(GOOD, "abc1234", True, False, 2 * 3600)
-        self.assertFalse(ok)
-        bad = [l for l in lines if l.startswith("❌")][0]
-        self.assertIn("abc1234", bad)
-        self.assertIn("120 min", bad)
-
-    def test_an_unknown_commit_fails_after_the_grace(self):
-        ok, lines, _ = lc.decide(GOOD, "fff0000", False, False, 2 * 3600)
-        self.assertFalse(ok)
-        self.assertIn("not a commit in this repo", "\n".join(lines))
-
-    def test_dirty_always_fails(self):
-        ok, lines, _ = lc.decide(GOOD, "abc1234-dirty", True, True, 10 * 86400)
-        self.assertFalse(ok)
-        self.assertIn("uncommitted edits", "\n".join(lines))
-
-    def test_cloud_down_fails_even_when_versions_match(self):
-        ok, lines, _ = lc.decide({**GOOD, "/api/cloud": (503, "")}, "abc1234", True, True, 0)
+    def test_cloud_down_fails(self):
+        ok, lines = lc.decide({**GOOD, "/api/cloud": (503, "")})
         self.assertFalse(ok)
         self.assertIn("/api/cloud answered 503", "\n".join(lines))
 
     def test_cloud_200_but_not_ok_fails(self):
-        ok, lines, _ = lc.decide({**GOOD, "/api/cloud": (200, '{"ok":false}')}, "abc1234", True, True, 0)
+        ok, lines = lc.decide({**GOOD, "/api/cloud": (200, '{"ok":false}')})
         self.assertFalse(ok)
         self.assertIn("/api/cloud not ok", "\n".join(lines))
 
-    def test_no_version_fails(self):
-        ok, _, _ = lc.decide(GOOD, None, False, False, 0)
+    def test_cloud_200_but_not_json_fails(self):
+        ok, _ = lc.decide({**GOOD, "/api/cloud": (200, "<html>")})
         self.assertFalse(ok)
 
+    def test_home_page_down_fails(self):
+        ok, lines = lc.decide({**GOOD, "/": (404, "")})
+        self.assertFalse(ok)
+        self.assertIn("/ answered 404", "\n".join(lines))
 
-class Parts(unittest.TestCase):
-    def test_commit_of_a_describe_version(self):
-        self.assertEqual(lc.commit_of("abc1234"), "abc1234")
-        self.assertEqual(lc.commit_of("abc1234-dirty"), "abc1234")
-        self.assertEqual(lc.commit_of("v1.0-3-gabc1234"), "abc1234")
-        self.assertEqual(lc.commit_of("v1.0-3-gabc1234-dirty"), "abc1234")
+    def test_unreachable_version_fails(self):
+        ok, lines = lc.decide({**GOOD, "/version.json": (0, "")})
+        self.assertFalse(ok)
+        self.assertIn("/version.json answered nothing", "\n".join(lines))
 
+
+class Retries(unittest.TestCase):
     def test_retries_only_the_misses(self):
         answers = {"/": [(200, "x")], "/version.json": [(200, "{}")], "/api/cloud": [(503, ""), (200, '{"ok":true}')]}
         calls, sleeps = [], []
@@ -68,7 +54,18 @@ class Parts(unittest.TestCase):
         out = lc.check_pages(fetch, sleeps.append)
         self.assertEqual(out["/api/cloud"], (200, '{"ok":true}'))
         self.assertEqual(calls, ["/", "/version.json", "/api/cloud", "/api/cloud"])
-        self.assertEqual(len(sleeps), 1)
+        self.assertEqual(sleeps, [lc.WAIT_S])
+
+    def test_a_page_still_down_is_tried_three_more_times(self):
+        calls, sleeps = [], []
+
+        def fetch(p):
+            calls.append(p)
+            return (503, "") if p == "/" else GOOD[p]
+        out = lc.check_pages(fetch, sleeps.append)
+        self.assertEqual(out["/"], (503, ""))
+        self.assertEqual(calls.count("/"), 1 + lc.TRIES)
+        self.assertEqual(sleeps, [lc.WAIT_S] * lc.TRIES)
 
 
 if __name__ == "__main__":
