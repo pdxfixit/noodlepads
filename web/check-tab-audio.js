@@ -21,6 +21,15 @@ export function hear(state, frame) {
   return { frames: state.frames + 1, loud, heard: state.heard || loud >= HEARD_FRAMES };
 }
 
+// The browser's own words for an error from startCapture, for the small
+// line under the status: '' when the browser said nothing (no sound came
+// with the tab, or this browser has no way: those are listen-input's own).
+export function browserSaid(err) {
+  const cause = err?.cause;
+  if (!cause?.name || cause.name === 'NoAudio' || cause.name === 'Unsupported') return '';
+  return `What the browser said (${cause.name}${cause.message ? `: ${cause.message}` : ''})`;
+}
+
 const NAMES = { tab: '🗂️ another tab', screen: '🖥️ the whole computer', mic: '🎤 the microphone', file: '📁 a song file' };
 
 const byId = (id) => document.getElementById(id);
@@ -90,9 +99,8 @@ function wire() {
       setButton(true);
       show('listening', 'Listening…');
     } catch (err) {
-      const why = err.cause?.name ? ` (${err.cause.name}${err.cause.message ? `: ${err.cause.message}` : ''})` : '';
       show('error', err.message);
-      detail.textContent = why ? `What the browser said${why}` : '';
+      detail.textContent = browserSaid(err);
     } finally {
       button.disabled = false;
     }

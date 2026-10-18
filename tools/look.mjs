@@ -200,10 +200,12 @@ const VIEWS = {
   'check-tab-heard': { page: 'check-tab-audio.html', js: `const c = await import('/check-tab-audio.js');
     c.show('heard', 'Hearing sound ✓'); c.showLevel(0.72);
     document.querySelector('#share').textContent = '■ Stop'; document.querySelector('#share').classList.add('stop');
-    document.querySelector('#detail').textContent = 'Sharing “Tab audio” · 48000 Hz · loudest so far -3 dB';` },
+    document.querySelector('#detail').textContent = 'Sharing “Tab audio” · 48000 Hz · loudest so far −3 dB';` },
   'check-tab-error': { page: 'check-tab-audio.html', js: `const c = await import('/check-tab-audio.js');
-    c.show('error', 'No sound came with that tab: share it again and leave Also share tab audio ticked.');
-    document.querySelector('#detail').textContent = 'What the browser said (NotAllowedError: Permission denied)';` },
+    const i = await import('/listen-input.js');
+    const why = Object.assign(new Error('Permission denied by system'), { name: 'NotAllowedError' });
+    c.show('error', i.captureError('tab', why));
+    document.querySelector('#detail').textContent = c.browserSaid({ cause: why });` },
   'sheet-edit': { screen: 'pads', js: `${q('#edit-toggle')} ${q('#pads .pad-cell [data-edit]')}` },
   // ✏️ Edit sounds with six made-up sounds of the kid's own, four in two
   // groups (MINE): as it opens, with two chosen (the bar), with a preset
