@@ -78,6 +78,12 @@ const GROOVE_KEEP = (group, id) => q('#seq-grooves') + GROOVE_GROUPS_OPEN(group)
 const PLAYLIST = `${q('#beats-toggle') + GROOVE_KEEP('latin', 'ska') + GROOVE_KEEP('dance', 'house') + GROOVE_KEEP('rock', 'pop')}
   ${q('#song-tab') + nap + q('#song-new') + nap} ${SONG_DROP}
   drop(0, 0, 0); ${q('#song-more')} drop(1, 1, 0); drop(1, 1, 4); drop(2, 2, 2); ${q('#song-sel-close')}`;
+// The playlist with Advanced on and two tempo marks put in through 🎼 Tempo
+// (140 BPM from bar 3, 80 from bar 9), the sheet shut again.
+const TEMPO_MARK = (bar, bpm) => `${q('#tempo-add')} document.querySelector('#tempo-bar').value = '${bar}';
+  document.querySelector('#tempo-bpm').value = '${bpm}'; ${q('#tempo-done')}`;
+const TEMPO_MARKS = `${PLAYLIST} (await import('/settings.js')).setSetting('advancedBeats', true); ${nap}
+  ${q('#song-tempo-open')} ${TEMPO_MARK(3, 140)} ${TEMPO_MARK(9, 80)} document.querySelector('#tempo-sheet').close(); ${nap}`;
 // Six made-up sounds of the kid's own (silent audio), four of them in two
 // groups, for the Edit sounds views. Not stored: a reload forgets them.
 const MINE = `const { state } = await import('/state.js'); const pid = state.personId;
@@ -312,6 +318,14 @@ const VIEWS = {
   'playlist-playing': { screen: 'song', js: `${PLAYLIST} ${q('#song-play')} await new Promise((r) => setTimeout(r, 2500));` },
   'playlist-lanes': { screen: 'song', js: `${PLAYLIST} ${q('#song-add-lane').repeat(4)}` },
   'playlist-lane': { screen: 'song', js: `${PLAYLIST} ${q('#song-lanes [data-lane-pick="1"]')}` },
+  // Tempo marks (ADR 0031), with Advanced on: song-tempos has two (140 from
+  // bar 3, 80 from bar 9), their BPM chips over the ruler; tempo-sheet is 🎼
+  // Tempo's list (the deck's tempo tapped); tempo-mark is a chip tapped, its
+  // mark open to change or remove; song-tempos-regular is the chips with Advanced off.
+  'song-tempos': { screen: 'song', js: TEMPO_MARKS },
+  'song-tempos-regular': { screen: 'song', js: `${TEMPO_MARKS} (await import('/settings.js')).setSetting('advancedBeats', false); ${nap}` },
+  'tempo-sheet': { screen: 'song', js: `${TEMPO_MARKS} ${q('#song-tempo-open')} ${nap}` },
+  'tempo-mark': { screen: 'song', js: `${TEMPO_MARKS} ${q('#song-lanes [data-tempo-bar="9"]')} ${nap}` },
   // Cloud profiles (cloud-ui.js). The look server has no /api, so these show
   // the screens as a device sees them with the cloud out of reach, and
   // cloud-in fakes this device's link to draw the in-the-cloud sheet.
