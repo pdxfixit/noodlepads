@@ -233,18 +233,6 @@ const VIEWS = {
   'keys-inst': { screen: 'live', js: q('#dj-input [data-input="keys"]') + q('#dj-change') + q('[data-group="kit-notes"]') + q('#ke-inst [data-inst-pick]') + nap },
   'touch-inst': { screen: 'live', js: q('#dj-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-inst-pick]') + nap },
   sheet: { screen: 'pads', js: q('.pad-add') },
-  // The tab-audio check page for 🎧 From a song (web/check-tab-audio.html), not the app:
-  // as it opens, hearing sound (a made-up level), and a problem (the no-sound message).
-  'check-tab': { page: 'check-tab-audio.html' },
-  'check-tab-heard': { page: 'check-tab-audio.html', js: `const c = await import('/check-tab-audio.js');
-    c.show('heard', 'Hearing sound ✓'); c.showLevel(0.72);
-    document.querySelector('#share').textContent = '■ Stop'; document.querySelector('#share').classList.add('stop');
-    document.querySelector('#detail').textContent = 'Sharing “Tab audio” · 48000 Hz · loudest so far −3 dB';` },
-  'check-tab-error': { page: 'check-tab-audio.html', js: `const c = await import('/check-tab-audio.js');
-    const i = await import('/listen-input.js');
-    const why = Object.assign(new Error('Permission denied by system'), { name: 'NotAllowedError' });
-    c.show('error', i.captureError('tab', why));
-    document.querySelector('#detail').textContent = c.browserSaid({ cause: why });` },
   'sheet-edit': { screen: 'pads', js: `${q('#edit-toggle')} ${q('#pads .pad-cell [data-edit]')}` },
   // ✏️ Edit sounds with six made-up sounds of the kid's own, four in two
   // groups (MINE): as it opens, with two chosen (the bar), with a preset

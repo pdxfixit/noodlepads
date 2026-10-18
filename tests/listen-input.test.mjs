@@ -1,9 +1,9 @@
-// 🎧 From a song's inputs (web/listen-input.js, web/listen-worklet.js) and
-// the tab-audio check page. Node has no capture, so the browser is stood in
+// 🎧 From a song's inputs (web/listen-input.js, web/listen-worklet.js).
+// Node has no capture, so the browser is stood in
 // for: navigators for which sources a device offers, a fake stream and audio
 // context for startCapture's wiring, a fake decoder for song files, and a
 // fake worklet scope for the processor. Real capture (does Chrome hand over
-// Spotify's tab?) is what web/check-tab-audio.html is for.
+// Spotify's tab?) was proven by a check page, since deleted (Ben, 2026-10-18).
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
