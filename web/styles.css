@@ -3188,7 +3188,8 @@ body[data-locked] main { visibility: hidden; }
 /* Ben, 2026-10-11: "fill, then split. still reasonable to have upper/lower
    limits". Every screen fills the width up to --max (2400 px), centered
    beyond it; pads take more columns (pads.js), beat pills grow wider. From
-   1400 px, a screen with two natural parts puts them side by side. Limits:
+   1400 px, a screen with two natural parts puts them side by side, except
+   Beats, whose rows keep the full width. Limits:
    pads stop at 400 px (pad-size.js), the DJ keys at a 1500 px keyboard,
    and text keeps a readable line. Phones (up to 700 px) are unchanged. */
 
@@ -3199,11 +3200,9 @@ body[data-locked] main { visibility: hidden; }
   /* The tempo slider stops at a length a finger still travels in one go. */
   .beat-tempo { max-width: 52rem; }
 
-  /* Beat Builder: the beat beside the keys that record into it. */
-  .dj:has(> .dj-grid:not([hidden])) { display: grid; grid-template-columns: minmax(18rem, 1fr) minmax(0, 2fr); column-gap: 20px; align-items: start; }
-  .dj:has(> .dj-grid:not([hidden])) > * { grid-column: 1 / -1; }
-  .dj:has(> .dj-grid:not([hidden])) > .dj-grid { grid-column: 1; grid-row: span 2; }   /* beside ⌨️ / 👆 and the keys or tiles under it */
-  .dj:has(> .dj-grid:not([hidden])) > :is(.dj-keys, .dj-touch, .dj-input) { grid-column: 2; }
+  /* Beats with ⌨️ Keys stays one column: the beat's rows over the keys, full
+     width, for programming a beat line and dragging its pills (Ben, 2026-10-19:
+     "even with a wide screen, the beats shouldn't go side-by-side"). */
 
   /* ❓ Help: wider, its pictures and sentences in two columns. */
   dialog#help { width: min(1180px, calc(100vw - 2 * var(--gutter))); }

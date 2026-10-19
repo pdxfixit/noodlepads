@@ -112,7 +112,7 @@ git reset -q && git worktree remove "$WT" && git push -q origin main
 Ben: *"Optimizing the user interface for a variety of screens is very important."*
 
 - Phones are the main device. Design at 375 px first, then check 320 up to 1100, and the wide screens up to 3440 (`just look --wide`).
-- Wide screens fill, then split (Ben): content fills up to 2400 px, centered beyond; from 1400 px a screen's two natural parts sit side by side. The rules are at the end of `styles.css` (Wide screens).
+- Wide screens fill, then split (Ben): content fills up to 2400 px, centered beyond; from 1400 px a screen's two natural parts sit side by side, except Beats (its rows keep the full width). The rules are at the end of `styles.css` (Wide screens).
 - Lines of controls fill the width on phones. Nothing scrolls sideways.
 - Touch targets are at least 44 px.
 - The `just test` contrast suite checks text on every color the app uses. Keep it green when you add a color.

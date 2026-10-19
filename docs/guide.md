@@ -97,9 +97,9 @@ Look's samples show their own skin; a browser without CSS `@scope` shows Tiles.
 ## Wide screens
 
 or desktop, up to 2400 px of content (centered beyond that). From 1400 px a
-screen with two parts shows them side by side: Beats with ⌨️ Keys its beat beside the keys,
-❓ Help two columns, and the sound sheet the sound and how it looks beside
-Voice and Layers. Limits keep it sensible: pads stop at 400 px, the
+screen with two parts shows them side by side: ❓ Help two columns, and the sound sheet the sound and how it looks beside
+Voice and Layers. Beats never splits: with ⌨️ Keys the beat's rows stay over the
+keys, full width, for programming and dragging pills. Limits keep it sensible: pads stop at 400 px, the
 keys at 1500 px, and text at a readable line.
 
 ## 🧸 Kids
