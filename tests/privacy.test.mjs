@@ -205,21 +205,18 @@ test('"Problem reports … send": the statement names everything a report holds,
   assert.doesNotMatch(JSON.stringify(report), /Mozilla|Pixel/);
 });
 
-test('the privacy policy is linked beside the version, in the footer and in About, and not in "What\'s private"', () => {
+// Ben, 2026-10-19: "drop privacy policy" from the footer.
+test('the privacy policy is linked beside the version in About, not in the footer, and not in "What\'s private"', () => {
   assert.equal(PRIVACY_URL, 'https://privacy.pdxfixit.com/noodlepads/');
-  const link = (where) => where.match(/<a class="privacy-link"(?: id="privacy-policy")? href="([^"]+)" target="_blank" rel="noopener">([^<]+)<\/a>/);
+  const link = (where) => where.match(/<a class="privacy-link" href="([^"]+)" target="_blank" rel="noopener">([^<]+)<\/a>/);
   const foot = html.slice(html.indexOf('<div class="page-foot">'), html.indexOf('</div>', html.indexOf('<div class="page-foot">')));
-  const inFoot = link(foot);
-  assert.ok(inFoot, 'a link in the page footer, opening in a new tab');
-  assert.ok(foot.indexOf('id="version"') < foot.indexOf('privacy-policy'), 'right after the version');
+  assert.equal(link(foot), null, 'no link in the page footer');
   const about = html.match(/<p class="set-version">[\s\S]*?<\/p>/)?.[0] ?? '';
   assert.match(about, /<span id="about-version"><\/span>/, 'About keeps its version');
   const inAbout = link(about);
   assert.ok(inAbout, 'a link beside the version in Settings → About');
-  for (const l of [inFoot, inAbout]) {
-    assert.equal(l[1], PRIVACY_URL);
-    assert.equal(l[2], 'Privacy policy');
-  }
+  assert.equal(inAbout[1], PRIVACY_URL);
+  assert.equal(inAbout[2], 'Privacy policy');
   assert.doesNotMatch(html, /id="set-privacy"/, 'no "What\'s private" section in Settings');
   assert.ok(readme.includes(`(${PRIVACY_URL})`), 'README links it');
 });

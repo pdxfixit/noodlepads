@@ -8,7 +8,7 @@
 export const PRIVACY_TITLE = "🔓 What's private (not much)";
 
 // The full policy, shared by every pdxfixit app. The page links it beside the
-// version, in the footer (#privacy-policy) and in Settings → About; README
+// version in Settings → About (not in the footer: Ben, 2026-10-19); README
 // links it too.
 export const PRIVACY_URL = 'https://privacy.pdxfixit.com/noodlepads/';
 
