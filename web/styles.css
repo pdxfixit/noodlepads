@@ -2668,6 +2668,22 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
   .touch-band .touch-tile { min-height: 88px; }
   .touch-band[data-size="l"] .touch-tile { min-height: 130px; }
 }
+/* 👆 A grid (ADR 0032): blocks side by side, filling the room under the
+   bar like a pad controller (Ben, 2026-10-19), each block's pads filling it
+   in the columns dj-touch.js measures (--cols). Each part of a split is as
+   big as its twelfths (--part). */
+.grid-split { display: flex; gap: 10px; min-width: 0; min-height: 0; }
+.grid-split[data-dir="down"] { flex-direction: column; }
+.grid-split > * { flex: var(--part, 1) 1 0; min-width: 0; min-height: 0; }
+.touch-grid { display: flex; height: max(320px, calc(100dvh - var(--head-h, 64px) - var(--toolbar-h) - 48px)); }
+body.keys-on .touch-grid { height: max(320px, calc(100dvh - var(--head-h, 64px) - var(--toolbar-h) - 140px)); }
+.touch-grid > .grid-split { flex: 1 1 auto; }
+.touch-band.touch-cell { display: flex; flex-direction: column; gap: 6px; }
+.touch-band.touch-cell .cell-tiles { flex: 1 1 auto; min-height: 0; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); grid-auto-rows: minmax(52px, 1fr); overflow-y: auto; }
+.touch-band.touch-cell .touch-tile { min-height: 0; }
+.touch-band.touch-cell .touch-emoji { font-size: clamp(1.3rem, 5vmin, 2.6rem); }
+.touch-band.touch-cell .touch-name { font-size: 0.85rem; }
+.touch-block-empty { border: 2px dashed rgb(255 255 255 / 0.3); border-radius: 12px; }
 
 /* A legend for the key colors, like the periodic table's. */
 .dj-change-row { grid-area: change; display: flex; justify-content: flex-end; }
@@ -4005,6 +4021,23 @@ dialog#keys-edit::backdrop, dialog#touch-edit::backdrop { background: var(--bed)
 .te-pick-actions .seq-tool { flex: 1 1 auto; }
 .te-adding .ke-hint { margin: 0 0 8px; }
 .te-dragging, .te-dragging * { cursor: grabbing; }
+/* ✏️ Layout's Grids: ☰ Stacked and the ready-made grids, each a small
+   picture of its blocks; and a grid's blocks, to drop groups onto. */
+.te-grids { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.te-shape { display: grid; justify-items: center; align-content: center; gap: 6px; min-height: 76px; padding: 8px 4px; border: 2px solid rgb(255 255 255 / 0.5); border-radius: 12px; background: rgb(255 255 255 / 0.06); color: #fff; font: 800 0.85rem/1.1 var(--font-ui); }
+.te-shape[aria-pressed="true"] { background: var(--led); border-color: var(--led); color: var(--ink); }
+.shape-pic { width: 48px; height: 32px; gap: 3px; }
+.shape-pic .shape-block { border: 2px dashed currentColor; border-radius: 3px; }
+.te-grid { height: clamp(320px, 60dvh, 640px); }
+.te-grid.grid-split, .te-grid .grid-split { gap: 8px; }
+.te-cell { display: flex; overflow: auto; border-radius: 14px; }
+.te-cell > .te-band { flex: 1 1 auto; align-content: start; }
+.te-cell .te-band-head { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name remove"; }
+.te-cell .te-tiles { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
+.te-cell .te-tiles .te-tile, .te-cell .te-tiles .te-more { min-height: 48px; }
+.te-cell.te-over { box-shadow: inset 0 0 0 3px var(--led); }
+.te-drop { flex: 1 1 auto; min-height: 44px; padding: 8px; border: 3px dashed rgb(255 255 255 / 0.5); border-radius: 14px; background: transparent; color: #fff; font: 800 0.95rem/1.2 var(--font-ui); }
+.te-drop[aria-pressed="true"] { border-color: var(--led); background: rgb(255 229 138 / 0.12); color: var(--led); }
 @media (min-width: 700px) {
   .te-tiles { --tile: 96px; grid-template-columns: repeat(auto-fill, minmax(min(var(--tile), 100%), 1fr)); }
   .te-tiles[data-size="s"] { --tile: 76px; }

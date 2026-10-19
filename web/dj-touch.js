@@ -12,6 +12,9 @@ import {
 } from './touch.js';
 import { hasPicker, pickerButton, pickerList, pickedFor, pickInstrument } from './inst-picker.js';
 import { presetInstrument, versionFor, ownIdOf, instrumentById } from './instruments.js';
+import {
+  READY_GRIDS, blocks, useGrid, fillBlock, gridShape, bestColumns, pathKey, pathOf,
+} from './touch-grid.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { newId } from './util.js';
 
@@ -30,11 +33,39 @@ export function groupLabel(group, kitGroups = []) {
 
 // Draws `touch` into `box` for playing: a heading and a grid of tiles per
 // band, each tile a sound in its family's color. A sound that is gone is
-// left out, and so is a band with none left. `deps`: clipById, family(clip)
-// -> {color}, kitGroups(), isLooping(id).
+// left out, and so is a band with none left. With a grid (touch-grid.js),
+// the bands sit in its blocks instead, each block's pads filling it.
+// `deps`: clipById, family(clip) -> {color}, kitGroups(), isLooping(id).
 export function drawBands(box, touch, deps) {
-  const bands = (touch?.bands ?? []).map((b, i) => ({ b, i, clips: b.sounds.map((id) => deps.clipById(id)).filter(Boolean) }))
-    .filter((x) => x.clips.length);
+  const live = (b) => b.sounds.map((id) => deps.clipById(id)).filter(Boolean);
+  if (touch?.grid) {
+    const frac = new Map(blocks(touch.grid).map((x) => [pathKey(x.path), x.frac]));
+    const grid = document.createElement('div');
+    grid.className = 'touch-grid';
+    grid.append(splitEl(touch.grid, [], (part, path) => {
+      const b = part.band == null ? null : touch.bands[part.band];
+      const clips = b ? live(b) : [];
+      if (!clips.length) {
+        // An empty block keeps its room: the grid is the kid's shape.
+        const empty = document.createElement('div');
+        empty.className = 'touch-block-empty';
+        empty.setAttribute('aria-hidden', 'true');
+        return empty;
+      }
+      const band = playBand(b, part.band, clips, deps);
+      band.classList.add('touch-cell');
+      const tiles = band.querySelector('.touch-tiles');
+      tiles.classList.add('cell-tiles');
+      // A first guess from the block's share of a phone-sized grid, until it is measured.
+      const f = frac.get(pathKey(path));
+      tiles.style.setProperty('--cols', bestColumns(clips.length, f.w * 360, f.h * 480));
+      return band;
+    }));
+    box.replaceChildren(grid);
+    fitPads(box);
+    return;
+  }
+  const bands = (touch?.bands ?? []).map((b, i) => ({ b, i, clips: live(b) })).filter((x) => x.clips.length);
   if (!bands.length) {
     const p = document.createElement('p');
     p.className = 'touch-empty';
@@ -42,40 +73,76 @@ export function drawBands(box, touch, deps) {
     box.replaceChildren(p);
     return;
   }
-  box.replaceChildren(...bands.map(({ b, i, clips }) => {
-    const band = document.createElement('section');
-    band.className = 'touch-band';
-    band.dataset.band = i;
-    band.dataset.size = b.size;
-    const head = document.createElement('h3');
-    head.className = 'touch-head';
-    head.id = `touch-head-${i}`;
-    head.textContent = groupLabel(b.group, deps.kitGroups());
-    band.setAttribute('aria-labelledby', head.id);
-    const tiles = document.createElement('div');
-    tiles.className = 'touch-tiles';
-    tiles.append(...clips.map((clip) => {
-      const t = document.createElement('button');
-      t.type = 'button';
-      t.className = 'touch-tile';
-      t.dataset.clip = clip.id;
-      t.style.setProperty('--c', deps.family(clip).color);
-      t.setAttribute('aria-label', clip.label);
-      if (deps.isLooping?.(clip.id)) t.classList.add('looping');
-      const emoji = document.createElement('span');
-      emoji.className = 'touch-emoji';
-      emoji.setAttribute('aria-hidden', 'true');
-      emoji.textContent = clip.emoji || '🔊';
-      const name = document.createElement('span');
-      name.className = 'touch-name';
-      name.setAttribute('aria-hidden', 'true');
-      name.textContent = clip.label;
-      t.append(emoji, name);
-      return t;
-    }));
-    band.append(head, tiles);
-    return band;
+  box.replaceChildren(...bands.map(({ b, i, clips }) => playBand(b, i, clips, deps)));
+}
+
+// One band for playing: its heading, then its tiles.
+function playBand(b, i, clips, deps) {
+  const band = document.createElement('section');
+  band.className = 'touch-band';
+  band.dataset.band = i;
+  band.dataset.size = b.size;
+  const head = document.createElement('h3');
+  head.className = 'touch-head';
+  head.id = `touch-head-${i}`;
+  head.textContent = groupLabel(b.group, deps.kitGroups());
+  band.setAttribute('aria-labelledby', head.id);
+  const tiles = document.createElement('div');
+  tiles.className = 'touch-tiles';
+  tiles.append(...clips.map((clip) => {
+    const t = document.createElement('button');
+    t.type = 'button';
+    t.className = 'touch-tile';
+    t.dataset.clip = clip.id;
+    t.style.setProperty('--c', deps.family(clip).color);
+    t.setAttribute('aria-label', clip.label);
+    if (deps.isLooping?.(clip.id)) t.classList.add('looping');
+    const emoji = document.createElement('span');
+    emoji.className = 'touch-emoji';
+    emoji.setAttribute('aria-hidden', 'true');
+    emoji.textContent = clip.emoji || '🔊';
+    const name = document.createElement('span');
+    name.className = 'touch-name';
+    name.setAttribute('aria-hidden', 'true');
+    name.textContent = clip.label;
+    t.append(emoji, name);
+    return t;
   }));
+  band.append(head, tiles);
+  return band;
+}
+
+// A split of a grid as boxes: its parts side by side (`across`) or one
+// under another (`down`), each as big as its twelfths say (`--part`).
+// `leaf(part, path)` draws a block; `edge(split, path, k)`, when given, the
+// handle between part k and the next.
+export function splitEl(n, path, leaf, edge = null) {
+  const box = document.createElement('div');
+  box.className = 'grid-split';
+  box.dataset.dir = n.dir;
+  n.parts.forEach((p, k) => {
+    const at = [...path, k];
+    const child = Array.isArray(p.parts) ? splitEl(p, at, leaf, edge) : leaf(p, at);
+    child.style.setProperty('--part', p.size);
+    box.append(child);
+    if (edge && k < n.parts.length - 1) box.append(edge(n, path, k));
+  });
+  return box;
+}
+
+// Each block's pads in as many columns as fill it best (touch-grid.js
+// bestColumns), measured now and again whenever the pads' box changes size.
+const fitting = new WeakSet();
+function fitPads(box) {
+  const fit = () => {
+    for (const t of box.querySelectorAll('.cell-tiles')) {
+      if (t.clientWidth > 0 && t.clientHeight > 0) t.style.setProperty('--cols', bestColumns(t.children.length, t.clientWidth, t.clientHeight));
+    }
+  };
+  fit();
+  if (fitting.has(box) || !globalThis.ResizeObserver) return;
+  fitting.add(box);
+  new ResizeObserver(fit).observe(box);
 }
 
 // ── ✏️ Layout (👆 Pads) ──
@@ -123,6 +190,7 @@ export function createTouchEditor({ el, deps }) {
   let picking = null;         // {band, tile (null: + more, adding), group, groupsOpen}: the picker under a band
   let focusAfter = null;      // a selector to focus after a redraw
   let instBand = null;        // the band whose instrument list is open, or null
+  let chosen = null;          // a grid's block picked for the next group tapped ('0-1'), or null
 
   const pid = () => deps.personId();
   const clip = (id) => (id ? deps.clipById(id) : null);
@@ -149,7 +217,7 @@ export function createTouchEditor({ el, deps }) {
     const out = [];
     const mine = deps.mine();
     if (mine) out.push({ id: 'mine', label: '⭐ My layout', touch: mine, mine: true });
-    for (const l of own()) out.push({ id: l.id, label: `⭐ ${l.name}`, touch: { bands: l.bands }, own: l });
+    for (const l of own()) out.push({ id: l.id, label: `⭐ ${l.name}`, touch: { bands: l.bands, ...(l.grid ? { grid: l.grid } : {}) }, own: l });
     for (const r of READY_TOUCH) out.push({ id: `ready-${r.id}`, label: `${r.emoji} ${r.name}`, touch: readyTouch(r, s) });
     return out;
   }
@@ -161,6 +229,7 @@ export function createTouchEditor({ el, deps }) {
     const kept = keepAsMine(now(), all.filter((x) => !x.mine).map((x) => x.touch));
     if (kept && !sameTouch(kept, l.touch)) deps.saveMine(kept);
     picking = null;
+    chosen = null;
     set(l.touch, `${l.label} is on.${kept && !l.mine ? ' Your own layout is kept in ⭐ My layout.' : ''}`);
   }
   function renderLayouts() {
@@ -187,9 +256,53 @@ export function createTouchEditor({ el, deps }) {
     }
   }
 
+  // ── Grids: ☰ Stacked, or a ready-made grid of empty blocks ──
+
+  // A small picture of a grid: its blocks as boxes, the way they sit.
+  function shapePic(grid) {
+    const pic = grid
+      ? splitEl(grid, [], () => { const b = document.createElement('span'); b.className = 'shape-block'; return b; })
+      : splitEl({ dir: 'down', parts: [{ size: 4 }, { size: 4 }, { size: 4 }] }, [], () => { const b = document.createElement('span'); b.className = 'shape-block'; return b; });
+    pic.classList.add('shape-pic');
+    pic.setAttribute('aria-hidden', 'true');
+    return pic;
+  }
+  function renderShapes() {
+    const on = gridShape(now());
+    const shapes = [{ id: 'stacked', name: 'Stacked', grid: null }, ...READY_GRIDS];
+    el.grids.replaceChildren(...shapes.map((g) => {
+      const b = button('te-shape', '', { shape: g.id });
+      b.setAttribute('aria-pressed', String(g.id === on));
+      b.setAttribute('aria-label', g.grid ? `${g.name}: a grid of empty blocks to drop groups onto` : 'Stacked: each group a band of its own, top to bottom');
+      const name = document.createElement('span');
+      name.className = 'te-shape-name';
+      name.textContent = g.name;
+      b.append(shapePic(g.grid), name);
+      return b;
+    }));
+  }
+  // A ready-made grid in place of the layout, its blocks empty; the one on
+  // screen kept as ⭐ My layout when it is the kid's own. ☰ Stacked keeps
+  // the groups, one band each, in the blocks' order.
+  function useShape(id) {
+    const cur = now();
+    if (id === gridShape(cur)) return;
+    picking = null;
+    chosen = null;
+    if (id === 'stacked') { set({ bands: cur.bands }, 'Stacked: each group is a band of its own, top to bottom.'); return; }
+    const r = READY_GRIDS.find((x) => x.id === id);
+    if (!r) return;
+    const kept = cur.bands.length ? keepAsMine(cur, allLayouts().filter((x) => !x.mine).map((x) => x.touch)) : null;
+    if (kept) deps.saveMine(kept);
+    focusAfter = '[data-drop]';
+    set(useGrid(r.grid), `${r.name}: tap a block, then a group, or drag a group onto a block.${kept ? ' Your own layout is kept in ⭐ My layout.' : ''}`);
+  }
+
   // ── The bands ──
 
-  function bandEl(b, i) {
+  // `cell`, a grid's block ('0-1') the band sits in: no ⠿ (its place is the
+  // block) and no S M L (the block decides its pads' size, Ben 2026-10-19).
+  function bandEl(b, i, cell = null) {
     const name = label(b.group);
     const sec = document.createElement('section');
     sec.className = 'te-band';
@@ -212,7 +325,8 @@ export function createTouchEditor({ el, deps }) {
     }));
     const asked = asking?.remove === i;
     const rm = button(`icon-btn te-remove${asked ? ' armed' : ''}`, asked ? '✕?' : '✕', { remove: i }, asked ? `Tap again to remove ${name}` : `Remove ${name}`);
-    head.append(handle, title, sizes, rm);
+    if (cell) head.append(title, rm);
+    else head.append(handle, title, sizes, rm);
     const tiles = document.createElement('div');
     tiles.className = 'te-tiles';
     tiles.dataset.size = b.size;
@@ -237,8 +351,23 @@ export function createTouchEditor({ el, deps }) {
     more.setAttribute('aria-expanded', String(picking?.band === i && picking.tile == null));
     tiles.append(more);
     sec.append(head, ...instLine(b, i), tiles);
-    if (picking?.band === i) sec.append(pickerEl(b, i));
+    if (picking?.band === i && !cell) sec.append(pickerEl(b, i));
     return sec;
+  }
+
+  // A grid's block in ✏️ Layout: its band, or a dashed "Drop a group here".
+  function cellEl(t, part, path) {
+    const key = pathKey(path);
+    const cell = document.createElement('div');
+    cell.className = 'te-cell';
+    cell.dataset.cell = key;
+    if (part.band == null) {
+      cell.classList.add('te-empty');
+      const drop = button('te-drop', 'Drop a group here', { drop: key }, 'An empty block: tap it, then a group below, or drag a group onto it');
+      drop.setAttribute('aria-pressed', String(chosen === key));
+      cell.append(drop);
+    } else cell.append(bandEl(t.bands[part.band], part.band, key));
+    return cell;
   }
 
   // A band of Notes, Chords or Bass: who plays it, under its name (ADR
@@ -381,10 +510,12 @@ export function createTouchEditor({ el, deps }) {
   function renderBands() {
     const t = now();
     if (picking && !t.bands[picking.band]) picking = null;
+    if (t.grid) { renderGrid(t); return; }
+    el.bandsTitle.textContent = 'Groups, top to bottom';
     const empty = document.createElement('p');
     empty.className = 'ke-hint';
     empty.textContent = 'No groups yet. Add one below.';
-    el.bands.replaceChildren(...(t.bands.length ? t.bands.map(bandEl) : [empty]));
+    el.bands.replaceChildren(...(t.bands.length ? t.bands.map((b, i) => bandEl(b, i)) : [empty]));
     el.undo.disabled = !undo.length;
     const full = t.bands.length >= MAX_BANDS;
     el.add.replaceChildren(...groups().map((g) => {
@@ -397,8 +528,24 @@ export function createTouchEditor({ el, deps }) {
       : 'Tap a group to add it at the bottom, with a few of its sounds.';
   }
 
+  // With a grid: its blocks, then (when open) the picker of the band tapped.
+  function renderGrid(t) {
+    if (chosen && !blocks(t.grid).some((b) => pathKey(b.path) === chosen && b.band == null)) chosen = null;
+    el.bandsTitle.textContent = 'Blocks';
+    const tree = splitEl(t.grid, [], (part, path) => cellEl(t, part, path));
+    tree.classList.add('te-grid');
+    el.bands.replaceChildren(tree, ...(picking ? [pickerEl(t.bands[picking.band], picking.band)] : []));
+    el.undo.disabled = !undo.length;
+    const empty = blocks(t.grid).some((b) => b.band == null);
+    el.add.replaceChildren(...groups().map((g) => button('ke-group', label(g), { addGroup: g })));
+    el.addHint.textContent = empty
+      ? 'Drag a group onto a block, or tap one: it goes in the block picked, else the first empty one.'
+      : 'Every block holds a group. Drag one onto a block to swap it in, or ✕ a group to empty its block.';
+  }
+
   function render() {
     renderLayouts();
+    renderShapes();
     renderBands();
     if (focusAfter) { el.dialog.querySelector(focusAfter)?.focus(); focusAfter = null; }
   }
@@ -418,6 +565,21 @@ export function createTouchEditor({ el, deps }) {
     set(moveBand(t, from, to), `${label(t.bands[from].group)} moved ${to < from ? 'up' : 'down'}.`);
   }
 
+  // Group `g` into the block at `key`, with its starting sounds not on the
+  // board yet; a block holding a group takes the new one in its place.
+  function putInBlock(g, key) {
+    const cur = now();
+    const path = pathOf(key);
+    const was = blocks(cur.grid).find((b) => pathKey(b.path) === key);
+    if (!path || !was) return;
+    picking = null;
+    chosen = null;
+    focusAfter = `[data-cell="${key}"] [data-remove]`;
+    const old = was.band == null ? null : cur.bands[was.band];
+    const rest = old ? { ...cur, bands: cur.bands.map((b) => (b === old ? { ...b, sounds: [] } : b)) } : cur;
+    set(fillBlock(cur, path, newBand(g, deps.sounds(), rest)), old ? `${label(g)} is in the block now, in place of ${label(old.group)}.` : `${label(g)} is in the block.`);
+  }
+
   // ── Taps ──
 
   let justDragged = false;   // the click that ends a drag is not a tap
@@ -435,7 +597,17 @@ export function createTouchEditor({ el, deps }) {
       if (asking === 'save') el.saveName.focus();
       return;
     }
+    const shape = at('shape');
+    if (shape) { useShape(shape.dataset.shape); return; }
     const cur = now();
+    const drop = at('drop');
+    if (drop) {
+      chosen = chosen === drop.dataset.drop ? null : drop.dataset.drop;
+      focusAfter = `[data-drop="${drop.dataset.drop}"]`;
+      say(chosen ? 'Now tap a group below for this block.' : '');
+      render();
+      return;
+    }
     const who = at('inst-pick');
     if (who && who.dataset.instBand != null) {
       const i = Number(who.dataset.instBand);
@@ -523,6 +695,12 @@ export function createTouchEditor({ el, deps }) {
     }
     if (t.closest('[data-pick-close]')) { picking = null; render(); return; }
     const add = at('add-group');
+    if (add && cur.grid) {
+      const into = chosen ?? (() => { const b = blocks(cur.grid).find((x) => x.band == null); return b ? pathKey(b.path) : null; })();
+      if (!into) { say('Every block holds a group. Drag this one onto a block to swap it in, or ✕ a group first.'); return; }
+      putInBlock(add.dataset.addGroup, into);
+      return;
+    }
     if (add && !add.disabled) {
       const g = add.dataset.addGroup;
       if (cur.bands.length >= MAX_BANDS) return;
@@ -563,7 +741,8 @@ export function createTouchEditor({ el, deps }) {
   function save() {
     const name = touchName(el.saveName.value);
     if (!name) { el.saveName.focus(); return; }
-    deps.saveLayout({ id: newId('touch'), personId: pid(), name, created: Date.now(), bands: now().bands });
+    const t = now();
+    deps.saveLayout({ id: newId('touch'), personId: pid(), name, created: Date.now(), bands: t.bands, ...(t.grid ? { grid: t.grid } : {}) });
     asking = null;
     say(`Saved ⭐ ${name}.`);
     render();
@@ -658,11 +837,64 @@ export function createTouchEditor({ el, deps }) {
   el.dialog.addEventListener('touchmove', (e) => { if (press?.dragging) e.preventDefault(); }, { passive: false });
   el.dialog.addEventListener('contextmenu', (e) => { if (e.target.closest?.('[data-handle]')) e.preventDefault(); });
 
+  // ── Drag a group onto a block (a grid) ──
+  // As ⠿ above: a mouse or pen once it moves, a finger after holding still.
+
+  let carry = null;   // {id, x, y, group, touch, timer, dragging, over}
+
+  function carryOver(x, y) {
+    const cell = document.elementFromPoint?.(x, y)?.closest?.('.te-cell');
+    const to = cell && el.bands.contains(cell) ? cell.dataset.cell : null;
+    for (const c of el.bands.querySelectorAll('.te-over')) if (c !== cell) c.classList.remove('te-over');
+    if (to) cell.classList.add('te-over');
+    carry.over = to;
+  }
+  function startCarry() {
+    carry.dragging = true;
+    el.dialog.classList.add('te-dragging');
+    el.add.querySelector(`[data-add-group="${carry.group}"]`)?.classList.add('ke-lifted');
+  }
+  function endCarry(drop) {
+    const c = carry;
+    carry = null;
+    if (!c?.dragging) return;
+    justDragged = true;
+    setTimeout(() => { justDragged = false; }, 0);
+    el.dialog.classList.remove('te-dragging');
+    for (const x of el.dialog.querySelectorAll('.te-over, .ke-lifted')) x.classList.remove('te-over', 'ke-lifted');
+    if (drop && c.over) putInBlock(c.group, c.over);
+  }
+  el.add.addEventListener('pointerdown', (e) => {
+    const g = e.target.closest?.('[data-add-group]');
+    if (!g || e.button > 0 || carry || !now().grid) return;
+    const touch = e.pointerType === 'touch';
+    carry = { id: e.pointerId, x: e.clientX, y: e.clientY, group: g.dataset.addGroup, touch, dragging: false, over: null };
+    try { g.setPointerCapture?.(e.pointerId); } catch { /* the pointer is gone */ }
+    if (touch) carry.timer = setTimeout(() => { if (carry && !carry.dragging) startCarry(); }, HOLD_MS);
+  });
+  el.dialog.addEventListener('pointermove', (e) => {
+    if (!carry || e.pointerId !== carry.id) return;
+    if (carry.dragging) { carryOver(e.clientX, e.clientY); return; }
+    const far = Math.hypot(e.clientX - carry.x, e.clientY - carry.y);
+    if (carry.touch) { if (far > SLOP_PX) { clearTimeout(carry.timer); carry = null; } return; }
+    if (far > DRAG_PX) { startCarry(); carryOver(e.clientX, e.clientY); }
+  });
+  el.dialog.addEventListener('pointerup', (e) => {
+    if (!carry || e.pointerId !== carry.id) return;
+    clearTimeout(carry.timer);
+    endCarry(true);
+  });
+  el.dialog.addEventListener('pointercancel', () => { if (carry) { clearTimeout(carry.timer); endCarry(false); } });
+  el.dialog.addEventListener('touchmove', (e) => { if (carry?.dragging) e.preventDefault(); }, { passive: false });
+  el.dialog.addEventListener('contextmenu', (e) => { if (carry && e.target.closest?.('[data-add-group]')) e.preventDefault(); });
+
   setupDialog(el.dialog);
   el.dialog.addEventListener('close', () => {
     if (press) endDrag(false);
+    if (carry) endCarry(false);
     picking = null;
     asking = null;
+    chosen = null;
     deps.closed?.();
   });
 
@@ -674,6 +906,7 @@ export function createTouchEditor({ el, deps }) {
     picking = null;
     instBand = null;
     asking = null;
+    chosen = null;
     say('');
     render();
     openDialog(el.dialog, { focus: focus ?? el.bands.querySelector('[data-handle]') ?? el.add.querySelector('button'), opener });

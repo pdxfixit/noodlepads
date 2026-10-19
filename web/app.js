@@ -847,7 +847,7 @@ async function start() {
         ownLine: $('#ke-own-line'), rename: $('#ke-rename'), remove: $('#ke-delete'), keys: $('#ke-keys'), note: $('#ke-note'), undo: $('#ke-undo'), reset: $('#ke-reset'),
         groups: $('#ke-groups'), inst: $('#ke-inst'), picks: $('#ke-picks'), picksHint: $('#ke-picks-hint'), clearPicks: $('#ke-clear-picks') },
       touchEdit: { dialog: $('#touch-edit'), layouts: $('#te-layouts'), saveLine: $('#te-save-line'), saveName: $('#te-save-name'), saveOk: $('#te-save-ok'), saveCancel: $('#te-save-cancel'),
-        ownLine: $('#te-own-line'), rename: $('#te-rename'), remove: $('#te-delete'), bands: $('#te-bands'), note: $('#te-note'), undo: $('#te-undo'), add: $('#te-add'), addHint: $('#te-add-hint') },
+        ownLine: $('#te-own-line'), rename: $('#te-rename'), remove: $('#te-delete'), bands: $('#te-bands'), bandsTitle: $('#te-bands-title'), grids: $('#te-grids'), note: $('#te-note'), undo: $('#te-undo'), add: $('#te-add'), addHint: $('#te-add-hint') },
       record: $('#dj-record'), status: $('#dj-status'), done: $('#dj-done'), nameFlash: $('#dj-name-flash'),
       donePlay: $('#dj-done-play'), doneUndo: $('#dj-done-undo'), doneSound: $('#dj-done-sound'),
       trying: $('#dj-trying'), tryingText: $('#dj-trying-text'), tryingStop: $('#dj-trying-stop'),
