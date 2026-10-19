@@ -217,11 +217,12 @@ test('Share lists no scratch: Keep it first', async () => {
 // Ben, 2026-10-12: 📂 Open names the collection now, where opening, copies,
 // pins and deletes live, like 🎬 Takes.
 // In the beat bar it follows 💃 and ⌨️: just 🗂️ under 560 px, the word
-// from data-word on wider screens (the words overflowed at 320 px).
-test('the beat bar\'s 📂 Open is 🗂️ My beats, and Song\'s is 🗂️ My songs, dialogs too', () => {
+// from data-word on wider screens (the words overflowed at 320 px): "Beats",
+// to save room (Ben, 2026-10-19); its name and its dialog say My beats.
+test('the beat bar\'s 📂 Open is 🗂️ My beats (worded Beats), and Song\'s is 🗂️ My songs, dialogs too', () => {
   for (const b of document.querySelectorAll('[data-beat-open]')) {
     assert.equal(b.textContent, '🗂️');
-    assert.equal(b.dataset.word, 'My beats');
+    assert.equal(b.dataset.word, 'Beats');
     assert.match(b.getAttribute('aria-label'), /^🗂️ My beats/);
   }
   assert.equal($('#song-open').textContent, '🗂️ My songs');

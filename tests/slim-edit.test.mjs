@@ -54,12 +54,30 @@ test('with ⌨️ Keys on, the slim bar\'s ✏️ opens ✏️ Edit keys, and wi
   assert.equal($('#keys-edit').open, true, 'the keys\' own view');
   assert.equal($('#touch-edit').open, false);
   $('#keys-edit').close();
-  // Beats' control bar has it too, after 🎚️, and the keys' foot has none (Ben, 2026-10-19).
+  // Beats' control bar has it too, after 🎚️, and the keys' foot has none (Ben,
+  // 2026-10-19). It opens a menu: ⌨️ Keys · 👆 Tiles · ✏️ Edit keys, so the
+  // ⌨️ / 👆 switch by the keys goes on Beats.
   assert.equal($('#dj-change-bar').textContent, '✏️⌨️');
-  assert.equal($('#dj-change-bar').getAttribute('aria-label'), '✏️ Edit keys');
+  assert.equal($('#dj-change-bar').getAttribute('aria-label'), '⌨️ Keys or 👆 Tiles, and ✏️ Edit keys');
   $('#dj-change-bar').dispatch('click');
-  assert.equal($('#keys-edit').open, true, 'the bar\'s ✏️⌨️ opens the same view');
+  assert.equal($('#keys-edit').open, false, 'a menu first, not the editor');
+  const pop = () => document.querySelector('.more-pop');
+  const items = () => pop().querySelectorAll('[data-more-item]').map((b) => b.textContent);
+  assert.equal(pop().hidden, false);
+  assert.deepEqual(items(), ['⌨️ Keys', '👆 Tiles', '✏️ Edit keys']);
+  assert.equal(pop().querySelectorAll('[data-more-item]')[0].getAttribute('aria-checked'), 'true', '⌨️ Keys is the one on');
+  pop().querySelectorAll('[data-more-item]')[2].dispatch('click');
+  assert.equal($('#keys-edit').open, true, '✏️ Edit keys opens the same view');
+  assert.equal(pop().hidden, true, 'and the menu closes');
   $('#keys-edit').close();
+  assert.match(css, /body\.keys-on \.dj-input-switch \{ display: none; \}/, 'the switch by the keys goes on Beats');
+  // 👆 Tiles from the menu: what the switch did.
+  $('#dj-change-bar').dispatch('click');
+  pop().querySelectorAll('[data-more-item]')[1].dispatch('click');
+  assert.equal($('#dj-input').querySelector('[data-input="touch"]').getAttribute('aria-pressed'), 'true');
+  assert.equal($('#dj-change-bar').textContent, '✏️👆');
+  assert.equal(pop().hidden, true);
+  $('#dj-input').querySelector('[data-input="keys"]').dispatch('click');
   assert.match(css, /body\.keys-on \.dj-change-row \{ display: none; \}/, 'no ✏️ at the keys\' foot on Beats; 🎤 Live keeps its own');
   assert.match(css, /@media \(max-width: 600px\) \{\n  #dj-change-bar \{ display: none; \}\n  body\.keys-on #dj-change-tempo \{ display: block; \}/, 'on a phone after ⏲️: the bars\' line is full');
   // A grid on a phone (Ben, 2026-10-19): ⏲️ over 🎚️ and ✏️ over ⇆, each 48 px, the same gaps, both lines right-aligned.
@@ -71,11 +89,8 @@ test('with ⌨️ Keys on, the slim bar\'s ✏️ opens ✏️ Edit keys, and wi
   assert.equal($('#dj-change').textContent, '✏️ Edit layout');
   assert.equal(word(), ' layout', 'kept in step with the foot\'s');
   assert.equal($('#dj-change-bar').textContent, '✏️👆');
-  assert.equal($('#dj-change-bar').getAttribute('aria-label'), '✏️ Edit layout');
+  assert.equal($('#dj-change-bar').getAttribute('aria-label'), '⌨️ Keys or 👆 Tiles, and ✏️ Edit layout');
   assert.equal($('#dj-change-tempo').textContent, '✏️👆', 'its phone twin, after ⏲️, too');
-  $('#dj-change-tempo').dispatch('click');
-  assert.equal($('#touch-edit').open, true);
-  $('#touch-edit').close();
   $('#dj-change-top').dispatch('click');
   assert.equal($('#touch-edit').open, true, 'the touch layout\'s own view');
   assert.equal($('#keys-edit').open, false);
@@ -129,4 +144,30 @@ test('on a phone the Keys control bar\'s lines are ▶ Play · ● Record, then 
   assert.match(phone, /body\.keys-on \.dj-bar > \.beat-go \{ display: contents; \}/, 'its two boxes become the bar\'s own lines');
   assert.match(phone, /body\.keys-on \.dj-bar :is\(\.beat-run, \.beat-more\) \{ display: flex; flex: 1 1 100%;/);
   assert.doesNotMatch(phone, /sticky/, 'no line sticks on its own: the bar does, at every width');
+});
+
+// A phone has no keyboard to play (Ben, 2026-10-19): under 700 px the tiles
+// always show, the ⌨️ / 👆 switch goes (🎤 Live too), and Beats' button is
+// just ✏️, which opens ✏️ Edit layout at once, no menu.
+test('on a phone: tiles only, and the bar\'s ✏️ edits them at once', () => {
+  const wide = globalThis.matchMedia;
+  globalThis.matchMedia = (q) => ({ matches: q.includes('max-width: 699px'), addEventListener() {} });
+  try {
+    keysOn(page);
+    $('#dj-input').querySelector('[data-input="keys"]').dispatch('click');   // a pick made on a computer
+    assert.equal($('#dj-input').querySelector('[data-input="touch"]').getAttribute('aria-pressed'), 'true', 'tiles, whatever was picked');
+    assert.equal($('#dj-change').textContent, '✏️ Edit layout');
+    assert.equal($('#dj-change-tempo').textContent, '✏️');
+    assert.equal($('#dj-change-tempo').getAttribute('aria-label'), '✏️ Edit layout');
+    assert.equal($('#dj-change-tempo').hasAttribute('aria-haspopup'), false);
+    $('#dj-change-tempo').dispatch('click');
+    assert.equal($('#touch-edit').open, true, 'the tiles\' own view, at once');
+    assert.equal(document.querySelector('.more-pop')?.hidden ?? true, true, 'no menu');
+    $('#touch-edit').close();
+    assert.match(css, /@media \(max-width: 699px\) \{ \.dj-input-switch \{ display: none; \} \}/);
+  } finally {
+    globalThis.matchMedia = wide;
+    $('#dj-input').querySelector('[data-input="keys"]').dispatch('click');
+    keysOff(page);
+  }
 });

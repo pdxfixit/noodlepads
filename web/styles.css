@@ -2677,6 +2677,14 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
    in the slim bar once scrolled), so the keys' foot has none (Ben, 2026-10-19:
    "if it's in the sticky bar, the footer one isn't needed"). 🎤 Live keeps it. */
 body.keys-on .dj-change-row { display: none; }
+/* Beats' ✏️⌨️ holds ⌨️ / 👆 too, in its menu (Ben, 2026-10-19: "collapse the
+   kbd/touch selector into the same button set"): the switch by the keys goes,
+   and the menu's items are buttons never shown (overflow.js taps them). */
+body.keys-on .dj-input-switch { display: none; }
+/* A phone has no keyboard to play: tiles only, no switch, on 🎤 Live too (Ben, 2026-10-19). */
+@media (max-width: 699px) { .dj-input-switch { display: none; } }
+.input-menu { display: contents; }
+.input-menu > button:not(.edit-keys-open) { display: none; }
 .edit-keys-open { width: auto; padding: 0 8px; font-size: 1.2rem; white-space: nowrap; }
 /* After 🎚️ from 601 px; on a phone the bars' line is full, so after ⏲️. */
 #dj-change-tempo { display: none; }
@@ -2686,7 +2694,7 @@ body.keys-on .dj-change-row { display: none; }
   /* A grid (Ben, 2026-10-19: "a bit more of a grid"): ⏲️ over 🎚️ and ✏️ over
      ⇆, each 48 px, 8 px apart, both lines ending at the right edge. */
   body.keys-on .dj-bar :is(#dj-beat-click, #dj-change-tempo) { width: 48px; padding: 0; }
-  body.keys-on #dj-change-tempo { font-size: 1rem; letter-spacing: -0.1em; }
+  body.keys-on #dj-change-tempo { font-size: 1.2rem; }   /* just ✏️ on a phone (dj.js) */
   body.keys-on .dj-bar > .beat-shape { gap: 8px; }
   body.keys-on .dj-bar > .beat-shape .mixer-open { margin-left: auto; }
 }

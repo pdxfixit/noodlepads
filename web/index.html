@@ -98,7 +98,7 @@
         <button type="button" class="seq-tool doc-grooves" id="seq-grooves" data-beat-grooves data-word="Grooves" aria-label="Grooves: ready-made beats">💃</button>
         <button type="button" class="seq-tool doc-keys" id="seq-keys" data-beat-keys data-word="Keys" aria-pressed="false" aria-label="Keys: play sounds under the beat, and ● Record them into it">⌨️</button>
         <button type="button" class="seq-tool doc-new" data-beat-new data-word="New" aria-label="New: a blank scratch beat, with no rows">🆕</button>
-        <button type="button" class="seq-tool doc-open" data-beat-open data-word="My beats" aria-label="🗂️ My beats: open, pin, copy or delete your beats">🗂️</button>
+        <button type="button" class="seq-tool doc-open" data-beat-open data-word="Beats" aria-label="🗂️ My beats: open, pin, copy or delete your beats">🗂️</button>
       </div>
       <!-- Pattern chips: the last beats used, a tap opens one (at the next bar line while playing). -->
       <div class="beat-chips" data-beat-chips role="group" aria-label="Your beats: tap one to open it" hidden></div>
@@ -174,7 +174,7 @@
         <button type="button" class="seq-tool doc-grooves" id="dj-grooves" data-beat-grooves data-word="Grooves" aria-label="Grooves: play one behind you">💃</button>
         <button type="button" class="seq-tool doc-keys" id="dj-keys-toggle" data-beat-keys data-word="Keys" aria-pressed="true" aria-label="Keys: play sounds under the beat, and ● Record them into it">⌨️</button>
         <button type="button" class="seq-tool doc-new" data-beat-new data-word="New" aria-label="New: a blank scratch beat, with no rows">🆕</button>
-        <button type="button" class="seq-tool doc-open" data-beat-open data-word="My beats" aria-label="🗂️ My beats: open, pin, copy or delete your beats">🗂️</button>
+        <button type="button" class="seq-tool doc-open" data-beat-open data-word="Beats" aria-label="🗂️ My beats: open, pin, copy or delete your beats">🗂️</button>
         <span class="name-flash" id="dj-name-flash" aria-hidden="true" hidden></span>
       </div>
       <!-- Pattern chips: the last beats used, a tap opens one (at the next bar line while playing). -->
@@ -199,8 +199,13 @@
               <button type="button" class="tempo-step up" data-tempo-step="1" aria-label="Faster"></button>
             </div>
             <button type="button" class="seq-click" id="dj-beat-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never recorded. Tap it three times in time to set the tempo." title="Click track: a tick on every beat to keep time" hidden>⏲️</button>
-            <!-- On a phone ✏️ Edit keys sits here, after ⏲️: the bars' line has no room for it (Ben, 2026-10-19). -->
-            <button type="button" class="seq-click edit-keys-open" id="dj-change-tempo" aria-label="✏️ Edit keys" title="✏️ Edit keys">✏️⌨️</button>
+            <!-- On a phone ✏️⌨️ and its menu sit here, after ⏲️: the bars' line has no room for it (Ben, 2026-10-19). -->
+            <span class="input-menu">
+              <button type="button" class="seq-click edit-keys-open" id="dj-change-tempo" data-more="input-tempo" aria-haspopup="menu" aria-expanded="false" aria-label="⌨️ Keys or 👆 Tiles, and ✏️ Edit keys" title="⌨️ Keys · 👆 Tiles · ✏️ Edit keys">✏️⌨️</button>
+              <button type="button" data-more-word="Keys" data-pick-input="keys" aria-pressed="true" aria-label="⌨️ Keys: laid out like a keyboard">⌨️</button>
+              <button type="button" data-more-word="Tiles" data-pick-input="touch" aria-pressed="false" aria-label="👆 Touch: big tiles in groups, no keyboard needed">👆</button>
+              <button type="button" data-more-word="Edit keys" data-pick-edit>✏️</button>
+            </span>
             <span class="dj-status" id="dj-status" role="status"></span>
             <button type="button" class="seq-tool" id="dj-takes-open">🎬 Takes</button>
           </div>
@@ -220,8 +225,14 @@
             <select class="seq-pick" aria-label="Time signature"></select>
           </div>
           <button type="button" class="seq-click mixer-open" data-mixer aria-label="🎚️ Mixer: each row's loudness, mute, solo and effect" title="Mixer">🎚️</button>
-          <!-- ✏️ Edit keys (✏️ Edit layout with 👆), after 🎚️ on Beats' bar (Ben, 2026-10-19); on a phone after ⏲️ instead (#dj-change-tempo). 🎤 Live keeps its own under the keys. -->
-          <button type="button" class="seq-click edit-keys-open" id="dj-change-bar" aria-label="✏️ Edit keys" title="✏️ Edit keys">✏️⌨️</button>
+          <!-- ✏️⌨️ (✏️👆 with tiles), after 🎚️ on Beats' bar (Ben, 2026-10-19); on a phone after ⏲️ instead (#dj-change-tempo).
+               A menu (overflow.js): ⌨️ Keys · 👆 Tiles · ✏️ Edit keys, the buttons after it, never shown. 🎤 Live keeps ⌨️ / 👆 and ✏️ Edit keys by the keys. -->
+          <span class="input-menu">
+            <button type="button" class="seq-click edit-keys-open" id="dj-change-bar" data-more="input-bar" aria-haspopup="menu" aria-expanded="false" aria-label="⌨️ Keys or 👆 Tiles, and ✏️ Edit keys" title="⌨️ Keys · 👆 Tiles · ✏️ Edit keys">✏️⌨️</button>
+            <button type="button" data-more-word="Keys" data-pick-input="keys" aria-pressed="true" aria-label="⌨️ Keys: laid out like a keyboard">⌨️</button>
+            <button type="button" data-more-word="Tiles" data-pick-input="touch" aria-pressed="false" aria-label="👆 Touch: big tiles in groups, no keyboard needed">👆</button>
+            <button type="button" data-more-word="Edit keys" data-pick-edit>✏️</button>
+          </span>
           <button type="button" class="seq-click move-open" data-move-open aria-pressed="false" aria-label="⇆ Move: pick pills and slide them along, the whole beat or a part. The big rows show until ✓ Done." title="⇆ Move: slide pills along">⇆</button>
         </div>
       </div>
