@@ -61,10 +61,14 @@ export function resetCloudCheck() { there = null; askedAt = 0; }
 
 // ── links and keys ──
 //
-// A link: {id, key, rev, sent, sounds, pin, remember, check}. `key` is kept
-// only when the device remembers the profile (`remember`, or a profile with
-// no PIN); otherwise it lives in `sessionKeys`, for this page's life.
-// `check` ({salt, hash}) lets the device check a PIN itself when offline.
+// A link: {id, key, rev, sent, sounds, pin, check, newPin}. `key` is kept
+// only for a profile with no PIN; a PIN's key lives in `sessionKeys`, for
+// this page's life, so the PIN is asked on every visit (Ben, 2026-10-19:
+// "Remove Remember"). `check` ({salt, hash}) lets the device check a PIN
+// itself when offline. `newPin`: the profile has a PIN this device has never
+// had typed (set or changed on another device since it was last opened
+// here); until it is typed, the person can't be opened, and 🤷 I don't know
+// the PIN deletes them from this device.
 
 const sessionKeys = new Map();   // person id -> key, not stored
 const unlocked = new Set();      // people whose PIN was typed since they were last opened
@@ -77,12 +81,14 @@ export const linkOf = (personId) => state.cloud.get(personId) ?? null;
 export const inCloud = (personId) => state.cloud.has(personId);
 export const keyOf = (personId) => linkOf(personId)?.key || sessionKeys.get(personId) || null;
 export const isOffline = (personId) => state.peopleEdits.get(personId)?.offline === true;
-// Links made before "Remember on this device" existed stay remembered.
-const remembers = (link) => !link?.pin || link.remember !== false;
+// Only a profile with no PIN keeps its key on the device.
+const keepsKey = (link) => !link?.pin;
+// The profile has a PIN this device has never had typed (a link's `newPin`).
+export const pinIsNew = (personId) => !!linkOf(personId)?.newPin;
 
 async function saveLink(link) {
-  const stored = remembers(link) ? link : { ...link, key: null };
-  if (!remembers(link) && link.key) sessionKeys.set(link.id, link.key);
+  const stored = keepsKey(link) ? link : { ...link, key: null };
+  if (!keepsKey(link) && link.key) sessionKeys.set(link.id, link.key);
   state.cloud.set(link.id, stored);
   try { await db.put('cloud', stored); } catch (err) { console.error('Saving a cloud link failed:', err); }
 }
@@ -123,7 +129,7 @@ async function pinCheck(pin) {
 // Whether opening this person on this device asks for their PIN now.
 export function needsPin(personId) {
   const link = linkOf(personId);
-  return !!link?.pin && !remembers(link) && !unlocked.has(personId);
+  return !!link?.pin && !unlocked.has(personId);
 }
 
 // The profile sheet's guard (people.js): whether changing this person's name,
@@ -134,30 +140,31 @@ export const pinGuards = (personId) => !!linkOf(personId)?.pin && !pinTyped.has(
 
 // Checks a PIN for the guard the way opening a person does (unlock: the
 // Worker, with its wrong-try count and 10-minute wait; offline, the device's
-// own check), keeping whether this device remembers them. Throws as unlock does.
+// own check). Throws as unlock does.
 export async function checkPin(personId, pin) {
-  await unlock(personId, pin, remembers(linkOf(personId)));
+  await unlock(personId, pin);
 }
 
 // The person was switched away from: their PIN is asked the next time.
 export function leftPerson(personId) {
-  if (!remembers(linkOf(personId))) unlocked.delete(personId);
+  unlocked.delete(personId);
 }
 
 // Opens a person with their PIN. Online, the cloud checks it and gives a key
-// (kept if `remember`); offline, the device's own check lets them in, and the
-// sync waits for the next open. Throws a CloudError on a wrong PIN.
-export async function unlock(personId, pin, remember = false) {
+// for this visit; offline, the device's own check lets them in, and the sync
+// waits for the next open. A PIN new to this device is checked by the cloud
+// only. Throws a CloudError on a wrong PIN.
+export async function unlock(personId, pin) {
   const link = linkOf(personId);
   if (!link) return;
   try {
-    const opened = await api.open(personId, pin, remember);
+    const opened = await api.open(personId, pin, false);
     // The key this device held before is dropped in the cloud, so each open
     // leaves one key, not one more.
     const before = keyOf(personId);
     if (before && before !== opened.key) api.forget(personId, before).catch(() => {});
     sessionKeys.delete(personId);
-    await saveLink({ ...link, key: opened.key, pin: !!opened.pin, remember, check: await pinCheck(pin) });
+    await saveLink({ ...link, key: opened.key, pin: !!opened.pin, check: await pinCheck(pin), newPin: undefined });
     status.delete(personId);
   } catch (err) {
     // The cloud said no to the PIN (wrong, or too many wrong tries): a usage event, no log entry.
@@ -166,22 +173,33 @@ export async function unlock(personId, pin, remember = false) {
   }
   unlocked.add(personId);
   pinTyped.add(personId);
-  logEvent('cloud', { unlocked: true, remember });
+  logEvent('cloud', { unlocked: true });
   if (keyOf(personId)) syncNow(personId);
 }
 
-// "Forget on this device": the device drops its key (and the cloud deletes
-// it), so the PIN is asked every time again, and syncing waits for it.
-export async function forgetHere(personId) {
-  const link = linkOf(personId);
-  if (!link) return;
-  const key = keyOf(personId);
-  if (key) await api.forget(personId, key).catch(() => {});   // gone already, or offline: the key is dropped here anyway
+// A key the cloud no longer takes (401 on a sync): a PIN was set or changed
+// on another device, which closes the profile everywhere (worker/cloud.js
+// changeProfile), or Ben cleared a forgotten one (`just cloud-reset-pin`).
+// The public list says which, without spending a wrong try: no PIN now, and
+// it opens again at once; else the PIN is new here and must be typed before
+// the person opens (Ben, 2026-10-19).
+async function keyRefused(personId) {
   sessionKeys.delete(personId);
   unlocked.delete(personId);
-  await saveLink({ ...link, key: null, remember: false });
-  setStatus(personId, { state: 'locked', text: '🔒 Forgotten on this device. Its PIN opens it again.' });
-  logEvent('cloud', { forgot: true });
+  pinTyped.delete(personId);
+  const link = linkOf(personId);
+  if (!link) return;
+  const listed = (await api.list().catch(() => null))?.profiles?.find((p) => p.id === personId);
+  if (listed && !listed.pin) {
+    try {
+      const opened = await api.open(personId);
+      await saveLink({ ...link, key: opened.key, pin: false, check: undefined, newPin: undefined });
+      setStatus(personId, { state: 'ok', text: 'Opened again: its PIN was cleared.' });
+      return;
+    } catch { /* a PIN came meanwhile: as below */ }
+  }
+  await saveLink({ ...link, key: null, pin: true, check: undefined, newPin: true });
+  setStatus(personId, { state: 'locked', text: '🔒 They have a new PIN. Open them and type it.' });
 }
 
 // ── sync ──
@@ -254,7 +272,7 @@ function deps() {
     // (PIN changed) stays, and a link dropped while it ran stays dropped.
     saveLink: async (l) => {
       const now = linkOf(l.id);
-      if (now) await saveLink({ ...l, key: keyOf(l.id), pin: now.pin, remember: now.remember, check: now.check });
+      if (now) await saveLink({ ...l, key: keyOf(l.id), pin: now.pin, check: now.check, newPin: now.newPin });
     },
   };
 }
@@ -291,10 +309,7 @@ export function syncNow(personId) {
         await setPersonEdit(id, { offline: true });
         setStatus(id, { state: 'trouble', text: 'Taken out of the cloud on another device. It stays here, offline. Switch Offline off to put it back.' });
       } else if (err instanceof CloudError && err.status === 401) {
-        sessionKeys.delete(id);
-        const link = linkOf(id);
-        if (link) await saveLink({ ...link, key: null, remember: false });
-        setStatus(id, { state: 'locked', text: '🔒 Open it again on this device (its PIN changed).' });
+        await keyRefused(id);
       } else {
         setStatus(id, { state: 'trouble', text: cloudTrouble(err) });
       }
@@ -361,7 +376,8 @@ async function funNamed(personId) {
 }
 
 // Makes the person's profile. The same person already there (from a backup
-// on another device) is opened instead; one with a PIN waits, locked, for it.
+// on another device) is opened instead; one with a PIN waits, locked, for it,
+// as a PIN new to this device.
 async function putInCloud(personId) {
   const p = await funNamed(personId);
   try {
@@ -375,7 +391,7 @@ async function putInCloud(personId) {
       await saveLink({ id: personId, key: opened.key, rev: 0, sent: {}, sounds: {}, pin: !!opened.pin });
     } catch (e2) {
       if (!(e2 instanceof CloudError && e2.status === 401)) throw e2;
-      await saveLink({ id: personId, key: null, rev: 0, sent: {}, sounds: {}, pin: true, remember: false });
+      await saveLink({ id: personId, key: null, rev: 0, sent: {}, sounds: {}, pin: true, newPin: true });
       setStatus(personId, { state: 'locked', text: '🔒 Already in the cloud with a PIN. Open them to join up.' });
     }
   }
@@ -383,12 +399,12 @@ async function putInCloud(personId) {
 
 // Opens a profile from the list on this device (with its PIN, if it has one).
 // Its person arrives with the first sync.
-export async function openProfile(profileId, pin, remember = true) {
-  const opened = await api.open(profileId, pin, !pin || remember);
+export async function openProfile(profileId, pin) {
+  const opened = await api.open(profileId, pin, !pin);
   const before = linkOf(profileId);
   await saveLink({
     id: profileId, key: opened.key, rev: before?.rev ?? 0, sent: before?.sent ?? {}, sounds: before?.sounds ?? {},
-    pin: !!opened.pin, remember: !pin || remember, check: pin ? await pinCheck(pin) : undefined,
+    pin: !!opened.pin, check: pin ? await pinCheck(pin) : undefined,
   });
   if (pin) { unlocked.add(profileId); pinTyped.add(profileId); }
   if (isOffline(profileId)) await setPersonEdit(profileId, { offline: false });
@@ -399,7 +415,7 @@ export async function openProfile(profileId, pin, remember = true) {
 export async function setPin(personId, current, next) {
   const link = linkOf(personId);
   const res = await api.change(personId, keyOf(personId), { pin: current || undefined, newPin: next });
-  await saveLink({ ...link, key: res.key, pin: !!next, check: next ? await pinCheck(next) : undefined });
+  await saveLink({ ...link, key: res.key, pin: !!next, check: next ? await pinCheck(next) : undefined, newPin: undefined });
   if (next) { unlocked.add(personId); pinTyped.add(personId); }
   logEvent('cloud', { pin: next ? 'set' : 'removed' });
 }
@@ -573,6 +589,9 @@ export function initCloud(hooks = {}) {
   if (hooks.storeLoaded) storeLoaded = hooks.storeLoaded;
   if (hooks.whatIsHere) whatIsHere = hooks.whatIsHere;
   if (hooks.renderShare) renderShare = hooks.renderShare;
+  // A PIN's key that "Remember on this device" kept (retired 2026-10-19)
+  // serves this visit only: from the next one the PIN is asked first.
+  for (const link of [...state.cloud.values()]) if (link.pin && link.key) saveLink(link);
   db.onChange = (store) => {
     if (applying || store === 'cloud' || store === 'bases' || store === 'settings') return;
     if (CLOUD_KINDS.includes(store) || store === 'people') scheduleSync();

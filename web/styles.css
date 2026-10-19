@@ -2352,6 +2352,24 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
   transition: transform 50ms, box-shadow 50ms;
 }
 .primary:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--board-deep); }
+/* The same button as .primary, outlined: the second choice beside it. */
+.secondary {
+  min-height: 56px;
+  padding: 0 28px;
+  border: 3px solid var(--board);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 1.1rem;
+  box-shadow: 0 5px 0 var(--board-deep);
+  transition: transform 50ms, box-shadow 50ms;
+}
+.secondary:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--board-deep); }
+/* 👥 People: ☁️ Open from the cloud on the left, ➕ Add a person on the
+   right, halves of the line; a long label wraps inside its button. */
+#people-dialog .sheet-actions { flex-wrap: nowrap; }
+#people-dialog .sheet-actions > button { flex: 1 1 0; min-width: 0; padding: 6px 12px; line-height: 1.2; }
 .quiet {
   display: inline-flex;
   align-items: center;
@@ -3030,10 +3048,9 @@ body[data-locked] main { visibility: hidden; }
 .cl-shared > button { flex: 1 1 0; min-height: 44px; }
 .cl-code { display: block; font: 700 0.85rem/1.4 ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0.06em; opacity: 0.75; }
 #shared-code { flex: 1 1 10rem; text-transform: uppercase; }
-.pin-remember { margin: 6px 0 12px; }
 .pin-forgot { margin: 12px 0 0; text-align: center; }
-.pin-new { display: block; width: 100%; min-height: 44px; margin-top: 10px; }
-.pin-new[hidden] { display: none; }
+.pin-new, .pin-unknown { display: flex; justify-content: center; width: 100%; min-height: 44px; margin-top: 10px; }
+.pin-new[hidden], .pin-unknown[hidden] { display: none; }
 
 /* ── ⇆ Move (beat-move.js) ───────────────────────────────────────────── */
 

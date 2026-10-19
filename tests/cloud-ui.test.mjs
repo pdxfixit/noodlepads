@@ -2,8 +2,8 @@
 // Worker and a fake D1: People lines that open a profile sheet with no name
 // field, 🎲, the picture and the color, its PIN guard once per visit;
 // everyone who made something goes to the cloud by themselves (a typed name
-// never reaches it); the PIN asked when a person is opened, with Remember on
-// this device and Forget on this device; 📴 Offline; 🔗 Share and Shared with
+// never reaches it); the PIN asked each time a person is opened, a PIN new to
+// this device (🤷 I don't know the PIN); 📴 Offline; 🔗 Share and Shared with
 // me; and the app with no /api at all (the dev server, a static copy).
 
 import { test, before } from 'node:test';
@@ -174,7 +174,21 @@ test('everyone goes to the cloud by themselves once they make something; a typed
   assert.ok(cloud.inCloud(id));
 });
 
-test('☁️ Open from the cloud: a PIN pad with Remember on this device, and what to do about a forgotten PIN', async () => {
+// Ben, 2026-10-19: "an actual button on the left mirroring the add a person".
+test('👥 People: ☁️ Open from the cloud is a real button on the left, ➕ Add a person on the right', () => {
+  const [left, right] = $('#people-dialog').querySelector('.sheet-actions').children;
+  assert.ok(left === $('#cloud-browse') && right === $('#person-add'));
+  assert.equal(left.className, 'secondary', 'a button, not an underlined link');
+  assert.equal(right.className, 'primary');
+  const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
+  const rule = (sel) => css.match(new RegExp(`\\n${sel.replace('.', '\\.')} \\{([^}]*)\\}`))[1];
+  for (const prop of ['min-height', 'border-radius', 'font-weight', 'font-size']) {
+    const of = (sel) => rule(sel).match(new RegExp(`${prop}: ([^;]+);`))?.[1];
+    assert.equal(of('.secondary'), of('.primary'), `${prop} mirrors ➕ Add a person`);
+  }
+});
+
+test('☁️ Open from the cloud: a PIN pad with no Remember on this device, and what to do about a forgotten PIN', async () => {
   await cloud.api.create({ id: 'p-far', name: 'Sir Squid', avatar: '🐙', color: '#0C5E4B', pin: '2468' });
   $('#cloud-browse').dispatch('click');
   await settle();
@@ -185,8 +199,8 @@ test('☁️ Open from the cloud: a PIN pad with Remember on this device, and wh
   open.dispatch('click');
   await settle();
   assert.equal($('#pin-dialog').open, true);
-  assert.equal($('#pin-remember-line').hidden, false);
-  assert.equal($('#pin-remember').checked, false, 'not remembered unless chosen');
+  assert.equal($('#pin-remember'), null, 'no device remembers a PIN (Ben, 2026-10-19)');
+  assert.equal($('#pin-unknown').hidden, true, 'nothing of theirs is here to delete');
   assert.equal($('#pin-forgot').hidden, false);
   assert.match($('#pin-forgot').textContent, /pin\.reset@noodlepads\.com/);
   typePin('1111');
@@ -197,12 +211,12 @@ test('☁️ Open from the cloud: a PIN pad with Remember on this device, and wh
   await settle();
   assert.equal($('#pin-dialog').open, false);
   assert.ok(cloud.inCloud('p-far'), 'on this device now');
-  assert.equal(cloud.linkOf('p-far').key, null, 'not remembered: the key is not stored');
+  assert.equal(cloud.linkOf('p-far').key, null, 'the key is not stored');
   assert.ok(cloud.keyOf('p-far'), 'it is held for this visit');
   $('#cloud-list').close();
 });
 
-test('a PIN not remembered is asked each time the person is opened; Remember on this device stops that', async () => {
+test('a PIN is asked each time the person is opened, every time, and never remembered', async () => {
   // Joined up as a person on this device (the first sync would do this).
   await setPersonEdit('p-far', { id: 'p-far', name: 'Sir Squid', avatar: '🐙', color: '#0C5E4B', added: true, fun: true, created: 2 });
   renderPeople();
@@ -218,43 +232,21 @@ test('a PIN not remembered is asked each time the person is opened; Remember on 
   typePin('2468');
   await settle();
   assert.equal(state.personId, 'p-far');
-  choose(before);
-  choose('p-far');
-  await settle();
-  assert.equal($('#pin-dialog').open, true, 'asked again after switching away');
-  $('#pin-remember').checked = true;
-  typePin('2468');
-  await settle();
-  assert.equal(state.personId, 'p-far');
-  assert.ok(cloud.linkOf('p-far').key, 'remembered: the key is kept');
-  choose(before);
-  choose('p-far');
-  await settle();
-  assert.equal($('#pin-dialog').open, false, 'not asked any more');
-  assert.equal(state.personId, 'p-far');
+  for (let i = 0; i < 2; i++) {
+    choose(before);
+    choose('p-far');
+    await settle();
+    assert.equal($('#pin-dialog').open, true, 'asked again after switching away');
+    typePin('2468');
+    await settle();
+    assert.equal(state.personId, 'p-far');
+    assert.equal(cloud.linkOf('p-far').key, null, 'never kept on the device');
+  }
+  assert.equal($('#profile-dialog').querySelector('#cloud-forget'), null, 'no 🙈 Forget: nothing is remembered to forget');
 });
 
-test('Forget on this device (in the profile sheet) drops the key (in the cloud too), and the PIN is asked again', async () => {
-  const key = cloud.keyOf('p-far');
-  $('#people-open').dispatch('click');
-  profile(rows().findIndex((r) => r.dataset.person === 'p-far'));
-  assert.equal(rows().find((r) => r.dataset.person === 'p-far').querySelector('.pe-cloud').textContent, '☁️✓ 🔒', 'the line says it has a PIN');
-  assert.equal($('#cloud-forget').hidden, false);
-  $('#cloud-forget').dispatch('click');
-  assert.match($('#cloud-forget').textContent, /Tap again/);
-  $('#cloud-forget').dispatch('click');
-  await settle();
-  assert.equal(cloud.keyOf('p-far'), null);
-  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM keys WHERE profile_id = ?', 'p-far')[0].n, 1,
-    "each open here replaced the key before it, and the last is forgotten: only the key of the device that made it is left");
-  assert.equal((await cloud.api.pull('p-far', key, 0).catch((e) => e)).status, 401, 'the forgotten key no longer opens it');
-  assert.ok(cloud.needsPin('p-far'));
-  $('#profile-dialog').close();
-  $('#people-dialog').close();
-});
-
-// A person in the cloud with a PIN this device has not had typed on this visit:
-// it remembers them (the key is kept), and the PIN was set on another device.
+// A person in the cloud with a PIN this device has not had typed on this visit,
+// holding a key (as one opened earlier in the visit does).
 async function personWithPin(id, pin) {
   await setPersonEdit(id, { id, name: funName(names()), fun: true, avatar: '🐙', color: '#1F3FA8', added: true, created: 3 });
   makeBeat(id);
@@ -301,7 +293,7 @@ test('a PIN guards the name, picture and color: asked once per visit, a wrong on
   assert.equal($('#names-dialog').open, true, 'the right PIN goes on to Pick a name');
   $('#names-dialog').close();
   assert.equal(cloud.pinGuards(id), false, 'typed once on this visit');
-  assert.ok(cloud.linkOf(id).key, 'still remembered on this device');
+  assert.ok(cloud.keyOf(id), 'still open on this device');
 
   swatch(2).dispatch('click');
   await settle();

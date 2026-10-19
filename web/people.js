@@ -160,6 +160,17 @@ export async function addPerson() {
   offerWelcome(record.id);   // 👋 Who's playing? (welcome.js, ADR 0028)
 }
 
+// Deletes a person and everything of theirs from this device: Delete in their
+// profile sheet, and 🤷 I don't know the PIN (cloud-ui.js). It never deletes
+// the cloud's profile: this device just stops syncing it.
+export async function deleteHere(id) {
+  const p = anyone(id);
+  if (inCloud(id)) await dropLink(id);
+  const gone = await deletePerson(id);
+  for (const clipId of gone) audio.forget(clipId);
+  logEvent('person', { deleted: id, bundled: !p?.added, sounds: gone.length });
+}
+
 // ── a person's profile sheet ──
 
 const profileNote = (text) => { el.profileNote.textContent = text; };
@@ -196,7 +207,7 @@ function renderProfile(fresh = false) {
   el.profileCloudText.textContent = cloud ? cloud.label.replace(/^Cloud for [^:]*: /, '').replace(/^./, (c) => c.toUpperCase()) + '.'
     : "Someone from the app's own list stays on this device.";
   el.profileCloud.hidden = !cloud;
-  drawPin(p.id, fresh);
+  drawPin(p.id);
 
   // Everyone can be deleted, with what is theirs, except the last on show.
   const n = state.userClips.filter((c) => c.personId === p.id).length;
@@ -318,11 +329,7 @@ async function onProfileClick(e) {
     announce(`Tap again to delete ${p.name}.`);
     return;
   }
-  // Deleting here never deletes the cloud's profile: this device just stops syncing it.
-  if (inCloud(id)) await dropLink(id);
-  const gone = await deletePerson(id);
-  for (const clipId of gone) audio.forget(clipId);
-  logEvent('person', { deleted: id, bundled: !p.added, sounds: gone.length });
+  await deleteHere(id);
   el.profile.close();
   refreshPeople();
   el.personAdd.focus({ preventScroll: true });

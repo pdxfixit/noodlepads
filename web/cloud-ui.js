@@ -1,6 +1,6 @@
-// The cloud's screens: the PIN pad (with "Remember on this device"), the
-// avatar picker, the PIN part of a person's profile sheet (set, change,
-// remove, Forget on this device; the guard on their name, picture and color),
+// The cloud's screens: the PIN pad (with 🤷 I don't know the PIN for a PIN new
+// to this device), the avatar picker, the PIN part of a person's profile
+// sheet (set, change, remove; the guard on their name, picture and color),
 // a person's ☁️ sheet (sync, 🔗 Share with 🚫 Unshare, 📴 Offline), ☁️ Open from the cloud, 🔗 Shared
 // with me (▶ Play, 🎛️ Remix, ✕ Remove). The work is in cloud.js.
 
@@ -17,7 +17,7 @@ import { audio } from './audio.js';
 import { PIN_RESET_EMAIL } from './contact.js';
 import {
   api, CloudError, cloudTrouble, cloudThere, inCloud, linkOf, keyOf, isOffline, statusOf, onCloud, syncNow, syncAll,
-  openProfile, unlock, forgetHere, checkPin, setPin, setOffline, wantsCloud, shareable, shareItem, showCode,
+  openProfile, unlock, pinIsNew, checkPin, setPin, setOffline, wantsCloud, shareable, shareItem, showCode,
   sharedHere, openShare, forgetShare, remixShare, fetchShare, checkShared, mySharesOf, unshareItem, listProfiles,
 } from './cloud.js';
 import { mergeSummary } from './merge.js';
@@ -28,6 +28,7 @@ export const FORGOT_PIN = `Forgot your PIN? A grown-up can email ${PIN_RESET_EMA
 const el = {};
 let refresh = () => {};    // redraws People and the corner, after a person changes
 let addPerson = () => {};  // 👋 Someone new, from a PIN pad that guards a locked board
+let dropPerson = async () => {};  // 🤷 I don't know the PIN: deletes them from this device (app.js)
 let sheetFor = null;       // the person the ☁️ sheet is open for
 
 const $ = (s) => document.querySelector(s);
@@ -90,40 +91,40 @@ function pinKey(k) {
   }
 }
 
-// Asks for four digits. Resolves with them, null when closed, or 'new' for
-// 👋 Someone new. `remember` shows the "Remember on this device" switch;
-// `forgot` the line on what to do about a forgotten PIN.
-export function askPin({ title = 'PIN', hint = '', note = '', remember = false, forgot = false, someoneNew = false } = {}) {
+// Asks for four digits. Resolves with them, null when closed, 'new' for
+// 👋 Someone new, or 'unknown' for 🤷 I don't know the PIN (two taps), which
+// `unknown` shows. `forgot` shows the line on what to do about a forgotten PIN.
+export function askPin({ title = 'PIN', hint = '', note = '', forgot = false, someoneNew = false, unknown = false } = {}) {
   pinDigits = '';
   drawDots();
   el.pinTitle.textContent = title;
   el.pinHint.textContent = hint;
   el.pinNote.textContent = note;
-  el.pinRememberLine.hidden = !remember;
   el.pinForgot.hidden = !forgot;
   el.pinNew.hidden = !someoneNew;
+  el.pinUnknown.hidden = !unknown;
+  disarm(el.pinUnknown);
   return new Promise((resolve) => {
     pinDone = resolve;
     openDialog(el.pin, { focus: el.pinKeys.querySelector('[data-key="1"]') });
   });
 }
-export const rememberChosen = () => el.pinRemember.checked;
 
-// Tries `act(pin, remember)` until it works, asking again on a wrong PIN;
-// null when the kid gives up.
-async function withPin(act, { title, hint, remember = false, forgot = true, locked = false }) {
+// Tries `act(pin)` until it works, asking again on a wrong PIN; null when the
+// kid gives up, {unknown: true} after 🤷 I don't know the PIN.
+async function withPin(act, { title, hint, forgot = true, locked = false, unknown = false }) {
   let note = '';
-  if (remember) el.pinRemember.checked = false;
   for (;;) {
-    const pin = await askPin({ title, hint, note, remember, forgot, someoneNew: locked });
+    const pin = await askPin({ title, hint, note, forgot, someoneNew: locked, unknown });
     if (pin === 'new') { addPerson(); return null; }
+    if (pin === 'unknown') return { unknown: true };
     if (pin === null) {
       if (!locked) return null;
       note = 'Everyone on this device has a PIN. Type yours, or tap 👋 Someone new.';
       continue;
     }
     try {
-      return { result: await act(pin, el.pinRemember.checked) };
+      return { result: await act(pin) };
     } catch (err) {
       if (err instanceof CloudError && err.status === 401 && err.error === 'pin') { note = cloudTrouble(err); continue; }
       if (err instanceof CloudError && err.status === 0 && locked) { note = "That isn't this device's PIN for them."; continue; }
@@ -132,18 +133,33 @@ async function withPin(act, { title, hint, remember = false, forgot = true, lock
   }
 }
 
-// Opening a person whose PIN this device doesn't remember (app.js setPerson).
+// Opening a person with a PIN (app.js setPerson), asked on every visit.
 // Resolves true once the right PIN is typed. `locked`: nobody else can show
-// meanwhile, so the pad stays until a PIN or 👋 Someone new.
-export async function askToOpen(personId, { locked = false } = {}) {
+// meanwhile, so the pad stays until a PIN or 👋 Someone new. A PIN new to
+// this device (set or changed elsewhere since) also offers 🤷 I don't know
+// the PIN, which deletes them from this device (Ben, 2026-10-19). One ask
+// per person at a time: a sync that finds a new PIN asks again (app.js).
+const asking = new Map();   // person id -> the ask's promise
+export function askToOpen(personId, opts) {
+  if (!asking.has(personId)) asking.set(personId, askOnce(personId, opts).finally(() => asking.delete(personId)));
+  return asking.get(personId);
+}
+async function askOnce(personId, { locked = false } = {}) {
   const p = people({ includeHidden: true }).find((x) => x.id === personId);
+  const fresh = pinIsNew(personId);
   try {
-    const opened = await withPin((pin, remember) => unlock(personId, pin, remember), {
+    const opened = await withPin((pin) => unlock(personId, pin), {
       title: `${p?.avatar ? `${p.avatar} ` : ''}${p?.name ?? 'PIN'}`,
-      hint: 'Type their PIN to open them.',
-      remember: true,
+      hint: fresh
+        ? "They have a new PIN. Type it to open them here. Don't know it? Their things on this device are deleted; the cloud keeps what it has."
+        : 'Type their PIN to open them.',
       locked,
+      unknown: fresh,
     });
+    if (opened?.unknown) {
+      await dropPerson(personId);
+      return false;
+    }
     return !!opened;
   } catch (err) {
     announce(trouble(err));
@@ -265,8 +281,8 @@ async function onSheetClick(e) {
     return;
   }
   if (t === el.reopen) {
-    await act(() => withPin((pin, remember) => openProfile(id, pin, remember), {
-      title: 'Open again', hint: 'Type the PIN to open this profile on this device again.', remember: true,
+    await act(() => withPin((pin) => openProfile(id, pin), {
+      title: 'Open again', hint: 'Type the PIN to open this profile on this device again.',
     }), { done: 'In the cloud ✓' });
     return;
   }
@@ -286,11 +302,10 @@ async function onSheetClick(e) {
 }
 
 // ── the PIN, in a person's profile sheet ──
-// Set or change it, remove it, and 🙈 Forget on this device. It needs the
-// cloud: a person not in it yet (or not opened here) gets a line saying so.
+// Set or change it, or remove it. It needs the cloud: a person not in it yet
+// (or not opened here) gets a line saying so.
 
-// `fresh`: the sheet just opened, so a half-done 🙈 Forget is taken back.
-export function drawPin(personId, fresh = false) {
+export function drawPin(personId) {
   const p = people({ includeHidden: true }).find((x) => x.id === personId);
   if (!p) return;
   const link = linkOf(personId);
@@ -298,21 +313,18 @@ export function drawPin(personId, fresh = false) {
   el.pinBtn.textContent = link?.pin ? '🔒 Change the PIN' : '🔒 Set a PIN';
   el.pinBtn.hidden = !hasKey;
   el.pinOff.hidden = !link?.pin || !hasKey;
-  el.forget.hidden = !link?.pin || !hasKey;
   el.pinPartHint.textContent = !p.added ? "Someone from the app's own list can't have a PIN."
     : hasKey ? (link?.pin
-      ? 'Their PIN is asked each time they are opened, unless a device remembers it, and before their name, picture or color changes.'
+      ? 'Their PIN is asked each time they are opened, on every device, and before their name, picture or color changes.'
       : 'A PIN is asked each time this person is opened, and before their name, picture or color changes.')
       : inCloud(personId) ? '🔒 Open them on this device first (☁️ Cloud).'
         : 'A PIN comes once they are in the cloud.';
-  if (fresh) disarm(el.forget);
 }
 
 // A tap in the PIN part: true when it was one of its buttons. `note` shows
 // what happened; `done` redraws after.
 export async function pinClick(personId, t, note) {
-  if (t !== el.forget) disarm(el.forget);
-  if (![el.pinBtn, el.pinOff, el.forget].includes(t)) return false;
+  if (![el.pinBtn, el.pinOff].includes(t)) return false;
   const run = async (fn, said) => {
     try {
       await fn();
@@ -335,17 +347,14 @@ export async function pinClick(personId, t, note) {
     const again = await askPin({ title: 'Once more', hint: 'Type the new PIN again.' });
     if (again === null) return true;
     if (again !== next) { note("The two PINs didn't match. Nothing changed."); return true; }
-    await run(() => setPin(personId, current, next), '🔒 PIN set. It is asked each time they are opened, unless a device remembers it.');
+    await run(() => setPin(personId, current, next), '🔒 PIN set. It is asked each time they are opened, on every device.');
     return true;
   }
   if (t === el.pinOff) {
     const current = await askPin({ title: 'Remove the PIN', hint: 'Type the PIN it has now.', forgot: true });
     if (current === null) return true;
     await run(() => setPin(personId, current, null), '🔓 No PIN now.');
-    return true;
   }
-  if (!armed(t, 'Tap again: forget it here')) return true;
-  await run(() => forgetHere(personId), '🙈 Forgotten on this device. The PIN is asked each time now.');
   return true;
 }
 
@@ -614,7 +623,7 @@ async function onListClick(e) {
   el.listNote.textContent = 'Opening…';
   try {
     const opened = b.dataset.pin === 'true'
-      ? await withPin((pin, remember) => openProfile(id, pin, remember), { title: 'Their PIN', hint: 'Type the PIN to open this profile on this device.', remember: true })
+      ? await withPin((pin) => openProfile(id, pin), { title: 'Their PIN', hint: 'Type the PIN to open this profile on this device.' })
       : { result: await openProfile(id) };
     if (!opened) { el.listNote.textContent = ''; return; }
     el.listNote.textContent = statusOf(id)?.state === 'trouble' ? statusOf(id).text : '☁️ On this device now ✓';
@@ -630,13 +639,14 @@ async function onListClick(e) {
 export function initCloudUI(hooks) {
   refresh = hooks.refresh;
   if (hooks.addPerson) addPerson = hooks.addPerson;
+  if (hooks.dropPerson) dropPerson = hooks.dropPerson;
   Object.assign(el, {
     pin: $('#pin-dialog'), pinTitle: $('#pin-title'), pinHint: $('#pin-hint'), pinNote: $('#pin-note'), pinDots: $('#pin-dots'), pinKeys: $('#pin-keys'),
-    pinRememberLine: $('#pin-remember-line'), pinRemember: $('#pin-remember'), pinForgot: $('#pin-forgot'), pinNew: $('#pin-new'),
+    pinForgot: $('#pin-forgot'), pinNew: $('#pin-new'), pinUnknown: $('#pin-unknown'),
     avatar: $('#avatar-dialog'), avatarGrid: $('#avatar-grid'),
     sheet: $('#cloud-dialog'), sheetAvatar: $('#cloud-avatar'), sheetName: $('#cloud-name'), status: $('#cloud-status'),
     in: $('#cloud-in'), sync: $('#cloud-sync'), shareBtn: $('#cloud-share'),
-    pinBtn: $('#cloud-pin'), pinOff: $('#cloud-pin-off'), forget: $('#cloud-forget'), pinPartHint: $('#profile-pin-hint'), reopen: $('#cloud-reopen'),
+    pinBtn: $('#cloud-pin'), pinOff: $('#cloud-pin-off'), pinPartHint: $('#profile-pin-hint'), reopen: $('#cloud-reopen'),
     offline: $('#cloud-offline'), online: $('#cloud-online'), offlineHint: $('#cloud-offline-hint'),
     list: $('#cloud-list'), listNote: $('#cloud-list-note'), listItems: $('#cloud-list-items'),
     shareDialog: $('#share-dialog'), shareNote: $('#share-note'), shareWhat: $('#share-what'), shareItems: $('#share-items'),
@@ -661,6 +671,14 @@ export function initCloudUI(hooks) {
   el.pin.addEventListener('close', () => { const done = pinDone; pinDone = null; done?.(null); });
   el.pinForgot.textContent = FORGOT_PIN;
   el.pinNew.addEventListener('click', () => { const done = pinDone; pinDone = null; el.pin.close(); done?.('new'); });
+  // 🤷 I don't know the PIN: the first tap asks, the second deletes them here.
+  el.pinUnknown.addEventListener('click', () => {
+    if (!armed(el.pinUnknown, 'Tap again: delete them from this device')) return;
+    const done = pinDone;
+    pinDone = null;
+    el.pin.close();
+    done?.('unknown');
+  });
 
   avatarAll = emojiMore({
     grid: el.avatarGrid,

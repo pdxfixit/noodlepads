@@ -530,7 +530,7 @@
       <p class="field-hint">Tap someone for their name, picture, color, cloud and PIN.</p>
       <ul class="pe-list" id="people-edit"></ul>
       <div class="sheet-actions">
-        <button type="button" class="quiet" id="cloud-browse">☁️ Open from the cloud</button>
+        <button type="button" class="secondary" id="cloud-browse">☁️ Open from the cloud</button>
         <button type="button" class="primary" id="person-add">➕ Add a person</button>
       </div>
       <section class="pe-gone" id="people-gone" aria-labelledby="people-gone-title" hidden>
@@ -599,7 +599,6 @@
       <p class="field-hint" id="profile-pin-hint"></p>
       <div class="set-buttons">
         <button type="button" class="chip-dark" id="cloud-pin">🔒 Set a PIN</button>
-        <button type="button" class="chip-dark" id="cloud-forget" hidden>🙈 Forget on this device</button>
         <button type="button" class="chip-dark" id="cloud-pin-off" hidden>🔓 Remove the PIN</button>
       </div>
       <div class="sheet-actions pf-end">
@@ -730,13 +729,10 @@
       <p class="field-hint" id="pin-hint"></p>
       <div class="pin-dots" id="pin-dots" aria-live="polite"><span></span><span></span><span></span><span></span></div>
       <p class="set-note pin-note" id="pin-note" role="status"></p>
-      <label class="set-radio set-switch pin-remember" id="pin-remember-line" hidden>
-        <input type="checkbox" role="switch" id="pin-remember">
-        <span><b>Remember on this device</b> — then it opens without the PIN here.</span>
-      </label>
       <div class="pin-keys" id="pin-keys" role="group" aria-label="Number keys"></div>
       <p class="field-hint pin-forgot" id="pin-forgot" hidden></p>
       <button type="button" class="quiet pin-new" id="pin-new" hidden>👋 Someone new</button>
+      <button type="button" class="quiet danger pin-unknown" id="pin-unknown" hidden>🤷 I don't know the PIN</button>
     </div>
   </dialog>
 
