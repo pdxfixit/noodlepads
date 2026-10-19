@@ -64,11 +64,13 @@
       <span class="nudge-time" aria-hidden="true"></span>
     </div>
     <div class="pads-bar" id="pads-bar">
-      <!-- Pad size: one smooth slider from this screen's smallest pads (0) to its biggest (100) (pads.js, pad-size.js). -->
+      <!-- The top of the pads' panel, as 🎤 Live's ● Record · 🎬 Takes: Pad size at the left, one smooth
+           slider from this screen's smallest pads (0) to its biggest (100) (pads.js, pad-size.js), then ✏️ Edit sounds. -->
       <div class="pads-size" id="pads-size">
+        <label class="pads-size-word" for="pads-size-slider">Size</label>
         <input type="range" id="pads-size-slider" min="0" max="100" step="1" value="50" aria-label="Pad size">
       </div>
-      <button type="button" class="pads-edit" id="edit-toggle" aria-pressed="false">✏️ Edit<span class="edit-more"> sounds</span></button>
+      <button type="button" class="pads-edit" id="edit-toggle" aria-pressed="false">✏️<span class="edit-word"> Edit</span><span class="edit-more"> sounds</span></button>
     </div>
     <div class="pads" id="pads"></div>
     <!-- ✏️ Edit sounds with sounds chosen: what to do with them all (bulk.js). -->

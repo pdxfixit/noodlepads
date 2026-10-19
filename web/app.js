@@ -184,7 +184,9 @@ function setEditing(on) {
   el.editToggle.setAttribute('aria-pressed', String(on));
   // ✏️ Edit sounds keeps " sounds" in its own span: the slim header (Q26)
   // shortens it to ✏️ Edit where a phone has no room beside its buttons.
-  el.editToggle.textContent = on ? '✅ Done' : '✏️ Edit';
+  // The words are spans, so the band can drop them where they would collide (styles.css).
+  el.editToggle.textContent = on ? '✅' : '✏️';
+  el.editToggle.append(Object.assign(document.createElement('span'), { className: 'edit-word', textContent: on ? ' Done' : ' Edit' }));
   if (!on) el.editToggle.append(Object.assign(document.createElement('span'), { className: 'edit-more', textContent: ' sounds' }));
   showHint();
   if (on) audio.stopAll();

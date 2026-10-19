@@ -69,7 +69,9 @@ folding section on a light sheet or dialog (the sheet's Voice and Layers,
 Pads each group sits with its pads inside a light outline (`.pad-fold`; an
 outline takes no room, so the pads keep their columns). 🧩 **Chop into pads** cuts it where
 each sound starts and makes each piece a new pad ("Baby Burp", "Burp Jr.").
-The **pad size slider** at the top left of the pads makes them smoothly
+The **pad size slider** at the top left of the pads, on the panel's darker
+top band with ✏️ Edit sounds at its right (as 🎤 Live's ● Record and 🎬
+Takes), says "Size" where it has the room and makes them smoothly
 smaller (more on a line) or bigger (fewer). Its ends are the smallest and
 biggest pads this screen can show: as many 76 px pads as fill a line, and one
 whole-width pad on a phone (400 px on a wide screen). It is kept as the

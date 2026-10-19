@@ -142,7 +142,9 @@ test('arrow keys do nothing in a text field, behind a dialog, or when a control 
 test('Edit sounds: each pad has its circle, ✏️ and 🗑️ from the start; tapping a pad or its circle selects it', async () => {
   $('#edit-toggle').dispatch('click');
   assert.ok(document.body.classList.contains('editing'));
-  assert.equal($('#edit-toggle').textContent, '✅ Done');
+  assert.equal($('#edit-toggle').textContent, '✅');
+  // The stand-in's textContent keeps the parsed children, so read the span the app appended last.
+  assert.equal([...$('#edit-toggle').querySelectorAll('.edit-word')].at(-1).textContent, ' Done', 'the word is its own span, so a tight band can drop it');
   assert.match($('#screen-hint').textContent, /^Editing:.*✏️.*🗑️.*select.*(drag|Drag)/, 'the footer how-to says all of how to edit');
   assert.equal($('#edit-tools'), null, 'the tools row is gone: People and Backups live in Settings');
   const mine = () => pads().filter((p) => p.dataset.id);

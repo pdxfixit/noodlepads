@@ -109,8 +109,8 @@ const rule = (sel) => {
   return m ? m[1] : '';
 };
 
-test('the Pads bar and the toolbar draw the page\'s tile over their own solid color, cut to the bar', () => {
-  for (const bar of ['.pads-bar', '.toolbar']) {
+test('the toolbar draws the page\'s tile over its own solid color, cut to the bar', () => {
+  for (const bar of ['.toolbar']) {
     const ink = rule(`:root[data-bg] ${bar}::before`);
     assert.match(ink, /position: fixed;/, `${bar}: a screen-sized layer, the page's own box, so the tiles line up`);
     assert.match(ink, /inset: 0;/, `${bar}: from the top left of the screen`);
@@ -119,8 +119,9 @@ test('the Pads bar and the toolbar draw the page\'s tile over their own solid co
     assert.match(ink, /(^|[^-])mask: var\(--backdrop\) repeat;/, `${bar}: the page's tile`);
     assert.match(rule(`:root[data-bg] ${bar}`), /clip-path: inset\(/, `${bar}: the layer is cut to the bar`);
   }
-  // Opaque: each bar keeps its solid casing color under the ink.
-  assert.match(css, /\.pads-bar \{[^}]*position: sticky;[^}]*background: var\(--board\);/);
+  // The Pads bar is the top of the pads' dark panel now (Ben, 2026-10-19), so it draws no page tile.
+  assert.equal(rule(':root[data-bg] .pads-bar::before'), '');
+  // Opaque: the bar keeps its solid casing color under the ink.
   assert.match(css, /\n\.toolbar \{[^}]*background: var\(--board\);/);
   // The toolbar's top line is drawn above the ink, as its shadow was.
   assert.match(rule(':root[data-bg] .toolbar::after'), /background: var\(--board-deep\);/);
