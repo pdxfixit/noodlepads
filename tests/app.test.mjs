@@ -69,17 +69,18 @@ test('the first nine pads are numbered for the keyboard, and decoration is hidde
   assert.equal(first.children.find((c) => c.classList.contains('pad-emoji')).getAttribute('aria-hidden'), 'true');
 });
 
-test('a dev copy says so (no version.json is served)', () => {
-  assert.equal($('#version').textContent, 'dev copy');
+test('a dev copy says so (no version.json is served), with no commit to link', () => {
+  assert.equal($('#version').querySelector('[data-about]').textContent, 'dev copy');
+  assert.equal($('#version').querySelector('.ver-sha'), null);
 });
 
 // Ben, 2026-10-11: tapping the version or date opens Settings at the bottom,
 // About and the credits.
-test('the footer\'s version is a button that opens Settings scrolled to About', () => {
-  const version = $('#version');
+test('the footer\'s date is a button that opens Settings scrolled to About', () => {
+  const version = $('#version').querySelector('[data-about]');
   const dialog = $('#settings-dialog');
   assert.equal(version.tagName.toLowerCase(), 'button', 'keyboard reachable');
-  assert.equal(version.getAttribute('aria-label'), 'About Noodle Pads');
+  assert.match(version.getAttribute('aria-label'), /^About Noodle Pads: /);
   dialog.scrollHeight = 1200;
   dialog.scrollTop = 0;
   version.dispatch('click');
@@ -87,7 +88,8 @@ test('the footer\'s version is a button that opens Settings scrolled to About', 
   assert.equal(dialog.scrollTop, 1200, 'scrolled to the end: About');
   // Ben, 2026-10-11: the version sits at the very bottom of About, centered.
   const about = $('#about-version');
-  assert.equal(about.textContent, $('#version').textContent || 'dev copy');
+  assert.equal(about.querySelector('.ver-date').textContent, 'dev copy');
+  assert.equal(about.querySelector('[data-about]'), null, 'About itself has no button to About');
   // Its line also links the privacy policy (Ben, 2026-10-16: "next to the version").
   const line = about.parent;
   assert.equal(line.className, 'set-version');
@@ -106,7 +108,7 @@ test('tapping a person shows their board and sets the page color', () => {
   people()[1].dispatch('click');
   assert.equal(who(), 'Juno');
   assert.deepEqual(labels().slice(0, 4), ['Juno Pads!', 'Ba dum tss', 'Drumroll', 'Laser']);
-  assert.equal(document.documentElement.style.props['--board'], '#0C5E4B');
+  assert.equal(document.documentElement.style.props['--board'], '#304A00');
   assert.equal(globalThis.location.hash, '#juno');
   assert.equal(people()[1].getAttribute('aria-current'), 'true');
 });
@@ -276,7 +278,7 @@ test('the People dialog is a short list, one line per person; a line opens their
   assert.equal(sheet.open, true);
   assert.equal($('#profile-name').textContent, 'Pip');
   const colors = $('#profile-colors').querySelectorAll('[data-color]');
-  assert.equal(colors.length, 10, 'every person color');
+  assert.equal(colors.length, 8, 'every person color');
   assert.equal(colors[0].getAttribute('aria-label'), 'Blue');
   assert.equal(colors[0].getAttribute('aria-pressed'), 'true');
   assert.equal($('#profile-delete').textContent, 'Delete');
@@ -290,11 +292,11 @@ test('picking a person color in their profile recolors the board and their line,
   swatch.focus();
   swatch.dispatch('click');
   await page.settle();
-  assert.equal(document.documentElement.style.props['--board'], '#9E1640');
+  assert.equal(document.documentElement.style.props['--board'], swatch.dataset.color);
   const again = $('#profile-colors').querySelectorAll('[data-color]')[2];
   assert.equal(document.activeElement, again);
   assert.equal(again.getAttribute('aria-pressed'), 'true');
-  assert.equal($('#people-edit').children[0].style.props['--c'], '#9E1640', 'the list line too');
+  assert.equal($('#people-edit').children[0].style.props['--c'], swatch.dataset.color, 'the list line too');
   $('#profile-dialog').close();
 });
 

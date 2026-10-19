@@ -57,7 +57,7 @@ test('a card sets the level for the person showing, then Pick your stage name', 
   assert.equal(pics().length, 7);
   assert.equal(pics()[0].dataset.pic, person(id).avatar, 'their own picture first');
   assert.equal($('#wl-pics').children.at(-1).textContent, '…', 'then the full chooser');
-  assert.equal($('#wl-colors').children.length, 10);
+  assert.equal($('#wl-colors').children.length, 8);
 });
 
 test('each tap changes them at once: a name, a picture, a color (the screen takes it); 🎲 deals more names', async () => {
@@ -74,10 +74,10 @@ test('each tap changes them at once: a name, a picture, a color (the screen take
   const emoji = pics()[3].dataset.pic;
   await tap(pics()[3]);
   assert.equal(person(id).avatar, emoji);
-  await tap($('#wl-colors').querySelector('[data-color="#9E1640"]'));
-  assert.equal(person(id).color, '#9E1640');
-  assert.equal(document.documentElement.style.props['--board'], '#9E1640', 'the screen takes the color');
-  assert.equal($('#welcome').style.props['--c'], '#9E1640');
+  await tap($('#wl-colors').querySelector('[data-color="#A3156E"]'));
+  assert.equal(person(id).color, '#A3156E');
+  assert.equal(document.documentElement.style.props['--board'], '#A3156E', 'the screen takes the color');
+  assert.equal($('#welcome').style.props['--c'], '#A3156E');
   await tap($('#wl-go'));
   assert.equal($('#welcome').open, false);
   assert.equal(person(id).name, name, "▶ Let's play keeps them");
@@ -100,7 +100,7 @@ test('Skip on Pick your stage name puts back what the app gave', async () => {
   const was = { ...person(id) };
   await tap(card('regular'));
   await tap(names()[0]);
-  await tap($('#wl-colors').querySelector('[data-color="#0C5E4B"]'));
+  await tap($('#wl-colors').querySelector('[data-color="#304A00"]'));
   assert.notEqual(person(id).name, was.name);
   await tap($('#wl-stage-skip'));
   assert.equal($('#welcome').open, false);

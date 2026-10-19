@@ -91,7 +91,9 @@ function makePeopleMenu(list) {
     item.dataset.person = p.id;
     item.style.setProperty('--c', p.color);
     item.setAttribute('aria-current', String(p.id === state.personId));
-    item.textContent = p.avatar ? `${p.avatar} ${p.name}` : p.name;
+    // 🔒: their cloud profile has a PIN, asked when they are opened (Ben, 2026-10-19).
+    const lock = state.cloud.get(p.id)?.pin ? ' 🔒' : '';
+    item.textContent = `${p.avatar ? `${p.avatar} ${p.name}` : p.name}${lock}`;
     li.append(item);
     menu.append(li);
   }

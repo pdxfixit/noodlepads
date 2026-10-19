@@ -10,16 +10,29 @@ import { funName } from './names.js';
 import { songHasBeats } from './playlist.js';
 import { showsFor, instrumentProblem } from './instruments.js';
 
-// Deep colors white text reads on: a board's casing. The first four are the
-// boards.json defaults.
-export const PERSON_COLORS = ['#1F3FA8', '#0C5E4B', '#9E1640', '#4C2A8C', '#8A3B00',
-  '#0B5C7A', '#6B2F6B', '#2E5A12', '#7A1E1E', '#333040'];
+// Deep colors white text reads on: a board's casing. Eight that stay apart
+// for someone with deuteranopia too (Ben, 2026-10-19): the closest pair is
+// about 14 apart (CIEDE2000) in normal vision and 10.5 as deuteranopia sees
+// them; ten such dark colors can't be. Two lines of four on a phone.
+export const PERSON_COLORS = ['#2D3FD6', '#0E2C78', '#304A00', '#B3141C',
+  '#A3156E', '#86424E', '#5A2050', '#3A3A3A'];
 
 // What to call each of those colors, for screen readers and tooltips.
 export const PERSON_COLOR_NAMES = {
-  '#1F3FA8': 'Blue', '#0C5E4B': 'Green', '#9E1640': 'Raspberry', '#4C2A8C': 'Purple', '#8A3B00': 'Rust',
-  '#0B5C7A': 'Teal', '#6B2F6B': 'Plum', '#2E5A12': 'Forest', '#7A1E1E': 'Maroon', '#333040': 'Charcoal',
+  '#2D3FD6': 'Blue', '#0E2C78': 'Navy', '#304A00': 'Olive', '#B3141C': 'Red',
+  '#A3156E': 'Pink', '#86424E': 'Rose', '#5A2050': 'Plum', '#3A3A3A': 'Graphite',
 };
+
+// The ten person colors before 2026-10-19, each to the nearest of today's.
+// People stored with one move to the new one when the app reads storage
+// (state.js); the cloud still takes them from an older copy of the app.
+export const OLD_PERSON_COLORS = {
+  '#1F3FA8': '#2D3FD6', '#0B5C7A': '#2D3FD6', '#0C5E4B': '#304A00', '#2E5A12': '#304A00',
+  '#9E1640': '#A3156E', '#4C2A8C': '#0E2C78', '#6B2F6B': '#5A2050', '#8A3B00': '#B3141C',
+  '#7A1E1E': '#B3141C', '#333040': '#3A3A3A',
+};
+// A person's color as today's palette has it (any other color stays as it is).
+export const personColor = (c) => (typeof c === 'string' && OLD_PERSON_COLORS[c.toUpperCase()]) || c;
 
 // Palette names before 2026-09-27. Edits saved in a browser's IndexedDB may
 // still use them, so they map to the nearest current color.

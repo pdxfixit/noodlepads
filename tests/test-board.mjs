@@ -13,22 +13,22 @@ const sound = (person, id, label, emoji, color) => ({ id: `${person}-${id}`, lab
 
 export const TEST_PEOPLE = [
   {
-    id: 'pip', name: 'Pip', color: '#1F3FA8',
+    id: 'pip', name: 'Pip', color: '#2D3FD6',
     clips: [sound('pip', 'name', 'Pip Pads!', '📣', 'yellow'), sound('pip', 'horn', 'Airhorn', '🎺', 'red'),
       sound('pip', 'zapper', 'Laser', '🚀', 'lime'), sound('pip', 'spring', 'Boing', '🐸', 'teal')],
   },
   {
-    id: 'juno', name: 'Juno', color: '#0C5E4B',
+    id: 'juno', name: 'Juno', color: '#304A00',
     clips: [sound('juno', 'name', 'Juno Pads!', '📣', 'white'), sound('juno', 'joke', 'Ba dum tss', '🥁', 'blue'),
       sound('juno', 'roll', 'Drumroll', '🎉', 'orange'), sound('juno', 'zapper', 'Laser', '⚡', 'lime')],
   },
   {
-    id: 'toby', name: 'Toby', color: '#9E1640',
+    id: 'toby', name: 'Toby', color: '#A3156E',
     clips: [sound('toby', 'name', 'Toby Pads!', '📣', 'yellow'), sound('toby', 'fanfare', 'Ta-da!', '🎉', 'pink'),
       sound('toby', 'whistle', 'Slide whistle', '🚀', 'teal'), sound('toby', 'spring', 'Boing', '🐸', 'lime')],
   },
   {
-    id: 'wren', name: 'Wren', color: '#4C2A8C',
+    id: 'wren', name: 'Wren', color: '#0E2C78',
     clips: [sound('wren', 'name', 'Wren Pads!', '📣', 'white'), sound('wren', 'womp', 'Sad trombone', '🎺', 'blue'),
       sound('wren', 'joke', 'Ba dum tss', '🥁', 'orange'), sound('wren', 'horn', 'Airhorn', '💥', 'red')],
   },

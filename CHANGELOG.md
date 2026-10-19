@@ -1,7 +1,7 @@
 # What's new in Noodle Pads
 
 The version shows in the bottom corner of the app (and in ⚙️ Settings → About):
-the release, then the exact build, like `1.0 · fd576a9`.
+the exact build, a link to it on GitHub, and its date, like `fd576a9 · 2026-10-11 13:45 PDT`.
 
 ## 1.0 (October 2026)
 

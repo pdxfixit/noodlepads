@@ -323,8 +323,8 @@
     </section>
     <div class="page-foot">
       <p class="screen-hint" id="screen-hint"></p>
-      <!-- The version and date: a tap opens ⚙️ Settings at About (settings-ui.js). -->
-      <button type="button" class="version" id="version" aria-label="About Noodle Pads"></button>
+      <!-- The commit (a link to it on GitHub) and the date, a tap on which opens ⚙️ Settings at About (settings-ui.js). -->
+      <p class="version" id="version"></p>
       <!-- The full privacy policy, beside the version (Ben, 2026-10-16). -->
       <a class="privacy-link" id="privacy-policy" href="https://privacy.pdxfixit.com/noodlepads/" target="_blank" rel="noopener">Privacy policy</a>
     </div>
@@ -576,7 +576,7 @@
   <dialog id="profile-dialog" class="np-dialog" aria-labelledby="profile-title">
     <div class="chooser-body">
       <div class="sheet-head">
-        <h2 id="profile-title"><span class="cl-avatar" id="profile-avatar"></span> <span id="profile-name"></span></h2>
+        <h2 id="profile-title"><span class="cl-avatar" id="profile-avatar"></span> <span id="profile-name"></span> <span class="pf-lock" id="profile-lock" hidden>🔒 PIN</span></h2>
         <button type="button" class="close" data-close aria-label="Close">✕</button>
       </div>
       <p class="set-note" id="profile-note" role="status"></p>
@@ -590,17 +590,31 @@
       </div>
       <h3 class="cl-head" id="profile-color-title">🎨 Color</h3>
       <div class="pf-colors" id="profile-colors" role="group" aria-labelledby="profile-color-title"></div>
-      <h3 class="cl-head">☁️ Cloud</h3>
-      <div class="pf-line">
-        <p class="field-hint pf-cloud-text" id="profile-cloud-text"></p>
-        <button type="button" class="chip-dark" id="profile-cloud" data-cloud>☁️ Cloud</button>
-      </div>
-      <h3 class="cl-head">🔒 PIN</h3>
-      <p class="field-hint" id="profile-pin-hint"></p>
-      <div class="set-buttons">
-        <button type="button" class="chip-dark" id="cloud-pin">🔒 Set a PIN</button>
-        <button type="button" class="chip-dark" id="cloud-pin-off" hidden>🔓 Remove the PIN</button>
-      </div>
+      <!-- ☁️ In the cloud is a switch; 🔒 PIN says at a glance whether one is on (cloud-ui.js drawPin). -->
+      <section class="pf-part" aria-labelledby="profile-cloud-title">
+        <div class="pf-row">
+          <h3 class="cl-head pf-grow" id="profile-cloud-title">☁️ In the cloud</h3>
+          <button type="button" class="pf-switch" role="switch" id="profile-cloud" aria-checked="false" aria-label="☁️ In the cloud"></button>
+        </div>
+        <p class="field-hint pf-cloud-text" id="profile-cloud-text" role="status"></p>
+        <div class="set-buttons" id="profile-cloud-tools" hidden>
+          <button type="button" class="chip-dark" id="cloud-sync">🔄 Sync now</button>
+          <button type="button" class="chip-dark" id="cloud-share">🔗 Share…</button>
+        </div>
+      </section>
+      <section class="pf-part" aria-labelledby="profile-pin-title">
+        <div class="pf-row">
+          <h3 class="cl-head pf-grow" id="profile-pin-title">PIN</h3>
+          <span class="pf-pill" id="profile-pin-state" role="status"></span>
+        </div>
+        <p class="field-hint" id="profile-pin-hint"></p>
+        <button type="button" class="primary pf-wide" id="cloud-pin">🔒 Set a PIN</button>
+        <div class="pf-two" id="profile-pin-tools" hidden>
+          <button type="button" class="secondary" id="cloud-pin-change">Change PIN</button>
+          <button type="button" class="secondary pf-danger" id="cloud-pin-off">Remove PIN</button>
+        </div>
+        <p class="set-note" id="profile-pin-note" role="status"></p>
+      </section>
       <div class="sheet-actions pf-end">
         <button type="button" class="quiet danger" id="profile-delete" data-remove>Delete</button>
       </div>
@@ -631,31 +645,6 @@
       </div>
       <p class="field-hint">It shows in the top corner and in the cloud's list.</p>
       <div class="pictures-grid" id="avatar-grid"></div>
-    </div>
-  </dialog>
-
-  <dialog id="cloud-dialog" class="np-dialog" aria-labelledby="cloud-title">
-    <div class="chooser-body">
-      <div class="sheet-head">
-        <h2 id="cloud-title"><span class="cl-avatar" id="cloud-avatar"></span> <span id="cloud-name"></span></h2>
-        <button type="button" class="close" data-close aria-label="Close">✕</button>
-      </div>
-      <p class="set-note cl-status" id="cloud-status" role="status"></p>
-      <section class="cl-part" id="cloud-in" aria-label="In the cloud" hidden>
-        <div class="set-buttons">
-          <button type="button" class="chip-dark" id="cloud-sync">🔄 Sync now</button>
-          <button type="button" class="chip-dark" id="cloud-share">🔗 Share…</button>
-          <button type="button" class="chip-dark" id="cloud-reopen" hidden>🔓 Open again</button>
-        </div>
-      </section>
-      <section class="cl-part" aria-label="Offline">
-        <h3 class="cl-head">📴 Offline</h3>
-        <p class="field-hint" id="cloud-offline-hint"></p>
-        <div class="set-buttons">
-          <button type="button" class="quiet danger" id="cloud-offline">📴 Offline (this device only)</button>
-          <button type="button" class="chip-dark" id="cloud-online" hidden>☁️ Put back in the cloud</button>
-        </div>
-      </section>
     </div>
   </dialog>
 

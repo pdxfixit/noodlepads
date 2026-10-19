@@ -58,8 +58,8 @@ const MUST_MENTION = [
   // Settings
   '💾 Save a backup', '📂 Load a backup', 'Advanced', '🧸 Kids', 'Regular', '📮 Send problem reports',
   // The cloud
-  '☁️ Open from the cloud', '☁️ Cloud', '🎲 Pick a name', '🔒 Set a PIN', "🤷 I don't know the PIN", '🔄 Sync now',
-  '🔗 Share…', '🔗 Shared with me', '📴 Offline (this device only)', '☁️ Put back in the cloud', 'Privacy policy',
+  '☁️ Open from the cloud', '☁️ In the cloud', '🎲 Pick a name', '🔒 Set a PIN', '🔒 PIN on', 'Change PIN', 'Remove PIN',
+  "🤷 I don't know the PIN", '🔄 Sync now', '🔗 Share…', '🔗 Shared with me', 'Privacy policy',
 ];
 
 const appText = () => {
