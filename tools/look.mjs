@@ -553,9 +553,8 @@ const MEASURE = (width) => `(() => {
   const controls = 'button, [role="button"], summary, select, input[type="range"], input[type="checkbox"], input[type="radio"]';
   // The beat grid's pills, the piano roll's squares and notes are exempt: their width is the
   // grid's (16 a bar, a decision in docs/decisions.md), and they are 64 px tall.
-  const exempt = '.pill, .note-cell, .roll-note, .dj-grid-row .row-x, .dj-grid-row .row-clear, .dj-grid-row .row-ring, .dj-grid-row > .row-emoji, .dj-grid-row .row-vol, .ke-key, .page-foot.stacked .ver-date';   // Beat Builder's row ✕ and picture: Ben chose the ✕ as small as the emoji beside it (2026-10-11), so the pair keeps the row's height; its 🧹 clear (Ben, 2026-10-12) and 🔔 Overlap are the ✕'s size, and its speaker matches them (provisional, questions.md); the three sit in .row-tools at the row's right
+  const exempt = '.pill, .note-cell, .roll-note, .dj-grid-row .row-x, .dj-grid-row .row-clear, .dj-grid-row .row-ring, .dj-grid-row > .row-emoji, .dj-grid-row .row-vol, .ke-key';   // Beat Builder's row ✕ and picture: Ben chose the ✕ as small as the emoji beside it (2026-10-11), so the pair keeps the row's height; its 🧹 clear (Ben, 2026-10-12) and 🔔 Overlap are the ✕'s size, and its speaker matches them (provisional, questions.md); the three sit in .row-tools at the row's right
   // ✏️ Edit keys' keyboard keeps all ten keys of a row across even at 320 px (Ben, 2026-10-11), so its keys are narrow there; they stay 52 px tall.
-  // The footer's date, stacked line on line over the commit when the how-to wraps (Ben, 2026-10-19: "no blank lines in between"): 20 px tall, as wide as the column.
   // An open modal dialog makes the rest of the page inert: check only it.
   // The last one opened is on top (People opens over Settings).
   const scope = [...document.querySelectorAll('dialog[open]')].filter((d) => d.matches(':modal')).at(-1) || document;

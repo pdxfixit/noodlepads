@@ -3025,21 +3025,15 @@ dialog.np-dialog .set-buttons .quiet { justify-content: center; }
 .version .ver-date { order: -1; }
 .version .ver-sha { order: 1; }
 .version .ver-sep { white-space: pre; }
-/* A how-to on two lines or more: the how-to keeps the width, and the date
-   and the commit stack at the right, line on line, the version's size (Ben,
-   2026-10-19: "no blank lines in between. neatly stacked"). Each tap area is
-   its line, 20 px, touching the next and as wide as the column: below the
-   44 px rule, on purpose. */
-.page-foot.stacked { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; align-items: start; }
-.page-foot.stacked .screen-hint { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
-.page-foot.stacked .version { display: contents; }
+/* The how-to takes half the width at most, and the date and the commit
+   always sit at its right, both at the top. When the how-to wraps, they
+   stack, line on line: the date's 44 px tap reaches up, the commit's down,
+   so the two lines touch and each still gets a full target (Ben, 2026-10-19). */
+.page-foot .screen-hint { max-width: 50%; }
+.page-foot.stacked .version { flex-direction: column; align-items: flex-end; }
 .page-foot.stacked .ver-sep { display: none; }
-.page-foot.stacked .ver-date, .page-foot.stacked .ver-sha {
-  grid-column: 2; justify-self: stretch; justify-content: flex-end; margin: 0 -10px 0 0; padding: 2px 10px; min-height: 20px;
-  font-size: 0.75rem; line-height: 16px; opacity: 0.8;
-}
-.page-foot.stacked .ver-date { grid-row: 1; }
-.page-foot.stacked .ver-sha { grid-row: 2; }
+.page-foot.stacked .ver-date { margin: -26px -6px 0; padding: 26px 6px 2px; }
+.page-foot.stacked .ver-sha { margin: 0 -6px -26px; padding: 2px 6px 26px; }
 .set-version .privacy-link { display: inline-flex; align-items: center; min-height: 44px; }
 /* The link above the version, centered like it. */
 .set-again { margin: 14px 0 0; text-align: center; }
