@@ -58,19 +58,19 @@ test('with ⌨️ Keys on, the slim bar\'s ✏️ opens ✏️ Edit keys, and wi
   // 2026-10-19). It opens a menu: ⌨️ Keys · 👆 Tiles · ✏️ Edit keys, so the
   // ⌨️ / 👆 switch by the keys goes on Beats.
   assert.equal($('#dj-change-bar').textContent, '✏️⌨️');
-  assert.equal($('#dj-change-bar').getAttribute('aria-label'), '⌨️ Keys or 👆 Tiles, and ✏️ Edit keys');
+  assert.equal($('#dj-change-bar').getAttribute('aria-label'), '⌨️ Keys or 👆 Tiles, and ✏️ Edit layout');
   $('#dj-change-bar').dispatch('click');
   assert.equal($('#keys-edit').open, false, 'a menu first, not the editor');
   const pop = () => document.querySelector('.more-pop');
   const items = () => pop().querySelectorAll('[data-more-item]').map((b) => b.textContent);
   assert.equal(pop().hidden, false);
-  assert.deepEqual(items(), ['⌨️ Keys', '👆 Tiles', '✏️ Edit keys']);
+  assert.deepEqual(items(), ['⌨️ Keys', '👆 Tiles', '✏️ Edit layout']);
   assert.equal(pop().querySelectorAll('[data-more-item]')[0].getAttribute('aria-checked'), 'true', '⌨️ Keys is the one on');
   pop().querySelectorAll('[data-more-item]')[2].dispatch('click');
-  assert.equal($('#keys-edit').open, true, '✏️ Edit keys opens the same view');
+  assert.equal($('#keys-edit').open, true, '✏️ Edit layout opens the keys\' editor');
   assert.equal(pop().hidden, true, 'and the menu closes');
   $('#keys-edit').close();
-  assert.match(css, /body\.keys-on \.dj-input-switch \{ display: none; \}/, 'the switch by the keys goes on Beats');
+  assert.match(css, /body\.keys-on \.dj-input \{ display: none; \}/, 'the switch by the keys goes on Beats');
   // 👆 Tiles from the menu: what the switch did.
   $('#dj-change-bar').dispatch('click');
   pop().querySelectorAll('[data-more-item]')[1].dispatch('click');
@@ -164,10 +164,21 @@ test('on a phone: tiles only, and the bar\'s ✏️ edits them at once', () => {
     assert.equal($('#touch-edit').open, true, 'the tiles\' own view, at once');
     assert.equal(document.querySelector('.more-pop')?.hidden ?? true, true, 'no menu');
     $('#touch-edit').close();
-    assert.match(css, /@media \(max-width: 699px\) \{ \.dj-input-switch \{ display: none; \} \}/);
+    assert.match(css, /@media \(max-width: 699px\) \{ \.dj-input \{ display: none; \} \}/);
   } finally {
     globalThis.matchMedia = wide;
     $('#dj-input').querySelector('[data-input="keys"]').dispatch('click');
     keysOff(page);
   }
+});
+
+// S M L and Q / D are set in ✏️ Edit keys, at every width (Ben, 2026-10-19:
+// "the layout editor is where Q/D can be changed as well as S/M/L").
+test('S M L and Q / D sit in ✏️ Edit keys, over its keys, not by the keys you play', () => {
+  const look = document.querySelector('.ke-look');
+  assert.ok(look, 'a line for them');
+  assert.ok($('#keys-edit').contains(look), 'in ✏️ Edit keys');
+  assert.ok(look.contains($('#dj-size')) && look.contains($('#dj-layout-keys')));
+  assert.equal($('#dj').contains($('#dj-size')), false);
+  assert.equal($('#dj').contains($('#dj-layout-keys')), false);
 });

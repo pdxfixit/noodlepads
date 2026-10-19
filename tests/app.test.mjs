@@ -1147,7 +1147,7 @@ test('🎤 Live: 40 keys like the number row and the letter rows, drums on the h
   // Q / D hang under ⌨️ / 👆 while the keys show letters (Ben, 2026-10-16),
   // and Settings has no Keyboard section any more.
   assert.equal($('#set-keys'), null, 'no ⌨️ Keyboard in Settings');
-  assert.equal($('#dj-input-line').contains($('#dj-layout-keys')), true, 'Q / D sit with ⌨️ / 👆');
+  assert.equal($('#keys-edit').contains($('#dj-layout-keys')), true, 'Q / D sit in ✏️ Edit keys (Ben, 2026-10-19)');
   assert.equal($('#dj-layout-keys').hidden, false, 'a keyboard was pressed: Q / D show');
   const layoutKeys = $('#dj-layout-keys').querySelectorAll('[data-layout]');
   assert.deepEqual(layoutKeys.map((b) => b.dataset.layout), ['qwerty', 'dvorak'], 'no Auto');

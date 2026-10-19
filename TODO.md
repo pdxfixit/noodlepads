@@ -58,6 +58,9 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
+- **Beats stays one column on wide screens** (Ben, 2026-10-19: "when on the desktop, even with a wide screen, the beats shouldn't go side-by-side. the full width is better for beat-line-programming"; it helps click-and-drag pill placement too). Today from 1400 px Beats with ⌨️ Keys puts the beat's rows and the keys side by side (`styles.css` Wide screens, `.dj:has(> .dj-grid…)`); keep them stacked, rows full width. Update decisions.md "Wide screens fill, then split".
+- **Pills select and drag like standard objects** (Ben, 2026-10-19: "pills should be selectable and draggable, like standard objects (ctrl, shift, etc). pills in an active state can be selected, and their spacing between each other is preserved (but at the moment, inactive pills cannot be selected)"). Questions asked first: how it sits beside a tap toggling a pill and beside ⇆ Move.
+
 
 
 

@@ -149,16 +149,15 @@ export function createDJ({ el, deps }) {
     el.change.textContent = touch ? '✏️ Edit layout' : '✏️ Edit keys';
     const more = el.changeTop?.querySelector('.edit-more');
     if (more) more.textContent = touch ? ' layout' : ' keys';
-    // Beats' ✏️⌨️ opens a menu (Ben, 2026-10-19): ⌨️ Keys · 👆 Tiles · the edit.
+    // Beats' ✏️⌨️ opens a menu (Ben, 2026-10-19): ⌨️ Keys · 👆 Tiles · ✏️ Edit layout.
     for (const b of el.changeBars ?? []) {
       if (!b) continue;
       // On a phone (tiles only) it is just ✏️, the edit, no menu (Ben, 2026-10-19).
       b.textContent = narrow() ? '✏️' : touch ? '✏️👆' : '✏️⌨️';
-      b.setAttribute('aria-label', narrow() ? el.change.textContent : `⌨️ Keys or 👆 Tiles, and ${el.change.textContent}`);
-      b.title = narrow() ? el.change.textContent : `⌨️ Keys · 👆 Tiles · ${el.change.textContent}`;
+      b.setAttribute('aria-label', narrow() ? '✏️ Edit layout' : '⌨️ Keys or 👆 Tiles, and ✏️ Edit layout');
+      b.title = narrow() ? '✏️ Edit layout' : '⌨️ Keys · 👆 Tiles · ✏️ Edit layout';
       if (narrow()) b.removeAttribute('aria-haspopup'); else b.setAttribute('aria-haspopup', 'menu');
       for (const p of b.parentElement?.querySelectorAll('[data-pick-input]') ?? []) p.setAttribute('aria-pressed', String(p.dataset.pickInput === inputNow()));
-      b.parentElement?.querySelector('[data-pick-edit]')?.setAttribute('data-more-word', touch ? 'Edit layout' : 'Edit keys');
     }
     inputMenu?.refresh();
     if (touch) drawBands(el.touch, touchNow(), { clipById: deps.clipById, family, kitGroups: () => deps.kitGroups?.() ?? [], isLooping: deps.isLooping });
@@ -1536,7 +1535,7 @@ export function createDJ({ el, deps }) {
   // A phone turned or a window resized past 700 px: tiles under it, the kid's pick (or keys) over it.
   globalThis.matchMedia?.('(max-width: 699px)')?.addEventListener?.('change', () => { inputMenu?.close(false); render(); if (mode === 'beat') renderGrid(); deps.inputChanged?.(); });
 
-  // Tile size on the pads grid: more sounds on screen, or bigger targets.
+  // S M L in ✏️ Edit keys, the pads' size: more sounds on screen, or bigger targets.
   el.size.addEventListener('click', (e) => {
     const b = e.target.closest('[data-size]');
     if (!b) return;
@@ -1545,7 +1544,7 @@ export function createDJ({ el, deps }) {
     render();
   });
 
-  // Q / D under ⌨️ / 👆: the keyboard the letters follow, this device's own.
+  // Q / D in ✏️ Edit keys: the keyboard the letters follow, this device's own.
   function showLayout() { for (const b of el.layout.querySelectorAll('[data-layout]')) b.setAttribute('aria-pressed', String(b.dataset.layout === layout)); }
   el.layout.addEventListener('click', (e) => {
     const b = e.target.closest('[data-layout]');
