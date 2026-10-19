@@ -8,7 +8,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
-const tail = html.slice(html.indexOf('<div class="dj-tail">'), html.indexOf('<section class="song"'));
+const start = html.indexOf('<div class="dj-tail">');
+const tail = html.slice(start, html.indexOf('</section>', start));   // to the end of the keys' section
 
 test('Edit keys comes last under the DJ keys, after Click track and Overlap', () => {
   const at = (id) => tail.indexOf(`id="${id}"`);

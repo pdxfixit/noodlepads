@@ -36,7 +36,6 @@ import { MAX_RINGING, ringOver } from './rhythm.js';
 import { cleanFx, masterLevel, silencedBySolo, mixKey, buildMix, createMixer } from './mixer.js';
 import { MELODY_NOTES, cleanNotes, fromLegacy, legacy, startsIn, addNote, lineOf, sameNotes, multiplyNotes } from './notes.js';
 import { createRoll } from './roll.js';
-import { createBeatMove } from './beat-move.js';
 import { createPillSelect } from './pill-select.js';
 import { edgeScroller } from './edge-scroll.js';
 import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
@@ -657,7 +656,8 @@ export function createSequencer(deps) {
   let rowMenus = null;       // the header lines' ⋯ menus (overflow.js), and
   let rowRoom = null;        // what decides they show: a line short of room
   let mixer = null;          // the 🎚️ Mixer sheet (mixer.js), set once the rows listen
-  let move = null;           // ⇆ Move (beat-move.js), set once the rows listen
+  let locked = false;        // ⇆: the pills locked, nothing lights or unlights (pill-select.js)
+  const pickers = [];        // the views' pickers, {pick, shown}: these rows', the keys' grid's
   let select = null;         // pills picked and dragged with a mouse (pill-select.js)
 
   const playing = () => timer !== 0;
@@ -824,7 +824,7 @@ export function createSequencer(deps) {
   // remix, 🧸 Kids' squares in the scratch) or went (deleted: then the
   // scratch opens). Live has none.
   function show(which) {
-    if (which !== slot) { stop(); offerUndo(null); speakers?.close(); rowMenus?.close(); slot = which; move?.end(); }
+    if (which !== slot) { stop(); offerUndo(null); speakers?.close(); rowMenus?.close(); slot = which; }
     if (doc && isScratch(doc.pattern)) {
       if (scratchSaved() !== doc.seen) { doc = scratchDoc(); loaded = null; }
     } else if (doc) {
@@ -1455,7 +1455,6 @@ export function createSequencer(deps) {
       el.empty.hidden = true;
       el.noRows.hidden = true;
       if (undo && undo.pattern !== pattern) offerUndo(null);
-      move?.decorate(pills);
       select?.decorate();
       return;
     }
@@ -1490,8 +1489,7 @@ export function createSequencer(deps) {
     rowMenus?.refresh();   // and an open ⋯ menu shows its row as it is now
     if (mixer?.isOpen()) mixer.render();   // another beat, or a row gone: the open mixer follows
     roll?.refresh();       // and 🎹 the roll, or it closes when its row is gone
-    move?.decorate(pills); // ⇆ Move's pick on the pills
-    select?.decorate();    // a mouse's pick (pill-select.js)
+    select?.decorate();    // the pick (pill-select.js)
   }
 
   // A pill's look and its spoken state: off, on, or on and loud.
@@ -1505,8 +1503,7 @@ export function createSequencer(deps) {
   let twins = new Set();   // rows whose emoji another row shows too: a letter tells them apart
   function renderRow(row, i, clips) {
     const clip = deps.clipById(row.clipId);
-    // ⇆ Move shows every row open: a whole-beat slide moves collapsed rows too.
-    if (row.collapsed && !move?.on()) { pills[i] = []; return renderSlimRow(row, i, clip); }
+    if (row.collapsed) { pills[i] = []; return renderSlimRow(row, i, clip); }
     const wrap = document.createElement('div');
     wrap.className = 'seq-row';
     wrap.dataset.row = i;
@@ -1874,7 +1871,7 @@ export function createSequencer(deps) {
 
   function rowDragDown(e) {
     const grip = e.target.closest('[data-grip]');
-    if (!grip || e.button !== 0 || rowDrag.row || move?.on()) return;
+    if (!grip || e.button !== 0 || rowDrag.row) return;
     e.preventDefault();
     const row = grip.closest('.seq-row');
     Object.assign(rowDrag, { row, pointerId: e.pointerId, grabY: e.clientY - row.getBoundingClientRect().top, y: e.clientY });
@@ -2376,8 +2373,6 @@ export function createSequencer(deps) {
 
   let afterHold = () => false;   // set below, once the hold listener is on
   el.rows.addEventListener('click', (e) => {
-    // In ⇆ Move the pills are locked: a tap changes the pick (beat-move.js).
-    if (move?.on()) { afterHold(); move.click(e); return; }
     const rowEl = e.target.closest('.seq-row');
     if (!rowEl) return;
     const i = Number(rowEl.dataset.row);
@@ -2438,7 +2433,7 @@ export function createSequencer(deps) {
 
   // Holding a pill makes it a loud hit (or a loud one normal).
   afterHold = pillHolds(el.rows, (t) => t.closest?.('.pill'), (pill) => {
-    if (move?.on() || select?.dragging()) return;   // in ⇆ Move a hold lifts the pick instead; a mouse may be sliding
+    if (locked || select?.dragging()) return;   // ⇆ locked: nothing changes; a mouse may be sliding
     const rowEl = pill.closest('.seq-row');
     const row = pattern?.rows[Number(rowEl?.dataset.row)];
     if (!row) return;
@@ -2473,7 +2468,7 @@ export function createSequencer(deps) {
   // Arrow keys move between pills (they are one Tab stop, not 128).
   el.rows.addEventListener('keydown', (e) => {
     const pill = e.target.closest('.pill');
-    if (!pill || e.altKey || e.ctrlKey || e.metaKey || (e.shiftKey && move?.on())) return;   // Shift + ← → slides in ⇆ Move
+    if (!pill || e.altKey || e.ctrlKey || e.metaKey) return;
     const row = Number(pill.closest('.seq-row').dataset.row);
     let to = pillTarget(e.key, row, Number(pill.dataset.step), pattern.rows.length, countOf);
     if (!to) return;
@@ -3202,8 +3197,7 @@ export function createSequencer(deps) {
   }
   const snapshot = () => structuredClone(pattern);
 
-  // ⇆ Move (beat-move.js): pick pills and slide them along their rows.
-  // putRows writes slid rows into the open beat's own row objects, so a
+  // A pick slid along its rows (pill-select.js): putRows writes slid rows into the open beat's own row objects, so a
   // playing beat plays them from its next pill; a tune row's pills follow
   // its notes again (cleanRow).
   function putRows(rows) {
@@ -3213,7 +3207,7 @@ export function createSequencer(deps) {
     });
     render();
   }
-  // While a drag slides pills (⇆ Move, a mouse's pick): the rows go into the
+  // While a drag slides pills (pill-select.js): the rows go into the
   // open beat as putRows does (a playing beat follows), but only the pills
   // that changed are repainted, never the whole page, so the pills keep up
   // with the pointer (Ben, 2026-10-19: "the pill drag lags"). A tune row or
@@ -3241,23 +3235,10 @@ export function createSequencer(deps) {
     });
     if (!draw) return;
     if (full) { render(); return; }
-    move?.decorate(pills);
     select?.decorate();
   }
-  const moveBar = el.moveBar;
-  move = moveBar ? createBeatMove({
-    el: {
-      rows: el.rows, bar: moveBar,
-      what: moveBar.querySelector('[data-move-what]'), hint: moveBar.querySelector('[data-move-hint]'),
-      left: moveBar.querySelector('[data-move-step="-1"]'), right: moveBar.querySelector('[data-move-step="1"]'),
-      all: moveBar.querySelector('[data-move-pick="all"]'), none: moveBar.querySelector('[data-move-pick="none"]'),
-      invert: moveBar.querySelector('[data-move-pick="invert"]'),
-      undo: moveBar.querySelector('[data-move-undo]'), done: moveBar.querySelector('[data-move-done]'),
-    },
-    beat: () => pattern, total: () => countOf(), render, save, putRows, paint: paintRows, holdMs: HOLD_MS,
-    onChange: (on) => deps.onMove?.(on),
-  }) : null;
-  // A mouse picks lit pills and drags them along (pill-select.js); not in ⇆ Move.
+  // A mouse picks lit pills and drags them along (pill-select.js), and a
+  // finger too while ⇆ locks them.
   select = createPillSelect({
     root: el.rows,
     pillOf: (node) => {
@@ -3268,8 +3249,40 @@ export function createSequencer(deps) {
     pillEl: (r, s) => pills[r]?.[s] ?? null,
     beat: () => pattern, total: () => countOf(), putRows, paint: paintRows, save, snapshot,
     light: (r, s) => { tapPill(pattern.rows[r], s); save(); render(); },
-    enabled: () => !move?.on(),
+    enabled: () => true, locked: () => locked, changed: () => showLock(),
     undoable: (copy, text) => offerUndo({ copy, text, pattern }),
+  });
+  pickers.push({ pick: select, shown: () => !el.rows.closest?.('[hidden]') });
+
+  // ⇆ locks the pills (Ben, 2026-10-19: "all it should really change is the
+  // ability to turn pills on/off, in order to enable large scale edits"):
+  // the view stays as it is, Beats' rows or the keys' grid, and nothing
+  // lights or unlights there; taps and drags pick and slide (pill-select.js).
+  // Its bar at the foot says what is picked, with All · None · Invert.
+  const lockBar = el.moveBar;
+  const shownPicker = () => pickers.find((p) => p.shown())?.pick ?? select;
+  function showLock() {
+    for (const b of document.querySelectorAll('[data-move-open]')) b.setAttribute('aria-pressed', String(locked));
+    document.body.classList.toggle('pills-locked', locked);
+    if (!lockBar) return;
+    lockBar.hidden = !locked;
+    if (!locked) return;
+    const n = shownPicker().picked().size;
+    lockBar.querySelector('[data-move-what]').textContent = n ? `${n} ${n === 1 ? 'pill' : 'pills'} picked` : 'Nothing picked';
+    lockBar.querySelector('[data-move-hint]').textContent = n ? 'Drag one to slide them along' : 'Tap lit pills, or drag across them, to pick';
+    lockBar.querySelector('[data-move-pick="none"]').disabled = !n;
+  }
+  function setLock(on) {
+    if (on === locked) return;
+    locked = on;
+    if (!on) for (const p of pickers) p.pick.clear();
+    showLock();
+  }
+  lockBar?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-move-pick]');
+    if (!b) return;
+    const p = shownPicker();
+    if (b.dataset.movePick === 'all') p.all(); else if (b.dataset.movePick === 'none') p.clear(); else p.invert();
   });
   function restore(copy) {
     const was = playing();
@@ -3344,7 +3357,9 @@ export function createSequencer(deps) {
     openSaved: (id) => { const saved = library().find((b) => b.id === id); if (saved) openBeat(cleanPattern(saved, personId), { resume: false }); return !!saved; },
     lockChips, queuedBeat: () => (queued ? { ...queued } : null), openMixer, toggleSolo, setFx: setRowFx, setMaster, setMasterFx,
     openRoll, rollRow: () => roll?.row() ?? -1,
-    toggleMove: (opts) => move?.toggle(opts), endMove: () => move?.end(), moving: () => !!move?.on(),
+    // ⇆ the lock, and the keys' grid's picker beside these rows' (dj.js).
+    toggleLock: () => setLock(!locked), endLock: () => setLock(false), locked: () => locked, lockChanged: () => showLock(),
+    addPicker: (pick, shown) => pickers.push({ pick, shown }),
     // For the keys' grid's mouse pick (pill-select.js in dj.js).
     putRows, paintRows, saveBeat: () => save() };
 }

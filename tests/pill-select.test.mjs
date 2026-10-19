@@ -148,3 +148,65 @@ test('a mouse drag slides the pick, repainting pills in place, and the drop draw
   page.$('#banner-action').dispatch('click');
   assert.deepEqual(lit(0), [2, 10], 'Undo puts it back');
 });
+
+// ⇆ locks the pills (Ben, 2026-10-19): the view stays as it is, nothing
+// lights or unlights, and a finger picks as a mouse does; the bar at the
+// foot says what is picked, with All · None · Invert.
+const lockKey = () => document.querySelector('#seq-deck [data-move-open]');
+const bar = () => page.$('#seq-move');
+const pickKey = (name) => bar().querySelectorAll('[data-move-pick]').find((b) => b.dataset.movePick === name);
+const tap = (p) => { p.dispatch('pointerdown', { pointerType: 'touch', button: 0, clientX: 5, clientY: 5 }); p.dispatch('pointerup', { pointerType: 'touch' }); p.dispatch('click'); };
+
+test('⇆ locks the pills: a tap on an unlit pill does nothing, on a lit one picks it; All, Invert and None pick', async () => {
+  await new Promise((r) => setTimeout(r, 450));   // past the last drag's own click
+  for (const s of lit(0)) tap(pill(0, s));
+  for (const s of [1, 5, 9]) tap(pill(0, s));
+  assert.deepEqual(lit(0), [1, 5, 9]);
+  lockKey().dispatch('click');
+  assert.equal(lockKey().getAttribute('aria-pressed'), 'true');
+  assert.ok(document.body.classList.contains('pills-locked'));
+  assert.equal(bar().hidden, false, 'the bar shows');
+  assert.equal(page.$('#seq-rows').closest('[hidden]'), null, 'the same view');
+  tap(pill(0, 3));
+  assert.deepEqual(lit(0), [1, 5, 9], 'an unlit pill stays unlit');
+  tap(pill(0, 5));
+  assert.deepEqual(lit(0), [1, 5, 9], 'a lit pill stays lit');
+  assert.deepEqual(chosen(), [5], 'and is picked');
+  assert.match(bar().querySelector('[data-move-what]').textContent, /^1 pill picked/);
+  tap(pill(0, 5));
+  assert.deepEqual(chosen(), [], 'a second tap takes it out');
+  pill(0, 9).dispatch('click', { detail: 0 });
+  assert.deepEqual(chosen(), [9], 'Space on a lit pill picks it too');
+  pickKey('invert').dispatch('click');
+  assert.deepEqual(chosen(), [1, 5], 'Invert: the lit ones not picked');
+  pickKey('all').dispatch('click');
+  assert.deepEqual(chosen(), [1, 5, 9]);
+  assert.match(bar().querySelector('[data-move-what]').textContent, /^3 pills picked/);
+  pickKey('none').dispatch('click');
+  assert.deepEqual(chosen(), []);
+  assert.equal(pickKey('none').disabled, true);
+  lockKey().dispatch('click');
+  assert.equal(bar().hidden, true, 'unlocked: the bar goes');
+  assert.equal(document.body.classList.contains('pills-locked'), false);
+  tap(pill(0, 3));
+  assert.deepEqual(lit(0), [1, 3, 5, 9], 'and a tap lights again');
+});
+
+test('⇆ with ⌨️ Keys on keeps the keys, and the grid picks instead of lighting', async () => {
+  const { keysOn, keysOff } = await import('./new-beat.mjs');
+  keysOn(page);
+  const gridPill = (s) => page.$('#dj-grid').querySelectorAll('.dj-grid-row')[0].querySelector('.dj-grid-pills').children[s];
+  document.querySelector('.dj-bar [data-move-open]').dispatch('click');
+  assert.ok(document.body.classList.contains('keys-on'), 'still the keys');
+  assert.equal(page.$('#dj').hidden, false);
+  assert.equal(bar().hidden, false);
+  tap(gridPill(3));
+  assert.equal(gridPill(3).classList.contains('on'), true, 'lit as it was');
+  assert.equal(gridPill(3).classList.contains('chosen'), true, 'and picked');
+  tap(gridPill(2));
+  assert.equal(gridPill(2).classList.contains('on'), false, 'an unlit one stays unlit');
+  page.$('#pads-tab').dispatch('click');
+  assert.equal(document.body.classList.contains('pills-locked'), false, 'leaving Beats unlocks');
+  page.$('#beats-toggle').dispatch('click');
+  keysOff(page);
+});

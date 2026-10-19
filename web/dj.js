@@ -1275,14 +1275,15 @@ export function createDJ({ el, deps }) {
     renderGrid();
   });
   const gridHeld = pillHolds(el.grid, (t) => t.closest?.('[data-step]'), (p) => {
-    if (gridPick?.dragging()) return;   // a mouse sliding the pick
+    if (gridPick?.dragging() || deps.seq.locked()) return;   // a mouse sliding the pick; ⇆ locked: nothing changes
     const line = p.closest('[data-row]');
     if (!line) return;
     deps.seq.cyclePill(Number(line.dataset.row), Number(p.dataset.step), true);
     renderGrid();
   });
   // A mouse picks lit pills of the beat and drags them along their rows, as
-  // on Beats' rows (pill-select.js); not while recording or in ⇆ Move.
+  // on Beats' rows (pill-select.js), and a finger too while ⇆ locks them;
+  // not while recording.
   const gridPill = (node) => {
     const p = node?.closest?.('.dj-grid-pills > [data-step]');
     const line = p?.closest('[data-row]');
@@ -1313,9 +1314,10 @@ export function createDJ({ el, deps }) {
     },
     save: () => deps.seq.saveBeat(), snapshot: () => deps.seq.snapshot(),
     light: (r, s) => { deps.seq.cyclePill(r, s); renderGrid(); },
-    enabled: () => !beatRec && !deps.seq.moving(),
+    enabled: () => !beatRec, locked: () => deps.seq.locked(), changed: () => deps.seq.lockChanged(),
     undoable: (copy, text) => offerBeatUndo(copy, text),
   });
+  deps.seq.addPicker(gridPick, () => !el.grid.hidden && !el.grid.closest?.('[hidden]'));
 
   // The beat's shape, chosen before Record: tempo, bars and (with Advanced)
   // the time signature. They change the open beat, as on the Beats screen,
