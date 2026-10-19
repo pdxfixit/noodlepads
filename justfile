@@ -20,7 +20,10 @@ doctor:
 [doc("Check syntax, then run the tests (Node's built-in runner, then the tools' and the noodlepads-logs skill's unittest; no install step). Judge by the exit code")]
 test:
     @for f in web/*.js worker/*.js; do node --check "$f" || exit 1; done
-    node --test --test-force-exit
+    @# The spec reporter, as on GitHub (Node 22's default TAP output is cut off by
+    @# --test-force-exit). No test here has subtests, so a "▶" line is a test that
+    @# started and never finished: --test-force-exit ended it silently (2026-10-19).
+    @bash -c 'set -o pipefail; log=$(mktemp); node --test --test-force-exit --test-reporter=spec 2>&1 | tee "$log"; rc=$?; if grep -q "^▶ " "$log"; then echo "✖ started and never finished (cut off by --test-force-exit; await nothing a test does not need):" >&2; grep "^▶ " "$log" >&2; rc=1; fi; rm -f "$log"; exit $rc'
     python3 -m unittest discover -s tools -p 'test_*.py'
     python3 -m unittest discover -s skills/noodlepads-logs -p 'test_*.py'
 
@@ -188,7 +191,7 @@ prove test +files:
     # A Python test (tools/test_*.py) runs under unittest from its own folder, as `just test` runs it.
     case "{{test}}" in
       *.py) run() { (cd "$(dirname "{{test}}")" && python3 -m unittest "$(basename "{{test}}" .py)"); } ;;
-      *) run() { node --test --test-force-exit {{test}}; } ;;
+      *) run() { node --test --test-force-exit --test-reporter=spec {{test}}; } ;;
     esac
     if run > "$keep/out" 2>&1; then
       echo "❌ {{test}} passes without your change to {{files}}" >&2
