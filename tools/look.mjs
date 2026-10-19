@@ -230,7 +230,7 @@ const VIEWS = {
   'chooser-inst': { screen: 'beats', js: q('.beat-bar [data-beat-new]') + ADD_ROW + q('.seq-row [data-pick]') + q('#chooser-grid [data-inst-pick="notes"]') + nap },
   'tune-who': { screen: 'beats', js: q('.beat-bar [data-beat-new]') + q('#seq-add-tune') + nap },
   'roll-inst': { screen: 'beats', js: ROLL_GROOVE + q('.seq-row.tune [data-pick]') + q('[data-roll="inst"] [data-inst-pick]') + nap },
-  'keys-inst': { screen: 'live', js: q('#ke-input [data-input="keys"]') + q('#dj-change') + q('[data-group="kit-notes"]') + q('#ke-inst [data-inst-pick]') + nap },
+  'keys-inst': { screen: 'live', from: 700, js: q('#ke-input [data-input="keys"]') + q('#dj-change') + q('[data-group="kit-notes"]') + q('#ke-inst [data-inst-pick]') + nap },
   'touch-inst': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-inst-pick]') + nap },
   sheet: { screen: 'pads', js: q('.pad-add') },
   'sheet-edit': { screen: 'pads', js: `${q('#edit-toggle')} ${q('#pads .pad-cell [data-edit]')}` },
@@ -331,7 +331,7 @@ const VIEWS = {
   'builder-grown': { screen: 'beats', keys: true, js: q('#dj-beatbar [data-beat-new]') + BUILDER_REC + 'await new Promise((r) => setTimeout(r, 1700));' },
   takes: { screen: 'live', js: q('#dj-takes-open') },
   // ✏️ Edit keys: as it opens, with a ready-made layout loaded, and with sounds picked.
-  keys: { screen: 'live', js: q('#ke-input [data-input="keys"]') + q('#dj-change') },
+  keys: { screen: 'live', from: 700, js: q('#ke-input [data-input="keys"]') + q('#dj-change') },
   // ⌨️ / 👆 (ADR 0029): 🎤 Live on the touch layout or on the keys (a phone's
   // default is 👆), and Beats with ⌨️ Keys on the touch layout.
   touch: { screen: 'live', js: q('#ke-input [data-input="touch"]') },
@@ -347,8 +347,8 @@ const VIEWS = {
   'touch-edit-more': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-more="1"]') },
   'touch-edit-groups': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-more="1"]') + q('#te-bands [data-group-pick]') },
   'touch-edit-small': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-size="s"][data-band="1"]') },
-  'keys-layout': { screen: 'live', js: q('#ke-input [data-input="keys"]') + q('#dj-change') + q('[data-layout="ready-space-band"]') + q('#ke-save') },
-  'keys-picked': { screen: 'live', js: `${q('#ke-input [data-input="keys"]')} ${q('#dj-change')} ${q('[data-group="kit-animals"]')} for (let i = 0; i < 3; i++) document.querySelectorAll('#ke-picks [data-sound]')[i].click();` },
+  'keys-layout': { screen: 'live', from: 700, js: q('#ke-input [data-input="keys"]') + q('#dj-change') + q('[data-layout="ready-space-band"]') + q('#ke-save') },
+  'keys-picked': { screen: 'live', from: 700, js: `${q('#ke-input [data-input="keys"]')} ${q('#dj-change')} ${q('[data-group="kit-animals"]')} for (let i = 0; i < 3; i++) document.querySelectorAll('#ke-picks [data-sound]')[i].click();` },
   'song-new': { screen: 'song', js: q('#song-new') },
   songs: { screen: 'song', js: q('#song-open') },
   // 🎼 Song's playlist (ADR 0024), PLAYLIST: as arranged; with a beat picked in the strip;
@@ -720,8 +720,12 @@ async function lookOnce(screen, w, bg = '', skin = '') {
 // resource") has twice failed a run that passed on a rerun, so such a
 // width gets one more try, and the report says it did.
 const hiccup = (row) => row.errors.some((e) => /net::ERR_|Failed to load resource/.test(e));
+// A view with `from` exists only from that width: ✏️ Layout's keys view (a
+// phone has only pads, Ben 2026-10-19). Narrower widths are skipped, and said.
+const skipped = [];
 for (const screen of opts.screens) {
   for (const w of opts.widths) {
+    if (VIEWS[screen].from > w) { skipped.push(`${screen} ${w}`); continue; }
     for (const bg of opts.bgs) {
       for (const skin of opts.skins) {
         let row = await lookOnce(screen, w, bg, skin);
@@ -753,5 +757,6 @@ for (const r of rows.filter((x) => !x.ok)) {
   if (r.small.length) console.log(`  👆 under ${MIN_TAP}px: ${r.small.join(', ')}`);
 }
 for (const r of rows.filter((x) => x.logs?.length)) for (const l of r.logs) console.log(`📝 ${r.screen} ${r.w}: ${l}`);
+if (skipped.length) console.log(`⏭️  not on a phone (only from 700 px), skipped: ${skipped.join(', ')}`);
 console.log(`\n📸 screenshots: ${out}`);
 process.exit(rows.every((r) => r.ok) ? 0 : 1);
