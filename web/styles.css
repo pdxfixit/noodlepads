@@ -4031,7 +4031,10 @@ dialog#keys-edit::backdrop, dialog#touch-edit::backdrop { background: var(--bed)
 .te-grid { height: clamp(320px, 60dvh, 640px); }
 .te-cell { display: flex; overflow: auto; border-radius: 14px; }
 .te-cell > .te-band { flex: 1 1 auto; align-content: start; }
-.te-cell .te-band-head { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name remove"; }
+.te-cell .te-band-head { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "name more remove"; }
+.te-block-more { grid-area: more; width: 44px; height: 44px; }
+.te-cell.te-empty { position: relative; }
+.te-empty .te-block-more { position: absolute; top: 8px; right: 8px; }
 .te-cell .te-tiles { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
 .te-cell .te-tiles .te-tile, .te-cell .te-tiles .te-more { min-height: 48px; }
 .te-cell.te-over { box-shadow: inset 0 0 0 3px var(--led); }

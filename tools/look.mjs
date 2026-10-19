@@ -347,6 +347,8 @@ const VIEWS = {
   'layout-pads': { screen: 'beats', keys: true, js: q('#ke-input [data-input="touch"]') + q('#dj-change-bar') },
   // 👆 A grid (ADR 0032): Two and one, filled with Drums, Chords and Bass; in ✏️ Layout, and played.
   'grid-edit': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + GRID_FILL },
+  'grid-menu': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + GRID_FILL + q('[data-block-more="0-0"]') },
+  'grid-split': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + GRID_FILL + q('[data-block-more="0-0"]') + q('[data-split="down"]') + q('[data-add-group="animals"]') + q('#touch-edit [data-close]') },
   'grid-empty': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + q('[data-shape="two-one"]') },
   'grid-play': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + GRID_FILL + q('#touch-edit [data-close]') },
   'grid-beats': { screen: 'beats', keys: true, js: q('#ke-input [data-input="touch"]') + q('#dj-change-bar') + GRID_FILL + q('#touch-edit [data-close]') },
