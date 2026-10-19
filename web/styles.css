@@ -2683,6 +2683,16 @@ body.keys-on .dj-change-row { display: none; }
 @media (max-width: 600px) {
   #dj-change-bar { display: none; }
   body.keys-on #dj-change-tempo { display: block; }   /* 🎤 Live keeps its own under the keys */
+  /* A grid (Ben, 2026-10-19: "a bit more of a grid"): ⏲️ over 🎚️ and ✏️ over
+     ⇆, each 48 px, 8 px apart, both lines ending at the right edge. */
+  body.keys-on .dj-bar :is(#dj-beat-click, #dj-change-tempo) { width: 48px; padding: 0; }
+  body.keys-on #dj-change-tempo { font-size: 1rem; letter-spacing: -0.1em; }
+  body.keys-on .dj-bar > .beat-shape { gap: 8px; }
+  body.keys-on .dj-bar > .beat-shape .mixer-open { margin-left: auto; }
+}
+/* The narrowest phones: 6 px apart, so the bars' line fits (it ran 3 px over at 320). */
+@media (max-width: 359px) {
+  body.keys-on .dj-bar .beat-more, body.keys-on .dj-bar > .beat-shape { gap: 6px; }
 }
 /* Under the keys: the pad size, then the last line: the key colors at the
    left; ⏲️ Click track, 🔔 Overlap and ✏️ Edit keys in the corner, Edit keys
