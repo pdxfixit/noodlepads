@@ -2403,6 +2403,15 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
   transition: transform 50ms, box-shadow 50ms;
 }
 .secondary:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--board-deep); }
+/* Their keyboard focus, one stroke inside the button (Ben, 2026-10-19: the stroke was "a touch off"): .primary a
+   white ring, .secondary its own border twice as thick. The
+   page-wide outline drew a second ring outside .secondary's own border, and the 5 px shadow below filled its gap.
+   No outline (the dialogs' outline-color rules can't bring it back), except in forced-colors mode, which draws no shadows. */
+.primary:focus-visible, .secondary:focus-visible { outline-style: none; }
+@media (forced-colors: active) { .primary:focus-visible, .secondary:focus-visible { outline-style: solid; } }
+.primary:focus-visible { box-shadow: 0 5px 0 var(--board-deep), inset 0 0 0 3px var(--board), inset 0 0 0 6px #fff; }
+.secondary:focus-visible { box-shadow: 0 5px 0 var(--board-deep), inset 0 0 0 3px var(--board); }
+.primary:focus-visible:active, .secondary:focus-visible:active { box-shadow: 0 1px 0 var(--board-deep); }
 /* 👥 People: ☁️ Open from the cloud on the left, ➕ Add a person on the
    right, halves of the line; a long label wraps inside its button. */
 #people-dialog .sheet-actions { flex-wrap: nowrap; }

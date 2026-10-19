@@ -261,3 +261,14 @@ test('on noodlepads.com: a failure keeps the text and says try again; 204 thanks
   const log = JSON.stringify(getLog());
   for (const words of ['squid pad', '555-0100', 'Another idea']) assert.ok(!log.includes(words), words);
 });
+
+test('a focused .primary or .secondary button shows one stroke inside it, not a ring outside its border and shadow', () => {
+  // Ben, 2026-10-19: the selection stroke on Cancel was "a touch off" (the page-wide outline sat outside
+  // .secondary's border, and the 5 px shadow below filled its gap).
+  const css = web('styles.css');
+  assert.match(css, /\n\.primary:focus-visible, \.secondary:focus-visible \{ outline-style: none; \}\n/);
+  assert.match(css, /\n\.primary:focus-visible \{ box-shadow: 0 5px 0 var\(--board-deep\), inset 0 0 0 3px var\(--board\), inset 0 0 0 6px #fff; \}\n/);
+  assert.match(css, /\n\.secondary:focus-visible \{ box-shadow: 0 5px 0 var\(--board-deep\), inset 0 0 0 3px var\(--board\); \}\n/);
+  assert.match(css, /@media \(forced-colors: active\) \{ \.primary:focus-visible, \.secondary:focus-visible \{ outline-style: solid; \} \}/,
+    'forced-colors mode, which draws no shadows, keeps an outline');
+});
