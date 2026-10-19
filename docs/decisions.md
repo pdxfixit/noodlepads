@@ -323,4 +323,4 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | The Pick a name list opens by holding 🎲 (or right-click, Shift+Enter); no separate ▾ button. | Ben: "49 ok". | 2026-10-11 |
 | Select all picks only the person's own sounds (not presets); a group's ✏️ can select just that group. | Ben: "50; correct just one's own". | 2026-10-11 |
 | Beat pills keep their 30 px minimum on every device; four bars sit on one line only where the screen is wide enough (about 2,300 px of pill area). | Ben said no to slimmer desktop pills. | 2026-10-11 |
-| Beat pills are 64 px tall at one bar's height; each time more bars stacked double a row's height they are 10 px shorter, down to 44 px. Bars side by side keep them tall. | Ben, 2026-10-19: "more of a balance between overall page height … and the size of pills". | 2026-10-19 |
+| Beat pills are 64 px tall at 1 bar, 54 at 2 and 44 at 4, on every screen (bars side by side too), with round ends. Never under 44 px. | Ben, 2026-10-19: "more of a balance between overall page height … and the size of pills"; "shrink on wide screens too"; "round ends throughout". | 2026-10-19 |

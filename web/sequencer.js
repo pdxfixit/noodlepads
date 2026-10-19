@@ -347,14 +347,12 @@ export function barsPerLine(sizes, bars, width, { pill = 30, pad = 10, gap = 10,
   return 1;
 }
 
-// How tall a row's pills are: 64 px while its bars take one bar's height,
-// 10 px less each time more bars double it, down to 44 px (a finger's
-// target). So a 4-bar beat on a phone, eight lines of pills a row, grows
-// the page less than it shrinks the pills (Ben, 2026-10-19: "more of a
-// balance"). Bars side by side add no height, so they keep their pills.
-export function pillHeight(bars, across = 1) {
-  const lines = Math.max(1, bars / Math.max(1, across));
-  return Math.max(44, Math.round(64 - 10 * Math.log2(lines)));
+// How tall a row's pills are: 64 px at one bar, 10 px less each time the
+// bars double, down to 44 px (a finger's target), on every screen. So a
+// 4-bar beat on a phone, eight lines of pills a row, grows the page less
+// (Ben, 2026-10-19: "more of a balance"; "shrink on wide screens too").
+export function pillHeight(bars) {
+  return Math.max(44, Math.round(64 - 10 * Math.log2(Math.max(1, bars))));
 }
 
 // A beat file (🗂️ My beats → ⬇️ / 📥): one beat as JSON, to move it to another
@@ -1440,7 +1438,7 @@ export function createSequencer(deps) {
       const across = measures.length ? barsPerLine(sizesOf(measures[0]), measures.length, width) : 1;
       steps.style.gridTemplateColumns = across > 1 ? `repeat(${across}, minmax(0, 1fr))` : '';
       steps.classList.toggle('bars-across', across > 1);
-      steps.style.setProperty('--pill-h', `${pillHeight(measures.length, across)}px`);
+      steps.style.setProperty('--pill-h', `${pillHeight(measures.length)}px`);
       const each = across > 1 ? (width - (across - 1) * 24) / across : width;
       for (const measure of measures) {
         measure.style.gridTemplateColumns = balancedColumns(sizesOf(measure), each).map((s) => `minmax(0, ${s}fr)`).join(' ');

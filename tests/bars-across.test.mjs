@@ -14,15 +14,12 @@ test('bars go side by side only when each still fits on one line', () => {
   assert.equal(barsPerLine(fourFour, 4, 0), 1, 'not measured yet');
 });
 
-// More bars stacked make the page taller, so each doubling shortens the
-// pills a step, never under a finger's 44 px (Ben, 2026-10-19).
-test('pills shorten each time stacked bars double the height, down to 44 px', () => {
+// More bars make the page taller, so each doubling shortens the pills a
+// step, on wide screens too, never under a finger's 44 px (Ben, 2026-10-19).
+test('pills shorten each time the bars double, down to 44 px', () => {
   assert.equal(pillHeight(1), 64, 'one bar keeps its tall pills');
-  assert.equal(pillHeight(2), 54, 'two bars stacked: a step shorter');
-  assert.equal(pillHeight(4), 44, 'four bars stacked: shorter again');
-  assert.equal(pillHeight(2, 2), 64, 'two bars side by side add no height');
-  assert.equal(pillHeight(4, 2), 54, 'four bars two by two: twice the height of one');
-  assert.equal(pillHeight(4, 4), 64, 'four across: one line');
+  assert.equal(pillHeight(2), 54, 'two bars: a step shorter');
+  assert.equal(pillHeight(4), 44, 'four bars: shorter again');
   assert.equal(pillHeight(8), 44, 'never under 44 px');
   const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
   assert.match(css, /\.pill \{\s*height: var\(--pill-h, 64px\)/, 'the pills read the height the layout sets');
