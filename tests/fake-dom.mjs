@@ -71,7 +71,7 @@ export class FakeElement {
     this.attributes = new Map();
     this.listeners = new Map();
     this.classList = new ClassList();
-    this.style = { props: {}, setProperty(k, v) { this.props[k] = v; } };
+    this.style = { props: {}, setProperty(k, v) { this.props[k] = v; }, getPropertyValue(k) { return this.props[k] == null ? '' : String(this.props[k]); } };
     this.textContent = '';
     this.value = '';
     this.files = [];
