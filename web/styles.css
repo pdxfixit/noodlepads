@@ -3028,9 +3028,10 @@ dialog.np-dialog .set-buttons .quiet { justify-content: center; }
 /* The how-to takes half the width at most; the version, at its right, both
    at the top (Ben, 2026-10-19). */
 .page-foot .screen-hint { max-width: 50%; }
-.set-version .privacy-link { display: inline-flex; align-items: center; min-height: 44px; }
-/* The link above the version, centered like it. */
-.set-again { margin: 14px 0 0; text-align: center; }
+/* About's links: one centered row, wrapping to centered lines on a phone, as isopix has (Ben, 2026-10-19). */
+.about-links { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0 18px; margin: 14px 0 0; font-size: 0.85rem; color: var(--muted); }
+.about-links .privacy-link { display: inline-flex; align-items: center; min-height: 44px; }
+.about-links .link-btn { padding: 0; }
 /* A button that reads as a link (About's Show the welcome again); still 44 px tall. */
 .link-btn { min-height: 44px; padding: 0 10px; border: 0; background: none; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
 .link-btn:focus-visible { outline: 3px solid var(--board); outline-offset: 2px; }

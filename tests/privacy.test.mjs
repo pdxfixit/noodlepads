@@ -234,10 +234,10 @@ test('the privacy policy is linked beside the version in About, not in the foote
   const link = (where) => where.match(/<a class="privacy-link" href="([^"]+)" target="_blank" rel="noopener">([^<]+)<\/a>/);
   const foot = html.slice(html.indexOf('<div class="page-foot">'), html.indexOf('</div>', html.indexOf('<div class="page-foot">')));
   assert.equal(link(foot), null, 'no link in the page footer');
-  const about = html.match(/<p class="set-version">[\s\S]*?<\/p>/)?.[0] ?? '';
+  const about = html.match(/<nav class="about-links"[\s\S]*?<p class="set-version">[\s\S]*?<\/p>/)?.[0] ?? '';
   assert.match(about, /<span id="about-version"><\/span>/, 'About keeps its version');
   const inAbout = link(about);
-  assert.ok(inAbout, 'a link beside the version in Settings → About');
+  assert.ok(inAbout, 'a link in About\'s row, above the version');
   assert.equal(inAbout[1], PRIVACY_URL);
   assert.equal(inAbout[2], 'Privacy policy');
   assert.doesNotMatch(html, /id="set-privacy"/, 'no "What\'s private" section in Settings');
