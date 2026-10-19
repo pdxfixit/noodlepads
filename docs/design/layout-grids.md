@@ -37,7 +37,7 @@ touch  {bands: [{group, size, sounds}…],
 ## Phases
 
 1. **Preset grids, fixed** (built 2026-10-19): `web/touch-grid.js` (shape, cleaning, ready-made grids), drawing it in `dj-touch.js`, Grids and a tap or drop onto a block in ✏️ Layout.
-2. **Resize by the edges** (about half a day): the splitter handles, snapping, Undo, the minimum, keyboard (← → on a focused handle).
+2. **Resize by the edges** (built 2026-10-19): the splitter handles, snapping, Undo, the minimum, keyboard (← → on a focused handle).
 3. **Split and join** (a few hours): a block's ⋯.
 
 Each phase ships on its own; phase 1 is useful without the others.

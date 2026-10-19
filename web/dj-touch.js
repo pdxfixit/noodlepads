@@ -13,7 +13,7 @@ import {
 import { hasPicker, pickerButton, pickerList, pickedFor, pickInstrument } from './inst-picker.js';
 import { presetInstrument, versionFor, ownIdOf, instrumentById } from './instruments.js';
 import {
-  READY_GRIDS, blocks, useGrid, fillBlock, gridShape, bestColumns, pathKey, pathOf,
+  READY_GRIDS, MIN_PART, blocks, useGrid, fillBlock, gridShape, bestColumns, pathKey, pathOf, setEdge, nudgeEdge, fraction,
 } from './touch-grid.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { newId } from './util.js';
@@ -528,11 +528,52 @@ export function createTouchEditor({ el, deps }) {
       : 'Tap a group to add it at the bottom, with a few of its sounds.';
   }
 
+  // What a part of a grid is, for a sentence: its group, an empty block, or
+  // the blocks a split inside it holds.
+  function partName(t, p) {
+    if (Array.isArray(p.parts)) return 'those blocks';
+    return p.band == null ? 'the empty block' : label(t.bands[p.band].group);
+  }
+  // The edge between part k of a split and the next: a splitter, dragged
+  // (Ben, 2026-10-19: "like a frame/window slider") or moved with the arrow
+  // keys, a twelfth at a time. It says each side's share while it moves.
+  function edgeEl(t, n, path, k) {
+    const a = n.parts[k];
+    const b = n.parts[k + 1];
+    const e = document.createElement('div');
+    e.className = 'te-edge';
+    e.tabIndex = 0;
+    e.dataset.edgePath = pathKey(path);
+    e.dataset.edgeK = k;
+    e.dataset.dir = n.dir;
+    e.setAttribute('role', 'separator');
+    // A split across has its edges standing up; a split down, lying flat.
+    e.setAttribute('aria-orientation', n.dir === 'across' ? 'vertical' : 'horizontal');
+    e.setAttribute('aria-valuemin', String(MIN_PART));
+    e.setAttribute('aria-valuemax', String(a.size + b.size - MIN_PART));
+    e.setAttribute('aria-valuenow', String(a.size));
+    const keys = n.dir === 'across' ? '← or →' : '↑ or ↓';
+    e.setAttribute('aria-label', `The edge between ${partName(t, a)} (${fraction(a.size)}) and ${partName(t, b)} (${fraction(b.size)}): drag it, or press ${keys}`);
+    e.dataset.label = `${fraction(a.size)} · ${fraction(b.size)}`;
+    return e;
+  }
+  const edgeAt = (e) => ({ path: e.dataset.edgePath ? pathOf(e.dataset.edgePath) : [], k: Number(e.dataset.edgeK) });
+  const edgeSel = (path, k) => `[data-edge-path="${pathKey(path)}"][data-edge-k="${k}"]`;
+  // The split at `path` in grid `g` ([] the top one).
+  const splitOf = (g, path) => path.reduce((n, i) => n?.parts?.[i], g);
+  function moveEdge(path, k, next, focus = true) {
+    const cur = now();
+    if (next === cur.grid) return;
+    const n = splitOf(next, path);
+    if (focus) focusAfter = edgeSel(path, k);
+    set({ ...cur, grid: next }, `${partName(cur, n.parts[k])[0].toUpperCase()}${partName(cur, n.parts[k]).slice(1)} takes ${fraction(n.parts[k].size)}, ${partName(cur, n.parts[k + 1])} ${fraction(n.parts[k + 1].size)}.`);
+  }
+
   // With a grid: its blocks, then (when open) the picker of the band tapped.
   function renderGrid(t) {
     if (chosen && !blocks(t.grid).some((b) => pathKey(b.path) === chosen && b.band == null)) chosen = null;
     el.bandsTitle.textContent = 'Blocks';
-    const tree = splitEl(t.grid, [], (part, path) => cellEl(t, part, path));
+    const tree = splitEl(t.grid, [], (part, path) => cellEl(t, part, path), (n, path, k) => edgeEl(t, n, path, k));
     tree.classList.add('te-grid');
     el.bands.replaceChildren(tree, ...(picking ? [pickerEl(t.bands[picking.band], picking.band)] : []));
     el.undo.disabled = !undo.length;
@@ -738,6 +779,17 @@ export function createTouchEditor({ el, deps }) {
     move(i, i + (e.key === 'ArrowUp' ? -1 : 1));
   });
 
+  // An edge with the keys: ← → (across) or ↑ ↓ (down), a twelfth a press.
+  el.bands.addEventListener('keydown', (e) => {
+    const edge = e.target.closest?.('[data-edge-k]');
+    if (!edge) return;
+    const by = edge.dataset.dir === 'across' ? { ArrowLeft: -1, ArrowRight: 1 }[e.key] : { ArrowUp: -1, ArrowDown: 1 }[e.key];
+    if (!by) return;
+    e.preventDefault();
+    const { path, k } = edgeAt(edge);
+    moveEdge(path, k, nudgeEdge(now().grid, path, k, by));
+  });
+
   function save() {
     const name = touchName(el.saveName.value);
     if (!name) { el.saveName.focus(); return; }
@@ -837,6 +889,55 @@ export function createTouchEditor({ el, deps }) {
   el.dialog.addEventListener('touchmove', (e) => { if (press?.dragging) e.preventDefault(); }, { passive: false });
   el.dialog.addEventListener('contextmenu', (e) => { if (e.target.closest?.('[data-handle]')) e.preventDefault(); });
 
+  // ── Drag an edge ──
+  // At once, a finger too: the edge is a handle, never a place to scroll.
+  // While it moves only its two parts change on screen; letting go keeps
+  // it, one ↩️ Undo.
+
+  let edging = null;   // {id, edge, path, k, across, start, length, total, grid, next, sides}
+
+  el.bands.addEventListener('pointerdown', (e) => {
+    const edge = e.target.closest?.('[data-edge-k]');
+    if (!edge || e.button > 0 || edging) return;
+    const { path, k } = edgeAt(edge);
+    const grid = now().grid;
+    const n = splitOf(grid, path);
+    const kids = [...edge.parentElement.children];
+    const at = kids.indexOf(edge);
+    const sides = [kids[at - 1], kids[at + 1]];
+    if (!n?.parts?.[k + 1] || !sides[0] || !sides[1]) return;
+    const across = n.dir === 'across';
+    const a = sides[0].getBoundingClientRect();
+    const b = sides[1].getBoundingClientRect();
+    const start = across ? a.left : a.top;
+    const length = (across ? b.right : b.bottom) - start;
+    if (!(length > 0)) return;
+    e.preventDefault();
+    edging = { id: e.pointerId, edge, path, k, across, start, length, total: n.parts[k].size + n.parts[k + 1].size, grid, next: grid, sides };
+    edge.classList.add('te-edge-moving');
+    try { edge.setPointerCapture?.(e.pointerId); } catch { /* the pointer is gone */ }
+  });
+  el.dialog.addEventListener('pointermove', (e) => {
+    if (!edging || e.pointerId !== edging.id) return;
+    const pos = (edging.across ? e.clientX : e.clientY) - edging.start;
+    const next = setEdge(edging.grid, edging.path, edging.k, (pos / edging.length) * edging.total);
+    const n = splitOf(next, edging.path);
+    edging.next = next;
+    edging.sides[0].style.setProperty('--part', n.parts[edging.k].size);
+    edging.sides[1].style.setProperty('--part', n.parts[edging.k + 1].size);
+    edging.edge.dataset.label = `${fraction(n.parts[edging.k].size)} · ${fraction(n.parts[edging.k + 1].size)}`;
+  });
+  function endEdge(keep) {
+    const g = edging;
+    edging = null;
+    if (!g) return;
+    g.edge.classList.remove('te-edge-moving');
+    if (keep) moveEdge(g.path, g.k, g.next);
+    else renderBands();
+  }
+  el.dialog.addEventListener('pointerup', (e) => { if (edging && e.pointerId === edging.id) endEdge(true); });
+  el.dialog.addEventListener('pointercancel', () => endEdge(false));
+
   // ── Drag a group onto a block (a grid) ──
   // As ⠿ above: a mouse or pen once it moves, a finger after holding still.
 
@@ -892,6 +993,7 @@ export function createTouchEditor({ el, deps }) {
   el.dialog.addEventListener('close', () => {
     if (press) endDrag(false);
     if (carry) endCarry(false);
+    if (edging) endEdge(false);
     picking = null;
     asking = null;
     chosen = null;
