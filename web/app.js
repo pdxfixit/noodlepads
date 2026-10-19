@@ -54,6 +54,7 @@ import { trackPage, learnLabels } from './track-page.js';
 import { setUsage } from './usage.js';
 import { clearPlay } from './play-count.js';
 import { $, showNotice, announce, fadeAway, trackSlimHead } from './ui.js';
+import { initMiniDeck } from './mini-deck.js';
 import { db } from './store.js';
 import { newId, versionLabel, remember, recall, forget } from './util.js';
 import { beatName, remixName, songName, funName, keptName } from './names.js';
@@ -839,6 +840,7 @@ async function start() {
   });
   initFeedback();   // ⚙️ Settings → About → Feedback, behind the grown-up sum
   trackSlimHead();
+  initMiniDeck();   // 🥁 Beats' play bar tucks into the slim bar at the top
   initHelp();
   initLogSend();
   seq = makeSequencer();
@@ -848,7 +850,7 @@ async function start() {
   audio.grid = () => seq.grid();
   dj = createDJ({
     el: { keys: $('#dj-keys'), touch: $('#dj-touch'), input: $('#dj-input'), tabs: $('#dj-tabs'), layout: $('#dj-layout-keys'), legend: $('#dj-legend'), panel: $('#dj'),
-      change: $('#dj-change'), changeTop: $('#dj-change-top'),
+      change: $('#dj-change'), changeTop: $('#dj-change-top'), changeBars: [$('#dj-change-bar'), $('#dj-change-tempo')],
       keysEdit: { dialog: $('#keys-edit'), layouts: $('#ke-layouts'), saveLine: $('#ke-save-line'), saveName: $('#ke-save-name'), saveOk: $('#ke-save-ok'), saveCancel: $('#ke-save-cancel'),
         ownLine: $('#ke-own-line'), rename: $('#ke-rename'), remove: $('#ke-delete'), keys: $('#ke-keys'), note: $('#ke-note'), undo: $('#ke-undo'), reset: $('#ke-reset'),
         groups: $('#ke-groups'), inst: $('#ke-inst'), picks: $('#ke-picks'), picksHint: $('#ke-picks-hint'), clearPicks: $('#ke-clear-picks') },
