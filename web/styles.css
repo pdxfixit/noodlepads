@@ -1004,9 +1004,10 @@ dialog .lib-empty { border-color: rgb(20 19 24 / 0.25); background: var(--chalk)
 }
 
 /* Vertical pills: dim when off, the sound's pad color when on. The playhead
-   lights the column being played; a lit pill that is on flashes white. */
+   lights the column being played; a lit pill that is on flashes white.
+   --pill-h shortens them as more bars stack (pillHeight, sequencer.js). */
 .pill {
-  height: 64px;
+  height: var(--pill-h, 64px);
   min-width: 0;
   padding: 0;
   border: 0;
