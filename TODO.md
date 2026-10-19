@@ -58,7 +58,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **Layout grids side by side** (Ben, 2026-10-19, his option B on the ✏️ Layout mockups): preset grids of dashed blocks to drag groups onto, where blocks can share a line, heading toward a grid whose areas are resized by dragging their edges, like window splitters. A new stored shape for the touch layout (backups, sync, an ADR): write the design doc with mockups first, for Ben's OK.
+- **Layout grids side by side** (Ben, 2026-10-19, his option B on the ✏️ Layout mockups): preset grids of dashed blocks to drag groups onto, where blocks can share a line, heading toward a grid whose areas are resized by dragging their edges, like window splitters. A new `grid` inside the touch layout (backups, sync, an ADR). The proposal is `docs/design/layout-grids.md` (mockups: artboard 5); it waits on Ben's four answers at its end, then phase 1.
 
 
 
