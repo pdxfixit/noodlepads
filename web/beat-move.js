@@ -24,7 +24,8 @@ import { edgeScroller } from './edge-scroll.js';
 
 // deps: el {rows, bar, what, hint, left, right, all, none, invert, undo, done},
 // beat() (the open beat), total() (its pills per row), render(), save(),
-// putRows(rows) (writes rows into the open beat and draws it), holdMs,
+// putRows(rows) (writes rows into the open beat and draws it), paint(rows)
+// (writes them and repaints only the pills that changed: a drag's steps), holdMs,
 // onChange(on) (the ⇆ buttons follow).
 export function createBeatMove(deps) {
   const { el } = deps;
@@ -36,6 +37,7 @@ export function createBeatMove(deps) {
   let drag = null;          // {type: 'paint', ...} or {type: 'slide', from, d, base}
   let after = -1e9;         // when a drag or hold ended: the click right after it is not a tap
   let finger = null;        // where the pointer last was in a drag, {clientX, clientY}
+  let frame = 0;            // a move waiting for the next frame
   // Near the top or bottom of the screen a drag scrolls the page, so a
   // section can reach rows off screen on a phone; the drag follows the page.
   const scroller = edgeScroller(() => { if (drag && finger) move(finger); });
@@ -112,7 +114,8 @@ export function createBeatMove(deps) {
       if (d % deps.total() !== 0) undo.push({ rows: base, pick: new Set(pick) });
       pick = shiftPick(pick, d, deps.total());
     }
-    deps.putRows(next);
+    // A drag's every step repaints only the pills it moved; the drop draws all.
+    (final ? deps.putRows : deps.paint ?? deps.putRows)(next);
     if (final) deps.save();
   }
   function step(d) {
@@ -137,6 +140,8 @@ export function createBeatMove(deps) {
   function cancel() {
     if (press) clearTimeout(press.timer);
     press = null;
+    cancelAnimationFrame(frame);
+    frame = 0;
     if (drag?.type === 'slide') deps.putRows(drag.base);
     drag = null;
     scroller.stop();
@@ -175,7 +180,13 @@ export function createBeatMove(deps) {
     if (!drag) return;
     finger = { clientX: e.clientX, clientY: e.clientY };
     scroller.at(e.clientY);
-    const at = pillAt(e.clientX, e.clientY);
+    // Many moves come a frame: only the last one is worked out.
+    frame ||= requestAnimationFrame(follow);
+  }
+  function follow() {
+    frame = 0;
+    if (!drag || !finger) return;
+    const at = pillAt(finger.clientX, finger.clientY);
     if (!at) return;
     if (drag.type === 'slide') {
       const d = at.s - drag.from;
@@ -191,6 +202,7 @@ export function createBeatMove(deps) {
     scroller.stop();
     if (press) { clearTimeout(press.timer); press = null; return; }   // a tap: the click that follows does it
     if (!drag) return;
+    if (frame) { cancelAnimationFrame(frame); follow(); }   // the last move counts
     after = Date.now();
     const was = drag;
     drag = null;

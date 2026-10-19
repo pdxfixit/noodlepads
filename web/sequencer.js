@@ -3213,6 +3213,37 @@ export function createSequencer(deps) {
     });
     render();
   }
+  // While a drag slides pills (⇆ Move, a mouse's pick): the rows go into the
+  // open beat as putRows does (a playing beat follows), but only the pills
+  // that changed are repainted, never the whole page, so the pills keep up
+  // with the pointer (Ben, 2026-10-19: "the pill drag lags"). A tune row or
+  // a slim row needs the full draw. `draw: false` writes the beat alone (the
+  // keys' grid paints its own pills); the drop's putRows draws everything.
+  function paintRows(rows, { draw = true } = {}) {
+    let full = false;
+    rows.forEach((r, i) => {
+      const row = pattern?.rows[i];
+      if (!row || r === row) return;
+      if (r.melody) {
+        // A drag works on a copy of the rows: a tune row it left alone has the same notes.
+        if (JSON.stringify(r.tune ?? []) === JSON.stringify(row.tune ?? [])) return;
+        Object.assign(row, cleanRow(r));
+        full = true;
+        return;
+      }
+      const steps = row.steps, accents = row.accents ?? [];
+      Object.assign(row, r);
+      if (!draw) return;
+      if (!pills[i]?.length) { full = true; return; }
+      pills[i].forEach((p, s) => {
+        if (!!steps[s] !== !!row.steps[s] || !!accents[s] !== !!row.accents?.[s]) showPill(p, row, s);
+      });
+    });
+    if (!draw) return;
+    if (full) { render(); return; }
+    move?.decorate(pills);
+    select?.decorate();
+  }
   const moveBar = el.moveBar;
   move = moveBar ? createBeatMove({
     el: {
@@ -3223,7 +3254,7 @@ export function createSequencer(deps) {
       invert: moveBar.querySelector('[data-move-pick="invert"]'),
       undo: moveBar.querySelector('[data-move-undo]'), done: moveBar.querySelector('[data-move-done]'),
     },
-    beat: () => pattern, total: () => countOf(), render, save, putRows, holdMs: HOLD_MS,
+    beat: () => pattern, total: () => countOf(), render, save, putRows, paint: paintRows, holdMs: HOLD_MS,
     onChange: (on) => deps.onMove?.(on),
   }) : null;
   // A mouse picks lit pills and drags them along (pill-select.js); not in ⇆ Move.
@@ -3235,7 +3266,7 @@ export function createSequencer(deps) {
       return p && row && !p.hidden ? { r: Number(row.dataset.row), s: Number(p.dataset.step) } : null;
     },
     pillEl: (r, s) => pills[r]?.[s] ?? null,
-    beat: () => pattern, total: () => countOf(), putRows, save, snapshot,
+    beat: () => pattern, total: () => countOf(), putRows, paint: paintRows, save, snapshot,
     light: (r, s) => { tapPill(pattern.rows[r], s); save(); render(); },
     enabled: () => !move?.on(),
     undoable: (copy, text) => offerUndo({ copy, text, pattern }),
@@ -3315,5 +3346,5 @@ export function createSequencer(deps) {
     openRoll, rollRow: () => roll?.row() ?? -1,
     toggleMove: (opts) => move?.toggle(opts), endMove: () => move?.end(), moving: () => !!move?.on(),
     // For the keys' grid's mouse pick (pill-select.js in dj.js).
-    putRows, saveBeat: () => save() };
+    putRows, paintRows, saveBeat: () => save() };
 }

@@ -65,9 +65,10 @@ export function turnOff(rows, pick) {
 const count = (n) => `${n} ${n === 1 ? 'pill' : 'pills'}`;
 
 // deps: root (the rows' box), pillOf(node) → {r, s} or null, pillEl(r, s),
-// beat(), total(), putRows(rows) (writes and draws), save(), light(r, s)
-// (lights a pill, saves, draws), enabled() (false in ⇆ Move or recording),
-// snapshot(), undoable(copy, text).
+// beat(), total(), putRows(rows) (writes and draws everything), paint(rows)
+// (writes and repaints only the pills that changed: a drag's every step),
+// save(), light(r, s) (lights a pill, saves, draws), enabled() (false in ⇆
+// Move or recording), snapshot(), undoable(copy, text).
 export function createPillSelect(deps) {
   let pick = new Set();
   let anchor = null;
@@ -76,6 +77,9 @@ export function createPillSelect(deps) {
   let drag = null;           // {type: 'slide', from, d, base, copy} or {type: 'box', r, s, base}
   let after = -1e9;          // when a drag ended: the click it makes is not a click
   let mouse = false;         // the last press was a mouse's
+  let marked = [];           // the pills wearing the pick's ring now
+  let frame = 0;             // a pointer position waiting for the next frame
+  let at = null;             // that position
 
   const rows = () => deps.beat()?.rows ?? [];
   const keep = () => {
@@ -88,10 +92,16 @@ export function createPillSelect(deps) {
   function decorate() {
     const sliding = drag?.type === 'slide';
     if (!sliding) keep();
-    for (const p of deps.root.querySelectorAll('.chosen')) p.classList.remove('chosen');
+    // Only the ringed pills are touched, not every pill on the page.
+    for (const p of marked) p.classList.remove('chosen');
+    marked = [];
     if (!deps.enabled()) { pick = new Set(); return; }
     const shown = sliding ? shiftPick(pick, drag.d, deps.total()) : pick;
-    for (const k of shown) { const [r, s] = fromKey(k); deps.pillEl(r, s)?.classList.add('chosen'); }
+    for (const k of shown) {
+      const [r, s] = fromKey(k);
+      const p = deps.pillEl(r, s);
+      if (p) { p.classList.add('chosen'); marked.push(p); }
+    }
   }
   const set = (next) => { pick = next; decorate(); };
 
@@ -116,27 +126,40 @@ export function createPillSelect(deps) {
       try { deps.root.setPointerCapture?.(e.pointerId); } catch { /* a pointer that already went */ }
     }
     if (!drag) return;
-    const at = deps.pillOf(document.elementFromPoint?.(e.clientX, e.clientY));
-    if (!at) return;
+    // A mouse sends many moves a frame: only the last one is worked out.
+    at = { x: e.clientX, y: e.clientY };
+    frame ||= requestAnimationFrame(follow);
+  }
+  // Where the pointer is now: the slide repaints only the pills it moved.
+  function follow() {
+    frame = 0;
+    if (!drag || !at) return;
+    const over = deps.pillOf(document.elementFromPoint?.(at.x, at.y));
+    if (!over) return;
     if (drag.type === 'slide') {
-      const d = at.s - drag.from;
+      const d = over.s - drag.from;
       if (d === drag.d) return;
       drag.d = d;
-      deps.putRows(slideRows(drag.base, pick, d, deps.total()));
+      (deps.paint ?? deps.putRows)(slideRows(drag.base, pick, d, deps.total()));
       decorate();
     } else {
-      set(new Set([...drag.base, ...litOnly(rows(), section(drag.r, drag.s, at.r, at.s), deps.total())]));
+      set(new Set([...drag.base, ...litOnly(rows(), section(drag.r, drag.s, over.r, over.s), deps.total())]));
     }
   }
   function up() {
     press = null;
     if (!drag) return;
+    if (frame) { cancelAnimationFrame(frame); follow(); }   // the last move counts
     after = Date.now();
     const was = drag;
     drag = null;
     if (was.type !== 'slide') return;
     if (was.d % deps.total() === 0) { deps.putRows(was.base); decorate(); return; }
-    pick = shiftPick(pick, was.d, deps.total());
+    // The pick moves with its pills first: the drop's full draw keeps only
+    // lit pills in it. Then one full draw, for what a drag's paint left alone.
+    const from = pick;
+    pick = shiftPick(from, was.d, deps.total());
+    deps.putRows(slideRows(was.base, from, was.d, deps.total()));
     deps.save();
     decorate();
     deps.undoable(was.copy, `Moved ${count(pick.size)}, ${Math.abs(was.d)} to the ${was.d < 0 ? 'left' : 'right'}.`);
@@ -185,6 +208,8 @@ export function createPillSelect(deps) {
   deps.root.addEventListener('pointerup', up);
   deps.root.addEventListener('pointercancel', () => {
     press = null;
+    cancelAnimationFrame(frame);
+    frame = 0;
     const was = drag;
     drag = null;
     if (was?.type === 'slide') deps.putRows(was.base);

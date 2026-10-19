@@ -1294,6 +1294,23 @@ export function createDJ({ el, deps }) {
     pillEl: (r, s) => el.grid.querySelector(`.dj-grid-row[data-row="${r}"] .dj-grid-pills`)?.children[s] ?? null,
     beat: () => deps.seq.beat(), total: () => deps.seq.beatClock().total,
     putRows: (rows) => { deps.seq.putRows(rows); renderGrid(); },
+    // A drag's every step: the beat takes the rows, and only the grid's pills
+    // that changed are repainted (the drop's putRows draws the rest).
+    paint: (rows) => {
+      const was = deps.seq.beat().rows.map((r) => [r.steps, r.accents ?? []]);
+      deps.seq.paintRows(rows, { draw: false });
+      const lines = new Map([...el.grid.querySelectorAll('.dj-grid-row')].map((l) => [Number(l.dataset.row), l.querySelector('.dj-grid-pills')]));
+      deps.seq.beat().rows.forEach((r, i) => {
+        const pills = lines.get(i);
+        if (!pills || r.melody) return;
+        const [steps, accents] = was[i];
+        for (let s = 0; s < pills.children.length; s++) {
+          if (!!steps[s] === !!r.steps[s] && !!accents[s] === !!r.accents?.[s]) continue;
+          pills.children[s].classList.toggle('on', !!r.steps[s]);
+          pills.children[s].classList.toggle('loud', !!(r.steps[s] && r.accents?.[s]));
+        }
+      });
+    },
     save: () => deps.seq.saveBeat(), snapshot: () => deps.seq.snapshot(),
     light: (r, s) => { deps.seq.cyclePill(r, s); renderGrid(); },
     enabled: () => !beatRec && !deps.seq.moving(),

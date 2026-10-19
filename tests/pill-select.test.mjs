@@ -120,3 +120,31 @@ test('a finger\'s tap still lights and unlights, and picks nothing', () => {
   assert.deepEqual(lit(0), [2, 10], 'on');
   assert.deepEqual(chosen(), []);
 });
+
+// Ben, 2026-10-19: "the pill drag lags behind mouse activity". A drag's every
+// step repaints only the pills it moved (sequencer.js paintRows), never the
+// whole page; the drop draws everything once. The pointer is played here by
+// a stand-in elementFromPoint (x is the pill's number) and a frame that runs at once.
+test('a mouse drag slides the pick, repainting pills in place, and the drop draws once', () => {
+  click(pill(0, 2));
+  assert.deepEqual(lit(0), [2, 10], 'two lit pills; 2 picked');
+  const near = pill(0, 5);
+  const was = { efp: document.elementFromPoint, raf: globalThis.requestAnimationFrame };
+  document.elementFromPoint = (x) => pill(0, Math.round(x));
+  globalThis.requestAnimationFrame = (f) => { f(); return 0; };
+  try {
+    pill(0, 2).dispatch('pointerdown', { pointerType: 'mouse', button: 0, clientX: 2, clientY: 5 });
+    rows().dispatch('pointermove', { pointerType: 'mouse', clientX: 8, clientY: 5 });
+    assert.deepEqual(lit(0), [8, 10], 'the picked one slid 6 along; 10 stays');
+    assert.ok(pill(0, 5) === near, 'the same pills, repainted, not drawn again');
+    assert.deepEqual(chosen(), [8], 'the pick shows where it is now');
+    rows().dispatch('pointerup', { pointerType: 'mouse', clientX: 8, clientY: 5 });
+  } finally {
+    document.elementFromPoint = was.efp;
+    globalThis.requestAnimationFrame = was.raf;
+  }
+  assert.deepEqual(lit(0), [8, 10]);
+  assert.match(page.$('#banner-text').textContent, /Moved 1 pill, 6 to the right/);
+  page.$('#banner-action').dispatch('click');
+  assert.deepEqual(lit(0), [2, 10], 'Undo puts it back');
+});

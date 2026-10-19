@@ -28,14 +28,39 @@ export function addTips(root = document) {
   }
 }
 
+// The controls a batch of page changes touched: a control whose label or
+// text changed, and whatever was added (addTips looks inside it). Pure over
+// the records, for the tests.
+export function touched(records) {
+  const out = new Set();
+  for (const r of records) {
+    // An element, or the element round a text node that changed.
+    const at = typeof r.target?.closest === 'function' ? r.target : r.target?.parentElement;
+    const own = at?.closest?.(CONTROLS);
+    if (own) out.add(own);
+    for (const n of r.addedNodes ?? []) if (typeof n.closest === 'function') out.add(n);
+  }
+  return out;
+}
+
 // Keeps it so as the page changes: new controls, and labels that change.
+// Only what changed is looked at again, never the whole page: a pill's
+// label changes on every step of a drag, and a page of pills is thousands
+// of controls (Ben, 2026-10-19: "the pill drag lags").
 export function watchTips(root = document.body) {
   addTips(root);
   if (typeof MutationObserver !== 'function' || !root) return;
+  const pending = new Set();
   let queued = false;
-  new MutationObserver(() => {
+  new MutationObserver((records) => {
+    for (const el of touched(records)) pending.add(el);
     if (queued) return;
     queued = true;
-    queueMicrotask(() => { queued = false; addTips(root); });
+    queueMicrotask(() => {
+      queued = false;
+      const list = [...pending];
+      pending.clear();
+      for (const el of list) if (el.isConnected) addTips(el);
+    });
   }).observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-label'] });
 }
