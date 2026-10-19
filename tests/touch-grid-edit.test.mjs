@@ -183,6 +183,53 @@ test('an edge drags like a window splitter, in twelfths, ⅙ at least; the arrow
   $('#touch-edit').close();
 });
 
+test('⋯ on a block: split it across or down (a new empty block), or join it to its neighbour; each says why it can\'t', () => {
+  $('#dj-change').dispatch('click');
+  q('[data-block-more="0-0"]').dispatch('click');
+  assert.equal(q('[data-block-more="0-0"]').getAttribute('aria-expanded'), 'true');
+  const menu = q('.te-block-menu');
+  assert.ok(menu && menu.parentElement === $('#te-bands'), 'a menu under the grid');
+  assert.equal(menu.getAttribute('aria-label'), 'The 🥁 Drums block:');
+  assert.deepEqual(menu.querySelectorAll('button').map((b) => b.textContent), ['⇹ Split across', '⇳ Split down', 'Join with the one on its right', 'Cancel']);
+
+  q('[data-split="down"]').dispatch('click');
+  assert.deepEqual(held(), ['drums', null, 'chords', 'bass'], 'drums keeps the top half, a new empty block under it');
+  assert.deepEqual(touch().grid.parts[0].parts[0], { size: 8, dir: 'down', parts: [{ size: 6, band: 0 }, { size: 6 }] });
+  assert.equal($('#te-note').textContent, 'Split: a new empty block under 🥁 Drums.');
+  assert.ok(document.activeElement === q('[data-drop="0-0-1"]'), 'the new block has focus, ready for a group');
+  assert.ok(q('.te-block-menu') === null, 'the menu closes');
+  q('[data-add-group="animals"]').dispatch('click');
+  assert.deepEqual(held(), ['drums', 'animals', 'chords', 'bass'], 'a tap fills the new block');
+
+  q('[data-block-more="1"]').dispatch('click');
+  q('[data-split="across"]').dispatch('click');
+  assert.deepEqual(touch().grid.parts[1], { size: 4, dir: 'across', parts: [{ size: 6, band: 3 }, { size: 6 }] }, 'a split the other way nests');
+  q('[data-block-more="1-1"]').dispatch('click');
+  assert.match(q('.te-block-menu').querySelectorAll('button')[2].textContent, /^Join with the one on its left$/);
+  q('[data-join]').dispatch('click');
+  assert.deepEqual(touch().grid.parts[1], { size: 4, band: 3 }, 'joined: bass takes the bottom again');
+  assert.equal($('#te-note').textContent, 'Joined: its neighbour takes its room.');
+
+  // Drums sits three splits deep now: across would nest a fourth, so it waits, and the menu says why.
+  q('[data-block-more="0-0-0"]').dispatch('click');
+  const why = q('.te-block-menu');
+  assert.equal(why.querySelector('[data-split="across"]').disabled, true);
+  assert.equal(why.querySelector('[data-split="down"]').disabled, false, 'down, its own split\'s way, is fine');
+  assert.match(why.querySelectorAll('.ke-hint').map((h) => h.textContent).join(' '), /Split across: Blocks inside blocks go three deep at most\./);
+  assert.match(why.querySelector('[data-join]').textContent, /^Join with the one below$/);
+  q('[data-block-close]').dispatch('click');
+  assert.ok(q('.te-block-menu') === null);
+
+  q('[data-block-more="0-0-0"]').dispatch('click');
+  q('[data-join]').dispatch('click');
+  assert.match($('#te-note').textContent, /^Joined: 🥁 Drums went with its block\./);
+  $('#te-undo').dispatch('click');
+  assert.ok(held().includes('drums'), 'and ↩️ Undo brings it back');
+  for (let i = 0; i < 4; i += 1) $('#te-undo').dispatch('click');
+  assert.deepEqual(held(), ['drums', 'chords', 'bass'], 'Undo all the way back');
+  $('#touch-edit').close();
+});
+
 test('a saved layout keeps its grid; ☰ Stacked puts the groups one under another, in the blocks\' order', () => {
   $('#dj-change').dispatch('click');
   q('#te-save').dispatch('click');

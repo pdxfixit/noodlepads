@@ -14,6 +14,7 @@ import { hasPicker, pickerButton, pickerList, pickedFor, pickInstrument } from '
 import { presetInstrument, versionFor, ownIdOf, instrumentById } from './instruments.js';
 import {
   READY_GRIDS, MIN_PART, blocks, useGrid, fillBlock, gridShape, bestColumns, pathKey, pathOf, setEdge, nudgeEdge, fraction,
+  splitBlock, joinBlock, cannotSplit,
 } from './touch-grid.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { newId } from './util.js';
@@ -191,6 +192,7 @@ export function createTouchEditor({ el, deps }) {
   let focusAfter = null;      // a selector to focus after a redraw
   let instBand = null;        // the band whose instrument list is open, or null
   let chosen = null;          // a grid's block picked for the next group tapped ('0-1'), or null
+  let blockMenu = null;       // the grid's block whose ⋯ is open ('0-1'), or null
 
   const pid = () => deps.personId();
   const clip = (id) => (id ? deps.clipById(id) : null);
@@ -289,6 +291,7 @@ export function createTouchEditor({ el, deps }) {
     if (id === gridShape(cur)) return;
     picking = null;
     chosen = null;
+    blockMenu = null;
     if (id === 'stacked') { set({ bands: cur.bands }, 'Stacked: each group is a band of its own, top to bottom.'); return; }
     const r = READY_GRIDS.find((x) => x.id === id);
     if (!r) return;
@@ -325,7 +328,7 @@ export function createTouchEditor({ el, deps }) {
     }));
     const asked = asking?.remove === i;
     const rm = button(`icon-btn te-remove${asked ? ' armed' : ''}`, asked ? '✕?' : '✕', { remove: i }, asked ? `Tap again to remove ${name}` : `Remove ${name}`);
-    if (cell) head.append(title, rm);
+    if (cell) head.append(title, moreButton(cell), rm);
     else head.append(handle, title, sizes, rm);
     const tiles = document.createElement('div');
     tiles.className = 'te-tiles';
@@ -355,6 +358,60 @@ export function createTouchEditor({ el, deps }) {
     return sec;
   }
 
+  // ⋯ on a block: split it or join it (in the menu under the grid).
+  function moreButton(key) {
+    const b = button('icon-btn te-block-more', '⋯', { blockMore: key }, 'More for this block: split it in two, or join it to the next');
+    b.setAttribute('aria-expanded', String(blockMenu === key));
+    return b;
+  }
+
+  // Under the grid, for the block whose ⋯ is open: ⇹ Split across, ⇳ Split
+  // down, and join it to its neighbour, each saying why when it can't.
+  const WHY = {
+    full: 'A grid holds 8 blocks.',
+    crowded: 'Four side by side at most.',
+    small: 'Too small to cut in two: drag its edge to make it bigger first.',
+    deep: 'Blocks inside blocks go three deep at most.',
+  };
+  function blockMenuEl(t, key) {
+    const path = pathOf(key) ?? [];
+    const parent = splitOf(t.grid, path.slice(0, -1));
+    const k = path[path.length - 1];
+    const part = parent.parts[k];
+    const name = partName(t, part);
+    const box = document.createElement('div');
+    box.className = 'te-picker te-block-menu';
+    box.setAttribute('role', 'group');
+    const line = document.createElement('p');
+    line.className = 'ke-hint';
+    line.textContent = `The ${name.replace(/^the /, '')} block:`;
+    box.setAttribute('aria-label', line.textContent);
+    const why = [];
+    const acts = document.createElement('div');
+    acts.className = 'te-pick-actions';
+    for (const [dir, text] of [['across', '⇹ Split across'], ['down', '⇳ Split down']]) {
+      const b = button('seq-tool', text, { split: dir });
+      const no = cannotSplit(t.grid, path, dir);
+      b.disabled = !!no;
+      if (no) why.push(`${text.slice(2)}: ${WHY[no]}`);
+      acts.append(b);
+    }
+    const last = k === parent.parts.length - 1;
+    const side = parent.dir === 'across' ? (last ? 'the one on its left' : 'the one on its right') : (last ? 'the one above' : 'the one below');
+    const join = button('seq-tool', `Join with ${side}`, { join: '' });
+    join.disabled = blocks(t.grid).length <= 1;
+    if (join.disabled) why.push('Join: it is the only block.');
+    acts.append(join, button('seq-tool', 'Cancel', { blockClose: '' }));
+    box.append(line, acts);
+    if (why.length) {
+      const p = document.createElement('p');
+      p.className = 'ke-hint';
+      p.textContent = why.join(' ');
+      box.append(p);
+    }
+    return box;
+  }
+
   // A grid's block in ✏️ Layout: its band, or a dashed "Drop a group here".
   function cellEl(t, part, path) {
     const key = pathKey(path);
@@ -365,7 +422,7 @@ export function createTouchEditor({ el, deps }) {
       cell.classList.add('te-empty');
       const drop = button('te-drop', 'Drop a group here', { drop: key }, 'An empty block: tap it, then a group below, or drag a group onto it');
       drop.setAttribute('aria-pressed', String(chosen === key));
-      cell.append(drop);
+      cell.append(drop, moreButton(key));
     } else cell.append(bandEl(t.bands[part.band], part.band, key));
     return cell;
   }
@@ -575,13 +632,15 @@ export function createTouchEditor({ el, deps }) {
     el.bandsTitle.textContent = 'Blocks';
     const tree = splitEl(t.grid, [], (part, path) => cellEl(t, part, path), (n, path, k) => edgeEl(t, n, path, k));
     tree.classList.add('te-grid');
-    el.bands.replaceChildren(tree, ...(picking ? [pickerEl(t.bands[picking.band], picking.band)] : []));
+    if (blockMenu && !blocks(t.grid).some((b) => pathKey(b.path) === blockMenu)) blockMenu = null;
+    const under = picking ? [pickerEl(t.bands[picking.band], picking.band)] : blockMenu ? [blockMenuEl(t, blockMenu)] : [];
+    el.bands.replaceChildren(tree, ...under);
     el.undo.disabled = !undo.length;
     const empty = blocks(t.grid).some((b) => b.band == null);
     el.add.replaceChildren(...groups().map((g) => button('ke-group', label(g), { addGroup: g })));
     el.addHint.textContent = empty
       ? 'Drag a group onto a block, or tap one: it goes in the block picked, else the first empty one.'
-      : 'Every block holds a group. Drag one onto a block to swap it in, or ✕ a group to empty its block.';
+      : 'Every block holds a group. Drag one onto a block to swap it in, ✕ a group to empty its block, or cut a block in two with its ⋯.';
   }
 
   function render() {
@@ -641,6 +700,38 @@ export function createTouchEditor({ el, deps }) {
     const shape = at('shape');
     if (shape) { useShape(shape.dataset.shape); return; }
     const cur = now();
+    const dots = at('block-more');
+    if (dots) {
+      const key = dots.dataset.blockMore;
+      blockMenu = blockMenu === key ? null : key;
+      picking = null;
+      focusAfter = blockMenu ? '.te-block-menu [data-split]:not([disabled]), .te-block-menu [data-join]' : `[data-block-more="${key}"]`;
+      render();
+      return;
+    }
+    if (blockMenu && (at('split') || at('join'))) {
+      const path = pathOf(blockMenu) ?? [];
+      const parent = splitOf(cur.grid, path.slice(0, -1));
+      const k = path[path.length - 1];
+      const name = partName(cur, parent.parts[k]);
+      blockMenu = null;
+      if (at('split')) {
+        const dir = at('split').dataset.split;
+        const next = splitBlock(cur, path, dir);
+        if (next === cur) return;
+        // The new half: beside it in its own line, or the second half of a new split in its place.
+        const fresh = parent.dir === dir ? [...path.slice(0, -1), k + 1] : [...path, 1];
+        focusAfter = `[data-drop="${pathKey(fresh)}"]`;
+        set(next, `Split: a new empty block ${dir === 'across' ? 'beside' : 'under'} ${name}.`);
+        return;
+      }
+      const next = joinBlock(cur, path);
+      if (next === cur) return;
+      const held = parent.parts[k].band != null;
+      set(next, held ? `Joined: ${name} went with its block. ↩️ Undo brings it back.` : 'Joined: its neighbour takes its room.');
+      return;
+    }
+    if (at('block-close')) { focusAfter = `[data-block-more="${blockMenu}"]`; blockMenu = null; render(); return; }
     const drop = at('drop');
     if (drop) {
       chosen = chosen === drop.dataset.drop ? null : drop.dataset.drop;
@@ -683,6 +774,7 @@ export function createTouchEditor({ el, deps }) {
       const i = Number(tile.dataset.band);
       const k = Number(tile.dataset.tile);
       picking = picking?.band === i && picking.tile === k ? null : { band: i, tile: k, group: cur.bands[i].group };
+      blockMenu = null;
       render();
       return;
     }
@@ -690,6 +782,7 @@ export function createTouchEditor({ el, deps }) {
     if (more) {
       const i = Number(more.dataset.more);
       picking = picking?.band === i && picking.tile == null ? null : { band: i, tile: null, group: cur.bands[i].group };
+      blockMenu = null;
       render();
       return;
     }
@@ -738,7 +831,7 @@ export function createTouchEditor({ el, deps }) {
     const add = at('add-group');
     if (add && cur.grid) {
       const into = chosen ?? (() => { const b = blocks(cur.grid).find((x) => x.band == null); return b ? pathKey(b.path) : null; })();
-      if (!into) { say('Every block holds a group. Drag this one onto a block to swap it in, or ✕ a group first.'); return; }
+      if (!into) { say('Every block holds a group. Drag this one onto a block to swap it in, ✕ a group first, or cut a block in two with its ⋯.'); return; }
       putInBlock(add.dataset.addGroup, into);
       return;
     }
@@ -997,6 +1090,7 @@ export function createTouchEditor({ el, deps }) {
     picking = null;
     asking = null;
     chosen = null;
+    blockMenu = null;
     deps.closed?.();
   });
 
@@ -1009,6 +1103,7 @@ export function createTouchEditor({ el, deps }) {
     instBand = null;
     asking = null;
     chosen = null;
+    blockMenu = null;
     say('');
     render();
     openDialog(el.dialog, { focus: focus ?? el.bands.querySelector('[data-handle]') ?? el.add.querySelector('button'), opener });

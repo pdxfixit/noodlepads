@@ -58,7 +58,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **Layout grids** (Ben, 2026-10-19: "go with the recommendations"; `docs/design/layout-grids.md`, ADR 0032). Phases 1 (ready-made grids, filled by a tap or a drag) and 2 (edges dragged) are built; next: 3. ⋯ on a block: split across, split down, join.
 
 
 

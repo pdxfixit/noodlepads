@@ -56,7 +56,7 @@ A small rule (a label, a color, a layout) needs only its row in `decisions.md`.
 | [0029](0029-touch-layouts.md) | 👆 Touch layouts: bands of sounds on the deck (`decks.touch`), named saves as their own records (`touchLayouts`) | Proposed |
 | [0030](0030-instruments-who-plays.md) | 🎹 Instruments: who plays Notes, Chords and Bass, a view over the kit (`inst`, `plays`, `shift`, `chord` in boards.json; a person setting each) | Accepted, phase 1 built |
 | [0031](0031-tempo-marks-in-songs.md) | Tempo marks in songs: `tempos: [{bar, bpm}]`, every lane following them | Accepted, built |
-| [0032](0032-layout-grids.md) | 👆 Layout grids: a tree of splits in twelfths placing the touch layout's bands in blocks side by side | Accepted, phases 1 and 2 built |
+| [0032](0032-layout-grids.md) | 👆 Layout grids: a tree of splits in twelfths placing the touch layout's bands in blocks side by side | Accepted, built |
 
 ## Template
 

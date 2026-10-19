@@ -1,6 +1,6 @@
 # 0032. 👆 Layout grids: a tree of splits placing the touch layout's bands
 
-- **Status:** Accepted (2026-10-19); phases 1 and 2 built (ready-made grids, filled by a tap or a drag; edges dragged)
+- **Status:** Accepted, built (2026-10-19): ready-made grids filled by a tap or a drag, edges dragged, blocks split and joined
 - **Date:** 2026-10-19
 - **Decided by:** Ben, 2026-10-19, on the ✏️ Layout mockups (https://claude.ai/artifact/1yWPXSmMheecBRQ4urP6f3): option B, blocks side by side, "toward a customizeable grid layout, where like a frame/window slider, one could resize the dimensions of a grid area"; then "go with the recommendations" on the four questions in [docs/design/layout-grids.md](../design/layout-grids.md). Rows in [decisions.md](../decisions.md) (Live).
 
