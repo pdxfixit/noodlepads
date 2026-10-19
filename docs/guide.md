@@ -145,8 +145,9 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   (`keyKitId`), keeping its fruit.
 
 ⏹️ stops everything. The ⚙️ gear asks a grown-up sum (two numbers from 6 to
-9, big number keys); right opens Settings and the regular app until the page
-reloads, wrong goes quietly back. Choosing 🧸 Kids in Settings hands it back.
+9, big number keys; `grown-up.js`, which ⚙️ Settings → About → Feedback asks
+too); right opens Settings and the regular app until the page reloads, wrong
+goes quietly back. Choosing 🧸 Kids in Settings hands it back.
 The tab is remembered on the device (`kids-tab`).
 
 ## A new person's first steps
@@ -330,7 +331,9 @@ describe features still being built and stay hidden until their mark is removed.
 ## Settings
 
 The ⚙️ button in the top corner (small, and away from the pads and toolbar so
-it isn't pressed by accident) opens Settings: 🔗 Sharing (🔗 Shared with me), 💾 Backups, 🎚️ Level (🧸 Kids · Regular · Advanced, each person's own, ADR 0019; stored as `level` with `advancedBeats` beside it, true only for Advanced, so an older copy still reads Advanced right; Advanced shows the extra beat and sound tools: each beat row's sound picker gets Speed, beats get Swing, and each beat can have its own time signature), 🎨 Look (the person's pad skin: a sample pad in each of the seven, the chosen one shown playing; arrow keys move the choice), 📊 Data sharing (📊 Share play data and 📮 Send problem reports) and About. Every section but About folds under its heading (all closed at first; the device remembers which are open, in `localStorage` `settings-open`), with a chip saying its state where there is one (how many people, the level, the look, which of play data and reports are on). About is always open: a line on what the app is, then the version and the Privacy policy, centered. The pad size (`padSize`, `auto` or 0 to 1; an older percent, 50 to 220, or S M L reads as the nearest place) is a setting too, though its slider sits on the Pads screen.
+it isn't pressed by accident) opens Settings: 🔗 Sharing (🔗 Shared with me), 💾 Backups, 🎚️ Level (🧸 Kids · Regular · Advanced, each person's own, ADR 0019; stored as `level` with `advancedBeats` beside it, true only for Advanced, so an older copy still reads Advanced right; Advanced shows the extra beat and sound tools: each beat row's sound picker gets Speed, beats get Swing, and each beat can have its own time signature), 🎨 Look (the person's pad skin: a sample pad in each of the seven, the chosen one shown playing; arrow keys move the choice), 📊 Data sharing (📊 Share play data and 📮 Send problem reports) and About. Every section but About folds under its heading (all closed at first; the device remembers which are open, in `localStorage` `settings-open`), with a chip saying its state where there is one (how many people, the level, the look, which of play data and reports are on). About is always open: a line on what the app is, then the version, the Privacy policy and Feedback, centered.
+
+**Feedback** (Ben, 2026-10-19; `web/feedback.js`): the button on About's version line asks the grown-up sum first, at every level, since kids use the app (`web/grown-up.js`, the same sum 🧸 Kids' ⚙️ asks; here a wrong answer says "That's not it. Here's another one." and asks a new sum). The right answer opens Send feedback, a small dialog centered on every width, phones too: one line (no names or contact details, nobody writes back, kept 90 days), a box of up to 2000 characters, Cancel and Send (✕ and Esc close it too, and focus goes back to Feedback). Send waits for something typed. It posts the text as typed to `POST /api/feedback` (text/plain, no cookies, an `X-Feedback` id kept for retries of the same text, `X-App-Version` the deployed commit or `dev`); 204 says "Thanks! Sent. 💌" and empties the box, anything else "Couldn't send. Please try again." and keeps it. Only noodlepads.com sends; a dev copy says so. A draft stays in the box until the page reloads (never stored). The Worker (flarepress's shared `handleFeedback`) stores it in the shared R2 bucket `app-suggestions` under `v1/noodlepads/<day>/<version>-<id>.txt`, with nothing of the sender, at most 10 messages a minute for the whole app; the telemetry runner's daily pull moves each to Ben's notes and drops it after 90 days. The text never goes into the event log, so problem reports and usage events never carry it. The pad size (`padSize`, `auto` or 0 to 1; an older percent, 50 to 220, or S M L reads as the nearest place) is a setting too, though its slider sits on the Pads screen.
 **📮 Send problem reports** (a checkbox in 📊 Data sharing, off by default, per device) sends the event log,
 cleaned by `log-clean.js` so it holds no names and no audio, to the site's own
 `/api/log` when the page is hidden and 10 s after an error (`log-send.js`; plan
@@ -829,7 +832,7 @@ color, opening a list of everyone (arrow keys, Home, End and Esc work).
 
 ## Limits on what comes in
 
-Backups, older sounds found on this device, uploaded files and `boards.json` are treated as untrusted. A backup
+Backups, older sounds found on this device, uploaded files and `boards.json` are treated as untrusted. Feedback is capped at 2000 characters in the box and 4096 bytes at the Worker (the app says when a message is too long to send). A backup
 may unpack to at most 300 MB, hold at most 5000 files, `backup.json` at most
 8 MB, each sound at most 80 MB (a 3-minute song saved as a sound is 35–69 MB),
 older sounds found 2 GB in all, and record counts are capped; anything

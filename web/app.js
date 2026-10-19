@@ -43,6 +43,7 @@ import { initBackups, storeLoaded, whatIsHere } from './backup-ui.js';
 import { initSettingsUI, showSettings } from './settings-ui.js';
 import { initKids, showKids, refreshKids, kidsShowing, kidsBusy, askGrownUp, kidsKeydown, kidsKeyup } from './kids.js';
 import { initHelp } from './help.js';
+import { initFeedback } from './feedback.js';
 import { initListen, showCard } from './listen-ui.js';
 import { initLogSend } from './log-send.js';
 import { initLeftover } from './leftover.js';
@@ -850,6 +851,7 @@ async function start() {
     gate: () => { if (!kidsShowing()) return false; askGrownUp(); return true; },
     onKids: () => { grownUp = false; applyKids(); },
   });
+  initFeedback();   // ⚙️ Settings → About → Feedback, behind the grown-up sum
   trackSlimHead();
   initHelp();
   initLogSend();

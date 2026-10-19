@@ -22,6 +22,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 - **Check the PIN-reset address reaches you** (2 min): noodlepads.com mail is Google Workspace (MX checked 2026-10-11). Add `pin.reset` as an alias or group in the Admin console unless a catch-all already covers it, then send it a test. The app shows it for PIN resets.
 
 
+- **Land Feedback** (5 min, once the public privacy policy says what Feedback sends and keeps): flarepress's `claude/feedback-box` (`handleFeedback`) first, then this repo's `claude/feedback-box` with `just land`. GitHub deploys it; then send one message from noodlepads.com and check it reaches `~/notes/projects/app-suggestions.md` after the next `just daily`. `docs/state.md` "In flight".
+
 ### v1: prove out the interface
 
 - [ ] Attach any real sound clips in chat (5 min) 🔼

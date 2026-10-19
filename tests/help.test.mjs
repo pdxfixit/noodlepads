@@ -60,6 +60,8 @@ const MUST_MENTION = [
   // The cloud
   '☁️ Open from the cloud', '☁️ In the cloud', '🎲 Pick a name', '🔒 Set a PIN', '🔒 PIN on', 'Change PIN', 'Remove PIN',
   "🤷 I don't know the PIN", '🔄 Sync now', '🔗 Share…', '🔗 Shared with me', 'Privacy policy',
+  // About
+  'Feedback', 'Send feedback',
 ];
 
 const appText = () => {

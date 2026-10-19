@@ -4083,6 +4083,36 @@ dialog.np-dialog.sheet-warn {
 .sheet-warn-buttons { display: flex; gap: 10px; margin-top: 6px; }
 .sheet-warn-buttons .chain-tool { flex: 1 1 0; min-width: 0; }
 .sheet-warn-drop { border-color: #B3261E; background: #B3261E; color: #fff; }
+/* ── ⚙️ Settings → About → Feedback (feedback.js) ──
+   A small modal, centered on every width, phones too (Ben, 2026-10-19:
+   "centered, modalish, esc exits"), as the throw-away question above is:
+   np-dialog alone is a bottom sheet under 600 px. A box to type in, a line
+   saying what happened, then Cancel and Send, halves of the line. */
+dialog.np-dialog.feedback {
+  width: min(520px, calc(100vw - 2 * var(--gutter)));
+  max-width: none;
+  margin: auto;
+  border-radius: 24px;
+}
+.feedback-text {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 9rem;
+  margin: 4px 0 0;
+  padding: 12px 14px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+  font: 700 1rem/1.4 var(--font-ui);
+  resize: vertical;
+}
+.feedback-text:focus-visible { outline: 3px solid var(--board); outline-offset: 0; border-color: transparent; }
+.feedback-status { min-height: 1.4em; margin: 10px 0; font-weight: 800; }
+.feedback-buttons { flex-wrap: nowrap; }
+.feedback-buttons > button { flex: 1 1 0; min-width: 0; padding: 0 16px; }
+#feedback-send:disabled { opacity: 0.5; box-shadow: none; cursor: default; }
 dialog#sheet legend.field-name, dialog#sheet h3.field-name { width: 100%; margin-bottom: 8px; padding: 0; }
 .sheet-fold { font-weight: 800; font-size: 1.05rem; }
 .fold-body[hidden] { display: none; }
@@ -4736,6 +4766,9 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
 .kids-sum-keys button { min-height: 64px; border: 0; border-radius: 16px; background: var(--chalk); color: var(--ink); box-shadow: 0 5px 0 var(--chalk-edge); font: 900 2rem/1 var(--font-display); }
 .kids-sum-keys button:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--chalk-edge); }
 .kids-sum-zero { grid-column: 2; }
+/* Feedback's sum: a wrong answer says so above the keys, and asks another (grown-up.js). */
+.kids-sum-note { margin: -4px 0 14px; text-align: center; font-weight: 800; }
+.kids-sum-note[hidden] { display: none; }
 
 /* Settings' Level: three keys across the dialog. */
 .set-levels { display: flex; width: 100%; margin: 8px 0; border-color: rgb(20 19 24 / 0.3); }
