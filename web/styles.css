@@ -645,31 +645,24 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
   .beat-go .seq-click { width: 44px; font-size: 1.2rem; }
   .beat-go .seq-bpm-num { font-size: 0.9rem; }
 }
-/* Beats keeps ▶ Play and the tempo in reach while its rows scroll, at every
-   width (Ben, 2026-10-19: on a computer it scrolled away): the whole bar
-   sticks; on a phone only its first line does. */
-.seq .beat-deck { position: sticky; top: var(--head-h, 0px); z-index: 6; }  /* over the playhead and a dragged row */
+/* Beats' control bar sticks under the slim bar while its rows scroll, at
+   every width, the whole bar. Stuck, it hides and its ▶ ● ▾ ride in the slim
+   bar instead, until ▾ drops it down ("The play bar tucks into the slim
+   bar", below). Over the playhead and a dragged row. */
+.seq .beat-deck { position: sticky; top: var(--head-h, 0px); z-index: 6; }
 @media (max-width: 600px) {
-  .seq .beat-deck { display: contents; }
-  .seq .beat-go, .seq .beat-shape { margin-inline: -12px; padding: 10px 12px; background: var(--deck); }
-  .seq .beat-go { position: sticky; top: 0; z-index: 6; }
-  .seq .beat-shape { padding-top: 0; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 3px solid rgb(255 255 255 / 0.3); }
+  .seq .beat-deck { row-gap: 10px; }
 }
 /* Beats with ⌨️ Keys does the same while the keys scroll (Ben, 2026-10-18),
-   under the slim bar (--head-h, "The header slims"): the whole bar at every
-   width; on a phone only its first line, ▶ Play · ● Record (the tempo and ⏲️
-   are its second line there, the bars its third), so the keys keep the room.
-   Over the keys, the beat's rows and their playhead; the count-in's disc
-   (z-index 8) stays over it. 🎤 Live's bar (● Record, 🎬 Takes) scrolls. */
+   under the slim bar (--head-h, "The header slims"). On a phone its lines are
+   ▶ Play · ● Record, the tempo and ⏲️, then the bars. Over the keys, the
+   beat's rows and their playhead; the count-in's disc (z-index 8) stays over
+   it. 🎤 Live's bar (● Record, 🎬 Takes) scrolls. */
 body.keys-on .dj-bar { position: sticky; top: var(--head-h, 0px); z-index: 6; }
 @media (max-width: 600px) {
-  body.keys-on .dj-bar, body.keys-on .dj-bar > .beat-go { display: contents; }
-  body.keys-on .dj-bar :is(.beat-run, .beat-more), body.keys-on .dj-bar > .beat-shape { display: flex; align-items: center; gap: 8px; margin-inline: -12px; padding: 10px 12px; background: var(--deck); }
-  body.keys-on .dj-bar .beat-run { position: sticky; top: var(--head-h, 0px); z-index: 6; }
-  body.keys-on .dj-bar .beat-more, body.keys-on .dj-bar > .beat-shape { padding-top: 0; }
-  /* The last line ends the deck: the bars, or the tempo's while recording hides them. */
-  body.keys-on .dj-bar > .beat-shape,
-  body.keys-on .dj-bar:has(> .beat-shape[hidden]) .beat-more { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 3px solid rgb(255 255 255 / 0.3); }
+  body.keys-on .dj-bar { row-gap: 10px; }
+  body.keys-on .dj-bar > .beat-go { display: contents; }
+  body.keys-on .dj-bar :is(.beat-run, .beat-more) { display: flex; flex: 1 1 100%; align-items: center; gap: 8px; min-width: 0; }
 }
 .seq-play {
   min-height: 52px;
@@ -2680,6 +2673,17 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 
 /* A legend for the key colors, like the periodic table's. */
 .dj-change-row { grid-area: change; display: flex; justify-content: flex-end; }
+/* On Beats with ⌨️ Keys, ✏️ Edit keys sits on the control bar after 🎚️ (and
+   in the slim bar once scrolled), so the keys' foot has none (Ben, 2026-10-19:
+   "if it's in the sticky bar, the footer one isn't needed"). 🎤 Live keeps it. */
+body.keys-on .dj-change-row { display: none; }
+.edit-keys-open { width: auto; padding: 0 8px; font-size: 1.2rem; white-space: nowrap; }
+/* After 🎚️ from 601 px; on a phone the bars' line is full, so after ⏲️. */
+#dj-change-tempo { display: none; }
+@media (max-width: 600px) {
+  #dj-change-bar { display: none; }
+  body.keys-on #dj-change-tempo { display: block; }   /* 🎤 Live keeps its own under the keys */
+}
 /* Under the keys: the pad size, then the last line: the key colors at the
    left; ⏲️ Click track, 🔔 Overlap and ✏️ Edit keys in the corner, Edit keys
    last (Ben, 2026-10-12). The click's tempo opens to the left of Click track,
@@ -3344,7 +3348,6 @@ body[data-locked] main { visibility: hidden; }
 .title-row { min-height: 44px; }   /* holds the header's height when its buttons ride up */
 .pads-bar { top: var(--head-h, 0px); }
 .pad-group { top: calc(var(--head-h, 0px) + 64px); }
-.seq .beat-go { top: var(--head-h, 0px); }
 .to-top { display: none; }
 body.head-slim { --head-h: calc(var(--slim-top) + var(--slim-h)); }
 body.head-slim.screen-pads { --head-h: var(--slim-top); }   /* the Edit sounds band is the bar */
@@ -3416,9 +3419,10 @@ body.head-slim.screen-pads .pads-bar { padding-left: calc(4 * 44px + 3 * 6px + 1
 /* 🥁 Beats with ⌨️ Keys, and 🎤 Live: scrolled, ✏️ Edit keys (✏️ Edit
    layout with 👆) rides at the right of the slim bar, as Edit sounds does on
    Pads, so it is in reach while the rows and keys scroll (Ben, 2026-10-18).
-   It is a twin of the one at the foot of the keys, which stays. Every width;
-   under 900 px Beats' control bar sticks under the slim bar, never over it.
-   On a phone it says ✏️ Edit, like Pads'. */
+   It is a twin of the one at the foot of the keys, which stays. Every width,
+   just ✏️ in the slim bar (Ben, 2026-10-19: "icon only immediately when
+   joining the sticky menu"); its name stays in its text, for screen readers
+   and its tooltip. */
 .slim-edit { display: none; }
 body.head-slim:is(.keys-on, .screen-live) .slim-edit {
   position: fixed;
@@ -3426,22 +3430,59 @@ body.head-slim:is(.keys-on, .screen-live) .slim-edit {
   top: calc(var(--slim-top) + (var(--slim-h) - 44px) / 2);
   right: max(var(--gutter), calc((100% - var(--max)) / 2 + var(--gutter)));
   display: block;
-  min-height: 44px;
-  padding: 0 16px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  overflow: hidden;
   border: 2px solid rgb(255 255 255 / 0.6);
   border-radius: 12px;
   background: var(--bed);
   color: #fff;
-  font-weight: 800;
+  font-size: 0;
   white-space: nowrap;
   animation: head-slim-in 160ms ease-out;
 }
-@media (max-width: 429px) {
-  body.head-slim:is(.keys-on, .screen-live) .slim-edit .edit-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+body.head-slim:is(.keys-on, .screen-live) .slim-edit::before { content: "✏️"; font-size: 1.2rem; }
+
+/* 🥁 Beats: the play bar tucks into the slim bar (Ben, 2026-10-19: "rather
+   than be full length, collapse into single buttons in the already-sticky
+   space"). Once the control bar reaches the top it hides where it sticks,
+   ▶ (■), ● (Keys on), ✏️ (Keys on) and ▾ ride at the slim bar's right
+   (mini-deck.js).
+   ▾ drops the whole bar down under the slim bar; ▴ puts it away. The slim
+   bar never grows: as room runs out ⬆️, ●, ❓, ✏️, then ⚙️ give way, one
+   step at a time, measured (mini-deck.js STEPS). */
+.mini-deck { display: none; }
+/* At the right edge, apart from the round button, ❓, ⚙️ and ⬆️ at the
+   left (Ben, 2026-10-19). */
+body.deck-tucked .mini-deck {
+  position: fixed;
+  z-index: 9;
+  top: calc(var(--slim-top) + (var(--slim-h) - 44px) / 2);
+  right: max(var(--gutter), calc((100% - var(--max)) / 2 + var(--gutter)));
+  display: flex;
+  gap: 6px;
 }
-@media (max-width: 359px) {
-  body.head-slim:is(.keys-on, .screen-live) .slim-edit { padding: 0 12px; }
-}
+/* ▶ ● ✏️ ▾: ▾ at the very right, ✏️ between ● and it (Ben, 2026-10-19), in
+   room ▾ keeps at its left. */
+body.deck-tucked.keys-on:not(.tuck-noedit) .mini-more { margin-left: calc(44px + 6px); }
+body.deck-tucked.keys-on .slim-edit { right: calc(max(var(--gutter), calc((100% - var(--max)) / 2 + var(--gutter))) + 44px + 6px); }
+.mini-deck button { flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px; font: 800 1.2rem/1 var(--font-ui); animation: head-slim-in 160ms ease-out; }
+.mini-deck [hidden] { display: none; }
+.mini-play { background: var(--led); color: var(--ink); }
+.mini-play:disabled { opacity: 0.4; }
+.mini-rec { background: var(--chalk); color: #D93A2B; }
+.mini-rec.recording { background: #D93A2B; color: #fff; }
+.mini-rec:disabled { opacity: 0.45; }
+.mini-deck .mini-more { color: #fff; }
+.mini-more[aria-expanded="true"] { background: var(--led); color: var(--ink); }
+body.deck-tucked:not(.deck-open) .seq .beat-deck,
+body.deck-tucked:not(.deck-open).keys-on .dj-bar { visibility: hidden; }
+body.deck-tucked.tuck-notop .to-top,
+body.deck-tucked.tuck-norec .mini-rec,
+body.deck-tucked.tuck-nohelp #help-open,
+body.deck-tucked.tuck-noedit .slim-edit,
+body.deck-tucked.tuck-nosettings #settings-open { display: none; }
 
 
 /* ── How much each person has, in 👥 People (Ben, 2026-10-11) ──

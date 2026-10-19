@@ -27,6 +27,12 @@
       <!-- ✏️ Edit keys (✏️ Edit layout with 👆) at the right of the slim bar, on 🥁 Beats with ⌨️ Keys
            on and 🎤 Live once scrolled, as ✏️ Edit sounds is on Pads (Ben, 2026-10-18). A twin of #dj-change. -->
       <button type="button" class="slim-edit" id="dj-change-top">✏️ Edit<span class="edit-more"> keys</span></button>
+      <!-- 🥁 Beats' play bar, tucked into the slim bar once it reaches the top, at its right (mini-deck.js; Ben, 2026-10-19). -->
+      <div class="mini-deck" id="mini-deck" role="group" aria-label="Play bar">
+        <button type="button" class="mini-play" id="mini-play" aria-pressed="false" aria-label="Play">▶</button>
+        <button type="button" class="mini-rec" id="mini-rec" aria-pressed="false" aria-label="Record" hidden>●</button>
+        <button type="button" class="settings-btn mini-more" id="mini-more" aria-expanded="false" aria-label="The whole play bar: tempo, bars and the rest" title="The whole play bar">▾</button>
+      </div>
     </div>
   </header>
 
@@ -193,6 +199,8 @@
               <button type="button" class="tempo-step up" data-tempo-step="1" aria-label="Faster"></button>
             </div>
             <button type="button" class="seq-click" id="dj-beat-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never recorded. Tap it three times in time to set the tempo." title="Click track: a tick on every beat to keep time" hidden>⏲️</button>
+            <!-- On a phone ✏️ Edit keys sits here, after ⏲️: the bars' line has no room for it (Ben, 2026-10-19). -->
+            <button type="button" class="seq-click edit-keys-open" id="dj-change-tempo" aria-label="✏️ Edit keys" title="✏️ Edit keys">✏️⌨️</button>
             <span class="dj-status" id="dj-status" role="status"></span>
             <button type="button" class="seq-tool" id="dj-takes-open">🎬 Takes</button>
           </div>
@@ -212,6 +220,8 @@
             <select class="seq-pick" aria-label="Time signature"></select>
           </div>
           <button type="button" class="seq-click mixer-open" data-mixer aria-label="🎚️ Mixer: each row's loudness, mute, solo and effect" title="Mixer">🎚️</button>
+          <!-- ✏️ Edit keys (✏️ Edit layout with 👆), after 🎚️ on Beats' bar (Ben, 2026-10-19); on a phone after ⏲️ instead (#dj-change-tempo). 🎤 Live keeps its own under the keys. -->
+          <button type="button" class="seq-click edit-keys-open" id="dj-change-bar" aria-label="✏️ Edit keys" title="✏️ Edit keys">✏️⌨️</button>
           <button type="button" class="seq-click move-open" data-move-open aria-pressed="false" aria-label="⇆ Move: pick pills and slide them along, the whole beat or a part. The big rows show until ✓ Done." title="⇆ Move: slide pills along">⇆</button>
         </div>
       </div>
