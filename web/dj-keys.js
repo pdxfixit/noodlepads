@@ -1,4 +1,4 @@
-// DJ ✏️ Edit keys: a focused view for arranging the 40 keys, with none of
+// ✏️ Layout with ⌨️ Keys: a focused view for arranging the 40 keys, with none of
 // the beat, take or mode controls. Layouts on top (whole-keyboard
 // arrangements: the kid's own ⭐ ones first, then the ready-made ones), the
 // keyboard in the middle, and Sounds at the bottom (one at a time, or a
@@ -554,13 +554,16 @@ export function createKeysEditor({ el, deps }) {
     deps.closed?.();
   });
 
-  function open() {
+  // focus: where to start, else the first key (band). ✏️ Layout's switch
+  // passes its own button, and the first view's opener, when it swaps one
+  // view for the other.
+  function open({ focus, opener } = {}) {
     undo = [];
     picks = [];
     asking = null;
     say('');
     render();
-    openDialog(el.dialog, { focus: el.keys.querySelector('[data-code]') });
+    openDialog(el.dialog, { focus: focus ?? el.keys.querySelector('[data-code]'), opener });
   }
 
   return { open, render };

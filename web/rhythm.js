@@ -37,7 +37,7 @@ export function fallbackLabel(code) {
   return PUNCTUATION[code] ?? (/^Key[A-Z]$/.test(code) ? code.slice(3) : '');
 }
 
-// The two keyboards a kid can pick (the Q / D keycaps under ⌨️ / 👆, dj.js):
+// The two keyboards a kid can pick (the Q / D keycaps in ✏️ Layout, dj.js):
 // what each of the 40 keys prints, row by row, in KEY_ROWS order (the digits
 // are the same on both). Only QWERTY and Dvorak (Ben, 2026-10-11: AZERTY and
 // Colemak dropped; 2026-10-16: Auto dropped too; a stored one of those reads

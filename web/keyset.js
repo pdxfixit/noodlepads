@@ -1,4 +1,4 @@
-// DJ ✏️ Edit keys' pure rules: putting sounds on the 40 keys, moving the
+// ✏️ Layout's keys: the pure rules: putting sounds on the 40 keys, moving the
 // sounds that were in the way to free keys, swapping and clearing keys,
 // loading a group onto a row, and the keyboard layouts (whole-keyboard
 // arrangements: a kid's own saved ones, and the ready-made ones below).

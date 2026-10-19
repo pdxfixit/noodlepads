@@ -24,9 +24,9 @@
         <nav class="people" id="people" aria-label="Whose sounds"></nav>
         <button type="button" class="settings-btn to-top" id="to-top" aria-label="Back to the top">⬆️</button>
       </div>
-      <!-- ✏️ Edit keys (✏️ Edit layout with 👆) at the right of the slim bar, on 🥁 Beats with ⌨️ Keys
-           on and 🎤 Live once scrolled, as ✏️ Edit sounds is on Pads (Ben, 2026-10-18). A twin of #dj-change. -->
-      <button type="button" class="slim-edit" id="dj-change-top">✏️ Edit<span class="edit-more"> keys</span></button>
+      <!-- ✏️ Layout at the right of the slim bar, on 🥁 Beats with ⌨️ Keys on and 🎤 Live once
+           scrolled, as ✏️ Edit sounds is on Pads (Ben, 2026-10-18). A twin of #dj-change. -->
+      <button type="button" class="slim-edit" id="dj-change-top" aria-label="✏️ Layout: how the keys or pads are laid out">✏️<span class="edit-more"> Layout</span></button>
       <!-- 🥁 Beats' play bar, tucked into the slim bar once it reaches the top, at its right (mini-deck.js; Ben, 2026-10-19). -->
       <div class="mini-deck" id="mini-deck" role="group" aria-label="Play bar">
         <button type="button" class="mini-play" id="mini-play" aria-pressed="false" aria-label="Play">▶</button>
@@ -188,13 +188,8 @@
               <button type="button" class="tempo-step up" data-tempo-step="1" aria-label="Faster"></button>
             </div>
             <button type="button" class="seq-click" id="dj-beat-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never recorded. Tap it three times in time to set the tempo." title="Click track: a tick on every beat to keep time" hidden>⏲️</button>
-            <!-- On a phone ✏️⌨️ and its menu sit here, after ⏲️: the bars' line has no room for it (Ben, 2026-10-19). -->
-            <span class="input-menu">
-              <button type="button" class="seq-click edit-keys-open" id="dj-change-tempo" data-more="input-tempo" aria-haspopup="menu" aria-expanded="false" aria-label="⌨️ Keys or 👆 Tiles, and ✏️ Edit layout" title="⌨️ Keys · 👆 Tiles · ✏️ Edit layout">✏️⌨️</button>
-              <button type="button" data-more-word="Keys" data-pick-input="keys" aria-pressed="true" aria-label="⌨️ Keys: laid out like a keyboard">⌨️</button>
-              <button type="button" data-more-word="Tiles" data-pick-input="touch" aria-pressed="false" aria-label="👆 Touch: big tiles in groups, no keyboard needed">👆</button>
-              <button type="button" data-more-word="Edit layout" data-pick-edit>✏️</button>
-            </span>
+            <!-- On a phone ✏️ Layout sits here, after ⏲️, as just ✏️: the bars' line has no room for it (Ben, 2026-10-19). -->
+            <button type="button" class="seq-click edit-keys-open" id="dj-change-tempo" aria-label="✏️ Layout: how the pads are laid out" title="✏️ Layout">✏️</button>
             <span class="dj-status" id="dj-status" role="status"></span>
             <button type="button" class="seq-tool" id="dj-takes-open">🎬 Takes</button>
           </div>
@@ -214,14 +209,9 @@
             <select class="seq-pick" aria-label="Time signature"></select>
           </div>
           <button type="button" class="seq-click mixer-open" data-mixer aria-label="🎚️ Mixer: each row's loudness, mute, solo and effect" title="Mixer">🎚️</button>
-          <!-- ✏️⌨️ (✏️👆 with tiles), after 🎚️ on Beats' bar (Ben, 2026-10-19); on a phone after ⏲️ instead (#dj-change-tempo).
-               A menu (overflow.js): ⌨️ Keys · 👆 Tiles · ✏️ Edit layout, the buttons after it, never shown. 🎤 Live keeps ⌨️ / 👆 and ✏️ Edit keys by the keys. -->
-          <span class="input-menu">
-            <button type="button" class="seq-click edit-keys-open" id="dj-change-bar" data-more="input-bar" aria-haspopup="menu" aria-expanded="false" aria-label="⌨️ Keys or 👆 Tiles, and ✏️ Edit layout" title="⌨️ Keys · 👆 Tiles · ✏️ Edit layout">✏️⌨️</button>
-            <button type="button" data-more-word="Keys" data-pick-input="keys" aria-pressed="true" aria-label="⌨️ Keys: laid out like a keyboard">⌨️</button>
-            <button type="button" data-more-word="Tiles" data-pick-input="touch" aria-pressed="false" aria-label="👆 Touch: big tiles in groups, no keyboard needed">👆</button>
-            <button type="button" data-more-word="Edit layout" data-pick-edit>✏️</button>
-          </span>
+          <!-- ✏️ Layout, after 🎚️ on Beats' bar: opens the editor at once, whose top line picks ⌨️ Keys or 👆 Pads
+               (Ben, 2026-10-19); on a phone it sits after ⏲️ instead (#dj-change-tempo). 🎤 Live has its own by the keys. -->
+          <button type="button" class="seq-click edit-keys-open" id="dj-change-bar" aria-label="✏️ Layout: how the keys or pads are laid out" title="✏️ Layout: how the keys or pads are laid out">✏️ Layout</button>
           <button type="button" class="seq-click move-open" data-move-open aria-pressed="false" aria-label="⇆ Lock the pills: tap and drag pick and slide them, and none turns on or off" title="⇆ Lock the pills, to pick and slide them">⇆</button>
         </div>
       </div>
@@ -245,13 +235,6 @@
       </div>
       <div class="dj-grid" id="dj-grid" hidden></div>
       <div class="dj-count" id="dj-count" aria-hidden="true" hidden></div>
-      <!-- ⌨️ / 👆: the keys, or the touch layout's bands of tiles (ADR 0029), remembered on the device. -->
-      <div class="dj-input" id="dj-input-line">
-        <div class="seq-barsel dj-input-switch" id="dj-input" role="group" aria-label="Play with">
-          <button type="button" data-input="keys" aria-pressed="true" aria-label="⌨️ Keys: laid out like a keyboard" title="⌨️ Keys: laid out like a keyboard">⌨️</button>
-          <button type="button" data-input="touch" aria-pressed="false" aria-label="👆 Touch: big tiles in groups, no keyboard needed" title="👆 Touch: big tiles in groups, no keyboard needed">👆</button>
-        </div>
-      </div>
       <div class="dj-touch" id="dj-touch" aria-label="Touch layout" hidden></div>
       <div class="dj-tabs" id="dj-tabs" role="group" aria-label="Which keys to show">
         <button type="button" data-row="0" aria-pressed="false"></button>
@@ -274,7 +257,7 @@
           </div>
           <button type="button" class="seq-tool" id="dj-overlap" aria-pressed="false" title="Overlap: each hit rings over the last (this visit only)" aria-label="Overlap: each key's hits ring over each other instead of starting the sound again. For this visit only.">🔔 Overlap</button>
           <span class="dj-change-row">
-            <button type="button" class="seq-tool" id="dj-change">✏️ Edit keys</button>
+            <button type="button" class="seq-tool" id="dj-change">✏️ Layout</button>
           </span>
         </div>
       </div>
@@ -971,7 +954,13 @@
   <dialog id="keys-edit" aria-labelledby="keys-edit-title">
     <div class="ke-body">
       <div class="ke-head">
-        <h2 id="keys-edit-title">✏️ Edit keys</h2>
+        <h2 id="keys-edit-title">✏️ Layout</h2>
+        <!-- ⌨️ Keys or 👆 Pads, what 🎤 Live and Beats play with, remembered on the device (ADR 0029);
+             the other one swaps this view for its own (dj.js). From 700 px: a phone has only pads. -->
+        <div class="seq-barsel ke-input" id="ke-input" data-input-switch role="group" aria-label="Play with">
+          <button type="button" data-input="keys" aria-pressed="true" title="⌨️ Keys: laid out like a keyboard">⌨️ Keys</button>
+          <button type="button" data-input="touch" aria-pressed="false" title="👆 Pads: big pads in groups, no keyboard needed">👆 Pads</button>
+        </div>
         <button type="button" class="seq-tool ke-done" data-close>✅ Done</button>
       </div>
       <div class="ke-main">
@@ -1024,11 +1013,17 @@
     </div>
   </dialog>
 
-  <!-- ✏️ Edit layout: the 👆 touch layout's own focused view (ADR 0029), as ✏️ Edit keys is the keys'. -->
+  <!-- ✏️ Layout with 👆 Pads: the touch layout's own focused view (ADR 0029), as #keys-edit is the keys'. -->
   <dialog id="touch-edit" aria-labelledby="touch-edit-title">
     <div class="ke-body te-body">
       <div class="ke-head">
-        <h2 id="touch-edit-title">✏️ Edit layout</h2>
+        <h2 id="touch-edit-title">✏️ Layout</h2>
+        <!-- ⌨️ Keys or 👆 Pads, what 🎤 Live and Beats play with, remembered on the device (ADR 0029);
+             the other one swaps this view for its own (dj.js). From 700 px: a phone has only pads. -->
+        <div class="seq-barsel ke-input" id="te-input" data-input-switch role="group" aria-label="Play with">
+          <button type="button" data-input="keys" aria-pressed="true" title="⌨️ Keys: laid out like a keyboard">⌨️ Keys</button>
+          <button type="button" data-input="touch" aria-pressed="false" title="👆 Pads: big pads in groups, no keyboard needed">👆 Pads</button>
+        </div>
         <button type="button" class="seq-tool ke-done" data-close>✅ Done</button>
       </div>
       <section class="ke-layouts" aria-labelledby="te-layouts-title">

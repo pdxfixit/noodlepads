@@ -2,7 +2,7 @@
 // big tiles in bands, one group each, top to bottom (Ben, 2026-10-16: "not
 // tied to a kbd… preset groups… far simpler"). This file draws the bands
 // for playing; dj.js listens to them and plays through the same path as the
-// keys. It also draws ✏️ Edit layout, the focused view for building one:
+// keys. It also draws ✏️ Layout (👆 Pads), the focused view for building one:
 // layouts to load or save on top, then the bands (⠿ to move, S M L, ✕), then
 // + Add a group. The rules are in touch.js.
 
@@ -38,7 +38,7 @@ export function drawBands(box, touch, deps) {
   if (!bands.length) {
     const p = document.createElement('p');
     p.className = 'touch-empty';
-    p.textContent = 'No sounds here yet. ✏️ Edit layout adds a group of them.';
+    p.textContent = 'No sounds here yet. ✏️ Layout adds a group of them.';
     box.replaceChildren(p);
     return;
   }
@@ -78,12 +78,12 @@ export function drawBands(box, touch, deps) {
   }));
 }
 
-// ── ✏️ Edit layout ──
+// ── ✏️ Layout (👆 Pads) ──
 
 const UNDO_MAX = 30;
 const ARM_MS = 3000;        // how long a red ✕? or Delete? waits for its second tap
 const DRAG_PX = 6;          // a mouse or pen moved this far is dragging, not tapping
-const HOLD_MS = 280;        // a finger held this long without moving starts a drag (as in ✏️ Edit keys)
+const HOLD_MS = 280;        // a finger held this long without moving starts a drag (as in ✏️ Layout (⌨️ Keys))
 const SLOP_PX = 10;         // a finger moving further first is a scroll
 
 const button = (cls, text, data = {}, label = null) => {
@@ -96,7 +96,7 @@ const button = (cls, text, data = {}, label = null) => {
   return b;
 };
 
-// A sound to pick, as in ✏️ Edit keys: its emoji and name in its color.
+// A sound to pick, as in ✏️ Layout (⌨️ Keys): its emoji and name in its color.
 function soundButton(c, family, data) {
   const b = button('ke-sound', '', data);
   b.style.setProperty('--c', family(c).color);
@@ -204,9 +204,9 @@ export function createTouchEditor({ el, deps }) {
     const sizes = document.createElement('span');
     sizes.className = 'seq-barsel te-sizes';
     sizes.setAttribute('role', 'group');
-    sizes.setAttribute('aria-label', `Tile size for ${name}`);
+    sizes.setAttribute('aria-label', `Pad size for ${name}`);
     sizes.append(...Object.keys(SIZES).map((k) => {
-      const s = button('', k.toUpperCase(), { size: k, band: i }, `${SIZE_NAMES[k]} tiles, ${SIZES[k]} across on a phone`);
+      const s = button('', k.toUpperCase(), { size: k, band: i }, `${SIZE_NAMES[k]} pads, ${SIZES[k]} across on a phone`);
       s.setAttribute('aria-pressed', String(b.size === k));
       return s;
     }));
@@ -255,7 +255,7 @@ export function createTouchEditor({ el, deps }) {
     const open = instBand === i;
     const line = document.createElement('div');
     line.className = 'te-band-inst';
-    const pick = pickerButton(g, open, { where: `band-${i}`, inst: bandInstrument(b), title: `Who plays this band: pick an instrument, and every tile keeps its note` });
+    const pick = pickerButton(g, open, { where: `band-${i}`, inst: bandInstrument(b), title: `Who plays this band: pick an instrument, and every pad keeps its note` });
     pick.dataset.instBand = i;
     line.append(pick);
     if (!open) return [line];
@@ -276,7 +276,7 @@ export function createTouchEditor({ el, deps }) {
     };
     const who = instrumentById(inst);
     focusAfter = `[data-inst-pick][data-inst-band="${i}"]`;
-    set(swapBand(cur, i, swap), `${who.emoji} ${who.name} plays ${label(b.group)} now, each tile the same note.`);
+    set(swapBand(cur, i, swap), `${who.emoji} ${who.name} plays ${label(b.group)} now, each pad the same note.`);
     await pickInstrument(b.group, inst);
     render();
   }
@@ -453,7 +453,7 @@ export function createTouchEditor({ el, deps }) {
       const next = resizeBand(cur, i, k, deps.sounds());
       const added = next.bands[i].sounds.length - cur.bands[i].sounds.length;
       focusAfter = `[data-size="${k}"][data-band="${i}"]`;
-      set(next, `${label(cur.bands[i].group)}: ${SIZE_NAMES[k].toLowerCase()} tiles.${added > 0 ? ` ${added === 1 ? '1 more sound fills' : `${added} more sounds fill`} the line.` : ''}`);
+      set(next, `${label(cur.bands[i].group)}: ${SIZE_NAMES[k].toLowerCase()} pads.${added > 0 ? ` ${added === 1 ? '1 more sound fills' : `${added} more sounds fill`} the line.` : ''}`);
       return;
     }
     const rm = at('remove');
@@ -666,14 +666,17 @@ export function createTouchEditor({ el, deps }) {
     deps.closed?.();
   });
 
-  function open() {
+  // focus: where to start, else the first key (band). ✏️ Layout's switch
+  // passes its own button, and the first view's opener, when it swaps one
+  // view for the other.
+  function open({ focus, opener } = {}) {
     undo = [];
     picking = null;
     instBand = null;
     asking = null;
     say('');
     render();
-    openDialog(el.dialog, { focus: el.bands.querySelector('[data-handle]') ?? el.add.querySelector('button') });
+    openDialog(el.dialog, { focus: focus ?? el.bands.querySelector('[data-handle]') ?? el.add.querySelector('button'), opener });
   }
 
   return { open, render };

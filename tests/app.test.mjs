@@ -1155,7 +1155,7 @@ test('🎤 Live: 40 keys like the number row and the letter rows, drums on the h
   // Q / D hang under ⌨️ / 👆 while the keys show letters (Ben, 2026-10-16),
   // and Settings has no Keyboard section any more.
   assert.equal($('#set-keys'), null, 'no ⌨️ Keyboard in Settings');
-  assert.equal($('#keys-edit').contains($('#dj-layout-keys')), true, 'Q / D sit in ✏️ Edit keys (Ben, 2026-10-19)');
+  assert.equal($('#keys-edit').contains($('#dj-layout-keys')), true, 'Q / D sit in ✏️ Layout\'s keys view (Ben, 2026-10-19)');
   assert.equal($('#dj-layout-keys').hidden, false, 'a keyboard was pressed: Q / D show');
   const layoutKeys = $('#dj-layout-keys').querySelectorAll('[data-layout]');
   assert.deepEqual(layoutKeys.map((b) => b.dataset.layout), ['qwerty', 'dvorak'], 'no Auto');
@@ -1169,9 +1169,9 @@ test('🎤 Live: 40 keys like the number row and the letter rows, drums on the h
   layoutKeys.find((b) => b.dataset.layout === 'qwerty').click();
   assert.equal($('#dj-keys').querySelector('[data-code="KeyS"]').getAttribute('aria-label'), 'S: Snare');
   // With 👆 there are no letters, so no Q / D.
-  $('#dj-input').querySelector('[data-input="touch"]').click();
+  $('#ke-input').querySelector('[data-input="touch"]').click();
   assert.equal($('#dj-layout-keys').hidden, true, 'gone with 👆');
-  $('#dj-input').querySelector('[data-input="keys"]').click();
+  $('#ke-input').querySelector('[data-input="keys"]').click();
   assert.equal($('#dj-layout-keys').hidden, false, 'back with ⌨️');
   $('#pads-tab').dispatch('click');
   assert.equal($('#dj').hidden, true);

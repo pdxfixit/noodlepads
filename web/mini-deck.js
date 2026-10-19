@@ -2,12 +2,12 @@
 // once the control bar reaches the top and would stick, it hides and single
 // buttons ride at the right of the slim band instead, apart from its round
 // button, ❓, ⚙️ and ⬆️ at the left: ▶ Play (■ Stop), ● Record (⌨️ Keys on),
-// then ✏️ Edit keys (Keys on), and ▾ at the very right, which drops the whole
+// then ✏️ Layout (Keys on), and ▾ at the very right, which drops the whole
 // bar down under the band (▴ puts it away). Scrolled back up to the bar, it shows in its place.
 // The buttons are twins: each one clicks the bar's own, and copies its state.
 //
 // The band never grows, so as it runs out of room things give way in Ben's
-// order (STEPS): ⬆️, then ● Record, then ❓, then ✏️ (Edit keys: its twin on
+// order (STEPS): ⬆️, then ● Record, then ❓, then ✏️ (Layout: its twin on
 // the bar is a ▾ away), then ⚙️. Each step is a class on <body>;
 // styles.css says what it hides.
 

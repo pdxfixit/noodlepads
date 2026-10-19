@@ -230,8 +230,8 @@ const VIEWS = {
   'chooser-inst': { screen: 'beats', js: q('.beat-bar [data-beat-new]') + ADD_ROW + q('.seq-row [data-pick]') + q('#chooser-grid [data-inst-pick="notes"]') + nap },
   'tune-who': { screen: 'beats', js: q('.beat-bar [data-beat-new]') + q('#seq-add-tune') + nap },
   'roll-inst': { screen: 'beats', js: ROLL_GROOVE + q('.seq-row.tune [data-pick]') + q('[data-roll="inst"] [data-inst-pick]') + nap },
-  'keys-inst': { screen: 'live', js: q('#dj-input [data-input="keys"]') + q('#dj-change') + q('[data-group="kit-notes"]') + q('#ke-inst [data-inst-pick]') + nap },
-  'touch-inst': { screen: 'live', js: q('#dj-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-inst-pick]') + nap },
+  'keys-inst': { screen: 'live', js: q('#ke-input [data-input="keys"]') + q('#dj-change') + q('[data-group="kit-notes"]') + q('#ke-inst [data-inst-pick]') + nap },
+  'touch-inst': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-inst-pick]') + nap },
   sheet: { screen: 'pads', js: q('.pad-add') },
   'sheet-edit': { screen: 'pads', js: `${q('#edit-toggle')} ${q('#pads .pad-cell [data-edit]')}` },
   // ✏️ Edit sounds with six made-up sounds of the kid's own, four in two
@@ -331,21 +331,24 @@ const VIEWS = {
   'builder-grown': { screen: 'beats', keys: true, js: q('#dj-beatbar [data-beat-new]') + BUILDER_REC + 'await new Promise((r) => setTimeout(r, 1700));' },
   takes: { screen: 'live', js: q('#dj-takes-open') },
   // ✏️ Edit keys: as it opens, with a ready-made layout loaded, and with sounds picked.
-  keys: { screen: 'live', js: q('#dj-input [data-input="keys"]') + q('#dj-change') },
+  keys: { screen: 'live', js: q('#ke-input [data-input="keys"]') + q('#dj-change') },
   // ⌨️ / 👆 (ADR 0029): 🎤 Live on the touch layout or on the keys (a phone's
   // default is 👆), and Beats with ⌨️ Keys on the touch layout.
-  touch: { screen: 'live', js: q('#dj-input [data-input="touch"]') },
-  'live-keys': { screen: 'live', js: q('#dj-input [data-input="keys"]') },
-  'touch-beats': { screen: 'beats', keys: true, js: q('#dj-input [data-input="touch"]') },
+  touch: { screen: 'live', js: q('#ke-input [data-input="touch"]') },
+  'live-keys': { screen: 'live', js: q('#ke-input [data-input="keys"]') },
+  'touch-beats': { screen: 'beats', keys: true, js: q('#ke-input [data-input="touch"]') },
   // ✏️ Edit layout: as it opens, with a tile's picker open (swap or take out), + more on
   // Drums, + more with its ▾ list of groups open, and Drums sized down to S.
-  'touch-edit': { screen: 'live', js: q('#dj-input [data-input="touch"]') + q('#dj-change') },
-  'touch-edit-swap': { screen: 'live', js: q('#dj-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-tile="0"]') },
-  'touch-edit-more': { screen: 'live', js: q('#dj-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-more="1"]') },
-  'touch-edit-groups': { screen: 'live', js: q('#dj-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-more="1"]') + q('#te-bands [data-group-pick]') },
-  'touch-edit-small': { screen: 'live', js: q('#dj-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-size="s"][data-band="1"]') },
-  'keys-layout': { screen: 'live', js: q('#dj-input [data-input="keys"]') + q('#dj-change') + q('[data-layout="ready-space-band"]') + q('#ke-save') },
-  'keys-picked': { screen: 'live', js: `${q('#dj-input [data-input="keys"]')} ${q('#dj-change')} ${q('[data-group="kit-animals"]')} for (let i = 0; i < 3; i++) document.querySelectorAll('#ke-picks [data-sound]')[i].click();` },
+  'touch-edit': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') },
+  // ✏️ Layout from Beats' control bar (Ben, 2026-10-19): ⌨️ Keys | 👆 Pads in its title line, from 700 px.
+  layout: { screen: 'beats', keys: true, js: q('#ke-input [data-input="keys"]') + q('#dj-change-bar') },
+  'layout-pads': { screen: 'beats', keys: true, js: q('#ke-input [data-input="touch"]') + q('#dj-change-bar') },
+  'touch-edit-swap': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-tile="0"]') },
+  'touch-edit-more': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-more="1"]') },
+  'touch-edit-groups': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-more="1"]') + q('#te-bands [data-group-pick]') },
+  'touch-edit-small': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-size="s"][data-band="1"]') },
+  'keys-layout': { screen: 'live', js: q('#ke-input [data-input="keys"]') + q('#dj-change') + q('[data-layout="ready-space-band"]') + q('#ke-save') },
+  'keys-picked': { screen: 'live', js: `${q('#ke-input [data-input="keys"]')} ${q('#dj-change')} ${q('[data-group="kit-animals"]')} for (let i = 0; i < 3; i++) document.querySelectorAll('#ke-picks [data-sound]')[i].click();` },
   'song-new': { screen: 'song', js: q('#song-new') },
   songs: { screen: 'song', js: q('#song-open') },
   // 🎼 Song's playlist (ADR 0024), PLAYLIST: as arranged; with a beat picked in the strip;

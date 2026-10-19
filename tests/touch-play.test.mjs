@@ -39,7 +39,7 @@ before(async () => {
 const touch = (props) => ({ button: 0, pointerType: 'touch', clientX: 100, clientY: 100, ...props });
 const heads = () => $('#dj-touch').querySelectorAll('.touch-head').map((h) => h.textContent);
 const tile = (id) => $('#dj-touch').querySelector(`[data-clip="${id}"]`);
-const pressed = () => $('#dj-input').querySelectorAll('[data-input]').filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.input);
+const pressed = () => $('#ke-input').querySelectorAll('[data-input]').filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.input);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 test('⌨️ / 👆: the keys on a wide screen until the kid picks; 👆 shows the bands, remembered on the device', () => {
@@ -47,10 +47,10 @@ test('⌨️ / 👆: the keys on a wide screen until the kid picks; 👆 shows t
   assert.deepEqual(pressed(), ['keys']);
   assert.equal($('#dj-touch').hidden, true);
   assert.equal($('#dj-keys').hidden, false);
-  $('#dj-input').querySelector('[data-input="touch"]').dispatch('click');
+  $('#ke-input').querySelector('[data-input="touch"]').dispatch('click');
   assert.deepEqual(pressed(), ['touch']);
   assert.equal(remembered.get('dj-input'), 'touch');
-  assert.match($('#screen-hint').textContent, /^Tap a tile to play it/, 'the footer\'s how-to says tiles');
+  assert.match($('#screen-hint').textContent, /^Tap a pad to play it/, 'the footer\'s how-to says pads');
   assert.equal($('#dj-keys').hidden, true);
   assert.equal($('#dj-tabs').hidden, true);
   assert.equal($('#dj-touch').hidden, false);
@@ -113,7 +113,7 @@ test('a saved touch layout plays instead of the default; a sound that is gone is
   state.decks.set('pip', { personId: 'pip', keys: {}, touch: { bands: [] } });
   $('#pads-tab').dispatch('click');
   $('#live-tab').dispatch('click');
-  assert.match($('#dj-touch').querySelector('.touch-empty').textContent, /✏️ Edit layout adds a group/);
+  assert.match($('#dj-touch').querySelector('.touch-empty').textContent, /✏️ Layout adds a group/);
   state.decks.delete('pip');
 });
 
@@ -127,7 +127,7 @@ test('Beats with ⌨️ Keys and 👆: a tile played makes its row, and the rows
   }
   const rows = () => $('#dj-grid').querySelectorAll('.dj-grid-row').map((r) => r.querySelector('[data-picture]')?.dataset.picture);
   assert.deepEqual(rows(), ['pip-chord-c', 'pip-kick'], 'Chords is above Drums in the layout, so its row is too');
-  $('#dj-input').querySelector('[data-input="keys"]').dispatch('click');
+  $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');
   assert.deepEqual(rows(), ['pip-kick', 'pip-chord-c'], 'with ⌨️ the rows follow the keys again');
   assert.equal(remembered.get('dj-input'), 'keys');
   keysOff(page);

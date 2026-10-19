@@ -163,7 +163,7 @@ test('the roll\'s top line swaps who plays the tune, and every note stays where 
 
 test('✏️ Edit keys: the keys nobody changed keep Pluck; an open Notes group says who plays it, and filling a row uses the pick', async () => {
   $('#live-tab').dispatch('click');
-  $('#dj-input').querySelector('[data-input="keys"]').dispatch('click');
+  $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');
   $('#dj-change').dispatch('click');
   assert.equal($('#keys-edit').open, true);
   const key = (code) => $('#ke-keys').querySelector(`[data-code="${code}"]`);
@@ -201,7 +201,7 @@ test('👆 a band of Chords says who plays it; a pick plays every tile\'s chord 
   const { setSetting } = await import('../web/settings.js');
   await setSetting('instChords', 'guitar');
   await page.settle();
-  $('#dj-input').querySelector('[data-input="touch"]').dispatch('click');
+  $('#ke-input').querySelector('[data-input="touch"]').dispatch('click');
   const tiles = () => $('#dj-touch').querySelectorAll('[data-clip]').map((t) => t.dataset.clip);
   assert.ok(tiles().includes(`${pid()}-chord-c`), 'the default layout keeps the group\'s own chords, Guitar picked or not');
   $('#dj-change').dispatch('click');
@@ -228,7 +228,7 @@ test('👆 a band of Chords says who plays it; a pick plays every tile\'s chord 
   $('#te-undo').dispatch('click');
   assert.ok(state.decks.get(pid()).touch.bands[i].sounds.includes(`${pid()}-chord-c`), 'Undo puts the chords back');
   $('#touch-edit').close();
-  $('#dj-input').querySelector('[data-input="keys"]').dispatch('click');
+  $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');
 });
 
 test('🧸 Kids: a round instrument button on Keys; each tap plays the toy keys on the next one, kept as the person\'s', async () => {

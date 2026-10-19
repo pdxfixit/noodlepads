@@ -58,14 +58,14 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **One ✏️ Layout on Beats and 🎤 Live** (Ben, 2026-10-19): one ✏️ Layout button opens the editor at once; the switch moves inside it as ⌨️ Keys | 👆 Pads (Tiles becomes Pads). Then: a design doc for grids of blocks that sit side by side, heading toward areas resized by dragging their edges (his option B; a new stored shape, so an ADR).
+- **Layout grids side by side** (Ben, 2026-10-19, his option B on the ✏️ Layout mockups): preset grids of dashed blocks to drag groups onto, where blocks can share a line, heading toward a grid whose areas are resized by dragging their edges, like window splitters. A new stored shape for the touch layout (backups, sync, an ADR): write the design doc with mockups first, for Ben's OK.
 
 
 
 
 
 - **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (`docs/design/more-kinds-of-music.md`; decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups, the emoji rule's exceptions). The grooves, 🧸 Kids' pentatonic toy keys and instruments' phase 1 are built; next:
-  1. Instruments, phase 3 (ADR 0030; the pickers everywhere, 🧸 Kids' instrument button, the grooves' instruments and chips, Soca and Chiptune are built): one ready-made key layout per family in ✏️ Edit keys.
+  1. Instruments, phase 3 (ADR 0030; the pickers everywhere, 🧸 Kids' instrument button, the grooves' instruments and chips, Soca and Chiptune are built): one ready-made key layout per family in ✏️ Layout's keys.
 
 
 

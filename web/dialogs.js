@@ -44,12 +44,17 @@ export function onDialogOpen(fn) {
   return () => openWatchers.splice(openWatchers.indexOf(safe), 1);
 }
 
+// What had focus when `dialog` opened: a dialog that takes over from another
+// (✏️ Layout's ⌨️ Keys | 👆 Pads) hands focus back there, not to the one closed.
+export const openerOf = (dialog) => openers.get(dialog);
+
 // Opens `dialog` as a modal. `focus` is the element to focus first (the
 // dialog's own first control otherwise); `returnTo()` finds where focus goes
-// on close if the opening element is gone by then.
-export function openDialog(dialog, { focus, returnTo } = {}) {
+// on close if the opening element is gone by then; `opener`, where it goes
+// instead of what has focus now.
+export function openDialog(dialog, { focus, returnTo, opener } = {}) {
   for (const fn of openWatchers) fn(dialog);
-  openers.set(dialog, document.activeElement);
+  openers.set(dialog, opener ?? document.activeElement);
   if (returnTo) returns.set(dialog, returnTo);
   dialog.showModal();
   focus?.focus();
