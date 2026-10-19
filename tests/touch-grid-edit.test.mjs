@@ -138,6 +138,51 @@ test('playing: the blocks side by side in the grid, each block\'s pads in the co
   assert.equal(cells[0].querySelectorAll('[data-clip]').length, 4, 'every pad plays as a tile does');
 });
 
+test('an edge drags like a window splitter, in twelfths, ⅙ at least; the arrow keys move it; one ↩️ Undo a move', async () => {
+  $('#dj-change').dispatch('click');
+  const edges = qa('[data-edge-k]');
+  assert.deepEqual(edges.map((e) => [e.dataset.edgePath, e.dataset.edgeK, e.dataset.dir]), [['0', '0', 'across'], ['', '0', 'down']],
+    'between drums and chords, then between the top line and the bottom');
+  const side = q('[data-edge-path="0"]');
+  assert.equal(side.getAttribute('role'), 'separator');
+  assert.equal(side.getAttribute('aria-orientation'), 'vertical');
+  assert.equal(side.getAttribute('aria-valuenow'), '8');
+  assert.equal(side.getAttribute('aria-label'), 'The edge between 🥁 Drums (⅔) and 🎶 Chords (⅓): drag it, or press ← or →');
+  assert.equal(side.dataset.label, '⅔ · ⅓');
+
+  side.dispatch('keydown', { key: 'ArrowLeft' });
+  assert.deepEqual(touch().grid.parts[0].parts.map((p) => p.size), [7, 5]);
+  assert.equal($('#te-note').textContent, '🥁 Drums takes 7/12, 🎶 Chords 5/12.');
+  assert.ok(document.activeElement === q('[data-edge-path="0"]'), 'the edge keeps focus');
+  q('[data-edge-path="0"]').dispatch('keydown', { key: 'ArrowUp' });
+  assert.deepEqual(touch().grid.parts[0].parts.map((p) => p.size), [7, 5], 'up and down move only an edge lying flat');
+  q('[data-edge-path=""]').dispatch('keydown', { key: 'ArrowDown' });
+  assert.deepEqual(touch().grid.parts.map((p) => p.size), [9, 3], 'the top line takes ¾');
+  $('#te-undo').dispatch('click');
+  $('#te-undo').dispatch('click');
+  assert.deepEqual(touch().grid.parts[0].parts.map((p) => p.size), [8, 4]);
+  assert.deepEqual(touch().grid.parts.map((p) => p.size), [8, 4]);
+
+  // A drag: the two sides measure 0–200 and 216–300 px, so 12 twelfths over 300 px.
+  const edge = q('[data-edge-path="0"]');
+  const [left, , right] = edge.parentElement.children;
+  left.getBoundingClientRect = () => ({ left: 0, right: 200, top: 0, bottom: 100 });
+  right.getBoundingClientRect = () => ({ left: 216, right: 300, top: 0, bottom: 100 });
+  edge.dispatch('pointerdown', { pointerId: 3, pointerType: 'touch', clientX: 208, clientY: 50, button: 0 });
+  $('#touch-edit').dispatch('pointermove', { pointerId: 3, pointerType: 'touch', clientX: 150, clientY: 50 });
+  assert.equal(edge.dataset.label, '½ · ½', 'the shares while it moves');
+  assert.equal(String(left.style.getPropertyValue('--part')), '6', 'its two sides move on screen');
+  assert.deepEqual(touch().grid.parts[0].parts.map((p) => p.size), [8, 4], 'nothing kept until it is let go');
+  $('#touch-edit').dispatch('pointermove', { pointerId: 3, pointerType: 'touch', clientX: 296, clientY: 50 });
+  assert.equal(edge.dataset.label, '⅚ · ⅙', 'chords keeps ⅙');
+  $('#touch-edit').dispatch('pointermove', { pointerId: 3, pointerType: 'touch', clientX: 100, clientY: 50 });
+  $('#touch-edit').dispatch('pointerup', { pointerId: 3, pointerType: 'touch', clientX: 100, clientY: 50 });
+  assert.deepEqual(touch().grid.parts[0].parts.map((p) => p.size), [4, 8], 'drums ⅓, chords ⅔');
+  $('#te-undo').dispatch('click');
+  assert.deepEqual(touch().grid.parts[0].parts.map((p) => p.size), [8, 4], 'one Undo for the whole drag');
+  $('#touch-edit').close();
+});
+
 test('a saved layout keeps its grid; ☰ Stacked puts the groups one under another, in the blocks\' order', () => {
   $('#dj-change').dispatch('click');
   q('#te-save').dispatch('click');
