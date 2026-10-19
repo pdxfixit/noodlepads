@@ -868,7 +868,7 @@ Rename, ↩️ Undo) and the 🆕 update bar at the bottom.
 
 ## Versions and updates
 
-The corner shows the release first (`RELEASE` in `web/util.js`, now 1.0; raise it with a CHANGELOG.md section), then the build. every deploy runs the stamp, which writes `web/version.json`
+The corner says when the build went live, in the device's own time zone ("Updated Oct 19, 9:27 PM", `util.js` `updatedText`); a tap opens ⚙️ Settings at About, whose version line adds the commit, a link to it on GitHub. Every deploy runs the stamp, which writes `web/version.json`
 (`git describe --tags --always`, plus `-dirty` for uncommitted edits in `web/`
 or `worker/`, and the time; gitignored). The app shows
 it small in the bottom corner, so the live site says which commit it is; a

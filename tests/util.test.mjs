@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extensionFor, slug, count, localDate, newId, versionLabel, footStacks } from '../web/util.js';
+import { extensionFor, slug, count, localDate, newId, versionLabel, updatedText, builtAt } from '../web/util.js';
 
 test('extensionFor maps audio types and falls back to "audio"', () => {
   assert.equal(extensionFor('audio/webm;codecs=opus'), 'webm');
@@ -47,9 +47,9 @@ test('newId has the shape backups accept, for every prefix the app uses', () => 
 test('versionLabel: a stamped build says its commit (linked on GitHub) and date; a dev copy, and junk', () => {
   assert.deepEqual(versionLabel({ version: 'fd576a9', date: '2026-10-11 13:45 PDT' }), {
     version: 'fd576a9', text: 'fd576a9 · 2026-10-11 13:45 PDT', date: '2026-10-11 13:45 PDT',
-    url: 'https://github.com/pdxfixit/noodlepads/commit/fd576a9',
+    url: 'https://github.com/pdxfixit/noodlepads/commit/fd576a9', updated: updatedText('2026-10-11 13:45 PDT'),
   }, 'no "v", no release number, and the time zone shows');
-  assert.deepEqual(versionLabel({ version: 'abc1234' }), { version: 'abc1234', text: 'abc1234', date: '', url: 'https://github.com/pdxfixit/noodlepads/commit/abc1234' }, 'version stays the bare commit, for the update check');
+  assert.deepEqual(versionLabel({ version: 'abc1234' }), { version: 'abc1234', text: 'abc1234', date: '', url: 'https://github.com/pdxfixit/noodlepads/commit/abc1234', updated: '' }, 'version stays the bare commit, for the update check');
   assert.equal(versionLabel({ version: 'not-a-sha' }).url, '', 'only a commit links');
   assert.equal(versionLabel({ version: 'dev' }).url, '');
   assert.equal(versionLabel({ version: 'dev' }).text, 'dev copy');
@@ -59,8 +59,14 @@ test('versionLabel: a stamped build says its commit (linked on GitHub) and date;
   assert.equal(versionLabel({ version: 'x'.repeat(100) }).version.length, 40);
 });
 
-test('footStacks: the version stacks once the how-to needs a second line', () => {
-  assert.equal(footStacks(20, 20), false, 'one line');
-  assert.equal(footStacks(40, 20), true, 'two lines');
-  assert.equal(footStacks(40, 0), false, 'no measure: leave it');
+// Ben, 2026-10-19: the corner says "Updated Oct 19, 9:27 PM", in the device's time.
+test('updatedText: when the build went live, in the device\'s words and time zone', () => {
+  const us = { locale: 'en-US', timeZone: 'America/Los_Angeles' };
+  assert.equal(updatedText('2026-10-19 04:27 UTC', us), 'Oct 18, 9:27 PM', 'the deploy stamps UTC');
+  assert.equal(updatedText('2026-10-19 04:27 UTC', { locale: 'en-US', timeZone: 'UTC' }), 'Oct 19, 4:27 AM');
+  assert.equal(updatedText('2026-10-11 13:45 PDT', us), 'Oct 11, 1:45 PM', "Ben's Mac stamps its own zone");
+  assert.equal(updatedText('2026-10-11 13:45', { locale: 'en-US', timeZone: 'UTC' }), 'Oct 11, 1:45 PM', 'no zone: UTC');
+  assert.equal(builtAt('2026-10-19 04:27 UTC').toISOString(), '2026-10-19T04:27:00.000Z');
+  for (const junk of ['', 'soon', '2026-10-19 04:27 XYZ', undefined, 42]) assert.equal(updatedText(junk), '', String(junk));
+  assert.equal(versionLabel({ version: 'abc1234', date: '2026-10-19 04:27 UTC' }).updated, updatedText('2026-10-19 04:27 UTC'));
 });

@@ -40,6 +40,25 @@ export function newId(prefix, now = Date.now(), random = Math.random()) {
 // Where a build's commit is on GitHub (the repo is public).
 export const COMMIT_URL = 'https://github.com/pdxfixit/noodlepads/commit/';
 
+// When a build went live, from its stamp: the deploy writes "2026-10-19 04:27
+// UTC"; Ben's Mac fallback, its own US zone ("2026-10-11 13:45 PDT"). Null
+// when it can't be read.
+const STAMP_ZONES = { UTC: 0, GMT: 0, Z: 0, PST: -8, PDT: -7, MST: -7, MDT: -6, CST: -6, CDT: -5, EST: -5, EDT: -4 };
+export function builtAt(date) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})\s*([A-Z]{1,4})?$/.exec(String(date ?? '').trim());
+  const off = m && STAMP_ZONES[m[6] ?? 'UTC'];
+  if (!m || off === undefined) return null;
+  return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4] - off, +m[5]));
+}
+
+// "Oct 19, 9:27 PM": when it went live, in the device's own words and time
+// zone (`locale` and `timeZone` are for tests). '' when the stamp can't be read.
+export function updatedText(date, { locale, timeZone } = {}) {
+  const at = builtAt(date);
+  if (!at) return '';
+  return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone }).format(at);
+}
+
 // What the label next to the corner of the page says: the commit, then the
 // date. No release number: nothing keeps a semver up to date, and a bare
 // "1.0" said nothing (Ben, 2026-10-19). version.json is written by the
@@ -53,12 +72,8 @@ export function versionLabel(v) {
   // The date carries its time zone ("2026-10-11 13:45 PDT").
   const date = v.date ? String(v.date).slice(0, 26) : '';
   const url = /^[0-9a-f]{7,40}$/.test(version) ? `${COMMIT_URL}${version}` : '';
-  return { version, text: `${version}${date ? ` · ${date}` : ''}`, date, url };
+  return { version, text: `${version}${date ? ` · ${date}` : ''}`, date, url, updated: updatedText(date) };
 }
-
-// The footer stacks the version (date over commit) when the how-to beside it
-// needs more than one line, so the how-to gets the room. Pure.
-export const footStacks = (hintHeight, lineHeight) => lineHeight > 0 && hintHeight > lineHeight * 1.5;
 
 // Per-viewer niceties (the last person, beats showing) that must never break
 // the app: localStorage can be missing or throw in a private window.

@@ -55,7 +55,7 @@ import { setUsage } from './usage.js';
 import { clearPlay } from './play-count.js';
 import { $, showNotice, announce, fadeAway, trackSlimHead } from './ui.js';
 import { db } from './store.js';
-import { newId, versionLabel, footStacks, remember, recall, forget } from './util.js';
+import { newId, versionLabel, remember, recall, forget } from './util.js';
 import { beatName, remixName, songName, funName, keptName } from './names.js';
 import { adoptKidsBeats, isHiddenBeat } from './scratch.js';
 import { onSetting, followPerson, getSetting } from './settings.js';
@@ -234,7 +234,6 @@ export const screenHint = (screen, editing, fine = pointerFine()) => SCREEN_HINT
 function showHint() {
   const name = state.screen === 'beats' && keysOn ? 'keys' : state.screen;
   el.screenHint.textContent = screenHint(keysShow() && dj?.touching() ? `tiles-${name}` : name, state.editing);
-  fitFoot();
 }
 
 // Beats' ⌨️ Keys (ADR 0017): the keys under the open beat, with ● Record,
@@ -302,7 +301,6 @@ function setKeys(on, { keep = true } = {}) {
 // Builder's bars · time signature beside Record and the tempo, and the
 // Keyboard keys in Settings.
 function fitLines() {
-  fitFoot();
   for (const sel of document.querySelectorAll('.seq-pick')) pickerFor(sel.closest('.seq-barsel'), sel);
   fitLine(document.querySelector('.toolbar'), ['fit-tight', 'fit-short', 'fit-stack']);
   fitLine($('#seq-shape-line'), ['fit-tight', 'fit-short', 'fit-pick', 'fit-nosig', 'fit-noswing'], $('#seq-deck'));
@@ -314,28 +312,27 @@ function fitLines() {
 // ── Version ────────────────────────────────────────────────────────────
 
 // version.json is written by `just deploy`; without it this is a dev copy.
-// The version's parts: the commit, a link to it on GitHub (Ben, 2026-10-19),
-// then the date. In the corner the date (or "dev copy") is the button that
-// opens ⚙️ Settings at About (settings-ui.js listens for [data-about]); About
-// itself shows it as text.
-function versionParts(label, { about = true } = {}) {
+// The version's parts. The corner says only when it went live, in the
+// device's time ("Updated Oct 19, 9:27 PM"), a button that opens ⚙️ Settings
+// at About (settings-ui.js listens for [data-about]); About says it too, with
+// the commit, a link to it on GitHub (Ben, 2026-10-19). A dev copy says so.
+function versionParts(label, { inAbout = false } = {}) {
   const make = (tag, cls, text) => Object.assign(document.createElement(tag), { className: cls, textContent: text });
-  const parts = [];
-  if (label.url) {
-    const sha = make('a', 'ver-sha', label.version);
-    sha.setAttribute('href', label.url);
-    sha.setAttribute('target', '_blank');
-    sha.setAttribute('rel', 'noopener');
-    sha.setAttribute('aria-label', `Build ${label.version} on GitHub`);
-    parts.push(sha, make('span', 'ver-sep', ' · '));
+  const when = label.updated ? `Updated ${label.updated}` : label.date || label.text;
+  if (!inAbout) {
+    const button = make('button', 'ver-date', when);
+    button.type = 'button';
+    button.dataset.about = '';
+    button.setAttribute('aria-label', `About Noodle Pads: ${when}`);
+    return [button];
   }
-  const when = label.date || label.text;
-  if (!about) return [...parts, make('span', 'ver-date', when)];
-  const button = make('button', 'ver-date', when);
-  button.type = 'button';
-  button.dataset.about = '';
-  button.setAttribute('aria-label', `About Noodle Pads: ${when}`);
-  return [...parts, button];
+  if (!label.url) return [make('span', 'ver-date', when)];
+  const sha = make('a', 'ver-sha', label.version);
+  sha.setAttribute('href', label.url);
+  sha.setAttribute('target', '_blank');
+  sha.setAttribute('rel', 'noopener');
+  sha.setAttribute('aria-label', `Build ${label.version} on GitHub`);
+  return [make('span', 'ver-date', when), make('span', 'ver-sep', ' · '), sha];
 }
 
 async function loadVersion() {
@@ -347,20 +344,9 @@ async function loadVersion() {
   const label = versionLabel(found);
   state.version = label.version;
   telemetry?.setVersion(label.version);
-  // "fd576a9 · 2026-10-11 13:45 PDT" on one line, in the corner and in
-  // About; stacked, the date sits above the commit (fitFoot).
+  // "Updated Oct 19, 9:27 PM" in the corner; About adds the commit.
   el.version.replaceChildren(...versionParts(label));
-  el.aboutVersion?.replaceChildren(...versionParts(label, { about: false }));
-  fitFoot();
-}
-
-// When the how-to wraps, the version stacks to give it room (footStacks).
-function fitFoot() {
-  const foot = el.screenHint?.parentElement;
-  if (!foot?.classList) return;
-  foot.classList.remove('stacked');
-  const lh = parseFloat(globalThis.getComputedStyle?.(el.screenHint)?.lineHeight) || 0;
-  if (footStacks(el.screenHint.scrollHeight || 0, lh)) foot.classList.add('stacked');
+  el.aboutVersion?.replaceChildren(...versionParts(label, { inAbout: true }));
 }
 
 // ── Events ─────────────────────────────────────────────────────────────
