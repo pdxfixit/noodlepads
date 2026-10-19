@@ -62,6 +62,10 @@ test('with ⌨️ Keys on, the slim bar\'s ✏️ opens ✏️ Edit keys, and wi
   $('#keys-edit').close();
   assert.match(css, /body\.keys-on \.dj-change-row \{ display: none; \}/, 'no ✏️ at the keys\' foot on Beats; 🎤 Live keeps its own');
   assert.match(css, /@media \(max-width: 600px\) \{\n  #dj-change-bar \{ display: none; \}\n  body\.keys-on #dj-change-tempo \{ display: block; \}/, 'on a phone after ⏲️: the bars\' line is full');
+  // A grid on a phone (Ben, 2026-10-19): ⏲️ over 🎚️ and ✏️ over ⇆, each 48 px, the same gaps, both lines right-aligned.
+  assert.match(css, /body\.keys-on \.dj-bar :is\(#dj-beat-click, #dj-change-tempo\) \{ width: 48px; padding: 0; \}/);
+  assert.match(css, /body\.keys-on \.dj-bar > \.beat-shape \{ gap: 8px; \}\n  body\.keys-on \.dj-bar > \.beat-shape \.mixer-open \{ margin-left: auto; \}/);
+  assert.match(css, /body\.keys-on \.dj-bar \.beat-more, body\.keys-on \.dj-bar > \.beat-shape \{ gap: 6px; \}/, 'both lines alike on the narrowest');
 
   $('#dj-input').querySelector('[data-input="touch"]').dispatch('click');
   assert.equal($('#dj-change').textContent, '✏️ Edit layout');
