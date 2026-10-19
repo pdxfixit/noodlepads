@@ -149,14 +149,17 @@ test('Shift-click a voice chip shows its name and recipe without using it', asyn
 
 test('Help and the mouse how-to say Shift-click wherever they say hold', async () => {
   const { screenHint } = await import('../web/app.js');
-  for (const screen of ['pads', 'beats', 'live']) assert.match(screenHint(screen, false, true), /Shift-click/, screen);
+  for (const screen of ['pads', 'live']) assert.match(screenHint(screen, false, true), /Shift-click/, screen);
+  // A mouse's Shift-click on a pill picks (Ben, 2026-10-19: loud is "only the hold").
+  assert.doesNotMatch(screenHint('beats', false, true), /Shift/);
   for (const screen of ['pads', 'beats', 'live', 'keys']) assert.doesNotMatch(screenHint(screen, false, false), /Shift/, `${screen} on a touch screen`);
   const { HELP } = await import('../web/help.js');
   const texts = HELP.flatMap((s) => s.items.map((i) => i.text));
   // Each line about a hold that Shift now does: a pad's loop, a voice's name,
   // a loud pill, a row's loudness, a DJ key's loop, the grid (🎲 in People
   // is a plain tap since 2026-10-12).
-  const holds = texts.filter((t) => /\b[Hh]old (a pad|it\b|one\b|🎲)/.test(t) && !/drag \(on a touch screen, hold first\)|Hold to hear it/.test(t));
-  assert.ok(holds.length >= 6, holds.join('\n'));
+  // A pill's loud hit is the hold alone now (Ben, 2026-10-19): its lines are left out.
+  const holds = texts.filter((t) => /\b[Hh]old (a pad|it\b|one\b|🎲)/.test(t) && !/drag \(on a touch screen, hold first\)|Hold to hear it|for a loud hit/.test(t));
+  assert.ok(holds.length >= 5, holds.join('\n'));
   for (const t of holds) assert.match(t, /Shift-click/, t);
 });

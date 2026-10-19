@@ -60,7 +60,7 @@ const MODULES = [
   'download', 'edge-scroll', 'emoji-all', 'emoji-check', 'emoji-more', 'events-client', 'feedback', 'finger', 'firsts', 'grooves', 'groups', 'grown-up', 'help', 'inst-picker', 'instruments',
   'keyset', 'kids-logic', 'kids', 'leftover', 'lines', 'listen-dsp', 'listen-input', 'listen-make', 'listen-ui', 'listen-worklet', 'listen', 'log-clean', 'log-send', 'log', 'loudness', 'merge', 'merge3', 'meter', 'mini-deck',
   'mix', 'mixer', 'model', 'names', 'notes', 'nudge', 'offline', 'old-backup', 'overflow', 'pad-size', 'pads', 'people',
-  'pitch', 'play-count', 'playlist', 'privacy', 'reid', 'rhythm', 'roll', 'row-volume', 'scratch', 'sequencer',
+  'pill-select', 'pitch', 'play-count', 'playlist', 'privacy', 'reid', 'rhythm', 'roll', 'row-volume', 'scratch', 'sequencer',
   'settings-ui', 'settings', 'shape', 'share-render', 'sheet', 'skins', 'slide', 'song', 'starters', 'state', 'steps',
   'store', 'stretch-worker', 'stretch', 'sync-timing', 'synth', 'telemetry', 'tips', 'tooltips', 'touch', 'track-page', 'tweaks',
   'ui', 'update', 'usage', 'util', 'voice-knobs', 'voices', 'wave', 'welcome', 'zip',

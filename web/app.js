@@ -219,7 +219,7 @@ const SCREEN_HINTS = {
   },
   mouse: {
     pads: 'Click a pad to play it, or press 1–9. Hold one or Shift-click it to keep it going.',
-    beats: 'Click a pill to turn it on or off; hold it or Shift-click for a loud hit. ▶ Play to hear it.',
+    beats: 'Click an empty pill to light it; click lit ones to pick them, then drag. Hold one for a loud hit. ▶ Play to hear it.',
     keys: 'Click a key or press it: its sound gets a row. ● Record and play along to fill the beat.',
     live: 'Click a key, or press it on the keyboard. Hold one or Shift-click it to keep it going. Click ⏲️ in time to set the speed.',
     'tiles-keys': 'Click a tile: its sound gets a row. ● Record and play along to fill the beat.',

@@ -461,7 +461,7 @@ test('the grid shows its count: the first pill of each bar is the "1", and each 
   assert.equal(pills.map(kind).join('').slice(0, 16), '1...b...b...b...');
 });
 
-test('beat pills: one tap switches on or off; a hold (or Shift) makes a loud hit; arrow keys move the one Tab stop', async () => {
+test('beat pills: one tap switches on or off; a hold (or Shift+Space) makes a loud hit; arrow keys move the one Tab stop', async () => {
   const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
   const pill = (r, s) => rows()[r].querySelectorAll('.pill')[s];
   // One tap on, one tap off (Ben, 2026-10-11: never two taps).
@@ -484,12 +484,18 @@ test('beat pills: one tap switches on or off; a hold (or Shift) makes a loud hit
   pill(0, 0).dispatch('click');
   assert.equal(pill(0, 0).getAttribute('aria-pressed'), 'false');
   assert.doesNotMatch(pill(0, 0).getAttribute('aria-label'), /loud/);
-  // Shift (Shift+Space on a keyboard) makes it loud too, and again makes it normal.
-  pill(0, 0).dispatch('click', { shiftKey: true });
+  // On a keyboard, Shift+Space (a click with no pointer, detail 0) makes it loud
+  // too, and again makes it normal: a keyboard cannot hold.
+  pill(0, 0).dispatch('click', { shiftKey: true, detail: 0 });
   assert.ok(pill(0, 0).classList.contains('loud'));
-  pill(0, 0).dispatch('click', { shiftKey: true });
+  pill(0, 0).dispatch('click', { shiftKey: true, detail: 0 });
   assert.equal(pill(0, 0).classList.contains('loud'), false);
   assert.equal(pill(0, 0).getAttribute('aria-pressed'), 'true');
+  pill(0, 0).dispatch('click');
+  // A Shift-click is not loud any more (Ben, 2026-10-19: "only the hold"); it is a tap.
+  pill(0, 0).dispatch('click', { shiftKey: true });
+  assert.equal(pill(0, 0).getAttribute('aria-pressed'), 'true');
+  assert.equal(pill(0, 0).classList.contains('loud'), false);
   pill(0, 0).dispatch('click');
 
   const event = pill(0, 0).dispatch('keydown', { key: 'ArrowRight' });

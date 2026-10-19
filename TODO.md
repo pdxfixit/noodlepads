@@ -58,7 +58,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **Pills select and drag like standard objects** (Ben, 2026-10-19: "pills should be selectable and draggable, like standard objects (ctrl, shift, etc). pills in an active state can be selected, and their spacing between each other is preserved (but at the moment, inactive pills cannot be selected)"). Ben's answers: with a mouse a click on a lit pill selects it (Delete/Backspace or a double-click turns it off; a click on an unlit pill lights it); Ctrl/Cmd and Shift select; a drag moves the selection along its own rows, spacing kept; a hold is the only loud hit (Shift-click loses it); ⇆ Move stays, for touch.
 
 
 
