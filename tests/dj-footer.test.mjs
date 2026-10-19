@@ -16,6 +16,6 @@ test('Edit keys comes last under the DJ keys, after Click track and Overlap', ()
   assert.ok(at('dj-legend') >= 0 && at('dj-click') >= 0 && at('dj-change') >= 0);
   assert.ok(at('dj-legend') < at('dj-click'), 'the colors, then Click track');
   assert.ok(at('dj-click-tempo') < at('dj-overlap'), 'Click track and its tempo, then Overlap');
-  assert.ok(at('dj-overlap') < at('dj-change'), 'Overlap, then Edit keys');
-  assert.equal(tail.slice(at('dj-change')).match(/<button/g), null, 'nothing after Edit keys');
+  assert.ok(at('dj-overlap') < at('dj-change'), 'Overlap, then ✏️ Layout');
+  assert.equal(tail.slice(at('dj-change')).match(/<button/g), null, 'nothing after ✏️ Layout');
 });

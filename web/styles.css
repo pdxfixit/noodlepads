@@ -2612,12 +2612,6 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 .dj-keys.pads-mode[data-size="l"] .dj-name { font-size: 0.95rem; }
 .dj-tabs[hidden], .dj-size[hidden] { display: none; }
 .dj-size button { min-width: 44px; }
-/* ⌨️ / 👆 (ADR 0029): its own short line, at the right, above the keys or
-   tiles. While the keys show letters, Q / D hang under it as its second row,
-   the same width, so the two read as one switch. */
-.dj-input { display: grid; justify-content: end; margin: 0 0 10px; }
-.dj-input > .seq-barsel button { flex: 1 1 0; }
-.dj-input-switch button { min-width: 56px; font-size: 1.3rem; }
 .dj-layout-switch[hidden] { display: none; }
 .dj-layout-switch button { padding: 0 8px; }
 /* Each letter on a little keycap: a deeper bottom edge, like a real key. */
@@ -2677,19 +2671,11 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 
 /* A legend for the key colors, like the periodic table's. */
 .dj-change-row { grid-area: change; display: flex; justify-content: flex-end; }
-/* On Beats with ⌨️ Keys, ✏️ Edit keys sits on the control bar after 🎚️ (and
+/* On Beats with ⌨️ Keys, ✏️ Layout sits on the control bar after 🎚️ (and
    in the slim bar once scrolled), so the keys' foot has none (Ben, 2026-10-19:
    "if it's in the sticky bar, the footer one isn't needed"). 🎤 Live keeps it. */
 body.keys-on .dj-change-row { display: none; }
-/* Beats' ✏️⌨️ holds ⌨️ / 👆 too, in its menu (Ben, 2026-10-19: "collapse the
-   kbd/touch selector into the same button set"): the switch by the keys goes,
-   and the menu's items are buttons never shown (overflow.js taps them). */
-body.keys-on .dj-input { display: none; }
-/* A phone has no keyboard to play: tiles only, no switch, on 🎤 Live too (Ben, 2026-10-19). */
-@media (max-width: 699px) { .dj-input { display: none; } }
-.input-menu { display: contents; }
-.input-menu > button:not(.edit-keys-open) { display: none; }
-.edit-keys-open { width: auto; padding: 0 8px; font-size: 1.2rem; white-space: nowrap; }
+.edit-keys-open { width: auto; padding: 0 10px; font: 800 1rem/1 var(--font-ui); white-space: nowrap; }
 /* After 🎚️ from 601 px; on a phone the bars' line is full, so after ⏲️. */
 #dj-change-tempo { display: none; }
 @media (max-width: 600px) {
@@ -2707,14 +2693,14 @@ body.keys-on .dj-input { display: none; }
   body.keys-on .dj-bar .beat-more, body.keys-on .dj-bar > .beat-shape { gap: 6px; }
 }
 /* Under the keys, one line: the key colors at the
-   left; ⏲️ Click track, 🔔 Overlap and ✏️ Edit keys in the corner, Edit keys
+   left; ⏲️ Click track, 🔔 Overlap and ✏️ Layout in the corner, ✏️ Layout
    last (Ben, 2026-10-12). The click's tempo opens to the left of Click track,
    in room kept for it, so no button moves when the click turns on. */
 .dj-tail { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "legend click overlap change"; align-items: center; gap: 16px 12px; margin-top: 16px; }
 .dj-tail #dj-overlap { grid-area: overlap; }
 #dj-overlap[hidden] { display: none; }
 .dj-end { display: contents; }
-/* S M L and Q / D: in ✏️ Edit keys, over the keys (Ben, 2026-10-19). */
+/* S M L and Q / D: in ✏️ Layout (⌨️ Keys), over the keys (Ben, 2026-10-19). */
 .ke-look { display: flex; flex-wrap: wrap; gap: 12px; }
 .ke-look:has(> :not([hidden])) { margin-bottom: 10px; }
 .dj-legend { grid-area: legend; }
@@ -3424,8 +3410,8 @@ body.head-slim.screen-pads .title-tools { left: calc(max(var(--gutter), (100% - 
   body.head-slim.screen-pads .edit-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   body.head-slim.screen-pads .pads-bar .pads-edit { min-width: 48px; padding: 0 10px; }
 }
-/* 🥁 Beats with ⌨️ Keys, and 🎤 Live: scrolled, ✏️ Edit keys (✏️ Edit
-   layout with 👆) rides at the right of the slim bar, as Edit sounds does on
+/* 🥁 Beats with ⌨️ Keys, and 🎤 Live: scrolled, ✏️ Layout rides at the
+   right of the slim bar, as Edit sounds does on
    Pads, so it is in reach while the rows and keys scroll (Ben, 2026-10-18).
    It is a twin of the one at the foot of the keys, which stays. Every width,
    just ✏️ in the slim bar (Ben, 2026-10-19: "icon only immediately when
@@ -3700,12 +3686,12 @@ body.editing .pads .pad-cell .pad-emoji { margin-left: 26px; }
 .roll-inst[hidden] { display: none; }
 .roll-inst .inst-pick { max-width: 100%; }
 .roll-inst-list[hidden] { display: none; }
-/* ✏️ Edit keys, above an open Notes, Chords or Bass group's sounds. */
+/* ✏️ Layout (⌨️ Keys), above an open Notes, Chords or Bass group's sounds. */
 .ke-inst { display: grid; gap: 8px; justify-items: start; }
 .ke-inst[hidden] { display: none; }
 .ke-inst .inst-list { justify-self: stretch; }
 .ke-inst .inst-pick, .te-band-inst .inst-pick { max-width: 100%; }
-/* A 👆 band of Notes, Chords or Bass in ✏️ Edit layout, under its name. */
+/* A 👆 band of Notes, Chords or Bass in ✏️ Layout (👆 Pads), under its name. */
 .te-band-inst { display: flex; }
 
 /* An instrument's note keeps its fruit, weather or animal; a small picture
@@ -3823,7 +3809,7 @@ body.choosing .page-foot { margin-bottom: 180px; }
   body:not(.editing) .pad-cell:is(:hover, :focus-within) > .pad-hover { display: flex; }
 }
 
-/* ── DJ ✏️ Edit keys (Ben, 2026-10-11: layouts above the keyboard, sounds
+/* ── DJ ✏️ Layout (⌨️ Keys) (Ben, 2026-10-11: layouts above the keyboard, sounds
    below, "individual and grouped") ──
    A focused view over the whole screen, dark like the DJ panel: Layouts,
    the 40 keys, then Sounds. From 1400 px the sounds sit beside the keys. */
@@ -3850,6 +3836,12 @@ dialog#keys-edit::backdrop, dialog#touch-edit::backdrop { background: var(--bed)
 .ke-head { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -12px calc(-1 * var(--gutter)) 0; padding: 12px var(--gutter) 10px; background: var(--bed); box-shadow: 0 2px 0 rgb(255 255 255 / 0.08); }
 .ke-head h2 { margin: 0; font: 900 1.6rem/1.05 var(--font-display); font-stretch: 80%; }
 .ke-done { flex: none; padding: 0 16px; }
+/* ⌨️ Keys | 👆 Pads (ADR 0029), what plays, in ✏️ Layout's title line: both
+   its views have it, so a tap on the other swaps the view (Ben, 2026-10-19).
+   None on a phone, which has only pads (dj.js hides it). */
+.ke-input { flex: none; margin-right: auto; }
+.ke-input[hidden] { display: none; }
+.ke-input button { padding: 0 12px; white-space: nowrap; }
 .ke-main { display: grid; gap: 16px; min-width: 0; }
 .ke-title { margin: 0 0 8px; font: 800 0.8rem/1 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: rgb(255 255 255 / 0.8); }
 
@@ -3966,8 +3958,8 @@ dialog#keys-edit::backdrop, dialog#touch-edit::backdrop { background: var(--bed)
   .ke-sounds { position: sticky; top: 76px; max-height: calc(100dvh - 96px); overflow: auto; }
 }
 
-/* ── ✏️ Edit layout (ADR 0029): the 👆 touch layout's own view, built like
-   ✏️ Edit keys: Layouts, then the groups top to bottom, each with ⠿ to move
+/* ── ✏️ Layout (👆 Pads) (ADR 0029): the 👆 touch layout's own view, built like
+   ✏️ Layout (⌨️ Keys): Layouts, then the groups top to bottom, each with ⠿ to move
    it, its name, S M L and ✕, its tiles (tap one to swap it or take it out)
    and + more; then + Add a group. From 1400 px the groups sit at the left,
    Layouts and + Add a group beside them. ── */

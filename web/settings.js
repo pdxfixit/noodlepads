@@ -78,7 +78,7 @@ export const SETTINGS = {
   // (firsts.js): three over two visits offer Advanced once (nudge.js).
   reaches: { default: '', clean: cleanReaches, scope: 'person', quiet: true },
   // The keyboard the DJ keys' letters follow (dj.js, rhythm.js): the Q / D
-  // keycaps under ⌨️ / 👆. The device's own keyboard, so it stays with the
+  // keycaps in ✏️ Layout. The device's own keyboard, so it stays with the
   // device (Ben, Q17); a person's from when it travelled is ignored, and
   // dropped when their settings are next saved. Kept in localStorage
   // `dj-layout` before it was a setting; that is read once as the device's

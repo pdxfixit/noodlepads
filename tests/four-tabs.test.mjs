@@ -57,7 +57,7 @@ test('each tab shows its screen and lights itself; Live is the keys with takes a
   assert.equal($('#dj-beatbar').hidden, true, 'no beat bar on Live');
   assert.equal($('#dj-takes-open').hidden, false, '🎬 Takes');
   assert.equal($('#dj-click').hidden, false, '⏲️ Click track in the footer');
-  assert.ok($('.dj-end').contains($('#dj-click')) && $('.dj-end').contains($('#dj-change')), 'beside ✏️ Edit keys');
+  assert.ok($('.dj-end').contains($('#dj-click')) && $('.dj-end').contains($('#dj-change')), 'beside ✏️ Layout');
   assert.match($('#screen-hint').textContent, /^(Tap|Click) a key/);
   $('#pads-tab').dispatch('click');
   assert.deepEqual(shown(), ['#pads']);

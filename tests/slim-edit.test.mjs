@@ -1,11 +1,11 @@
-// ✏️ Edit keys in the slim bar (Ben, 2026-10-18): on 🥁 Beats with ⌨️ Keys
-// on and on 🎤 Live, scrolled, a twin of the ✏️ at the foot of the keys rides
-// at the right of the slim bar, as ✏️ Edit sounds does on Pads. It says Edit
-// keys or Edit layout with the one at the foot and opens the same view. Under
-// it, Beats with ⌨️ Keys keeps its control bar stuck while the keys scroll, as
-// with Keys off. Where they sit is checked with `just look keys-on --scroll
-// 700 --wide` and `just look live --scroll 700 --wide`; this checks the
-// wiring, and the styles as text.
+// ✏️ Layout in the slim bar (Ben, 2026-10-18): on 🥁 Beats with ⌨️ Keys on
+// and on 🎤 Live, scrolled, a twin of the ✏️ at the foot of the keys rides at
+// the right of the slim bar, as ✏️ Edit sounds does on Pads. ✏️ Layout opens
+// the editor at once everywhere, and its top line picks ⌨️ Keys or 👆 Pads
+// (Ben, 2026-10-19). Under it, Beats with ⌨️ Keys keeps its control bar stuck
+// while the keys scroll, as with Keys off. Where they sit is checked with
+// `just look keys-on --scroll 700 --wide` and `just look live --scroll 700
+// --wide`; this checks the wiring, and the styles as text.
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -30,12 +30,12 @@ before(async () => {
 });
 after(() => keysOff(page));
 
-const word = () => $('#dj-change-top').querySelector('.edit-more').textContent;
+const pressed = (sw) => $(sw).querySelectorAll('[data-input]').filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.input);
 
-test('the slim bar holds ✏️ Edit keys, shown only on Beats with ⌨️ Keys on and on 🎤 Live once scrolled', () => {
+test('the slim bar holds ✏️ Layout, shown only on Beats with ⌨️ Keys on and on 🎤 Live once scrolled', () => {
   const header = html.slice(html.indexOf('<header class="top">'), html.indexOf('</header>'));
-  assert.match(header, /<button type="button" class="slim-edit" id="dj-change-top">✏️ Edit<span class="edit-more"> keys<\/span><\/button>/,
-    'its text is the foot one\'s, so its name and tooltip are too');
+  assert.match(header, /<button type="button" class="slim-edit" id="dj-change-top" aria-label="✏️ Layout: how the keys or pads are laid out">✏️<span class="edit-more"> Layout<\/span><\/button>/,
+    'its name and tooltip are the foot one\'s');
   assert.match(css, /\.slim-edit \{ display: none; \}/, 'hidden everywhere else (Pads, Song, Keys off, the top of the screen)');
   assert.match(css, /body\.head-slim:is\(\.keys-on, \.screen-live\) \.slim-edit \{[^}]*position: fixed;[^}]*right: max\(var\(--gutter\)[^}]*display: block;[^}]*height: 44px;/,
     'on Beats with ⌨️ Keys and on 🎤 Live');
@@ -44,40 +44,25 @@ test('the slim bar holds ✏️ Edit keys, shown only on Beats with ⌨️ Keys 
   assert.match(css, /body\.head-slim:is\(\.keys-on, \.screen-live\) \.slim-edit::before \{ content: "✏️";/);
 });
 
-test('with ⌨️ Keys on, the slim bar\'s ✏️ opens ✏️ Edit keys, and with 👆 ✏️ Edit layout, as the foot\'s does', () => {
+test('with ⌨️ Keys on, ✏️ Layout (the bar\'s, the slim bar\'s) opens the keys\' view with ⌨️ Keys and the bands\' with 👆 Pads', () => {
   keysOn(page);
   assert.ok(document.body.classList.contains('keys-on'));
-  $('#dj-input').querySelector('[data-input="keys"]').dispatch('click');
-  assert.equal($('#dj-change').textContent, '✏️ Edit keys');
-  assert.equal(word(), ' keys');
+  $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');
+  assert.equal($('#dj-change').textContent, '✏️ Layout');
   $('#dj-change-top').dispatch('click');
   assert.equal($('#keys-edit').open, true, 'the keys\' own view');
   assert.equal($('#touch-edit').open, false);
   $('#keys-edit').close();
-  // Beats' control bar has it too, after 🎚️, and the keys' foot has none (Ben,
-  // 2026-10-19). It opens a menu: ⌨️ Keys · 👆 Tiles · ✏️ Edit keys, so the
-  // ⌨️ / 👆 switch by the keys goes on Beats.
-  assert.equal($('#dj-change-bar').textContent, '✏️⌨️');
-  assert.equal($('#dj-change-bar').getAttribute('aria-label'), '⌨️ Keys or 👆 Tiles, and ✏️ Edit layout');
+  // Beats' control bar has it too, after 🎚️, and the keys' foot has none:
+  // one tap, the editor, no menu (Ben, 2026-10-19).
+  assert.equal($('#dj-change-bar').textContent, '✏️ Layout');
+  assert.equal($('#dj-change-bar').hasAttribute('aria-haspopup'), false);
   $('#dj-change-bar').dispatch('click');
-  assert.equal($('#keys-edit').open, false, 'a menu first, not the editor');
-  const pop = () => document.querySelector('.more-pop');
-  const items = () => pop().querySelectorAll('[data-more-item]').map((b) => b.textContent);
-  assert.equal(pop().hidden, false);
-  assert.deepEqual(items(), ['⌨️ Keys', '👆 Tiles', '✏️ Edit layout']);
-  assert.equal(pop().querySelectorAll('[data-more-item]')[0].getAttribute('aria-checked'), 'true', '⌨️ Keys is the one on');
-  pop().querySelectorAll('[data-more-item]')[2].dispatch('click');
-  assert.equal($('#keys-edit').open, true, '✏️ Edit layout opens the keys\' editor');
-  assert.equal(pop().hidden, true, 'and the menu closes');
+  assert.equal($('#keys-edit').open, true, 'the editor at once');
+  assert.equal(document.querySelector('.more-pop')?.hidden ?? true, true, 'no menu');
   $('#keys-edit').close();
-  assert.match(css, /body\.keys-on \.dj-input \{ display: none; \}/, 'the switch by the keys goes on Beats');
-  // 👆 Tiles from the menu: what the switch did.
-  $('#dj-change-bar').dispatch('click');
-  pop().querySelectorAll('[data-more-item]')[1].dispatch('click');
-  assert.equal($('#dj-input').querySelector('[data-input="touch"]').getAttribute('aria-pressed'), 'true');
-  assert.equal($('#dj-change-bar').textContent, '✏️👆');
-  assert.equal(pop().hidden, true);
-  $('#dj-input').querySelector('[data-input="keys"]').dispatch('click');
+  assert.equal(document.querySelector('[data-pick-input], [data-pick-edit], .input-menu'), null, 'the old menu is gone');
+  assert.equal(document.querySelector('#dj-input'), null, 'and the switch by the keys: it lives in ✏️ Layout');
   assert.match(css, /body\.keys-on \.dj-change-row \{ display: none; \}/, 'no ✏️ at the keys\' foot on Beats; 🎤 Live keeps its own');
   assert.match(css, /@media \(max-width: 600px\) \{\n  #dj-change-bar \{ display: none; \}\n  body\.keys-on #dj-change-tempo \{ display: block; \}/, 'on a phone after ⏲️: the bars\' line is full');
   // A grid on a phone (Ben, 2026-10-19): ⏲️ over 🎚️ and ✏️ over ⇆, each 48 px, the same gaps, both lines right-aligned.
@@ -85,34 +70,63 @@ test('with ⌨️ Keys on, the slim bar\'s ✏️ opens ✏️ Edit keys, and wi
   assert.match(css, /body\.keys-on \.dj-bar > \.beat-shape \{ gap: 8px; \}\n  body\.keys-on \.dj-bar > \.beat-shape \.mixer-open \{ margin-left: auto; \}/);
   assert.match(css, /body\.keys-on \.dj-bar \.beat-more, body\.keys-on \.dj-bar > \.beat-shape \{ gap: 6px; \}/, 'both lines alike on the narrowest');
 
-  $('#dj-input').querySelector('[data-input="touch"]').dispatch('click');
-  assert.equal($('#dj-change').textContent, '✏️ Edit layout');
-  assert.equal(word(), ' layout', 'kept in step with the foot\'s');
-  assert.equal($('#dj-change-bar').textContent, '✏️👆');
-  assert.equal($('#dj-change-bar').getAttribute('aria-label'), '⌨️ Keys or 👆 Tiles, and ✏️ Edit layout');
-  assert.equal($('#dj-change-tempo').textContent, '✏️👆', 'its phone twin, after ⏲️, too');
+  $('#ke-input').querySelector('[data-input="touch"]').dispatch('click');
+  assert.equal($('#dj-change').textContent, '✏️ Layout', 'one name, whichever plays');
+  assert.equal($('#dj-change-bar').textContent, '✏️ Layout');
   $('#dj-change-top').dispatch('click');
   assert.equal($('#touch-edit').open, true, 'the touch layout\'s own view');
   assert.equal($('#keys-edit').open, false);
   $('#touch-edit').close();
-  $('#dj-input').querySelector('[data-input="keys"]').dispatch('click');
+  $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');
 });
 
-test('on 🎤 Live the slim bar\'s ✏️ opens ✏️ Edit keys or ✏️ Edit layout too, kept in step with the foot\'s', () => {
+// Ben, 2026-10-19: "the edit keys should take the keys/pads toggle into it,
+// and be renamed … Layout". Both views carry ⌨️ Keys | 👆 Pads in their title
+// line; the other one swaps the view, and what plays, at once.
+test('✏️ Layout\'s ⌨️ Keys | 👆 Pads picks what plays, and swaps the view open for the other one\'s', () => {
+  keysOn(page);
+  for (const id of ['#ke-input', '#te-input']) {
+    const sw = $(id);
+    assert.ok(sw.closest('.ke-head'), `${id} is in its view's title line`);
+    assert.deepEqual(sw.querySelectorAll('[data-input]').map((b) => b.textContent), ['⌨️ Keys', '👆 Pads']);
+  }
+  assert.equal($('#keys-edit-title').textContent, '✏️ Layout');
+  assert.equal($('#touch-edit-title').textContent, '✏️ Layout');
+  $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');
+  $('#dj-change-bar').dispatch('click');
+  assert.equal($('#keys-edit').open, true);
+  assert.equal($('#ke-input').hidden, false, 'shown from 700 px');
+  assert.deepEqual(pressed('#ke-input'), ['keys']);
+
+  $('#ke-input').querySelector('[data-input="touch"]').dispatch('click');
+  assert.equal($('#keys-edit').open, false, 'the keys\' view closes');
+  assert.equal($('#touch-edit').open, true, 'the bands\' opens in its place');
+  assert.deepEqual(pressed('#te-input'), ['touch']);
+  assert.deepEqual(pressed('#ke-input'), ['touch'], 'both switches say the same');
+  assert.equal($('#dj-touch').hidden, false, 'and the pads play behind it');
+  assert.equal($('#dj-keys').hidden, true);
+
+  $('#te-input').querySelector('[data-input="touch"]').dispatch('click');
+  assert.equal($('#touch-edit').open, true, 'the one already on changes nothing');
+  $('#te-input').querySelector('[data-input="keys"]').dispatch('click');
+  assert.equal($('#touch-edit').open, false);
+  assert.equal($('#keys-edit').open, true, 'and back');
+  assert.equal($('#dj-keys').hidden, false);
+  $('#keys-edit').close();
+});
+
+test('on 🎤 Live ✏️ Layout (by the keys, the slim bar\'s) opens the keys\' or the bands\' view too', () => {
   $('#live-tab').dispatch('click');
   assert.ok(document.body.classList.contains('screen-live'), 'the class its style keys on');
   assert.equal(document.body.classList.contains('keys-on'), false, 'Live is not Beats with ⌨️ Keys');
-  $('#dj-input').querySelector('[data-input="touch"]').dispatch('click');
-  assert.equal($('#dj-change').textContent, '✏️ Edit layout');
-  assert.equal(word(), ' layout');
+  $('#ke-input').querySelector('[data-input="touch"]').dispatch('click');
+  assert.equal($('#dj-change').textContent, '✏️ Layout');
   $('#dj-change-top').dispatch('click');
   assert.equal($('#touch-edit').open, true, 'the touch layout\'s own view');
   $('#touch-edit').close();
 
-  $('#dj-input').querySelector('[data-input="keys"]').dispatch('click');
-  assert.equal($('#dj-change').textContent, '✏️ Edit keys');
-  assert.equal(word(), ' keys');
-  $('#dj-change-top').dispatch('click');
+  $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');
+  $('#dj-change').dispatch('click');
   assert.equal($('#keys-edit').open, true, 'the keys\' own view');
   assert.equal($('#touch-edit').open, false);
   $('#keys-edit').close();
@@ -146,35 +160,33 @@ test('on a phone the Keys control bar\'s lines are ▶ Play · ● Record, then 
   assert.doesNotMatch(phone, /sticky/, 'no line sticks on its own: the bar does, at every width');
 });
 
-// A phone has no keyboard to play (Ben, 2026-10-19): under 700 px the tiles
-// always show, the ⌨️ / 👆 switch goes (🎤 Live too), and Beats' button is
-// just ✏️, which opens ✏️ Edit layout at once, no menu.
-test('on a phone: tiles only, and the bar\'s ✏️ edits them at once', () => {
+// A phone has no keyboard to play (Ben, 2026-10-19): under 700 px the pads
+// always show, ✏️ Layout has no ⌨️ Keys | 👆 Pads (🎤 Live too), and Beats'
+// button is just ✏️, after ⏲️.
+test('on a phone: pads only, no switch, and the bar\'s ✏️ edits them at once', () => {
   const wide = globalThis.matchMedia;
   globalThis.matchMedia = (q) => ({ matches: q.includes('max-width: 699px'), addEventListener() {} });
   try {
     keysOn(page);
-    $('#dj-input').querySelector('[data-input="keys"]').dispatch('click');   // a pick made on a computer
-    assert.equal($('#dj-input').querySelector('[data-input="touch"]').getAttribute('aria-pressed'), 'true', 'tiles, whatever was picked');
-    assert.equal($('#dj-change').textContent, '✏️ Edit layout');
+    $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');   // a pick made on a computer
+    assert.equal($('#ke-input').querySelector('[data-input="touch"]').getAttribute('aria-pressed'), 'true', 'pads, whatever was picked');
     assert.equal($('#dj-change-tempo').textContent, '✏️');
-    assert.equal($('#dj-change-tempo').getAttribute('aria-label'), '✏️ Edit layout');
-    assert.equal($('#dj-change-tempo').hasAttribute('aria-haspopup'), false);
+    assert.equal($('#dj-change-tempo').getAttribute('aria-label'), '✏️ Layout: how the pads are laid out');
     $('#dj-change-tempo').dispatch('click');
-    assert.equal($('#touch-edit').open, true, 'the tiles\' own view, at once');
-    assert.equal(document.querySelector('.more-pop')?.hidden ?? true, true, 'no menu');
+    assert.equal($('#touch-edit').open, true, 'the pads\' own view, at once');
+    assert.equal($('#te-input').hidden, true, 'no ⌨️ Keys | 👆 Pads');
+    assert.equal($('#ke-input').hidden, true);
     $('#touch-edit').close();
-    assert.match(css, /@media \(max-width: 699px\) \{ \.dj-input \{ display: none; \} \}/);
   } finally {
     globalThis.matchMedia = wide;
-    $('#dj-input').querySelector('[data-input="keys"]').dispatch('click');
+    $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');
     keysOff(page);
   }
 });
 
 // S M L and Q / D are set in ✏️ Edit keys, at every width (Ben, 2026-10-19:
 // "the layout editor is where Q/D can be changed as well as S/M/L").
-test('S M L and Q / D sit in ✏️ Edit keys, over its keys, not by the keys you play', () => {
+test('S M L and Q / D sit in ✏️ Layout\'s keys view, over its keys, not by the keys you play', () => {
   const look = document.querySelector('.ke-look');
   assert.ok(look, 'a line for them');
   assert.ok($('#keys-edit').contains(look), 'in ✏️ Edit keys');

@@ -43,11 +43,10 @@ const names = () => $('#te-bands').querySelectorAll('.te-band-name').map((n) => 
 const chips = () => $('#te-layouts').querySelectorAll('.ke-layout').map((b) => b.textContent);
 const q = (sel) => $('#touch-edit').querySelector(sel);
 
-test('✏️ in the corner says Edit layout with 👆 and opens its own view of the bands', () => {
+test('✏️ Layout in the corner opens, with 👆 Pads, its own view of the bands', () => {
   $('#live-tab').dispatch('click');
-  assert.equal($('#dj-change').textContent, '✏️ Edit keys');
-  $('#dj-input').querySelector('[data-input="touch"]').dispatch('click');
-  assert.equal($('#dj-change').textContent, '✏️ Edit layout');
+  $('#ke-input').querySelector('[data-input="touch"]').dispatch('click');
+  assert.equal($('#dj-change').textContent, '✏️ Layout');
   $('#dj-change').dispatch('click');
   assert.equal($('#touch-edit').open, true);
   assert.equal($('#keys-edit').open, false, 'not the keys\' editor');
@@ -59,14 +58,14 @@ test('✏️ in the corner says Edit layout with 👆 and opens its own view of 
   assert.ok($('#te-add').querySelector('[data-add-group="animals"]'));
 });
 
-test('S M L sets a band\'s tiles; ✕ asks first, then removes, and ↩️ Undo brings it back', () => {
+test('S M L sets a band\'s pads; ✕ asks first, then removes, and ↩️ Undo brings it back', () => {
   const chords = ['pip-chord-c', 'pip-chord-am', 'pip-chord-f', 'pip-chord-g'];   // the band's starters
   q('[data-size="s"][data-band="1"]').dispatch('click');
   assert.equal(touch().bands[1].size, 's', 'saved with the person\'s keys (decks.touch)');
   assert.equal(q('[data-size="s"][data-band="1"]').getAttribute('aria-pressed'), 'true');
   assert.equal(touch().bands[1].sounds.length, 5, 'four chords, and a fifth fills the line of five');
   assert.deepEqual(touch().bands[1].sounds.slice(0, 4), chords);
-  assert.match($('#te-note').textContent, /^🎶 Chords: small tiles\. 1 more sound fills the line\.$/);
+  assert.match($('#te-note').textContent, /^🎶 Chords: small pads\. 1 more sound fills the line\.$/);
   q('[data-size="m"][data-band="1"]').dispatch('click');
   assert.equal(touch().bands[1].sounds.length, 5, 'bigger tiles keep every sound, wrapping');
   q('[data-remove="2"]').dispatch('click');

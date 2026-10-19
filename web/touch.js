@@ -147,7 +147,7 @@ export function defaultTouch(sounds) {
 const copy = (t) => ({ bands: (t?.bands ?? []).map((b) => ({ ...b, sounds: [...b.sounds] })) });
 const at = (t, i) => (Number.isInteger(i) && i >= 0 && i < (t?.bands?.length ?? 0) ? i : -1);
 
-// ── Changing a layout (✏️ Edit layout) ──
+// ── Changing a layout (✏️ Layout (👆 Pads)) ──
 
 // A new band at the bottom; a full layout (MAX_BANDS) stays as it is.
 export function addBand(t, band) {

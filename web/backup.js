@@ -3,7 +3,7 @@
 //
 //   backup.json     {app: 'noodlepads', format: '1.1', exported, version, people, clips, overrides,
 //                    orders, patterns, beats, settings, decks, takes, songs, songbook, prefs, layouts, voices, touchLayouts}; each clip names its audio file.
-//                    `layouts` (since the DJ's ✏️ Edit keys) is each person's saved key layouts; an older 1.x copy skips it.
+//                    `layouts` (since the DJ's key editor) is each person's saved key layouts; an older 1.x copy skips it.
 //                    `touchLayouts` (since 👆 touch layouts, ADR 0029) is each person's saved touch layouts; an older 1.x copy skips it.
 //                    `voices` (since ⭐ Save voice) is each person's own voices, knob settings with a name; an older 1.x copy skips it.
 //                    `songs` holds each person's open song, `songbook` every saved song.

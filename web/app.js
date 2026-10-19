@@ -214,8 +214,8 @@ const SCREEN_HINTS = {
     beats: 'Tap a pill to turn it on or off; hold it for a loud hit. ▶ Play to hear it.',
     keys: 'Tap a key: its sound gets a row. ● Record and play along to fill the beat.',
     live: 'Tap a key to play it. Hold one to keep it going. Tap ⏲️ in time to set the speed.',
-    'tiles-keys': 'Tap a tile: its sound gets a row. ● Record and play along to fill the beat.',
-    'tiles-live': 'Tap a tile to play it. Hold one to keep it going. Tap ⏲️ in time to set the speed.',
+    'tiles-keys': 'Tap a pad: its sound gets a row. ● Record and play along to fill the beat.',
+    'tiles-live': 'Tap a pad to play it. Hold one to keep it going. Tap ⏲️ in time to set the speed.',
     song: 'Pick a beat, then tap a spot on a lane. Tap a block to repeat it or take it off.',
     editing: 'Editing: ✏️ changes a sound, 🗑️ deletes it. Tap sounds to select them, then act on them all. Hold and drag one to move it. ✅ Done to play.',
   },
@@ -224,8 +224,8 @@ const SCREEN_HINTS = {
     beats: 'Click an empty pill to light it; click lit ones to pick them, then drag. Hold one for a loud hit. ▶ Play to hear it.',
     keys: 'Click a key or press it: its sound gets a row. ● Record and play along to fill the beat.',
     live: 'Click a key, or press it on the keyboard. Hold one or Shift-click it to keep it going. Click ⏲️ in time to set the speed.',
-    'tiles-keys': 'Click a tile: its sound gets a row. ● Record and play along to fill the beat.',
-    'tiles-live': 'Click a tile to play it. Hold one or Shift-click it to keep it going. Click ⏲️ in time to set the speed.',
+    'tiles-keys': 'Click a pad: its sound gets a row. ● Record and play along to fill the beat.',
+    'tiles-live': 'Click a pad to play it. Hold one or Shift-click it to keep it going. Click ⏲️ in time to set the speed.',
     song: 'Click a beat, then a spot on a lane. Click a block to repeat it or take it off.',
     editing: 'Editing: ✏️ changes a sound, 🗑️ deletes it. Click sounds to select them, then act on them all. Drag one, or Alt+← →, to move it. ✅ Done to play.',
   },
@@ -841,7 +841,7 @@ async function start() {
   // Pads that loop while a beat plays start on its bars and keep its time.
   audio.grid = () => seq.grid();
   dj = createDJ({
-    el: { keys: $('#dj-keys'), touch: $('#dj-touch'), input: $('#dj-input'), tabs: $('#dj-tabs'), layout: $('#dj-layout-keys'), legend: $('#dj-legend'), panel: $('#dj'),
+    el: { keys: $('#dj-keys'), touch: $('#dj-touch'), inputs: [$('#ke-input'), $('#te-input')], tabs: $('#dj-tabs'), layout: $('#dj-layout-keys'), legend: $('#dj-legend'), panel: $('#dj'),
       change: $('#dj-change'), changeTop: $('#dj-change-top'), changeBars: [$('#dj-change-bar'), $('#dj-change-tempo')],
       keysEdit: { dialog: $('#keys-edit'), layouts: $('#ke-layouts'), saveLine: $('#ke-save-line'), saveName: $('#ke-save-name'), saveOk: $('#ke-save-ok'), saveCancel: $('#ke-save-cancel'),
         ownLine: $('#ke-own-line'), rename: $('#ke-rename'), remove: $('#ke-delete'), keys: $('#ke-keys'), note: $('#ke-note'), undo: $('#ke-undo'), reset: $('#ke-reset'),
@@ -889,7 +889,7 @@ async function start() {
         state.takes = state.takes.filter((t) => t.id !== id);
         db.remove('takes', id).catch((err) => console.error('Deleting a take failed:', err));
       },
-      // Saved key layouts (✏️ Edit keys, ADR 0013).
+      // Saved key layouts (✏️ Layout with ⌨️ Keys, ADR 0013).
       layouts: (pid) => state.layouts.filter((l) => l.personId === pid),
       saveLayout: (layout) => {
         state.layouts = [...state.layouts.filter((l) => l.id !== layout.id), layout];
@@ -899,7 +899,7 @@ async function start() {
         state.layouts = state.layouts.filter((l) => l.id !== id);
         db.remove('layouts', id).catch((err) => console.error('Deleting a key layout failed:', err));
       },
-      // Saved 👆 touch layouts (✏️ Edit layout, ADR 0029).
+      // Saved 👆 touch layouts (✏️ Layout with 👆 Pads, ADR 0029).
       touchLayouts: (pid) => state.touchLayouts.filter((l) => l.personId === pid),
       saveTouchLayout: (layout) => {
         state.touchLayouts = [...state.touchLayouts.filter((l) => l.id !== layout.id), layout];
@@ -910,8 +910,8 @@ async function start() {
         db.remove('touchLayouts', id).catch((err) => console.error('Deleting a touch layout failed:', err));
       },
       kitGroups: () => state.manifest.kitGroups ?? [],
-      inputChanged: () => showHint(),   // ⌨️ / 👆: the footer's how-to follows
-      // The kid's own groups of their sounds (groups.js), for the Edit keys picker.
+      inputChanged: () => showHint(),   // ⌨️ Keys | 👆 Pads: the footer's how-to follows
+      // The kid's own groups of their sounds (groups.js), for ✏️ Layout's picker.
       ownGroups: (pid) => groupOwn(clipsFor(pid).filter((c) => !c.kit), state.orders.get(pid)?.groups)
         .filter((g) => g.id !== UNGROUPED),
       // `more`: other fields to set (`mine`, ⭐ My keys); the rest are kept,

@@ -4,10 +4,10 @@
 // picks it and closes the list (open, it fills most of a phone). The pick is
 // the person's setting (instNotes, instChords, instBass), so it goes with
 // them to every device, and every picker shows it: 🔊 Pads, the beat row's
-// sound chooser, ✏️ Edit keys. Nothing already made changes: a beat row,
+// sound chooser, ✏️ Layout's keys. Nothing already made changes: a beat row,
 // key or band keeps the preset it was given. Two pickers also change the
 // thing they sit on, keeping every note: 🎹 the piano roll's (its tune row)
-// and a 👆 band's in ✏️ Edit layout (its tiles).
+// and a 👆 band's in ✏️ Layout (its pads).
 //
 // Draws only; each screen puts the parts in place and handles the taps
 // (`data-inst-pick` on the button, `data-inst` and `data-inst-group` on a
