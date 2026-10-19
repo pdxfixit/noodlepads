@@ -2612,8 +2612,6 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 .dj-input { display: grid; justify-content: end; margin: 0 0 10px; }
 .dj-input > .seq-barsel button { flex: 1 1 0; }
 .dj-input-switch button { min-width: 56px; font-size: 1.3rem; }
-.dj-input:has(> .dj-layout-switch:not([hidden])) > .dj-input-switch { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-.dj-layout-switch { border-top-width: 0; border-radius: 0 0 12px 12px; }
 .dj-layout-switch[hidden] { display: none; }
 .dj-layout-switch button { padding: 0 8px; }
 /* Each letter on a little keycap: a deeper bottom edge, like a real key. */
@@ -2680,9 +2678,9 @@ body.keys-on .dj-change-row { display: none; }
 /* Beats' ✏️⌨️ holds ⌨️ / 👆 too, in its menu (Ben, 2026-10-19: "collapse the
    kbd/touch selector into the same button set"): the switch by the keys goes,
    and the menu's items are buttons never shown (overflow.js taps them). */
-body.keys-on .dj-input-switch { display: none; }
+body.keys-on .dj-input { display: none; }
 /* A phone has no keyboard to play: tiles only, no switch, on 🎤 Live too (Ben, 2026-10-19). */
-@media (max-width: 699px) { .dj-input-switch { display: none; } }
+@media (max-width: 699px) { .dj-input { display: none; } }
 .input-menu { display: contents; }
 .input-menu > button:not(.edit-keys-open) { display: none; }
 .edit-keys-open { width: auto; padding: 0 8px; font-size: 1.2rem; white-space: nowrap; }
@@ -2702,15 +2700,17 @@ body.keys-on .dj-input-switch { display: none; }
 @media (max-width: 359px) {
   body.keys-on .dj-bar .beat-more, body.keys-on .dj-bar > .beat-shape { gap: 6px; }
 }
-/* Under the keys: the pad size, then the last line: the key colors at the
+/* Under the keys, one line: the key colors at the
    left; ⏲️ Click track, 🔔 Overlap and ✏️ Edit keys in the corner, Edit keys
    last (Ben, 2026-10-12). The click's tempo opens to the left of Click track,
    in room kept for it, so no button moves when the click turns on. */
-.dj-tail { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "size size size size" "legend click overlap change"; align-items: center; gap: 16px 12px; margin-top: 16px; }
+.dj-tail { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "legend click overlap change"; align-items: center; gap: 16px 12px; margin-top: 16px; }
 .dj-tail #dj-overlap { grid-area: overlap; }
 #dj-overlap[hidden] { display: none; }
-.dj-foot, .dj-end { display: contents; }
-.dj-size { grid-area: size; justify-self: start; }
+.dj-end { display: contents; }
+/* S M L and Q / D: in ✏️ Edit keys, over the keys (Ben, 2026-10-19). */
+.ke-look { display: flex; flex-wrap: wrap; gap: 12px; }
+.ke-look:has(> :not([hidden])) { margin-bottom: 10px; }
 .dj-legend { grid-area: legend; }
 .dj-clicktrack { grid-area: click; display: flex; flex-direction: row-reverse; align-items: center; gap: 12px; width: min(20rem, 45cqi); min-width: 0; }
 .dj-clicktrack #dj-click { flex: none; }
@@ -2743,7 +2743,6 @@ body.keys-on .dj-input-switch { display: none; }
      line (Edit keys at the right), then the click's tempo under them while on.
      A label too long for its third wraps onto two lines. */
   .dj-tail { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "legend legend legend" "click overlap change" "tempo tempo tempo"; gap: 12px 8px; }
-  .dj-tail:has(> .dj-foot > .dj-size:not([hidden])) { grid-template-areas: "size size size" "legend legend legend" "click overlap change" "tempo tempo tempo"; }
   .dj-tail > .dj-end > .seq-tool, .dj-change-row > .seq-tool, .dj-clicktrack #dj-click { padding: 6px; white-space: normal; line-height: 1.15; }
   .dj-clicktrack { display: contents; }
   .dj-clicktrack #dj-click { grid-area: click; }

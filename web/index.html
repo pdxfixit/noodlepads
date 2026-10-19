@@ -201,10 +201,10 @@
             <button type="button" class="seq-click" id="dj-beat-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never recorded. Tap it three times in time to set the tempo." title="Click track: a tick on every beat to keep time" hidden>⏲️</button>
             <!-- On a phone ✏️⌨️ and its menu sit here, after ⏲️: the bars' line has no room for it (Ben, 2026-10-19). -->
             <span class="input-menu">
-              <button type="button" class="seq-click edit-keys-open" id="dj-change-tempo" data-more="input-tempo" aria-haspopup="menu" aria-expanded="false" aria-label="⌨️ Keys or 👆 Tiles, and ✏️ Edit keys" title="⌨️ Keys · 👆 Tiles · ✏️ Edit keys">✏️⌨️</button>
+              <button type="button" class="seq-click edit-keys-open" id="dj-change-tempo" data-more="input-tempo" aria-haspopup="menu" aria-expanded="false" aria-label="⌨️ Keys or 👆 Tiles, and ✏️ Edit layout" title="⌨️ Keys · 👆 Tiles · ✏️ Edit layout">✏️⌨️</button>
               <button type="button" data-more-word="Keys" data-pick-input="keys" aria-pressed="true" aria-label="⌨️ Keys: laid out like a keyboard">⌨️</button>
               <button type="button" data-more-word="Tiles" data-pick-input="touch" aria-pressed="false" aria-label="👆 Touch: big tiles in groups, no keyboard needed">👆</button>
-              <button type="button" data-more-word="Edit keys" data-pick-edit>✏️</button>
+              <button type="button" data-more-word="Edit layout" data-pick-edit>✏️</button>
             </span>
             <span class="dj-status" id="dj-status" role="status"></span>
             <button type="button" class="seq-tool" id="dj-takes-open">🎬 Takes</button>
@@ -226,12 +226,12 @@
           </div>
           <button type="button" class="seq-click mixer-open" data-mixer aria-label="🎚️ Mixer: each row's loudness, mute, solo and effect" title="Mixer">🎚️</button>
           <!-- ✏️⌨️ (✏️👆 with tiles), after 🎚️ on Beats' bar (Ben, 2026-10-19); on a phone after ⏲️ instead (#dj-change-tempo).
-               A menu (overflow.js): ⌨️ Keys · 👆 Tiles · ✏️ Edit keys, the buttons after it, never shown. 🎤 Live keeps ⌨️ / 👆 and ✏️ Edit keys by the keys. -->
+               A menu (overflow.js): ⌨️ Keys · 👆 Tiles · ✏️ Edit layout, the buttons after it, never shown. 🎤 Live keeps ⌨️ / 👆 and ✏️ Edit keys by the keys. -->
           <span class="input-menu">
-            <button type="button" class="seq-click edit-keys-open" id="dj-change-bar" data-more="input-bar" aria-haspopup="menu" aria-expanded="false" aria-label="⌨️ Keys or 👆 Tiles, and ✏️ Edit keys" title="⌨️ Keys · 👆 Tiles · ✏️ Edit keys">✏️⌨️</button>
+            <button type="button" class="seq-click edit-keys-open" id="dj-change-bar" data-more="input-bar" aria-haspopup="menu" aria-expanded="false" aria-label="⌨️ Keys or 👆 Tiles, and ✏️ Edit layout" title="⌨️ Keys · 👆 Tiles · ✏️ Edit layout">✏️⌨️</button>
             <button type="button" data-more-word="Keys" data-pick-input="keys" aria-pressed="true" aria-label="⌨️ Keys: laid out like a keyboard">⌨️</button>
             <button type="button" data-more-word="Tiles" data-pick-input="touch" aria-pressed="false" aria-label="👆 Touch: big tiles in groups, no keyboard needed">👆</button>
-            <button type="button" data-more-word="Edit keys" data-pick-edit>✏️</button>
+            <button type="button" data-more-word="Edit layout" data-pick-edit>✏️</button>
           </span>
           <button type="button" class="seq-click move-open" data-move-open aria-pressed="false" aria-label="⇆ Move: pick pills and slide them along, the whole beat or a part. The big rows show until ✓ Done." title="⇆ Move: slide pills along">⇆</button>
         </div>
@@ -262,11 +262,6 @@
           <button type="button" data-input="keys" aria-pressed="true" aria-label="⌨️ Keys: laid out like a keyboard" title="⌨️ Keys: laid out like a keyboard">⌨️</button>
           <button type="button" data-input="touch" aria-pressed="false" aria-label="👆 Touch: big tiles in groups, no keyboard needed" title="👆 Touch: big tiles in groups, no keyboard needed">👆</button>
         </div>
-        <!-- Q / D: the keyboard the keys' letters follow, hanging under ⌨️ / 👆 while the keys show letters. -->
-        <div class="seq-barsel dj-layout-switch" id="dj-layout-keys" role="group" aria-label="Keyboard" hidden>
-          <button type="button" data-layout="qwerty" aria-pressed="true" aria-label="QWERTY keyboard" title="QWERTY keyboard: the letters on the keys match yours"><span class="keycap">Q</span></button>
-          <button type="button" data-layout="dvorak" aria-pressed="false" aria-label="Dvorak keyboard" title="Dvorak keyboard: the letters on the keys match yours"><span class="keycap">D</span></button>
-        </div>
       </div>
       <div class="dj-touch" id="dj-touch" aria-label="Touch layout" hidden></div>
       <div class="dj-tabs" id="dj-tabs" role="group" aria-label="Which keys to show">
@@ -277,13 +272,6 @@
       </div>
       <div class="dj-keys" id="dj-keys" role="application" aria-label="Keys"></div>
       <div class="dj-tail">
-        <div class="dj-foot">
-          <div class="dj-size seq-barsel" id="dj-size" role="group" aria-label="Pad size" hidden>
-            <button type="button" data-size="s" aria-pressed="false" aria-label="Small pads">S</button>
-            <button type="button" data-size="m" aria-pressed="true" aria-label="Medium pads">M</button>
-            <button type="button" data-size="l" aria-pressed="false" aria-label="Large pads">L</button>
-          </div>
-        </div>
         <div class="dj-end">
           <ul class="dj-legend" id="dj-legend" aria-label="Key colors"></ul>
           <div class="dj-clicktrack">
@@ -1002,6 +990,20 @@
           </div>
         </section>
         <section class="ke-board" aria-label="The keys">
+          <!-- How the keys look while you play, set here at every width (Ben, 2026-10-19: "the layout
+               editor is where Q/D can be changed as well as S/M/L"): S M L, the pads' size, with no
+               mouse; Q / D, the keyboard the keys' letters follow, while they show letters (dj.js). -->
+          <div class="ke-look">
+            <div class="dj-size seq-barsel" id="dj-size" role="group" aria-label="Pad size" hidden>
+              <button type="button" data-size="s" aria-pressed="false" aria-label="Small pads">S</button>
+              <button type="button" data-size="m" aria-pressed="true" aria-label="Medium pads">M</button>
+              <button type="button" data-size="l" aria-pressed="false" aria-label="Large pads">L</button>
+            </div>
+            <div class="seq-barsel dj-layout-switch" id="dj-layout-keys" role="group" aria-label="Keyboard" hidden>
+              <button type="button" data-layout="qwerty" aria-pressed="true" aria-label="QWERTY keyboard" title="QWERTY keyboard: the letters on the keys match yours"><span class="keycap">Q</span></button>
+              <button type="button" data-layout="dvorak" aria-pressed="false" aria-label="Dvorak keyboard" title="Dvorak keyboard: the letters on the keys match yours"><span class="keycap">D</span></button>
+            </div>
+          </div>
           <div class="ke-keys" id="ke-keys"></div>
           <div class="ke-bar">
             <p class="ke-note" id="ke-note" role="status"></p>
