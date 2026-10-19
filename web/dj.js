@@ -30,6 +30,7 @@ import { makeVoice, fadeStop } from './audio.js';
 import { fingerTaps, isFinger } from './finger.js';
 import { soundsOf, defaultTouch, touchOrder, touchSounds } from './touch.js';
 import { drawBands, createTouchEditor } from './dj-touch.js';
+import { moreMenu } from './overflow.js';
 
 const STOPS = tempoStops();   // the click track slider's positions (see sequencer.js)
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
@@ -109,8 +110,10 @@ export function createDJ({ el, deps }) {
   // everywhere"). Until the kid picks, 👆 on a phone-sized screen.
   const INPUTS = ['keys', 'touch'];
   let input = INPUTS.includes(recall('dj-input')) ? recall('dj-input') : null;
+  let inputMenu = null;        // Beats' ✏️⌨️ menu (overflow.js): ⌨️ Keys · 👆 Tiles · ✏️ Edit
   const narrow = () => globalThis.matchMedia?.('(max-width: 699px)')?.matches === true;
-  const inputNow = () => input ?? (narrow() ? 'touch' : 'keys');
+  // A phone has no keyboard to play: always the tiles there (Ben, 2026-10-19).
+  const inputNow = () => (narrow() ? 'touch' : input ?? 'keys');
   const touching = () => inputNow() === 'touch';
   // The person's touch layout: the one they made, else the default (🎸 Band
   // under their newest sounds), worked out afresh so new sounds show. The
@@ -146,12 +149,18 @@ export function createDJ({ el, deps }) {
     el.change.textContent = touch ? '✏️ Edit layout' : '✏️ Edit keys';
     const more = el.changeTop?.querySelector('.edit-more');
     if (more) more.textContent = touch ? ' layout' : ' keys';
+    // Beats' ✏️⌨️ opens a menu (Ben, 2026-10-19): ⌨️ Keys · 👆 Tiles · the edit.
     for (const b of el.changeBars ?? []) {
       if (!b) continue;
-      b.textContent = touch ? '✏️👆' : '✏️⌨️';
-      b.setAttribute('aria-label', el.change.textContent);
-      b.title = el.change.textContent;
+      // On a phone (tiles only) it is just ✏️, the edit, no menu (Ben, 2026-10-19).
+      b.textContent = narrow() ? '✏️' : touch ? '✏️👆' : '✏️⌨️';
+      b.setAttribute('aria-label', narrow() ? el.change.textContent : `⌨️ Keys or 👆 Tiles, and ${el.change.textContent}`);
+      b.title = narrow() ? el.change.textContent : `⌨️ Keys · 👆 Tiles · ${el.change.textContent}`;
+      if (narrow()) b.removeAttribute('aria-haspopup'); else b.setAttribute('aria-haspopup', 'menu');
+      for (const p of b.parentElement?.querySelectorAll('[data-pick-input]') ?? []) p.setAttribute('aria-pressed', String(p.dataset.pickInput === inputNow()));
+      b.parentElement?.querySelector('[data-pick-edit]')?.setAttribute('data-more-word', touch ? 'Edit layout' : 'Edit keys');
     }
+    inputMenu?.refresh();
     if (touch) drawBands(el.touch, touchNow(), { clipById: deps.clipById, family, kitGroups: () => deps.kitGroups?.() ?? [], isLooping: deps.isLooping });
     for (const b of el.size.querySelectorAll('[data-size]')) b.setAttribute('aria-pressed', String(b.dataset.size === size));
     el.keys.replaceChildren(...KEY_ROWS.map((codes, r) => {
@@ -458,7 +467,19 @@ export function createDJ({ el, deps }) {
   };
   el.change.addEventListener('click', openEditor);
   el.changeTop?.addEventListener('click', openEditor);
-  for (const b of el.changeBars ?? []) b?.addEventListener('click', openEditor);
+  // Beats' ✏️⌨️: its menu's items tap the ⌨️ / 👆 switch (hidden on Beats) or
+  // open the editor, then the menu closes.
+  const bar = el.changeBars?.find(Boolean)?.closest('.dj-bar');
+  inputMenu = bar ? moreMenu(bar) : null;
+  // On a phone a tap edits the tiles at once: stopped before the menu hears it.
+  for (const b of el.changeBars ?? []) b?.addEventListener('click', (e) => { if (!narrow()) return; e.stopPropagation(); openEditor(); });
+  bar?.addEventListener('click', (e) => {
+    const pick = e.target.closest?.('[data-pick-input], [data-pick-edit]');
+    if (!pick) return;
+    inputMenu.close(false);
+    if (pick.hasAttribute('data-pick-edit')) openEditor();
+    else el.input.querySelector(`[data-input="${pick.dataset.pickInput}"]`)?.click();
+  });
   el.tabs.addEventListener('click', (e) => {
     const t = e.target.closest('[data-row]');
     if (!t) return;
@@ -1512,8 +1533,8 @@ export function createDJ({ el, deps }) {
     deps.inputChanged?.();
     deps.announce?.(input === 'touch' ? 'Touch: big tiles in groups.' : 'Keys: laid out like a keyboard.');
   });
-  // A phone turned or a window resized past 700 px: the default follows, until the kid picks.
-  globalThis.matchMedia?.('(max-width: 699px)')?.addEventListener?.('change', () => { if (!input) { render(); if (mode === 'beat') renderGrid(); deps.inputChanged?.(); } });
+  // A phone turned or a window resized past 700 px: tiles under it, the kid's pick (or keys) over it.
+  globalThis.matchMedia?.('(max-width: 699px)')?.addEventListener?.('change', () => { inputMenu?.close(false); render(); if (mode === 'beat') renderGrid(); deps.inputChanged?.(); });
 
   // Tile size on the pads grid: more sounds on screen, or bigger targets.
   el.size.addEventListener('click', (e) => {
