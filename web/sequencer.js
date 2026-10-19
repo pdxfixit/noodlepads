@@ -37,6 +37,7 @@ import { cleanFx, masterLevel, silencedBySolo, mixKey, buildMix, createMixer } f
 import { MELODY_NOTES, cleanNotes, fromLegacy, legacy, startsIn, addNote, lineOf, sameNotes, multiplyNotes } from './notes.js';
 import { createRoll } from './roll.js';
 import { createBeatMove } from './beat-move.js';
+import { edgeScroller } from './edge-scroll.js';
 import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
 
 export const STEPS = 16;         // a bar of 4/4, the simple beat maker
@@ -1861,39 +1862,53 @@ export function createSequencer(deps) {
   }
 
   // Dragging a row by its grip: the row follows the finger, and the others
-  // make room as it passes their middle. The order is saved on release.
-  const rowDrag = { row: null, pointerId: null, grabY: 0 };
+  // make room as it passes their middle. Near the top or bottom of the
+  // screen the page scrolls (edge-scroll.js). The order is saved on release.
+  const rowDrag = { row: null, pointerId: null, grabY: 0, y: 0 };
   const rowEls = () => [...el.rows.children].filter((c) => c.classList.contains('seq-row'));
+  const rowScroll = edgeScroller(() => placeRow(rowDrag.y));
 
   function rowDragDown(e) {
     const grip = e.target.closest('[data-grip]');
     if (!grip || e.button !== 0 || rowDrag.row || move?.on()) return;
     e.preventDefault();
     const row = grip.closest('.seq-row');
-    Object.assign(rowDrag, { row, pointerId: e.pointerId, grabY: e.clientY - row.getBoundingClientRect().top });
+    Object.assign(rowDrag, { row, pointerId: e.pointerId, grabY: e.clientY - row.getBoundingClientRect().top, y: e.clientY });
     grip.setPointerCapture?.(e.pointerId);
     row.classList.add('dragging');
   }
 
   function rowDragMove(e) {
+    if (!rowDrag.row || e.pointerId !== rowDrag.pointerId) return;
+    rowDrag.y = e.clientY;
+    placeRow(e.clientY);
+    rowScroll.at(e.clientY);
+  }
+  // Puts the dragged row where a finger at y says (also as the page scrolls under it).
+  function placeRow(y) {
     const row = rowDrag.row;
-    if (!row || e.pointerId !== rowDrag.pointerId) return;
+    if (!row) return;
     // Its place is after every other row whose middle is above the finger,
     // which also works past the first or last row.
     const others = rowEls().filter((r) => r !== row);
-    const place = others.filter((r) => { const b = r.getBoundingClientRect(); return b.top + b.height / 2 < e.clientY; }).length;
+    const place = others.filter((r) => { const b = r.getBoundingClientRect(); return b.top + b.height / 2 < y; }).length;
     if (rowEls().indexOf(row) !== place) {
       if (place === 0) others[0].insertAdjacentElement('beforebegin', row);
       else others[place - 1].insertAdjacentElement('afterend', row);
     }
+    // It stays inside the rows' box: below it, it would make the page longer,
+    // and the edge scrolling would chase it for ever.
     row.style.translate = '';
-    row.style.translate = `0 ${e.clientY - rowDrag.grabY - row.getBoundingClientRect().top}px`;
+    const b = row.getBoundingClientRect(), box = el.rows.getBoundingClientRect();
+    const top = Math.max(box.top, Math.min(y - rowDrag.grabY, box.bottom - b.height));
+    row.style.translate = `0 ${top - b.top}px`;
   }
 
   function rowDragUp(e) {
     const row = rowDrag.row;
     if (!row || e.pointerId !== rowDrag.pointerId) return;
     rowDrag.row = null;
+    rowScroll.stop();
     row.classList.remove('dragging');
     row.style.translate = '';
     const from = Number(row.dataset.row);
@@ -2426,6 +2441,8 @@ export function createSequencer(deps) {
   window.addEventListener('pointermove', rowDragMove);
   window.addEventListener('pointerup', rowDragUp);
   window.addEventListener('pointercancel', rowDragUp);
+  // A wheel or trackpad scroll mid-drag keeps the row under the pointer too.
+  window.addEventListener('scroll', () => placeRow(rowDrag.y), { passive: true });
   // On a grip, up and down move the row itself.
   el.rows.addEventListener('keydown', (e) => {
     const grip = e.target.closest('[data-grip]');

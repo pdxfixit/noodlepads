@@ -651,11 +651,10 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
   .beat-go .seq-click { width: 44px; font-size: 1.2rem; }
   .beat-go .seq-bpm-num { font-size: 0.9rem; }
 }
-/* Beats keeps ▶ Play and the tempo in reach while its rows scroll (under 900 px):
-   the whole one-line bar sticks; on a phone only its first line does. */
-@media (max-width: 899px) {
-  .seq .beat-deck { position: sticky; top: 0; z-index: 6; }  /* over the playhead and a dragged row */
-}
+/* Beats keeps ▶ Play and the tempo in reach while its rows scroll, at every
+   width (Ben, 2026-10-19: on a computer it scrolled away): the whole bar
+   sticks; on a phone only its first line does. */
+.seq .beat-deck { position: sticky; top: var(--head-h, 0px); z-index: 6; }  /* over the playhead and a dragged row */
 @media (max-width: 600px) {
   .seq .beat-deck { display: contents; }
   .seq .beat-go, .seq .beat-shape { margin-inline: -12px; padding: 10px 12px; background: var(--deck); }
@@ -663,14 +662,12 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
   .seq .beat-shape { padding-top: 0; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 3px solid rgb(255 255 255 / 0.3); }
 }
 /* Beats with ⌨️ Keys does the same while the keys scroll (Ben, 2026-10-18),
-   under the slim bar (--head-h, "The header slims"): the whole bar under
-   900 px; on a phone only its first line, ▶ Play · ● Record (the tempo and ⏲️
+   under the slim bar (--head-h, "The header slims"): the whole bar at every
+   width; on a phone only its first line, ▶ Play · ● Record (the tempo and ⏲️
    are its second line there, the bars its third), so the keys keep the room.
    Over the keys, the beat's rows and their playhead; the count-in's disc
    (z-index 8) stays over it. 🎤 Live's bar (● Record, 🎬 Takes) scrolls. */
-@media (max-width: 899px) {
-  body.keys-on .dj-bar { position: sticky; top: var(--head-h, 0px); z-index: 6; }
-}
+body.keys-on .dj-bar { position: sticky; top: var(--head-h, 0px); z-index: 6; }
 @media (max-width: 600px) {
   body.keys-on .dj-bar, body.keys-on .dj-bar > .beat-go { display: contents; }
   body.keys-on .dj-bar :is(.beat-run, .beat-more), body.keys-on .dj-bar > .beat-shape { display: flex; align-items: center; gap: 8px; margin-inline: -12px; padding: 10px 12px; background: var(--deck); }
@@ -3274,9 +3271,7 @@ body[data-locked] main { visibility: hidden; }
 .title-row { min-height: 44px; }   /* holds the header's height when its buttons ride up */
 .pads-bar { top: var(--head-h, 0px); }
 .pad-group { top: calc(var(--head-h, 0px) + 64px); }
-@media (max-width: 899px) {
-  .seq .beat-deck, .seq .beat-go { top: var(--head-h, 0px); }
-}
+.seq .beat-go { top: var(--head-h, 0px); }
 .to-top { display: none; }
 body.head-slim { --head-h: calc(var(--slim-top) + var(--slim-h)); }
 body.head-slim.screen-pads { --head-h: var(--slim-top); }   /* the Edit sounds band is the bar */
