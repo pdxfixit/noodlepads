@@ -2969,6 +2969,11 @@ dialog.np-dialog .set-buttons .quiet { justify-content: center; }
 .pin-dots span { width: 22px; height: 22px; border: 3px solid var(--ink); border-radius: 50%; }
 .pin-dots span.on { background: var(--ink); }
 .pin-note { text-align: center; }
+/* The pad saying no: a wrong PIN, or two new ones that didn't match. */
+.pin-wrong .pin-note { color: #B3261E; }
+.pin-wrong .pin-dots { animation: pin-shake 360ms ease-out; }
+@keyframes pin-shake { 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
+@media (prefers-reduced-motion: reduce) { .pin-wrong .pin-dots { animation: none; } }
 .pin-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .pin-key {
   min-height: 64px;
