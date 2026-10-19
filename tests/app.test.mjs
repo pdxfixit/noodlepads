@@ -90,11 +90,13 @@ test('the footer\'s date is a button that opens Settings scrolled to About', () 
   const about = $('#about-version');
   assert.equal(about.querySelector('.ver-date').textContent, 'dev copy');
   assert.equal(about.querySelector('[data-about]'), null, 'About itself has no button to About');
-  // Its line also links the privacy policy (Ben, 2026-10-16: "next to the version").
+  // Above it, one row of links, as isopix has (Ben, 2026-10-19: "they should be consistent").
   const line = about.parent;
   assert.equal(line.className, 'set-version');
-  assert.equal(line.children.at(-2).className, 'privacy-link', 'the privacy policy beside it');
-  assert.equal(line.children.at(-1).id, 'feedback-open', 'then Feedback (Ben, 2026-10-19)');
+  assert.equal(line.children.length, 1, 'the version alone on its line');
+  const links = line.parent.querySelector('.about-links');
+  assert.deepEqual(links.children.map((c) => c.className.split(' ')[0] === 'privacy-link' ? 'privacy' : c.id),
+    ['privacy', 'feedback-open', 'welcome-again']);
   assert.equal(line.parent.children.at(-1), line, 'last in About');
   assert.equal(dialog.querySelectorAll('section').at(-1), line.parent, 'and About is the last section');
   dialog.close();

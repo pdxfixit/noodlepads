@@ -133,17 +133,21 @@ function openFeedback() {
   assert.equal($('#feedback-dialog').open, true);
 }
 
-test('Feedback sits on About\'s version line, after the Privacy policy, a button named for screen readers', () => {
-  const line = $('.set-version');
+test('Send feedback is a plain link in About\'s one row (Privacy policy, Send feedback, Show the welcome again), as isopix has', () => {
+  // Ben, 2026-10-19: "one row of links, but allow wrapping on the phone gracefully"; "they should be consistent"
   const button = $('#feedback-open');
-  assert.ok(line.contains(button) && line.contains($('#about-version')));
   assert.equal(button.tagName, 'BUTTON');
   assert.equal(button.getAttribute('type'), 'button');
-  assert.equal(button.textContent, 'Feedback');
+  assert.equal(button.textContent, 'Send feedback');
   assert.equal(button.getAttribute('aria-haspopup'), 'dialog');
   const html = web('index.html');
-  const about = html.match(/<p class="set-version">[\s\S]*?<\/p>/)[0];
-  assert.ok(about.indexOf('Privacy policy') < about.indexOf('id="feedback-open"'));
+  const row = html.match(/<nav class="about-links"[^>]*>([\s\S]*?)<\/nav>\s*(?:<!--[\s\S]*?-->\s*)?<p class="set-version"><span id="about-version"><\/span><\/p>/);
+  assert.ok(row, 'the row, then the version alone');
+  const labels = [...row[1].matchAll(/>([^<]+)<\/(?:a|button)>/g)].map((m) => m[1]);
+  assert.deepEqual(labels, ['Privacy policy', 'Send feedback', 'Show the welcome again']);
+  assert.match(row[1], /id="feedback-open" aria-haspopup="dialog"/);
+  assert.match(row[1], /<button type="button" class="link-btn" id="feedback-open"/, 'a quiet link, not a bordered button');
+  assert.match(web('styles.css'), /\.about-links \{ display: flex; flex-wrap: wrap; justify-content: center;/);
 });
 
 test('Feedback asks the grown-up sum first, on Regular too; a wrong answer says so, stays open and asks another', () => {

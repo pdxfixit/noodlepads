@@ -499,15 +499,12 @@
       <section class="set-section" aria-labelledby="set-about-title">
         <h3 id="set-about-title">About</h3>
         <p class="set-about" id="about-text"></p>
-        <!-- A quiet link, not a button (isopix has the same): 👋 the welcome and the tips, once more (welcome.js). -->
-        <p class="set-again"><button type="button" class="link-btn" id="welcome-again">👋 Show the welcome again</button></p>
-        <!-- The version, as the page footer shows it: always last (settings-ui.js).
-             Feedback beside it (Ben, 2026-10-19) asks the grown-up sum, then opens #feedback-dialog (feedback.js). -->
-        <p class="set-version">
-          <span id="about-version"></span> ·
-          <a class="privacy-link" href="https://privacy.pdxfixit.com/noodlepads/" target="_blank" rel="noopener">Privacy policy</a> ·
-          <button type="button" class="link-btn set-feedback" id="feedback-open" aria-haspopup="dialog">Feedback</button>
-        </p>
+        <!-- One row of quiet links that wraps on a phone, as isopix has (Ben, 2026-10-19: "they should be consistent"):
+             Send feedback asks the grown-up sum, then opens #feedback-dialog (feedback.js); Show the welcome again brings
+             the welcome and the tips back (welcome.js). -->
+        <nav class="about-links" aria-label="More about Noodle Pads"><a class="privacy-link" href="https://privacy.pdxfixit.com/noodlepads/" target="_blank" rel="noopener">Privacy policy</a><button type="button" class="link-btn" id="feedback-open" aria-haspopup="dialog">Send feedback</button><button type="button" class="link-btn" id="welcome-again">Show the welcome again</button></nav>
+        <!-- The version, as the page footer shows it: always last, alone (settings-ui.js). -->
+        <p class="set-version"><span id="about-version"></span></p>
       </section>
     </div>
   </dialog>
