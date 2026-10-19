@@ -3025,20 +3025,9 @@ dialog.np-dialog .set-buttons .quiet { justify-content: center; }
 /* The privacy policy link beside the version in About (the footer has none:
    Ben, 2026-10-19). */
 .privacy-link { color: inherit; text-decoration: underline; white-space: nowrap; }
-/* On one line: the date, then the commit. The " · " keeps its spaces (a
-   flex item trims them). */
-.version .ver-date { order: -1; }
-.version .ver-sha { order: 1; }
-.version .ver-sep { white-space: pre; }
-/* The how-to takes half the width at most, and the date and the commit
-   always sit at its right, both at the top. When the how-to wraps, they
-   stack, line on line: the date's 44 px tap reaches up, the commit's down,
-   so the two lines touch and each still gets a full target (Ben, 2026-10-19). */
+/* The how-to takes half the width at most; the version, at its right, both
+   at the top (Ben, 2026-10-19). */
 .page-foot .screen-hint { max-width: 50%; }
-.page-foot.stacked .version { flex-direction: column; align-items: flex-end; }
-.page-foot.stacked .ver-sep { display: none; }
-.page-foot.stacked .ver-date { margin: -26px -6px 0; padding: 26px 6px 2px; }
-.page-foot.stacked .ver-sha { margin: 0 -6px -26px; padding: 2px 6px 26px; }
 .set-version .privacy-link { display: inline-flex; align-items: center; min-height: 44px; }
 /* The link above the version, centered like it. */
 .set-again { margin: 14px 0 0; text-align: center; }
