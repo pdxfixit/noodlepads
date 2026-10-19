@@ -93,7 +93,8 @@ test('the footer\'s date is a button that opens Settings scrolled to About', () 
   // Its line also links the privacy policy (Ben, 2026-10-16: "next to the version").
   const line = about.parent;
   assert.equal(line.className, 'set-version');
-  assert.equal(line.children.at(-1).className, 'privacy-link', 'the privacy policy beside it');
+  assert.equal(line.children.at(-2).className, 'privacy-link', 'the privacy policy beside it');
+  assert.equal(line.children.at(-1).id, 'feedback-open', 'then Feedback (Ben, 2026-10-19)');
   assert.equal(line.parent.children.at(-1), line, 'last in About');
   assert.equal(dialog.querySelectorAll('section').at(-1), line.parent, 'and About is the last section');
   dialog.close();

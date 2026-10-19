@@ -24,13 +24,13 @@ import { countPlay } from './play-count.js';
 import { fingerTaps, isFinger } from './finger.js';
 import { remember, recall, newId } from './util.js';
 import { soundName } from './names.js';
-import { openDialog, setupDialog } from './dialogs.js';
+import { askSum, closeSum } from './grown-up.js';
 import { scratchOf, scratchId } from './scratch.js';
 import { getSetting, setSetting, onSetting } from './settings.js';
 import { SKINS, nextSkin } from './skins.js';
 import { kidsHint, markSeen } from './tips.js';
 import {
-  makeSum, typeDigit, kidsPadPx, kidsSliderAt, shareOf, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder,
+  kidsPadPx, kidsSliderAt, shareOf, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder,
   KIDS_DRUMS, KIDS_SQUARES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds,
   kidsVoiceFields, voiceAfter, MAX_RECORD_SECONDS, MIN_RECORD_SECONDS, pictureFor, KIDS_KEYS, keyRate, keyPlayId, isHighKey, beatLayout, cleanTab,
   nextKidsInstrument, keyKitId,
@@ -53,7 +53,7 @@ function boing(node) {
   node.classList.add('boing');
   setTimeout(() => node.classList.remove('boing'), 320);
 }
-// A little head shake: that did nothing (a recording too short, a wrong sum).
+// A little head shake: that did nothing (a recording too short).
 function wiggle(node) {
   node.classList.add('wiggle');
   setTimeout(() => node.classList.remove('wiggle'), 420);
@@ -666,34 +666,16 @@ function stopAll() {
   boing(el.stop);
 }
 
-let sum = null;
-let typed = '';
-
-// The ⚙️ gear while Kids shows: a sum for a grown-up. Right opens Settings
-// and the regular app for this visit; wrong goes back to the kid's screens.
+// The ⚙️ gear while Kids shows: a sum for a grown-up (grown-up.js). Right
+// opens Settings and the regular app for this visit; wrong goes back to the
+// kid's screens.
 export function askGrownUp() {
   stopRecording();
-  sum = makeSum();
-  typed = '';
-  el.sumA.textContent = String(sum.a);
-  el.sumB.textContent = String(sum.b);
-  el.sumTyped.textContent = '?';
-  openDialog(el.sum);
-}
-
-function tapDigit(d) {
-  const next = typeDigit(typed, d, sum.answer);
-  typed = next.typed;
-  el.sumTyped.textContent = typed;
-  if (!next.done) return;
-  logEvent('kids', { sum: next.right ? 'right' : 'wrong' });
-  if (next.right) {
-    el.sum.close();
-    deps.grownUp();
-  } else {
-    wiggle(el.sumBox);
-    setTimeout(() => el.sum.close(), 400);
-  }
+  askSum({
+    owner: 'kids',
+    right: () => { logEvent('kids', { sum: 'right' }); deps.grownUp(); },
+    wrong: () => logEvent('kids', { sum: 'wrong' }),
+  });
 }
 
 // ── Showing and hiding ──
@@ -706,7 +688,7 @@ export function showKids(on) {
     stopBeat();
     stopRecording();
     releaseKeys();
-    if (el.sum.open) el.sum.close();
+    closeSum('kids');
     return;
   }
   if (!was) { lastId = null; page = 0; }
@@ -736,7 +718,6 @@ export function initKids(d) {
     mic: q('#kids-mic'), last: q('#kids-last'), voices: document.querySelectorAll('[data-kids-voice]'),
     beat: q('#kids-beat'), play: q('#kids-play'), slow: q('#kids-slow'), fast: q('#kids-fast'),
     keys: q('#kids-keys'), inst: q('#kids-inst'),
-    sum: q('#kids-sum'), sumBox: q('#kids-sum-box'), sumA: q('#kids-sum-a'), sumB: q('#kids-sum-b'), sumTyped: q('#kids-sum-typed'), sumKeys: q('#kids-sum-keys'),
   });
   for (const b of el.tabs) b.addEventListener('click', () => { boing(b); setTab(b.dataset.kidsTab); });
   el.stop.addEventListener('click', stopAll);
@@ -753,9 +734,4 @@ export function initKids(d) {
   wireRecord();
   wireBeat();
   wireKeys();
-  setupDialog(el.sum);
-  el.sumKeys.addEventListener('click', (e) => {
-    const k = e.target.closest?.('[data-digit]');
-    if (k) tapDigit(k.dataset.digit);
-  });
 }

@@ -94,6 +94,29 @@ test('"They are deleted from the cloud after 14 days": the report table keeps 14
   assert.equal(TTL_MS, 14 * 24 * 60 * 60 * 1000);
 });
 
+// Feedback (Ben, 2026-10-19: privacy changes "all approved", kept "90d?"):
+// what the line says, tied to the dialog, the gate and the Worker.
+test('"Feedback is sent only when a grown-up answers a sum and taps Send": always gated, only the text, no name or IP', async () => {
+  const line = claim('Feedback is sent only when');
+  for (const words of ['a grown-up answers a sum', 'taps Send', '⚙️ Settings → About → Feedback', 'only what they typed', "the app's version", 'deleted after 90 days', 'No name or IP address']) {
+    assert.ok(line.includes(words), `the feedback line names: ${words}`);
+  }
+  assert.match(html, /We keep messages for 90 days\./, 'the dialog says the same');
+  const js = readFileSync(new URL('../web/feedback.js', import.meta.url), 'utf8');
+  assert.match(js, /addEventListener\('click', \(\) => askSum\(\{ owner: 'feedback'/, 'every tap asks the sum, at every level');
+  const put = [];
+  const env = { FEEDBACK: { put: async (key, body) => { put.push([key, new TextDecoder().decode(body)]); } }, ASSETS: { fetch: async () => new Response('') } };
+  const res = await worker.fetch(new Request('https://noodlepads.com/api/feedback', {
+    method: 'POST',
+    headers: { Origin: ORIGIN, 'Content-Type': 'text/plain', 'X-Feedback': '7c9e6679-7425-40de-944b-e07fc1f90ae7', 'X-App-Version': 'fd576a9', 'CF-Connecting-IP': '192.0.2.44', 'User-Agent': 'Mozilla/5.0 (iPhone)' },
+    body: 'More cowbell',
+  }), env);
+  assert.equal(res.status, 204);
+  assert.deepEqual(put.map(([, body]) => body), ['More cowbell'], 'only what was typed');
+  assert.match(put[0][0], /^v1\/noodlepads\/\d{4}-\d{2}-\d{2}\/fd576a9-7c9e6679-7425-40de-944b-e07fc1f90ae7\.txt$/, 'named by day, version and a random id');
+  assert.ok(!JSON.stringify(put).includes('192.0.2.44') && !JSON.stringify(put).includes('iPhone'));
+});
+
 test('"To delete a profile": the steps name real buttons, and switching the cloud off deletes the cloud copy', async () => {
   const line = claim('To delete a profile');
   assert.ok(line.includes('☁️ In the cloud') && html.includes('☁️ In the cloud'));

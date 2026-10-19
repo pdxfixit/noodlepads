@@ -410,6 +410,15 @@ const VIEWS = {
     document.querySelector('#set-look').scrollIntoView(); ${nap}` },
   // Settings with every section open, to see them all at once.
   'settings-all': { screen: 'pads', js: `${q('#settings-open')} for (const h of document.querySelectorAll('#settings-dialog .set-head[aria-expanded="false"]')) h.click(); ${nap}` },
+  // ⚙️ Settings → About → Feedback: the grown-up sum, after a wrong answer (its note, and another sum).
+  'feedback-gate': { screen: 'pads', js: `${q('#settings-open')} ${q('#feedback-open')} ${nap}
+    const a = Number(document.querySelector('#kids-sum-a').textContent) + Number(document.querySelector('#kids-sum-b').textContent);
+    for (const d of String(a === 12 ? 13 : 12)) document.querySelector('#kids-sum-keys [data-digit="' + d + '"]').click(); ${nap}` },
+  // …and the Feedback dialog after the right answer, a message typed in (centered on every width).
+  feedback: { screen: 'pads', js: `${q('#settings-open')} ${q('#feedback-open')} ${nap}
+    const a = Number(document.querySelector('#kids-sum-a').textContent) + Number(document.querySelector('#kids-sum-b').textContent);
+    for (const d of String(a)) document.querySelector('#kids-sum-keys [data-digit="' + d + '"]').click(); ${nap}
+    const t = document.querySelector('#feedback-text'); t.value = 'The burp pad is the best. Could Beats have a cowbell? 🐄'; t.dispatchEvent(new Event('input')); ${nap}` },
 };
 // 🧸 Kids (ADR 0019): the person on the Kids level, on each of its tabs;
 // kids-mine adds six made-up sounds of the kid's own (they come first);

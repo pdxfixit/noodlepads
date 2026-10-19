@@ -202,7 +202,7 @@ export const HELP = [
     id: 'settings', tab: '⚙️ Settings', title: 'Settings',
     items: [
       { pic: [word('⚙️')], text: 'Settings is the gear at the top.' },
-      { pic: [word('▸ 🔗 Sharing   ▾ 💾 Backups')], text: 'Tap a heading to open or close it. This device remembers which are open. About, with the version and the Privacy policy, is always open at the bottom.' },
+      { pic: [word('▸ 🔗 Sharing   ▾ 💾 Backups')], text: 'Tap a heading to open or close it. This device remembers which are open. About, with the version, the Privacy policy and Feedback, is always open at the bottom.' },
       { pic: [chip('👥 People')], text: 'Not in Settings: tap the round picture at the top right, on any screen, then 👥 People: one line per person, and ➕ Add a person. Tap someone for their profile: name, picture, color, cloud, PIN and Delete.' },
       { pic: [chip('🎲 Pick a name')], text: 'In someone’s profile: a dozen fun names, and a few special ones, to choose from. 🎲 More names shows another dozen; ✕ keeps the name you have. Nobody types a name.' },
       { pic: [word('🎨 Color'), chip('Picture')], text: 'In someone’s profile: tap a color, or Picture to choose an emoji. With a PIN, changing the name, picture or color asks for it once, until the page reloads.' },
@@ -217,6 +217,7 @@ export const HELP = [
       { pic: [chip('🚫 Unshare')], text: 'In 🔗 Share…, under Shared already: tap twice and that code stops working for everyone. Remixes others made stay theirs.' },
       { pic: [chip('🔗 Shared with me'), chip('🎛️ Remix')], text: 'In ⚙️ Settings → 🔗 Sharing: type a code to play what someone shared. 🎛️ Remix puts a copy on your board to change, and it stays yours. ✕ Remove (tap twice) takes it off your list.' },
       { pic: [word('Privacy policy')], text: 'Beside the version, in ⚙️ Settings → About: exactly what the cloud keeps and who can see it. Everyone in the cloud is in a public list; a PIN is not security.' },
+      { pic: [word('Feedback'), word('7 + 8 = ?')], text: 'Beside the version and the Privacy policy, in ⚙️ Settings → About. A grown-up answers a sum first, then Send feedback opens: type an idea or a problem and tap Send. It goes to the people who make the app, as typed, and is kept 90 days. Please leave out names and contact details: nobody can write back.' },
       { pic: [word('📊 Share play data')], text: 'In ⚙️ Settings → 📊 Data sharing: on unless you turn it off. Off sends nothing. What it shares is in the Privacy policy, beside the version.' },
       { pic: [chip('💾 Save a backup'), chip('📂 Load a backup')], text: 'One file with all your sounds, beats and settings. Above the buttons it says how many of each it holds. Load it on another phone or tablet: it adds what is new and keeps everything there.' },
       { pic: [chip('📥 Bring them in'), chip('💾 Save everything it left')], text: 'Only when an older copy of the app left sounds in this browser: Older sounds found on this device. Bring them in adds them here; Save everything it left keeps a copy of all of it in one file. The older sounds are never deleted.' },

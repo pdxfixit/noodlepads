@@ -3,7 +3,8 @@
 // Worker, the names, the report expiry). The app no longer shows it: ⚙️
 // Settings and Help link the shared privacy policy instead (Ben, 2026-10-16).
 // Change it in the same commit as anything that changes what the cloud
-// stores or shows, and tell the policy (pdxfixit/privacy) too.
+// stores or shows (the feedback box too), and tell the policy
+// (pdxfixit/privacy) too.
 
 export const PRIVACY_TITLE = "🔓 What's private (not much)";
 
@@ -19,10 +20,11 @@ export const PRIVACY = [
   "Anyone who has a sound's link can play it. The links are long and random, but they are not secret.",
   'Anyone with a share code can see and play what was shared, even after its profile is deleted, until the sharer taps 🚫 Unshare. Remixes others made of it stay theirs. Removing it from Shared with me only takes it off your list.',
   'A PIN is not security. It only stops someone opening or changing a profile in the app.',
-  'The app collects no real names, emails or accounts. Profile names are made up by the app; nobody types one.',
+  'The app asks for no real names, emails or accounts. Profile names are made up by the app; nobody types one.',
   'People with ☁️ In the cloud switched off stay on this device only.',
   'A song 🎧 From a song listens to is heard only in this browser, as it plays: it is never saved, synced or sent. Only the beats made from it are kept.',
   "Problem reports, if you turn them on, send this device's cleaned event log (no sounds and no names), its settings, how many sounds, beats and songs it has, its browser, system and device type (never the full browser string), its screen size, time zone and sound timing, and a random code for this device. They are deleted from the cloud after 14 days.",
+  "Feedback is sent only when a grown-up answers a sum and taps Send in ⚙️ Settings → About → Feedback: only what they typed, and the app's version. Only the people who make the app read it, and it is deleted after 90 days. No name or IP address is stored with it.",
   'To delete a profile and everything in it: 👥 People, tap them, then switch ☁️ In the cloud off (tap it twice), and its PIN if it has one. It is gone from the cloud at once, except what it shared; this device keeps its own copy.',
 ];
 
