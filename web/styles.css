@@ -2905,6 +2905,13 @@ dialog#help :focus-visible { outline-color: var(--board); }
 /* Pills answer the first tap on a phone (no double-tap zoom wait), and a
    hold makes a loud hit without the phone's text-select or callout menu. */
 .pill, .dj-grid-pills i { touch-action: manipulation; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+/* A mouse's pick (pill-select.js; Ben, 2026-10-19): the ring ⇆ Move's pick
+   wears, over the playhead's. With a mouse a lit pill can be grabbed. */
+.pill.chosen, .dj-grid-pills i.chosen { position: relative; z-index: 1; outline: 3px solid var(--led); outline-offset: 1px; }
+.dj-grid-pills i.chosen { outline-width: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .seq-rows:not(.moving) .pill[aria-pressed="true"], .dj-grid-pills i.on { cursor: grab; }
+}
 
 /* A beat row's emoji and its tools, 🔔 · 🔊 · 🧹 · ✕ at its right
    (beat-row.js), on Beats with ⌨️ Keys off and on, in the order of the sound

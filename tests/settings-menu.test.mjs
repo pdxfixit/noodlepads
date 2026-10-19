@@ -116,7 +116,7 @@ test('the page footer has each screen\'s how-to, opposite the version', () => {
 test('the footer how-tos are worded for the device: tap and hold on a touch screen, click, hold or Shift-click with a mouse', async () => {
   const { screenHint } = await import('../web/app.js');
   assert.match(screenHint('beats', false, false), /^Tap a pill to turn it on or off; hold it for a loud hit/);
-  assert.match(screenHint('beats', false, true), /^Click a pill to turn it on or off; hold it or Shift-click for a loud hit/);
+  assert.match(screenHint('beats', false, true), /^Click an empty pill to light it; click lit ones to pick them, then drag\. Hold one for a loud hit/, 'with a mouse pills pick and drag (Ben, 2026-10-19)');
   assert.match(screenHint('live', false, false), /^Tap a key to play it/);
   assert.match(screenHint('live', false, true), /press it on the keyboard/);
   assert.match(screenHint('keys', false, false), /^Tap a key: its sound gets a row/, 'Beats with ⌨️ Keys on');

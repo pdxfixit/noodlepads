@@ -37,6 +37,7 @@ import { cleanFx, masterLevel, silencedBySolo, mixKey, buildMix, createMixer } f
 import { MELODY_NOTES, cleanNotes, fromLegacy, legacy, startsIn, addNote, lineOf, sameNotes, multiplyNotes } from './notes.js';
 import { createRoll } from './roll.js';
 import { createBeatMove } from './beat-move.js';
+import { createPillSelect } from './pill-select.js';
 import { edgeScroller } from './edge-scroll.js';
 import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
 
@@ -657,6 +658,7 @@ export function createSequencer(deps) {
   let rowRoom = null;        // what decides they show: a line short of room
   let mixer = null;          // the 🎚️ Mixer sheet (mixer.js), set once the rows listen
   let move = null;           // ⇆ Move (beat-move.js), set once the rows listen
+  let select = null;         // pills picked and dragged with a mouse (pill-select.js)
 
   const playing = () => timer !== 0;
   const baseStep = () => 60 / shape().bpm / STEPS_PER_BEAT;
@@ -1454,6 +1456,7 @@ export function createSequencer(deps) {
       el.noRows.hidden = true;
       if (undo && undo.pattern !== pattern) offerUndo(null);
       move?.decorate(pills);
+      select?.decorate();
       return;
     }
     showTempo();
@@ -1488,6 +1491,7 @@ export function createSequencer(deps) {
     if (mixer?.isOpen()) mixer.render();   // another beat, or a row gone: the open mixer follows
     roll?.refresh();       // and 🎹 the roll, or it closes when its row is gone
     move?.decorate(pills); // ⇆ Move's pick on the pills
+    select?.decorate();    // a mouse's pick (pill-select.js)
   }
 
   // A pill's look and its spoken state: off, on, or on and loud.
@@ -1963,7 +1967,8 @@ export function createSequencer(deps) {
     undo = next;
     if (!next) { undoBanner?.close(); undoBanner = null; return; }
     const clip = next.row && deps.clipById(next.row.clipId);
-    const text = next.level ? `${levelState(next.level.at).name} loudness ${percent(rowLevel(pattern.rows[next.level.at]))} %.`
+    const text = next.copy ? next.text
+      : next.level ? `${levelState(next.level.at).name} loudness ${percent(rowLevel(pattern.rows[next.level.at]))} %.`
       : next.fresh ? FRESH_TEXT
       : 'before' in next && next.added !== undefined ? `Added ${next.added} ${next.added === 1 ? 'hit' : 'hits'} from “${next.groove}”.`
       : 'before' in next && next.replaced ? `“${next.groove}” replaced your scratch beat.`
@@ -1979,6 +1984,14 @@ export function createSequencer(deps) {
   }
 
   function undoRemove() {
+    // Pills slid or turned off with a mouse (pill-select.js): the rows as they were.
+    if (undo?.copy && undo.pattern === pattern) {
+      const { copy } = undo;
+      offerUndo(null);
+      putRows(copy.rows);
+      save();
+      return;
+    }
     if (undo?.level && undo.pattern === pattern) {
       const { at, before } = undo.level;
       offerUndo(null);
@@ -2412,8 +2425,10 @@ export function createSequencer(deps) {
     if (!pill || afterHold()) return;
     const s = Number(pill.dataset.step);
     if (row.melody) { openRoll(i, s); return; }
-    // A tap switches it on or off; Shift (Shift+Space, Shift+click) or a hold makes it loud.
-    if (e.shiftKey) holdPill(row, s); else tapPill(row, s);
+    // A mouse's click picks (pill-select.js). A tap switches it on or off; a
+    // hold makes it loud, and with the keyboard Shift+Space or Shift+Enter.
+    if (select?.click(e, i, s)) return;
+    if (e.shiftKey && e.detail === 0) holdPill(row, s); else tapPill(row, s);
     showPill(pill, row, s);
     const clear = rowEl.querySelector('[data-clear]');
     if (clear) clear.disabled = !row.steps.some(Boolean);
@@ -2423,7 +2438,7 @@ export function createSequencer(deps) {
 
   // Holding a pill makes it a loud hit (or a loud one normal).
   afterHold = pillHolds(el.rows, (t) => t.closest?.('.pill'), (pill) => {
-    if (move?.on()) return;   // in ⇆ Move a hold lifts the pick instead
+    if (move?.on() || select?.dragging()) return;   // in ⇆ Move a hold lifts the pick instead; a mouse may be sliding
     const rowEl = pill.closest('.seq-row');
     const row = pattern?.rows[Number(rowEl?.dataset.row)];
     if (!row) return;
@@ -3211,6 +3226,20 @@ export function createSequencer(deps) {
     beat: () => pattern, total: () => countOf(), render, save, putRows, holdMs: HOLD_MS,
     onChange: (on) => deps.onMove?.(on),
   }) : null;
+  // A mouse picks lit pills and drags them along (pill-select.js); not in ⇆ Move.
+  select = createPillSelect({
+    root: el.rows,
+    pillOf: (node) => {
+      const p = node?.closest?.('.pill');
+      const row = p?.closest('.seq-row');
+      return p && row && !p.hidden ? { r: Number(row.dataset.row), s: Number(p.dataset.step) } : null;
+    },
+    pillEl: (r, s) => pills[r]?.[s] ?? null,
+    beat: () => pattern, total: () => countOf(), putRows, save, snapshot,
+    light: (r, s) => { tapPill(pattern.rows[r], s); save(); render(); },
+    enabled: () => !move?.on(),
+    undoable: (copy, text) => offerUndo({ copy, text, pattern }),
+  });
   function restore(copy) {
     const was = playing();
     stop();
@@ -3284,5 +3313,7 @@ export function createSequencer(deps) {
     openSaved: (id) => { const saved = library().find((b) => b.id === id); if (saved) openBeat(cleanPattern(saved, personId), { resume: false }); return !!saved; },
     lockChips, queuedBeat: () => (queued ? { ...queued } : null), openMixer, toggleSolo, setFx: setRowFx, setMaster, setMasterFx,
     openRoll, rollRow: () => roll?.row() ?? -1,
-    toggleMove: (opts) => move?.toggle(opts), endMove: () => move?.end(), moving: () => !!move?.on() };
+    toggleMove: (opts) => move?.toggle(opts), endMove: () => move?.end(), moving: () => !!move?.on(),
+    // For the keys' grid's mouse pick (pill-select.js in dj.js).
+    putRows, saveBeat: () => save() };
 }

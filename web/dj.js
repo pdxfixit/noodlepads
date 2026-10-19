@@ -31,6 +31,7 @@ import { fingerTaps, isFinger } from './finger.js';
 import { soundsOf, defaultTouch, touchOrder, touchSounds } from './touch.js';
 import { drawBands, createTouchEditor } from './dj-touch.js';
 import { moreMenu } from './overflow.js';
+import { createPillSelect } from './pill-select.js';
 
 const STOPS = tempoStops();   // the click track slider's positions (see sequencer.js)
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
@@ -111,6 +112,7 @@ export function createDJ({ el, deps }) {
   const INPUTS = ['keys', 'touch'];
   let input = INPUTS.includes(recall('dj-input')) ? recall('dj-input') : null;
   let inputMenu = null;        // Beats' ✏️⌨️ menu (overflow.js): ⌨️ Keys · 👆 Tiles · ✏️ Edit
+  let gridPick = null;         // the grid's mouse pick (pill-select.js), set once the grid listens
   const narrow = () => globalThis.matchMedia?.('(max-width: 699px)')?.matches === true;
   // A phone has no keyboard to play: always the tiles there (Ben, 2026-10-19).
   const inputNow = () => (narrow() ? 'touch' : input ?? 'keys');
@@ -1095,6 +1097,7 @@ export function createDJ({ el, deps }) {
       return line;
     }));
     gridSpeakers?.refresh();
+    gridPick?.decorate();   // a mouse's pick (pill-select.js)
     // New pills: the playhead goes back on at once, not a pill later.
     if (deps.seq.playing()) steps(lastShown);
   }
@@ -1266,14 +1269,35 @@ export function createDJ({ el, deps }) {
     const p = e.target.closest('[data-step]');
     const line = e.target.closest('[data-row]');
     if (!p || !line || gridHeld()) return;
-    deps.seq.cyclePill(Number(line.dataset.row), Number(p.dataset.step), e.shiftKey);
+    // A mouse's click picks (pill-select.js); a tap lights or unlights, a hold makes it loud.
+    if (gridPick?.click(e, Number(line.dataset.row), Number(p.dataset.step))) return;
+    deps.seq.cyclePill(Number(line.dataset.row), Number(p.dataset.step));
     renderGrid();
   });
   const gridHeld = pillHolds(el.grid, (t) => t.closest?.('[data-step]'), (p) => {
+    if (gridPick?.dragging()) return;   // a mouse sliding the pick
     const line = p.closest('[data-row]');
     if (!line) return;
     deps.seq.cyclePill(Number(line.dataset.row), Number(p.dataset.step), true);
     renderGrid();
+  });
+  // A mouse picks lit pills of the beat and drags them along their rows, as
+  // on Beats' rows (pill-select.js); not while recording or in ⇆ Move.
+  const gridPill = (node) => {
+    const p = node?.closest?.('.dj-grid-pills > [data-step]');
+    const line = p?.closest('[data-row]');
+    return p && line ? { r: Number(line.dataset.row), s: Number(p.dataset.step) } : null;
+  };
+  gridPick = createPillSelect({
+    root: el.grid,
+    pillOf: gridPill,
+    pillEl: (r, s) => el.grid.querySelector(`.dj-grid-row[data-row="${r}"] .dj-grid-pills`)?.children[s] ?? null,
+    beat: () => deps.seq.beat(), total: () => deps.seq.beatClock().total,
+    putRows: (rows) => { deps.seq.putRows(rows); renderGrid(); },
+    save: () => deps.seq.saveBeat(), snapshot: () => deps.seq.snapshot(),
+    light: (r, s) => { deps.seq.cyclePill(r, s); renderGrid(); },
+    enabled: () => !beatRec && !deps.seq.moving(),
+    undoable: (copy, text) => offerBeatUndo(copy, text),
   });
 
   // The beat's shape, chosen before Record: tempo, bars and (with Advanced)
