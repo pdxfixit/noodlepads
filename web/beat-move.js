@@ -20,8 +20,7 @@
 // It slides live: a playing beat plays each step of a drag.
 
 import { pillKey, fromKey, pickAll, section, paint, invertPick, shiftPick, keepPick, slideRows } from './slide.js';
-
-const EDGE = 60;   // px from the top or bottom of the screen where a drag scrolls the page
+import { edgeScroller } from './edge-scroll.js';
 
 // deps: el {rows, bar, what, hint, left, right, all, none, invert, undo, done},
 // beat() (the open beat), total() (its pills per row), render(), save(),
@@ -36,7 +35,10 @@ export function createBeatMove(deps) {
   let press = null;         // a finger down that is not yet a tap, a paint or a hold
   let drag = null;          // {type: 'paint', ...} or {type: 'slide', from, d, base}
   let after = -1e9;         // when a drag or hold ended: the click right after it is not a tap
-  let edge = 0, scrolling = 0;
+  let finger = null;        // where the pointer last was in a drag, {clientX, clientY}
+  // Near the top or bottom of the screen a drag scrolls the page, so a
+  // section can reach rows off screen on a phone; the drag follows the page.
+  const scroller = edgeScroller(() => { if (drag && finger) move(finger); });
   let onDone = null;
 
   const rowCount = () => deps.beat()?.rows.length ?? 0;
@@ -137,7 +139,7 @@ export function createBeatMove(deps) {
     press = null;
     if (drag?.type === 'slide') deps.putRows(drag.base);
     drag = null;
-    edge = 0;
+    scroller.stop();
   }
 
   function down(e) {
@@ -171,8 +173,8 @@ export function createBeatMove(deps) {
       press = null;
     }
     if (!drag) return;
-    edge = e.clientY < EDGE ? -1 : e.clientY > (globalThis.innerHeight ?? 0) - EDGE ? 1 : 0;
-    if (edge && !scrolling) scrollLoop();
+    finger = { clientX: e.clientX, clientY: e.clientY };
+    scroller.at(e.clientY);
     const at = pillAt(e.clientX, e.clientY);
     if (!at) return;
     if (drag.type === 'slide') {
@@ -186,7 +188,7 @@ export function createBeatMove(deps) {
     }
   }
   function up() {
-    edge = 0;
+    scroller.stop();
     if (press) { clearTimeout(press.timer); press = null; return; }   // a tap: the click that follows does it
     if (!drag) return;
     after = Date.now();
@@ -195,14 +197,6 @@ export function createBeatMove(deps) {
     if (was.type === 'slide') slideBy(was.d, { base: was.base });
     else deps.render();
   }
-  // Near the top or bottom of the screen a drag scrolls the page, so a
-  // section can reach rows off screen on a phone.
-  function scrollLoop() {
-    if (!drag || !edge) { scrolling = 0; return; }
-    globalThis.scrollBy?.(0, edge * 10);
-    scrolling = globalThis.requestAnimationFrame?.(scrollLoop) ?? 0;
-  }
-
   // A click on the rows while moving (sequencer.js hands it here): a tap
   // or Space on a pill puts it in or out; the emoji or name picks its row.
   function click(e) {

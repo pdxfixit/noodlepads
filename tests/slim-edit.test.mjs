@@ -91,14 +91,12 @@ const block = (query) => {
   return css.slice(at, css.indexOf('\n}', at));
 };
 
-test('Beats with ⌨️ Keys: under 900 px the control bar sticks under the slim bar while the keys scroll, as with Keys off', () => {
-  // Keys off: the whole bar under 900 px, only ▶ Play · tempo on a phone.
-  assert.match(css, /@media \(max-width: 899px\) \{\n  \.seq \.beat-deck \{ position: sticky;/);
-  const mid = block('max-width: 899px');
-  assert.match(mid, /body\.keys-on \.dj-bar \{ position: sticky; top: var\(--head-h, 0px\); z-index: 6; \}/,
+test('Beats with ⌨️ Keys: the control bar sticks under the slim bar while the keys scroll, at every width, as with Keys off', () => {
+  // Ben, 2026-10-19: on a computer it scrolled away. edge-scroll.test.mjs checks neither rule is inside an @media.
+  assert.match(css, /\n\.seq \.beat-deck \{ position: sticky; top: var\(--head-h, 0px\);/);
+  assert.match(css, /\nbody\.keys-on \.dj-bar \{ position: sticky; top: var\(--head-h, 0px\); z-index: 6; \}/,
     'the whole bar, under the slim bar (never over it or its ✏️), over the keys and the beat\'s rows');
-  assert.doesNotMatch(css, /@media \(min-width: 900px\)[^{]*\{[^}]*\.dj-bar[^}]*position: sticky/, 'from 900 px it scrolls, as Keys off\'s does');
-  assert.doesNotMatch(mid, /screen-live/, '🎤 Live\'s bar scrolls');
+  assert.doesNotMatch(css, /screen-live[^{]*\.dj-bar[^{]*\{[^}]*position: sticky/, '🎤 Live\'s bar scrolls');
 });
 
 test('on a phone only the Keys control bar\'s first line, ▶ Play · ● Record, sticks', () => {
