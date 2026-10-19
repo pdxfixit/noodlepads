@@ -31,12 +31,12 @@ import { initBulk } from './bulk.js';
 import { initSheet, openSheet, setBeatTempo, isRecording } from './sheet.js';
 import { initUpdate } from './update.js';
 import { registerOffline } from './offline.js';
-import { initPeople, refreshPeople, addPerson, editLook, openPictures } from './people.js';
+import { initPeople, refreshPeople, addPerson, deleteHere, editLook, openPictures } from './people.js';
 import { initWelcome, markNew, offerWelcome } from './welcome.js';
 import { initTips, tipsScreen } from './tips.js';
 import { initNudge } from './nudge.js';
 import { beatHasHits } from './firsts.js';
-import { initCloud, needsPin, leftPerson } from './cloud.js';
+import { initCloud, needsPin, leftPerson, onCloud } from './cloud.js';
 import { initCloudUI, askToOpen, shareSounds } from './cloud-ui.js';
 import { renderPreview } from './share-render.js';
 import { initBackups, storeLoaded, whatIsHere } from './backup-ui.js';
@@ -73,14 +73,16 @@ let dj = null;   // The keys: 🎤 Live's screen, and Beats' ⌨️ Keys (dj.js)
 
 // ── Who is showing, Edit sounds, Beats ─────────────────────────────────
 
-// A person whose PIN this device does not remember is asked for it each time
-// they are opened (cloud-ui.js askToOpen). Starting up on one, someone
-// without a PIN shows meanwhile; if everyone here has one, the board stays
-// hidden until a PIN is typed.
-function setPerson(id, { checked = false } = {}) {
+// A person with a PIN is asked for it each time they are opened (cloud-ui.js
+// askToOpen). Starting up on one, someone without a PIN shows meanwhile; if
+// everyone here has one, the board stays hidden until a PIN is typed.
+// `again`: the person showing has just turned out to have a PIN new to this
+// device (a sync, cloud.js keyRefused), so they are asked as on start-up.
+function setPerson(id, { checked = false, again = false } = {}) {
   const p = person(id) || people()[0];
-  if (!checked && p.id !== state.personId && needsPin(p.id)) {
-    const free = !state.personId && people().find((x) => !needsPin(x.id));
+  if (!checked && (again || p.id !== state.personId) && needsPin(p.id)) {
+    const fresh = !state.personId || again;
+    const free = fresh && people().find((x) => !needsPin(x.id));
     if (free) setPerson(free.id, { checked: true });
     else if (!state.personId) showPerson(p);
     const locked = !state.personId || state.personId === p.id;
@@ -89,6 +91,19 @@ function setPerson(id, { checked = false } = {}) {
     return;
   }
   showPerson(p);
+}
+
+// 🤷 I don't know the PIN (cloud-ui.js): they go from this device, with
+// everything of theirs, and someone else shows (a new person if nobody is left).
+async function dropLockedPerson(id) {
+  await deleteHere(id);
+  renderPeople();
+  refreshPeople();
+  if (state.personId !== id) return;
+  const next = people().find((x) => !needsPin(x.id)) ?? people()[0];
+  if (!next) { addPerson(); return; }
+  state.personId = null;
+  setPerson(next.id);
 }
 
 function showPerson(p) {
@@ -799,7 +814,12 @@ async function start() {
     keysOn: () => keysOn,
     beatHasHits: () => beatHasHits(seq?.beat()),
   });
-  initCloudUI({ refresh: () => { renderPeople(); refreshPeople(); }, addPerson });
+  initCloudUI({ refresh: () => { renderPeople(); refreshPeople(); }, addPerson, dropPerson: dropLockedPerson });
+  // A sync that finds a PIN new to this device on the person showing: the
+  // board goes behind the PIN pad until it is typed (Ben, 2026-10-19).
+  onCloud(() => {
+    if (state.personId && needsPin(state.personId)) setPerson(state.personId, { again: true });
+  });
   initBackups();
   // ⚙️ while 🧸 Kids shows asks a grown-up sum first (kids.js).
   initSettingsUI({

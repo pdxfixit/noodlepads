@@ -178,7 +178,7 @@ A device key goes in `Authorization: Bearer <key>`.
 | `GET /api/profiles` | — | the list: id, name, avatar, color, `pin` (has one), newest first, at most 300 |
 | `POST /api/profiles` | — | makes a profile: `{id, name, avatar, color, pin?}` → `{key, rev}` |
 | `POST /api/profiles/:id/open` | the PIN, if set | `{pin?, remember?}` → `{key, rev, name, avatar, color, edited}`; `remember: false` makes a session key; a wrong PIN → 401 `{tries}`; while waiting → 429 `{wait}` |
-| `DELETE /api/profiles/:id/key` | key | Forget on this device: deletes the key the request carries |
+| `DELETE /api/profiles/:id/key` | key | deletes the key the request carries: the one a device held before it opened the profile again |
 | `PATCH /api/profiles/:id` | key | `{name?, avatar?, color?, edited?}`; `{pin, newPin}` sets, changes (`newPin` a PIN) or removes (`newPin: null`) the PIN, and needs the current PIN too |
 | `DELETE /api/profiles/:id` | key, and the PIN if set | deletes the profile, its records, keys and unshared sounds (📴 Offline uses it) |
 | `GET /api/profiles/:id/records?since=N` | key | records with `rev > N`, oldest first, 500 at a time: `{records, rev, more}` |
@@ -202,12 +202,14 @@ A device key goes in `Authorization: Bearer <key>`.
   10,000 PINs takes 2,000 waits: about two weeks without a break.
 - **Asked each time the person is opened** (Ben, Q9): switching to them, or
   starting the app on them. Online, `open` checks it and gives a key; offline,
-  the device's own `check` lets them in and the sync waits. "Remember on this
-  device" on the PIN pad (off to start) keeps the key, so this device stops
-  asking; 🙈 Forget on this device (beside Change PIN) drops it, in the cloud
-  too. Each open deletes the key this device held before, so a device holds
-  one key per profile; session keys a week old are deleted on the next open.
-  A new PIN or a reset deletes every key.
+  the device's own `check` lets them in and the sync waits. The key is a
+  session key, held for the visit only: no device remembers a PIN (Ben,
+  2026-10-19). Each open deletes the key this device held before, so a device
+  holds one key per profile; session keys a week old are deleted on the next
+  open. A new PIN or a reset deletes every key. A device that finds its key
+  refused asks the public list: no PIN (a reset) opens again by itself; a PIN
+  is new to it, asked before the person opens, and 🤷 I don't know the PIN
+  deletes them from that device.
 - **If everyone on a device has a PIN** the board stays hidden behind the PIN
   pad, which offers 👋 Someone new (Q19).
 - **What it is not:** sound files play without it (their ids are unguessable

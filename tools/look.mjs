@@ -113,10 +113,10 @@ const WAVE_OWN = `${OWN_SOUND(true)} ${q('#trim-btn')}
   await new Promise((r) => setTimeout(r, 400)); ${q('#cut-views [data-view="part"]')} ${nap}`;
 // Taps the made-up sound `i` in Edit sounds: it is chosen.
 const CHOOSE = (i) => q(`#pads .pad[data-id="user-look-${i}"]`);
-// This device's first person, linked to the cloud with a PIN it remembers
-// (faked: the look server has no /api), for the profile-pin views.
+// This device's first person, linked to the cloud with a PIN, its key held
+// for this visit (faked: the look server has no /api), for the profile-pin views.
 const PIN_LINK = `const { state } = await import('/state.js'); const pinId = [...state.peopleEdits.keys()][0];
-  state.cloud.set(pinId, { id: pinId, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true, remember: true });`;
+  state.cloud.set(pinId, { id: pinId, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true });`;
 // A long notice in the banner over the top of the screen (ui.js showNotice),
 // after its slide-in, for the notice views.
 const NOTICE = `const { showNotice } = await import('/ui.js');
@@ -392,7 +392,7 @@ const VIEWS = {
   'sheet-all': { screen: 'pads', js: `${q('.pad-add')} ${nap} ${q('#emoji-grid .emoji-more')} ${nap} ${nap}` },
   cloud: { screen: 'pads', js: q('#people-open') + q('#people-edit [data-profile]') + q('#profile-cloud') },
   'cloud-in': { screen: 'pads', js: `const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()][0];
-    state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true, remember: true });
+    state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true });
     ${q('#people-open') + q('#people-edit [data-profile]') + q('#profile-cloud')} ${nap}` },
   share: { screen: 'pads', js: `const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()][0];
     state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {} });
@@ -403,7 +403,7 @@ const VIEWS = {
     ${q('#settings-open') + q('#shared-browse')} ${nap}` },
   'cloud-list': { screen: 'pads', js: `${q('#people-open') + q('#cloud-browse')} ${nap}` },
   pin: { screen: 'pads', js: `const ui = await import('/cloud-ui.js');
-    ui.askPin({ title: 'Their PIN', hint: 'Type the PIN to open this profile on this device.', note: "That PIN isn't right. 4 tries left before a 10-minute wait.", remember: true, forgot: true, someoneNew: true });` },
+    ui.askPin({ title: '🦊 Admiral Acorn', hint: "They have a new PIN. Type it to open them here. Don't know it? Their things on this device are deleted; the cloud keeps what it has.", note: "That PIN isn't right. 4 tries left before a 10-minute wait.", forgot: true, someoneNew: true, unknown: true });` },
   // ⚙️ Settings → 🎨 Look open (the pad skins to choose from), scrolled to it.
   look: { screen: 'pads', js: `${q('#settings-open')} { const h = document.querySelector('#set-look .set-head'); if (h.getAttribute('aria-expanded') !== 'true') h.click(); }
     document.querySelector('#set-look').scrollIntoView(); ${nap}` },

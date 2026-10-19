@@ -578,7 +578,7 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   👥 People is a short list, one line per person: picture, name, counts and
   ☁️ state (🔒 with a PIN). Tapping a line opens their profile sheet
   (`#profile-dialog`, `people.js`): 🎲 Pick a name, the picture, every person
-  color, ☁️ Cloud, 🔒 PIN (set, change, remove, 🙈 Forget on this device) and
+  color, ☁️ Cloud, 🔒 PIN (set, change, remove) and
   Delete. With a PIN on their cloud profile, changing the name, picture or
   color asks for it once per visit (until a reload; typing it to open them
   counts), checked like an open (`cloud.js` `pinGuards`, `checkPin`); without
@@ -709,10 +709,19 @@ ADR 0002.
   `scope: 'person'`): Advanced, the time signature, pad size, pad skin. The
   keyboard, problem reports and the device code stay with the device.
 - **PIN:** optional, 4 digits, in a person's profile sheet (once they are in
-  the cloud). It is asked each time that person is opened, unless the PIN
-  pad's "Remember on this device" was on; 🙈 Forget on this device asks every
-  time again. It is also asked, once per visit, before their name, picture or
-  color changes. 5 wrong tries mean a 10-minute wait.
+  the cloud). It is asked each time that person is opened, on every device;
+  no device keeps the key (it lives for the visit only, `cloud.js`
+  `sessionKeys`), so a person with a PIN syncs only once it is typed. It is
+  also asked, once per visit, before their name, picture or color changes.
+  5 wrong tries mean a 10-minute wait.
+- **A PIN new to this device:** a PIN set or changed on another device closes
+  the profile on every device. The next sync here is refused (401); the
+  public list says whether the profile has a PIN now (a reset: it opens again
+  by itself, no PIN asked). If it has, the link says `newPin` and the person
+  can't be opened until it is typed: the person showing goes behind the PIN
+  pad at once. Its 🤷 I don't know the PIN (two taps) deletes them from this
+  device with everything of theirs here (unsynced work too); the cloud copy
+  stays (`cloud.js` `keyRefused`, `app.js` `dropLockedPerson`).
 - **🔗 Share…** (in a person's ☁️) gives a code like `ABCD-2345` for one sound,
   beat or song: a snapshot, read-only. Shared already lists that person's
   codes; 🚫 Unshare (two taps) ends one for everyone (the Worker deletes it,
