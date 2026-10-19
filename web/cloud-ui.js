@@ -99,6 +99,11 @@ export function askPin({ title = 'PIN', hint = '', note = '', forgot = false, so
   el.pinTitle.textContent = title;
   el.pinHint.textContent = hint;
   el.pinNote.textContent = note;
+  // A note is trouble (a wrong PIN, two that didn't match): red, and the dots
+  // shake once, so the pad says no out loud (a tester, 2026-10-19).
+  el.pin.classList.remove('pin-wrong');
+  void el.pin.offsetWidth;   // restarts the shake when it says no again
+  el.pin.classList.toggle('pin-wrong', !!note);
   el.pinForgot.hidden = !forgot;
   el.pinNew.hidden = !someoneNew;
   el.pinUnknown.hidden = !unknown;
@@ -710,7 +715,16 @@ export function initCloudUI(hooks) {
   el.pin.addEventListener('keydown', (e) => {
     if (/^\d$/.test(e.key)) { e.preventDefault(); pinKey(e.key); } else if (e.key === 'Backspace') { e.preventDefault(); pinKey('⌫'); }
   });
-  el.pin.addEventListener('close', () => { const done = pinDone; pinDone = null; done?.(null); });
+  // Closing the pad gives up. A browser fires 'close' as a task of its own,
+  // after the pad that just took four digits may already be open again for
+  // the next ask ("Once more", a mismatch, a wrong PIN): then it is ignored,
+  // or it would end that ask unseen (a tester, 2026-10-19).
+  el.pin.addEventListener('close', () => {
+    if (el.pin.open) return;
+    const done = pinDone;
+    pinDone = null;
+    done?.(null);
+  });
   el.pinForgot.textContent = FORGOT_PIN;
   el.pinNew.addEventListener('click', () => { const done = pinDone; pinDone = null; el.pin.close(); done?.('new'); });
   // 🤷 I don't know the PIN: the first tap asks, the second deletes them here.

@@ -235,3 +235,41 @@ test('☁️ on for someone brand new puts them in the cloud now, with nothing m
   closeSheets();
 });
 
+
+// A tester, 2026-10-19: a different second PIN still "cleared the screen with
+// no notice". A browser fires a dialog's 'close' as a task of its own, after
+// the pad has opened again for the next ask; the stand-in page fires it at
+// once, which hid this. Here the pad closes the way a browser does.
+test('the PIN pad closing a moment later never ends the next ask: a mismatch is said, in red, on the pad', async () => {
+  const pad = $('#pin-dialog');
+  const close = pad.close;
+  pad.close = function () { this.open = false; setTimeout(() => this.dispatch('close')); };
+  const tick = () => new Promise((r) => setTimeout(r, 5));
+  try {
+    sheetOf(LATER);   // its PIN is 3333 since the mismatch test
+    $('#cloud-pin-change').dispatch('click');
+    await settle();
+    typePin('3333');
+    await settle(); await tick();
+    assert.equal($('#pin-title').textContent, 'A new PIN');
+    typePin('4444');
+    await settle(); await tick();
+    assert.equal(pad.open, true, 'Once more is still asking');
+    assert.equal($('#pin-title').textContent, 'Once more');
+    typePin('5555');
+    await settle(); await tick();
+    assert.equal(pad.open, true, 'a mismatch keeps the pad open');
+    assert.equal($('#pin-note').textContent, ui.PIN_MISMATCH);
+    assert.ok(pad.classList.contains('pin-wrong'), 'said in red, the dots shake');
+    typePin('6666');
+    await settle(); await tick();
+    assert.ok(!pad.classList.contains('pin-wrong'), 'calm again on the next try');
+    typePin('6666');
+    await settle(); await tick();
+    assert.equal(pill(), '✅ PIN changed');
+    assert.ok((await call(`profiles/${LATER}/open`, { pin: '6666', remember: false })).key);
+  } finally {
+    pad.close = close;
+  }
+  closeSheets();
+});
