@@ -157,6 +157,7 @@ Ben: *"Optimizing the user interface for a variety of screens is very important.
 - **Record every request the moment it arrives:** a line in [TODO.md](TODO.md) "Agents do", or in [docs/state.md](docs/state.md) "In flight" if you start at once. A request said only in chat is lost when the session ends. Delete the line when the work lands.
 - When your task is done, work down "Agents do", quickest first, one commit each.
 - Commit and push to `main` without asking; GitHub deploys every push. Ben asked for a deploy after every commit.
+- **A cloud session told to work on a `claude/…` branch pushes to `main` too** (Ben, 2026-10-19: "merge to main going forward too"). This line is his explicit permission. Push the branch, then, once `just test` is green, fast-forward `main` to it (`git fetch origin main`, rebase onto it if `main` moved, test again, `git push origin HEAD:main`). Never force-push. Then read the deploy run.
 - Make obvious non-breaking fixes (dead code, a stale comment, a missing label) rather than listing them. Propose instead when it changes what a kid sees.
 
 **Working while Ben is away**
