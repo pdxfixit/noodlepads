@@ -20,6 +20,13 @@ test('content fills the screen up to 2400 px, centered beyond it', () => {
   }
 });
 
+// Ben, 2026-10-19: "even with a wide screen, the beats shouldn't go
+// side-by-side. the full width is better for beat-line-programming".
+test('Beats with ⌨️ Keys never splits: the beat\'s rows stay over the keys, full width', () => {
+  assert.doesNotMatch(css, /\.dj:has\(> \.dj-grid[^{]*\{[^}]*grid-template-columns/, 'the keys panel lays out in one column at every width');
+  assert.doesNotMatch(css, /> \.dj-grid \{ grid-column: 1;/, 'the beat\'s rows never take a column of their own');
+});
+
 // Ben: "perhaps moving the tweaks above the shape it section"; "name can be
 // at the top in the title bar". The knobs sit
 // under the voices, in one box with the sticky ⭐ Save voice · ↩️ Reset voice row.
