@@ -71,15 +71,11 @@ body {
    same box as the page's own. clip-path cuts that layer to the bar (it clips
    fixed descendants, where overflow would not), so the tile grid matches the
    page's wherever the bar is: stuck at the top, at the bottom, or scrolling
-   in its place, with no measuring and no script. The Pads bar's clip reaches
-   past its sides for the Edit sounds focus ring; the page's ink is there too.
-   The toolbar's top line moves from its shadow (which the clip would cut) to
-   ::after. The slim header's band is fixed at the top of the screen like the
+   in its place, with no measuring and no script. The toolbar's top line
+   moves from its shadow (which the clip would cut) to ::after. The slim header's band is fixed at the top of the screen like the
    page's layer, so its ink (.top::after) needs no clip. 🧸 Kids' bars are
    see-through over the Kids pattern already. */
-:root[data-bg] .pads-bar { clip-path: inset(0 -16px); }
 :root[data-bg] .toolbar { clip-path: inset(-2px 0 0 0); box-shadow: none; }
-:root[data-bg] .pads-bar::before,
 :root[data-bg] .toolbar::before {
   content: "";
   position: fixed;
@@ -292,13 +288,22 @@ main {
 @keyframes nudge-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 @media (prefers-reduced-motion: reduce) { .nudge-time { animation: none; } }
 
-/* Edit sounds lives on the pads screen, at the top right of the pads. */
+/* The pads' panel opens with a darker band, as 🎤 Live's ● Record ·
+   🎬 Takes does (Ben, 2026-10-19): Pad size at its left, ✏️ Edit sounds at
+   its right, then a bright rule. */
 .pads-bar { display: flex; justify-content: flex-end; }
 .pads-bar[hidden] { display: none; }
-/* ✏️ Edit sounds (✅ Done while editing) stays at the top as the sounds
-   scroll under it, on a band of the page color as tall as the gap above a
-   stuck group header (top: 64px), so no pad or ✕ badge shows between them. */
-.pads-bar { position: sticky; top: 0; z-index: 7; margin: -8px 0 2px; padding: 8px 0; background: var(--board); transition: background-color 0.3s ease; }
+/* The band stays at the top as the sounds scroll under it, as tall as the
+   gap above a stuck group header (top: 64px), so no pad or ✕ badge shows
+   between them. The rule is a shadow, so it adds no height. */
+.pads-bar {
+  position: sticky; top: 0; z-index: 7;
+  margin: 0; padding: 8px 12px;
+  border-radius: 22px 22px 0 0;
+  background: var(--deck);
+  box-shadow: inset 0 4px 0 var(--bed-edge), inset 0 -3px 0 rgb(255 255 255 / 0.3);
+}
+.pads-bar:not([hidden]) + .pads { border-radius: 0 0 22px 22px; box-shadow: none; }
 .pads-edit {
   min-height: 44px;
   padding: 0 16px;
@@ -309,7 +314,7 @@ main {
   font-weight: 800;
 }
 .pads-edit[aria-pressed="true"] { background: var(--chalk); border-color: var(--chalk); color: var(--ink); }
-/* Pad size, centered in the room Edit sounds leaves: a slider (more at the end of the file). */
+/* Pad size, at the left of the room Edit sounds leaves: a slider (more at the end of the file). */
 .pads-bar { align-items: center; gap: 8px; }
 .pads-size { display: flex; align-items: center; flex: 0 1 auto; min-width: 0; margin-right: auto; }
 .pads-size > input { width: 120px; min-height: 44px; accent-color: var(--led); }
@@ -3080,18 +3085,13 @@ dialog.np-dialog .set-buttons .quiet { justify-content: center; }
 .set-check + .set-check { margin-top: 0; }
 .set-check-hint { margin: -6px 0 6px 36px; }
 
-/* Pad size: one smooth slider beside ✏️ Edit sounds, a small and a big
-   square at its ends. It takes the room Edit sounds leaves, up to 240 px. */
-.pads-size { flex: 1 1 auto; gap: 6px; max-width: 240px; }
-/* It sits centered in the room left on its line (Ben, 2026-10-13: "the
-   size scroller should be centered in the available space"): equal margins
-   take what its 240 px leave. Where it stays when the header slims (from
-   560 px), that room starts after the slim header's buttons whether or not
-   they are there, so it does not jump when the bar sticks. */
-.pads-bar .pads-size { margin-inline: auto; }
-@media (min-width: 560px) {
-  .pads-bar { padding-left: calc(4 * 44px + 3 * 6px + 10px); }
-}
+/* Pad size: one smooth slider at the left of the Pads band (Ben,
+   2026-10-19), a small and a big square at its ends. It takes the room
+   ✏️ Edit sounds leaves, up to 300 px, and says "Size" before them where
+   that room is 190 px or more (a container, so the word reads its width). */
+.pads-size { flex: 1 1 0; gap: 6px; max-width: 300px; container: pad-size / inline-size; }
+.pads-size-word { order: -1; flex: none; font-weight: 800; white-space: nowrap; }
+@container pad-size (max-width: 189px) { .pads-size-word { display: none; } }
 .pads-size > input { flex: 1 1 auto; width: auto; min-width: 60px; }
 .pads-size::before, .pads-size::after { content: ""; flex: none; border: 2px solid currentColor; opacity: 0.85; }
 .pads-size::before { width: 8px; height: 8px; border-radius: 2px; }
@@ -3406,18 +3406,23 @@ body.head-slim .person-list { right: auto; left: 0; }   /* opens into the screen
 /* Pads: the bar's buttons sit at the left of the Edit sounds band, so the
    band's own things start after them. Where Pad size has no room beside
    them, it waits at the top of the screen. */
-body.head-slim.screen-pads .pads-bar { padding-left: calc(4 * 44px + 3 * 6px + 10px); }
+body.head-slim.screen-pads .pads-bar { padding-left: calc(12px + 4 * 44px + 3 * 6px + 10px); border-radius: 0; }
+body.head-slim.screen-pads .title-tools { left: calc(max(var(--gutter), (100% - var(--max)) / 2 + var(--gutter)) + 12px); }
 @media (max-width: 559px) {
   body.head-slim.screen-pads .pads-size { display: none; }
 }
 /* On a phone, ✏️ Edit sounds says ✏️ Edit beside them (screen readers
-   still hear "Edit sounds"), and on the narrowest the buttons sit closer. */
+   still hear "Edit sounds"); on the narrowest the buttons sit closer and
+   it drops its word too, ✏️ (✅ for Done) alone, rather than collide
+   with ⬆️ (Ben, 2026-10-19). */
 @media (max-width: 429px) {
   body.head-slim.screen-pads .edit-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 @media (max-width: 359px) {
   body.head-slim .title-tools { gap: 4px; }
-  body.head-slim.screen-pads .pads-bar { padding-left: calc(4 * 44px + 3 * 4px + 8px); }
+  body.head-slim.screen-pads .pads-bar { padding-left: calc(12px + 4 * 44px + 3 * 4px + 8px); }
+  body.head-slim.screen-pads .edit-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  body.head-slim.screen-pads .pads-bar .pads-edit { min-width: 48px; padding: 0 10px; }
 }
 /* 🥁 Beats with ⌨️ Keys, and 🎤 Live: scrolled, ✏️ Edit keys (✏️ Edit
    layout with 👆) rides at the right of the slim bar, as Edit sounds does on

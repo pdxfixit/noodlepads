@@ -68,17 +68,20 @@ test('older copies\' sizes read as the nearest place on the slider', () => {
   for (const bad of [49, 221, 101, 102.5, 'xl', null, undefined, 0.5]) assert.equal(fromOldSize(bad), undefined, String(bad));
 });
 
-// Ben, 2026-10-13: "the size scroller should be centered in the available
-// space". Equal auto margins share the room its 240 px leave; from 560 px,
-// where it stays when the header slims, the room starts after the slim
-// buttons whether or not they show, so it does not jump when the bar sticks.
-test('the size slider sits centered in the room left on its line', async () => {
+// Ben, 2026-10-19: the slider and ✏️ Edit sounds sit on the dark band at
+// the top of the pads' panel, as 🎤 Live's ● Record and 🎬 Takes do; the
+// slider at the left, saying "Size" where it has the room.
+test('the size slider sits at the left of the pads\' dark top band, with a word where there is room', async () => {
   const { readFileSync } = await import('node:fs');
   const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
-  assert.match(css, /\n\.pads-bar \.pads-size \{ margin-inline: auto; \}/);
-  const slim = css.match(/body\.head-slim\.screen-pads \.pads-bar \{ padding-left: ([^;]+); \}/)[1];
-  const wide = css.match(/@media \(min-width: 560px\) \{\s*\.pads-bar \{ padding-left: ([^;]+); \}/);
-  assert.ok(wide, 'from 560 px the bar keeps the slim buttons\' room at all times');
-  assert.equal(wide[1], slim, 'the same room as when the header slims');
-  assert.match(css, /@media \(max-width: 559px\) \{\s*body\.head-slim\.screen-pads \.pads-size \{ display: none; \}/, 'under 560 px it hides when the bar sticks, so it never moves either');
+  const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
+  assert.match(html, /<div class="pads-size" id="pads-size">\s*<label class="pads-size-word" for="pads-size-slider">Size<\/label>/);
+  assert.doesNotMatch(css, /\.pads-bar \.pads-size \{ margin-inline: auto; \}/, 'no longer centered');
+  assert.match(css, /\n\.pads-size \{[^}]*margin-right: auto;/, 'at the left: the room it leaves goes after it');
+  assert.doesNotMatch(css, /@media \(min-width: 560px\) \{\s*\.pads-bar \{ padding-left:/, 'unscrolled, nothing holds room before it');
+  assert.match(css, /\n\.pads-bar \{[^}]*position: sticky;[^}]*background: var\(--deck\);/, 'the darker band of Live\'s deck');
+  assert.match(css, /\.pads-bar:not\(\[hidden\]\) \+ \.pads \{ border-radius: 0 0 22px 22px;/, 'the band and the pads are one panel');
+  assert.match(css, /\.pads-size \{[^}]*container: pad-size \/ inline-size;/);
+  assert.match(css, /@container pad-size \(max-width: \d+px\) \{ \.pads-size-word \{ display: none; \} \}/, 'the word goes where the room is short');
+  assert.match(css, /@media \(max-width: 559px\) \{\s*body\.head-slim\.screen-pads \.pads-size \{ display: none; \}/, 'under 560 px it hides when the bar sticks');
 });

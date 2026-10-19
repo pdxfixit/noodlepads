@@ -62,7 +62,16 @@ test('the page: ⬆️ sits with ❓, ⚙️ and the person button; the board na
   for (const id of ['help-open', 'settings-open', 'people', 'to-top']) assert.ok(tools.includes(`id="${id}"`), id);
   assert.match(tools, /id="to-top" aria-label="Back to the top">⬆️</);
   assert.match(html, /<h1 id="board-title" tabindex="-1">/);
-  assert.match(html, /id="edit-toggle"[^>]*>✏️ Edit<span class="edit-more"> sounds<\/span>/);
+  assert.match(html, /id="edit-toggle"[^>]*>✏️<span class="edit-word"> Edit<\/span><span class="edit-more"> sounds<\/span>/);
+});
+
+// Ben, 2026-10-19: where ✏️ Edit would collide with ⬆️ on the slim band, it
+// drops its word (✏️ alone, ✅ for Done), still heard by screen readers.
+test('the styles: on the narrowest slim band ✏️ Edit drops its word, hidden only to the eye', () => {
+  const css = web('styles.css');
+  const narrow = css.match(/@media \(max-width: 359px\) \{([\s\S]*?)\n\}/g).join('\n');
+  assert.match(narrow, /body\.head-slim\.screen-pads \.edit-word \{ position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset\(50%\);/);
+  assert.doesNotMatch(narrow, /\.edit-word \{[^}]*display: none/, 'never display: none: the button keeps its name');
 });
 
 test('the styles: the header no longer sticks whole; the slim bar is fixed at the top left and sets --head-h', () => {
