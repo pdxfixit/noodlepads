@@ -58,7 +58,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **One ✏️ Layout on Beats** (Ben, 2026-10-19): the ⌨️ / 👆 switch moves into the editor, renamed ✏️ Layout (or Edit pads), so the bar's one button just edits how the beat pads are laid out; maybe the 👆 side offers preset grids of dashed blocks to drag instruments onto. Mockups first; waits on Ben's answers.
+- **One ✏️ Layout on Beats and 🎤 Live** (Ben, 2026-10-19): one ✏️ Layout button opens the editor at once; the switch moves inside it as ⌨️ Keys | 👆 Pads (Tiles becomes Pads). Then: a design doc for grids of blocks that sit side by side, heading toward areas resized by dragging their edges (his option B; a new stored shape, so an ADR).
 
 
 
