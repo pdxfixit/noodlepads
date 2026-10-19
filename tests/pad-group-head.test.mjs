@@ -1,7 +1,7 @@
 // A group's header on 🔊 Pads (Ben, 2026-10-18): its tooltip says what it
 // is ("🎮 Game: 9 sounds. Tap to open.", not "▸🎮 Game9"), every group's
 // count ends the line, after who plays it on Notes, Chords and Bass, and a
-// closed group is one box: the stroke is its header's edge.
+// closed group is one box: the stroke is its header's edge, at every width.
 // Not tested here: how the boxes look (checked with just look pads).
 
 import { test, before } from 'node:test';
@@ -44,4 +44,15 @@ test('a closed group draws one box: its stroke hugs the header', () => {
   const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
   assert.match(css, /\.pad-fold:not\(:has\(\.pad-group\[aria-expanded="true"\]\)\) \{ outline-offset: 0;/);
   assert.match(css, /\.pad-fold:not\(:has\(\.pad-group\[aria-expanded="true"\]\)\) > :is\(\.pad-group, \.pad-group-row\) \{ box-shadow: none; \}/);
+});
+
+// When the pads leave room on a line (a wide screen, big pads), the bed
+// shares it out round its columns. A box with a copy of the bed's template
+// shared it out again inside itself, so its stroke stood off the header
+// (2026-10-19). Its columns are the bed's own, so the box ends where they do.
+test('a group\'s box takes the bed\'s own columns, so its stroke is its header\'s edge on a wide screen', () => {
+  const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
+  const fold = css.match(/\n\.pad-fold \{[^}]*\}/)?.[0] ?? '';
+  assert.match(fold, /grid-template-columns: subgrid;/);
+  assert.doesNotMatch(fold, /justify-content/, 'no second share of the room left over');
 });

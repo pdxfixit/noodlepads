@@ -378,14 +378,15 @@ main {
 /* A group and its pads in one box with a light stroke round it (Ben,
    2026-10-18: like the light dialogs' bordered panels). The stroke is an
    outline, so it takes no room: the pads inside lay out exactly as the
-   bed's own, the same columns at every pad size. Inside it a stuck header
-   covers only out to the stroke. */
+   bed's own, the same columns at every pad size. Its columns are the bed's
+   own (subgrid), so the box ends where its pads and header end: an inherited
+   template spread the room left over a second time inside the box, and the
+   stroke stood off its header's edge on a wide screen. Inside it a stuck
+   header covers only out to the stroke. */
 .pad-fold {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: inherit;
-  justify-content: inherit;
-  column-gap: inherit;
+  grid-template-columns: subgrid;
   row-gap: 16px;
   margin: 6px 0;
   border-radius: 14px;

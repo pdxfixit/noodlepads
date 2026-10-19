@@ -67,7 +67,7 @@ says so and nothing is added; ↩️ Undo in the banner takes it back. Every
 folding section on a light sheet or dialog (the sheet's Voice and Layers,
 ⚙️ Settings, 💃 Grooves, the "…" emoji list) is a bordered panel, and on 🔊
 Pads each group sits with its pads inside a light outline (`.pad-fold`; an
-outline takes no room, so the pads keep their columns). 🧩 **Chop into pads** cuts it where
+outline takes no room, and the box takes the bed's own columns, so the pads keep them and the outline hugs its header at every width). 🧩 **Chop into pads** cuts it where
 each sound starts and makes each piece a new pad ("Baby Burp", "Burp Jr.").
 The **pad size slider** at the top left of the pads, on the panel's darker
 top band with ✏️ Edit sounds at its right (as 🎤 Live's ● Record and 🎬
