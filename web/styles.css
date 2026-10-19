@@ -3017,38 +3017,29 @@ dialog.np-dialog .set-buttons .quiet { justify-content: center; }
 }
 .version .ver-sha, .set-version .ver-sha { text-decoration: underline; text-underline-offset: 2px; }
 .version .ver-date:hover { text-decoration: underline; }
-/* The privacy policy link beside the version, in the version's small text,
-   with the same 44 px target (Ben, 2026-10-16: "next to the version"). */
+/* The privacy policy link beside the version in About (the footer has none:
+   Ben, 2026-10-19). */
 .privacy-link { color: inherit; text-decoration: underline; white-space: nowrap; }
-.page-foot .privacy-link {
-  flex: none; display: inline-flex; align-items: center; min-height: 44px;
-  margin: -14px -10px; padding: 14px 10px; border-radius: 10px;
-  font-size: 0.75rem; line-height: 16px; opacity: 0.8;
-}
-.page-foot .privacy-link:hover { opacity: 1; }
-/* On one line the right side reads the same way round: Privacy policy, the
-   date, then the commit. The " · " keeps its spaces (a flex item trims them). */
-.page-foot .privacy-link { order: 1; margin-left: auto; }
-.page-foot .version { order: 2; margin-left: 0; }
+/* On one line: the date, then the commit. The " · " keeps its spaces (a
+   flex item trims them). */
 .version .ver-date { order: -1; }
 .version .ver-sha { order: 1; }
 .version .ver-sep { white-space: pre; }
-/* A how-to on two lines or more: the how-to keeps the width, and the right
-   side is one column, Privacy policy, then the date, then the commit, each
-   the version's size, stacked line on line (Ben, 2026-10-19: "no blank lines
-   in between. neatly stacked"). Each tap area is its line, 20 px, touching
-   the next and as wide as the column: below the 44 px rule, on purpose. */
+/* A how-to on two lines or more: the how-to keeps the width, and the date
+   and the commit stack at the right, line on line, the version's size (Ben,
+   2026-10-19: "no blank lines in between. neatly stacked"). Each tap area is
+   its line, 20 px, touching the next and as wide as the column: below the
+   44 px rule, on purpose. */
 .page-foot.stacked { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; align-items: start; }
-.page-foot.stacked .screen-hint { grid-column: 1; grid-row: 1 / span 3; align-self: center; }
+.page-foot.stacked .screen-hint { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
 .page-foot.stacked .version { display: contents; }
 .page-foot.stacked .ver-sep { display: none; }
-.page-foot.stacked .privacy-link, .page-foot.stacked .ver-date, .page-foot.stacked .ver-sha {
+.page-foot.stacked .ver-date, .page-foot.stacked .ver-sha {
   grid-column: 2; justify-self: stretch; justify-content: flex-end; margin: 0 -10px 0 0; padding: 2px 10px; min-height: 20px;
   font-size: 0.75rem; line-height: 16px; opacity: 0.8;
 }
-.page-foot.stacked .privacy-link { grid-row: 1; }
-.page-foot.stacked .ver-date { grid-row: 2; }
-.page-foot.stacked .ver-sha { grid-row: 3; }
+.page-foot.stacked .ver-date { grid-row: 1; }
+.page-foot.stacked .ver-sha { grid-row: 2; }
 .set-version .privacy-link { display: inline-flex; align-items: center; min-height: 44px; }
 /* The link above the version, centered like it. */
 .set-again { margin: 14px 0 0; text-align: center; }
