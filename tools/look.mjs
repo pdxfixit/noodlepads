@@ -266,14 +266,14 @@ const VIEWS = {
   'row-more': { screen: 'beats', still: true, js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('rock') + q('[data-groove="pop"]') + 'await new Promise((r) => setTimeout(r, 300));'
     + 'document.querySelector(".seq-head").scrollIntoView({ block: "center" }); await new Promise((r) => setTimeout(r, 200));' + q('.seq-head [data-more]') + nap },
   'beat-groove': { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('rock') + q('[data-groove="pop"]') + 'await new Promise((r) => setTimeout(r, 300));' },
-  // ⇆ Move on Pop (beat-move.js): the whole beat picked, the Move bar at the foot. Opened only if shut (the widths share the page's beat, not the mode).
-  'beat-move': { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('rock') + q('[data-groove="pop"]') + 'await new Promise((r) => setTimeout(r, 300));' + MOVE_OPEN },
-  // Mid-slide: a hold on the kick's third pill lifted the pick, and the finger is two pills left, so the dashed shadows show. The drag is left in the air for the shot.
+  // ⇆ locked on Pop: every lit pill picked (All), the bar at the foot. Locked only if not (the widths share the page's beat, not the mode).
+  'beat-move': { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('rock') + q('[data-groove="pop"]') + 'await new Promise((r) => setTimeout(r, 300));' + MOVE_OPEN + q('[data-move-pick="all"]') },
+  // Mid-slide, locked: a finger on the kick's lit third pill dragged two pills left, so the pick shows where it slid. The drag is left in the air for the shot.
   'beat-move-slide': { screen: 'beats', still: true, js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('rock') + q('[data-groove="pop"]') + 'await new Promise((r) => setTimeout(r, 300));' + MOVE_OPEN
     + `const pill = (s) => document.querySelector('#seq-rows .seq-row[data-row="0"] .pill[data-step="' + s + '"]');
        pill(2).scrollIntoView({ block: 'center' }); await new Promise((r) => setTimeout(r, 100));
        const at = (el, type) => { const b = el.getBoundingClientRect(); return new PointerEvent(type, { bubbles: true, pointerId: 9, pointerType: 'touch', clientX: b.x + b.width / 2, clientY: b.y + b.height / 2 }); };
-       pill(2).dispatchEvent(at(pill(2), 'pointerdown')); await new Promise((r) => setTimeout(r, 600));
+       pill(2).dispatchEvent(at(pill(2), 'pointerdown'));
        document.querySelector('#seq-rows').dispatchEvent(at(pill(0), 'pointermove')); await new Promise((r) => setTimeout(r, 100));` },
   // The scratch beat with Ska loaded (ADR 0020): "Ska (scratch)", 💾 Keep where ✏️ was, and the Undo line.
   keep: { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('latin') + q('[data-groove="ska"]') + 'await new Promise((r) => setTimeout(r, 300));' },

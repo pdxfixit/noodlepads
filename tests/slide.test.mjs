@@ -3,7 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { pillKey, pickAll, section, paint, invertPick, shiftPick, keepPick, slideRows } from '../web/slide.js';
+import { pillKey, pickAll, section, shiftPick, slideRows } from '../web/slide.js';
 import { cleanRow } from '../web/sequencer.js';
 
 const on = (...steps) => Array.from({ length: 16 }, (_, i) => steps.includes(i));
@@ -68,19 +68,9 @@ test('a tune row: notes starting where moved ones land are replaced', () => {
   assert.deepEqual(out.tune, [{ p: 2, s: 0, l: 1 }]);
 });
 
-test('picking: a section is a rectangle either way round; painting adds or takes out', () => {
+test('picking: a section is a rectangle either way round; a pick follows its pills round the end', () => {
   assert.deepEqual([...section(1, 5, 0, 3)].sort(), ['0:3', '0:4', '0:5', '1:3', '1:4', '1:5']);
-  const all = pickAll(2, 4);
-  assert.equal(all.size, 8);
-  const out = paint(all, section(0, 1, 1, 2), false);
-  assert.deepEqual([...out].sort(), ['0:0', '0:3', '1:0', '1:3']);
-  assert.equal(paint(out, section(0, 1, 0, 1), true).has(pillKey(0, 1)), true);
-});
-
-test('Invert picks every pill not picked; a pick follows its pills and drops what is gone', () => {
-  const one = section(0, 0, 0, 3);
-  assert.deepEqual([...invertPick(one, 2, 4)].sort(), ['1:0', '1:1', '1:2', '1:3']);
-  assert.equal(invertPick(pickAll(2, 4), 2, 4).size, 0);
+  assert.equal(pickAll(2, 4).size, 8);
   assert.deepEqual([...shiftPick(new Set(['0:0', '1:3']), -1, 4)].sort(), ['0:3', '1:2']);
-  assert.deepEqual([...keepPick(new Set(['0:0', '2:1', '0:9']), 2, 4)], ['0:0']);
+  assert.ok(pickAll(1, 2).has(pillKey(0, 1)));
 });

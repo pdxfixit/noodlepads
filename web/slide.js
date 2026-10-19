@@ -1,11 +1,11 @@
-// ⇆ Move on Beats (Ben, 2026-10-17): picking pills and sliding them along
-// their rows, so a beat that starts on pill 3 can be put back on pill 1, all
-// its rows in step, or one part of it moved. Pure: lists in, lists out. The
-// beat maker (sequencer.js) draws the pick and wires the gestures
-// (beat-move.js); this file decides what a pick is and what a slide does.
+// Picking pills and sliding them along their rows (Ben, 2026-10-17), so a
+// beat that starts on pill 3 can be put back on pill 1, all its rows in
+// step, or one part of it moved. Pure: lists in, lists out. pill-select.js
+// wires the gestures (a mouse, or a finger while ⇆ locks the pills); this
+// file decides what a pick is and what a slide does.
 //
-// A pick is a Set of pill keys, "row:pill" (pillKey). Any set: a section
-// painted with a finger, a whole row, everything, or Invert of any of those.
+// A pick is a Set of pill keys, "row:pill" (pillKey): a box drawn across
+// pills, single pills, every lit pill, or Invert of those.
 // A slide moves every picked pill `d` pills along its own row (sideways
 // only, so each keeps its sound), round the end of the beat (`total` pills),
 // since beats loop: nothing is lost, and sliding back undoes it. Where a
@@ -25,14 +25,8 @@ export const pickAll = (count, total) => pillsOf(upTo(count), upTo(total));
 // What a drag paints: the rows and pills from where it started to where the
 // finger is, as a rectangle, whichever way it went.
 export const section = (r0, s0, r1, s1) => pillsOf(span(r0, r1), span(s0, s1));
-// The pick after painting `sect` over `base`: added, or taken out.
-export const paint = (base, sect, add) => (add ? new Set([...base, ...sect]) : new Set([...base].filter((k) => !sect.has(k))));
-// Every pill of the beat that is not picked, and none that is.
-export const invertPick = (pick, count, total) => new Set([...pickAll(count, total)].filter((k) => !pick.has(k)));
 // The pick moved along with its pills.
 export const shiftPick = (pick, d, total) => new Set([...pick].map((k) => { const [r, s] = fromKey(k); return pillKey(r, wrap(s + d, total)); }));
-// A pick of a beat that changed (fewer rows or pills): what still exists.
-export const keepPick = (pick, count, total) => new Set([...pick].filter((k) => { const [r, s] = fromKey(k); return r < count && s < total; }));
 
 // The rows after sliding the picked pills `d` along, round `total` pills.
 // New row objects; the old ones are left as they were (for Undo). A plain

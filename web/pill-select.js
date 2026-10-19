@@ -12,10 +12,16 @@
 // - Delete or Backspace turns the pick off, a double-click one pill; Esc
 //   lets go. A slide and a delete each offer Undo.
 // A finger and the keyboard keep their own ways: a tap lights or unlights,
-// a hold makes a hit loud (the one way now), and ⇆ Move slides by touch.
+// a hold makes a hit loud (the one way now).
+// ⇆ locks the pills (Ben, 2026-10-19: "all it should really change is the
+// ability to turn pills on/off, in order to enable large scale edits"):
+// nothing lights or unlights, in whichever view shows, and a finger picks
+// and drags as a mouse does. A tap (or Space) puts a lit pill in or out of
+// the pick; a drag from an unlit pill boxes, from a lit one slides; All,
+// None and Invert sit in the lock's bar at the foot (sequencer.js).
 // Tune rows (🎹) are left out: a click there opens the piano roll.
 
-import { pillKey, fromKey, section, shiftPick, slideRows } from './slide.js';
+import { pillKey, fromKey, section, shiftPick, slideRows, pickAll } from './slide.js';
 
 // The keys of `keys` that are lit pills of plain rows: only those are picked.
 export function litOnly(rows, keys, total) {
@@ -67,8 +73,9 @@ const count = (n) => `${n} ${n === 1 ? 'pill' : 'pills'}`;
 // deps: root (the rows' box), pillOf(node) → {r, s} or null, pillEl(r, s),
 // beat(), total(), putRows(rows) (writes and draws everything), paint(rows)
 // (writes and repaints only the pills that changed: a drag's every step),
-// save(), light(r, s) (lights a pill, saves, draws), enabled() (false in ⇆
-// Move or recording), snapshot(), undoable(copy, text).
+// save(), light(r, s) (lights a pill, saves, draws), enabled() (false while
+// recording), locked() (⇆ on), snapshot(), undoable(copy, text), and
+// changed(size) (hears the pick change, for the lock's bar).
 export function createPillSelect(deps) {
   let pick = new Set();
   let anchor = null;
@@ -101,13 +108,15 @@ export function createPillSelect(deps) {
       const [r, s] = fromKey(k);
       const p = deps.pillEl(r, s);
       if (p) { p.classList.add('chosen'); marked.push(p); }
-    }
+    }    deps.changed?.(pick.size);
   }
   const set = (next) => { pick = next; decorate(); };
 
+  // A mouse picks at any time; a finger only while ⇆ locks the pills.
+  const ours = () => mouse || !!deps.locked?.();
   function down(e) {
     mouse = e.pointerType === 'mouse';
-    if (!mouse || e.button !== 0 || !deps.enabled()) return;
+    if (!ours() || e.button > 0 || !deps.enabled()) return;
     const at = deps.pillOf(e.target);
     if (!at || rows()[at.r]?.melody) return;
     keep();
@@ -169,8 +178,19 @@ export function createPillSelect(deps) {
   // A keyboard's Space or Enter (no pointer, detail 0) and a finger's tap are not.
   function click(e, r, s) {
     if (Date.now() - after < 400) { after = -1e9; return true; }
-    if (!mouse || e.detail === 0 || !deps.enabled() || rows()[r]?.melody) return false;
+    if (!deps.enabled() || rows()[r]?.melody) return false;
+    const locked = !!deps.locked?.();
+    // Locked, a finger's tap or the keyboard's Space puts a lit pill in or
+    // out of the pick, and an unlit one stays as it is.
+    if (locked && (!mouse || e.detail === 0)) {
+      keep();
+      const k = pillKey(r, s);
+      if (rows()[r]?.steps[s]) { const next = new Set(pick); if (next.has(k)) next.delete(k); else next.add(k); anchor = k; set(next); }
+      return true;
+    }
+    if (!mouse || e.detail === 0) return false;
     keep();
+    if (locked && !rows()[r]?.steps[s]) return true;   // a mouse never lights one while locked
     const res = clickPick(rows(), pick, { r, s }, { add: e.ctrlKey || e.metaKey, range: e.shiftKey }, anchor, deps.total());
     anchor = res.anchor;
     if (res.light) { pick = res.pick; deps.light(r, s); decorate(); return true; }
@@ -179,7 +199,7 @@ export function createPillSelect(deps) {
   }
   // A double-click turns that one pill off.
   function dblclick(e) {
-    if (!mouse || !deps.enabled()) return;
+    if (!mouse || !deps.enabled() || deps.locked?.()) return;   // locked: nothing turns off
     const at = deps.pillOf(e.target);
     if (!at || !rows()[at.r]?.steps[at.s] || rows()[at.r]?.melody) return;
     const copy = deps.snapshot();
@@ -192,7 +212,7 @@ export function createPillSelect(deps) {
     if (!pick.size || !deps.enabled() || e.target?.closest?.('input, textarea, select, dialog') || document.querySelector?.('dialog[open]')) return;
     if (!deps.root.isConnected || deps.root.closest?.('[hidden]')) return;
     if (e.key === 'Escape') { set(new Set()); return; }
-    if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+    if ((e.key !== 'Delete' && e.key !== 'Backspace') || deps.locked?.()) return;
     e.preventDefault();
     const copy = deps.snapshot();
     const n = pick.size;
@@ -218,5 +238,11 @@ export function createPillSelect(deps) {
   deps.root.addEventListener('dblclick', dblclick);
   globalThis.document?.addEventListener?.('keydown', key);
 
-  return { decorate, click, dragging: () => !!drag, picked: () => new Set(pick), clear: () => set(new Set()) };
+  // The lock's bar: every lit pill, none, or the lit ones not picked.
+  const every = () => litOnly(rows(), pickAll(rows().length, deps.total()), deps.total());
+  return {
+    decorate, click, dragging: () => !!drag, picked: () => new Set(pick), clear: () => set(new Set()),
+    all: () => { keep(); set(every()); },
+    invert: () => { keep(); set(new Set([...every()].filter((k) => !pick.has(k)))); },
+  };
 }
