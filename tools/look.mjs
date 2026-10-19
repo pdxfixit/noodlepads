@@ -44,6 +44,8 @@ const KEYS = (on) => `if (document.body.classList.contains('keys-on') !== ${on})
 // Named states past a screen: a dialog or mode, opened by script, so a look
 // at every screen is one command (just look pads settings help sheet ...).
 const q = (sel) => `document.querySelector(${JSON.stringify(sel)}).click();`;
+// ✏️ Layout with 👆 Pads open: Two and one, then Drums, Chords and Bass into its blocks, in order.
+const GRID_FILL = ['[data-shape="two-one"]', '[data-add-group="drums"]', '[data-add-group="chords"]', '[data-add-group="bass"]'].map(q).join('');
 // 🆕 New in a beat bar, then a 24-character name typed into its title (the scratch holds it).
 const LONG_NAME = (bar) => `${q(`${bar} [data-beat-new]`)} { const n = document.querySelector(${JSON.stringify(`${bar} [data-beat-name]`)});
   n.value = 'Wobbly Noodle Jamboree 9'; n.dispatchEvent(new Event('change')); } await new Promise((r) => setTimeout(r, 300));`;
@@ -343,6 +345,11 @@ const VIEWS = {
   // ✏️ Layout from Beats' control bar (Ben, 2026-10-19): ⌨️ Keys | 👆 Pads in its title line, from 700 px.
   layout: { screen: 'beats', keys: true, js: q('#ke-input [data-input="keys"]') + q('#dj-change-bar') },
   'layout-pads': { screen: 'beats', keys: true, js: q('#ke-input [data-input="touch"]') + q('#dj-change-bar') },
+  // 👆 A grid (ADR 0032): Two and one, filled with Drums, Chords and Bass; in ✏️ Layout, and played.
+  'grid-edit': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + GRID_FILL },
+  'grid-empty': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + q('[data-shape="two-one"]') },
+  'grid-play': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + GRID_FILL + q('#touch-edit [data-close]') },
+  'grid-beats': { screen: 'beats', keys: true, js: q('#ke-input [data-input="touch"]') + q('#dj-change-bar') + GRID_FILL + q('#touch-edit [data-close]') },
   'touch-edit-swap': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-tile="0"]') },
   'touch-edit-more': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-more="1"]') },
   'touch-edit-groups': { screen: 'live', js: q('#ke-input [data-input="touch"]') + q('#dj-change') + q('#te-bands [data-more="1"]') + q('#te-bands [data-group-pick]') },

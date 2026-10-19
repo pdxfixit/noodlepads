@@ -8,11 +8,16 @@
 // sounds, with one size for all its tiles: S, M or L, 5, 4 or 2 across on a
 // phone. No DOM, no audio, no storage: dj-touch.js draws and listens.
 //
-//   touch  {bands: [{group, size: 's' | 'm' | 'l', sounds: [clipId…]}]}
+//   touch  {bands: [{group, size: 's' | 'm' | 'l', sounds: [clipId…]}], grid?}
+//
+// With a `grid` (touch-grid.js, ADR 0032) the bands sit in blocks side by
+// side instead, each block's pads filling it, and `size` waits unused.
 //
 // Sounds are the person's own clip ids (`<person>-kick` for their copy of
 // the kit), as the keys are. Every function returns a new layout and never
 // changes the one it was given.
+
+import { cleanGrid, settle, dropBand } from './touch-grid.js';
 
 export const MINE = 'mine';                       // 🎤 My sounds, the person's own
 export const SIZES = { s: 5, m: 4, l: 2 };        // tiles across on a phone (Ben, 2026-10-16)
@@ -144,7 +149,11 @@ export function defaultTouch(sounds) {
   return mine.length ? { bands: [newBand(MINE, sounds), ...band.bands] } : band;
 }
 
-const copy = (t) => ({ bands: (t?.bands ?? []).map((b) => ({ ...b, sounds: [...b.sounds] })) });
+const copy = (t) => {
+  const out = { bands: (t?.bands ?? []).map((b) => ({ ...b, sounds: [...b.sounds] })) };
+  if (t?.grid) out.grid = JSON.parse(JSON.stringify(t.grid));
+  return out;
+};
 const at = (t, i) => (Number.isInteger(i) && i >= 0 && i < (t?.bands?.length ?? 0) ? i : -1);
 
 // ── Changing a layout (✏️ Layout (👆 Pads)) ──
@@ -159,7 +168,9 @@ export function addBand(t, band) {
 
 export function removeBand(t, i) {
   const out = copy(t);
-  if (at(out, i) >= 0) out.bands.splice(i, 1);
+  if (at(out, i) < 0) return out;
+  out.bands.splice(i, 1);
+  if (out.grid) out.grid = dropBand(out.grid, i);   // its block stays, empty
   return out;
 }
 
@@ -257,7 +268,8 @@ export function removeTile(t, i, k) {
 // ── Comparing and ordering ──
 
 export function sameTouch(a, b) {
-  return JSON.stringify(cleanTouch(a)?.bands ?? []) === JSON.stringify(cleanTouch(b)?.bands ?? []);
+  const key = (t) => { const c = cleanTouch(t); return JSON.stringify([c?.bands ?? [], c?.grid ?? null]); };
+  return key(a) === key(b);
 }
 
 // Before a layout replaces this one, the one on screen when it is the kid's
@@ -288,10 +300,29 @@ export function cleanBand(b) {
 }
 
 // A live touch layout (`decks.touch`, `decks.touchMine`): {bands} with at
-// most MAX_BANDS, or null.
+// most MAX_BANDS, and a grid placing them when it has one, or null. A band
+// a block lost (a broken index) is dropped, as touch-grid.js `settle` says.
 export function cleanTouch(t) {
   if (!t || typeof t !== 'object' || !Array.isArray(t.bands)) return null;
-  return { bands: t.bands.map(cleanBand).filter(Boolean).slice(0, MAX_BANDS) };
+  const raw = t.bands.slice(0, MAX_BANDS * 2);
+  const cleaned = raw.map(cleanBand);
+  // Indexes past a band that failed cleaning count it no longer.
+  const index = []; let n = 0;
+  for (const b of cleaned) { index.push(b ? n : null); if (b) n += 1; }
+  const bands = cleaned.filter(Boolean).slice(0, MAX_BANDS);
+  if (!t.grid) return { bands };
+  const grid = cleanGrid(reindex(t.grid, index), bands.length);
+  return grid ? settle({ bands, grid }) : { bands };
+}
+// A stored grid's band indexes, as `index` maps them (null: none).
+function reindex(g, index) {
+  if (!g || typeof g !== 'object' || !Array.isArray(g.parts)) return g;
+  return { ...g, parts: g.parts.map((p) => {
+    if (Array.isArray(p?.parts)) return reindex(p, index);
+    if (!p || typeof p !== 'object' || !Number.isInteger(p.band)) return p;
+    const { band, ...rest } = p;
+    return index[band] == null ? rest : { ...rest, band: index[band] };
+  }) };
 }
 
 // A name typed for a touch layout: trimmed and cut to 24, or null when blank.
@@ -300,7 +331,7 @@ export function touchName(v) {
   return name || null;
 }
 
-// A saved touch layout (IndexedDB `touchLayouts`): {id, personId, name, created, bands}.
+// A saved touch layout (IndexedDB `touchLayouts`): {id, personId, name, created, bands, grid?}.
 export function cleanTouchLayout(l) {
   if (!TOUCH_ID.test(l?.id) || typeof l.personId !== 'string') return null;
   const t = cleanTouch(l);
@@ -311,5 +342,6 @@ export function cleanTouchLayout(l) {
     name: touchName(l.name) ?? 'Layout',
     created: Number.isFinite(l.created) ? l.created : Date.now(),
     bands: t.bands,
+    ...(t.grid ? { grid: t.grid } : {}),
   };
 }
