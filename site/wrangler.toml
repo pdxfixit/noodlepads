@@ -1,10 +1,11 @@
 # Noodle Pads on Cloudflare: one Worker serving web/ as static files and
-# worker/ for /api (cloud profiles, problem reports, player metrics, usage events).
+# worker/ for /api (cloud profiles, problem reports, player metrics, usage events,
+# feedback).
 # Deployed by flarepress (github.com/pdxfixit/flarepress): on every push to
 # main by .github/workflows/deploy.yml, or by Ben's `just deploy`.
 # Apex only: a www copy would be a second origin with its own saved sounds.
-# One D1 database and one R2 bucket for usage events, nothing else (keep the
-# free-plan footprint small).
+# One D1 database, an R2 bucket for usage events, the shared feedback bucket
+# and its rate limit, nothing else (keep the free-plan footprint small).
 # This repo is public: the database id is ${D1_DATABASE_ID}, filled at deploy
 # time from a GitHub secret or ~/.config/noodlepads/cloud.json.
 name = "noodlepads-com"
@@ -29,3 +30,19 @@ database_id = "${D1_DATABASE_ID}"
 [[r2_buckets]]
 binding = "EVENTS"
 bucket_name = "noodlepads-telemetry"
+
+# Feedback (POST /api/feedback, handleFeedback in worker/events-worker.js):
+# what a grown-up typed in Settings → About → Feedback, stored as sent under
+# v1/noodlepads/. One bucket holds every app's feedback, a prefix each; the
+# telemetry runner's daily pull copies each message to Ben's notes and
+# deletes it (none is kept over 90 days).
+[[r2_buckets]]
+binding = "FEEDBACK"
+bucket_name = "app-suggestions"
+
+# A flood guard for /api/feedback: 10 messages a minute for the whole app,
+# counted under the app's name, never the sender's address.
+[[ratelimits]]
+name = "FEEDBACK_LIMITER"
+namespace_id = "4151"
+simple = { limit = 10, period = 60 }
