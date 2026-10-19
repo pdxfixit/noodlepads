@@ -4,7 +4,7 @@
 // told it will not survive a reload.
 
 import { db, STORE_NAMES, SCHEMA } from './store.js';
-import { personEditRecord, adoptPeople, personIdsIn } from './model.js';
+import { personEditRecord, adoptPeople, personIdsIn, personColor } from './model.js';
 import { isCloudId, reIdDoc } from './reid.js';
 import { newId } from './util.js';
 import { showNotice } from './ui.js';
@@ -47,6 +47,17 @@ const wouldNotSave = (err) => (storageWaiting
   : `This browser wouldn't save that change (${err.message || err.name}). It works until you reload the page, then it's gone.`);
 
 // Reads every store into state; also used after loading a backup.
+// A person stored with one of the person colors before 2026-10-19 takes the
+// nearest of today's (model.js OLD_PERSON_COLORS) as it is read, so the color
+// picker shows it chosen and the next sync sends it. Storage keeps the old
+// one until the record next saves; every read moves it again.
+function movePersonColors() {
+  for (const [id, record] of state.peopleEdits) {
+    const color = personColor(record.color);
+    if (color !== record.color) state.peopleEdits.set(id, { ...record, color });
+  }
+}
+
 export async function readStorage() {
   // `bases` is cloud sync's own (cloud.js), read only by the sync.
   const [clips, overrides, orders, patterns, beats, peopleEdits, settings, decks, takes, songs, songbook, cloud, prefs, layouts, voices, touchLayouts] = await Promise.all(
@@ -57,6 +68,7 @@ export async function readStorage() {
   state.patterns = new Map(patterns.map((p) => [p.personId, p]));
   state.savedBeats = beats;
   state.peopleEdits = new Map(peopleEdits.map((p) => [p.id, p]));
+  movePersonColors();
   state.settings = new Map(settings.map((s) => [s.key, s.value]));
   state.decks = new Map(decks.map((d) => [d.personId, d]));
   state.takes = takes;

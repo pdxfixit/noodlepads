@@ -5,7 +5,7 @@ import {
   PERSON_COLORS, mergePeople, colorName, padColor, orderClips, clipsForPerson,
   overrideFor, withHidden, personEditRecord, nextPersonColor, validateManifest,
 } from '../web/model.js';
-import { PICTURES } from '../web/model.js';
+import { PICTURES, pictureTakenBy, overrideWithEmoji } from '../web/model.js';
 import { isFunName, FUN_NAMES } from '../web/names.js';
 import { groupKit, openKitGroups, isKitClip, kitFor, boardTitle, ownSoundsTitle, soloPerson, adoptPeople, personIdsIn, isDefaultPerson, SOLO_NAME, SOLO_COLOR } from '../web/model.js';
 import { whiteReadsOn } from '../web/contrast.js';
@@ -100,7 +100,7 @@ test('isDefaultPerson: only the automatic first person (or an older copy\'s Me),
 
 test('nextPersonColor: the first unused color, ignoring case, else the first', () => {
   assert.equal(nextPersonColor([]), PERSON_COLORS[0]);
-  assert.equal(nextPersonColor(['#1f3fa8', '#0c5e4b']), PERSON_COLORS[2]);
+  assert.equal(nextPersonColor([PERSON_COLORS[0].toLowerCase(), PERSON_COLORS[1].toLowerCase()]), PERSON_COLORS[2]);
   assert.equal(nextPersonColor(PERSON_COLORS), PERSON_COLORS[0]);
 });
 
@@ -566,7 +566,6 @@ test('the presets (Ben, 2026-10-11): the old starters, a full octave of notes, A
 // a chord its weather, a bass note its animal, so "a C is a C, whoever
 // plays it". The instrument shows as a badge (pads.js).
 test('every kit sound has its own emoji, so a sound is told apart by its picture alone, except an instrument\'s, which has its note\'s', async () => {
-  const { readFileSync } = await import('node:fs');
   const boards = JSON.parse(readFileSync(new URL('../web/boards.json', import.meta.url), 'utf8'));
   const seen = new Map();
   for (const k of boards.kit.filter((x) => !x.inst)) {
@@ -594,7 +593,6 @@ test('no instrument\'s kit id ends in another kit id, and an older one that does
 });
 
 test('pictures: each once; a picture another sound has is found; an override changes only the emoji', async () => {
-  const { PICTURES, pictureTakenBy, overrideWithEmoji } = await import('../web/model.js');
   assert.equal(new Set(PICTURES).size, PICTURES.length);
   assert.ok(PICTURES.includes('🦶') && PICTURES.includes('🥁'), 'the kit\'s own are there');
   const clips = [{ id: 'a', emoji: '🥁', label: 'Snare' }, { id: 'b', emoji: '🦶', label: 'Kick' }, { id: 'c', emoji: '🎸', hidden: true }];

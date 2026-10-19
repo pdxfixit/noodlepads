@@ -3,7 +3,7 @@
 // worker/schema.sql). The device keeps the working copy; this only stores
 // and hands back, and checks everything it is sent.
 
-import { PERSON_ID, PERSON_COLORS } from '../web/model.js';
+import { PERSON_ID, PERSON_COLORS, OLD_PERSON_COLORS } from '../web/model.js';
 import { isListedEmoji } from '../web/emoji-check.js';
 import { isFunName } from '../web/names.js';
 import { CLOUD_ID } from '../web/reid.js';
@@ -117,7 +117,8 @@ function checkLooks(body, { partial = false } = {}) {
     out.avatar = avatar;
   }
   if (!partial || body.color !== undefined) {
-    if (!PERSON_COLORS.includes(body.color)) throw new Refuse(400, 'color');
+    // Today's colors, or one from before 2026-10-19 an older copy of the app still sends.
+    if (!PERSON_COLORS.includes(body.color) && !Object.hasOwn(OLD_PERSON_COLORS, body.color)) throw new Refuse(400, 'color');
     out.color = body.color;
   }
   return out;

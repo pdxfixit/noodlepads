@@ -17,8 +17,8 @@ import { people, person } from './board.js';
 import { PERSON_COLORS, PERSON_COLOR_NAMES, nextPersonColor, freePicture, personCounts, countsText, countsWords, KIND_EMOJI } from './model.js';
 import { newId } from './util.js';
 import { funName, nameChoices, isFunName } from './names.js';
-import { inCloud, dropLink, linkOf, pinGuards } from './cloud.js';
-import { avatarBadge, openAvatar, openCloudSheet, cloudLabel, askEditPin, drawPin, pinClick } from './cloud-ui.js';
+import { inCloud, dropLink, linkOf, pinGuards, onCloud } from './cloud.js';
+import { avatarBadge, openAvatar, cloudLabel, askEditPin, drawPin, pinClick, disarmCloud } from './cloud-ui.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { announce } from './ui.js';
 import { logEvent } from './log.js';
@@ -203,10 +203,8 @@ function renderProfile(fresh = false) {
   for (const b of el.profileColors.children) {
     b.setAttribute('aria-pressed', String(b.dataset.color.toLowerCase() === p.color.toLowerCase()));
   }
-  const cloud = cloudLabel(p);
-  el.profileCloudText.textContent = cloud ? cloud.label.replace(/^Cloud for [^:]*: /, '').replace(/^./, (c) => c.toUpperCase()) + '.'
-    : "Someone from the app's own list stays on this device.";
-  el.profileCloud.hidden = !cloud;
+  el.profileLock.hidden = !linkOf(p.id)?.pin;
+  if (fresh) disarmCloud();
   drawPin(p.id);
 
   // Everyone can be deleted, with what is theirs, except the last on show.
@@ -301,6 +299,7 @@ async function onProfileClick(e) {
   const t = e.target.closest('button');
   if (!id || !t) return;
   if (t !== el.profileDelete) disarmDelete();
+  if (t.id !== 'profile-cloud') disarmCloud(id);
   const swatch = t.closest('[data-color]');
   if (swatch) {
     if (await editLook(id, { color: swatch.dataset.color })) swatch.focus({ preventScroll: true });
@@ -318,8 +317,7 @@ async function onProfileClick(e) {
     openPictures(id);
     return;
   }
-  if (t === el.profileCloud) { openCloudSheet(id); return; }
-  if (t !== el.profileDelete) { await pinClick(id, t, profileNote); return; }
+  if (t !== el.profileDelete) { await pinClick(id, t); return; }
   if (t.disabled) return;
   const p = anyone(id);
   if (!t.classList.contains('armed')) {
@@ -356,8 +354,7 @@ export function initPeople(hooks) {
     profileFace: document.querySelector('#profile-face'),
     profileReroll: document.querySelector('#profile-reroll'),
     profileColors: document.querySelector('#profile-colors'),
-    profileCloudText: document.querySelector('#profile-cloud-text'),
-    profileCloud: document.querySelector('#profile-cloud'),
+    profileLock: document.querySelector('#profile-lock'),
     profileDelete: document.querySelector('#profile-delete'),
     namesDialog: document.querySelector('#names-dialog'),
     namesList: document.querySelector('#names-list'),
@@ -405,6 +402,8 @@ export function initPeople(hooks) {
     openNames(r.dataset.reroll);
   });
   el.profile.addEventListener('click', onProfileClick);
+  // A sync, a PIN found new, a link dropped: the open sheet's ☁️ and 🔒 follow.
+  onCloud(() => { if (profileFor) renderProfile(); });
 
   el.peopleMenu.addEventListener('click', (e) => {
     if (!e.target.closest('#people-open')) return;

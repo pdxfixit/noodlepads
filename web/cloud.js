@@ -282,7 +282,7 @@ function deps() {
 export function syncNow(personId) {
   if (!inCloud(personId) || !db.handle) return Promise.resolve(null);
   if (!keyOf(personId)) {
-    setStatus(personId, { state: 'locked', text: '🔒 Waiting for the PIN: open them to sync.' });
+    setStatus(personId, { state: 'locked', text: '🔒 Syncs once they are opened with their PIN.' });
     return Promise.resolve(null);
   }
   if (running.has(personId)) return running.get(personId);
@@ -397,6 +397,20 @@ async function putInCloud(personId) {
   }
 }
 
+// ☁️ In the cloud switched on (or a PIN set) in their profile sheet: they go
+// in the cloud now, even with nothing made yet, and sync. Back from 📴 Offline
+// too. Throws a CloudError when the cloud isn't reachable from here.
+export async function putUpNow(personId) {
+  if (isOffline(personId)) await setPersonEdit(personId, { offline: false });
+  if (!inCloud(personId)) {
+    if (!await cloudThere()) throw new CloudError(0, { error: 'no cloud' });
+    await putInCloud(personId);
+  }
+  status.delete(personId);
+  logEvent('cloud', { offline: false });
+  return syncNow(personId);
+}
+
 // Opens a profile from the list on this device (with its PIN, if it has one).
 // Its person arrives with the first sync.
 export async function openProfile(profileId, pin) {
@@ -413,6 +427,9 @@ export async function openProfile(profileId, pin) {
 }
 
 export async function setPin(personId, current, next) {
+  // A sync still running (typing the PIN just now starts one) finishes first:
+  // the change closes every key, and that sync would answer it with a stale PIN.
+  await running.get(personId);
   const link = linkOf(personId);
   const res = await api.change(personId, keyOf(personId), { pin: current || undefined, newPin: next });
   await saveLink({ ...link, key: res.key, pin: !!next, check: next ? await pinCheck(next) : undefined, newPin: undefined });

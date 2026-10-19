@@ -578,14 +578,28 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   👥 People is a short list, one line per person: picture, name, counts and
   ☁️ state (🔒 with a PIN). Tapping a line opens their profile sheet
   (`#profile-dialog`, `people.js`): 🎲 Pick a name, the picture, every person
-  color, ☁️ Cloud, 🔒 PIN (set, change, remove) and
-  Delete. With a PIN on their cloud profile, changing the name, picture or
+  color (eight, in two lines of four on a phone, one of eight from 601 px;
+  chosen to stay apart for deuteranopia, `model.js` `PERSON_COLORS`; a
+  person stored with one of the ten before 2026-10-19 takes the nearest as
+  it is read, `OLD_PERSON_COLORS`), ☁️ In the cloud, 🔒 PIN and Delete.
+  ☁️ In the cloud is a switch: on puts them in the cloud now, even with
+  nothing made; off asks twice (and for the PIN), deletes the cloud copy and
+  keeps them here only (📴 Offline); a tap anywhere else takes the first tap
+  back. Under it, when they are in the cloud, 🔄 Sync now and 🔗 Share… (both
+  ask for the PIN first on a visit that hasn't had it). The 🔒 PIN part has a
+  pill, 🔒 PIN on or 🔓 No PIN, and 🔒 PIN shows by the name in the sheet's
+  title and 🔒 by it in the corner menu. 🔒 Set a PIN (which puts them in
+  the cloud first if they aren't), or Change PIN and Remove PIN, which ask
+  for the PIN they have now. A new PIN is typed twice; a second that doesn't
+  match says so on the pad and asks again. What a button just did (✅ PIN
+  set, ✅ PIN changed, 🔓 PIN removed) shows in the pill for 3 s, then it
+  fades back (`cloud-ui.js` `drawPin`, `pinClick`). With a PIN on their cloud profile, changing the name, picture or
   color asks for it once per visit (until a reload; typing it to open them
   counts), checked like an open (`cloud.js` `pinGuards`, `checkPin`); without
   one, anyone can. It gates the sheet only: syncs apply as before.
   Nobody types a name: a tap on 🎲 opens Pick a name, a dozen fun names and the
   special names to choose from (🎲 More names deals another dozen); closing it keeps the name. Deleting someone who is in
-  the cloud deletes them from this device only (📴 Offline deletes the cloud copy). Anyone can be deleted (two taps), with their recorded sounds,
+  the cloud deletes them from this device only (switching ☁️ In the cloud off deletes the cloud copy). Anyone can be deleted (two taps), with their recorded sounds,
   saved beats, beat on screen and pad order. A boards.json person can't leave
   that file, so deleting one keeps only a hidden record; the People dialog
   lists hidden people under "Deleted — bring back". The last person on show
@@ -679,12 +693,14 @@ ADR 0002.
 - **By themselves.** A person who has made something (a sound, beat, song,
   take or kit edit) goes to the cloud on the next sync. A typed name from
   before is swapped for a fun name first, so it never leaves the device. A
-  person who has made nothing (a new device's empty first board) stays here.
+  person who has made nothing (a new device's empty first board) stays here
+  until their ☁️ In the cloud is switched on.
   👥 People → ☁️ Open from the cloud puts someone from the list on this device.
-- **📴 Offline (this device only)**, in a person's ☁️ Cloud: deletes their cloud
-  copy (tap twice; the PIN if it has one) and keeps them out of the cloud.
-  ☁️ Put back in the cloud undoes it. A person taken out of the cloud on
-  another device goes Offline here too, rather than coming back by itself.
+- **📴 Offline (this device only)**: ☁️ In the cloud switched off in a
+  person's profile deletes their cloud copy (tap twice; the PIN if it has
+  one) and keeps them out of the cloud; switched on, they go back. A person
+  taken out of the cloud on another device goes Offline here too, rather than
+  coming back by itself.
 - **Names are made up.** Nobody types a person's name: `names.js` `funName`
   makes alliterative ones ("Admiral Avocado"), 🎲 picks another, and the
   round picture picks an emoji avatar: one from the short list, or any one
@@ -743,11 +759,11 @@ ADR 0002.
 - **A forgotten PIN:** email the PIN-reset address with the profile's fun
   name. Ben clears it by hand (`just cloud-reset-pin <profile id>`); then each
   device opens the profile once with no PIN.
-- **To delete a profile and everything in it:** 👥 People → tap them → ☁️ Cloud →
-  📴 Offline (this device only) (tap twice; it asks for the PIN if it has
-  one). What it shared stays shared.
+- **To delete a profile and everything in it:** 👥 People → tap them → switch
+  ☁️ In the cloud off (tap twice; it asks for the PIN if it has one). What it
+  shared stays shared.
 - **What's private:** read [Privacy](../README.md#privacy) in the README. Everyone who makes something is
-  in the public list unless set Offline.
+  in the public list unless their ☁️ In the cloud is switched off.
 - **Managing the database** (Ben): `just cloud-profiles` lists every profile;
   `just cloud-prune --days 180 --empty` shows idle and empty ones and loose
   sounds, `--yes` deletes them; `just cloud-migrate` brings the live schema up

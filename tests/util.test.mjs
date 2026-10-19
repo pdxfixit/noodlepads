@@ -43,9 +43,15 @@ test('newId has the shape backups accept, for every prefix the app uses', () => 
   assert.notEqual(newId('user'), newId('user'));
 });
 
-test('versionLabel: a stamped build says 1.0 and its commit; a dev copy, and junk', () => {
-  assert.deepEqual(versionLabel({ version: 'fd576a9', date: '2026-10-11 13:45 PDT' }), { version: 'fd576a9', release: '1.0', text: '1.0 · fd576a9 · 2026-10-11 13:45 PDT', date: '2026-10-11 13:45 PDT' }, 'no "v", and the time zone shows');
-  assert.deepEqual(versionLabel({ version: 'abc123' }), { version: 'abc123', release: '1.0', text: '1.0 · abc123', date: '' }, 'version stays the bare commit, for the update check');
+// Ben, 2026-10-19: the sha links to GitHub; "1.0" alone said nothing, so no release number.
+test('versionLabel: a stamped build says its commit (linked on GitHub) and date; a dev copy, and junk', () => {
+  assert.deepEqual(versionLabel({ version: 'fd576a9', date: '2026-10-11 13:45 PDT' }), {
+    version: 'fd576a9', text: 'fd576a9 · 2026-10-11 13:45 PDT', date: '2026-10-11 13:45 PDT',
+    url: 'https://github.com/pdxfixit/noodlepads/commit/fd576a9',
+  }, 'no "v", no release number, and the time zone shows');
+  assert.deepEqual(versionLabel({ version: 'abc1234' }), { version: 'abc1234', text: 'abc1234', date: '', url: 'https://github.com/pdxfixit/noodlepads/commit/abc1234' }, 'version stays the bare commit, for the update check');
+  assert.equal(versionLabel({ version: 'not-a-sha' }).url, '', 'only a commit links');
+  assert.equal(versionLabel({ version: 'dev' }).url, '');
   assert.equal(versionLabel({ version: 'dev' }).text, 'dev copy');
   assert.equal(versionLabel({}).text, 'dev copy');
   assert.equal(versionLabel(null).text, 'dev copy');

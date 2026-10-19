@@ -313,6 +313,30 @@ function fitLines() {
 // ── Version ────────────────────────────────────────────────────────────
 
 // version.json is written by `just deploy`; without it this is a dev copy.
+// The version's parts: the commit, a link to it on GitHub (Ben, 2026-10-19),
+// then the date. In the corner the date (or "dev copy") is the button that
+// opens ⚙️ Settings at About (settings-ui.js listens for [data-about]); About
+// itself shows it as text.
+function versionParts(label, { about = true } = {}) {
+  const make = (tag, cls, text) => Object.assign(document.createElement(tag), { className: cls, textContent: text });
+  const parts = [];
+  if (label.url) {
+    const sha = make('a', 'ver-sha', label.version);
+    sha.setAttribute('href', label.url);
+    sha.setAttribute('target', '_blank');
+    sha.setAttribute('rel', 'noopener');
+    sha.setAttribute('aria-label', `Build ${label.version} on GitHub`);
+    parts.push(sha, make('span', 'ver-sep', ' · '));
+  }
+  const when = label.date || label.text;
+  if (!about) return [...parts, make('span', 'ver-date', when)];
+  const button = make('button', 'ver-date', when);
+  button.type = 'button';
+  button.dataset.about = '';
+  button.setAttribute('aria-label', `About Noodle Pads: ${when}`);
+  return [...parts, button];
+}
+
 async function loadVersion() {
   let found = null;
   try {
@@ -322,11 +346,10 @@ async function loadVersion() {
   const label = versionLabel(found);
   state.version = label.version;
   telemetry?.setVersion(label.version);
-  // "1.0 · fd576a9 · 2026-10-11 13:45 PDT" on one line; stacked, the date
-  // sits above the release and commit (fitFoot).
-  const part = (cls, text) => Object.assign(document.createElement('span'), { className: cls, textContent: text });
-  if (label.date) el.version.replaceChildren(part('ver-sha', `${label.release} · ${label.version}`), part('ver-sep', ' · '), part('ver-date', label.date));
-  else el.version.textContent = label.text;
+  // "fd576a9 · 2026-10-11 13:45 PDT" on one line, in the corner and in
+  // About; stacked, the date sits above the commit (fitFoot).
+  el.version.replaceChildren(...versionParts(label));
+  el.aboutVersion?.replaceChildren(...versionParts(label, { about: false }));
   fitFoot();
 }
 
@@ -758,6 +781,7 @@ async function start() {
     title: $('#board-title'),
     grille: $('#grille'),
     version: $('#version'),
+    aboutVersion: $('#about-version'),
     pads: $('#pads'),
     editToggle: $('#edit-toggle'),
     padsBar: $('#pads-bar'),

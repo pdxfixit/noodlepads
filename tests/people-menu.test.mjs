@@ -34,13 +34,13 @@ test('the corner button shows the current person\'s letter in their color; the h
   const button = row().querySelector('.person-menu-btn');
   assert.equal(row().children.length, 1);
   assert.equal(button.children[0].textContent, 'P');
-  assert.equal(button.style.props['--c'], '#1F3FA8');
+  assert.equal(button.style.props['--c'], '#2D3FD6');
   assert.equal(button.getAttribute('aria-expanded'), 'false');
   assert.equal(button.getAttribute('aria-haspopup'), 'true');
   assert.match(button.getAttribute('aria-label'), /^Whose sounds: Pip\. 4 people\.$/);
   const items = row().querySelectorAll('.person-item');
   assert.deepEqual(items.map((i) => i.textContent), ['Pip', 'Juno', 'Toby', 'Wren', '👥 People']);
-  assert.deepEqual(items.slice(0, 4).map((i) => i.style.props['--c']), ['#1F3FA8', '#0C5E4B', '#9E1640', '#4C2A8C'], 'each in their color');
+  assert.deepEqual(items.slice(0, 4).map((i) => i.style.props['--c']), ['#2D3FD6', '#304A00', '#A3156E', '#0E2C78'], 'each in their color');
   assert.equal(row().querySelector('.person-list').hidden, true);
 });
 
@@ -77,7 +77,7 @@ test('choosing someone switches the board, closes the list and keeps focus on th
   const button = row().querySelector('.person-menu-btn');
   assert.equal(button.children[0].textContent, 'T');
   assert.match(button.getAttribute('aria-label'), /Toby/);
-  assert.equal(button.style.props['--c'], '#9E1640');
+  assert.equal(button.style.props['--c'], '#A3156E');
   assert.equal(row().querySelector('.person-list').hidden, true);
   assert.equal(document.activeElement, button);
 });

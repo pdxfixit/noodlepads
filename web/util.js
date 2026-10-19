@@ -37,20 +37,23 @@ export function newId(prefix, now = Date.now(), random = Math.random()) {
   return `${prefix}-${now.toString(36)}-${random.toString(36).slice(2, 6)}`;
 }
 
-// The release kids and parents see in the corner and in About: "1.0", ahead
-// of the commit. Raise it for a release worth a line in CHANGELOG.md.
-export const RELEASE = '1.0';
+// Where a build's commit is on GitHub (the repo is public).
+export const COMMIT_URL = 'https://github.com/pdxfixit/noodlepads/commit/';
 
-// What the label next to the corner of the page says. version.json is written
-// by `just deploy`; a missing one (or the dev server's "dev") is a dev copy.
-// `version` stays the bare commit: the update check and reports compare it.
+// What the label next to the corner of the page says: the commit, then the
+// date. No release number: nothing keeps a semver up to date, and a bare
+// "1.0" said nothing (Ben, 2026-10-19). version.json is written by the
+// deploy; a missing one (or the dev server's "dev") is a dev copy. `version`
+// stays the bare commit: the update check and reports compare it. `url` is
+// the commit on GitHub, when it is one.
 export function versionLabel(v) {
-  if (!v || typeof v !== 'object') return { version: 'dev', release: RELEASE, text: 'dev copy', date: '' };
+  if (!v || typeof v !== 'object') return { version: 'dev', text: 'dev copy', date: '', url: '' };
   const version = String(v.version || 'dev').slice(0, 40);
-  if (version === 'dev') return { version, release: RELEASE, text: 'dev copy', date: '' };
+  if (version === 'dev') return { version, text: 'dev copy', date: '', url: '' };
   // The date carries its time zone ("2026-10-11 13:45 PDT").
   const date = v.date ? String(v.date).slice(0, 26) : '';
-  return { version, release: RELEASE, text: `${RELEASE} · ${version}${date ? ` · ${date}` : ''}`, date };
+  const url = /^[0-9a-f]{7,40}$/.test(version) ? `${COMMIT_URL}${version}` : '';
+  return { version, text: `${version}${date ? ` · ${date}` : ''}`, date, url };
 }
 
 // The footer stacks the version (date over commit) when the how-to beside it

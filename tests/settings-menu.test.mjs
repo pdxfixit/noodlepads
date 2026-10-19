@@ -153,7 +153,7 @@ test('notices fade away by themselves: a bar hides, a line empties; a finger on 
 test('About says what the app is, and ends with the version on its own line', () => {
   // Ben, 2026-10-16: drop "Noodle Pads." from the start.
   assert.match($('#about-text').textContent, /^Tap a pad, hold it to loop, record your own sounds and make beats\. Made by the Sandberg Family\.$/);
-  assert.equal($('#about-version').textContent, 'dev copy');
+  assert.equal($('#about-version').querySelector('.ver-date').textContent, 'dev copy');
 });
 
 // Ben, 2026-10-11: "each -other- settings section should be collapsible".

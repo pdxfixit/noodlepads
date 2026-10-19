@@ -118,7 +118,6 @@ export function syncSettingsControls() {
   el.where.hidden = !reports || globalThis.location?.hostname === LIVE_HOST;
   // Ben's wording, 2026-10-11, without its opening "Noodle Pads." (2026-10-16); the version has its own line below it.
   el.about.textContent = 'Tap a pad, hold it to loop, record your own sounds and make beats. Made by the Sandberg Family.';
-  el.aboutVersion.textContent = el.version.textContent || 'dev copy';
   chips();
 }
 
@@ -169,7 +168,6 @@ export function initSettingsUI({ gate = () => false, onKids = () => {} } = {}) {
     open: document.querySelector('#settings-open'),
     dialog: document.querySelector('#settings-dialog'),
     about: document.querySelector('#about-text'),
-    aboutVersion: document.querySelector('#about-version'),
     version: document.querySelector('#version'),
     radios: document.querySelector('#settings-dialog').querySelectorAll('input[type="radio"]'),
     levels: document.querySelector('#level-keys').querySelectorAll('[data-level]'),
@@ -215,7 +213,7 @@ export function initSettingsUI({ gate = () => false, onKids = () => {} } = {}) {
     }
   });
   // The version and date in the page footer open Settings at About (Ben, 2026-10-11).
-  el.version.addEventListener('click', () => open(true));
+  el.version.addEventListener('click', (e) => { if (e.target.closest('[data-about]')) open(true); });
   // The radios are named for the setting they set (timeSignature);
   // the switches are sendLogs and sendUsage, real booleans.
   el.dialog.addEventListener('change', async (e) => {

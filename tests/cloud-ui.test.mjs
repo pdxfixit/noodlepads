@@ -62,6 +62,12 @@ const profile = (i) => {
   return $('#profile-dialog');
 };
 const dice = (i) => profile(i).querySelector('[data-reroll]');
+// Person `id`'s profile sheet, from 👥 People; and closing both again.
+const sheetOf = (id) => {
+  if (!$('#people-dialog').open) $('#people-open').dispatch('click');
+  return profile(rows().findIndex((r) => r.dataset.person === id));
+};
+const closeSheets = () => { $('#profile-dialog').close(); $('#people-dialog').close(); };
 // The page settled: no cloud request or PIN hash in flight (PBKDF2, 20,000
 // rounds, off the main thread: slow when every core is busy). page.settle()
 // counts both (tests/fake-dom.mjs, "Work in flight").
@@ -86,8 +92,10 @@ test('People: no name field; each line has a picture, its made-up name and (for 
   assert.equal(sheet.querySelectorAll('input').length, 0);
   assert.ok(sheet.querySelector('[data-avatar]') && sheet.querySelector('[data-reroll]'));
   assert.equal($('#profile-cloud').hidden, false);
-  assert.match($('#profile-pin-hint').textContent, /once they are in the cloud/);
-  assert.equal($('#cloud-pin').hidden, true, 'no PIN before the cloud');
+  assert.equal($('#profile-cloud').getAttribute('aria-checked'), 'false', 'not in the cloud yet');
+  assert.equal($('#profile-pin-state').textContent, '🔓 No PIN');
+  assert.match($('#profile-pin-hint').textContent, /A PIN needs the cloud\. Setting one turns it on/);
+  assert.equal($('#cloud-pin').hidden, false, 'a PIN can be set before the cloud: it puts them there');
   profile(0);
   assert.equal($('#profile-cloud').hidden, true);
   $('#profile-dialog').close();
@@ -160,9 +168,10 @@ test('everyone goes to the cloud by themselves once they make something; a typed
   await setPersonEdit(id, { name: 'Typed Name', fun: false });
   await cloud.syncAll();
   assert.equal(cloud.inCloud(id), false, 'nothing made yet: an empty person never fills the public list');
-  ui.openCloudSheet(id);
-  assert.match($('#cloud-status').textContent, /once they make something/);
-  $('#cloud-dialog').close();
+  sheetOf(id);
+  assert.match($('#profile-cloud-text').textContent, /once they make something/);
+  assert.equal($('#profile-cloud').getAttribute('aria-checked'), 'false');
+  closeSheets();
   makeBeat(id);
   await cloud.syncAll();
   const [row] = env.DB.rows('SELECT * FROM profiles');
@@ -268,7 +277,9 @@ test('a PIN guards the name, picture and color: asked once per visit, a wrong on
   assert.equal(cloud.pinGuards(id), true);
   $('#people-open').dispatch('click');
   profile(lineOf(id));
-  assert.match($('#profile-pin-hint').textContent, /before their name, picture or color changes/);
+  assert.match($('#profile-pin-hint').textContent, /before the name, picture or color changes/);
+  assert.equal($('#profile-pin-state').textContent, '🔒 PIN on');
+  assert.equal($('#profile-lock').hidden, false, '🔒 PIN beside the name');
   const color = state.peopleEdits.get(id).color;
 
   swatch(2).dispatch('click');
@@ -336,7 +347,7 @@ test('the guard is a gate in the profile sheet only: a sync that changes a guard
   $('#people-open').dispatch('click');
   profile(lineOf(id));
   // What a pull does with another device's new name and color (the backup merge's setPersonEdit).
-  await setPersonEdit(id, { name: 'Captain Cranberries', color: '#9E1640' });
+  await setPersonEdit(id, { name: 'Captain Cranberries', color: swatch(2).dataset.color });
   renderPeople();
   (await import('../web/people.js')).refreshPeople();
   assert.equal($('#profile-name').textContent, 'Captain Cranberries');
@@ -346,32 +357,38 @@ test('the guard is a gate in the profile sheet only: a sync that changes a guard
   $('#people-dialog').close();
 });
 
-test('📴 Offline asks twice, deletes the cloud copy, keeps everything here, and is never put back by itself', async () => {
+// Ben, 2026-10-19: "Let Cloud be a toggle".
+test('☁️ In the cloud switched off asks twice, deletes the cloud copy, keeps everything here, and is never put back by itself', async () => {
   const id = added;
-  ui.openCloudSheet(id);
-  assert.equal($('#cloud-in').hidden, false);
-  $('#cloud-offline').dispatch('click');
-  assert.match($('#cloud-offline').textContent, /Tap again: delete the cloud copy/);
+  sheetOf(id);
+  const sw = $('#profile-cloud');
+  assert.equal(sw.getAttribute('aria-checked'), 'true');
+  assert.equal($('#profile-cloud-tools').hidden, false, '🔄 Sync now and 🔗 Share… under it');
+  sw.dispatch('click');
+  assert.match($('#profile-cloud-text').textContent, /Tap again to take them out of the cloud/);
   assert.ok(cloud.inCloud(id), 'one tap does nothing yet');
-  $('#cloud-offline').dispatch('click');
+  sw.dispatch('click');
   await settle();
-  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM profiles WHERE id = ?', id)[0].n, 0, `gone from the cloud: ${$('#cloud-status').textContent}`);
+  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM profiles WHERE id = ?', id)[0].n, 0, `gone from the cloud: ${$('#profile-cloud-text').textContent}`);
   assert.ok(state.savedBeats.some((b) => b.personId === id), 'still here');
   assert.equal(state.peopleEdits.get(id).offline, true);
+  assert.equal(sw.getAttribute('aria-checked'), 'false');
+  assert.match($('#profile-cloud-text').textContent, /Off: everything of theirs stays on this device only/);
   await cloud.syncAll();
   assert.equal(cloud.inCloud(id), false, 'not put back by itself');
-  assert.equal($('#cloud-online').hidden, false);
-  $('#cloud-online').dispatch('click');
+  sw.dispatch('click');
   await settle();
   await settle();
-  assert.ok(cloud.inCloud(id), 'Put back in the cloud');
-  $('#cloud-dialog').close();
+  assert.ok(cloud.inCloud(id), 'switched on: back in the cloud');
+  assert.equal(sw.getAttribute('aria-checked'), 'true');
+  closeSheets();
 });
 
 test('🔗 Share gives a code; Shared with me opens it, offers 🎛️ Remix, and removes it with two taps', async () => {
   const id = added;
-  ui.openCloudSheet(id);
+  sheetOf(id);
   $('#cloud-share').dispatch('click');
+  await settle();
   assert.equal($('#share-dialog').open, true);
   $('#share-what').querySelector('[data-kind="beat"]').dispatch('click');
   $('#share-items').querySelector(`[data-item="beat-${id}"]`).dispatch('click');
@@ -381,7 +398,7 @@ test('🔗 Share gives a code; Shared with me opens it, offers 🎛️ Remix, an
   const code = $('#share-code').textContent;
   assert.match(code, /^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
   $('#share-dialog').close();
-  $('#cloud-dialog').close();
+  closeSheets();
 
   $('#shared-browse').dispatch('click');
   assert.equal($('#shared-dialog').open, true);
@@ -413,7 +430,7 @@ test('🚫 Unshare: the sharer\'s Shared already lists the code; two taps end it
   await settle();
   $('#shared-dialog').close();
 
-  ui.openCloudSheet(id);
+  sheetOf(id);
   $('#cloud-share').dispatch('click');
   await settle();
   const mine = () => $('#share-mine').children.find((li) => li.querySelector(`[data-unshare="${code}"]`));
@@ -427,7 +444,7 @@ test('🚫 Unshare: the sharer\'s Shared already lists the code; two taps end it
   assert.match($('#share-mine-note').textContent, /Unshared/);
   await assert.rejects(cloud.api.shared(code), (err) => err.status === 404, 'the code stops working for everyone');
   $('#share-dialog').close();
-  $('#cloud-dialog').close();
+  closeSheets();
 
   $('#shared-browse').dispatch('click');
   await settle();
@@ -485,4 +502,21 @@ test('with no /api (the dev server, a static copy) the app says so and carries o
   assert.match($('#shared-note').textContent, /isn't reachable from here/);
   $('#shared-dialog').close();
   assert.equal(await cloud.syncNow('p-none'), null, 'a sync without storage or cloud does nothing, and throws nothing');
+  // In someone's profile: the switch and 🔒 Set a PIN say so where they were tapped, and nothing changes.
+  await setPersonEdit('p-nocloud', { id: 'p-nocloud', name: 'Duke Dumpling', fun: true, avatar: '🥟', color: '#5A2050', added: true, created: 8 });
+  renderPeople();
+  sheetOf('p-nocloud');
+  $('#profile-cloud').dispatch('click');
+  await settle();
+  assert.match($('#profile-cloud-text').textContent, /isn't reachable from here/);
+  assert.equal($('#profile-cloud').getAttribute('aria-checked'), 'false');
+  $('#cloud-pin').dispatch('click');
+  await settle();
+  typePin('1212');
+  await settle();
+  typePin('1212');
+  await settle();
+  assert.match($('#profile-pin-note').textContent, /isn't reachable from here/);
+  assert.equal($('#profile-pin-state').textContent, '🔓 No PIN');
+  closeSheets();
 });

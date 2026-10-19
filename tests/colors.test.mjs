@@ -41,7 +41,7 @@ const check = (what, fg, bg, min = 4.5) => {
 };
 
 test('the board colors cover every person', () => {
-  assert.ok(BOARDS.length >= 10);
+  assert.ok(BOARDS.length >= 8);
 });
 
 test('pad text (ink) reads on every palette color, and on the grey of a pad that failed to load', () => {
