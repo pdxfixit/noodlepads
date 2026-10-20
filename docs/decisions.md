@@ -38,6 +38,7 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 
 | Rule | Why | Since |
 |---|---|---|
+| Cloudflare Web Analytics may run: the CSP allows its beacon (`static.cloudflareinsights.com`, `cloudflareinsights.com`), as Isopix's does; the privacy policy says so. | Ben, 2026-10-20: "Allow Cloudflare's Web Analytics beacon in Noodle Pads' CSP, the way Isopix does". | 2026-10-20 |
 | The code is MIT-licensed (`LICENSE`, copyright the Sandberg Family). | Ben chose MIT for the public repo (2026-10-13). | 2026-10-13 |
 | The repo `pdxfixit/noodlepads` is public; its description names https://noodlepads.com. Nothing private goes in it: no kids' names, no IDs or tokens, no personal details. | Ben, 2026-10-13: "the repo can then be made public"; "Yes, make it public". | 2026-10-13 |
 | Release 1.0 moves the code to `~/src/noodlepads` and a new public repo, `pdxfixit/noodlepads`, from one "Noodle Pads 1.0" commit; the old repo is archived private. The name is `noodlepads`, no hyphen, wherever reasonable; reading old hyphenated IDs doesn't matter. The cloud database keeps its name. | Ben, 2026-10-13: "cut a 1.0 release… the repo can then be made public". | 2026-10-13 |
