@@ -329,11 +329,11 @@ function versionParts(label, { inAbout = false } = {}) {
     return [button];
   }
   if (!label.url) return [make('span', 'ver-date', when)];
-  const sha = make('a', 'ver-sha', label.version);
+  const sha = make('a', 'ver-sha', label.commit);
   sha.setAttribute('href', label.url);
   sha.setAttribute('target', '_blank');
   sha.setAttribute('rel', 'noopener');
-  sha.setAttribute('aria-label', `Build ${label.version} on GitHub`);
+  sha.setAttribute('aria-label', `Build ${label.commit} on GitHub`);
   return [make('span', 'ver-date', when), make('span', 'ver-sep', ' · '), sha];
 }
 

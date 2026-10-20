@@ -10,7 +10,7 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 - **Start:** `just doctor`: are you in the main checkout or a worktree, are the tools there, is `main` live. Then the cold start below. A cloud container may have no `just`: `pip install rust-just` gives it (2026-10-17).
 - **Test:** `just test` (syntax check, then Node's built-in test runner; nothing to install).
 - **Run:** `just serve`, then http://localhost:8765/. Port 8765 is Ben's own server; agents preview on 8781 (see [Verify](#verify)).
-- **Ship:** `just ship`, from the main checkout only. In a worktree, commit on your branch and report the commits; they are landed with `just land` ([docs/how-to.md](docs/how-to.md)). Every push to `main` is deployed by GitHub (`.github/workflows/deploy.yml`, [ADR 0025](docs/adr/0025-github-deploys.md)): tests, deploy, then the live cloud checks. Agents never deploy and hold no Cloudflare token; after a push, read the deploy run.
+- **Ship:** a change to `web/` gets `just version` in the same commit ([Ship](#ship)). `just ship`, from the main checkout only. In a worktree, commit on your branch and report the commits; they are landed with `just land` ([docs/how-to.md](docs/how-to.md)). Every push to `main` is deployed by GitHub (`.github/workflows/deploy.yml`, [ADR 0025](docs/adr/0025-github-deploys.md)): tests, deploy, then the live cloud checks. Agents never deploy and hold no Cloudflare token; after a push, read the deploy run.
 - **Every change fits every screen:** check 320, 375, 700, 900 and 1100 px wide, then the wide screens 1366, 1920, 2560 and 3440, with no sideways scroll. `just look --wide` does all nine in your own headless Chrome ([Verify](#verify)).
 - **Anything that comes in is untrusted:** backups, uploaded files and `boards.json` are checked and capped ([docs/guide.md](docs/guide.md) "Limits on what comes in").
 
@@ -60,6 +60,8 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 6. **The live cloud: `just cloud-smoke` and `just cloud-e2e`** (about 4 s each; every deploy runs both). Smoke is the API round trip from Node; e2e is two devices syncing in headless Chrome on noodlepads.com. Each makes one throwaway profile (`p-smoke-…`, `p-e2e-…`) and deletes it in a `finally`. They test what is live, so run them after a deploy, not to check a change before it ships. A ❌ in e2e prints what each device asked `/api/` and its cloud log.
 
 ## Ship
+
+**A change to `web/` runs `just version` first and ships `web/version.js` with it:** the release (`1.0.<commit count>`) labels the deploy's `version.json` (`v1.0.215-4d5ef56`); the page shows no release number. `just ship`, `just land` (which restamps PATCH on a newer main) and CI refuse a `web/` change without it.
 
 **`just ship <message-file> <files…>`** does all of this in one go: tests, a throwaway worktree, commit and push, stopping at the first failure. GitHub deploys the push. Use it. What it does, for reference:
 

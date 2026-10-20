@@ -29,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0   # git describe names the version from the tags
+          fetch-depth: 0   # full history, as the test run has (the label itself is v<release>-<commit>)
       # The same flarepress the action is, for the recipes (cloud-db).
       - uses: actions/checkout@v7
         with:
