@@ -46,16 +46,21 @@ test('newId has the shape backups accept, for every prefix the app uses', () => 
 // Ben, 2026-10-19: the sha links to GitHub; "1.0" alone said nothing, so no release number.
 test('versionLabel: a stamped build says its commit (linked on GitHub) and date; a dev copy, and junk', () => {
   assert.deepEqual(versionLabel({ version: 'fd576a9', date: '2026-10-11 13:45 PDT' }), {
-    version: 'fd576a9', commit: 'fd576a9', text: 'fd576a9 · 2026-10-11 13:45 PDT', date: '2026-10-11 13:45 PDT',
+    version: 'fd576a9', release: '', commit: 'fd576a9', text: 'fd576a9 · 2026-10-11 13:45 PDT', date: '2026-10-11 13:45 PDT',
     url: 'https://github.com/pdxfixit/noodlepads/commit/fd576a9', updated: updatedText('2026-10-11 13:45 PDT'),
   }, 'no "v", no release number, and the time zone shows');
-  assert.deepEqual(versionLabel({ version: 'abc1234' }), { version: 'abc1234', commit: 'abc1234', text: 'abc1234', date: '', url: 'https://github.com/pdxfixit/noodlepads/commit/abc1234', updated: '' }, 'version stays the bare commit, for the update check');
+  assert.deepEqual(versionLabel({ version: 'abc1234' }), { version: 'abc1234', release: '', commit: 'abc1234', text: 'abc1234', date: '', url: 'https://github.com/pdxfixit/noodlepads/commit/abc1234', updated: '' }, 'version stays the bare commit, for the update check');
   assert.equal(versionLabel({ version: 'not-a-sha' }).url, '', 'only a commit links');
   // flarepress's stamp with site.conf release=: version is the whole label, commit the short commit.
   const released = versionLabel({ version: 'v1.0.215-4d5ef56', commit: '4d5ef56', date: '2026-10-19 04:27 UTC' });
   assert.equal(released.version, 'v1.0.215-4d5ef56', 'version stays the whole label, for the update check and telemetry');
   assert.equal(released.commit, '4d5ef56', 'About shows the commit, never the whole label');
   assert.equal(released.url, 'https://github.com/pdxfixit/noodlepads/commit/4d5ef56');
+  // Ben, 2026-10-20: About shows the release again ("Updated … · 1.0.217 · f52728b").
+  assert.equal(released.release, '1.0.215', 'the release, from the label');
+  assert.equal(versionLabel({ version: 'v1.0.215-4d5ef56-dirty', commit: '4d5ef56' }).release, '1.0.215');
+  assert.equal(versionLabel({ version: 'v1.0-4d5ef56' }).release, '', 'only an X.Y.Z is a release');
+  assert.equal(versionLabel({ version: 'dev' }).release, '');
   assert.equal(versionLabel({ version: 'v1.0.215-4d5ef56-dirty', commit: '4d5ef56' }).url, 'https://github.com/pdxfixit/noodlepads/commit/4d5ef56');
   assert.equal(versionLabel({ version: 'v1.0.215-4d5ef56', commit: '<b>' }).url, '', 'a commit that is not one links nowhere');
   assert.equal(versionLabel({ version: 'dev' }).url, '');
