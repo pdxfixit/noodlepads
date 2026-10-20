@@ -60,24 +60,26 @@ export function updatedText(date, { locale, timeZone } = {}) {
 }
 
 // What the label next to the corner of the page says: the commit, then the
-// date. No release number on screen (Ben, 2026-10-19). version.json is
+// date. The release shows in About only (Ben, 2026-10-20). version.json is
 // written by the deploy: `version` is the whole label, "v1.0.215-4d5ef56"
 // (the release from web/version.js, site.conf release=), and `commit` the
 // short commit. A missing file (or the dev server's "dev") is a dev copy.
 // `version` stays the whole label: the update check, telemetry and reports
 // compare it. `commit` is what About shows, from version.json's `commit`, or
 // `version` itself when that is a bare commit (a stamp from before release=);
-// `url` is that commit on GitHub, when there is one.
+// `url` is that commit on GitHub, when there is one. `release` is the label's
+// X.Y.Z ("1.0.215"), or '' for a stamp without one.
 export function versionLabel(v) {
-  if (!v || typeof v !== 'object') return { version: 'dev', commit: '', text: 'dev copy', date: '', url: '' };
+  if (!v || typeof v !== 'object') return { version: 'dev', release: '', commit: '', text: 'dev copy', date: '', url: '' };
   const version = String(v.version || 'dev').slice(0, 40);
-  if (version === 'dev') return { version, commit: '', text: 'dev copy', date: '', url: '' };
+  if (version === 'dev') return { version, release: '', commit: '', text: 'dev copy', date: '', url: '' };
+  const release = /^v(\d+\.\d+\.\d+)-/.exec(version)?.[1] ?? '';
   // The date carries its time zone ("2026-10-11 13:45 PDT").
   const date = v.date ? String(v.date).slice(0, 26) : '';
   const sha = (s) => (/^[0-9a-f]{7,40}$/.test(s) ? s : '');
   const commit = sha(String(v.commit ?? '')) || sha(version);
   const url = commit ? `${COMMIT_URL}${commit}` : '';
-  return { version, commit, text: `${commit || version}${date ? ` · ${date}` : ''}`, date, url, updated: updatedText(date) };
+  return { version, release, commit, text: `${commit || version}${date ? ` · ${date}` : ''}`, date, url, updated: updatedText(date) };
 }
 
 // Per-viewer niceties (the last person, beats showing) that must never break

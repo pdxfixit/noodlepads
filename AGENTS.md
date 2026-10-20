@@ -61,7 +61,7 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 
 ## Ship
 
-**A change to `web/` runs `just version` first and ships `web/version.js` with it:** the release (`1.0.<commit count>`) labels the deploy's `version.json` (`v1.0.215-4d5ef56`); the page shows no release number. `just ship`, `just land` (which restamps PATCH on a newer main) and CI refuse a `web/` change without it.
+**A change to `web/` runs `just version` first and ships `web/version.js` with it:** the release (`1.0.<commit count>`) labels the deploy's `version.json` (`v1.0.215-4d5ef56`) and shows in About. `just ship`, `just land` (which restamps PATCH on a newer main) and CI refuse a `web/` change without it.
 
 **`just ship <message-file> <files…>`** does all of this in one go: tests, a throwaway worktree, commit and push, stopping at the first failure. GitHub deploys the push. Use it. What it does, for reference:
 

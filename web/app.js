@@ -317,7 +317,8 @@ function fitLines() {
 // The version's parts. The corner says only when it went live, in the
 // device's time ("Updated Oct 19, 9:27 PM"), a button that opens ⚙️ Settings
 // at About (settings-ui.js listens for [data-about]); About says it too, with
-// the commit, a link to it on GitHub (Ben, 2026-10-19). A dev copy says so.
+// the release and the commit, a link to it on GitHub ("Updated Oct 20,
+// 12:01 AM · 1.0.217 · f52728b"; Ben, 2026-10-19 and 2026-10-20). A dev copy says so.
 function versionParts(label, { inAbout = false } = {}) {
   const make = (tag, cls, text) => Object.assign(document.createElement(tag), { className: cls, textContent: text });
   const when = label.updated ? `Updated ${label.updated}` : label.date || label.text;
@@ -328,13 +329,15 @@ function versionParts(label, { inAbout = false } = {}) {
     button.setAttribute('aria-label', `About Noodle Pads: ${when}`);
     return [button];
   }
-  if (!label.url) return [make('span', 'ver-date', when)];
+  const sep = () => make('span', 'ver-sep', ' · ');
+  const release = label.release ? [sep(), make('span', 'ver-release', label.release)] : [];
+  if (!label.url) return [make('span', 'ver-date', when), ...release];
   const sha = make('a', 'ver-sha', label.commit);
   sha.setAttribute('href', label.url);
   sha.setAttribute('target', '_blank');
   sha.setAttribute('rel', 'noopener');
   sha.setAttribute('aria-label', `Build ${label.commit} on GitHub`);
-  return [make('span', 'ver-date', when), make('span', 'ver-sep', ' · '), sha];
+  return [make('span', 'ver-date', when), ...release, sep(), sha];
 }
 
 async function loadVersion() {

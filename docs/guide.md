@@ -874,7 +874,7 @@ Rename, ↩️ Undo) and the 🆕 update bar at the bottom.
 
 The corner says when the build went live, in the device's own time zone ("Updated Oct 19, 9:27 PM", `util.js` `updatedText`); a tap opens ⚙️ Settings at About, whose version line adds the commit, a link to it on GitHub. Every deploy runs the stamp, which writes `web/version.json`
 (gitignored): `version` is `v<release>-<short commit>` (`v1.0.215-4d5ef56`; the release is `RELEASE` in `web/version.js`, which `just version` bumps to the commit count with every change to `web/`, read through `site/site.conf` `release=`), plus `-dirty` for uncommitted edits in `web/`
-or `worker/`; `commit` is the short commit; and the time. The page shows no release number: About links `commit`, and the update check, telemetry and problem reports use the whole label. The app shows
+or `worker/`; `commit` is the short commit; and the time. About shows the release (the label's X.Y.Z) and links `commit`; the footer shows neither, and the update check, telemetry and problem reports use the whole label. The app shows
 it small in the bottom corner, so the live site says which commit it is; a
 `-dirty` suffix means uncommitted edits were deployed. Without the file (the dev
 server) it shows "dev copy". Tapping the version or date opens ⚙️ Settings
