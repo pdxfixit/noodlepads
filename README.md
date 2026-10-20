@@ -83,7 +83,8 @@ the cloud database show what they would do, or ask, before they do it.
 | Make sounds and emoji lists | `just placeholders`, `just emoji`, `just preset-loudness` (how loud each preset plays on a phone) |
 
 Agents use the rest: `just ship`, `just land`, `just land-continue`,
-`just archive-agent`, `just prove`, and the steps a deploy runs itself
+`just archive-agent`, `just prove`, `just version` (the release in
+`web/version.js`, bumped with every change to `web/`), and the steps a deploy runs itself
 (`just stamp`, `just deploy-verify`).
 
 Deploying uses [flarepress](https://github.com/pdxfixit/flarepress) and the site

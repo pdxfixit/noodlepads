@@ -15,6 +15,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # the release checks count commits
       - uses: actions/setup-node@v7
         with:
           node-version: 26.11.1
@@ -22,3 +24,7 @@ jobs:
         run: curl -sSfL https://github.com/casey/just/releases/download/1.58.0/just-1.58.0-x86_64-unknown-linux-musl.tar.gz | sudo tar xz -C /usr/local/bin just && just --version
       - name: just test
         run: just test
+      - name: web/version.js bumped after the last change to web/
+        run: tools/version_bumped.sh
+      - name: web/version.js PATCH is the commit count of its commit
+        run: python3 tools/bump_version.py --check

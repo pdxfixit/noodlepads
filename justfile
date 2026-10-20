@@ -263,7 +263,7 @@ deploy-plan: deploy-check
     "{{flarepress}}/tools/wrangler.sh" "{{site}}" deploy --dry-run
 
 # deploy-verify reads this stamp back, so the two can never disagree about -dirty.
-[doc("Write web/version.json (shown in the app's corner): git describe, plus -dirty for uncommitted edits in web/ or worker/. just deploy runs it")]
+[doc("Write web/version.json (shown in the app's corner): v<release>-<short commit> (site.conf release=), plus -dirty for uncommitted edits in web/ or worker/. just deploy runs it")]
 stamp:
     @"{{flarepress}}/tools/site.sh" "{{site}}" stamp
 
@@ -340,8 +340,16 @@ archive-agent id:
     git branch -D "$b"
     echo "✅ archived $b as archive/$b"
 
+#   just version          1.0.215 -> 1.0.218: PATCH is the commit count this commit will have
+#   just version minor    1.1.218 (major: 2.0.218); --show prints it, --check checks the committed one
+[doc("Bump the release in web/version.js (the deploy labels version.json v<release>-<commit>): run it with every change to web/ and commit the file with it")]
+[positional-arguments]
+version *args:
+    @python3 tools/bump_version.py "$@"
+
 # The message comes from a file. Stops at the first failure: tests red,
-# main moved under you, or a file that changed while committing.
+# main moved under you, a file that changed while committing, or a change to
+# web/ without its `just version` (or with a stale one).
 [doc("Commit the named files to main through a throwaway worktree and push (GitHub deploys): just ship <message-file> <files...>. Run it from the main checkout")]
 ship msgfile +files:
     #!/usr/bin/env bash
@@ -369,6 +377,9 @@ ship msgfile +files:
     # conflict markers) see a new file only once it is tracked. On 2026-10-11
     # an untracked test file passed here and then failed on main.
     (cd "$wt" && just test-quiet) || { echo "🛑 tests fail on the commit; main unchanged" >&2; exit 1; }
+    # The release: a change to web/ carries its bump, and PATCH is this commit's count.
+    (cd "$wt" && tools/version_bumped.sh >/dev/null && python3 tools/bump_version.py --check >/dev/null) \
+      || { echo "🛑 run 'just version' and ship web/version.js with the change; main unchanged" >&2; exit 1; }
     git update-ref refs/heads/main "$(git -C "$wt" rev-parse HEAD)" "$old"
     git reset -q
     git push -q origin main
