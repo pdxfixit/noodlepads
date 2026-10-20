@@ -9,7 +9,9 @@
 #
 # The policy allows exactly what the page loads: its own scripts and styles,
 # its own fonts (web/fonts/), blob: URLs for downloads and data: for the tab
-# icon. No outside origin at all. No inline script or style, no framing, no plugins.
+# icon. One outside origin: Cloudflare's Web Analytics beacon, which Cloudflare
+# adds at the edge and which reports page views to cloudflareinsights.com (Ben,
+# 2026-10-20). No inline script or style, no framing, no plugins.
 # Adding a new origin or inline code means changing this line on purpose.
 /*
   Cache-Control: no-cache
@@ -17,4 +19,4 @@
   Cross-Origin-Opener-Policy: same-origin
   X-Content-Type-Options: nosniff
   Referrer-Policy: same-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://cloudflareinsights.com; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'

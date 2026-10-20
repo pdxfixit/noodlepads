@@ -28,7 +28,8 @@ test('the other hardening headers are still there', () => {
 
 test('the policy is closed by default and never allows inline code or eval', () => {
   assert.deepEqual(csp['default-src'], ["'self'"]);
-  assert.deepEqual(csp['script-src'], ["'self'"]);
+  // Cloudflare's Web Analytics beacon, which Cloudflare adds at the edge (Ben, 2026-10-20).
+  assert.deepEqual(csp['script-src'], ["'self'", 'https://static.cloudflareinsights.com']);
   assert.deepEqual(csp['object-src'], ["'none'"]);
   assert.deepEqual(csp['frame-ancestors'], ["'none'"]);
   assert.deepEqual(csp['base-uri'], ["'none'"]);
@@ -36,7 +37,7 @@ test('the policy is closed by default and never allows inline code or eval', () 
   assert.doesNotMatch(value('Content-Security-Policy'), /unsafe-|\*/);
 });
 
-test('no outside origin at all: the fonts are served from this site', () => {
+test('no outside origin but Cloudflare\'s page counter: the fonts are served from this site', () => {
   assert.deepEqual(csp['style-src'], ["'self'"]);
   assert.deepEqual(csp['font-src'], ["'self'"]);
   assert.doesNotMatch(headers, /googleapis|gstatic/);
@@ -63,5 +64,8 @@ test('fonts.css names only font files that are in web/fonts/, and index.html loa
 
 test('the tab icon (data:) and downloads (blob:) are allowed images and nothing else is', () => {
   assert.deepEqual(csp['img-src'], ["'self'", 'data:', 'blob:']);
-  assert.deepEqual(csp['connect-src'], ["'self'"]);
+  assert.deepEqual(csp['connect-src'], ["'self'", 'https://cloudflareinsights.com'], 'the beacon reports there, and nowhere else');
+  // Cloudflare's two are the only outside origins anywhere in the policy.
+  const outside = new Set(Object.values(csp).flat().filter((s) => /^https?:/.test(s)));
+  assert.deepEqual([...outside].sort(), ['https://cloudflareinsights.com', 'https://static.cloudflareinsights.com']);
 });
