@@ -1,8 +1,8 @@
 # Tests on every push and pull request: just test (syntax, the Node tests, the
-# tools' and the noodlepads-logs skill's unittest). GitHub only tests and watches:
-# agents deploy from Ben's Mac after each commit (a GitHub deploy would need a
-# Cloudflare token only Ben can make). No secrets. Node and just are pinned to
-# the versions on Ben's Mac (tests/fake-d1.mjs needs node:sqlite).
+# tools' and the noodlepads-logs skill's unittest), then the release checks
+# (web/version.js bumped with web/, PATCH the commit count). This workflow never
+# deploys; deploy.yml does, on pushes to main. No secrets. Node and just are
+# pinned to the versions on Ben's Mac (tests/fake-d1.mjs needs node:sqlite).
 name: test
 on:
   push:
