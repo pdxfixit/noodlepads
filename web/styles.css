@@ -4948,6 +4948,9 @@ dialog.welcome { width: min(640px, calc(100vw - 2 * var(--gutter))); }
   text-align: center;
   cursor: pointer;
 }
+/* The focus ring wraps the card's face, but a pad's lip hangs 4 to 7 px below
+   it (by skin): offset past the lip so the ring clears it, not cuts through it. */
+.wl-cards .pad.pad.pad.wl-card:focus-visible { outline-offset: 8px; }
 .wl-cards .pad.pad.pad.wl-card .pad-emoji { align-self: center; font-size: clamp(2.2rem, 34cqw, 3.6rem); }
 .wl-cards .pad.pad.pad.wl-card .pad-label { align-self: end; font-size: clamp(0.85rem, 13cqw, 1.3rem); hyphens: none; overflow-wrap: normal; }
 @media (min-width: 560px) { .wl-cards { gap: 16px; } .wl-cards .pad.pad.pad.wl-card { height: 184px; } }
