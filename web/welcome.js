@@ -257,6 +257,10 @@ export function initWelcome(hooks = {}) {
     const pad = makePad({ id: `welcome-${c.level}`, emoji: c.emoji, label: c.label, color: c.color });
     pad.classList.add('wl-card');
     pad.dataset.level = c.level;
+    const ring = document.createElement('span');
+    ring.className = 'wl-ring';
+    ring.setAttribute('aria-hidden', 'true');
+    pad.append(ring);
     pad.setAttribute('aria-label', `${c.emoji} ${c.label}: ${c.words}`);
     return pad;
   }));
