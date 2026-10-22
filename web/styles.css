@@ -4948,16 +4948,12 @@ dialog.welcome { width: min(640px, calc(100vw - 2 * var(--gutter))); }
   text-align: center;
   cursor: pointer;
 }
-/* The focus ring is drawn by .wl-ring (welcome.js), not an outline: an outline
-   is even on every side, and a pad's lip hangs 4 to 7 px below its face (by
-   skin). The ring keeps the usual 3 px gap on the sides and top and adds the
-   lip at the bottom. The card lets it out, and its playback fill keeps the corners. */
-.wl-cards .pad.pad.pad.wl-card { overflow: visible; }
-.wl-cards .pad.pad.pad.wl-card::before { border-radius: inherit; }
-.wl-ring { display: none; position: absolute; inset: -6px -6px -12px; border: 3px solid var(--board); border-radius: 20px; pointer-events: none; }
-.wl-cards .pad.pad.pad.wl-card:focus-visible { outline-style: none; }
-.wl-cards .pad.wl-card:focus-visible .wl-ring { display: block; }
-@media (forced-colors: active) { .wl-cards .pad.pad.pad.wl-card:focus-visible { outline-style: solid; } .wl-ring { display: none !important; } }
+/* Tiles (the default skin) has no lip here: a pad's 3D lip hangs below its
+   box, so the dialog's focus ring cut through it. Without it the ring sits
+   evenly around the card. Other skins keep the lip their look is made of. */
+:root:not([data-skin]) .wl-cards .pad.pad.pad.wl-card,
+:root:not([data-skin]) .wl-cards .pad.pad.pad.wl-card:not(.pad-add):active,
+:root:not([data-skin]) .wl-cards .pad.pad.pad.wl-card.hit { box-shadow: none; }
 .wl-cards .pad.pad.pad.wl-card .pad-emoji { align-self: center; font-size: clamp(2.2rem, 34cqw, 3.6rem); }
 .wl-cards .pad.pad.pad.wl-card .pad-label { align-self: end; font-size: clamp(0.85rem, 13cqw, 1.3rem); hyphens: none; overflow-wrap: normal; }
 @media (min-width: 560px) { .wl-cards { gap: 16px; } .wl-cards .pad.pad.pad.wl-card { height: 184px; } }
