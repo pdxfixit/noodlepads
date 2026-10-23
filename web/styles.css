@@ -4722,7 +4722,7 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
 .kids-dot { flex: 0 1 12px; min-width: 4px; height: 12px; border-radius: 6px; background: rgb(255 255 255 / 0.35); transition: scale 0.15s; }
 .kids-dot.here { background: var(--led); scale: 1.4; }
 
-/* Record: the big mic (hold), the new sound's pad beside it, three voices under. */
+/* Record: the big mic (tap, or hold), the new sound's pad beside it, three voices under. */
 .kids-record-view { justify-content: center; align-items: center; gap: 28px; }
 .kids-record-top { display: flex; align-items: center; justify-content: center; gap: 28px; flex-wrap: wrap; }
 .kids-mic {
@@ -4739,9 +4739,12 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
   touch-action: none;
 }
 .kids-mic span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--record); }
-.kids-mic.recording { animation: kids-throb 0.7s ease-in-out infinite alternate; box-shadow: 0 0 0 10px rgb(255 229 138 / 0.5); }
+/* Listening: the mic swells and its glow widens with how loud the voice is
+   right now (--kids-level, 0 to 1, set each frame by kids.js), so a kid
+   sees the mic hear them. Counting: 3, 2, 1 on its face in place of 🎙️. */
+.kids-mic.recording { scale: calc(1 + var(--kids-level, 0) * 0.14); box-shadow: 0 8px 0 #7E1612, 0 0 0 calc(8px + var(--kids-level, 0) * 28px) rgb(255 229 138 / 0.55); transition: scale 70ms linear, box-shadow 70ms linear; }
+.kids-mic.counting .kids-mic-face { font: 900 1em/1 var(--font-display); color: #fff; }
 .kids-mic:disabled { opacity: 0.45; }
-@keyframes kids-throb { from { scale: 1; } to { scale: 1.06; } }
 .kids-last {
   width: min(30vw, 22dvh, 150px);
   aspect-ratio: 1;
@@ -4880,8 +4883,9 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
 .set-levels button { flex: 1 1 0; color: var(--ink); }
 
 @media (prefers-reduced-motion: reduce) {
-  .kids .boing, .kids .wiggle, .kids-sum .wiggle, .kids-mic.recording { animation: none; }
+  .kids .boing, .kids .wiggle, .kids-sum .wiggle { animation: none; }
   .kids .boing { filter: brightness(1.2); }
+  .kids-mic.recording { scale: 1; }   /* the glow still follows the voice */
   .kids-dot, .kids-pad, .kids-tab, .kids-key { transition: none; }
 }
 
@@ -4908,9 +4912,9 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
   animation: kids-hand 1.2s ease-in-out infinite;
 }
 @keyframes kids-hand { 0%, 100% { transform: translate(-30%, 0) scale(1); } 50% { transform: translate(-30%, -14%) scale(1.1); } }
-.kids-mic.kids-nudge:not(.recording) { animation: kids-nudge 2.4s ease-in-out infinite; }
+.kids-mic.kids-nudge:not(.recording, .counting) { animation: kids-nudge 2.4s ease-in-out infinite; }
 @keyframes kids-nudge { 0%, 70%, 100% { rotate: 0deg; } 76% { rotate: -9deg; } 82% { rotate: 9deg; } 88% { rotate: -6deg; } 94% { rotate: 5deg; } }
-@media (prefers-reduced-motion: reduce) { .kids-hand, .kids-mic.kids-nudge:not(.recording) { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .kids-hand, .kids-mic.kids-nudge:not(.recording, .counting) { animation: none; } }
 
 /* ── ⋯ menus (overflow.js; Ben, 2026-10-12: "allow the buttons to move into a
    sub menu where space requires it"). A line short of room gets .more-tight

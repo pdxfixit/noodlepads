@@ -361,12 +361,20 @@ test('Record: the mic and three voices; without a microphone the mic is off', ()
   assert.equal($('[data-kids-voice="robot"]').getAttribute('aria-pressed'), 'false');
 });
 
-test('Record: hold the mic, let go, and it is a new pad of the kid\'s own, in the lit voice; a voice tap changes it', async () => {
-  // A stand-in microphone and recorder: the page has neither.
-  const { audio } = await import('../web/audio.js');
-  const data = new Float32Array(4800);
-  data[2400] = 0.8;
-  audio.decode = async () => ({ length: data.length, numberOfChannels: 1, sampleRate: 48000, duration: 0.1, getChannelData: () => data });
+// Waits until `fn()` is true, polling: a count that shows 3, 2, 1 is read
+// as each number appears, never after a fixed wait.
+async function until(fn, what, ms = 3000) {
+  const t0 = Date.now();
+  while (!fn()) {
+    if (Date.now() - t0 > ms) throw new Error(`still waiting for ${what}`);
+    await new Promise((r) => setTimeout(r, 4));
+  }
+}
+
+// A stand-in microphone and recorder: the page has neither. Each stream's
+// tracks count how often they were stopped (let go of).
+const mic = { streams: [] };
+function fakeMicrophone() {
   window.MediaRecorder = class {
     static isTypeSupported() { return true; }
     constructor() { this.state = 'inactive'; this.mimeType = 'audio/webm'; }
@@ -374,26 +382,31 @@ test('Record: hold the mic, let go, and it is a new pad of the kid\'s own, in th
     stop() { this.state = 'inactive'; this.ondataavailable({ data: new Blob(['sound']) }); this.onstop(); }
   };
   globalThis.MediaRecorder = window.MediaRecorder;
-  navigator.mediaDevices = { getUserMedia: async () => ({ getTracks: () => [{ stop() {} }] }) };
+  navigator.mediaDevices = { getUserMedia: async () => { const s = { stopped: 0, getTracks() { return [{ stop: () => { s.stopped += 1; } }]; } }; mic.streams.push(s); return s; } };
+}
+
+test('Record: hold the mic, let go, and it is a new pad of the kid\'s own, in the lit voice; a voice tap changes it', async () => {
+  const { audio } = await import('../web/audio.js');
+  const data = new Float32Array(4800);
+  data[2400] = 0.8;
+  audio.decode = async () => ({ length: data.length, numberOfChannels: 1, sampleRate: 48000, duration: 0.1, getChannelData: () => data });
+  fakeMicrophone();
   $('[data-kids-tab="pads"]').dispatch('click');
   $('[data-kids-tab="record"]').dispatch('click');
   assert.equal($('#kids-mic').disabled, false);
   $('[data-kids-voice="tiny"]').dispatch('click');
   const before = state.userClips.length;
   played.length = 0;
-  // A quick tap records nothing.
-  $('#kids-mic').dispatch('pointerdown');
-  await page.settle();
-  $('#kids-mic').dispatch('pointerup');
-  await page.settle();
-  assert.equal(state.userClips.length, before);
-  // A real hold.
-  $('#kids-mic').dispatch('pointerdown');
+  // A real hold: it listens as soon as the microphone answers; the lift keeps it.
+  $('#kids-mic').dispatch('pointerdown', { pointerId: 1 });
   await page.settle();
   assert.ok($('#kids-mic').classList.contains('recording'));
-  await new Promise((r) => setTimeout(r, 350));
-  $('#kids-mic').dispatch('pointerup');
+  assert.equal($('#kids-mic').getAttribute('aria-pressed'), 'true');
+  await new Promise((r) => setTimeout(r, 400));
+  $('#kids-mic').dispatch('pointerup', { pointerId: 1 });
   await page.settle();
+  assert.equal($('#kids-mic').classList.contains('recording'), false);
+  assert.equal(mic.streams.at(-1).stopped, 1, 'the microphone is let go');
   assert.equal(state.userClips.length, before + 1);
   const made = state.userClips.at(-1);
   assert.equal(made.personId, state.personId);
@@ -411,6 +424,71 @@ test('Record: hold the mic, let go, and it is a new pad of the kid\'s own, in th
   // And it is the first pad on Pads.
   $('[data-kids-tab="pads"]').dispatch('click');
   assert.equal($('#kids-pages').querySelector('.kids-pad').dataset.clip, made.id);
+  $('[data-kids-voice="spooky"]').dispatch('click');   // Normal again
+});
+
+// Ben, 2026-10-22: "Tapping the big microphone to record should give a 321
+// countdown… It can be held still if they want but both should be capable".
+test('Record: a tap counts 3, 2, 1 on the mic, then it listens until the next tap; the hold\'s first moments are thrown away', async () => {
+  const { KIDS_COUNT } = await import('../web/kids-logic.js');
+  KIDS_COUNT.ms = 40;
+  fakeMicrophone();
+  $('[data-kids-tab="record"]').dispatch('click');
+  const face = () => $('#kids-mic-face').textContent;
+  const before = state.userClips.length;
+  played.length = 0;
+  $('#kids-mic').dispatch('pointerdown', { pointerId: 2 });
+  await page.settle();
+  assert.ok($('#kids-mic').classList.contains('recording'), 'a press listens at once, in case it is a hold');
+  $('#kids-mic').dispatch('pointerup', { pointerId: 2 });   // a quick lift: a tap
+  assert.equal($('#kids-mic').classList.contains('recording'), false, 'the hold\'s first moments are thrown away');
+  assert.equal(state.userClips.length, before, 'nothing kept from them');
+  assert.ok($('#kids-mic').classList.contains('counting'));
+  assert.equal(face(), '3');
+  await until(() => face() === '2', '2');
+  await until(() => face() === '1', '1');
+  await until(() => face() === '🎙️' && $('#kids-mic').classList.contains('recording'), 'listening');
+  assert.equal($('#kids-mic').classList.contains('counting'), false);
+  assert.equal(mic.streams.at(-1).stopped, 0, 'the same microphone, asked for once, is listening');
+  assert.equal(state.userClips.length, before, 'nothing kept yet');
+  await new Promise((r) => setTimeout(r, 400));
+  $('#kids-mic').dispatch('pointerdown', { pointerId: 3 });   // the next tap stops it
+  $('#kids-mic').dispatch('pointerup', { pointerId: 3 });
+  await page.settle();
+  assert.equal($('#kids-mic').classList.contains('recording'), false);
+  assert.equal(mic.streams.at(-1).stopped, 1, 'the microphone is let go');
+  assert.equal(state.userClips.length, before + 1, 'a new pad');
+  assert.equal(state.userClips.at(-1).voice, 'normal');
+  assert.deepEqual(played, [state.userClips.at(-1).id]);
+});
+
+test('Record: a tap during 3, 2, 1 calls it off, and nothing is kept', async () => {
+  fakeMicrophone();
+  const before = state.userClips.length;
+  $('#kids-mic').dispatch('pointerdown', { pointerId: 4 });
+  await page.settle();
+  $('#kids-mic').dispatch('pointerup', { pointerId: 4 });
+  assert.equal($('#kids-mic-face').textContent, '3');
+  $('#kids-mic').dispatch('pointerdown', { pointerId: 5 });
+  $('#kids-mic').dispatch('pointerup', { pointerId: 5 });
+  await page.settle();
+  assert.equal($('#kids-mic').classList.contains('counting'), false);
+  assert.equal($('#kids-mic-face').textContent, '🎙️');
+  assert.equal($('#kids-mic').classList.contains('recording'), false);
+  assert.equal(mic.streams.at(-1).stopped, 1, 'the microphone is let go');
+  await new Promise((r) => setTimeout(r, 150));
+  assert.equal($('#kids-mic').classList.contains('recording'), false, 'the count stays called off');
+  assert.equal(state.userClips.length, before);
+  // Leaving the screen while it counts calls it off too.
+  $('#kids-mic').dispatch('pointerdown', { pointerId: 6 });
+  await page.settle();
+  $('#kids-mic').dispatch('pointerup', { pointerId: 6 });
+  assert.ok($('#kids-mic').classList.contains('counting'));
+  $('[data-kids-tab="pads"]').dispatch('click');
+  assert.equal($('#kids-mic').classList.contains('counting'), false);
+  assert.equal(mic.streams.at(-1).stopped, 1);
+  $('[data-kids-tab="record"]').dispatch('click');
+  assert.equal(state.userClips.length, before);
 });
 
 test('the page\'s keys stand down in Kids: ← → never change the person', () => {
