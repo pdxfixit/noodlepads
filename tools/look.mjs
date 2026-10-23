@@ -13,6 +13,7 @@
 //   --skin ID[,ID…]|all: the pad skin (skins.js), set as the person's padSkin before the view runs; one shot per skin.
 //   --reduced-motion: the device asks for less motion (prefers-reduced-motion: reduce).
 //   --cpu RATE: the page's CPU RATE times slower, as a slow device runs it (timing checks with --js).
+//   --height PX: a window PX tall instead of 800: a phone with its browser bar showing (Firefox for Android leaves about 680 px).
 //   A new person's first steps (the welcome, tips, hint dots, the nudge; ADR 0028) stay off,
 //   as a fresh device always looked, except in the views that show them (welcome, …).
 //   node tools/look.mjs cloud-smoke|cloud-e2e [--url URL]   the live cloud checks (look-cloud.mjs)
@@ -455,12 +456,12 @@ const MIN_TAP = 44;
 function usage(msg) {
   if (msg) console.error(`🛑 ${msg}`);
   console.error(`views: ${Object.keys(VIEWS).join(' ')}`);
-  console.error('usage: just look [pads|beats|keys-on|song|live|VIEW ...] [--advanced] [--top PX] [--scroll PX | --scroll-to SELECTOR] [--js CODE | --js-file PATH] [--url URL] [--out DIR] [--widths 320,375,...] [--wide] [--bg NAME,...|all|none] [--skin ID,...|all] [--reduced-motion] [--cpu RATE]');
+  console.error('usage: just look [pads|beats|keys-on|song|live|VIEW ...] [--advanced] [--top PX] [--scroll PX | --scroll-to SELECTOR] [--js CODE | --js-file PATH] [--url URL] [--out DIR] [--widths 320,375,...] [--wide] [--bg NAME,...|all|none] [--skin ID,...|all] [--reduced-motion] [--cpu RATE] [--height PX]');
   console.error(`skins: ${SKIN_IDS.join(' ')}`);
   process.exit(2);
 }
 
-const opts = { screens: [], js: '', url: '', out: '', advanced: false, reduced: false, cpu: 1, top: 0, scroll: null, scrollTo: '', widths: [320, 375, 700, 900, 1100], bgs: [''], skins: [''] };
+const opts = { screens: [], js: '', url: '', out: '', advanced: false, reduced: false, cpu: 1, height: 800, top: 0, scroll: null, scrollTo: '', widths: [320, 375, 700, 900, 1100], bgs: [''], skins: [''] };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
@@ -477,6 +478,8 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === '--reduced-motion') opts.reduced = true;
   // A slow device: the page's CPU this many times slower, so a --js timing script shows what a slower phone or laptop would.
   else if (a === '--cpu') opts.cpu = Number(val());
+  // A shorter window: a phone with its browser bar showing (Firefox for Android leaves about 680 px, 2026-10-22). The fixed screens (🧸 Kids) must still fit it.
+  else if (a === '--height') opts.height = Number(val());
   else if (a === '--top') opts.top = Number(val());
   else if (a === '--scroll') opts.scroll = Number(val());
   // An 800 px window with this element 200 px from the top (clear of the
@@ -661,7 +664,7 @@ const rows = [];
 // One page load at one width, measured and photographed.
 async function lookOnce(screen, w, bg = '', skin = '') {
     errors = []; csp = []; logs = [];
-    await send('Emulation.setDeviceMetricsOverride', { width: w, height: 800, deviceScaleFactor: 1, mobile: w < 768 });
+    await send('Emulation.setDeviceMetricsOverride', { width: w, height: opts.height, deviceScaleFactor: 1, mobile: w < 768 });
     const loaded = new Promise((r) => listeners.push(function once(m) {
       if (m.method === 'Page.loadEventFired') { listeners.splice(listeners.indexOf(once), 1); r(); }
     }));
@@ -711,7 +714,7 @@ async function lookOnce(screen, w, bg = '', skin = '') {
     if (opts.scrollTo) await evaluate(`{ const e = document.querySelector(${JSON.stringify(opts.scrollTo)}); if (e) scrollTo(0, e.getBoundingClientRect().top + scrollY - 200); }`);
     else if (opts.scroll !== null) await evaluate(`scrollTo(0, ${opts.scroll}); for (const d of document.querySelectorAll('dialog[open]')) d.scrollTop = ${opts.scroll};`);
     else if (VIEWS[screen].still) { /* a popover open where its view put it: a scroll or resize would close it */ }
-    else await send('Emulation.setDeviceMetricsOverride', { width: w, height: Math.min(Math.max(m.height, 800), 8000), deviceScaleFactor: 1, mobile: w < 768 });
+    else await send('Emulation.setDeviceMetricsOverride', { width: w, height: Math.min(Math.max(m.height, opts.height), 8000), deviceScaleFactor: 1, mobile: w < 768 });
     await sleep(200);
     // --top keeps only the top of the page: cheaper to read when the change is there.
     const clip = opts.top ? { clip: { x: 0, y: 0, width: w, height: Math.min(opts.top, m.height), scale: 1 } } : {};
