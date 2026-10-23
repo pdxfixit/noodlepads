@@ -4824,6 +4824,23 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
 .kids-square.now { outline: 4px solid var(--led); outline-offset: 1px; }
 .kids-square.now[aria-pressed="true"] { scale: 1.08; }
 
+/* ● on the Keys screen's top bar, beside who plays: red, a disc inside a
+   ring that fills with the kid's one time round the beat while it records;
+   3, 2, 1 on its face while it counts. */
+.kids-rec {
+  --kids-rec: 0;
+  padding: 5px;
+  background: conic-gradient(var(--led) calc(var(--kids-rec) * 360deg), transparent 0), var(--record);
+  box-shadow: 0 5px 0 #7E1612;
+  color: #fff;
+}
+.kids-rec-face { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--record); font: 900 1.4rem/1 var(--font-display); }
+.kids-rec.counting .kids-rec-face { font-size: 1.7rem; }
+.kids-rec.recording { box-shadow: 0 5px 0 #7E1612, 0 0 0 5px rgb(255 229 138 / 0.6); }
+.kids-rec.recording .kids-rec-face { animation: kids-rec-blink 1s ease-in-out infinite; }
+@keyframes kids-rec-blink { 50% { color: rgb(255 255 255 / 0.35); } }
+@media (prefers-reduced-motion: reduce) { .kids-rec.recording .kids-rec-face { animation: none; } }
+
 /* Keys: eight colored keys, side by side like a toy keyboard; on a phone
    they lie down like a xylophone, longest first. */
 .kids-keys { flex: 1 1 auto; min-height: 0; display: flex; gap: 8px; padding-bottom: 8px; touch-action: none; }

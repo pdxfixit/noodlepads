@@ -4,7 +4,8 @@
 // (four drums, eight squares) and its three tempos, and the three voices.
 // kids.js draws all of it.
 
-import { cleanRow, STEPS } from './sequencer.js';
+import { cleanRow, STEPS, multiplyRows } from './sequencer.js';
+import { addNote } from './notes.js';
 import { chainFields, voiceStep } from './voices.js';
 import { SCRATCH_NAME } from './scratch.js';
 import { versionFor } from './instruments.js';
@@ -184,23 +185,83 @@ export function squaresOf(beat, clipIds) {
 }
 
 // The beat with one square turned on or off. Its other rows and pills are
-// left as they are; the drum gets a row if it had none.
+// left as they are; the drum gets a row if it had none. The square lands in
+// every bar of the beat (a tune made it four bars, below), so the drums
+// read as the one pattern the grid shows.
 export function withSquare(beat, clipIds, drum, square, on, now = Date.now()) {
   const clipId = clipIds[drum];
   if (!clipId) return beat;
   const rows = beat.rows.map((r) => ({ ...r, steps: [...r.steps], accents: [...(r.accents ?? [])], notes: [...(r.notes ?? [])] }));
   let row = rows.find((r) => r.clipId === clipId);
   if (!row) { row = cleanRow({ clipId, steps: [] }); rows.push(row); }
-  const pill = square * PER_SQUARE;
-  row.steps[pill] = on;
-  if (!on && row.accents) row.accents[pill] = false;
-  if (!on && row.notes) row.notes[pill] = null;
+  const first = square * PER_SQUARE;
+  for (let pill = first; pill < Math.max(STEPS, row.steps.length); pill += STEPS) {
+    row.steps[pill] = on;
+    if (!on && row.accents) row.accents[pill] = false;
+    if (!on && row.notes) row.notes[pill] = null;
+  }
   // A tune row (🎹, ADR 0023) keeps its notes: a square is a note there.
   if (row.melody) {
-    const tune = (row.tune ?? []).filter((n) => Math.floor(n.s) !== pill);
-    if (on) tune.push({ p: 0, s: pill, l: 1 });
+    const tune = (row.tune ?? []).filter((n) => Math.floor(n.s) % STEPS !== first);
+    if (on) for (let pill = first; pill < row.steps.length; pill += STEPS) tune.push({ p: 0, s: pill, l: 1 });
     Object.assign(row, cleanRow({ ...row, tune }));
   }
+  return { ...beat, rows, saved: now };
+}
+
+// ── ● Record on the Keys screen: a tune into the kid's beat ──
+
+// Ben, 2026-10-22: "there should be a record button… compose a little tune
+// in here in this mode and be able to save it and use it again in the grown
+// up mode". The kid's tune is one tune row (🎹, ADR 0023) of their one
+// beat: its sound the C of the instrument playing (keyKitId), each key a
+// note above it (keyPitch). The beat grows to TUNE_BARS bars for it, the
+// drums' one bar repeated, so a tune has room; a square tapped on Beats
+// lands in every bar (withSquare), so the grid still shows the one pattern.
+// ● counts 3, 2, 1 at the beat's tempo, then the beat goes round once
+// through its bars while the keys land on the nearest pill; it stops by
+// itself as the beat comes round, or at the next tap, and the beat plays on
+// with the tune. The first note of a new recording throws the old tune away
+// (an empty take changes nothing). A grown-up sees the tune row on 🥁 Beats,
+// in 🎹 the piano roll, and keeps the beat with 💾 Keep.
+export const TUNE_BARS = 4;
+export const TUNE_COUNT = 3;   // beats of 3, 2, 1 before the beat starts
+export const pillSeconds = (bpm) => 60 / bpm / (STEPS / 4);
+export const tuneRowOf = (beat) => beat?.rows?.find((r) => r.melody) ?? null;
+
+// The beat with at least `bars` bars: each row's pills so far repeated to
+// fill them (sequencer multiplyRows). A beat with as many, or more, is left.
+export function withBars(beat, bars, now = Date.now()) {
+  const had = beat.bars || 1;
+  if (had >= bars) return beat;
+  return { ...beat, bars, rows: multiplyRows(beat.rows, STEPS * had, STEPS * bars), saved: now };
+}
+
+// The pill a key lands on: `t` seconds after the beat started round (less
+// than 0: before it, in the count), a pill every `pill` seconds, `total`
+// pills round. The nearest pill, so a hit a touch early still lands where
+// it was meant; one before the first pill is the first pill (an eager tap
+// in the count); one past the last comes round.
+export function pillAt(t, pill, total) {
+  const n = Math.round(t / pill);
+  if (n < 0) return 0;
+  return n % total;
+}
+
+// A note the kid played, `pitch` semitones above the C, landing on pill `s`
+// of the tune row, `l` pills long (notes.js addNote: a note already there
+// at that pitch keeps its place). `fresh`: a new recording's first note
+// starts the row again, on `clipId` (the instrument playing now); the row
+// is made when the beat has none. Returns the beat, saved.
+export function withTuneNote(beat, { clipId, pitch, s, l = 1, fresh = false }, now = Date.now()) {
+  const total = STEPS * (beat.bars || 1);
+  const rows = beat.rows.map((r) => ({ ...r }));
+  let row = rows.find((r) => r.melody);
+  if (!row) { row = cleanRow({ clipId, melody: true, steps: Array(total).fill(false), tune: [] }); rows.push(row); }
+  const tune = fresh ? [] : (row.tune ?? []);
+  const made = addNote(tune, pitch, s, l);
+  if (!made && !fresh) return beat;
+  rows[rows.indexOf(row)] = cleanRow({ ...row, clipId: fresh ? clipId : row.clipId, steps: Array(total).fill(false), tune: made?.tune ?? tune });
   return { ...beat, rows, saved: now };
 }
 

@@ -12,10 +12,11 @@ import { testManifest } from './test-board.mjs';
 import {
   makeSum, typeDigit, kidsRange, kidsAutoPx, kidsPadPx, kidsShare, shareOf, kidsSliderAt, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder, KIDS_PADS,
   newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds, KIDS_TEMPOS,
+  TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote,
   kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS, keyPitch, keyRate, keyPlayId, isHighKey,
 } from '../web/kids-logic.js';
 import { MELODY_NOTES } from '../web/notes.js';
-import { BEAT_ID, cleanPattern } from '../web/sequencer.js';
+import { BEAT_ID, cleanPattern, STEPS } from '../web/sequencer.js';
 import { isScratch, scratchId } from '../web/scratch.js';
 
 // ── Pure ──
@@ -159,6 +160,66 @@ test('🐢 and 🏃: tap one for slow or fast, tap it again for the middle', () 
   assert.equal(tempoName(110), 'mid');
   assert.equal(tempoName(140), 'fast');
   assert.equal(squareSeconds(120), 0.25);
+});
+
+// Ben, 2026-10-22: "there should be a record button… compose a little tune
+// in here… save it and use it again in the grown up mode".
+test('● a tune: the beat grows to four bars, the drums repeated; a square tapped lands in every bar', () => {
+  const ids = ['p-kick', 'p-snare', 'p-hihat', 'p-clap'];
+  const one = withSquare(newKidsBeat('p-a', ids, scratchId('p-a'), 5), ids, 0, 2, true, 6);
+  const four = withBars(one, TUNE_BARS, 7);
+  assert.equal(TUNE_BARS, 4);
+  assert.equal(four.bars, 4);
+  assert.equal(four.rows[0].steps.length, 4 * STEPS);
+  assert.deepEqual([0, 1, 2, 3].map((b) => four.rows[0].steps[4 + b * STEPS]), [true, true, true, true], 'bar 1 repeated');
+  assert.equal(four.saved, 7);
+  assert.equal(withBars(four, 4), four, 'as many already: left alone');
+  assert.equal(withBars(four, 2), four);
+  assert.deepEqual(squaresOf(four, ids), squaresOf(one, ids), 'the grid reads bar 1');
+  // A square tapped now lands in every bar, and off takes it out of every bar.
+  const more = withSquare(four, ids, 1, 7, true);
+  assert.deepEqual([0, 1, 2, 3].map((b) => more.rows[1].steps[14 + b * STEPS]), [true, true, true, true]);
+  const less = withSquare(more, ids, 0, 2, false);
+  assert.deepEqual([0, 1, 2, 3].map((b) => less.rows[0].steps[4 + b * STEPS]), [false, false, false, false]);
+  assert.equal(TUNE_COUNT, 3);
+  assert.equal(pillSeconds(120), 0.125, 'a pill is a sixteenth');
+});
+
+test('● a tune: a key lands on the nearest pill; an eager one in the count on the first; past the end it comes round', () => {
+  const dt = pillSeconds(120);
+  assert.equal(pillAt(0, dt, 64), 0);
+  assert.equal(pillAt(dt * 2.4, dt, 64), 2);
+  assert.equal(pillAt(dt * 2.6, dt, 64), 3);
+  assert.equal(pillAt(-0.3, dt, 64), 0, 'an eager tap in the count');
+  assert.equal(pillAt(dt * 65, dt, 64), 1, 'round again');
+});
+
+test('● a tune: notes land in one tune row on the instrument\'s C; a new recording\'s first note starts it again; the regular app keeps it', () => {
+  const ids = ['p-kick', 'p-snare', 'p-hihat', 'p-clap'];
+  const beat = withBars(withSquare(newKidsBeat('p-a', ids, scratchId('p-a'), 5), ids, 0, 0, true), TUNE_BARS);
+  assert.equal(tuneRowOf(beat), null);
+  const a = withTuneNote(beat, { clipId: 'p-a-piano-c', pitch: 4, s: 2, l: 1, fresh: true }, 8);
+  const row = tuneRowOf(a);
+  assert.ok(row && row.melody && row.clipId === 'p-a-piano-c', 'a tune row on the C');
+  assert.deepEqual(row.tune, [{ p: 4, s: 2, l: 1 }]);
+  assert.equal(row.steps.length, 4 * STEPS);
+  assert.equal(a.rows.length, 5, 'after the four drums');
+  assert.equal(a.saved, 8);
+  assert.deepEqual(squaresOf(a, ids), squaresOf(beat, ids), 'the drums are as they were');
+  const b = withTuneNote(a, { clipId: 'p-a-piano-c', pitch: 16, s: 40, l: 3 });
+  assert.deepEqual(tuneRowOf(b).tune, [{ p: 4, s: 2, l: 1 }, { p: 16, s: 40, l: 3 }]);
+  assert.equal(withTuneNote(b, { clipId: 'p-a-piano-c', pitch: 4, s: 2 }), b, 'a note already there: nothing to add');
+  // A new recording on another instrument: its first note starts the row again, on that C.
+  const c = withTuneNote(b, { clipId: 'p-a-marimba-c', pitch: 0, s: 0, l: 2, fresh: true });
+  assert.equal(tuneRowOf(c).clipId, 'p-a-marimba-c');
+  assert.deepEqual(tuneRowOf(c).tune, [{ p: 0, s: 0, l: 2 }]);
+  assert.equal(c.rows.length, 5);
+  // It stays itself through the regular app's cleaning, and a square tapped keeps the tune.
+  const clean = cleanPattern(c, 'p-a');
+  assert.deepEqual(tuneRowOf(clean).tune, [{ p: 0, s: 0, l: 2 }]);
+  assert.equal(clean.bars, 4);
+  const tapped = withSquare(c, ids, 2, 5, true);
+  assert.deepEqual(tuneRowOf(tapped).tune, [{ p: 0, s: 0, l: 2 }]);
 });
 
 test('the voices: 🤖 Robot, 🐭 Tiny (Chipmunk), 👻 Spooky (Monster with an echo); tap again for Normal', () => {
@@ -744,4 +805,101 @@ test('Kids\' slider and a pinch keep the person\'s pad size, and the pads follow
   await page.settle();
   assert.equal(getSetting('padSize'), want);
   await setLevel('regular');
+});
+
+// ● on the Keys screen: 3, 2, 1 at the beat's tempo, the beat goes round
+// once while the keys land, it stops by itself, and a grown-up finds the
+// tune on 🥁 Beats. The beat is set very fast so the test takes a moment,
+// and the stand-in's audio clock is made to run.
+test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes round once, and the regular app shows the tune row', async () => {
+  const { audio } = await import('../web/audio.js');
+  const { getSetting, setSetting } = await import('../web/settings.js');
+  const { scratchOf } = await import('../web/scratch.js');
+  const { pillSeconds: pill, tuneRowOf: tuneOf } = await import('../web/kids-logic.js');
+  await setLevel('regular');
+  await setSetting('instNotes', 'piano');
+  await toKids();
+  // A running audio clock, and sounds that "load" and play silently.
+  const ctx = audio.context();
+  const t0 = performance.now();
+  Object.defineProperty(ctx, 'currentTime', { configurable: true, get: () => (performance.now() - t0) / 1000 });
+  ctx.createBufferSource = () => ({ connect() {}, start() {}, stop() {}, playbackRate: { value: 1 }, buffer: null });
+  const plainLoad = audio.load;
+  audio.load = async () => ({ buffer: {}, duration: 0.2 });
+  const mine = () => scratchOf(state.savedBeats.filter((b) => b.personId === state.personId), state.personId);
+  // The kid's beat, with a square on, at a tempo that goes round in moments.
+  $('[data-kids-tab="beats"]').dispatch('click');
+  if (!mine()?.rows.some((r) => r.steps.some(Boolean))) $('#kids-beat').querySelectorAll('.kids-square')[0].dispatch('click');
+  mine().bpm = 1200;
+  mine().bars = 1;
+  mine().rows = mine().rows.filter((r) => !r.melody).map((r) => ({ ...r, steps: r.steps.slice(0, STEPS) }));
+  $('[data-kids-tab="keys"]').dispatch('click');
+  const rec = $('#kids-rec');
+  const face = () => $('#kids-rec-face').textContent;
+  assert.equal(rec.closest('.kids-top').classList.contains('kids-keys-top'), true, 'in the Keys screen\'s top bar');
+  assert.equal(face(), '●');
+  rec.dispatch('click');
+  await page.settle();
+  assert.equal(rec.classList.contains('counting'), true);
+  assert.equal(mine().bars, 4, 'the beat grew to four bars for the tune');
+  assert.equal(mine().rows[0].steps.length, 4 * STEPS);
+  await until(() => face() === '3', '3');
+  await until(() => face() === '2', '2');
+  await until(() => face() === '1', '1');
+  await until(() => rec.classList.contains('recording'), 'recording');
+  assert.equal(face(), '●');
+  assert.equal($('#kids-play').getAttribute('aria-pressed'), 'true', 'the beat goes round');
+  const keys = $('#kids-keys').querySelectorAll('.kids-key');
+  const dt = pill(1200) * 1000;
+  await new Promise((r) => setTimeout(r, dt * 2.2));
+  keys[0].dispatch('pointerdown', { pointerId: 11 });   // C, held about two pills
+  await new Promise((r) => setTimeout(r, dt * 2));
+  keys[0].dispatch('pointerup', { pointerId: 11 });
+  keys[4].dispatch('pointerdown', { pointerId: 12 });   // A, a tap
+  keys[4].dispatch('pointerup', { pointerId: 12 });
+  const tune = tuneOf(mine());
+  assert.ok(tune, 'a tune row');
+  assert.equal(tune.clipId, $('#kids-keys').querySelector('.kids-key') && state.userClips.length >= 0 && tune.clipId, 'its sound');
+  assert.ok(tune.clipId.endsWith('-piano-c'), `the instrument's C: ${tune.clipId}`);
+  assert.deepEqual(tune.tune.map((n) => n.p), [0, 9], 'C then A');
+  assert.ok(tune.tune[0].l >= 1 && tune.tune[0].s >= 1 && tune.tune[0].s <= 4, JSON.stringify(tune.tune));
+  assert.equal(mine().rows.length, 5, 'the four drums and the tune');
+  await until(() => !rec.classList.contains('recording'), 'the beat came round', 6000);
+  assert.equal($('#kids-play').getAttribute('aria-pressed'), 'true', 'the beat plays on, with the tune');
+  assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [0, 9], 'the tune stays');
+  // A new recording: its first note starts the tune again; a tap on ● stops it early.
+  rec.dispatch('click');
+  await page.settle();
+  await until(() => rec.classList.contains('recording'), 'recording again');
+  assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [0, 9], 'the old tune stays until a key lands');
+  await new Promise((r) => setTimeout(r, dt * 1.5));
+  keys[2].dispatch('pointerdown', { pointerId: 13 });
+  keys[2].dispatch('pointerup', { pointerId: 13 });
+  assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [4], 'started again, with the E');
+  rec.dispatch('click');
+  assert.equal(rec.classList.contains('recording'), false, 'stopped early');
+  assert.equal(rec.getAttribute('aria-pressed'), 'false');
+  // A tap during the count calls it off; the tune and the beat are left as they were.
+  $('#kids-stop').dispatch('click');
+  assert.equal($('#kids-play').getAttribute('aria-pressed'), 'false');
+  rec.dispatch('click');
+  await page.settle();
+  assert.equal(rec.classList.contains('counting'), true);
+  rec.dispatch('click');
+  assert.equal(rec.classList.contains('counting'), false);
+  await new Promise((r) => setTimeout(r, dt * 6));
+  assert.equal($('#kids-play').getAttribute('aria-pressed'), 'false', 'nothing started');
+  assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [4]);
+  // A grown-up finds it on 🥁 Beats: the drums and a 🎹 tune row, four bars.
+  await setLevel('regular');
+  $('#beats-toggle').dispatch('click');
+  const rows = $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
+  assert.equal(rows.length, 5);
+  assert.equal(rows.filter((r) => r.classList.contains('tune')).length, 1, 'one tune row, for 🎹 the piano roll');
+  assert.equal(document.querySelectorAll('.beat-bar')[0].querySelector('[data-beat-name]').value, 'Scratch beat', 'the scratch: 💾 Keep names it');
+  $('#pads-tab').dispatch('click');
+  audio.load = plainLoad;
+  delete ctx.currentTime;
+  ctx.currentTime = 0;
+  assert.equal(getSetting('level'), 'regular');
 });
