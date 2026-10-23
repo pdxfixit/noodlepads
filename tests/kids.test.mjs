@@ -879,14 +879,21 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   rec.dispatch('click');
   assert.equal(rec.classList.contains('recording'), false, 'stopped early');
   assert.equal(rec.getAttribute('aria-pressed'), 'false');
-  // A tap during the count calls it off; the tune and the beat are left as they were.
+  // A tap during the count calls it off, its beeps still to come go quiet,
+  // and the tune and the beat are left as they were.
   $('#kids-stop').dispatch('click');
   assert.equal($('#kids-play').getAttribute('aria-pressed'), 'false');
+  const beeps = [];
+  const plainOsc = ctx.createOscillator;
+  ctx.createOscillator = () => { const o = { connect() {}, start() {}, stop() { o.stopped = true; }, frequency: { value: 0 } }; beeps.push(o); return o; };
   rec.dispatch('click');
   await page.settle();
   assert.equal(rec.classList.contains('counting'), true);
+  assert.equal(beeps.length, 3, 'three beeps booked on the audio clock');
   rec.dispatch('click');
+  ctx.createOscillator = plainOsc;
   assert.equal(rec.classList.contains('counting'), false);
+  assert.ok(beeps.every((o) => o.stopped), 'the beeps are stopped');
   await new Promise((r) => setTimeout(r, dt * 6));
   assert.equal($('#kids-play').getAttribute('aria-pressed'), 'false', 'nothing started');
   assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [4]);

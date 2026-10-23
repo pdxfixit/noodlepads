@@ -313,7 +313,8 @@ function beep(at = null) {
     gain.connect(audio.master);
     osc.start(t);
     osc.stop(t + 0.13);
-  } catch { /* no sound: the numbers still show */ }
+    return osc;
+  } catch { return null; /* no sound: the numbers still show */ }
 }
 
 // The press: a hold starts at once; while 3, 2, 1 count a press calls it
@@ -810,14 +811,15 @@ async function startTune() {
   if (!c) return;
   const beat = withBars(kidsBeat(), TUNE_BARS);
   if (beat !== kidsBeat()) deps.saveBeat(beat);
-  tuneRec = { mode: 'count', t0: 0, clipId: c.id, fresh: true, held: new Map(), timers: [], raf: 0, notes: 0 };
+  tuneRec = { mode: 'count', t0: 0, clipId: c.id, fresh: true, held: new Map(), timers: [], beeps: [], raf: 0, notes: 0 };
   const run = tuneRec;
   audio.load(c).catch(() => {});
   const step = 60 / beat.bpm;
   run.t0 = ctx.currentTime + TUNE_COUNT * step;
   for (let n = TUNE_COUNT; n >= 1; n--) {
     const at = run.t0 - n * step;
-    beep(at);
+    const b = beep(at);
+    if (b) run.beeps.push(b);
     run.timers.push(setTimeout(() => { if (tuneRec === run) { el.recFace.textContent = String(n); boing(el.recFace); } }, Math.max(0, (at - ctx.currentTime) * 1000)));
   }
   showRec();
@@ -865,6 +867,7 @@ function stopTune() {
   if (!run) return;
   for (const id of [...run.held.keys()]) landNote(id);
   run.timers.forEach(clearTimeout);
+  for (const b of run.beeps) { try { b.stop(); } catch { /* sounded already */ } }   // a count called off goes quiet
   cancelAnimationFrame(run.raf);
   tuneRec = null;
   if (run.mode === 'on') logEvent('kids', { rec: 'stop', tune: run.notes });
