@@ -157,9 +157,13 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   smaller, with a small ✦. Lying down like a xylophone on a phone. The round
   button at the top left, like Pads' skin button, shows who plays them by
   its picture; each tap moves to the next of Pluck, Piano, Marimba, Steel
-  drum and Kalimba (`KIDS_INSTRUMENTS`; round again) and keeps it as the
+  drum and Kalimba (`KIDS_INSTRUMENTS`; round again), keeps it as the
   person's `instNotes`, so each key plays its note on that instrument
-  (`keyKitId`), keeping its fruit.
+  (`keyKitId`), keeping its fruit, and plays a C on it so the change is
+  heard. Every key wears the same picture small at its far end (the left end
+  on a phone, the top on a wide screen), so the whole screen says who plays
+  (Ben, 2026-10-22: the toggle must show "whatever the mode currently
+  playing is").
 
 ⏹️ stops everything. The ⚙️ gear asks a grown-up sum (two numbers from 6 to
 9, big number keys; `grown-up.js`, which ⚙️ Settings → About → Feedback asks

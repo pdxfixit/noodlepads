@@ -674,7 +674,11 @@ function keyClip(i) {
 
 // 🎹 The instrument button shows who plays the keys, by its picture; a tap
 // moves to the next one (kids-logic.js KIDS_INSTRUMENTS), kept as the
-// person's `instNotes`. No words: its name is only for a screen reader.
+// person's `instNotes`, and plays a C on it, so the change is heard. Every
+// key wears the same picture small at its end, so the whole screen says who
+// plays (Ben, 2026-10-22: the toggle "should be far more indicative of
+// whatever the mode currently playing is"). No words: the instrument's name
+// is only for a screen reader.
 const keysInstrument = () => instrumentById(getSetting('instNotes')) ?? instrumentById(PLAYED.notes.default);
 function showInstButton() {
   const inst = keysInstrument();
@@ -690,22 +694,28 @@ async function nextInstrument() {
     await setSetting('instNotes', nextKidsInstrument(getSetting('instNotes')));
   } catch (err) {
     console.error('Changing the instrument failed:', err);
+    return;
   }
+  const c = keyClip(0);
+  if (c && showing) audio.play(c);   // hear who plays now
 }
 
 // A high key wears its low note's fruit a size smaller, with a small ✦:
-// the same note, higher.
+// the same note, higher. Each key carries the instrument's picture too.
 function renderKeys() {
+  const inst = keysInstrument();
   el.keys.replaceChildren(...KIDS_KEYS.map((k, i) => {
     const clip = keyClip(i);
     const high = isHighKey(k);
     const b = make('button', high ? 'kids-key high' : 'kids-key', { type: 'button' });
+    const who = make('span', 'kids-key-inst', { textContent: inst.emoji });
+    who.setAttribute('aria-hidden', 'true');
     const face = make('span', 'kids-key-face', { textContent: clip?.emoji ?? '🎵' });
     if (high) face.append(make('span', 'kids-key-star', { textContent: '✦' }));
-    b.append(face);
+    b.append(who, face);
     b.dataset.key = String(i);
     const label = clip?.label ?? 'Note';
-    b.setAttribute('aria-label', high ? `High ${label}` : label);
+    b.setAttribute('aria-label', `${high ? `High ${label}` : label} on ${inst.name}`);
     b.style.setProperty('--key', k.color);
     b.style.setProperty('--n', String(i));
     return b;

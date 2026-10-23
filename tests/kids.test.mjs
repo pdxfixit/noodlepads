@@ -351,6 +351,40 @@ test('Keys: eight colored keys; a held key plays', async () => {
   keys[4].dispatch('pointerup', { pointerId: 2 });
 });
 
+// Ben, 2026-10-22: the instrument toggle "should be far more indicative of
+// whatever the mode currently playing is": every key wears who plays it,
+// and a tap on the button plays a note on the new one.
+test('🎹 the instrument button: every key wears who plays it; a tap moves to the next of five, keeps it, and plays a C on it', async () => {
+  const { getSetting, setSetting } = await import('../web/settings.js');
+  const { KIDS_INSTRUMENTS } = await import('../web/kids-logic.js');
+  const { instrumentById } = await import('../web/instruments.js');
+  await setSetting('instNotes', 'pluck');
+  await page.settle();
+  $('[data-kids-tab="keys"]').dispatch('click');
+  const button = $('#kids-inst');
+  assert.equal(button.closest('[data-kids-view]').dataset.kidsView, 'keys', 'on the Keys screen');
+  const badges = () => $('#kids-keys').querySelectorAll('.kids-key-inst').map((b) => b.textContent);
+  assert.equal(button.textContent, instrumentById('pluck').emoji);
+  assert.deepEqual(badges(), Array(8).fill(instrumentById('pluck').emoji), 'every key wears the picture the button shows');
+  assert.ok($('#kids-keys').querySelector('.kids-key').getAttribute('aria-label').endsWith(' on Pluck'));
+  const seen = [];
+  for (let i = 0; i < KIDS_INSTRUMENTS.length; i++) {
+    played.length = 0;
+    button.dispatch('click');
+    await page.settle();
+    const inst = getSetting('instNotes');
+    seen.push(inst);
+    assert.equal(button.textContent, instrumentById(inst).emoji, 'the button shows the instrument now on');
+    assert.deepEqual(badges(), Array(8).fill(instrumentById(inst).emoji), 'and so does every key');
+    const c = $('#kids-keys').querySelector('.kids-key');
+    assert.ok(c.getAttribute('aria-label').endsWith(` on ${instrumentById(inst).name}`), c.getAttribute('aria-label'));
+    assert.equal(played.length, 1, 'a note plays on it');
+    const { findClip } = await import('../web/board.js');
+    assert.equal(findClip(played[0]).label, 'C', 'the C');
+  }
+  assert.deepEqual(seen, ['piano', 'marimba', 'steel', 'kalimba', 'pluck']);
+});
+
 test('Record: the mic and three voices; without a microphone the mic is off', () => {
   $('[data-kids-tab="record"]').dispatch('click');
   assert.deepEqual($('#kids').querySelectorAll('[data-kids-voice]').map((b) => b.textContent), ['🤖', '🐭', '👻']);
