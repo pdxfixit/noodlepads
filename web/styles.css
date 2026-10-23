@@ -4781,9 +4781,24 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
 .kids-play[aria-pressed="true"] { background: var(--record); box-shadow: 0 6px 0 #7E1612; }
 .kids-tempo { width: 88px; }
 .kids-tempo[aria-pressed="true"] { background: #fff; box-shadow: 0 6px 0 var(--chalk-edge); }
-.kids-beat { flex: 1 1 auto; min-height: 0; display: grid; gap: 8px; padding-bottom: 6px; }
+/* The grid never runs under the bottom bar (Ben, 2026-10-22, Firefox for
+   Android: its URL bar leaves about 680 px, and the last squares sat behind
+   the tabs): a square is 44 px at least, and where the room is shorter than
+   the nine rows the grid scrolls inside its own box instead of spilling out
+   of it. The padding keeps the playing square's outline inside the box. */
+.kids-beat { flex: 1 1 auto; min-height: 0; display: grid; gap: 8px; margin: 0 -6px; padding: 0 6px 6px; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; }
 .kids-beat[data-layout="across"] { grid-template-columns: minmax(56px, 90px) repeat(8, 1fr); grid-template-rows: repeat(4, minmax(48px, 1fr)); }
 .kids-beat[data-layout="down"] { grid-template-columns: repeat(4, 1fr); grid-template-rows: minmax(48px, 64px) repeat(8, minmax(44px, 1fr)); }
+/* A short screen (a phone with its browser bar showing): the bars and the
+   drum heads tighten, so the whole beat fits without scrolling. */
+@media (max-height: 740px) {
+  .kids-beat-view { gap: 8px; }
+  .kids-play, .kids-tempo { height: 56px; border-radius: 18px; font-size: 2rem; }
+  .kids-beat { gap: 5px; }
+  .kids-beat[data-layout="down"] { grid-template-rows: minmax(44px, 48px) repeat(8, minmax(44px, 1fr)); }
+  .kids-bar { padding: 6px 0 calc(8px + env(safe-area-inset-bottom)); }
+  .kids-tab { height: 60px; }
+}
 .kids-drum {
   border: 0;
   border-radius: 18px;
