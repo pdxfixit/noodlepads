@@ -255,6 +255,8 @@ test('🧸 Kids: a round instrument button on Keys; each tap plays the toy keys 
   await page.settle();
   assert.equal(pick('instNotes'), 'piano');
   assert.equal(button.textContent, '🎹');
+  assert.deepEqual(heard, [['piano-c', 1]], 'the tap plays a C on the piano, so the change is heard (Ben, 2026-10-22)');
+  heard.length = 0;
   tapKeys();
   assert.deepEqual(heard, [['piano-e', 1], ['piano-c', 2]], 'the same notes on the piano, the high one an octave up');
   assert.deepEqual(faces(), fruit, 'each key keeps its fruit');
