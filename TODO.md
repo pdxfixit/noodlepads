@@ -29,6 +29,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
   an agent adds them to the kit (`web/boards.json` `kit`, `web/clips/kit/`). The site is public, so no names in them. `docs/guide.md` "How sounds are stored"
 - [ ] Listen to the new presets (10 min) 🔼
   open Presets on a phone: 🐵 Animals, 👽 Sci-fi, the new 🤪 Silly ones, and the new drums, notes, chords and bass, plus the sharps and flats (⚙️ Advanced on: Notes, Chords, Bass). Say which to redo or drop (each is a short recipe in `tools/make_placeholders.py`).
+- [ ] Decide: 🧸 Kids' beat drums keep 🎩 Hi-hat, or swap it for a drum whose picture matches its sound (🧂 Shaker, 🔔 Ride) (2 min)
+  the Kids pads now show only sounds whose picture says what they are (2026-10-22), but the beat's four drums are still kick 🦶, snare 🥁, hi-hat 🎩, clap 👏: the hat is a pun a five-year-old won't get. Swapping changes `KIDS_DRUMS` (kids-logic.js); an old beat's hi-hat row would stay in the regular app and leave the Kids grid.
 - [ ] Record three one-liners and try every voice on them (10 min) 🔼
   on https://noodlepads.com/, tap New sound. Say which voices are funny and which to drop. Listen for a stutter at word endings on Slow, and how crunchy Loud gets at 10.
 - [x] Decide: when a row's sound is still playing at its next hit, cut it off or let hits overlap ✅ 2026-10-10
