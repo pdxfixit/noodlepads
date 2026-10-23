@@ -138,6 +138,8 @@ export const RULES = {
   kids: {
     tab: oneOf(['pads', 'record', 'beats', 'keys']), recorded: num, how: oneOf(['tap', 'hold']), voice: oneOf(['normal', 'robot', 'tiny', 'spooky']),
     play: bool, bpm: num, sum: oneOf(['right', 'wrong']),
+    // ● on the Keys screen: a tune recording started and stopped (`tune`: notes landed).
+    rec: oneOf(['start', 'stop']), tune: num,
   },
   // 👋 The welcome (welcome.js, ADR 0028): shown, the level a card set, skipped.
   welcome: { shown: bool, level: oneOf(['kids', 'regular', 'advanced']), skipped: bool },

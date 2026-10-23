@@ -163,7 +163,23 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   heard. Every key wears the same picture small at its far end (the left end
   on a phone, the top on a wide screen), so the whole screen says who plays
   (Ben, 2026-10-22: the toggle must show "whatever the mode currently
-  playing is").
+  playing is"). Beside it, **●** records a tune (Ben, 2026-10-22: "there
+  should be a record button… compose a little tune in here… save it and use
+  it again in the grown up mode"): a tap counts 3, 2, 1 on its face at the
+  beat's tempo (a beep each), then the kid's beat starts round from its
+  first pill and goes round once through its bars while every key pressed
+  lands as a note on the nearest pill, held keys as long as they were held
+  (`kids-logic.js` "● Record": `pillAt`, `withTuneNote`). The beat grows to
+  four bars for it (`withBars`, the drums' bar repeated; a square tapped on
+  Beats lands in every bar, so the grid still shows one pattern), and the
+  tune is one tune row (🎹, ADR 0023) of the scratch beat, on the C of the
+  instrument playing, each key its note above it. The ring round ● fills as
+  the beat goes round; it stops by itself as the beat comes round (or at the
+  next tap, ⏹️, or leaving the screen), and the beat plays on with the tune:
+  Kids' ▶️ plays it too, on the Beats screen and here. The first note of a
+  new recording throws the old tune away, so a kid can do it over (an empty
+  take changes nothing). A grown-up finds the tune row on 🥁 Beats and in 🎹
+  the piano roll, and keeps the beat with 💾 Keep.
 
 ⏹️ stops everything. The ⚙️ gear asks a grown-up sum (two numbers from 6 to
 9, big number keys; `grown-up.js`, which ⚙️ Settings → About → Feedback asks

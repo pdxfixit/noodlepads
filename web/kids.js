@@ -1,7 +1,8 @@
 // 🧸 Kids (ADR 0019): the screens a person on the Kids level sees, for a
 // five-year-old. Pictures, not words: four big tabs at the bottom (🔊 Pads,
 // 🎙️ Record, 🥁 Beats, 🎹 Keys) and a big ⏹️, over the same sounds and beats
-// as the regular app. Nothing here deletes, edits, shares or opens Settings;
+// as the regular app. The Keys screen's ● records a tune into the kid's
+// beat, for a grown-up to keep (kids-logic.js, "● Record"). Nothing here deletes, edits, shares or opens Settings;
 // the ⚙️ gear in its usual corner asks a grown-up sum first (the Settings
 // gate, settings-ui.js). The Pads screen's round button at the top left
 // moves to the next pad skin (skins.js), the person's own `padSkin`, as
@@ -32,10 +33,13 @@ import { SKINS, nextSkin } from './skins.js';
 import { kidsHint, markSeen } from './tips.js';
 import {
   kidsPadPx, kidsSliderAt, shareOf, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder,
-  KIDS_DRUMS, KIDS_SQUARES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds,
-  kidsVoiceFields, voiceAfter, MAX_RECORD_SECONDS, MIN_RECORD_SECONDS, pressKind, KIDS_COUNT, pictureFor, KIDS_KEYS, keyRate, keyPlayId, isHighKey, beatLayout, cleanTab,
+  KIDS_DRUMS, KIDS_SQUARES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName,
+  kidsVoiceFields, voiceAfter, MAX_RECORD_SECONDS, MIN_RECORD_SECONDS, pressKind, KIDS_COUNT, pictureFor, KIDS_KEYS, keyRate, keyPlayId, keyPitch, isHighKey, beatLayout, cleanTab,
   nextKidsInstrument, keyKitId,
+  TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote,
 } from './kids-logic.js';
+import { STEPS, noteRate } from './sequencer.js';
+import { startsIn } from './notes.js';
 import { instrumentById, PLAYED } from './instruments.js';
 
 const el = {};
@@ -65,6 +69,7 @@ function wiggle(node) {
 function setTab(name) {
   name = cleanTab(name);
   if (name !== tab) {
+    stopTune();
     stopBeat();
     stopRecording();
     releaseKeys();
@@ -293,19 +298,21 @@ function renderRecord() {
 
 const dropStream = (stream) => stream?.getTracks().forEach((t) => t.stop());
 
-// A short beep for each number of the count, on the app's own output.
-function beep() {
+// A short beep for each number of a count, on the app's own output, now or
+// at `at` on the audio clock.
+function beep(at = null) {
   try {
     const ctx = audio.wake();
+    const t = at ?? ctx.currentTime;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.18, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.18, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
     osc.connect(gain);
     gain.connect(audio.master);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.13);
+    osc.start(t);
+    osc.stop(t + 0.13);
   } catch { /* no sound: the numbers still show */ }
 }
 
@@ -592,39 +599,74 @@ function setTempo(which) {
   renderBeat();
 }
 
-// Plays the squares in a loop, scheduled a little ahead on the audio clock.
-async function playBeat() {
+// The sound of a clip for the player, loaded once per run; null until it is.
+function soundFor(run, clipId) {
+  if (!clipId) return null;
+  if (!run.sounds.has(clipId)) {
+    run.sounds.set(clipId, null);
+    const clip = deps.clips({ includeHidden: true, allPresets: true }).find((c) => c.id === clipId);
+    if (clip) audio.load(clip).then((got) => { if (playing === run) run.sounds.set(clipId, got); }).catch(() => {});
+  }
+  return run.sounds.get(clipId);
+}
+
+// Plays the beat in a loop, scheduled a little ahead on the audio clock:
+// every pill of every bar, the drums' squares and the tune row's notes
+// (the tune a ● recording made, played as the regular app plays it: the
+// sound faster for a higher note, for as long as the note lasts). `from`:
+// the audio-clock time the first pill sounds (after a count); `onPass(at)`
+// is told as each time round is booked, with when it ends.
+async function playBeat({ from = null, onPass = null } = {}) {
   if (playing) return;
   const ctx = audio.wake();
-  const loaded = await Promise.all(drumClips().map((c) => (c ? audio.load(c).catch(() => null) : null)));
+  const run = { t0: 0, next: 0, pill: 0, voices: new Set(), timer: 0, shows: [], sounds: new Map(), onPass };
+  const first = kidsBeat();
+  await Promise.all([...drumClips().map((c) => c?.id), tuneRowOf(first)?.clipId].filter(Boolean).map((id) => {
+    const clip = deps.clips({ includeHidden: true, allPresets: true }).find((c) => c.id === id);
+    return clip ? audio.load(clip).then((got) => run.sounds.set(id, got)).catch(() => {}) : null;
+  }));
   if (playing || !showing) return;
-  playing = { next: ctx.currentTime + 0.06, square: 0, voices: new Set(), timer: 0, shows: [] };
-  const run = playing;
+  playing = run;
+  run.t0 = from ?? ctx.currentTime + 0.06;
+  run.next = run.t0;
+  const hit = (got, at, rate, len) => {
+    const v = makeVoice(ctx, got.buffer, audio.master);
+    if (rate !== 1) v.src.playbackRate.value = rate;
+    v.src.start(at);
+    const end = at + got.duration / rate;
+    if (len > 0 && at + len < end) fadeStop(v, at + len); else v.src.stop(end);
+    run.voices.add(v);
+    v.src.onended = () => run.voices.delete(v);
+  };
   const tick = () => {
     if (playing !== run) return;
-    const beat = kidsBeat();
-    const squares = squaresOf(beat, drumClips().map((c) => c?.id ?? null));
+    const beat = kidsBeat();   // read each time: a square tapped, or a note landed, while it plays
+    const ids = drumClips().map((c) => c?.id ?? null);
+    const total = STEPS * (beat.bars || 1);
+    const dt = pillSeconds(beat.bpm);
+    const tune = tuneRowOf(beat);
     while (run.next < ctx.currentTime + 0.12) {
-      const s = run.square;
-      squares.forEach((line, r) => {
-        const got = loaded[r];
-        if (!line[s] || !got) return;
-        const v = makeVoice(ctx, got.buffer, audio.master);
-        v.src.start(run.next);
-        v.src.stop(run.next + got.duration);
-        run.voices.add(v);
-        v.src.onended = () => run.voices.delete(v);
-      });
-      run.shows.push(setTimeout(() => showSquare(s), Math.max(0, (run.next - ctx.currentTime) * 1000)));
-      if (run.shows.length > 32) run.shows.splice(0, 16);
-      run.next += squareSeconds(beat.bpm);
-      run.square = (s + 1) % KIDS_SQUARES;
+      const p = run.pill;
+      for (const id of ids) {
+        const row = id && beat.rows.find((r) => r.clipId === id);
+        const got = row?.steps?.[p] ? soundFor(run, id) : null;
+        if (got) hit(got, run.next, 1, 0);
+      }
+      if (tune?.tune?.length) {
+        const got = soundFor(run, tune.clipId);
+        if (got) for (const n of startsIn(tune.tune, p)) hit(got, run.next + (n.s - p) * dt, noteRate(n.p), n.l * dt);
+      }
+      if (p % 2 === 0) run.shows.push(setTimeout(() => showSquare((p % STEPS) / 2), Math.max(0, (run.next - ctx.currentTime) * 1000)));
+      if (run.shows.length > 64) run.shows.splice(0, 32);
+      run.next += dt;
+      run.pill = (p + 1) % total;
+      if (run.pill === 0) run.onPass?.(run.next);
     }
   };
   run.timer = setInterval(tick, 25);
   tick();
   audio.on.started();
-  logEvent('kids', { play: true, bpm: kidsBeat().bpm });
+  logEvent('kids', { play: true, bpm: first.bpm });
   showPlay();
 }
 
@@ -730,20 +772,111 @@ function press(id, i) {
   const clip = keyClip(i);
   if (clip) audio.play(clip, { rate: keyRate(KIDS_KEYS[i]), id: keyPlayId(KIDS_KEYS[i], clip.id) });
   el.keys.querySelector(`[data-key="${i}"]`)?.classList.add('down');
+  if (tuneRec) tuneRec.held.set(id, { at: audio.context().currentTime, pitch: keyPitch(KIDS_KEYS[i]) });
 }
 
 function lift(id) {
   if (!held.has(id)) return;
   const i = held.get(id);
   held.delete(id);
+  landNote(id);
   if ([...held.values()].includes(i)) return;   // another finger still holds it
   const clip = keyClip(i);
   if (clip) audio.stop(keyPlayId(KIDS_KEYS[i], clip.id));
   el.keys.querySelector(`[data-key="${i}"]`)?.classList.remove('down');
 }
 
+// ── ● Record: a tune into the kid's beat (kids-logic.js, "● Record") ──
+
+// What records: {mode: 'count' | 'on', t0, clipId, fresh, held, timers, raf, notes}, or null.
+let tuneRec = null;
+
+function showRec() {
+  const on = !!tuneRec;
+  el.rec.classList.toggle('counting', tuneRec?.mode === 'count');
+  el.rec.classList.toggle('recording', tuneRec?.mode === 'on');
+  el.rec.setAttribute('aria-pressed', String(on));
+  if (!on) { el.recFace.textContent = '●'; el.rec.style.setProperty('--kids-rec', '0'); }
+}
+
+// A tap on ●: 3, 2, 1 at the beat's tempo (a beep each, on the audio
+// clock), then the beat starts round from its first pill and the keys land.
+// A tap during the count calls it off; one while it records stops it.
+async function startTune() {
+  if (tuneRec) { stopTune(); return; }
+  const ctx = audio.wake();
+  stopBeat();
+  const c = keyClip(0);
+  if (!c) return;
+  const beat = withBars(kidsBeat(), TUNE_BARS);
+  if (beat !== kidsBeat()) deps.saveBeat(beat);
+  tuneRec = { mode: 'count', t0: 0, clipId: c.id, fresh: true, held: new Map(), timers: [], raf: 0, notes: 0 };
+  const run = tuneRec;
+  audio.load(c).catch(() => {});
+  const step = 60 / beat.bpm;
+  run.t0 = ctx.currentTime + TUNE_COUNT * step;
+  for (let n = TUNE_COUNT; n >= 1; n--) {
+    const at = run.t0 - n * step;
+    beep(at);
+    run.timers.push(setTimeout(() => { if (tuneRec === run) { el.recFace.textContent = String(n); boing(el.recFace); } }, Math.max(0, (at - ctx.currentTime) * 1000)));
+  }
+  showRec();
+  run.timers.push(setTimeout(async () => {
+    if (tuneRec !== run) return;
+    await playBeat({ from: run.t0, onPass: (at) => { if (tuneRec === run) run.timers.push(setTimeout(stopTune, Math.max(0, (at - ctx.currentTime) * 1000))); } });
+    if (tuneRec !== run) return;
+    if (!playing) { stopTune(); return; }   // the sounds failed to load: nothing to play along to
+    run.mode = 'on';
+    el.recFace.textContent = '●';
+    showRec();
+    logEvent('kids', { rec: 'start', bpm: beat.bpm });
+    // The ring round ● fills as the beat goes round once.
+    const total = STEPS * (beat.bars || 1) * pillSeconds(beat.bpm);
+    const ring = () => {
+      if (tuneRec !== run) return;
+      el.rec.style.setProperty('--kids-rec', String(Math.min(1, (ctx.currentTime - run.t0) / total)));
+      run.raf = requestAnimationFrame(ring);
+    };
+    run.raf = requestAnimationFrame(ring);
+  }, Math.max(0, (run.t0 - ctx.currentTime) * 1000)));
+}
+
+// A key let go of while recording lands as a note where it was pressed,
+// as long as it was held (a pill at least).
+function landNote(id) {
+  const got = tuneRec?.held.get(id);
+  if (!got) return;
+  tuneRec.held.delete(id);
+  const beat = kidsBeat();
+  const dt = pillSeconds(beat.bpm);
+  const total = STEPS * (beat.bars || 1);
+  if (got.at < tuneRec.t0 - 2 * dt) return;   // long before the beat started: not meant for it
+  const s = pillAt(got.at - tuneRec.t0, dt, total);
+  const l = Math.min(STEPS, Math.max(1, Math.round((audio.context().currentTime - got.at) / dt)));
+  deps.saveBeat(withTuneNote(beat, { clipId: tuneRec.clipId, pitch: got.pitch, s, l, fresh: tuneRec.fresh }));
+  tuneRec.fresh = false;
+  tuneRec.notes += 1;
+}
+
+// Done: as the beat comes round, at the next tap, with ⏹️, or on leaving.
+// Keys still held land; the beat plays on with the tune (⏹️ stops it).
+function stopTune() {
+  const run = tuneRec;
+  if (!run) return;
+  for (const id of [...run.held.keys()]) landNote(id);
+  run.timers.forEach(clearTimeout);
+  cancelAnimationFrame(run.raf);
+  tuneRec = null;
+  if (run.mode === 'on') logEvent('kids', { rec: 'stop', tune: run.notes });
+  showRec();
+}
+
 function releaseKeys() {
   for (const id of [...held.keys()]) lift(id);
+}
+
+function wireRec() {
+  el.rec.addEventListener('click', () => { boing(el.rec); startTune(); });
 }
 
 function wireKeys() {
@@ -784,6 +917,7 @@ export function kidsKeyup(e) {
 // ── ⏹️ and the grown-up sum ──
 
 function stopAll() {
+  stopTune();
   stopBeat();
   releaseKeys();
   audio.stopAll();
@@ -809,6 +943,7 @@ export function showKids(on) {
   showing = on;
   el.root.hidden = !on;
   if (!on) {
+    stopTune();
     stopBeat();
     stopRecording();
     releaseKeys();
@@ -822,12 +957,13 @@ export function showKids(on) {
 // Draws the current tab again: the person changed, or their sounds did.
 export function refreshKids() {
   if (!showing) return;
+  stopTune();
   stopBeat();
   render();
 }
 
 export const kidsShowing = () => showing;
-export const kidsBusy = () => !!playing || !!rec.mode;
+export const kidsBusy = () => !!playing || !!rec.mode || !!tuneRec;
 
 export function initKids(d) {
   deps = d;
@@ -841,7 +977,7 @@ export function initKids(d) {
     pages: q('#kids-pages'), turn: q('#kids-turn'), dots: q('#kids-dots'), arrows: document.querySelectorAll('[data-turn]'),
     mic: q('#kids-mic'), micFace: q('#kids-mic-face'), last: q('#kids-last'), voices: document.querySelectorAll('[data-kids-voice]'),
     beat: q('#kids-beat'), play: q('#kids-play'), slow: q('#kids-slow'), fast: q('#kids-fast'),
-    keys: q('#kids-keys'), inst: q('#kids-inst'),
+    keys: q('#kids-keys'), inst: q('#kids-inst'), rec: q('#kids-rec'), recFace: q('#kids-rec-face'),
   });
   for (const b of el.tabs) b.addEventListener('click', () => { boing(b); setTab(b.dataset.kidsTab); });
   el.stop.addEventListener('click', stopAll);
@@ -858,4 +994,5 @@ export function initKids(d) {
   wireRecord();
   wireBeat();
   wireKeys();
+  wireRec();
 }
