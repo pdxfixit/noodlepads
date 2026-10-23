@@ -16,6 +16,7 @@ Ben (2026-10-12): "add a kids mode where it changes the interface to support a 5
   - **Live keys**: big colored keys that play while held, like a toy keyboard.
 - Kids mode has no delete, no edit, no settings, no cloud and no sharing on screen.
 - A grown-up taps ⚙️ (the usual gear, in its usual corner) and answers a sum (like 7 + 8); that opens Settings and the regular app for the visit.
+- 🧸 Kids mode in the corner menu (and 🧸 at the top of the regular app, from 600 px wide) goes the other way (2026-10-22): a Kids-level person comes back to Kids, and a Regular or Advanced person sees Kids for the visit, their level unchanged; ⚙️ and the sum lead out again.
 
 ## Consequences
 

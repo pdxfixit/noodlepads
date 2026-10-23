@@ -97,6 +97,16 @@ function makePeopleMenu(list) {
     li.append(item);
     menu.append(li);
   }
+  // 🧸 Kids, now, for whoever is showing (app.js enterKids), then 👥 People.
+  const kidsLi = document.createElement('li');
+  const kids = document.createElement('button');
+  kids.type = 'button';
+  kids.className = 'person-item person-edit';
+  kids.dataset.kidsOpen = '';
+  kids.id = 'kids-open-menu';
+  kids.textContent = '🧸 Kids mode';
+  kidsLi.append(kids);
+  menu.append(kidsLi);
   const li = document.createElement('li');
   const edit = document.createElement('button');
   edit.type = 'button';
@@ -921,8 +931,8 @@ export function initPads(hooks) {
       setPeopleMenu(el.people.querySelector('.person-list').hidden);
       return;
     }
-    if (e.target.closest('[data-people-edit]')) {
-      setPeopleMenu(false);   // people.js opens the People editor
+    if (e.target.closest('[data-people-edit], [data-kids-open]')) {
+      setPeopleMenu(false);   // people.js opens the People editor; app.js shows Kids
       return;
     }
     const b = e.target.closest('[data-person]');

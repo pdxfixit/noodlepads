@@ -56,7 +56,7 @@ const MUST_MENTION = [
   // Song
   '🎼 Song', '➕ Add a lane', '▶ Play song', '🔊 Save as a sound', '↩️ Undo',
   // Settings
-  '💾 Save a backup', '📂 Load a backup', 'Advanced', '🧸 Kids', 'Regular', '📮 Send problem reports',
+  '💾 Save a backup', '📂 Load a backup', 'Advanced', '🧸 Kids', 'Regular', '📮 Send problem reports', 'Kids mode',
   // The cloud
   '☁️ Open from the cloud', '☁️ In the cloud', '🎲 Pick a name', '🔒 Set a PIN', '🔒 PIN on', 'Change PIN', 'Remove PIN',
   "🤷 I don't know the PIN", '🔄 Sync now', '🔗 Share…', '🔗 Shared with me', 'Privacy policy',
