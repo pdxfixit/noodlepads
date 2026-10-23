@@ -400,7 +400,7 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   flats, labelled both ways ("C♯ · D♭"), the five in Notes and in Bass between
   the naturals, and ten chords for songs in G, D, F, B♭ and A after the first
   seven. A beat row, key or take that already uses one keeps playing it
-  with Advanced off (`anyClip` in `board.js`). Every sound plays with the same loudest moment; a preset's `level` (dB, at most 0) turns it down after that, for the few that blasted on a phone (`just preset-loudness` measures them), and the kicks, booms, 808s and bass notes carry their own overtones so a phone speaker plays them (`carry` in `tools/make_placeholders.py`). boards.json lists the presets once, as top-level `kit`; every board (people
+  with Advanced off (`anyClip` in `board.js`). Every sound plays with the same loudest moment; a preset's `level` (dB, at most 0) turns it down after that, so every preset plays as loud as the middle of them all on a phone (`just preset-loudness --fix` works them out, at the note or chord each plays; `tools/test_preset_loudness.py` fails until boards.json has them; a level never turns one up, so the kicks and booms stay a little quieter), and the kicks, booms, 808s and bass notes carry their own overtones so a phone speaker plays them (`carry` in `tools/make_placeholders.py`). boards.json lists the presets once, as top-level `kit`; every board (people
   added in the app too) gets its own copy with ids like `<person>-kick`, so each
   board can hide, rename or reorder presets separately. The pads show two
   sections, the person's own sounds (with New sound) then Presets, and a pad only

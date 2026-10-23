@@ -24,11 +24,11 @@ export function softLimit(v) {
   return a <= 0.9 ? v : Math.sign(v) * (0.9 + 0.1 * Math.tanh((a - 0.9) / 0.1));
 }
 
-// How loud the presets seem as the app plays them (each at peak 0.9): the
-// median of the presets shown with Advanced off (web/boards.json `kit`), in
-// LUFS. tests/loudness.test.mjs recomputes it from web/clips/kit/, so it
-// stays honest when presets change.
-export const PRESET_LOUDNESS = -12.4;
+// How loud the presets seem as the app plays them (each at peak 0.9, then
+// turned down by its boards.json `level`): the median of the presets shown
+// with Advanced off (web/boards.json `kit`), in LUFS. tests/loudness.test.mjs
+// recomputes it from web/clips/kit/, so it stays honest when presets change.
+export const PRESET_LOUDNESS = -13.8;
 
 // Within this many dB of the target, a sound is already even.
 export const EVEN_ENOUGH = 1;

@@ -224,9 +224,10 @@ phone-off serial port="8765":
 placeholders *names:
     python3 tools/make_placeholders.py "$@"
 
-# How loud each shown preset seems as the app plays it on a phone, from the middle of them all (a boards.json `level` turns one down)
-preset-loudness:
-    python3 tools/preset_loudness.py
+# How loud each preset seems as the app plays it on a phone, from the middle of them all; --fix writes the boards.json `level` that turns each one over it down to the middle. Run --fix after any change to web/clips/kit/ or the kit
+[positional-arguments]
+preset-loudness *args:
+    python3 tools/preset_loudness.py "$@"
 
 # Remake web/emoji-all.js and web/emoji-check.js (every emoji behind the pickers' "…") from this Python's Unicode data; prints sizes
 emoji:

@@ -112,7 +112,17 @@ def rebuilt(text):
         if last_of_group:
             for inst in INSTRUMENTS:
                 kit.extend(e for e in entries_for(inst, own) if e["group"] == k["group"])
-    doc["kit"] = kit
+    # A preset's `level` is preset_loudness.py's to set; it stays.
+    levels = {k["id"]: k["level"] for k in doc["kit"] if "level" in k}
+    for k in kit:
+        if k["id"] in levels:
+            k["level"] = levels[k["id"]]
+    return with_kit(text, kit)
+
+
+def with_kit(text, kit):
+    """boards.json's text with its `kit` list replaced by `kit`, one preset
+    a line, everything else as it was (preset_loudness.py writes it too)."""
     lines = text.split("\n")
     start = next(i for i, line in enumerate(lines) if line.strip() == '"kit": [')
     end = next(i for i in range(start, len(lines)) if lines[i].strip() in ("],", "]"))
