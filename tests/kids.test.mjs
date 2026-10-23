@@ -588,6 +588,70 @@ test('🧸 Kids in Settings brings the kid\'s screens back; Regular leaves them 
   $('#pads-tab').dispatch('click');
 });
 
+// Ben, 2026-10-22: "There's also not a way to toggle in between kid mode and
+// out again": 🧸 at the top (and 🧸 Kids mode in the corner menu) shows Kids
+// now, for anyone; ⚙️ and the sum lead out.
+const answerSum = () => {
+  const answer = String(Number($('#kids-sum-a').textContent) + Number($('#kids-sum-b').textContent));
+  for (const d of answer) $('#kids-sum-keys').querySelector(`[data-digit="${d}"]`).dispatch('click');
+};
+test('🧸 at the top: a Regular person sees Kids for this visit, their level unchanged; the sum leads out; 🧸 again goes back in', async () => {
+  const { getSetting } = await import('../web/settings.js');
+  await setLevel('regular');
+  assert.equal(document.body.classList.contains('kids'), false);
+  assert.equal($('#kids-open').getAttribute('aria-label'), 'Kids mode');
+  $('#kids-open').dispatch('click');
+  await page.settle();
+  assert.equal(document.body.classList.contains('kids'), true, 'Kids shows');
+  assert.equal(getSetting('level'), 'regular', 'the level stays');
+  // ⚙️ asks the sum, as for a Kids-level person; the right answer leads out.
+  $('#settings-open').dispatch('click');
+  assert.equal($('#kids-sum').open, true);
+  answerSum();
+  await page.settle();
+  assert.equal(document.body.classList.contains('kids'), false);
+  assert.equal($('#settings-dialog').open, true);
+  assert.equal(getSetting('level'), 'regular');
+  $('#settings-dialog').close();
+  // The corner menu's line does the same.
+  $('#people').querySelector('.person-menu-btn').dispatch('click');
+  const line = $('#people').querySelector('[data-kids-open]');
+  assert.equal(line.textContent, '🧸 Kids mode');
+  assert.ok(line.closest('.person-list'), 'in the corner menu');
+  line.dispatch('click');
+  await page.settle();
+  assert.equal(document.body.classList.contains('kids'), true);
+  assert.equal($('#people').querySelector('.person-list').hidden, true, 'the menu closed');
+  $('#settings-open').dispatch('click');
+  answerSum();
+  await page.settle();
+  $('#settings-dialog').close();
+  assert.equal(document.body.classList.contains('kids'), false);
+});
+
+test('🧸 at the top: a Kids-level person a grown-up let out goes straight back to Kids', async () => {
+  const { getSetting } = await import('../web/settings.js');
+  await setLevel('kids');
+  assert.equal(document.body.classList.contains('kids'), true);
+  $('#settings-open').dispatch('click');
+  answerSum();
+  await page.settle();
+  $('#settings-dialog').close();
+  assert.equal(document.body.classList.contains('kids'), false, 'the grown-up is in');
+  $('#kids-open').dispatch('click');
+  await page.settle();
+  assert.equal(document.body.classList.contains('kids'), true, 'and Kids is back');
+  assert.equal(getSetting('level'), 'kids');
+  // Out again, and Regular in Settings ends it for good.
+  $('#settings-open').dispatch('click');
+  answerSum();
+  await page.settle();
+  $('#level-keys').querySelector('[data-level="regular"]').dispatch('click');
+  await page.settle();
+  $('#settings-dialog').close();
+  assert.equal(document.body.classList.contains('kids'), false);
+});
+
 // Kids showing for sure: chosen in ⚙️ Settings → Level, which also ends a
 // grown-up's visit (an earlier test left one open).
 const toKids = async () => {

@@ -216,6 +216,7 @@ h1 { min-width: 0; overflow-wrap: anywhere; }
 .person-item[aria-current="true"] { outline: 3px solid #fff; outline-offset: -3px; }
 .person-item[aria-current="true"]::after { content: " ✓"; }
 .person-item.person-edit { margin-top: 4px; border: 2px solid rgb(255 255 255 / 0.5); background: transparent; font-family: var(--font-ui); }
+li:has(> .person-edit) + li > .person-edit { margin-top: 0; }   /* 🧸 Kids mode and 👥 People sit together */
 
 /* ── Pad bed ────────────────────────────────────────────────────────── */
 
@@ -3401,6 +3402,9 @@ body.head-slim .title-tools {
 }
 body.head-slim.screen-pads .title-tools { height: 64px; }   /* centred on Edit sounds */
 body.head-slim .title-tools .grille { display: none; }
+body.head-slim .kids-open { display: none; }   /* the slim bar keeps its four; 🧸 waits at the top, and in the person menu */
+/* Under 600 px a fourth button would wrap the title: there the corner menu's 🧸 Kids mode is the way in. */
+@media (max-width: 599px) { .kids-open { display: none; } }
 body.head-slim .title-tools .people { order: -1; }
 body.head-slim .to-top { display: block; }
 body.head-slim .person-list { right: auto; left: 0; }   /* opens into the screen, not off its left edge */
@@ -4581,7 +4585,7 @@ dialog#listen.listening .chooser-body > .sheet-head:first-child { background: va
    tabs and ⏹️ sit at the bottom. Nothing scrolls but the pad pages, sideways. */
 
 /* Kids shows; the regular app hides (the update bar and notices with it). */
-body.kids main, body.kids .toolbar, body.kids #board-title, body.kids #help-open, body.kids #people, body.kids #to-top { display: none !important; }
+body.kids main, body.kids .toolbar, body.kids #board-title, body.kids #kids-open, body.kids #help-open, body.kids #people, body.kids #to-top { display: none !important; }
 body.kids { overflow: hidden; }
 body.kids .top { position: fixed; inset: 0 0 auto 0; z-index: 12; pointer-events: none; }
 body.kids .title-row { justify-content: flex-end; }

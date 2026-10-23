@@ -151,9 +151,15 @@ function adoptKidsBeat(pid) {
 // reloads; the level stays Kids (provisional, questions.md Q63). Choosing
 // 🧸 Kids in Settings shows the kid's screens again.
 let grownUp = false;
+// The other way round: 🧸 in the header (or 🧸 Kids mode in the person menu)
+// shows Kids to a Regular or Advanced person for this visit, their level
+// unchanged; ⚙️ and the sum lead out again (Ben, 2026-10-22: a way "to
+// toggle in between kid mode and out again"). For a Kids-level person a
+// grown-up let out, 🧸 simply brings Kids back.
+let kidsVisit = false;
 function applyKids() {
   if (!seq || !state.personId) return;
-  const on = getSetting('level') === 'kids' && !grownUp;
+  const on = kidsVisit || (getSetting('level') === 'kids' && !grownUp);
   if (on === kidsShowing()) return;
   if (on) {
     if (state.editing) setEditing(false);
@@ -167,6 +173,11 @@ function applyKids() {
   showKids(on);
   page?.screen(on ? 'kids' : state.screen);
   if (!on) refitLines();
+}
+function enterKids() {
+  grownUp = false;
+  kidsVisit = getSetting('level') !== 'kids';
+  applyKids();
 }
 
 function stepPerson(delta) {
@@ -831,8 +842,11 @@ async function start() {
   // ⚙️ while 🧸 Kids shows asks a grown-up sum first (kids.js).
   initSettingsUI({
     gate: () => { if (!kidsShowing()) return false; askGrownUp(); return true; },
-    onKids: () => { grownUp = false; applyKids(); },
+    onKids: () => { grownUp = false; kidsVisit = false; applyKids(); },
   });
+  // 🧸 at the top, and 🧸 Kids mode at the end of the person menu: Kids, now.
+  document.querySelector('#kids-open').addEventListener('click', enterKids);
+  document.querySelector('#people').addEventListener('click', (e) => { if (e.target.closest?.('[data-kids-open]')) enterKids(); });
   initFeedback();   // ⚙️ Settings → About → Feedback, behind the grown-up sum
   trackSlimHead();
   initMiniDeck();   // 🥁 Beats' play bar tucks into the slim bar at the top
@@ -961,7 +975,9 @@ async function start() {
       state.savedBeats = [...state.savedBeats.filter((b) => b.id !== beat.id), beat];
       persist('beats', structuredClone(beat));
     },
-    grownUp: () => { grownUp = true; applyKids(); showSettings(); },
+    // The sum ends a visit into Kids as well: then no grown-up is "in", so a
+    // later change of level to Kids shows Kids at once.
+    grownUp: () => { grownUp = !kidsVisit; kidsVisit = false; applyKids(); showSettings(); },
   });
   onSetting('level', () => applyKids());
   // The person's pad skin on every pad (skins.js): it follows a switch of

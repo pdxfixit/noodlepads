@@ -168,8 +168,15 @@ five-year-old, with no words to read and nothing to delete, edit or share:
 ⏹️ stops everything. The ⚙️ gear asks a grown-up sum (two numbers from 6 to
 9, big number keys; `grown-up.js`, which ⚙️ Settings → About → Feedback asks
 too); right opens Settings and the regular app until the page reloads, wrong
-goes quietly back. Choosing 🧸 Kids in Settings hands it back.
-The tab is remembered on the device (`kids-tab`).
+goes quietly back. 🧸 Kids mode at the end of the corner menu (the round
+button's), or 🧸 at the top of the regular app before ❓ and ⚙️ (from 600 px
+wide: on a phone a fourth button wraps the title; it waits at the top, out of
+the slim bar) hands it back; choosing 🧸 Kids in Settings does too. The same
+🧸 shows Kids to a Regular or Advanced person for this visit, their level
+unchanged, so a phone can be handed to a small kid; ⚙️ and the sum lead
+out again (Ben, 2026-10-22: a way "to toggle in between kid mode and out
+again"; `app.js` `kidsVisit`). The tab is remembered on the device
+(`kids-tab`).
 
 ## A new person's first steps
 
