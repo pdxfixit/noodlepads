@@ -810,7 +810,10 @@ test('Kids\' slider and a pinch keep the person\'s pad size, and the pads follow
 // ● on the Keys screen: 3, 2, 1 at the beat's tempo, the beat goes round
 // once while the keys land, it stops by itself, and a grown-up finds the
 // tune on 🥁 Beats. The beat is set very fast so the test takes a moment,
-// and the stand-in's audio clock is made to run.
+// and the stand-in's audio clock is made to run. Where a note lands depends
+// on how fast this machine is, so the checks are relative: the notes come
+// in the order played, and the second right after the first was let go
+// (on GitHub's loaded runner the first landed on pill 5, 2026-10-23).
 test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes round once, and the regular app shows the tune row', async () => {
   const { audio } = await import('../web/audio.js');
   const { getSetting, setSetting } = await import('../web/settings.js');
@@ -830,7 +833,7 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   // The kid's beat, with a square on, at a tempo that goes round in moments.
   $('[data-kids-tab="beats"]').dispatch('click');
   if (!mine()?.rows.some((r) => r.steps.some(Boolean))) $('#kids-beat').querySelectorAll('.kids-square')[0].dispatch('click');
-  mine().bpm = 1200;
+  mine().bpm = 600;
   mine().bars = 1;
   mine().rows = mine().rows.filter((r) => !r.melody).map((r) => ({ ...r, steps: r.steps.slice(0, STEPS) }));
   $('[data-kids-tab="keys"]').dispatch('click');
@@ -850,7 +853,7 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   assert.equal(face(), '●');
   assert.equal($('#kids-play').getAttribute('aria-pressed'), 'true', 'the beat goes round');
   const keys = $('#kids-keys').querySelectorAll('.kids-key');
-  const dt = pill(1200) * 1000;
+  const dt = pill(600) * 1000;
   await new Promise((r) => setTimeout(r, dt * 2.2));
   keys[0].dispatch('pointerdown', { pointerId: 11 });   // C, held about two pills
   await new Promise((r) => setTimeout(r, dt * 2));
@@ -859,10 +862,11 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   keys[4].dispatch('pointerup', { pointerId: 12 });
   const tune = tuneOf(mine());
   assert.ok(tune, 'a tune row');
-  assert.equal(tune.clipId, $('#kids-keys').querySelector('.kids-key') && state.userClips.length >= 0 && tune.clipId, 'its sound');
   assert.ok(tune.clipId.endsWith('-piano-c'), `the instrument's C: ${tune.clipId}`);
   assert.deepEqual(tune.tune.map((n) => n.p), [0, 9], 'C then A');
-  assert.ok(tune.tune[0].l >= 1 && tune.tune[0].s >= 1 && tune.tune[0].s <= 4, JSON.stringify(tune.tune));
+  const [c, a] = tune.tune;
+  assert.ok(c.l >= 2 && c.s >= 0 && c.s < 4 * STEPS, `the C held about two pills: ${JSON.stringify(tune.tune)}`);
+  assert.ok(Math.abs(a.s - (c.s + c.l)) <= 1 && a.l === 1, `the A right after the C was let go, a tap: ${JSON.stringify(tune.tune)}`);
   assert.equal(mine().rows.length, 5, 'the four drums and the tune');
   await until(() => !rec.classList.contains('recording'), 'the beat came round', 6000);
   assert.equal($('#kids-play').getAttribute('aria-pressed'), 'true', 'the beat plays on, with the tune');
