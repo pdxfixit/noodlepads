@@ -133,10 +133,10 @@ export const RULES = {
   // ● Record a take on 🎤 Live: started, and stopped (`made`: a take was kept).
   take: { rec: oneOf(['start', 'stop']), made: bool, seconds: num },
   chop: { found: num, seconds: num, made: num },
-  // 🧸 Kids (kids.js): a tab shown, a recording kept (its length) and its
-  // voice, the beat played, the grown-up sum answered.
+  // 🧸 Kids (kids.js): a tab shown, a recording kept (its length, by a tap
+  // or a hold) and its voice, the beat played, the grown-up sum answered.
   kids: {
-    tab: oneOf(['pads', 'record', 'beats', 'keys']), recorded: num, voice: oneOf(['normal', 'robot', 'tiny', 'spooky']),
+    tab: oneOf(['pads', 'record', 'beats', 'keys']), recorded: num, how: oneOf(['tap', 'hold']), voice: oneOf(['normal', 'robot', 'tiny', 'spooky']),
     play: bool, bpm: num, sum: oneOf(['right', 'wrong']),
   },
   // 👋 The welcome (welcome.js, ADR 0028): shown, the level a card set, skipped.

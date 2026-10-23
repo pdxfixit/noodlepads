@@ -129,9 +129,17 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   is ignored. A tap plays from the start; no holding or looping. The round button at the top left shows the
   person's pad skin; each tap moves to the next one (Tiles after Googly eyes)
   and keeps it, as ⚙️ Settings → 🎨 Look would.
-- **🎙️ Record**: hold the big mic, let go to stop (10 s at most; a tap under
-  0.3 s or silence keeps nothing). It becomes a pad of the kid's own, saved
-  as the sound sheet saves one, and plays. 🤖 Robot, 🐭 Tiny (Chipmunk) and
+- **🎙️ Record**: tap the big mic and it counts 3, 2, 1 on its face (a beep
+  each), then listens until the next tap; or hold it and let go to stop
+  (Ben, 2026-10-22: "both should be capable"). A press under 350 ms is a tap
+  (`kids-logic.js` `pressKind`); the hold's first moments are thrown away and
+  the count starts, on the microphone already asked for. A tap during the
+  count calls it off. While it listens the ring fills over the 10 s it may
+  run, and the mic swells and glows with how loud the voice is right now
+  (`--kids-level`, from an analyser on the microphone; under reduced motion
+  only the glow moves). A recording under 0.3 s or silence keeps nothing.
+  It becomes a pad of the kid's own, saved as the sound sheet saves one, and
+  plays. 🤖 Robot, 🐭 Tiny (Chipmunk) and
   👻 Spooky (Monster with Stadium's echo) light for the next recordings and
   change the last one at once; tap a lit one for Normal.
 - **🥁 Beats**: four drums (kick, snare, hi-hat, clap) of eight squares, ▶️/⏹️,

@@ -19,6 +19,7 @@
 // device size in localStorage `kids-size`; it is ignored.
 
 import { audio, makeVoice, fadeStop, trimBounds } from './audio.js';
+import { levelOf } from './meter.js';
 import { logEvent } from './log.js';
 import { countPlay } from './play-count.js';
 import { fingerTaps, isFinger } from './finger.js';
@@ -32,7 +33,7 @@ import { kidsHint, markSeen } from './tips.js';
 import {
   kidsPadPx, kidsSliderAt, shareOf, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder,
   KIDS_DRUMS, KIDS_SQUARES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds,
-  kidsVoiceFields, voiceAfter, MAX_RECORD_SECONDS, MIN_RECORD_SECONDS, pictureFor, KIDS_KEYS, keyRate, keyPlayId, isHighKey, beatLayout, cleanTab,
+  kidsVoiceFields, voiceAfter, MAX_RECORD_SECONDS, MIN_RECORD_SECONDS, pressKind, KIDS_COUNT, pictureFor, KIDS_KEYS, keyRate, keyPlayId, isHighKey, beatLayout, cleanTab,
   nextKidsInstrument, keyKitId,
 } from './kids-logic.js';
 import { instrumentById, PLAYED } from './instruments.js';
@@ -261,9 +262,18 @@ function wirePads() {
   if (typeof ResizeObserver === 'function') new ResizeObserver(() => { if (showing && tab === 'pads') renderPads(); }).observe(el.pages);
 }
 
-// ── Record: hold the mic, let go to stop ──
+// ── Record: tap the mic for 3, 2, 1, then it listens; or hold it and let go ──
 
-const rec = { wanted: false, recorder: null, stream: null, chunks: [], started: 0, timer: 0, raf: 0 };
+// The mic's state (Ben, 2026-10-22: a tap gives "a 321 countdown", a hold
+// still works, and the pulse follows the voice): `mode` is null (nothing),
+// 'hold' (a finger holds it: it listens as soon as the microphone answers,
+// and the lift stops it), 'count' (a tap: 3, 2, 1 show on the mic, a beep
+// each, and the next tap calls it off) or 'tap' (then it listens until the
+// next tap, or the time runs out). A press shorter than TAP_MS is a tap
+// (kids-logic.js pressKind), decided as the finger lifts, so the hold's
+// first moments are thrown away and the count starts. The stream is kept
+// from the press through the count, so the browser asks once.
+const rec = { mode: null, downAt: 0, stream: null, recorder: null, chunks: [], started: 0, timer: 0, count: 0, raf: 0, source: null, analyser: null, scratch: new Float32Array(512), level: 0 };
 let voice = null;      // the lit voice button: 'robot', 'tiny', 'spooky' or null (Normal)
 let lastId = null;     // the sound recorded last this visit; a voice tap changes it
 
@@ -281,63 +291,168 @@ function renderRecord() {
   el.mic.classList.toggle('kids-nudge', kidsHint('mic'));   // wiggles until the first recording (ADR 0028)
 }
 
-async function startRecording() {
-  if (rec.wanted || !canRecord()) return;
-  rec.wanted = true;
+const dropStream = (stream) => stream?.getTracks().forEach((t) => t.stop());
+
+// A short beep for each number of the count, on the app's own output.
+function beep() {
+  try {
+    const ctx = audio.wake();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    osc.connect(gain);
+    gain.connect(audio.master);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.13);
+  } catch { /* no sound: the numbers still show */ }
+}
+
+// The press: a hold starts at once; while 3, 2, 1 count a press calls it
+// off; while a tapped recording listens a press stops it.
+function micDown(e) {
+  e.preventDefault?.();
+  if (rec.mode === 'count') { stopRecording({ discard: true }); return; }
+  if (rec.mode === 'tap') { stopRecording(); return; }
+  if (rec.mode || !canRecord()) return;
+  el.mic.setPointerCapture?.(e.pointerId);
+  rec.mode = 'hold';
+  rec.downAt = performance.now();
+  askMicrophone();
+}
+
+// The lift ends a hold: a quick one was a tap, so the count starts instead.
+function micUp() {
+  if (rec.mode !== 'hold') return;
+  if (pressKind(performance.now() - rec.downAt) === 'tap') startCount();
+  else stopRecording();
+}
+
+async function askMicrophone() {
   audio.stopAll();
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch {
-    rec.wanted = false;
+    rec.mode = null;
     wiggle(el.mic);
     return;
   }
-  // Let go while the browser asked for the microphone: nothing to record.
-  if (!rec.wanted || !showing) { stream.getTracks().forEach((t) => t.stop()); rec.wanted = false; return; }
+  // Called off, or Kids left, while the browser asked: nothing to record.
+  if (!rec.mode || !showing) { dropStream(stream); rec.mode = null; return; }
+  rec.stream = stream;
+  if (rec.mode === 'count') count();   // the finger lifted while the browser asked
+  else listen();
+}
+
+// The tap's count: the microphone answered already (a hold's first moments
+// are thrown away), or the count waits for it.
+function startCount() {
+  rec.mode = 'count';
+  if (rec.recorder) endRecorder(true);
+  if (rec.stream) count();
+}
+
+function count() {
+  let n = KIDS_COUNT.from;
+  const tick = () => {
+    if (rec.mode !== 'count') return;
+    if (n === 0) { showCount(''); rec.mode = 'tap'; listen(); return; }
+    showCount(String(n));
+    beep();
+    boing(el.micFace);
+    n -= 1;
+    rec.count = setTimeout(tick, KIDS_COUNT.ms);
+  };
+  tick();
+}
+
+function showCount(text) {
+  el.mic.classList.toggle('counting', !!text);
+  el.micFace.textContent = text || '🎙️';
+}
+
+// Listens: the recorder runs on the stream, the ring fills as the time runs
+// out, and the mic swells with how loud the voice is (meter.js levelOf on
+// an analyser fed by the microphone; --kids-level drives styles.css).
+function listen() {
   const mime = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/ogg'].find((m) => MediaRecorder.isTypeSupported?.(m)) || '';
   let recorder;
   try {
-    recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    recorder = new MediaRecorder(rec.stream, mime ? { mimeType: mime } : undefined);
   } catch {
-    stream.getTracks().forEach((t) => t.stop());
-    rec.wanted = false;
+    stopRecording({ discard: true });
     wiggle(el.mic);
     return;
   }
-  Object.assign(rec, { recorder, stream, chunks: [], started: performance.now() });
+  Object.assign(rec, { recorder, chunks: [], started: performance.now(), level: 0 });
+  const how = rec.mode === 'tap' ? 'tap' : 'hold';
+  const started = rec.started;
   recorder.ondataavailable = (e) => { if (e.data.size) rec.chunks.push(e.data); };
-  recorder.onstop = () => keep(new Blob(rec.chunks, { type: recorder.mimeType || mime || 'audio/webm' }), (performance.now() - rec.started) / 1000);
+  // `discard` is set on the recorder itself as it is stopped, so a late
+  // onstop of a thrown-away hold can never keep anything.
+  recorder.onstop = () => { if (!recorder.discard) keep(new Blob(rec.chunks, { type: recorder.mimeType || mime || 'audio/webm' }), (performance.now() - started) / 1000, how); };
   recorder.start();
+  try {
+    const ctx = audio.wake();
+    rec.source = ctx.createMediaStreamSource(rec.stream);
+    rec.analyser = ctx.createAnalyser();
+    rec.analyser.fftSize = 512;
+    rec.source.connect(rec.analyser);
+  } catch {
+    rec.analyser = null;   // no meter: the ring still fills
+  }
   el.mic.classList.add('recording');
   el.mic.setAttribute('aria-pressed', 'true');
-  rec.timer = setTimeout(stopRecording, MAX_RECORD_SECONDS * 1000);
-  // The ring around the mic fills as the time runs out.
+  rec.timer = setTimeout(() => stopRecording(), MAX_RECORD_SECONDS * 1000);
   const step = () => {
     const done = Math.min(1, (performance.now() - rec.started) / (MAX_RECORD_SECONDS * 1000));
     el.mic.style.setProperty('--kids-rec', String(done));
+    if (rec.analyser) {
+      rec.level = Math.max(levelOf(rec.analyser, rec.scratch), rec.level * 0.8);
+      el.mic.style.setProperty('--kids-level', rec.level.toFixed(2));
+    }
     rec.raf = requestAnimationFrame(step);
   };
   rec.raf = requestAnimationFrame(step);
 }
 
-function stopRecording() {
-  rec.wanted = false;
-  if (!rec.recorder) return;
+// The recorder stops (its onstop keeps the sound, unless `discard`), the
+// meter goes, and the mic sits still again; the stream stays.
+function endRecorder(discard = false) {
   clearTimeout(rec.timer);
   cancelAnimationFrame(rec.raf);
-  if (rec.recorder.state !== 'inactive') rec.recorder.stop();
-  rec.stream.getTracks().forEach((t) => t.stop());
+  const { recorder } = rec;
   rec.recorder = null;
-  rec.stream = null;
+  if (recorder) {
+    recorder.discard = discard;
+    if (recorder.state !== 'inactive') recorder.stop();
+  }
+  rec.source?.disconnect();
+  rec.source = null;
+  rec.analyser = null;
   el.mic.classList.remove('recording');
   el.mic.setAttribute('aria-pressed', 'false');
   el.mic.style.setProperty('--kids-rec', '0');
+  el.mic.style.setProperty('--kids-level', '0');
+}
+
+// Everything off, in any state: a hold's or a tap's recording is kept (or
+// thrown away with `discard`), a count is called off, the microphone is let go.
+function stopRecording({ discard = false } = {}) {
+  if (!rec.mode) return;
+  rec.mode = null;
+  clearTimeout(rec.count);
+  showCount('');
+  endRecorder(discard);
+  dropStream(rec.stream);
+  rec.stream = null;
 }
 
 // A recording made into a pad of the kid's own, as the sound sheet saves one,
 // in the lit voice; then it plays.
-async function keep(blob, seconds) {
+async function keep(blob, seconds, how) {
   if (seconds < MIN_RECORD_SECONDS) { wiggle(el.mic); return; }
   try {
     const buffer = await audio.decode(await blob.arrayBuffer());
@@ -362,7 +477,7 @@ async function keep(blob, seconds) {
   await deps.saveClip(clip);
   lastId = clip.id;
   if (kidsHint('mic')) markSeen('kids-mic');
-  logEvent('kids', { recorded: Math.round(seconds * 10) / 10, voice: voice ?? 'normal' });
+  logEvent('kids', { recorded: Math.round(seconds * 10) / 10, voice: voice ?? 'normal', how });
   page = 0;   // the new pad is the first one on Pads
   renderRecord();
   playLast();
@@ -393,9 +508,8 @@ async function tapVoice(id) {
 }
 
 function wireRecord() {
-  const down = (e) => { e.preventDefault?.(); el.mic.setPointerCapture?.(e.pointerId); startRecording(); };
-  el.mic.addEventListener('pointerdown', down);
-  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) el.mic.addEventListener(type, () => stopRecording());
+  el.mic.addEventListener('pointerdown', micDown);
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) el.mic.addEventListener(type, micUp);
   el.mic.addEventListener('contextmenu', (e) => e.preventDefault());
   el.last.addEventListener('click', playLast);
   for (const b of el.voices) b.addEventListener('click', () => { boing(b); tapVoice(b.dataset.kidsVoice); });
@@ -703,7 +817,7 @@ export function refreshKids() {
 }
 
 export const kidsShowing = () => showing;
-export const kidsBusy = () => !!playing || !!rec.recorder;
+export const kidsBusy = () => !!playing || !!rec.mode;
 
 export function initKids(d) {
   deps = d;
@@ -715,7 +829,7 @@ export function initKids(d) {
     stop: q('#kids-stop'),
     skin: q('#kids-skin'), sizeSlider: q('#kids-size-slider'),
     pages: q('#kids-pages'), turn: q('#kids-turn'), dots: q('#kids-dots'), arrows: document.querySelectorAll('[data-turn]'),
-    mic: q('#kids-mic'), last: q('#kids-last'), voices: document.querySelectorAll('[data-kids-voice]'),
+    mic: q('#kids-mic'), micFace: q('#kids-mic-face'), last: q('#kids-last'), voices: document.querySelectorAll('[data-kids-voice]'),
     beat: q('#kids-beat'), play: q('#kids-play'), slow: q('#kids-slow'), fast: q('#kids-fast'),
     keys: q('#kids-keys'), inst: q('#kids-inst'),
   });
