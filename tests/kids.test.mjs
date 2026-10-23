@@ -6,10 +6,11 @@
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
 import {
-  makeSum, typeDigit, kidsRange, kidsAutoPx, kidsPadPx, kidsShare, shareOf, kidsSliderAt, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder,
+  makeSum, typeDigit, kidsRange, kidsAutoPx, kidsPadPx, kidsShare, shareOf, kidsSliderAt, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder, KIDS_PADS,
   newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds, KIDS_TEMPOS,
   kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS, keyPitch, keyRate, keyPlayId, isHighKey,
 } from '../web/kids-logic.js';
@@ -100,11 +101,28 @@ test('a pinch: fingers apart make the pads bigger, together smaller, smoothly, k
   assert.equal(pinchShare(0.3, 0, 50, 343, 520), 0.3);
 });
 
-test('the kid\'s own sounds come first, newest first, then the rest in board order', () => {
+// Ben, 2026-10-22: the kid mode pads "have to have matching sounds to the
+// emoji pictures… engaging, interesting and funny ones for the kids to hit".
+test('the kid\'s own sounds come first, newest first, then the board\'s own, then only the presets whose picture shows the sound, funniest first', () => {
   const clips = [
-    { id: 'k1', source: 'bundled' }, { id: 'u-old', source: 'user', created: 1 }, { id: 'k2', source: 'bundled' }, { id: 'u-new', source: 'user', created: 9 },
+    { id: 'k-c', source: 'bundled', kit: true, kitId: 'note-c' }, { id: 'u-old', source: 'user', created: 1 }, { id: 'b1', source: 'bundled' },
+    { id: 'k-woof', source: 'bundled', kit: true, kitId: 'woof' }, { id: 'u-new', source: 'user', created: 9 }, { id: 'k-pop', source: 'bundled', kit: true, kitId: 'pop' },
+    { id: 'k-hat', source: 'bundled', kit: true, kitId: 'hihat' }, { id: 'k-moo', source: 'bundled', kit: true, kitId: 'moo' },
   ];
-  assert.deepEqual(kidsPadOrder(clips).map((c) => c.id), ['u-new', 'u-old', 'k1', 'k2']);
+  assert.deepEqual(kidsPadOrder(clips).map((c) => c.id), ['u-new', 'u-old', 'b1', 'k-woof', 'k-moo', 'k-pop'], 'a note, and a 🎩 hi-hat, never show');
+});
+
+test('every Kids pad is a preset of the kit a kid can have without Advanced, each once, and the animals come first', () => {
+  const kit = JSON.parse(readFileSync(new URL('../web/boards.json', import.meta.url), 'utf8')).kit;
+  assert.equal(new Set(KIDS_PADS).size, KIDS_PADS.length, 'no preset twice');
+  for (const id of KIDS_PADS) {
+    const preset = kit.find((k) => k.id === id);
+    assert.ok(preset, `${id} is in the kit`);
+    assert.ok(!preset.advanced && !preset.inst, `${id} shows at every level, on no instrument`);
+    assert.ok(!['notes', 'chords', 'bass'].includes(preset.group), `${id}: no fruit, weather or bass animals (their pictures teach the notes, not the sound)`);
+  }
+  assert.deepEqual(KIDS_PADS.slice(0, 8).map((id) => kit.find((k) => k.id === id).group), Array(8).fill('animals'));
+  assert.ok(KIDS_PADS.length >= 50 && KIDS_PADS.length <= 90, String(KIDS_PADS.length));
 });
 
 test('the kid\'s beat is a normal beat: square i is pill 2i of a 16-pill bar', () => {

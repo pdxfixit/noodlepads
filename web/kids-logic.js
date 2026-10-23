@@ -110,11 +110,35 @@ export function pinchShare(start, startDist, dist, width, height, gap = KIDS_GAP
   return keep(from + Math.log(dist / startDist) / Math.log(ratio));
 }
 
+// The presets on Kids' Pads, in this order: only sounds whose picture
+// shows what they are, the funniest first (Ben, 2026-10-22: the pads "have
+// to have matching sounds to the emoji pictures… engaging, interesting and
+// funny"). A 🐶 woofs and a 🎈 pops; a 🍎 that plays a note, a 🌞 chord, a
+// 🐘 bass note or a 🎩 hi-hat teaches a kid who can't read the wrong thing,
+// so those stay in the regular app. A preset a grown-up hid stays hidden.
+export const KIDS_PADS = [
+  // Animals: each says what it is.
+  'woof', 'meow', 'moo', 'quack', 'ribbit', 'roar', 'tweet', 'buzz',
+  // Silly.
+  'toot', 'burp', 'raspberry', 'boing', 'honk', 'kazoo', 'slide-whistle', 'splat', 'bonk', 'squeak', 'zip', 'evil-laugh', 'sad-trombone',
+  // Effects.
+  'pop', 'whoosh', 'explosion', 'siren', 'alarm', 'ding', 'buzzer', 'airhorn', 'tada', 'heartbeat', 'countdown',
+  // Game and sci-fi.
+  'coin', 'jump', 'zap', 'pew', 'power-up', 'teleport', 'game-over', 'robot', 'ufo', 'computer',
+  // Spoken callouts whose face or sign says the word.
+  'wow', 'no-way', 'oh-yeah', 'oof', 'nice', 'yes', 'go', 'ready', 'lets-go',
+  // Drums and percussion that look like what they are.
+  'snare', 'clap', 'kick', 'snap', 'shaker', 'tambourine', 'ride', 'crash', 'drumroll', 'rimshot', 'boom', 'clave', 'conga', 'djembe-slap', 'plink', 'bloop', 'horn-stab', 'rewind',
+];
+
 // The pads in Kids: the kid's own sounds first, newest first (a new
-// recording is the first pad), then the kit and the rest in board order.
+// recording is the first pad), then any other sound of the board's own, then
+// the presets in KIDS_PADS order (a kit sound not in it never shows).
 export function kidsPadOrder(clips) {
   const own = clips.filter((c) => c.source === 'user').sort((a, b) => (b.created || 0) - (a.created || 0));
-  return [...own, ...clips.filter((c) => c.source !== 'user')];
+  const board = clips.filter((c) => c.source !== 'user' && !c.kit);
+  const kit = KIDS_PADS.map((id) => clips.find((c) => c.kit && c.kitId === id)).filter(Boolean);
+  return [...own, ...board, ...kit];
 }
 
 // ── The kid's beat ──
