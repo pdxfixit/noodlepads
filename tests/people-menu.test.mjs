@@ -39,7 +39,7 @@ test('the corner button shows the current person\'s letter in their color; the h
   assert.equal(button.getAttribute('aria-haspopup'), 'true');
   assert.match(button.getAttribute('aria-label'), /^Whose sounds: Pip\. 4 people\.$/);
   const items = row().querySelectorAll('.person-item');
-  assert.deepEqual(items.map((i) => i.textContent), ['Pip', 'Juno', 'Toby', 'Wren', '👥 People']);
+  assert.deepEqual(items.map((i) => i.textContent), ['Pip', 'Juno', 'Toby', 'Wren', '🧸 Kids mode', '👥 People'], '🧸 Kids mode (Ben, 2026-10-22), then 👥 People');
   assert.deepEqual(items.slice(0, 4).map((i) => i.style.props['--c']), ['#2D3FD6', '#304A00', '#A3156E', '#0E2C78'], 'each in their color');
   assert.equal(row().querySelector('.person-list').hidden, true);
 });
@@ -63,9 +63,9 @@ test('arrow keys, Home and End move through the list', () => {
   items[0].dispatch('keydown', { key: 'ArrowDown' });
   assert.equal(document.activeElement, items[1]);
   items[1].dispatch('keydown', { key: 'End' });
-  assert.equal(document.activeElement, items[4]);
-  items[4].dispatch('keydown', { key: 'ArrowDown' });
-  assert.equal(document.activeElement, items[0], 'wraps');
+  assert.ok(document.activeElement === items[5], 'End: 👥 People, the last line');
+  items[5].dispatch('keydown', { key: 'ArrowDown' });
+  assert.ok(document.activeElement === items[0], 'wraps');
   items[0].dispatch('keydown', { key: 'Home' });
   assert.equal(document.activeElement, items[0]);
   items[0].dispatch('keydown', { key: 'Escape' });
