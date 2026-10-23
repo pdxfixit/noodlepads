@@ -72,9 +72,10 @@ test('a short click seems quieter than a held note at the same peak; a low hum q
 
 test('PRESET_LOUDNESS is the median of the shown presets as the app plays them, recomputed from web/clips/kit/', () => {
   const kit = JSON.parse(readFileSync(new URL('boards.json', web), 'utf8')).kit;
-  const files = [...new Set(kit.filter((s) => !s.advanced && s.file).map((s) => s.file))];
-  assert.ok(files.length > 50, 'plenty of presets');
-  const levels = files.map((f) => loudness(atPeak(readWav(readFileSync(new URL(f, web)))))).sort((a, b) => a - b);
+  // One per file, each turned down by its boards.json `level` as the app plays it.
+  const shown = [...new Map(kit.filter((s) => !s.advanced && !s.inst && s.file).map((s) => [s.file, s])).values()];
+  assert.ok(shown.length > 50, 'plenty of presets');
+  const levels = shown.map((s) => loudness(atPeak(readWav(readFileSync(new URL(s.file, web)))), { scale: 10 ** ((s.level ?? 0) / 20) })).sort((a, b) => a - b);
   const mid = levels.length / 2;
   const median = levels.length % 2 ? levels[Math.floor(mid)] : (levels[mid - 1] + levels[mid]) / 2;
   near(PRESET_LOUDNESS, median, 0.5, 'update PRESET_LOUDNESS in web/loudness.js to');

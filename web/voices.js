@@ -267,8 +267,8 @@ export function livePlan(chain, tweaks = null) {
 export const presetGain = (db) => (typeof db === 'number' && db < 0 && db >= -24 ? 10 ** (db / 20) : 1);
 
 // `presetLevel` (dB, never above 0) turns a preset down after its evening-out:
-// boards.json's `level`, for the few that blasted on a phone (Ben,
-// 2026-10-17; tools/preset_loudness.py measures them).
+// boards.json's `level`, so every preset plays as loud as the middle of them
+// all on a phone (Ben, 2026-10-23; tools/preset_loudness.py works them out).
 export async function applyChain(buffer, chain, tweaks = null, presetLevel = 0) {
   const { steps, gain: voiceGain } = renderPlan(chain, tweaks);
   const gain = voiceGain * presetGain(presetLevel);

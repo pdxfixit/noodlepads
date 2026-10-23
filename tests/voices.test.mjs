@@ -229,7 +229,7 @@ test('livePlan: knobs that play first go in the head; knobs after join the live 
 });
 
 // A preset's boards.json `level` turns it down after the evening-out (Ben,
-// 2026-10-17: the few that blasted on a phone); it never turns one up.
+// 2026-10-23: every preset as loud as the middle); it never turns one up.
 test('a preset\'s level is a turn-down in dB, and nothing else changes a sound', () => {
   assert.equal(presetGain(undefined), 1);
   assert.equal(presetGain(0), 1);
