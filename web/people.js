@@ -4,7 +4,8 @@
 // ➕ Add a person, ☁️ Open from the cloud, and Bring back for deleted
 // boards.json people. Tapping a line opens their profile sheet: a new fun name
 // (🎲 opens Pick a name, including the special names), a picture, a color,
-// their ☁️ (cloud-ui.js), their PIN, and Delete (two taps).
+// their ☁️ (cloud-ui.js), their PIN, and Delete: two taps delete them from
+// this device; for someone in the cloud a third deletes their cloud copy too.
 //
 // With a PIN on their cloud profile, changing the name, picture or color asks
 // for it once per visit (cloud.js pinGuards; Ben, 2026-10-12). Without one,
@@ -17,8 +18,8 @@ import { people, person } from './board.js';
 import { PERSON_COLORS, PERSON_COLOR_NAMES, nextPersonColor, freePicture, personCounts, countsText, countsWords, KIND_EMOJI } from './model.js';
 import { newId } from './util.js';
 import { funName, nameChoices, isFunName } from './names.js';
-import { inCloud, dropLink, linkOf, pinGuards, onCloud } from './cloud.js';
-import { avatarBadge, openAvatar, cloudLabel, askEditPin, drawPin, pinClick, disarmCloud } from './cloud-ui.js';
+import { inCloud, dropLink, linkOf, keyOf, pinGuards, onCloud } from './cloud.js';
+import { avatarBadge, openAvatar, cloudLabel, askEditPin, drawPin, pinClick, disarmCloud, deleteLeftCloud } from './cloud-ui.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { announce } from './ui.js';
 import { logEvent } from './log.js';
@@ -27,6 +28,9 @@ import { markNew, offerWelcome } from './welcome.js';
 const el = {};
 let showPerson = () => {};
 let profileFor = null;   // the person whose profile sheet is open
+// Someone Delete just took off this device whose cloud copy is still there:
+// {id, name, avatar, color, key, pin}. Their sheet stays open for the third tap.
+let left = null;
 
 // What each person has on this device, as lists the way a backup holds them.
 // `voices` is ⭐ My voices (IndexedDB `voices`, state.myVoices).
@@ -184,6 +188,7 @@ export function openProfileSheet(id) {
 
 function renderProfile(fresh = false) {
   if (!profileFor || !el.profile) return;
+  if (left?.id === profileFor) { drawLeft(); return; }
   const p = anyone(profileFor);
   if (!p || p.hidden) {
     // Deleted, here or by a sync: nothing left to show.
@@ -217,11 +222,32 @@ function renderProfile(fresh = false) {
     del.setAttribute('aria-label', `Delete ${p.name}${sounds}`);
   }
   del.disabled = people().length === 1;
+  el.profileParts.hidden = false;
+  el.profileDeleteHint.textContent = inCloud(p.id)
+    ? 'Delete takes them, their recordings and their beats off this device. A third tap then deletes their cloud copy too.'
+    : 'Delete takes them, their recordings and their beats off this device.';
 }
 
-// Any other tap takes back a half-done Delete.
+// The sheet of someone just deleted here, cloud copy left: only Delete shows,
+// ready for the third tap. ✕ keeps the cloud copy.
+function drawLeft() {
+  el.profile.style.setProperty('--c', left.color);
+  el.profileAvatar.replaceChildren(avatarBadge(left));
+  el.profileName.textContent = left.name;
+  el.profileLock.hidden = !left.pin;
+  el.profileParts.hidden = true;
+  const del = el.profileDelete;
+  del.classList.add('armed');
+  del.disabled = false;
+  del.textContent = '☁️ Tap again to delete their cloud copy';
+  del.setAttribute('aria-label', `Tap again to delete the cloud copy of ${left.name}`);
+  el.profileDeleteHint.textContent = `${left.name} is deleted from this device. Their cloud copy is still there, for any other phone or tablet: tap again to delete it too${left.pin ? ' (it asks for their PIN)' : ''}, or ✕ to keep it.`;
+}
+
+// Any other tap takes back a half-done Delete. The third tap waits until the
+// sheet closes.
 function disarmDelete() {
-  if (!el.profileDelete.classList.contains('armed')) return;
+  if (left?.id === profileFor || !el.profileDelete.classList.contains('armed')) return;
   el.profileDelete.classList.remove('armed');
   renderProfile();
 }
@@ -319,6 +345,7 @@ async function onProfileClick(e) {
   }
   if (t !== el.profileDelete) { await pinClick(id, t); return; }
   if (t.disabled) return;
+  if (left?.id === id) { await deleteCloudToo(); return; }
   const p = anyone(id);
   if (!t.classList.contains('armed')) {
     t.classList.add('armed');
@@ -327,11 +354,35 @@ async function onProfileClick(e) {
     announce(`Tap again to delete ${p.name}.`);
     return;
   }
+  // In the cloud: the sheet stays for a third tap, so keep what deleting
+  // the cloud copy needs. A profile with a PIN keeps no key; it is asked.
+  if (inCloud(id)) {
+    const pin = !!linkOf(id)?.pin;
+    left = { id, name: p.name, avatar: p.avatar, color: p.color, pin, key: pin ? null : keyOf(id) };
+  }
   await deleteHere(id);
+  if (left?.id === id) {
+    refreshPeople();
+    t.focus({ preventScroll: true });
+    announce(`${p.name} is deleted from this device. Tap again to delete their cloud copy too.`);
+    return;
+  }
   el.profile.close();
   refreshPeople();
   el.personAdd.focus({ preventScroll: true });
   announce(`${p.name} is deleted from this device.`);
+}
+
+// Delete's third tap: the cloud copy goes too, past their PIN if they have one.
+async function deleteCloudToo() {
+  const gone = left;
+  profileNote('');
+  const { ok, note } = await deleteLeftCloud(gone);
+  if (note) profileNote(note);
+  if (!ok) return;
+  el.profile.close();
+  el.personAdd.focus({ preventScroll: true });
+  announce(`${gone.name} is deleted from the cloud too.`);
 }
 
 export function initPeople(hooks) {
@@ -356,6 +407,8 @@ export function initPeople(hooks) {
     profileColors: document.querySelector('#profile-colors'),
     profileLock: document.querySelector('#profile-lock'),
     profileDelete: document.querySelector('#profile-delete'),
+    profileDeleteHint: document.querySelector('#profile-delete-hint'),
+    profileParts: document.querySelector('#profile-parts'),
     namesDialog: document.querySelector('#names-dialog'),
     namesList: document.querySelector('#names-list'),
     namesMore: document.querySelector('#names-more'),
@@ -372,7 +425,7 @@ export function initPeople(hooks) {
     b.setAttribute('aria-pressed', 'false');
     return b;
   }));
-  el.profile.addEventListener('close', () => { profileFor = null; stopHold(); });
+  el.profile.addEventListener('close', () => { profileFor = null; left = null; stopHold(); });
   el.namesList.addEventListener('click', (e) => {
     const b = e.target.closest('[data-pick-name]');
     if (b) pickName(b.dataset.pickName);
