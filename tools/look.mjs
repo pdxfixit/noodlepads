@@ -408,6 +408,13 @@ const VIEWS = {
   'cloud-in': { screen: 'pads', js: `const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()][0];
     state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true });
     ${q('#people-open') + q('#people-edit [data-profile]')} ${nap} document.querySelector('#profile-cloud').scrollIntoView();` },
+  // profile-left: a new person in the cloud (a faked link, with a PIN), after
+  // Delete's second tap: gone here, the sheet showing only Delete's third tap.
+  'profile-left': { screen: 'pads', js: `${q('#people-open') + q('#person-add')} ${nap}
+    const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()].at(-1);
+    state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true });
+    document.querySelector('#people-edit [data-person="' + id + '"] [data-profile]').click(); ${nap}
+    ${q('#profile-delete')} ${nap} ${q('#profile-delete')} ${nap} ${nap}` },
   share: { screen: 'pads', js: `const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()][0];
     state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {} });
     ${q('#people-open') + q('#people-edit [data-profile]')} ${nap} ${q('#cloud-share')} ${nap}
