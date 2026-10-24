@@ -86,6 +86,11 @@ test('in the cloud with no PIN: the second tap deletes them here and keeps the s
 
 test('in the cloud with a PIN: the third tap asks for it; a wrong one asks again', async () => {
   sheetOf(LOCKED);
+  await settle();
+  assert.equal($('#pin-dialog').open, true, 'their profile opens past their PIN (Ben, 2026-10-24)');
+  typePin('2468');
+  await settle();
+  assert.equal($('#profile-dialog').open, true);
   await tap();
   await tap();
   assert.equal(state.peopleEdits.has(LOCKED), false);

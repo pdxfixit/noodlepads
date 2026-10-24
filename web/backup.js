@@ -175,6 +175,28 @@ export function onePersonIn(data) {
   return (data.overrides ?? []).every((o) => typeof o?.id === 'string' && o.id.startsWith(`${who.id}-`)) ? who : null;
 }
 
+// Does backup-shaped `data` hold anything of `personId`'s: them, a record
+// of theirs, or an edit of their copy of the kit? Pure.
+export function namesPerson(data, personId) {
+  return PERSON_STORES.some((name) => (data?.[name] ?? []).some((r) => (name === 'people' ? r?.id === personId
+    : name === 'overrides' ? typeof r?.id === 'string' && r.id.startsWith(`${personId}-`)
+      : r?.personId === personId)));
+}
+
+// `data` without anything of the people in `ids`: what a backup leaves out
+// for someone whose PIN wasn't typed (Ben, 2026-10-24). Pure.
+export function withoutPeople(data, ids) {
+  const gone = new Set(ids);
+  const out = { ...data };
+  for (const name of PERSON_STORES) {
+    if (!Array.isArray(data?.[name])) continue;
+    out[name] = data[name].filter((r) => (name === 'people' ? !gone.has(r?.id)
+      : name === 'overrides' ? ![...gone].some((id) => typeof r?.id === 'string' && r.id.startsWith(`${id}-`))
+        : !gone.has(r?.personId)));
+  }
+  return out;
+}
+
 // A one-person backup's things as `to`'s, for "load it all into someone
 // here": every record that names `from` names `to` (reid.js, their copy of
 // the kit's edits too), their scratch beat and song become `to`'s (merge.js

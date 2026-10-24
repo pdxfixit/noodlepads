@@ -7,10 +7,10 @@
 // their ☁️ (cloud-ui.js), their PIN, and Delete: two taps delete them from
 // this device; for someone in the cloud a third deletes their cloud copy too.
 //
-// With a PIN on their cloud profile, changing the name, picture or color asks
-// for it once per visit (cloud.js pinGuards; Ben, 2026-10-12). Without one,
-// anyone can. It is a gate in this sheet only: a sync from another device
-// changes them as before.
+// With a PIN on their cloud profile, the sheet opens only past it, once per
+// visit, and their counts stay hidden until then (cloud.js pinGuards; Ben,
+// 2026-10-24). Without one, anyone can. It is a gate on this device's
+// screens: a sync from another device changes them as before.
 
 import { state, persist, setPersonEdit, deletePerson } from './state.js';
 import { audio } from './audio.js';
@@ -21,7 +21,7 @@ import { funName, nameChoices, isFunName } from './names.js';
 import { inCloud, isOffline, dropLink, linkOf, keyOf, pinGuards, onCloud, syncEnded } from './cloud.js';
 import { avatarBadge, openAvatar, cloudLabel, askEditPin, drawPin, pinClick, disarmCloud, deleteLeftCloud } from './cloud-ui.js';
 import { openDialog, setupDialog } from './dialogs.js';
-import { announce } from './ui.js';
+import { announce, showNotice } from './ui.js';
 import { logEvent } from './log.js';
 import { markNew, offerWelcome } from './welcome.js';
 import { whoNowOpen, openWhoNow } from './who-now.js';
@@ -82,11 +82,14 @@ export function renderPeopleEditor() {
     name.className = 'pe-name';
     name.textContent = p.name;
     // Under the name, how much of each kind they have here: "🔊 27 · 🥁 4".
-    const counts = personCounts(lists, p.id);
+    // Someone with a PIN not typed on this visit shows none of it: what a
+    // person has is read only past their PIN (Ben, 2026-10-24).
+    const hidden = pinGuards(p.id);
+    const counts = hidden ? {} : personCounts(lists, p.id);
     const tally = document.createElement('span');
     tally.className = 'pe-counts';
-    tally.textContent = countsText(counts);
-    tally.setAttribute('aria-label', `${p.name} has ${countsWords(counts)}`);
+    tally.textContent = hidden ? '🔒 PIN to see' : countsText(counts);
+    tally.setAttribute('aria-label', hidden ? `${p.name}: their PIN shows what they have` : `${p.name} has ${countsWords(counts)}`);
     const who = document.createElement('span');
     who.className = 'pe-who';
     who.append(name, tally);
@@ -104,7 +107,7 @@ export function renderPeopleEditor() {
     go.textContent = '›';
     go.setAttribute('aria-hidden', 'true');
     open.append(go);
-    open.setAttribute('aria-label', `${p.name}: ${countsWords(counts)}${cloud ? `; ${cloud.words}` : ''}. Opens their profile.`);
+    open.setAttribute('aria-label', `${p.name}: ${hidden ? 'PIN set' : countsWords(counts)}${cloud ? `; ${cloud.words}` : ''}. Opens their profile${hidden ? ' after their PIN' : ''}.`);
     li.append(open);
     return li;
   }));
@@ -203,7 +206,16 @@ const goneNote = (name) => `${name} is deleted from this device. Tap your pictur
 
 const profileNote = (text) => { el.profileNote.textContent = text; };
 
-export function openProfileSheet(id) {
+// A profile opens only past its PIN, when one is set and not typed on this
+// visit (Ben, 2026-10-24: everything that reads or changes a person). So
+// 🗂️ See all, ⬇️ Export, Delete and the cloud tools are behind it too.
+export async function openProfileSheet(id) {
+  if (pinGuards(id)) {
+    const { ok, note } = await askEditPin(id, 'Type their PIN to open their profile.');
+    if (note) showNotice(note);   // the sheet isn't open to say it
+    if (!ok) return;
+    refreshPeople();   // their counts show now
+  }
   profileFor = id;
   profileNote('');
   renderProfile(true);

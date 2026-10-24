@@ -67,10 +67,15 @@ before(async () => {
 
 const settle = () => page.settle();
 const typePin = (d) => { for (const k of d) $('#pin-keys').querySelector(`[data-key="${k}"]`).dispatch('click'); };
-const sheetOf = (id) => {
+// Each PIN person's PIN as it is now: a profile opens past it (Ben,
+// 2026-10-24), so sheetOf types it when asked.
+const PINS = new Map([[LATER, '1357'], [THIRD, '9090']]);
+const sheetOf = async (id) => {
   if (!$('#people-dialog').open) $('#people-open').dispatch('click');
   const line = $('#people-edit').children.find((r) => r.dataset.person === id);
   line.querySelector('[data-profile]').dispatch('click');
+  await settle();
+  if ($('#pin-dialog').open) { typePin(PINS.get(id)); await settle(); }
 };
 const closeSheets = () => { $('#profile-dialog').close(); $('#people-dialog').close(); };
 const pill = () => $('#profile-pin-state').textContent;
@@ -79,7 +84,7 @@ const menuItem = (id) => $(`.person-list [data-person="${id}"]`);
 test('a person stored with an old color takes the nearest new one as it is read', async () => {
   assert.equal(state.peopleEdits.get(OLD).color, '#304A00', 'Forest is Olive now');
   assert.ok(PERSON_COLORS.includes(state.peopleEdits.get(OLD).color));
-  sheetOf(OLD);
+  await sheetOf(OLD);
   const picked = $('#profile-colors').querySelectorAll('[aria-pressed="true"]');
   assert.equal(picked.length, 1, 'the picker shows it chosen');
   assert.equal(picked[0].dataset.color, '#304A00');
@@ -98,9 +103,13 @@ test('a PIN not typed on this visit is ☁️✓ 🔒, not ⚠️; trouble is �
   assert.equal(cloud.statusOf(THIRD).state, 'waiting');
   $('#people-open').dispatch('click');
   assert.equal(cloudBit(THIRD), '☁️✓ 🔒');
-  sheetOf(THIRD);
-  assert.equal($('#profile-cloud-text').textContent, '🔒 Syncs once they are opened with their PIN.', 'said plainly, no ⚠️');
-  $('#profile-dialog').close();
+  // Their profile opens only past their PIN (Ben, 2026-10-24); not typed here.
+  $('#people-edit').children.find((r) => r.dataset.person === THIRD).querySelector('[data-profile]').dispatch('click');
+  await settle();
+  assert.match($('#pin-hint').textContent, /open their profile/);
+  $('#pin-dialog').close();
+  await settle();
+  assert.equal($('#profile-dialog').open, false);
 
   // A sync that fails: the open list shows ⚠️ without being reopened.
   $('#people-open').dispatch('click');
@@ -115,13 +124,13 @@ test('a PIN not typed on this visit is ☁️✓ 🔒, not ⚠️; trouble is �
   await settle();
   assert.equal(cloud.statusOf(SORE).state, 'trouble');
   assert.equal(cloudBit(SORE), '☁️⚠️', 'the open list redrew');
-  sheetOf(SORE);
+  await sheetOf(SORE);
   assert.match($('#profile-cloud-text').textContent, /^⚠️ \S/, 'the sheet says what, after the same ⚠️');
   closeSheets();
 });
 
 test('🔒 Set a PIN on someone brand new puts them in the cloud; the pill says ✅ PIN set, then fades to 🔒 PIN on', async () => {
-  sheetOf(OLD);
+  await sheetOf(OLD);
   assert.equal(cloud.inCloud(OLD), false, 'nothing made: not in the cloud');
   assert.equal(pill(), '🔓 No PIN');
   assert.equal($('#profile-pin-tools').hidden, true, 'no Change or Remove without a PIN');
@@ -145,7 +154,7 @@ test('🔒 Set a PIN on someone brand new puts them in the cloud; the pill says 
 });
 
 test('Change PIN asks for the PIN now (a wrong one asks again), then the new one twice', async () => {
-  sheetOf(OLD);
+  await sheetOf(OLD);
   $('#cloud-pin-change').dispatch('click');
   await settle();
   assert.equal($('#pin-title').textContent, 'The PIN now');
@@ -166,7 +175,7 @@ test('Change PIN asks for the PIN now (a wrong one asks again), then the new one
 
 test('on a later visit Change and Remove still show; Remove asks for the PIN, then the pill says 🔓 PIN removed', async () => {
   assert.equal(cloud.keyOf(LATER), null, 'not opened on this visit: no key');
-  sheetOf(LATER);
+  await sheetOf(LATER);
   assert.equal(pill(), '🔒 PIN on');
   assert.equal($('#profile-pin-tools').hidden, false, 'no dead end');
   assert.match(menuItem(LATER).textContent, /🔒$/);
@@ -185,7 +194,7 @@ test('on a later visit Change and Remove still show; Remove asks for the PIN, th
 
 // A tester, 2026-10-19: a different second PIN "didn't do anything".
 test('a second PIN that does not match says so on the pad and asks again; closing the pad changes nothing', async () => {
-  sheetOf(LATER);   // no PIN since the test before
+  await sheetOf(LATER);   // no PIN since the test before
   $('#cloud-pin').dispatch('click');
   await settle();
   typePin('1111');
@@ -219,23 +228,19 @@ test('a second PIN that does not match says so on the pad and asks again; closin
   closeSheets();
 });
 
-test('🔄 Sync now on someone not opened yet on this visit asks for their PIN, then syncs', async () => {
+test('the PIN that opens the profile of someone not opened yet also opens them for 🔄 Sync now', async () => {
   assert.equal(cloud.keyOf(THIRD), null);
-  sheetOf(THIRD);
-  assert.match($('#profile-cloud-text').textContent, /Syncs once they are opened with their PIN/);
-  $('#cloud-sync').dispatch('click');
-  await settle();
-  assert.equal($('#pin-dialog').open, true);
-  assert.match($('#pin-hint').textContent, /to sync them/);
-  typePin('9090');
-  await settle();
+  await sheetOf(THIRD);   // asks for 9090
   assert.ok(cloud.keyOf(THIRD), 'a key for this visit');
   assert.equal(cloud.linkOf(THIRD).key, null, 'never stored');
+  $('#cloud-sync').dispatch('click');
+  await settle();
+  assert.equal($('#pin-dialog').open, false, 'not asked again');
   closeSheets();
 });
 
 test('☁️ off for someone with a PIN: two taps and the PIN; a tap on anything else takes the first tap back', async () => {
-  sheetOf(THIRD);
+  await sheetOf(THIRD);
   const sw = $('#profile-cloud');
   sw.dispatch('click');
   assert.match($('#profile-cloud-text').textContent, /Tap again to take them out of the cloud/);
@@ -259,7 +264,7 @@ test('☁️ on for someone brand new puts them in the cloud now, with nothing m
   const { setPersonEdit } = await import('../web/state.js');
   await setPersonEdit('p-fresh-1', { id: 'p-fresh-1', name: 'Duke Dumpling', fun: true, avatar: '🥟', color: '#5A2050', added: true, created: 9 });
   (await import('../web/people.js')).renderPeopleEditor();
-  sheetOf('p-fresh-1');
+  await sheetOf('p-fresh-1');
   assert.equal($('#profile-cloud').getAttribute('aria-checked'), 'false');
   $('#profile-cloud').dispatch('click');
   await settle();
@@ -280,7 +285,7 @@ test('the PIN pad closing a moment later never ends the next ask: a mismatch is 
   pad.close = function () { this.open = false; setTimeout(() => this.dispatch('close')); };
   const tick = () => new Promise((r) => setTimeout(r, 5));
   try {
-    sheetOf(LATER);   // its PIN is 3333 since the mismatch test
+    await sheetOf(LATER);   // its PIN is 3333 since the mismatch test
     $('#cloud-pin-change').dispatch('click');
     await settle();
     typePin('3333');
