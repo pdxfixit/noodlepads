@@ -28,7 +28,7 @@ before(async () => {
   audio.start = (id, loaded) => { started.push([id, loaded.clip?.id]); audio.playing.set(id, {}); };
   audio.stop = (id) => { stopped.push(id); audio.playing.delete(id); };
   // Juno's own: four sounds, a key layout, and an edit of a preset.
-  for (let i = 1; i <= 4; i++) state.userClips.push({ id: `user-j${i}`, personId: 'juno', label: `Juno sound ${i}`, emoji: '🐸', created: i, voice: 'normal' });
+  for (let i = 1; i <= 4; i++) state.userClips.push({ id: `user-j${i}`, personId: 'juno', label: `Juno sound ${i}`, emoji: '🐸', created: i, voice: 'normal', blob: new Blob(['x'], { type: 'audio/webm' }), mime: 'audio/webm' });
   state.layouts.push({ id: 'layout-j', personId: 'juno', name: 'Zoo keys', keys: { KeyA: 'user-j1' }, created: 1 });
   state.overrides.set('juno-kick', { id: 'juno-kick', emoji: '🦶' });
   await page.settle();
@@ -112,4 +112,34 @@ test('someone switched off the cloud: the count line says it is this device only
   assert.match($('#profile-counts-text').textContent, /^📴 This device only: /);
   assert.match($('#profile-counts').getAttribute('aria-label'), /^See all: everything Toby has, on this device only: /);
   state.peopleEdits.delete('toby');
+});
+
+test('⬇️ Export a backup saves one file of just this person, named after them', async () => {
+  const { unzip } = await import('../web/zip.js');
+  if (!$('#things-dialog').open) { openProfile('juno'); $('#profile-counts').dispatch('click'); }
+  let blob;
+  let name;
+  const realUrl = URL.createObjectURL;
+  const realMake = document.createElement;
+  URL.createObjectURL = (b) => { blob = b; return 'blob:test'; };
+  document.createElement = (tag) => {
+    const made = realMake.call(document, tag);
+    if (tag === 'a') made.click = () => { name = made.download; };
+    return made;
+  };
+  try {
+    $('#things-backup').dispatch('click');
+    await page.settle();
+  } finally {
+    URL.createObjectURL = realUrl;
+    document.createElement = realMake;
+  }
+  assert.match(name, /^noodlepads-juno-\d{4}-\d{2}-\d{2}\.zip$/);
+  const files = await unzip(blob);
+  const doc = JSON.parse(new TextDecoder().decode(files.get('backup.json')));
+  assert.deepEqual(doc.clips.map((c) => c.id).sort(), ['user-j1', 'user-j2', 'user-j3', 'user-j4'], 'Juno\'s sounds and no one else\'s');
+  assert.deepEqual(doc.layouts.map((l) => l.id), ['layout-j']);
+  assert.deepEqual(doc.overrides.map((o) => o.id), ['juno-kick']);
+  assert.deepEqual(doc.settings, [], 'the device\'s settings stay here');
+  assert.equal($('#things-backup').getAttribute('aria-label'), 'Export a backup of Juno');
 });

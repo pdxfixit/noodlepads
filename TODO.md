@@ -66,7 +66,6 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 
 
-- **⬇️ Export in 🗂️ See all** (Ben, 2026-10-24: "how about an export in that screen as well"). Waits on his pick: a one-person backup .zip (today's format; 💾 Load brings them in; recommended, about 30 min), ⬇️ on each row (a sound's audio, a beat's .beat.json, a song or take as .wav; about 1 h), or both.
 - **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (`docs/design/more-kinds-of-music.md`; decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups, the emoji rule's exceptions). The grooves, 🧸 Kids' pentatonic toy keys and instruments' phase 1 are built; next:
   1. Instruments, phase 3 (ADR 0030; the pickers everywhere, 🧸 Kids' instrument button, the grooves' instruments and chips, Soca and Chiptune are built): one ready-made key layout per family in ✏️ Layout's keys.
 

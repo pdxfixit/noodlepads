@@ -6,7 +6,9 @@
 // edit as its pad plays it, a beat twice round, a song or 🎬 take as heard,
 // a ⭐ voice on one of their sounds. Key sets and layouts have no sound of
 // their own, so they are listed with no ▶. A second tap stops it, and so does
-// closing the sheet. The sheet only shows and plays: deleting stays where it is.
+// closing the sheet. ⬇️ Export a backup saves one file of just this person
+// (Ben, 2026-10-24). The sheet only shows, plays and exports: deleting stays
+// where it is.
 
 import { audio } from './audio.js';
 import { applyChain, chainOf } from './voices.js';
@@ -20,7 +22,8 @@ export const SHOWN_IN_ALL = 3;   // rows per kind under All; ＋ N more picks th
 // deps (app.js): lists() (the stores as lists), anyone(id) (a person),
 // preset(kitId) (a preset's {label, emoji}), clipById(id, personId), sampleClips(personId)
 // (the sounds a ⭐ voice may play on, in order), render(kind, id, personId, rate) (a beat,
-// song or take as an AudioBuffer, share-render.js renderAudio).
+// song or take as an AudioBuffer, share-render.js renderAudio), backup(personId,
+// name, button) (⬇️ Export a backup: one file of just them, backup-ui.js).
 let deps = null;
 const el = {};
 let who = null;        // the person shown
@@ -47,6 +50,7 @@ function draw() {
   if (!p) { if (el.dialog.open) el.dialog.close(); return; }
   el.dialog.style.setProperty('--c', p.color);
   el.title.textContent = `Everything ${p.name} has`;
+  el.backup?.setAttribute('aria-label', `Export a backup of ${p.name}`);
   const all = things();
   const total = Object.values(all).reduce((n, list) => n + list.length, 0);
   const chip = (kind, text, label) => {
@@ -212,10 +216,15 @@ export function initThings(hooks) {
     chips: document.querySelector('#things-chips'),
     list: document.querySelector('#things-list'),
     note: document.querySelector('#things-note'),
+    backup: document.querySelector('#things-backup'),
   });
   if (!el.dialog) return;
   setupDialog(el.dialog);
   el.dialog.addEventListener('close', () => { stop(); who = null; el.note.textContent = ''; });
+  el.backup?.addEventListener('click', () => {
+    const p = deps.anyone(who);
+    if (p) deps.backup(p.id, p.name, el.backup);
+  });
   el.dialog.addEventListener('click', (e) => {
     const pick = e.target.closest?.('[data-show]');
     if (pick) {

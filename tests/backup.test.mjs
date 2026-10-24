@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeBackup, readBackup, cleanBackup, BACKUP_APP, BACKUP_FORMAT, MAX_SOUND_BYTES, refusal, beforeOne } from '../web/backup.js';
+import { makeBackup, readBackup, cleanBackup, personBackupLists, BACKUP_APP, BACKUP_FORMAT, MAX_SOUND_BYTES, refusal, beforeOne } from '../web/backup.js';
 import { buildZip, blobOf, bytes, utf8, failure } from './helpers.mjs';
 import { unzip } from '../web/zip.js';
 import { isFunName } from '../web/names.js';
@@ -726,4 +726,52 @@ test("a person's seen tips round-trip in a backup, cleaned; older backups load w
   };
   const out = await readBackup(await makeBackup(state), bundled());
   assert.deepEqual(out.prefs, [{ personId: 'pip', values: { seen: 'dot-keys,tip-pads', level: 'regular' } }, { personId: 'juno', values: { padSkin: 'jelly' } }]);
+});
+
+// 🗂️ See all's ⬇️ Export a backup (Ben, 2026-10-24): one person's backup, in
+// the same format, so 📂 Load a backup on another device adds just them.
+const twoPeople = () => ({
+  people: [
+    { id: 'p-wren-1', name: 'Plucky Walrus', color: '#0C5E4B', added: true, created: 5 },
+    { id: 'p-juno-1', name: 'Agent Alpaca', color: '#1F3FA8', added: true, created: 6 },
+  ],
+  clips: [
+    { ...goodClip(), personId: 'p-wren-1', blob: new Blob([bytes(7, 8, 9)], { type: 'audio/webm' }) },
+    { ...goodClip({ id: 'user-xyz-9999', file: 'sounds/user-xyz-9999.webm' }), personId: 'p-juno-1', blob: new Blob([bytes(1)], { type: 'audio/webm' }) },
+  ],
+  overrides: [{ id: 'p-wren-1-kick', emoji: '🦶' }, { id: 'p-juno-1-kick', hidden: true }],
+  orders: [{ personId: 'p-wren-1', ids: [] }, { personId: 'p-juno-1', ids: [] }],
+  patterns: [],
+  beats: [
+    { id: 'beat-w-1', personId: 'p-wren-1', name: 'Wren groove', bpm: 90, rows: [], created: 1, saved: 2 },
+    { id: 'beat-j-1', personId: 'p-juno-1', name: 'Juno groove', bpm: 90, rows: [], created: 1, saved: 2 },
+  ],
+  settings: [{ key: 'timeSignature', value: '3/4' }],
+  takes: [{ id: 'take-w', personId: 'p-wren-1' }, { id: 'take-j', personId: 'p-juno-1' }],
+  voices: [{ id: 'v-j', personId: 'p-juno-1' }],
+  prefs: [{ personId: 'p-wren-1', values: { level: 'advanced' } }, { personId: 'p-juno-1', values: {} }],
+});
+
+test('one person\'s backup holds them and all of theirs, and nobody else\'s', () => {
+  const mine = personBackupLists(twoPeople(), 'p-wren-1');
+  assert.deepEqual(mine.people.map((p) => p.id), ['p-wren-1']);
+  assert.deepEqual(mine.clips.map((c) => c.id), ['user-abc-1234']);
+  assert.deepEqual(mine.overrides.map((o) => o.id), ['p-wren-1-kick'], 'edits of their own copy of the kit');
+  assert.deepEqual(mine.beats.map((b) => b.id), ['beat-w-1']);
+  assert.deepEqual(mine.takes.map((t) => t.id), ['take-w']);
+  assert.deepEqual(mine.voices, []);
+  assert.deepEqual(mine.prefs, [{ personId: 'p-wren-1', values: { level: 'advanced' } }], 'their own settings travel');
+  assert.deepEqual(mine.settings, [], 'the device\'s settings stay with the device');
+  for (const k of ['songs', 'songbook', 'layouts', 'touchLayouts', 'decks', 'patterns']) assert.deepEqual(mine[k], [], k);
+});
+
+test('one person\'s backup loads on a device that has never had them', async () => {
+  const out = await readBackup(await makeBackup(personBackupLists(twoPeople(), 'p-wren-1'), '1.0.1'), bundled({ kitIds: new Set(['kick']) }));
+  assert.equal(out.skipped, 0);
+  assert.deepEqual(out.overrides.map((o) => o.id), ['p-wren-1-kick']);
+  assert.deepEqual(out.people.map((p) => p.id), ['p-wren-1']);
+  assert.deepEqual(out.clips.map((c) => [c.id, c.personId]), [['user-abc-1234', 'p-wren-1']]);
+  assert.deepEqual(new Uint8Array(await out.clips[0].blob.arrayBuffer()), bytes(7, 8, 9));
+  assert.deepEqual(out.beats.map((b) => b.name), ['Wren groove']);
+  assert.deepEqual(out.settings, []);
 });
