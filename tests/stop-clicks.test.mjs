@@ -44,6 +44,23 @@ test('Space, which is Stop all, turns them off too', async () => {
   assert.equal(on('#dj-click'), false);
 });
 
+test('each stays off until its own ⏲️ is tapped: one turned back on leaves the other off', async () => {
+  turnOn();
+  $('#stop-all').dispatch('click');
+  $('#seq-click').dispatch('click');
+  await page.settle();
+  assert.equal(on('#seq-click'), true, "Beats' ⏲️ back on");
+  assert.equal(on('#dj-click'), false, "Live's stays off");
+  assert.ok(!recall('dj-click'), "Live's remembered off");
+  $('#stop-all').dispatch('click');
+  $('#dj-beat-click').dispatch('click');           // the keys view's ⏲️ is Live's
+  await page.settle();
+  assert.equal(on('#dj-click'), true);
+  assert.equal(on('#seq-click'), false, "Beats' stays off");
+  assert.ok(!recall('beat-click'));
+  $('#stop-all').dispatch('click');
+});
+
 test('a ⏲️ tapped after Stop all turns the click on, not into tap tempo', async () => {
   $('#dj-click').dispatch('click');                // on
   $('#stop-all').dispatch('click');                // off, taps forgotten
