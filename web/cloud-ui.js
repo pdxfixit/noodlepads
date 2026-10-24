@@ -17,7 +17,7 @@ import { audio } from './audio.js';
 import { PIN_RESET_EMAIL } from './contact.js';
 import {
   api, CloudError, cloudTrouble, cloudThere, inCloud, linkOf, keyOf, isOffline, statusOf, syncNow,
-  openProfile, unlock, pinIsNew, checkPin, setPin, setOffline, putUpNow, wantsCloud, shareable, shareItem, showCode,
+  openProfile, unlock, pinIsNew, checkPin, setPin, setOffline, removeProfile, putUpNow, wantsCloud, shareable, shareItem, showCode,
   sharedHere, openShare, forgetShare, remixShare, fetchShare, checkShared, mySharesOf, unshareItem, listProfiles,
 } from './cloud.js';
 import { mergeSummary } from './merge.js';
@@ -182,6 +182,23 @@ export async function askEditPin(personId) {
       title: `${p?.avatar ? `${p.avatar} ` : ''}${p?.name ?? 'PIN'}`,
       hint: 'Type their PIN to change their name, picture or color.',
     });
+    return { ok: !!done };
+  } catch (err) {
+    const note = trouble(err);
+    announce(note);
+    return { ok: false, note };
+  }
+}
+
+// Delete's third tap in a profile sheet (people.js): deletes the cloud copy of
+// someone just deleted from this device. `left` is what the sheet kept of
+// them: their id, the key this device held (none with a PIN) and whether they
+// have a PIN, which is asked. `ok` once it is gone; `note` says what went wrong.
+export async function deleteLeftCloud(left) {
+  const go = (pin) => removeProfile(left.id, left.key, pin);
+  try {
+    if (!left.pin) { await go(); return { ok: true }; }
+    const done = await withPin(go, { title: '☁️ Delete the cloud copy', hint: 'Type their PIN. Their cloud copy is deleted for every device.' });
     return { ok: !!done };
   } catch (err) {
     const note = trouble(err);

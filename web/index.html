@@ -596,45 +596,49 @@
         <button type="button" class="close" data-close aria-label="Close">✕</button>
       </div>
       <p class="set-note" id="profile-note" role="status"></p>
-      <p class="pf-counts" id="profile-counts"></p>
-      <div class="pf-looks">
-        <button type="button" class="pf-pic" id="profile-picture" data-avatar>
-          <span class="pf-pic-face" id="profile-face" aria-hidden="true"></span>
-          <span class="pf-pic-word">Picture</span>
-        </button>
-        <button type="button" class="chip-dark pf-dice" id="profile-reroll" data-reroll aria-keyshortcuts="Shift+Enter">🎲 Pick a name</button>
+      <!-- Hidden once they are deleted here with a cloud copy left: then only
+           Delete shows, for its third tap (people.js). -->
+      <div id="profile-parts">
+        <p class="pf-counts" id="profile-counts"></p>
+        <div class="pf-looks">
+          <button type="button" class="pf-pic" id="profile-picture" data-avatar>
+            <span class="pf-pic-face" id="profile-face" aria-hidden="true"></span>
+            <span class="pf-pic-word">Picture</span>
+          </button>
+          <button type="button" class="chip-dark pf-dice" id="profile-reroll" data-reroll aria-keyshortcuts="Shift+Enter">🎲 Pick a name</button>
+        </div>
+        <h3 class="cl-head" id="profile-color-title">🎨 Color</h3>
+        <div class="pf-colors" id="profile-colors" role="group" aria-labelledby="profile-color-title"></div>
+        <!-- ☁️ In the cloud is a switch; 🔒 PIN says at a glance whether one is on (cloud-ui.js drawPin). -->
+        <section class="pf-part" aria-labelledby="profile-cloud-title">
+          <div class="pf-row">
+            <h3 class="cl-head pf-grow" id="profile-cloud-title">☁️ In the cloud</h3>
+            <button type="button" class="pf-switch" role="switch" id="profile-cloud" aria-checked="false" aria-label="☁️ In the cloud"></button>
+          </div>
+          <p class="field-hint pf-cloud-text" id="profile-cloud-text" role="status"></p>
+          <div class="set-buttons" id="profile-cloud-tools" hidden>
+            <button type="button" class="chip-dark" id="cloud-sync">🔄 Sync now</button>
+            <button type="button" class="chip-dark" id="cloud-share">🔗 Share…</button>
+          </div>
+        </section>
+        <section class="pf-part" aria-labelledby="profile-pin-title">
+          <div class="pf-row">
+            <h3 class="cl-head pf-grow" id="profile-pin-title">PIN</h3>
+            <span class="pf-pill" id="profile-pin-state" role="status"></span>
+          </div>
+          <p class="field-hint" id="profile-pin-hint"></p>
+          <button type="button" class="primary pf-wide" id="cloud-pin">🔒 Set a PIN</button>
+          <div class="pf-two" id="profile-pin-tools" hidden>
+            <button type="button" class="secondary" id="cloud-pin-change">Change PIN</button>
+            <button type="button" class="secondary pf-danger" id="cloud-pin-off">Remove PIN</button>
+          </div>
+          <p class="set-note" id="profile-pin-note" role="status"></p>
+        </section>
       </div>
-      <h3 class="cl-head" id="profile-color-title">🎨 Color</h3>
-      <div class="pf-colors" id="profile-colors" role="group" aria-labelledby="profile-color-title"></div>
-      <!-- ☁️ In the cloud is a switch; 🔒 PIN says at a glance whether one is on (cloud-ui.js drawPin). -->
-      <section class="pf-part" aria-labelledby="profile-cloud-title">
-        <div class="pf-row">
-          <h3 class="cl-head pf-grow" id="profile-cloud-title">☁️ In the cloud</h3>
-          <button type="button" class="pf-switch" role="switch" id="profile-cloud" aria-checked="false" aria-label="☁️ In the cloud"></button>
-        </div>
-        <p class="field-hint pf-cloud-text" id="profile-cloud-text" role="status"></p>
-        <div class="set-buttons" id="profile-cloud-tools" hidden>
-          <button type="button" class="chip-dark" id="cloud-sync">🔄 Sync now</button>
-          <button type="button" class="chip-dark" id="cloud-share">🔗 Share…</button>
-        </div>
-      </section>
-      <section class="pf-part" aria-labelledby="profile-pin-title">
-        <div class="pf-row">
-          <h3 class="cl-head pf-grow" id="profile-pin-title">PIN</h3>
-          <span class="pf-pill" id="profile-pin-state" role="status"></span>
-        </div>
-        <p class="field-hint" id="profile-pin-hint"></p>
-        <button type="button" class="primary pf-wide" id="cloud-pin">🔒 Set a PIN</button>
-        <div class="pf-two" id="profile-pin-tools" hidden>
-          <button type="button" class="secondary" id="cloud-pin-change">Change PIN</button>
-          <button type="button" class="secondary pf-danger" id="cloud-pin-off">Remove PIN</button>
-        </div>
-        <p class="set-note" id="profile-pin-note" role="status"></p>
-      </section>
       <div class="sheet-actions pf-end">
         <button type="button" class="quiet danger" id="profile-delete" data-remove>Delete</button>
       </div>
-      <p class="field-hint">Delete takes them, their recordings and their beats off this device only. Their cloud copy stays.</p>
+      <p class="field-hint" id="profile-delete-hint">Delete takes them, their recordings and their beats off this device.</p>
     </div>
   </dialog>
 

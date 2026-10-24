@@ -647,12 +647,16 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   counts), checked like an open (`cloud.js` `pinGuards`, `checkPin`); without
   one, anyone can. It gates the sheet only: syncs apply as before.
   Nobody types a name: a tap on 🎲 opens Pick a name, a dozen fun names and the
-  special names to choose from (🎲 More names deals another dozen); closing it keeps the name. Deleting someone who is in
-  the cloud deletes them from this device only (switching ☁️ In the cloud off deletes the cloud copy). Anyone can be deleted (two taps), with their recorded sounds,
+  special names to choose from (🎲 More names deals another dozen); closing it keeps the name. Anyone can be deleted from this device (two taps), with their recorded sounds,
   saved beats, beat on screen and pad order. A boards.json person can't leave
   that file, so deleting one keeps only a hidden record; the People dialog
   lists hidden people under "Deleted — bring back". The last person on show
-  can't be deleted. Under each name, a row says how much that person has on
+  can't be deleted. For someone in the cloud the second tap deletes them here
+  and the sheet stays, showing only Delete ("☁️ Tap again to delete their
+  cloud copy"): a third tap deletes their cloud profile too (asking for the
+  PIN if they have one; `cloud-ui.js` `deleteLeftCloud`), and ✕ keeps it for
+  their other devices. Switching ☁️ In the cloud off deletes the cloud copy
+  and keeps them here. Under each name, a row says how much that person has on
   this device, kinds with none left out: "🔊 27 · 🥁 4 · 🎼 1 · 🎬 1", or
   "nothing yet" (`personCounts` and `countsText` in `web/model.js`).
 - **One emoji per kind** (`KIND_EMOJI` in `web/model.js`): 🔊 sounds,
@@ -808,8 +812,10 @@ ADR 0002.
 - **A forgotten PIN:** email the PIN-reset address with the profile's fun
   name. Ben clears it by hand (`just cloud-reset-pin <profile id>`); then each
   device opens the profile once with no PIN.
-- **To delete a profile and everything in it:** 👥 People → tap them → switch
-  ☁️ In the cloud off (tap twice; it asks for the PIN if it has one). What it
+- **To delete a profile and everything in it:** 👥 People → tap them → tap
+  Delete three times (the third deletes the cloud copy), or switch ☁️ In the
+  cloud off (tap twice) to keep it on this device. Either asks for the PIN
+  if it has one. What it
   shared stays shared.
 - **What's private:** read [Privacy](../README.md#privacy) in the README. Everyone who makes something is
   in the public list unless their ☁️ In the cloud is switched off.
