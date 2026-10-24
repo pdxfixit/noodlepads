@@ -212,6 +212,21 @@ const VIEWS = {
     state.takes.push({ id: 'take-look-1', personId: pid, name: 'Take 1', duration: 42, events: [], created: 3 });
     state.layouts.push({ id: 'layout-look-1', personId: pid, name: 'Zoo keys with a very long name indeed', keys: { KeyA: 'user-look-0' }, created: 2 });
     ${q('#people-open')} ${q('#people-edit [data-profile]')} ${q('#profile-counts')} ${nap}` },
+  // Loading a one-person backup (⬇️ Export a backup): it asks where it goes,
+  // ♻️ Restore them or load it all into someone here. Two made-up people here.
+  'load-who': { screen: 'pads', js: `const { state } = await import('/state.js');
+    const { makeBackup, personBackupLists } = await import('/backup.js');
+    for (const [id, name, avatar] of [['p-look-a', 'Captain Cranberries', '🍒'], ['p-look-b', 'Agent Alpaca with a long name', '🦙']])
+      state.peopleEdits.set(id, { id, name, fun: true, avatar, color: '#0E2C78', added: true, created: 1 });
+    const blob = await makeBackup(personBackupLists({
+      people: [{ id: 'p-look-away', name: 'Baron Bagel', fun: true, avatar: '🥯', color: '#304A00', added: true, created: 2 }],
+      clips: [{ id: 'user-look-away', personId: 'p-look-away', label: 'Big burp', emoji: '🐸', color: 'red', voice: 'normal', mime: 'audio/wav', created: 5, blob: new Blob([new Uint8Array(44)], { type: 'audio/wav' }) }],
+      beats: [{ id: 'beat-look-away', personId: 'p-look-away', name: 'Away groove', bpm: 90, rows: [], created: 1, saved: 2 }],
+    }, 'p-look-away'));
+    const input = document.querySelector('#backup-file');
+    const dt = new DataTransfer(); dt.items.add(new File([blob], 'baron.zip', { type: 'application/zip' }));
+    input.files = dt.files; input.dispatchEvent(new Event('change'));
+    await new Promise((r) => setTimeout(r, 600));` },
   // 👥 People's Pick a name list (a profile's 🎲).
   'people-names': { screen: 'pads', js: `${q('#people-open')} ${q('#people-edit [data-profile]')} ${q('#profile-reroll')}` },
   // 👥 People with four people who have different amounts (the counts under each name).

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeBackup, readBackup, cleanBackup, personBackupLists, BACKUP_APP, BACKUP_FORMAT, MAX_SOUND_BYTES, refusal, beforeOne } from '../web/backup.js';
+import { makeBackup, readBackup, cleanBackup, personBackupLists, onePersonIn, intoPerson, BACKUP_APP, BACKUP_FORMAT, MAX_SOUND_BYTES, refusal, beforeOne } from '../web/backup.js';
 import { buildZip, blobOf, bytes, utf8, failure } from './helpers.mjs';
 import { unzip } from '../web/zip.js';
 import { isFunName } from '../web/names.js';
@@ -774,4 +774,33 @@ test('one person\'s backup loads on a device that has never had them', async () 
   assert.deepEqual(new Uint8Array(await out.clips[0].blob.arrayBuffer()), bytes(7, 8, 9));
   assert.deepEqual(out.beats.map((b) => b.name), ['Wren groove']);
   assert.deepEqual(out.settings, []);
+});
+
+// Loading a one-person backup asks: restore them, or load it all into
+// someone here (Ben, 2026-10-24).
+test('a backup is about one person only when it holds one person and nothing of anyone else\'s', () => {
+  const wren = personBackupLists(twoPeople(), 'p-wren-1');
+  assert.equal(onePersonIn(wren)?.id, 'p-wren-1');
+  assert.equal(onePersonIn(twoPeople()), null, 'a whole-device backup with two people');
+  assert.equal(onePersonIn({ ...wren, clips: [...wren.clips, { id: 'u', personId: 'p-juno-1' }] }), null, 'someone else\'s sound in it');
+  assert.equal(onePersonIn({ ...wren, overrides: [{ id: 'p-juno-1-kick' }] }), null, 'someone else\'s preset edit in it');
+  assert.equal(onePersonIn({ ...wren, people: [] }), null);
+});
+
+test('loading into someone here: every thing becomes theirs; the person, their settings and the device\'s stay out', () => {
+  const lists = personBackupLists(twoPeople(), 'p-wren-1');
+  lists.beats.push({ id: 'beat-scratch-p-wren-1', personId: 'p-wren-1', name: 'Scratch', bpm: 100, rows: [] });
+  lists.songbook.push({ id: 'song-scratch-p-wren-1', personId: 'p-wren-1', name: 'Scratch', lanes: [] });
+  lists.settings = [{ key: 'timeSignature', value: '3/4' }];
+  const out = intoPerson(lists, 'p-wren-1', 'p-toby-1');
+  assert.deepEqual(out.people, []);
+  assert.deepEqual(out.prefs, [], 'they keep their own level, look and settings');
+  assert.deepEqual(out.settings, []);
+  assert.deepEqual(out.clips.map((c) => c.personId), ['p-toby-1']);
+  assert.equal(out.clips[0].blob, lists.clips[0].blob, 'the audio comes as it is');
+  assert.deepEqual(out.overrides.map((o) => o.id), ['p-toby-1-kick'], 'an edit of their kit becomes an edit of this person\'s');
+  assert.deepEqual(out.beats.map((b) => [b.id, b.personId]), [['beat-w-1', 'p-toby-1'], ['beat-scratch-p-toby-1', 'p-toby-1']]);
+  assert.deepEqual(out.songbook.map((s) => s.id), ['song-scratch-p-toby-1']);
+  assert.deepEqual(out.orders.map((o) => o.personId), ['p-toby-1']);
+  assert.ok(!JSON.stringify({ ...out, clips: [] }).includes('p-wren-1'), 'nothing names them any more');
 });

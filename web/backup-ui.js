@@ -4,7 +4,7 @@
 import { state, readStorage, deletePerson, reIdIncoming, rememberRenames } from './state.js';
 import { db } from './store.js';
 import { audio } from './audio.js';
-import { makeBackup, readBackup, leftOutNote, personBackupLists } from './backup.js';
+import { makeBackup, readBackup, leftOutNote, personBackupLists, onePersonIn, intoPerson } from './backup.js';
 import { mergeLoaded, mergeSummary } from './merge.js';
 import { colorName, people } from './board.js';
 import { renderPeople } from './pads.js';
@@ -15,6 +15,9 @@ import { showNotice } from './ui.js';
 import { logEvent } from './log.js';
 import { localDate } from './util.js';
 import { holdsWords, sizeWords } from './old-backup.js';
+import { openDialog, setupDialog } from './dialogs.js';
+import { avatarBadge } from './cloud-ui.js';
+import { personCounts, countsText } from './model.js';
 
 const el = {};
 
@@ -148,14 +151,56 @@ export function showHolds() {
   if (el.holds) el.holds.textContent = `A backup now holds ${holdsWords(storedLists())}.`;
 }
 
+// A one-person backup asks where it goes (Ben, 2026-10-24): ♻️ Restore them
+// as their own person, as any backup does, or load it all into someone on
+// this device, who keeps their own name, look and settings. Resolves to a
+// person id (theirs to restore), or null for ✕ (nothing loads).
+let answerWhere = null;
+function askWhere(who, data) {
+  el.whoTitle.textContent = `Load ${who.name}'s backup`;
+  el.whoCounts.textContent = countsText(personCounts(data, who.id));
+  el.whoRestore.textContent = `♻️ Restore ${who.name}`;
+  el.whoRestore.dataset.into = who.id;
+  const others = people().filter((p) => p.id !== who.id);
+  el.whoInto.hidden = others.length === 0;
+  el.whoPeople.replaceChildren(...others.map((p) => {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cl-pick';
+    b.dataset.into = p.id;
+    b.setAttribute('aria-label', `Load it all into ${p.name}`);
+    const name = document.createElement('span');
+    name.textContent = p.name;
+    b.append(avatarBadge(p), name);
+    li.append(b);
+    return li;
+  }));
+  return new Promise((resolve) => {
+    answerWhere = resolve;
+    openDialog(el.who, { focus: el.whoRestore });
+  });
+}
+
 async function loadBackup(file) {
   try {
-    const data = await readBackup(file, whatIsHere());
+    let data = await readBackup(file, whatIsHere());
+    const who = onePersonIn(data);
+    let into = null;
+    if (who) {
+      const to = await askWhere(who, data);
+      if (!to) return;
+      if (to !== who.id) {
+        into = people().find((p) => p.id === to);
+        data = intoPerson(data, who.id, to);
+      }
+    }
     const merged = await storeLoaded(data);
     const made = data.exported ? new Date(data.exported) : null;
     const when = made && !Number.isNaN(made.getTime()) ? ` from ${localDate(made)}` : '';
-    logEvent('backup', { loaded: true, sounds: merged.added.sounds, beats: merged.added.beats, already: merged.already, skipped: data.skipped });
-    showNotice(`Loaded the backup${when}. ${mergeSummary(merged)}${leftOut(data, merged)}`);
+    logEvent('backup', { loaded: true, into: !!into, sounds: merged.added.sounds, beats: merged.added.beats, already: merged.already, skipped: data.skipped });
+    const what = into ? `Loaded ${who.name}'s backup${when} into ${into.name}.` : `Loaded the backup${when}.`;
+    showNotice(`${what} ${mergeSummary(merged)}${leftOut(data, merged)}`);
     showHolds();
   } catch (err) {
     console.error('Loading a backup failed:', err);
@@ -169,7 +214,31 @@ export function initBackups() {
     save: document.querySelector('#backup-save'),
     file: document.querySelector('#backup-file'),
     holds: document.querySelector('#backup-holds'),
+    who: document.querySelector('#load-who'),
+    whoTitle: document.querySelector('#load-who-title'),
+    whoCounts: document.querySelector('#load-who-counts'),
+    whoRestore: document.querySelector('#load-who-restore'),
+    whoInto: document.querySelector('#load-who-into'),
+    whoPeople: document.querySelector('#load-who-people'),
   });
+  if (el.who) {
+    setupDialog(el.who);
+    let picked = null;
+    el.who.addEventListener('click', (e) => {
+      const b = e.target.closest?.('[data-into]');
+      if (!b) return;
+      picked = b.dataset.into;
+      el.who.close();
+    });
+    // ✕, Esc or a pick: the load goes on with the pick, or stops with none.
+    el.who.addEventListener('close', () => {
+      const done = answerWhere;
+      answerWhere = null;
+      const to = picked;
+      picked = null;
+      done?.(to);
+    });
+  }
   // Settings opens from ⚙️ and from the version in the footer.
   for (const id of ['#settings-open', '#version']) document.querySelector(id)?.addEventListener('click', showHolds);
   showHolds();

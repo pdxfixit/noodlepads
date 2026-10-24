@@ -697,8 +697,8 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   their person record, everything listed, their pad order, open beat and
   song, and their own settings (`prefs`), in the same format as 💾 Save a
   backup, named `noodlepads-<their fun name>-<date>.zip`; the device's
-  settings stay out. 📂 Load a backup on any device adds them as any backup
-  does. A beat row playing another person's own sound loses that row on a
+  settings stay out. 📂 Load a backup on any device asks whether to restore them or
+  load it all into someone there (Backups, below). A beat row playing another person's own sound loses that row on a
   device that lacks that person. The sheet only shows, plays and exports;
   deleting stays in Edit sounds, 🗂️ My beats and 🗂️ My songs.
 - **One emoji per kind** (`KIND_EMOJI` in `web/model.js`): 🔊 sounds,
@@ -719,6 +719,21 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   address has its own browser storage). `web/backup.js` checks every field of
   an imported file (`cleanBackup`, which older sounds found go through too);
   `web/zip.js` is the no-library zip code.
+  - **A one-person backup** (🗂️ See all's ⬇️ Export a backup, or any backup
+    with exactly one person and nothing of anyone else's, `backup.js`
+    `onePersonIn`) asks where it goes as it loads (Ben, 2026-10-24;
+    `#load-who`, `backup-ui.js` `askWhere`): "Load <name>'s backup", what it
+    holds, **♻️ Restore <name>** (as their own person, as any backup loads),
+    then "Or load it all into someone here:", one button per person on this
+    device (not the backup's own person). Loading into someone makes every
+    thing theirs (`intoPerson`: every record that names the backup's person
+    names them, an edit of their kit an edit of this person's, their scratch
+    beat and song this person's, merged as any backup is), and leaves out the
+    backup's person and their settings: nobody new is added, and this person
+    keeps their name, look, level and settings. What they already have is
+    skipped, so loading it twice adds nothing. ✕ loads nothing. A whole-device
+    backup loads as before. The notice says "Loaded <name>'s backup into
+    <person>".
   - **Format 1.1** ([ADR 0011](adr/0011-backups-1-0-merge.md)): a backup
     says `app: 'noodlepads'` (`'noodle-pads'` before the 1.0 rename, still read), `format: '1.1'` (1.1 added groups, ADR 0013, and key layouts, ADR 0014; touch layouts came later and additively, ADR 0029), and any `1.x` loads. A backup
     from before Noodle Pads 1.0 (an app id ending in `-soundboard`, or

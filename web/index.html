@@ -677,6 +677,25 @@
     </div>
   </dialog>
 
+  <!-- A one-person backup as it loads: restore them as they were, or load
+       their things into someone here (backup-ui.js askWhere). ✕ loads nothing. -->
+  <dialog id="load-who" class="np-dialog" aria-labelledby="load-who-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="load-who-title">Load a backup</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <p class="lw-counts" id="load-who-counts"></p>
+      <button type="button" class="primary pf-wide" id="load-who-restore">♻️ Restore</button>
+      <p class="field-hint">As their own person, as they were.</p>
+      <section class="lw-into" id="load-who-into" aria-labelledby="load-who-into-title">
+        <h3 class="cl-head" id="load-who-into-title">Or load it all into someone here:</h3>
+        <ul class="cl-list" id="load-who-people"></ul>
+        <p class="field-hint">Their things become that person's. Nobody new is added.</p>
+      </section>
+    </div>
+  </dialog>
+
   <dialog id="avatar-dialog" class="np-dialog" aria-labelledby="avatar-title">
     <div class="chooser-body">
       <div class="sheet-head">
