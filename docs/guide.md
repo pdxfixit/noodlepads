@@ -666,8 +666,9 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   person's `overrides`), 🎛️ key sets (their `decks` record, once a key is
   changed), ⌨️ key layouts and 👆 touch layouts.
 - **🗂️ See all** (Ben, 2026-10-24; `web/things.js`): the same count line at
-  the top of a profile sheet is a button, "On this device: 🔊 27 · 🥁 4 … See
-  all ›". It opens a sheet over the profile, "Everything <name> has": a chip
+  the top of a profile sheet is a button, "🔊 27 · 🥁 4 … See all ›"; for a
+  person switched off the cloud (📴) it starts "📴 This device only:". Everyone
+  else in the cloud has the same here and there, so it says no more. It opens a sheet over the profile, "Everything <name> has": a chip
   per kind (All, then the nine, each with its count, 0 included; they fill the
   width in as many lines as it takes), then the list (`personThings` in
   `web/model.js`, which `personCounts` counts, so a chip is always its list's
@@ -679,13 +680,13 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   and tempo, a take's length, whether a preset edit changed or hid it, how
   many keys a key set changed, a layout's keys or groups. A tap plays it right
   there in its own audio slot (`see-all`), ■ while it plays, … while it
-  renders: a sound or preset edit as its pad plays it; a beat twice round, a
+  renders (one fixed box, so the icon never moves): a sound or preset edit as its pad plays it; a beat twice round, a
   song or a 🎬 take as heard, each recorded first as a share's preview is
   (`share-render.js` `renderAudio`, at the device's rate); a ⭐ voice on their
   newest own sound, else (none, or it won't load) their first preset. A second tap, another row or ✕
   stops it. Key sets and layouts have no sound of their own: no ▶. It reads
-  this device only: a person in the cloud syncs in the background (Cloud
-  profiles, below), so it is at most a sync behind. It only shows and plays;
+  this device, which for a person in the cloud is the cloud's copy, at most a
+  background sync behind (Cloud profiles, below). It only shows and plays;
   deleting stays in Edit sounds, 🗂️ My beats and 🗂️ My songs.
 - **One emoji per kind** (`KIND_EMOJI` in `web/model.js`): 🔊 sounds,
   🥁 beats, 🎼 songs, 🎬 takes, ⭐ my voices, 👥 people, ✏️ sound edits,

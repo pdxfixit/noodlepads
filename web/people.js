@@ -18,7 +18,7 @@ import { people, person } from './board.js';
 import { PERSON_COLORS, PERSON_COLOR_NAMES, nextPersonColor, freePicture, personCounts, countsText, countsWords, KIND_EMOJI } from './model.js';
 import { newId } from './util.js';
 import { funName, nameChoices, isFunName } from './names.js';
-import { inCloud, dropLink, linkOf, keyOf, pinGuards, onCloud, syncEnded } from './cloud.js';
+import { inCloud, isOffline, dropLink, linkOf, keyOf, pinGuards, onCloud, syncEnded } from './cloud.js';
 import { avatarBadge, openAvatar, cloudLabel, askEditPin, drawPin, pinClick, disarmCloud, deleteLeftCloud } from './cloud-ui.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { announce } from './ui.js';
@@ -216,9 +216,12 @@ function renderProfile(fresh = false) {
   el.profile.style.setProperty('--c', p.color);
   el.profileAvatar.replaceChildren(avatarBadge(p));
   el.profileName.textContent = p.name;
+  // Someone in the cloud has the same here and there, so the line says only
+  // what they have; 📴 says it is on this device alone (Ben, 2026-10-24).
   const counts = personCounts(storedLists(), p.id);
-  el.profileCountsText.textContent = `On this device: ${countsText(counts)}`;
-  el.profileCounts.setAttribute('aria-label', `See all: everything ${p.name} has on this device, ${countsWords(counts)}`);
+  const alone = isOffline(p.id);
+  el.profileCountsText.textContent = `${alone ? '📴 This device only: ' : ''}${countsText(counts)}`;
+  el.profileCounts.setAttribute('aria-label', `See all: everything ${p.name} has${alone ? ', on this device only' : ''}: ${countsWords(counts)}`);
   el.profileFace.replaceChildren(avatarBadge(p, 'pf-face'));
   el.profilePicture.setAttribute('aria-label', `Picture for ${p.name}`);
   el.profileReroll.dataset.reroll = p.id;

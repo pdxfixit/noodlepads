@@ -45,8 +45,8 @@ test('the count line is a button that opens See all for that person', async () =
   openProfile('juno');
   const line = $('#profile-counts');
   assert.equal(line.tagName.toLowerCase(), 'button');
-  assert.equal($('#profile-counts-text').textContent.replace(/ /g, ' '), 'On this device: 🔊 4 · ✏️ 1 · ⌨️ 1');
-  assert.match(line.getAttribute('aria-label'), /^See all: everything Juno has on this device, 4 sounds, 1 preset edit, 1 key layout$/);
+  assert.equal($('#profile-counts-text').textContent.replace(/\u00a0/g, ' '), '🔊 4 · ✏️ 1 · ⌨️ 1', 'no "on this device": the cloud has the same');
+  assert.equal(line.getAttribute('aria-label'), 'See all: everything Juno has: 4 sounds, 1 preset edit, 1 key layout');
   line.dispatch('click');
   await page.settle();
   assert.ok($('#things-dialog').open);
@@ -87,6 +87,7 @@ test('a tap plays a sound in place and a second tap stops it; a layout has no �
   assert.equal(row('Juno sound 4').querySelector('.sa-go').textContent, '■');
   row('Juno sound 4').dispatch('click');
   assert.ok(stopped.includes('see-all'));
+  assert.equal(row('Juno sound 4').querySelector('.sa-go').textContent, '▶\uFE0E', 'a plain ▶, never the wider emoji ▶️');
   assert.equal(row('Juno sound 4').getAttribute('aria-pressed'), 'false');
   row('Kick').dispatch('click');
   await page.settle();
@@ -102,4 +103,13 @@ test('closing See all stops what it plays and goes back to the profile', async (
   assert.ok(!$('#things-dialog').open);
   assert.ok(stopped.includes('see-all'));
   assert.ok($('#profile-dialog').open, 'the profile is still open under it');
+});
+
+test('someone switched off the cloud: the count line says it is this device only', async () => {
+  $('#profile-dialog').close();
+  state.peopleEdits.set('toby', { id: 'toby', offline: true });
+  openProfile('toby');
+  assert.match($('#profile-counts-text').textContent, /^📴 This device only: /);
+  assert.match($('#profile-counts').getAttribute('aria-label'), /^See all: everything Toby has, on this device only: /);
+  state.peopleEdits.delete('toby');
 });

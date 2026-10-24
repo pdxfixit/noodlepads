@@ -138,7 +138,7 @@ function row(item) {
     const go = document.createElement('span');
     go.className = 'sa-go';
     go.setAttribute('aria-hidden', 'true');
-    go.textContent = on ? (loading ? '…' : '■') : '▶';
+    go.textContent = on ? (loading ? '…' : '■') : '▶\uFE0E';
     box.append(go);
     box.classList.toggle('playing', on);
     box.setAttribute('aria-pressed', String(on));
