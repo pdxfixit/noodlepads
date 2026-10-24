@@ -279,7 +279,7 @@ test('a PIN guards the name, picture and color: asked once per visit, a wrong on
   profile(lineOf(id));
   assert.match($('#profile-pin-hint').textContent, /before the name, picture or color changes/);
   assert.equal($('#profile-pin-state').textContent, '🔒 PIN on');
-  assert.equal($('#profile-lock').hidden, false, '🔒 PIN beside the name');
+  assert.ok($('#profile-lock') === null, "the title is the name alone: the PIN part says there's a PIN (Ben, 2026-10-24)");
   const color = state.peopleEdits.get(id).color;
 
   swatch(2).dispatch('click');

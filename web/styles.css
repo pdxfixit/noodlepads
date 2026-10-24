@@ -1824,8 +1824,6 @@ button.sa-row { cursor: pointer; }
 .pf-pill.flash { background: #1E6B3A; color: #fff; }
 .pf-pill.settle { animation: pf-settle 500ms ease-out; }
 @keyframes pf-settle { from { opacity: 0; } to { opacity: 1; } }
-.pf-lock { padding: 3px 8px; border-radius: 999px; background: var(--chalk); font: 800 0.8rem/1.2 var(--font-ui); vertical-align: 0.3em; white-space: nowrap; }
-.pf-lock[hidden] { display: none; }
 .pf-wide { width: 100%; }
 .pf-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .pf-two .secondary { padding: 6px 10px; line-height: 1.2; }

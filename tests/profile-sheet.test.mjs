@@ -28,6 +28,7 @@ const idb = fakeIndexedDB();
 const OLD = 'p-oldcolor-1';   // stored with Forest, a person color from before 2026-10-19
 const LATER = 'p-later-1';    // in the cloud with a PIN, not opened yet on this visit
 const THIRD = 'p-third-1';    // the same, for Sync now and the switch
+const SORE = 'p-sore-1';      // in the cloud with no PIN; its syncs fail
 const call = async (path, body) => (await worker.fetch(new Request(`https://noodlepads.com/api/${path}`, {
   method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ORIGIN }, body: JSON.stringify(body),
 }), env)).json();
@@ -36,15 +37,18 @@ before(async () => {
   console.error = () => {};
   await call('profiles', { id: LATER, name: 'Baron Bagel', avatar: '', color: '#304A00', pin: '1357' });
   await call('profiles', { id: THIRD, name: 'Count Cupcake', avatar: '', color: '#B3141C', pin: '9090' });
+  const sore = await call('profiles', { id: SORE, name: 'Giggly Pony', avatar: '', color: '#304A00' });
   idb.seed(DB_NAME, DB_VERSION, SCHEMA, {
     people: [
       { id: OLD, name: 'Admiral Acorn', fun: true, avatar: '🦉', color: '#2E5A12', added: true, created: 1 },
       { id: LATER, name: 'Baron Bagel', fun: true, avatar: '🥯', color: '#304A00', added: true, created: 2 },
       { id: THIRD, name: 'Count Cupcake', fun: true, avatar: '🍊', color: '#B3141C', added: true, created: 3 },
+      { id: SORE, name: 'Giggly Pony', fun: true, avatar: '🍩', color: '#304A00', added: true, created: 4 },
     ],
     cloud: [
       { id: LATER, key: null, rev: 0, sent: {}, sounds: {}, pin: true },
       { id: THIRD, key: null, rev: 0, sent: {}, sounds: {}, pin: true },
+      { id: SORE, key: sore.key, rev: 0, sent: {}, sounds: {} },
     ],
   });
   globalThis.indexedDB = idb;
@@ -83,11 +87,43 @@ test('a person stored with an old color takes the nearest new one as it is read'
   closeSheets();
 });
 
+// Ben, 2026-10-24: a line in 👥 People had ☁️⚠️, and nothing in the sheet
+// said why. A PIN not typed yet on this visit is no trouble (every open asks
+// for it): ☁️✓. Real trouble shows ⚠️ on the line and before what is wrong
+// in the sheet, and the open list follows a sync as it happens.
+const cloudBit = (id) => $('#people-edit').children.find((r) => r.dataset.person === id).querySelector('.pe-cloud').textContent;
+
+test('a PIN not typed on this visit is ☁️✓ 🔒, not ⚠️; trouble is ⚠️ on the line and in the sheet, and the open list follows', async () => {
+  await cloud.syncNow(THIRD);
+  assert.equal(cloud.statusOf(THIRD).state, 'waiting');
+  $('#people-open').dispatch('click');
+  assert.equal(cloudBit(THIRD), '☁️✓ 🔒');
+  sheetOf(THIRD);
+  assert.equal($('#profile-cloud-text').textContent, '🔒 Syncs once they are opened with their PIN.', 'said plainly, no ⚠️');
+  $('#profile-dialog').close();
+
+  // A sync that fails: the open list shows ⚠️ without being reopened.
+  $('#people-open').dispatch('click');
+  assert.equal(cloudBit(SORE), '☁️✓');
+  const pageFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => (String(url).startsWith(`/api/profiles/${SORE}/records`)
+    ? new Response(JSON.stringify({ error: 'busy' }), { status: 503, headers: { 'Content-Type': 'application/json' } })
+    : pageFetch(url, init));
+  try {
+    await cloud.syncNow(SORE);
+  } finally { globalThis.fetch = pageFetch; }
+  await settle();
+  assert.equal(cloud.statusOf(SORE).state, 'trouble');
+  assert.equal(cloudBit(SORE), '☁️⚠️', 'the open list redrew');
+  sheetOf(SORE);
+  assert.match($('#profile-cloud-text').textContent, /^⚠️ \S/, 'the sheet says what, after the same ⚠️');
+  closeSheets();
+});
+
 test('🔒 Set a PIN on someone brand new puts them in the cloud; the pill says ✅ PIN set, then fades to 🔒 PIN on', async () => {
   sheetOf(OLD);
   assert.equal(cloud.inCloud(OLD), false, 'nothing made: not in the cloud');
   assert.equal(pill(), '🔓 No PIN');
-  assert.equal($('#profile-lock').hidden, true);
   assert.equal($('#profile-pin-tools').hidden, true, 'no Change or Remove without a PIN');
   $('#cloud-pin').dispatch('click');
   await settle();
@@ -99,7 +135,6 @@ test('🔒 Set a PIN on someone brand new puts them in the cloud; the pill says 
   assert.equal(cloud.linkOf(OLD).pin, true);
   assert.equal(env.DB.rows('SELECT pin_hash IS NOT NULL AS pin FROM profiles WHERE id = ?', OLD)[0].pin, 1);
   assert.equal(pill(), '✅ PIN set', 'what just happened, where PIN on shows');
-  assert.equal($('#profile-lock').hidden, false, '🔒 PIN by the name');
   assert.equal($('#cloud-pin').hidden, true);
   assert.equal($('#profile-pin-tools').hidden, false, 'Change PIN and Remove PIN');
   assert.equal($('#profile-cloud').getAttribute('aria-checked'), 'true', 'the switch is on');
@@ -142,7 +177,6 @@ test('on a later visit Change and Remove still show; Remove asks for the PIN, th
   await settle();
   assert.equal(pill(), '🔓 PIN removed');
   assert.equal(cloud.linkOf(LATER).pin, false);
-  assert.equal($('#profile-lock').hidden, true);
   assert.equal($('#cloud-pin').hidden, false, '🔒 Set a PIN again');
   assert.doesNotMatch(menuItem(LATER).textContent, /🔒/);
   assert.equal(env.DB.rows('SELECT pin_hash IS NULL AS none FROM profiles WHERE id = ?', LATER)[0].none, 1);

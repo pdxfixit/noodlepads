@@ -230,7 +230,6 @@ function renderProfile(fresh = false) {
   for (const b of el.profileColors.children) {
     b.setAttribute('aria-pressed', String(b.dataset.color.toLowerCase() === p.color.toLowerCase()));
   }
-  el.profileLock.hidden = !linkOf(p.id)?.pin;
   if (fresh) disarmCloud();
   drawPin(p.id);
 
@@ -256,7 +255,6 @@ function drawLeft() {
   el.profile.style.setProperty('--c', left.color);
   el.profileAvatar.replaceChildren(avatarBadge(left));
   el.profileName.textContent = left.name;
-  el.profileLock.hidden = !left.pin;
   el.profileParts.hidden = true;
   const del = el.profileDelete;
   del.classList.add('armed');
@@ -429,7 +427,6 @@ export function initPeople(hooks) {
     profileFace: document.querySelector('#profile-face'),
     profileReroll: document.querySelector('#profile-reroll'),
     profileColors: document.querySelector('#profile-colors'),
-    profileLock: document.querySelector('#profile-lock'),
     profileDelete: document.querySelector('#profile-delete'),
     profileDeleteHint: document.querySelector('#profile-delete-hint'),
     profileParts: document.querySelector('#profile-parts'),
@@ -479,8 +476,12 @@ export function initPeople(hooks) {
     openNames(r.dataset.reroll);
   });
   el.profile.addEventListener('click', onProfileClick);
-  // A sync, a PIN found new, a link dropped: the open sheet's ☁️ and 🔒 follow.
-  onCloud(() => { if (profileFor) renderProfile(); });
+  // A sync, a PIN found new, a link dropped: the open list's ☁️ (and so its
+  // ⚠️) and the open sheet's ☁️ and 🔒 follow.
+  onCloud(() => {
+    if (el.peopleDialog.open) renderPeopleEditor();
+    else if (profileFor) renderProfile();
+  });
 
   el.peopleMenu.addEventListener('click', (e) => {
     if (!e.target.closest('#people-open')) return;
