@@ -201,7 +201,7 @@ sound.
 
 **Who's playing?** A device's first person (the one the app makes on a fresh
 device) and everyone added later (➕ in 👥 People, 👋 Someone new on the PIN
-pad) are asked once, in a dialog over the screen: three big picture cards,
+pad or on 👋 Who's playing now?) are asked once, in a dialog over the screen: three big picture cards,
 each drawn as a pad in the person's pad skin. 🧸 Little noodler sets 🧸 Kids,
 🎵 Tap and make beats Regular, 🎛️ Show me everything Advanced. No ages. A tap
 plays a ready-made sound (Pop, Clap, the C chord), sets the level and moves
@@ -663,7 +663,15 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   PIN if they have one; `cloud-ui.js` `deleteLeftCloud`), and ✕ keeps it for
   their other devices. When they were the one on show, nobody else comes on
   while the sheet waits (the next one's PIN pad would cover it); closing it
-  brings the next person on. Switching ☁️ In the cloud off deletes the cloud copy
+  brings the next person on. **👋 Who's playing now?** (`who-now.js`): when
+  the person on show is deleted (Delete, or 🤷 I don't know the PIN), and at
+  start when everyone has a PIN, the board starts over here (`app.js`
+  `startOver`), hidden behind it: everyone left as the welcome's big pads, in
+  their picture and color, 🔒 in the corner of anyone with a PIN, and 👋
+  Someone new. A tap opens them, past their PIN; closing the PIN pad comes
+  back. Only a pick closes it (no ✕, Esc or backdrop), and nothing behind it
+  shows a board meanwhile: a sync or a redraw of people only redraws it. The
+  only one left, with no PIN, just shows. Switching ☁️ In the cloud off deletes the cloud copy
   and keeps them here. Under each name, a row says how much that person has on
   this device, kinds with none left out: "🔊 27 · 🥁 4 · 🎼 1 · 🎬 1", or
   "nothing yet" (`personCounts` and `countsText` in `web/model.js`). It counts

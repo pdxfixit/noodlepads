@@ -5089,6 +5089,14 @@ dialog.welcome { width: min(640px, calc(100vw - 2 * var(--gutter))); }
 .wl-cards .pad.pad.pad.wl-card .pad-emoji { align-self: center; font-size: clamp(2.2rem, 34cqw, 3.6rem); }
 .wl-cards .pad.pad.pad.wl-card .pad-label { align-self: end; font-size: clamp(0.85rem, 13cqw, 1.3rem); hyphens: none; overflow-wrap: normal; }
 @media (min-width: 560px) { .wl-cards { gap: 16px; } .wl-cards .pad.pad.pad.wl-card { height: 184px; } }
+/* 👋 Who's playing now? (who-now.js): the welcome's cards, one per person,
+   as many to a row as fit; person colors are dark, so names are white. 🔒
+   sits where a note's instrument does. */
+.wn-note { margin: -6px 0 14px; text-align: center; }
+.wn-note:empty { display: none; }
+.wl-cards.wn-cards { grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr)); }
+.wn-cards .pad.pad.pad.wl-card { color: #fff; }
+.wn-cards .pad.pad.pad.wl-card .wn-lock { font-size: clamp(1rem, 12cqw, 1.5rem); }
 .wl-foot { display: flex; justify-content: center; margin-top: 14px; }
 .wl-skip {
   min-height: 44px;

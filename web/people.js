@@ -24,10 +24,12 @@ import { openDialog, setupDialog } from './dialogs.js';
 import { announce } from './ui.js';
 import { logEvent } from './log.js';
 import { markNew, offerWelcome } from './welcome.js';
+import { whoNowOpen, openWhoNow } from './who-now.js';
 import { openThings } from './things.js';
 
 const el = {};
 let showPerson = () => {};
+let startOver = () => {};
 let profileFor = null;   // the person whose profile sheet is open
 // Someone Delete just took off this device whose cloud copy is still there:
 // {id, name, avatar, color, key, pin}. Their sheet stays open for the third tap.
@@ -137,18 +139,20 @@ export function renderPeopleEditor() {
 
 // After anyone changes: show the same person, and redraw the list and any
 // open profile sheet. When theirs went away (deleted), the board starts over
-// as on opening: someone with no PIN shows, else it waits behind the PIN pad
-// (app.js setPerson). Asking with the deleted person still the one on show
-// left them there, in the corner menu too, when the pad was closed (Ben,
-// 2026-10-24). With nobody left, the caller adds someone (app.js
-// dropLockedPerson).
-export function refreshPeople() {
+// on 👋 Who's playing now? (app.js startOver; Ben, 2026-10-24). `note` says
+// why there.
+export function refreshPeople(note) {
   const still = person(state.personId);
-  const next = people()[0];
-  if (still) showPerson(still.id);
-  else if (next) {
-    state.personId = null;
-    showPerson(next.id);
+  // Behind 👋 Who's playing now? nobody is showing: it is redrawn, and only a
+  // pick shows someone (a PIN board must never show without its PIN).
+  if (whoNowOpen()) {
+    if (still) openWhoNow(note);
+    else startOver(note);
+  } else if (still) showPerson(still.id);
+  else {
+    // The chooser takes over; 👥 People isn't left behind it.
+    if (el.peopleDialog?.open) el.peopleDialog.close();
+    startOver(note);
   }
   renderPeopleEditor();
 }
@@ -193,6 +197,9 @@ export async function deleteHere(id) {
 }
 
 // ── a person's profile sheet ──
+
+// What 👋 Who's playing now? says when the one on show was just deleted.
+const goneNote = (name) => `${name} is deleted from this device. Tap your picture.`;
 
 const profileNote = (text) => { el.profileNote.textContent = text; };
 
@@ -392,7 +399,7 @@ async function onProfileClick(e) {
     return;
   }
   el.profile.close();
-  refreshPeople();
+  refreshPeople(goneNote(p.name));
   el.personAdd.focus({ preventScroll: true });
   announce(`${p.name} is deleted from this device.`);
 }
@@ -411,6 +418,7 @@ async function deleteCloudToo() {
 
 export function initPeople(hooks) {
   showPerson = hooks.showPerson;
+  startOver = hooks.startOver ?? startOver;
   Object.assign(el, {
     // 👥 People is the last line of the corner menu (pads.js), redrawn with it,
     // so the menu's box listens for it.
@@ -456,7 +464,7 @@ export function initPeople(hooks) {
     stopHold();
     // Deleted while on show, the sheet open for the third tap: someone else
     // comes on now.
-    if (waited && !person(state.personId)) refreshPeople();
+    if (waited && !person(state.personId)) refreshPeople(goneNote(waited.name));
   });
   el.namesList.addEventListener('click', (e) => {
     const b = e.target.closest('[data-pick-name]');
