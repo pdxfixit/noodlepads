@@ -1751,7 +1751,8 @@ button.sa-row { cursor: pointer; }
 .sa-text { flex: 1; display: grid; gap: 2px; min-width: 0; }
 .sa-name { font-weight: 800; overflow-wrap: anywhere; }
 .sa-detail { font-size: 0.9rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-.sa-go { flex: none; font-weight: 900; }
+/* ▶, ■ and … in one fixed box, centered, so the icon stays put as it changes. */
+.sa-go { flex: none; width: 1.6em; text-align: center; font: 900 1.1rem/1 var(--font-ui); }
 .sa-more { justify-content: center; font-weight: 800; }
 .sa-empty { margin: 12px 0; }
 #things-note:empty { display: none; }
