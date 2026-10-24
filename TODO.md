@@ -60,7 +60,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **Real recordings for the faked sounds** (Ben, 2026-10-24: "a lot of the animal sounds and other things that could be recordings should be, rather than being digitized or faked"). Waiting on Ben's answers: which sounds, where they come from (CC0 only, as `tools/make_samples.py`; this cloud container reaches GitHub but not freesound.org or Wikimedia), and who picks each take. Then swap each file in `web/clips/kit/`, credit it in `LICENSE-samples.txt`, and run `just preset-loudness --fix`.
 
 
 

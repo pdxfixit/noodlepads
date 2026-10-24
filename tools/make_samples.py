@@ -131,6 +131,51 @@ def cut(samples, seconds, release):
     return out
 
 
+def lift(samples, db, release=0.01):
+    """`samples` `db` louder under the same peak: a limiter holds the
+    loudest moments where they were, so the body of a hit comes up. A real
+    drum is one sharp spike and a short body, and the app plays every sound
+    at the same peak, so without this a recorded snare plays about 8 dB
+    under a made one. The gain falls 2 ms ahead of each spike (no click) and
+    comes back over `release` seconds."""
+    if db <= 0:
+        return samples
+    from collections import deque
+    ceiling = max(abs(s) for s in samples) or 1.0
+    up = 10 ** (db / 20)
+    x = [s * up for s in samples]
+    n, ahead = len(x), max(1, int(0.002 * RATE))
+    need = [min(1.0, ceiling / abs(v)) if v else 1.0 for v in x]
+    # The least gain needed within `ahead` samples either side (a running minimum).
+    low, q = [1.0] * n, deque()
+    for i in range(n + ahead):
+        if i < n:
+            while q and need[q[-1]] >= need[i]:
+                q.pop()
+            q.append(i)
+        j = i - ahead
+        if j >= 0:
+            while q[0] < j - ahead:
+                q.popleft()
+            low[j] = need[q[0]]
+    back = 1 / (release * RATE)
+    g, prev = [0.0] * n, 1.0
+    for i in range(n):
+        prev = min(low[i], prev + (1 - prev) * back)
+        g[i] = prev
+    # Smoothed over `ahead` samples, so the gain never steps.
+    out, run, half = [], 0.0, ahead // 2
+    for i in range(n + half):
+        if i < n:
+            run += g[i]
+        if i - ahead >= 0:
+            run -= g[i - ahead]
+        j = i - half
+        if j >= 0:
+            out.append(x[j] * run / min(ahead, i + 1))
+    return out
+
+
 def write_wav(path, samples):
     peak = max(abs(s) for s in samples) or 1.0
     pcm = array("h", (int(max(-1.0, min(1.0, s * 0.85 / peak)) * 32767) for s in samples))
