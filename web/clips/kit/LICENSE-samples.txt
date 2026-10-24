@@ -25,5 +25,60 @@ starts, and faded out (tools/make_samples.py). The number in each name is
 the MIDI note it plays (60 is middle C). Credit to the original authors and
 Versilian Studios is encouraged by the libraries, not required.
 
+Real drums, animals and effects (2026-10-24)
+
+These are recordings too, each picked by ear from three or four takes.
+
+From VCSL (CC0 1.0, above):
+
+  bongo.wav      Membranophones/Struck Membranophones/Bongos/BongoL_Hit1_v3_rr1_Mid.wav
+  cajon.wav      Idiophones/Struck Idiophones/Cajon/Cajon_hit1_f_rr1.wav
+  clap.wav       Idiophones/Struck Idiophones/Claps/Clap_rr1.wav
+  clave.wav      Idiophones/Struck Idiophones/Claves/Claves2_Hit_v3_rr1_Mid.wav
+  conga.wav      Membranophones/Struck Membranophones/Conga/Conga_HitFM_v2_rr1_Sum.wav
+  cowbell.wav    Idiophones/Struck Idiophones/Cowbells/Cowbell2_Normal_v3_rr1_Mid.wav
+  crash.wav      Idiophones/Struck Idiophones/Clash Cymbals 1/cymbal_crash1_mf1.wav
+  hihat.wav      Idiophones/Struck Idiophones/Hi-Hat Cymbal/HiHat_Close_rr1_Mid.wav
+  kick.wav       Membranophones/Struck Membranophones/Bass Drum 2/bassdrum_hit_f.wav
+  log-drum.wav   Idiophones/Struck Idiophones/Slit Drum/LogDrumLo_MedM_v3_rr1_Sum.wav
+  open-hat.wav   Idiophones/Struck Idiophones/Hi-Hat Cymbal/HiHat_HitO_rr1_Mid.wav
+  ride.wav       Idiophones/Struck Idiophones/Suspended Cymbal 1/susCymb1_hit_bell_pp1.wav
+  rim.wav        Membranophones/Struck Membranophones/Snare Drum, Modern 3/Snare4_Xstick_v2_rr1_Mid.wav
+  shaker.wav     Idiophones/Struck Idiophones/Shaker, Large/LShaker_Hit_rr1_Mid.wav
+  snare.wav      Membranophones/Struck Membranophones/Snare Drum, Modern 1/Snare2_HitSN_v5_rr1_Mid.wav
+  taiko.wav      Membranophones/Struck Membranophones/Bass Drum 1/BDrumNew_hit_v7_rr2_Sum.wav
+  tambourine.wav Idiophones/Struck Idiophones/Tambourine 2/Tamb2_Hit_v2_rr2_Mid.wav
+  tom-high.wav   Membranophones/Struck Membranophones/Tom 1/Stick/TomH_HitS_v4_rr1_Mid.wav
+  tom-low.wav    Membranophones/Struck Membranophones/Tom 2/Stick/TomL_HitS_v4_rr1_Mid.wav
+  woodblock.wav  Idiophones/Struck Idiophones/Woodblock/wood_click3_vl2.wav
+
+From ESC-50 (github.com/karolpiczak/ESC-50), cut from Freesound recordings.
+Each is used under its Freesound original's licence, CC0 1.0 or
+Creative Commons Attribution (CC BY): the CC BY ones are credited here as
+that licence asks. ESC-50's own selection is CC BY-NC; only clips whose
+originals are CC0 or CC BY are used.
+
+  alarm.wav      Analog Timer by EagleStealthTeam, CC0
+                 https://www.freesound.org/people/EagleStealthTeam/sounds/209698/  (ESC-50 4-209698-A-37.wav)
+  buzz.wav       20060524.fly.flac by dobroide, CC BY
+                 https://www.freesound.org/people/dobroide/sounds/19501/  (ESC-50 1-19501-A-7.wav)
+  meow.wav       cat meow by tuberatanka, CC0
+                 https://www.freesound.org/people/tuberatanka/sounds/110011/  (ESC-50 2-110011-A-5.wav)
+  moo.wav        Cow.wav by Benboncan, CC BY
+                 https://www.freesound.org/people/Benboncan/sounds/58277/  (ESC-50 1-58277-A-3.wav)
+  ribbit.wav     FrogsFLP.wav by daveincamas, CC BY
+                 https://www.freesound.org/people/daveincamas/sounds/71964/  (ESC-50 3-71964-C-4.wav)
+  siren.wav      police2.wav by guitarguy1985, CC0
+                 https://www.freesound.org/people/guitarguy1985/sounds/70938/  (ESC-50 2-70938-A-42.wav)
+  tweet.wav      Song thrush (pevchiy drozd) by urupin, CC0
+                 https://www.freesound.org/people/urupin/sounds/122616/  (ESC-50 2-122616-A-14.wav)
+  woof.wav       FX_Dog Barking.wav by davidmenke, CC0
+                 https://www.freesound.org/people/davidmenke/sounds/231762/  (ESC-50 5-231762-A-0.wav)
+
+Each was made mono, 22050 Hz, 16-bit, cut from where it starts, faded out,
+and its body lifted under its peak where noted in tools/make_samples.py
+(HITS), so it plays about as loud as the other sounds; the kick, taiko and
+conga have their own overtones added so a phone speaker plays them.
+
 Every other clip in this folder is made by tools/make_placeholders.py, or
 is one of the old app's starter sounds.

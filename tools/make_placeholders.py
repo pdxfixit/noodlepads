@@ -2,7 +2,7 @@
 """Make the synthesized clips of the presets (the shared kit) in web/clips/kit/.
 
 `python3 tools/make_placeholders.py` makes them all; with names
-(`make_placeholders.py moo quack`) it makes only those, so adding a preset
+(`make_placeholders.py quack roar`) it makes only those, so adding a preset
 never touches the others. The airhorn, laser and the rest of the old
 starter sounds are not made here: they are the old app's clips, kept as
 they were.
@@ -155,49 +155,6 @@ def bright(samples):
     return [a - b for a, b in zip(samples, lowpass(samples, 0.25))]
 
 
-def kick():
-    body = osc(lambda t: 45 + 110 * math.exp(-28 * t), 0.45, "sine", lambda t: math.exp(-6.5 * t))
-    click = noise(0.012, lambda t: 0.6 * math.exp(-300 * t), seed=11)
-    return carry(mix(body, click))
-
-
-def snare():
-    tone = osc(lambda t: 185, 0.25, "triangle", lambda t: 0.6 * math.exp(-22 * t))
-    rattle = noise(0.28, lambda t: math.exp(-13 * t), seed=12)
-    return mix(tone, rattle)
-
-
-def hihat():
-    return bright(noise(0.08, lambda t: math.exp(-50 * t), seed=13))
-
-
-def open_hat():
-    return bright(noise(0.5, lambda t: math.exp(-6 * t), seed=14))
-
-
-def clap():
-    bursts = [at(d, noise(0.03, lambda t: math.exp(-110 * t), seed=15 + i)) for i, d in enumerate((0, 0.011, 0.023))]
-    tail = at(0.03, noise(0.25, lambda t: 0.6 * math.exp(-16 * t), seed=19))
-    return lowpass(mix(*bursts, tail), 0.5)
-
-
-def tom(f0, f1):
-    return lambda: osc(lambda t: f1 + (f0 - f1) * math.exp(-10 * t), 0.4, "sine", lambda t: math.exp(-8 * t))
-
-
-def crash():
-    return bright(noise(1.6, lambda t: math.exp(-2.3 * t), seed=20))
-
-
-def cowbell():
-    return lowpass(mix(osc(lambda t: 545, 0.3, "square", lambda t: math.exp(-11 * t)),
-                       osc(lambda t: 815, 0.3, "square", lambda t: 0.8 * math.exp(-11 * t))), 0.4)
-
-
-def shaker():
-    return bright(noise(0.14, lambda t: min(t / 0.03, 1) * math.exp(-28 * max(0, t - 0.03)), seed=21))
-
-
 def pluck(freq):
     return lambda: lowpass(osc(lambda t: freq, 0.7, "saw", lambda t: math.exp(-4.5 * t)), 0.22)
 
@@ -228,10 +185,6 @@ def explosion():
     return carry(mix(rumble, thump))
 
 
-def siren():
-    return osc(lambda t: 650 + 250 * math.sin(2 * math.pi * 1.4 * t), 2.0, "triangle", adsr(0.05, 0.2, 2.0))
-
-
 def whoosh():
     return lowpass(noise(0.7, lambda t: math.sin(math.pi * t / 0.7) ** 2, seed=23), 0.12)
 
@@ -242,14 +195,6 @@ def pop():
 
 def zap():
     return osc(lambda t: 120 + 1600 * math.exp(-11 * t), 0.32, "saw", lambda t: math.exp(-7 * t))
-
-
-def alarm():
-    out = []
-    for i in range(8):
-        f = 880 if i % 2 == 0 else 660
-        out += osc(lambda t, f=f: f, 0.15, "square", lambda t: 0.7)
-    return out
 
 
 def ding():
@@ -280,34 +225,13 @@ def scratch():
 
 # ── More kit: drums, chords, game and silly sounds ──────────────────────────
 
-def rim():
-    click = noise(0.02, lambda t: math.exp(-200 * t), seed=30)
-    knock = osc(lambda t: 1700, 0.06, "triangle", lambda t: 0.6 * math.exp(-60 * t))
-    return mix(click, knock)
-
-
 def snap():
     return lowpass(bright(noise(0.07, lambda t: math.exp(-70 * t), seed=31)), 0.6)
-
-
-def tambourine():
-    jingles = [at(d, bright(noise(0.12, lambda t: 0.7 * math.exp(-22 * t), seed=32 + i))) for i, d in enumerate((0, 0.012, 0.026))]
-    return mix(*jingles)
-
-
-def ride():
-    bell = osc(lambda t: 2400, 1.2, "sine", lambda t: 0.25 * math.exp(-3 * t))
-    wash = bright(noise(1.2, lambda t: 0.5 * math.exp(-2.6 * t), seed=35))
-    return mix(bell, wash)
 
 
 def boom():
     """An 808-style long, deep kick."""
     return carry(osc(lambda t: 42 + 90 * math.exp(-22 * t), 1.0, "sine", lambda t: math.exp(-2.6 * t)))
-
-
-def conga():
-    return osc(lambda t: 220 + 120 * math.exp(-40 * t), 0.35, "sine", lambda t: math.exp(-10 * t))
 
 
 def chord(*freqs):
@@ -380,21 +304,10 @@ def snare_808():
     return mix(body, bright(noise(0.25, lambda t: math.exp(-16 * t), seed=40)))
 
 
-def clave():
-    """An 808-style clave: one bright wooden tick."""
-    return osc(lambda t: 2500, 0.1, "sine", lambda t: math.exp(-55 * t))
-
-
 def tom_fill():
     """Four toms, high to low, in quick time."""
     hit = lambda f0, f1, length: osc(lambda t: f1 + (f0 - f1) * math.exp(-12 * t), length, "sine", lambda t: math.exp(-9 * t))
     return mix(hit(300, 220, 0.3), at(0.12, hit(240, 170, 0.3)), at(0.24, hit(180, 125, 0.35)), at(0.36, hit(140, 95, 0.5)))
-
-
-def moo():
-    """A cow: a low buzzy tone that opens up and sags."""
-    tone = osc(lambda t: 150 - 30 * t + 3 * math.sin(2 * math.pi * 5 * t), 1.1, "saw", adsr(0.15, 0.35, 1.1))
-    return sweep_lowpass(tone, lambda t: 0.03 + 0.09 * math.sin(math.pi * min(t / 0.9, 1)))
 
 
 def quack():
@@ -404,36 +317,11 @@ def quack():
     return one() + silence(0.08) + one()
 
 
-def tweet():
-    """A bird: three quick rising chirps."""
-    chirp = lambda: osc(lambda t: 2600 + 18000 * t, 0.07, "sine", lambda t: math.sin(math.pi * t / 0.07))
-    return chirp() + silence(0.05) + chirp() + silence(0.05) + chirp()
-
-
 def roar():
     """A lion, cartoon-sized: a growl that swells and fades."""
     growl = wobble(osc(lambda t: 95 + 25 * math.sin(math.pi * t / 1.2), 1.2, "saw", adsr(0.25, 0.4, 1.2)), 23, 0.6)
     rasp = lowpass(noise(1.2, adsr(0.25, 0.4, 1.2), seed=41, highpass=False), 0.15)
     return lowpass(mix(growl, rasp), 0.2)
-
-
-def meow():
-    """A cat: "mee-ow", the pitch up then down while the mouth opens."""
-    tone = osc(lambda t: 520 + 260 * math.sin(math.pi * min(t / 0.55, 1)) - 120 * max(0, t - 0.55), 0.75, "saw", adsr(0.04, 0.2, 0.75))
-    return sweep_lowpass(tone, lambda t: 0.06 + 0.3 * math.sin(math.pi * min(t / 0.75, 1)))
-
-
-def woof():
-    """A dog: two barks, each a falling growl with a puff of breath."""
-    bark = lambda: lowpass(mix(osc(lambda t: 300 - 350 * t, 0.17, "saw", lambda t: math.exp(-12 * t)),
-                               noise(0.17, lambda t: 0.5 * math.exp(-25 * t), seed=42)), 0.25)
-    return bark() + silence(0.12) + bark()
-
-
-def ribbit():
-    """A frog: "rib-bit", two croaks made of fast clicks."""
-    croak = lambda length: lowpass(wobble(osc(lambda t: 190, length, "square", adsr(0.01, 0.03, length)), 28, 1.0), 0.3)
-    return croak(0.14) + silence(0.06) + croak(0.1)
 
 
 def buzz():
@@ -578,12 +466,6 @@ def hat_roll():
     return mix(*(at(i * 0.036, tick(i)) for i in range(6)))
 
 
-def woodblock():
-    """A woodblock: a hollow, bouncy tock."""
-    return mix(osc(lambda t: 1050, 0.12, "sine", lambda t: math.exp(-45 * t)),
-               osc(lambda t: 2900, 0.12, "sine", lambda t: 0.3 * math.exp(-80 * t)))
-
-
 def plink():
     """A plink: one mallet note (C), round like a marimba bar."""
     return mix(osc(lambda t: 523.3, 0.6, "sine", lambda t: math.exp(-9 * t)),
@@ -635,13 +517,6 @@ def skin(f0, f1, length, decay, slap=0.0, seed=60):
     return mix(body, hit)
 
 
-def taiko():
-    """A taiko: a huge drum, a deep boom that rolls on."""
-    boom = skin(95, 52, 1.2, 3.2, slap=0.5, seed=61)
-    rumble = lowpass(noise(1.2, lambda t: 0.3 * math.exp(-4 * t), seed=62, highpass=False), 0.05)
-    return carry(drive(mix(boom, rumble), 1.6))
-
-
 def djembe():
     """A djembe's tone: the hand flat near the edge, round and ringing."""
     return mix(skin(340, 260, 0.4, 11, slap=0.35, seed=63),
@@ -654,13 +529,6 @@ def djembe_slap():
     return mix(crack, skin(520, 420, 0.15, 30, seed=65))
 
 
-def log_drum():
-    """An amapiano log drum: a round, woody bass note that bends and wobbles."""
-    tone = osc(lambda t: 110 + 30 * math.exp(-25 * t), 0.7, "triangle", lambda t: math.exp(-4.5 * t))
-    knock = osc(lambda t: 660, 0.05, "sine", lambda t: 0.3 * math.exp(-80 * t))
-    return carry(lowpass(drive(mix(tone, knock), 2.0), 0.3))
-
-
 def dhol():
     """A dhol's big side, hit with a bent stick: dhuk."""
     return carry(drive(skin(120, 68, 0.6, 6, slap=0.6, seed=66), 1.8))
@@ -671,17 +539,6 @@ def dhol_high():
     return mix(lowpass(noise(0.1, lambda t: 0.8 * math.exp(-55 * t), seed=67), 0.6),
                osc(lambda t: 620, 0.1, "triangle", lambda t: 0.6 * math.exp(-45 * t)))
 
-
-def bongo():
-    """A bongo: the small, high drum of a pair."""
-    return skin(560, 470, 0.22, 20, slap=0.3, seed=68)
-
-
-def cajon():
-    """A cajón: a wooden box you sit on; the low thump of its middle."""
-    thump = skin(130, 85, 0.35, 12, slap=0.4, seed=69)
-    wires = bright(noise(0.2, lambda t: 0.25 * math.exp(-25 * t), seed=70))
-    return carry(mix(thump, wires))
 
 # ── Instruments (ADR 0030): who plays Notes, Chords and Bass. Each is one
 # note (two for guitar), named by its MIDI number (`marimba-66` is F♯4);
@@ -790,34 +647,33 @@ INSTRUMENT_CLIPS = {
 
 
 KIT = {
-    "kick": kick, "snare": snare, "hihat": hihat, "open-hat": open_hat, "clap": clap,
-    "tom-high": tom(270, 190), "tom-low": lambda: carry(tom(150, 100)()), "crash": crash, "cowbell": cowbell, "shaker": shaker,
+    # The kick, snare, hats, toms, cymbals, hand drums, animals, siren,
+    # alarm and the rest of the real-world sounds are recordings now
+    # (tools/make_samples.py HITS; Ben, 2026-10-24).
+    "snap": snap, "boom": boom,
     "note-c": pluck(261.6), "note-d": pluck(293.7), "note-e": pluck(329.6), "note-g": pluck(392.0),
     "note-a": pluck(440.0), "note-c-high": pluck(523.3), "bass-c": bass(65.4), "bass-g": bass(98.0),
-    "coin": coin, "power-up": power_up, "jump": jump, "explosion": explosion, "siren": siren,
-    "whoosh": whoosh, "pop": pop, "zap": zap, "alarm": alarm, "ding": ding, "buzzer": buzzer,
+    "coin": coin, "power-up": power_up, "jump": jump, "explosion": explosion,
+    "whoosh": whoosh, "pop": pop, "zap": zap, "ding": ding, "buzzer": buzzer,
     "heartbeat": heartbeat, "countdown": countdown, "scratch": scratch,
-    "rim": rim, "snap": snap, "tambourine": tambourine, "ride": ride, "boom": boom, "conga": conga,
     "chord-c": chord(261.6, 329.6, 392.0), "chord-am": chord(220.0, 261.6, 329.6),
     "chord-f": chord(174.6, 220.0, 261.6), "chord-g": chord(196.0, 246.9, 293.7),
     "bass-f": bass(87.3), "bass-a": bass(110.0),
     "pew": pew, "blip": blip, "one-up": one_up, "game-over": game_over, "teleport": teleport,
     "raspberry": raspberry, "honk": honk,
-    "snare-808": snare_808, "clave": clave, "tom-fill": tom_fill,
+    "snare-808": snare_808, "tom-fill": tom_fill,
     "note-f": pluck(349.2), "note-b": pluck(493.9),
     "chord-dm": chord(293.7, 349.2, 440.0), "chord-em": chord(329.6, 392.0, 493.9),
     "chord-g7": chord(196.0, 246.9, 293.7, 349.2), "bass-d": bass(73.4), "bass-e": bass(82.4),
-    "moo": moo, "quack": quack, "tweet": tweet, "roar": roar, "meow": meow, "woof": woof,
-    "ribbit": ribbit, "buzz": buzz,
+    "quack": quack, "roar": roar,
     "warp": warp, "phaser": phaser, "robot": robot, "ufo": ufo, "beam": beam, "red-alert": red_alert,
     "computer": computer,
     "burp": burp, "toot": toot, "splat": splat, "zip": zip_away, "kazoo": kazoo, "bonk": bonk,
     "squeak": squeak,
     "kick-dusty": kick_dusty, "snare-dusty": snare_dusty, "glide": glide, "hat-roll": hat_roll,
-    "woodblock": woodblock, "plink": plink, "bloop": bloop, "vinyl": vinyl, "horn-stab": horn_stab,
+    "plink": plink, "bloop": bloop, "vinyl": vinyl, "horn-stab": horn_stab,
     "rewind": rewind,
-    "taiko": taiko, "djembe": djembe, "djembe-slap": djembe_slap, "log-drum": log_drum, "dhol": dhol,
-    "dhol-high": dhol_high, "bongo": bongo, "cajon": cajon,
+    "djembe": djembe, "djembe-slap": djembe_slap, "dhol": dhol, "dhol-high": dhol_high,
 }
 
 # The sharps and flats (Advanced-only presets, Ben 2026-10-11): the same
@@ -903,7 +759,7 @@ def cackle(path):
 
 def main(names):
     """Makes every clip, or only the ones named (file names without .wav):
-    `make_placeholders.py moo quack` leaves every other file as it is."""
+    `make_placeholders.py quack roar` leaves every other file as it is."""
     known = set(KIT) | {n for n, _, _ in KIT_CALLOUTS} | {"cackle"}
     unknown = [n for n in names if n not in known]
     if unknown:

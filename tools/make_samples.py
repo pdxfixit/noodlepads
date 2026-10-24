@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Make the recorded instruments' clips in web/clips/kit/ from CC0 sample
-libraries (ADR 0030): VSCO 2 CE (github.com/sgossner/VSCO-2-CE) and VCSL
-(github.com/sgossner/VCSL), both CC0 1.0.
+"""Make the recorded clips in web/clips/kit/: the instruments' notes (ADR
+0030) from the CC0 sample libraries VSCO 2 CE (github.com/sgossner/VSCO-2-CE)
+and VCSL (github.com/sgossner/VCSL), and the real drums, animals and
+effects (HITS; Ben, 2026-10-24) from VCSL and from ESC-50's clips
+(github.com/karolpiczak/ESC-50) whose Freesound originals are CC0 or CC-BY.
 
 `python3 -I tools/make_samples.py SOURCE_DIR` reads the few files named in
-SAMPLES below from SOURCE_DIR (a folder holding `vsco/` and `vcsl/`, the two
-libraries' trees as they are on GitHub, only those files checked out) and
-writes each one as the kit's clips are: mono, 22050 Hz, 16-bit, the quiet
-start cut off, a fixed length, faded out, peak at 85%. The libraries are not
-in this repo; web/clips/kit/LICENSE-samples.txt names what came from where.
+SAMPLES and HITS below from SOURCE_DIR (a folder holding `vsco/`, `vcsl/` and
+`esc50/`, the libraries' trees as they are on GitHub, only those files
+checked out) and writes each one as the kit's clips are: mono, 22050 Hz,
+16-bit, the quiet start cut off, a fixed length, faded out, peak at 85%. The
+libraries are not in this repo; web/clips/kit/LICENSE-samples.txt names what
+came from where and credits each CC-BY author.
 
 The downloads are someone else's files: keep them in a folder of their own,
 outside web/, and run this with `python3 -I` so nothing in that folder can
@@ -23,6 +26,9 @@ import wave
 import sys
 from array import array
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from make_placeholders import carry  # noqa: E402
 
 RATE = 22050
 KIT_OUT = Path(__file__).resolve().parent.parent / "web" / "clips" / "kit"
@@ -40,6 +46,43 @@ SAMPLES = [
     ("flute-64", "vsco", "Woodwinds/Flute/susvib/LDFlute_susvib_E3_v1_1.wav", 64, 1.3, 0.3),
     ("organ-63", "vcsl", "Aerophones/Edge-blown Aerophones/Pipe Organ/Quiet/NT5_Man3Quiet_D#3_rr1.wav", 63, 1.4, 0.3),
     ("upright-40", "vsco", "Strings/Solo Contrabass/Pizz/BKCtbss_Pizz_E1_v3_rr1.wav", 40, 1.2, 0.4),
+]
+
+# The real drums, animals and effects, each picked by ear from three or four
+# takes (Ben, 2026-10-24): (file name, library, path in it, seconds kept,
+# seconds of fade at the end, dB of lift, where the sound starts). `lift`
+# raises a hit's body under its peak (see lift()), so it plays about as loud
+# as the made sound it replaced. ESC-50's clips are five-second field
+# recordings: the sound starts `at` seconds in; VCSL's start at their onset.
+HITS = [
+    ("alarm", "esc50", "audio/4-209698-A-37.wav", 1.2, 0.3, 0, 0.0),
+    ("bongo", "vcsl", "Membranophones/Struck Membranophones/Bongos/BongoL_Hit1_v3_rr1_Mid.wav", 0.4, 0.15, 8, None),
+    ("buzz", "esc50", "audio/1-19501-A-7.wav", 1.2, 0.3, 8, 0.0),
+    ("cajon", "vcsl", "Idiophones/Struck Idiophones/Cajon/Cajon_hit1_f_rr1.wav", 0.5, 0.2, 8, None),
+    ("clap", "vcsl", "Idiophones/Struck Idiophones/Claps/Clap_rr1.wav", 0.4, 0.15, 8, None),
+    ("clave", "vcsl", "Idiophones/Struck Idiophones/Claves/Claves2_Hit_v3_rr1_Mid.wav", 0.3, 0.12, 8, None),
+    ("conga", "vcsl", "Membranophones/Struck Membranophones/Conga/Conga_HitFM_v2_rr1_Sum.wav", 0.6, 0.25, 8, None),
+    ("cowbell", "vcsl", "Idiophones/Struck Idiophones/Cowbells/Cowbell2_Normal_v3_rr1_Mid.wav", 0.5, 0.2, 8, None),
+    ("crash", "vcsl", "Idiophones/Struck Idiophones/Clash Cymbals 1/cymbal_crash1_mf1.wav", 1.6, 0.533, 4, None),
+    ("hihat", "vcsl", "Idiophones/Struck Idiophones/Hi-Hat Cymbal/HiHat_Close_rr1_Mid.wav", 0.25, 0.1, 8, None),
+    ("kick", "vcsl", "Membranophones/Struck Membranophones/Bass Drum 2/bassdrum_hit_f.wav", 0.6, 0.25, 8, None),
+    ("log-drum", "vcsl", "Idiophones/Struck Idiophones/Slit Drum/LogDrumLo_MedM_v3_rr1_Sum.wav", 0.7, 0.233, 8, None),
+    ("meow", "esc50", "audio/2-110011-A-5.wav", 0.9, 0.3, 0, 0.02),
+    ("moo", "esc50", "audio/1-58277-A-3.wav", 1.3, 0.3, 0, 0.0),
+    ("open-hat", "vcsl", "Idiophones/Struck Idiophones/Hi-Hat Cymbal/HiHat_HitO_rr1_Mid.wav", 0.6, 0.2, 0, None),
+    ("ribbit", "esc50", "audio/3-71964-C-4.wav", 0.8, 0.267, 2, 4.32),
+    ("ride", "vcsl", "Idiophones/Struck Idiophones/Suspended Cymbal 1/susCymb1_hit_bell_pp1.wav", 1.2, 0.4, 0, None),
+    ("rim", "vcsl", "Membranophones/Struck Membranophones/Snare Drum, Modern 3/Snare4_Xstick_v2_rr1_Mid.wav", 0.2, 0.08, 8, None),
+    ("shaker", "vcsl", "Idiophones/Struck Idiophones/Shaker, Large/LShaker_Hit_rr1_Mid.wav", 0.35, 0.12, 8, None),
+    ("siren", "esc50", "audio/2-70938-A-42.wav", 1.6, 0.3, 0, 0.0),
+    ("snare", "vcsl", "Membranophones/Struck Membranophones/Snare Drum, Modern 1/Snare2_HitSN_v5_rr1_Mid.wav", 0.5, 0.2, 8, None),
+    ("taiko", "vcsl", "Membranophones/Struck Membranophones/Bass Drum 1/BDrumNew_hit_v7_rr2_Sum.wav", 1.2, 0.4, 8, None),
+    ("tambourine", "vcsl", "Idiophones/Struck Idiophones/Tambourine 2/Tamb2_Hit_v2_rr2_Mid.wav", 0.5, 0.2, 8, None),
+    ("tom-high", "vcsl", "Membranophones/Struck Membranophones/Tom 1/Stick/TomH_HitS_v4_rr1_Mid.wav", 0.5, 0.167, 8, None),
+    ("tom-low", "vcsl", "Membranophones/Struck Membranophones/Tom 2/Stick/TomL_HitS_v4_rr1_Mid.wav", 0.6, 0.2, 8, None),
+    ("tweet", "esc50", "audio/2-122616-A-14.wav", 0.8, 0.267, 0, 2.57),
+    ("woodblock", "vcsl", "Idiophones/Struck Idiophones/Woodblock/wood_click3_vl2.wav", 0.25, 0.1, 8, None),
+    ("woof", "esc50", "audio/5-231762-A-0.wav", 0.7, 0.233, 0, 0.06),
 ]
 
 
@@ -204,6 +247,22 @@ def main(args):
         clip = cut(resample(mono, rate), seconds, release)
         write_wav(KIT_OUT / (name + ".wav"), clip)
         print(f"🎻 kit/{name}.wav  {len(clip) / RATE:.2f} s, MIDI {midi}")
+    for name, library, rel, seconds, release, db, at in HITS:
+        if names and name not in names:
+            continue
+        rate, mono = read_wav(source / library / rel)
+        if at is not None:
+            mono = mono[max(0, int(at * rate) - int(0.01 * rate)):int(at * rate) + int((seconds + 0.1) * rate)]
+        else:
+            peak = max(abs(s) for s in mono) or 1.0
+            start = next(i for i, s in enumerate(mono) if abs(s) > peak * 0.02)
+            mono = mono[max(0, start - int(0.02 * rate)):start + int((seconds + 0.1) * rate)]
+        # A real kick or bass drum is almost all under what a phone speaker
+        # plays: carry adds its own overtones, as the made ones have (Ben,
+        # 2026-10-17); a sound already bright enough is left as it is.
+        clip = carry(lift(cut(resample(mono, rate), seconds, release), db))
+        write_wav(KIT_OUT / (name + ".wav"), clip)
+        print(f"🥁 kit/{name}.wav  {len(clip) / RATE:.2f} s, lift {db} dB")
 
 
 if __name__ == "__main__":

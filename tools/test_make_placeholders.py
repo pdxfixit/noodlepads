@@ -24,7 +24,7 @@ class Presets(unittest.TestCase):
     def test_every_preset_is_made_here_or_is_an_old_starter(self):
         kit = json.loads((WEB / "boards.json").read_text())["kit"]
         made = set(mp.KIT) | {n for n, _, _ in mp.KIT_CALLOUTS} | {"cackle"}
-        recorded = {s[0] for s in make_samples.SAMPLES}
+        recorded = {s[0] for s in make_samples.SAMPLES} | {h[0] for h in make_samples.HITS}
         for k in kit:
             self.assertTrue((WEB / k["file"]).exists(), k["file"])
             stem = Path(k["file"]).stem
@@ -34,7 +34,7 @@ class Presets(unittest.TestCase):
                 self.assertTrue(stem in made or stem in recorded, k["file"])
             else:
                 self.assertEqual(k["file"], "clips/kit/%s.wav" % k["id"])
-                self.assertTrue(k["id"] in made or k["id"] in OLD_STARTERS, k["id"])
+                self.assertTrue(k["id"] in made or k["id"] in recorded or k["id"] in OLD_STARTERS, k["id"])
         self.assertFalse(made & OLD_STARTERS, "an old starter's clip is never regenerated")
         self.assertFalse(made & recorded, "a recording is never made here")
 
@@ -57,10 +57,10 @@ class Presets(unittest.TestCase):
             old_out = mp.KIT_OUT
             mp.KIT_OUT = Path(tmp)
             try:
-                mp.main(["kick", "pop"])
+                mp.main(["pop", "quack"])
             finally:
                 mp.KIT_OUT = old_out
-            self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), ["kick.wav", "pop.wav"])
+            self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), ["pop.wav", "quack.wav"])
             self.assertEqual((Path(tmp) / "pop.wav").read_bytes(), (WEB / "clips/kit/pop.wav").read_bytes(),
                              "the same recipe makes the same bytes")
 

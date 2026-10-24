@@ -28,7 +28,7 @@ export function softLimit(v) {
 // turned down by its boards.json `level`): the median of the presets shown
 // with Advanced off (web/boards.json `kit`), in LUFS. tests/loudness.test.mjs
 // recomputes it from web/clips/kit/, so it stays honest when presets change.
-export const PRESET_LOUDNESS = -13.8;
+export const PRESET_LOUDNESS = -14.3;
 
 // Within this many dB of the target, a sound is already even.
 export const EVEN_ENOUGH = 1;
