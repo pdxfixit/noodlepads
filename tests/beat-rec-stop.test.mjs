@@ -106,9 +106,9 @@ test('the beat stopped from outside (⏹ Stop all) ends the recording too: the b
 });
 
 // 🆕 New stops first, so the recording ends and its note is saved in the
-// beat it went into (here the scratch); then New empties the scratch, and
-// the keys' line says so, with ↩️ Undo, which brings the note back.
-test('🆕 New mid-recording ends the recording cleanly; the note is in the scratch it emptied, and Undo brings it back', async () => {
+// beat it went into (here the scratch); then New keeps that scratch in
+// 🗂️ My beats, note and all, and opens a blank one.
+test('🆕 New mid-recording ends the recording cleanly; the note is kept in 🗂️ My beats and the scratch is blank', async () => {
   const { audio } = await import('../web/audio.js');
   const { getLog } = await import('../web/log.js');
   const ctx = audio.context();
@@ -117,18 +117,19 @@ test('🆕 New mid-recording ends the recording cleanly; the note is in the scra
   ctx.currentTime = 4000.05 + 16 * 0.15;
   await wait();
   page.key('a', { code: 'KeyA' });
-  const hits = () => state.savedBeats.find((b) => b.id.startsWith('beat-scratch-') && b.personId === state.personId)
-    ?.rows.reduce((n, r) => n + r.steps.filter(Boolean).length, 0) ?? 0;
+  const hitsOf = (b) => b?.rows.reduce((n, r) => n + r.steps.filter(Boolean).length, 0) ?? 0;
+  const scratch = () => state.savedBeats.find((b) => b.id.startsWith('beat-scratch-') && b.personId === state.personId);
+  const mine = () => state.savedBeats.filter((b) => !b.id.startsWith('beat-scratch-') && b.personId === state.personId);
+  const before = new Set(mine().map((b) => b.id));
   $('#dj-beatbar').querySelector('[data-beat-new]').dispatch('click');
   assert.equal($('#dj-record').textContent, '● Record', 'not recording into the new beat');
   assert.equal(getLog().filter((e) => e.kind === 'dj').at(-1).data.why, 'stopped');
   assert.equal($('#dj-beatbar').querySelector('[data-beat-name]').value, 'Scratch beat');
-  assert.equal(hits(), 0, 'a blank scratch');
-  assert.equal(hasUndo(), true);
-  assert.equal($('#banner-text').textContent, '🆕 Your scratch beat is blank now.');
-  $('#banner-action').dispatch('click');
-  assert.equal(hits(), 1, 'Undo: the note is back in the scratch');
-  assert.equal(hasUndo(), false);
+  assert.equal(hitsOf(scratch()), 0, 'a blank scratch');
+  const kept = mine().filter((b) => !before.has(b.id));
+  assert.equal(kept.length, 1, 'the scratch joined 🗂️ My beats');
+  assert.equal(hitsOf(kept[0]), 1, 'with the note recorded');
+  assert.equal(hasUndo(), false, 'nothing was lost: no Undo');
   $('#stop-all').dispatch('click');
   ctx.currentTime = 0;
 });

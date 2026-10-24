@@ -192,7 +192,7 @@ const VIEWS = {
   edit: { screen: 'pads', js: q('#edit-toggle') },
   settings: { screen: 'pads', js: q('#settings-open') },
   // The banner with a notice, on Pads and over ⚙️ Settings. The Undo banner
-  // shows in edit-undo (Pads), new-full (Beats), keys-new-full and song-new-full.
+  // shows in edit-undo (Pads); 🆕 New's kept line in new-full (Beats), keys-new-full and song-new-full.
   notice: { screen: 'pads', js: NOTICE },
   'settings-notice': { screen: 'pads', js: q('#settings-open') + NOTICE },
   people: { screen: 'pads', js: q('#people-open') },
@@ -295,8 +295,8 @@ const VIEWS = {
   // line on a wide screen, 💃 ⌨️ 🗂️ on their own row above it on a phone; keys-long-name with ⌨️ Keys on.
   'beat-long-name': { screen: 'beats', js: LONG_NAME('.beat-bar') },
   'keys-long-name': { screen: 'beats', keys: true, js: LONG_NAME('#dj-beatbar') },
-  // 🆕 New over a scratch with hits (Ska loaded): the blank scratch and the Undo line;
-  // keys-new-full is the same with ⌨️ Keys on (the keys' line), song-new-full on Song (a kept beat, twice).
+  // 🆕 New over a scratch with hits (Ska loaded): the blank scratch and the line saying it was kept;
+  // keys-new-full is the same with ⌨️ Keys on, song-new-full on Song (a kept beat, twice).
   'new-full': { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('latin') + q('[data-groove="ska"]') + nap + q('.beat-bar [data-beat-new]') + nap },
   'keys-new-full': { screen: 'beats', keys: true, js: q('#dj-beatbar [data-beat-grooves]') + GROOVE_GROUPS_OPEN('dance') + q('[data-groove="house"]') + nap
     + q('#dj-beatbar [data-beat-new]') + nap },
