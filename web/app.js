@@ -31,14 +31,15 @@ import { initBulk } from './bulk.js';
 import { initSheet, openSheet, setBeatTempo, isRecording } from './sheet.js';
 import { initUpdate } from './update.js';
 import { registerOffline } from './offline.js';
-import { initPeople, refreshPeople, addPerson, deleteHere, editLook, openPictures } from './people.js';
+import { initPeople, refreshPeople, addPerson, deleteHere, editLook, openPictures, storedLists } from './people.js';
+import { initThings } from './things.js';
 import { initWelcome, markNew, offerWelcome } from './welcome.js';
 import { initTips, tipsScreen } from './tips.js';
 import { initNudge } from './nudge.js';
 import { beatHasHits } from './firsts.js';
 import { initCloud, needsPin, leftPerson, onCloud } from './cloud.js';
 import { initCloudUI, askToOpen, shareSounds } from './cloud-ui.js';
-import { renderPreview } from './share-render.js';
+import { renderPreview, renderAudio } from './share-render.js';
 import { initBackups, storeLoaded, whatIsHere } from './backup-ui.js';
 import { initSettingsUI, showSettings } from './settings-ui.js';
 import { initKids, showKids, refreshKids, kidsShowing, kidsBusy, askGrownUp, kidsKeydown, kidsKeyup } from './kids.js';
@@ -817,6 +818,28 @@ async function start() {
   initSheet();
   initBulk({ share: shareSounds });   // ✏️ Edit sounds with sounds chosen: Move, Color · picture, Voice, Share, Delete
   initPeople({ showPerson: setPerson });
+  // 🗂️ See all, from a profile's count line: everything of one person's,
+  // each row playing in place; a beat, song or take is recorded as a share's
+  // preview is, at the device's own rate.
+  initThings({
+    lists: storedLists,
+    anyone: (id) => people({ includeHidden: true }).find((p) => p.id === id),
+    preset: (kitId) => (state.manifest.kit ?? []).find((k) => k.id === kitId) ?? null,
+    clipById: (cid, personId) => clipsFor(personId, { includeHidden: true, allPresets: true }).find((c) => c.id === cid) ?? anyClip(cid),
+    sampleClips: (personId) => [
+      ...clipsFor(personId, { includeHidden: true }).filter((c) => c.source === 'user').sort((a, b) => (b.created || 0) - (a.created || 0)).slice(0, 1),
+      ...clipsFor(personId).filter((c) => c.source !== 'user').slice(0, 1),
+    ],
+    render: (kind, id, personId, rate) => renderAudio(kind, id, {
+      seq,
+      rate,
+      clipById: (cid) => anyClip(cid),
+      beatById: (bid) => state.savedBeats.find((b) => b.id === bid),
+      songById: (sid) => state.songbook.find((s) => s.id === sid)
+        ?? [...state.songs.values()].find((s) => s.personId === personId && String(s.id ?? '') === sid),
+      takeById: (tid) => state.takes.find((t) => t.id === tid),
+    }),
+  });
   // 👋 Who's playing? for a new person (ADR 0028). A card's sound is the
   // person's copy of a ready-made one.
   initWelcome({

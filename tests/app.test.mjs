@@ -350,8 +350,9 @@ test('deleting Pip (from boards.json) asks twice, then removes his sounds, beats
   state.orders.set('pip', { personId: 'pip', ids: ['pip-laser'] });
   $('#people-open').dispatch('click');
   assert.equal(removeButton(0).textContent, 'Delete (and 🔊 1 sound)');
-  assert.equal($('#people-edit').children[0].querySelector('.pe-counts').textContent, '🔊\u00a01\u00a0· 🥁\u00a01', 'the row says what Pip has here');
-  assert.equal($('#people-edit').children[0].querySelector('.pe-counts').getAttribute('aria-label'), 'Pip has 1 sound, 1 beat');
+  // ✏️ 1: an earlier test changed one of Pip's presets, and preset edits count too (🗂️ See all).
+  assert.equal($('#people-edit').children[0].querySelector('.pe-counts').textContent, '🔊\u00a01\u00a0· 🥁\u00a01\u00a0· ✏️\u00a01', 'the row says what Pip has here');
+  assert.equal($('#people-edit').children[0].querySelector('.pe-counts').getAttribute('aria-label'), 'Pip has 1 sound, 1 beat, 1 preset edit');
 
   removeButton(0).dispatch('click');
   assert.equal(removeButton(0).textContent, 'Tap again to delete');

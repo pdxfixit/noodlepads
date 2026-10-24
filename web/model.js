@@ -465,30 +465,72 @@ export const KIND_EMOJI = Object.freeze({
   people: '👥', edits: '✏️', djKeys: '🎛️', shares: '🔗', layouts: '⌨️', touchLayouts: '👆',
 });
 
-// The kinds a person's row in 👥 People counts, in order, with their words.
-// ⭐ My voices are IndexedDB `voices` (state.myVoices).
-const PERSON_KINDS = [
-  ['sounds', 'sound', 'sounds'], ['beats', 'beat', 'beats'], ['songs', 'song', 'songs'],
-  ['takes', 'take', 'takes'], ['voices', 'voice', 'voices'],
-];
+// The kinds a person has, in order, with their words: what a row in
+// 👥 People counts and what 🗂️ See all lists (Ben, 2026-10-24: every kind).
+// ⭐ My voices are IndexedDB `voices` (state.myVoices); ✏️ preset edits are
+// `overrides`; 🎛️ key sets are a person's `decks` record, with keys changed.
+export const PERSON_KINDS = Object.freeze([
+  ['sounds', 'sound', 'sounds', 'Sounds'], ['beats', 'beat', 'beats', 'Beats'], ['songs', 'song', 'songs', 'Songs'],
+  ['takes', 'take', 'takes', 'Takes'], ['voices', 'voice', 'voices', 'My voices'],
+  ['edits', 'preset edit', 'preset edits', 'Preset edits'], ['djKeys', 'key set', 'key sets', 'Key sets'],
+  ['layouts', 'key layout', 'key layouts', 'Key layouts'], ['touchLayouts', 'touch layout', 'touch layouts', 'Touch layouts'],
+].map(Object.freeze));
 
 const listOf = (lists, name) => (Array.isArray(lists?.[name]) ? lists[name] : []);
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const madeOn = (t) => (Number.isFinite(t) && t > 0
+  ? `Made ${new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : '');
+const newestFirst = (a, b) => (b.at - a.at) || a.name.localeCompare(b.name);
 
-// How many of each kind `personId` has on this device. `lists` holds the
-// stores as lists, the way a backup does. Songs are the saved songs, plus an
-// open song with something in it that isn't one of them.
-export function personCounts(lists, personId) {
+// Everything `personId` has on this device, by kind, newest first: each
+// {kind, id, name, emoji, detail, at}. `lists` holds the stores as lists, the
+// way a backup does. Songs are the saved songs, plus an open song with
+// something in it that isn't one of them. `preset(kitId)` names a preset a
+// ✏️ edit changes ({label, emoji}); without it the edit shows its id.
+export function personThings(lists, personId, { preset = () => null, dateText = madeOn } = {}) {
   const mine = (name) => listOf(lists, name).filter((r) => r?.personId === personId);
+  const item = (kind, r, name, emoji, detail, at = r?.created) => ({
+    kind, id: String(r?.id ?? ''), name: name || 'No name', emoji: emoji || KIND_EMOJI[kind], detail: detail || '', at: Number(at) || 0,
+  });
   const saved = mine('songbook');
   const savedIds = new Set(saved.map((s) => s?.id).filter(Boolean));
   const open = mine('songs').filter((s) => songHasBeats(s) && !(s.id && savedIds.has(s.id)));
-  return {
-    sounds: mine('clips').length,
-    beats: mine('beats').length,
-    songs: saved.length + open.length,
-    takes: mine('takes').length,
-    voices: mine('voices').length,
+  const scratch = (r, prefix, word) => typeof r?.id === 'string' && r.id.startsWith(prefix)
+    && (r.name && r.name !== 'Scratch' ? `${r.name} (scratch)` : `Scratch ${word}`);
+  const prefix = `${personId}-`;
+  const keys = (k) => Object.values(k && typeof k === 'object' ? k : {}).length;
+  const deck = listOf(lists, 'decks').find((d) => d?.personId === personId);
+  const out = {
+    sounds: mine('clips').map((c) => item('sounds', c, c.label, c.emoji, dateText(c.created))),
+    beats: mine('beats').map((b) => {
+      const bars = Number(b.bars) || 1;
+      return item('beats', b, scratch(b, 'beat-scratch-', 'beat') || b.name, '', `${plural(bars, 'bar', 'bars')} · ${Number(b.bpm) || 100} BPM`, b.saved ?? b.created);
+    }),
+    songs: [...saved, ...open].map((s) => {
+      const lanes = (Array.isArray(s.lanes) ? s.lanes : []).filter((l) => l?.blocks?.length).length;
+      const tempo = Number(s.tempo) ? ` · ${Number(s.tempo)} BPM` : '';
+      return item('songs', s, scratch(s, 'song-scratch-', 'song') || s.name, '', `${plural(lanes, 'lane', 'lanes')}${tempo}`, s.saved ?? s.created);
+    }),
+    takes: mine('takes').map((t) => {
+      const sec = Math.max(0, Number(t.duration) || 0);
+      return item('takes', t, t.name, '', `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')}`);
+    }),
+    voices: mine('voices').map((v) => item('voices', v, v.name, v.emoji, dateText(v.created), v.used || v.created)),
+    edits: listOf(lists, 'overrides').filter((o) => typeof o?.id === 'string' && o.id.startsWith(prefix)).map((o) => {
+      const p = preset(o.id.slice(prefix.length));
+      return item('edits', o, o.label || p?.label || o.id.slice(prefix.length), o.emoji || p?.emoji, o.hidden ? 'Preset, hidden' : 'Preset, changed', 0);
+    }),
+    djKeys: deck && keys(deck.keys) ? [item('djKeys', { id: deck.personId }, 'My keys', '', plural(keys(deck.keys), 'key changed', 'keys changed'), 0)] : [],
+    layouts: mine('layouts').map((l) => item('layouts', l, l.name, '', plural(keys(l.keys), 'key', 'keys'))),
+    touchLayouts: mine('touchLayouts').map((l) => item('touchLayouts', l, l.name, '', plural(Array.isArray(l.bands) ? l.bands.length : 0, 'group', 'groups'))),
   };
+  for (const list of Object.values(out)) list.sort(newestFirst);
+  return out;
+}
+
+// How many of each kind `personId` has on this device (personThings).
+export function personCounts(lists, personId, opts) {
+  return Object.fromEntries(Object.entries(personThings(lists, personId, opts)).map(([k, list]) => [k, list.length]));
 }
 
 // The counts as a row shows them: "🔊 27 · 🥁 4 · 🎼 1", kinds with none

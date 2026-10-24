@@ -204,6 +204,14 @@ const VIEWS = {
   'profile-pin': { screen: 'pads', js: `${PIN_LINK} ${q('#people-open')} ${q('#people-edit [data-profile]')} ${nap}` },
   'profile-guard': { screen: 'pads', js: `${PIN_LINK} ${q('#people-open')} ${q('#people-edit [data-profile]')} ${nap}
     ${q('#profile-colors [aria-pressed="false"]')} ${nap}` },
+  // 🗂️ See all (a profile's count line): six made-up sounds (MINE), two beats,
+  // a take and a key layout of the kid's own, so every part of the sheet shows.
+  'see-all': { screen: 'pads', js: `${MINE}
+    state.savedBeats.push({ id: 'beat-look-1', personId: pid, name: 'Funky Pickle', bars: 2, bpm: 120, rows: [], saved: 9 },
+      { id: 'beat-scratch-' + pid, personId: pid, name: 'Scratch', bars: 1, bpm: 100, rows: [], saved: 1 });
+    state.takes.push({ id: 'take-look-1', personId: pid, name: 'Take 1', duration: 42, events: [], created: 3 });
+    state.layouts.push({ id: 'layout-look-1', personId: pid, name: 'Zoo keys with a very long name indeed', keys: { KeyA: 'user-look-0' }, created: 2 });
+    ${q('#people-open')} ${q('#people-edit [data-profile]')} ${q('#profile-counts')} ${nap}` },
   // 👥 People's Pick a name list (a profile's 🎲).
   'people-names': { screen: 'pads', js: `${q('#people-open')} ${q('#people-edit [data-profile]')} ${q('#profile-reroll')}` },
   // 👥 People with four people who have different amounts (the counts under each name).

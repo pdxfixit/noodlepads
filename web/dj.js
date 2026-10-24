@@ -12,7 +12,7 @@
 // click track) and 🥁 Beats with ⌨️ Keys on (mode 'beat': the open beat
 // above the keys, ● Record into it). app.js picks the mode with setMode.
 
-import { countAt, KEY_ROWS, KEY_CODES, keyboardOrder, defaultDeck, fallbackLabel, layoutLabel, detectLayout, LAYOUTS, LAYOUT_NAMES, keyFor, takeFrom, clockText, MAX_TAKE_SECONDS, planTake, createSnapper, tapTempo, TAP_GAP_MAX } from './rhythm.js';
+import { countAt, KEY_ROWS, KEY_CODES, keyboardOrder, defaultDeck, fallbackLabel, layoutLabel, detectLayout, LAYOUTS, LAYOUT_NAMES, keyFor, takeFrom, clockText, MAX_TAKE_SECONDS, createSnapper, tapTempo, TAP_GAP_MAX } from './rhythm.js';
 import { encodeWav, SIGNATURES, COMMON_BPMS, tempoStops, stopFor, pillHolds, typedBpm } from './sequencer.js';
 import { recall, remember, newId } from './util.js';
 import { PICTURES, pictureTakenBy } from './model.js';
@@ -26,7 +26,7 @@ import { drawSpeaker, speakerControls, percent } from './row-volume.js';
 import { rowParts, rowSpeaker, rowEmoji, twinRows } from './beat-row.js';
 import { logEvent } from './log.js';
 import { countPlay } from './play-count.js';
-import { makeVoice, fadeStop } from './audio.js';
+import { renderTake } from './share-render.js';
 import { fingerTaps, isFinger } from './finger.js';
 import { soundsOf, defaultTouch, touchOrder, touchSounds } from './touch.js';
 import { drawBands, createTouchEditor } from './dj-touch.js';
@@ -624,26 +624,10 @@ export function createDJ({ el, deps }) {
   async function makeSound(take, button) {
     if (button) { button.disabled = true; button.textContent = 'Making…'; }
     try {
-      const clips = [...new Set(take.events.map((e) => e.clipId))].map((id) => deps.clipById(id)).filter(Boolean);
-      const loaded = new Map();
-      for (const clip of clips) { try { loaded.set(clip.id, await deps.loadSound(clip)); } catch { /* left out */ } }
-      const plays = planTake(take, new Map([...loaded].map(([id, l]) => [id, l.duration])));
-      if (!plays.length) { deps.announce?.('None of the sounds in this take are here any more.'); return null; }
-      const rate = deps.sampleRate();
-      const seconds = Math.min(MAX_TAKE_SECONDS, Math.max(take.duration, ...plays.map((p) => p.at + loaded.get(p.clipId).duration)));
-      const ctx = new OfflineAudioContext(2, Math.max(1, Math.ceil(seconds * rate)), rate);
       // Each play as it was heard: a hit the next one cut off stops there,
       // with the same short fade (planTake `end`; 🔔 Overlap lets it ring).
-      for (const { clipId, at, end } of plays) {
-        const { buffer, duration } = loaded.get(clipId);
-        const voice = makeVoice(ctx, buffer, ctx.destination);
-        voice.src.start(at, 0, duration);
-        if (end != null && end < at + duration) fadeStop(voice, end);
-      }
-      const out = await ctx.startRendering();
-      let peak = 0;
-      for (let c = 0; c < out.numberOfChannels; c++) for (const v of out.getChannelData(c)) peak = Math.max(peak, Math.abs(v));
-      if (peak > 0) for (let c = 0; c < out.numberOfChannels; c++) { const d = out.getChannelData(c); for (let k = 0; k < d.length; k++) d[k] *= 0.9 / peak; }
+      const out = await renderTake(take, { clipById: deps.clipById, loadSound: deps.loadSound, rate: deps.sampleRate(), channels: 2 });
+      if (!out) { deps.announce?.('None of the sounds in this take are here any more.'); return null; }
       const names = deps.soundNames();
       const label = names.includes(take.name) ? soundName(names) : take.name;
       const clip = await deps.addSound({ label, blob: encodeWav(out) });

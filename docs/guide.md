@@ -661,7 +661,32 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   their other devices. Switching ☁️ In the cloud off deletes the cloud copy
   and keeps them here. Under each name, a row says how much that person has on
   this device, kinds with none left out: "🔊 27 · 🥁 4 · 🎼 1 · 🎬 1", or
-  "nothing yet" (`personCounts` and `countsText` in `web/model.js`).
+  "nothing yet" (`personCounts` and `countsText` in `web/model.js`). It counts
+  nine kinds: sounds, beats, songs, takes, ⭐ voices, ✏️ preset edits (a
+  person's `overrides`), 🎛️ key sets (their `decks` record, once a key is
+  changed), ⌨️ key layouts and 👆 touch layouts.
+- **🗂️ See all** (Ben, 2026-10-24; `web/things.js`): the same count line at
+  the top of a profile sheet is a button, "On this device: 🔊 27 · 🥁 4 … See
+  all ›". It opens a sheet over the profile, "Everything <name> has": a chip
+  per kind (All, then the nine, each with its count, 0 included; they fill the
+  width in as many lines as it takes), then the list (`personThings` in
+  `web/model.js`, which `personCounts` counts, so a chip is always its list's
+  length). Under All, each kind they have gets a heading and its three newest,
+  then ＋ N more, which picks that kind's chip; a kind with none gets no
+  heading, and its chip says "No beats yet". Each row: its picture, its name
+  (a scratch beat or song reads "Scratch beat", or "Ska (scratch)"), and one
+  fact: a sound's or voice's day made, a beat's bars and tempo, a song's lanes
+  and tempo, a take's length, whether a preset edit changed or hid it, how
+  many keys a key set changed, a layout's keys or groups. A tap plays it right
+  there in its own audio slot (`see-all`), ■ while it plays, … while it
+  renders: a sound or preset edit as its pad plays it; a beat twice round, a
+  song or a 🎬 take as heard, each recorded first as a share's preview is
+  (`share-render.js` `renderAudio`, at the device's rate); a ⭐ voice on their
+  newest own sound, else (none, or it won't load) their first preset. A second tap, another row or ✕
+  stops it. Key sets and layouts have no sound of their own: no ▶. It reads
+  this device only: a person in the cloud syncs in the background (Cloud
+  profiles, below), so it is at most a sync behind. It only shows and plays;
+  deleting stays in Edit sounds, 🗂️ My beats and 🗂️ My songs.
 - **One emoji per kind** (`KIND_EMOJI` in `web/model.js`): 🔊 sounds,
   🥁 beats, 🎼 songs, 🎬 takes, ⭐ my voices, 👥 people, ✏️ sound edits,
   🎛️ key sets, 🔗 shares, ⌨️ key layouts, 👆 touch layouts. Every count or kind name uses it: People, the

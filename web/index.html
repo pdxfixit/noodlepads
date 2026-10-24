@@ -599,7 +599,8 @@
       <!-- Hidden once they are deleted here with a cloud copy left: then only
            Delete shows, for its third tap (people.js). -->
       <div id="profile-parts">
-        <p class="pf-counts" id="profile-counts"></p>
+        <!-- How much they have here; a tap opens 🗂️ See all, everything of theirs (things.js). -->
+        <button type="button" class="pf-counts" id="profile-counts"><span class="pf-counts-text" id="profile-counts-text"></span> <span class="pf-see" aria-hidden="true">See all ›</span></button>
         <div class="pf-looks">
           <button type="button" class="pf-pic" id="profile-picture" data-avatar>
             <span class="pf-pic-face" id="profile-face" aria-hidden="true"></span>
@@ -654,6 +655,20 @@
       <div class="sheet-actions">
         <button type="button" class="quiet" id="names-more">🎲 More names</button>
       </div>
+    </div>
+  </dialog>
+
+  <!-- A profile's count line opens it: everything that person has on this device, by kind, each row playing in place (things.js). -->
+  <dialog id="things-dialog" class="np-dialog" aria-labelledby="things-title">
+    <div class="chooser-body">
+      <div class="sheet-head">
+        <h2 id="things-title">Everything</h2>
+        <button type="button" class="close" data-close aria-label="Close">✕</button>
+      </div>
+      <div class="sa-chips" id="things-chips" role="group" aria-label="Show"></div>
+      <p class="set-note" id="things-note" role="status"></p>
+      <div id="things-list"></div>
+      <p class="field-hint sa-foot">On this device. Presets show only once changed (✏️).</p>
     </div>
   </dialog>
 
