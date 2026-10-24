@@ -66,6 +66,7 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 
 
+- **🗂️ See everything a person has** (Ben, 2026-10-24): on the profile sheet, a button that lists every one of that person's own things (sounds, beats, songs, …). Mockup sent for his OK (https://claude.ai/artifact/ERfYQ89QffiDYRB1JgRTyM): the count line becomes "See all ›" and opens a sheet grouped by kind. Waits on his answers: which kinds, what a tap does, device only or the cloud too.
 - **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (`docs/design/more-kinds-of-music.md`; decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups, the emoji rule's exceptions). The grooves, 🧸 Kids' pentatonic toy keys and instruments' phase 1 are built; next:
   1. Instruments, phase 3 (ADR 0030; the pickers everywhere, 🧸 Kids' instrument button, the grooves' instruments and chips, Soca and Chiptune are built): one ready-made key layout per family in ✏️ Layout's keys.
 
