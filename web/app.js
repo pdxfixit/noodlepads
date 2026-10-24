@@ -586,8 +586,6 @@ function makeSequencer() {
     onGroovesOpen: () => showCard(),   // 🎧 From a song's card, for this person's level
     // ⇆ Move on or off: the ⇆ keys show it.
     onStop: () => dj?.beatStopped(),
-    // 🆕 New with ⌨️ Keys on: its Undo is on the keys' line.
-    offerKeysUndo: (text, fn) => dj?.offerUndo(text, fn),
     // The chooser's sections: the shared kit once (this board's copies, so its
     // renames and hides apply), then each person's own sounds, this board first.
     groups: () => {

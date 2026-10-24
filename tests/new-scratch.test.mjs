@@ -1,9 +1,10 @@
 // 🆕 New opens a blank scratch (Ben, 2026-10-12: "if someone taps new, that
 // should open up an entirely blank beat screen"), on Beats with ⌨️ Keys off
-// and on, and on 🎼 Song. Nothing joins 🗂️ My beats or My songs: only 💾 Keep
-// adds one. A named beat open stays in the list as it was. A scratch with
-// rows (or slots) that New empties is said in a line with ↩️ Undo, which
-// brings it back with the beat (or song) open before. Layout needs a
+// and on, and on 🎼 Song. A named beat open stays in the list as it was. A
+// scratch with hits (or blocks) is kept first (Ben, 2026-10-24: 🗂️ See all
+// lists it as theirs, and New had deleted it): it joins 🗂️ My beats or My
+// songs, named as 💾 Keep would name it, whether it was open or not, and a
+// line says so. Nothing is lost, so there is no Undo. Layout needs a
 // browser (`just look new-full`, `just look keys-new-full`, `just look song-new-full`).
 
 import { test, before } from 'node:test';
@@ -14,6 +15,7 @@ import { testManifest } from './test-board.mjs';
 import { hasUndo } from './banner.mjs';
 import { dropBeat, allBlocks } from './song-ui.mjs';
 import { state } from '../web/state.js';
+import { personThings } from '../web/model.js';
 
 let page;
 let $;
@@ -65,66 +67,73 @@ test('🆕 New with a named beat open: a blank scratch, the beat stays in 🗂�
   assert.equal(state.patterns.get(state.personId) ?? null, null, 'the scratch is open');
 });
 
-test('🆕 New over a scratch with hits: it empties, a line says so, and ↩️ Undo brings the hits back', () => {
+// What 🗂️ See all lists as this person's beats, by name.
+const seeAll = () => personThings({ beats: state.savedBeats }, state.personId).beats;
+const added = (before) => mine().filter((b) => !before.has(b.id));
+
+test('🆕 New over a scratch with hits: it joins 🗂️ My beats as it was, a line says so, and the scratch is blank', () => {
   fillScratch();
   assert.equal(hitsOf(scratch()), 1);
   assert.equal(scratch().bars, 2);
-  const count = mine().length;
+  assert.equal(seeAll().filter((b) => b.name === 'Scratch beat').length, 1, '🗂️ See all lists the scratch');
+  const before = new Set(mine().map((b) => b.id));
   bar().querySelector('[data-beat-new]').dispatch('click');
   assert.equal(name(), 'Scratch beat');
   assert.equal(rows().length, 0);
   assert.equal($('#seq-bars').querySelector('[data-bars="1"]').getAttribute('aria-pressed'), 'true', 'the bars go back to one');
   assert.equal(scratch(), undefined, 'the scratch is empty');
-  assert.equal(mine().length, count, 'nothing joins 🗂️ My beats');
-  assert.equal(hasUndo(), true);
-  assert.equal($('#banner-text').textContent, '🆕 Your scratch beat is blank now.');
-  tap('#banner-action');
-  assert.equal(hasUndo(), false);
-  assert.equal(name(), 'Scratch beat');
-  assert.equal(rows().length, 1, 'Undo: the row is back');
-  assert.equal(hitsOf(scratch()), 1, 'and its hit');
-  assert.equal(scratch().bars, 2, 'and its bars');
+  const kept = added(before);
+  assert.equal(kept.length, 1, 'one beat joins 🗂️ My beats');
+  assert.equal(hitsOf(kept[0]), 1, 'with its hit');
+  assert.equal(kept[0].bars, 2, 'and its bars');
+  assert.ok(seeAll().some((b) => b.name === kept[0].name), '🗂️ See all still lists it, under its new name');
+  assert.equal($('#banner-text').textContent, `Kept as “${kept[0].name}” in 🗂️ My beats. A blank scratch beat.`);
+  assert.equal(hasUndo(), false, 'nothing was lost: no Undo');
 });
 
-test('🆕 New with a named beat open over a full scratch: Undo brings back both, the named beat open', () => {
-  const named = mine()[0].name;
+test('🆕 New with a named beat open over a groove in the scratch: the groove is kept under its name, the named beat as it was', () => {
+  const named = mine()[0];
+  $('#seq-grooves').dispatch('click');
+  $('#groove-list').querySelector('[data-groove="four"]').dispatch('click');
+  assert.equal(name(), 'Four on the floor (scratch)');
   bar().querySelector('[data-beat-open]').dispatch('click');
-  $('#lib-list').children.find((li) => li.querySelector('.lib-name').textContent === named).querySelector('[data-load]').dispatch('click');
-  assert.equal(name(), named);
+  $('#lib-list').children.find((li) => li.querySelector('.lib-name').textContent === named.name).querySelector('[data-load]').dispatch('click');
+  assert.equal(name(), named.name, 'the named beat is open; the groove waits in the scratch');
+  const was = JSON.stringify(state.savedBeats.find((b) => b.id === named.id));
+  const before = new Set(mine().map((b) => b.id));
   bar().querySelector('[data-beat-new]').dispatch('click');
   assert.equal(name(), 'Scratch beat');
-  assert.equal(hasUndo(), true, 'the scratch it emptied had hits');
-  tap('#banner-action');
-  assert.equal(name(), named, 'the beat open before');
-  assert.equal(hitsOf(scratch()), 1, 'and the scratch as it was');
+  assert.equal(scratch(), undefined);
+  const kept = added(before);
+  assert.equal(kept.length, 1, 'the scratch it was not showing is kept too');
+  assert.match(kept[0].name, /Four on the floor/, 'named after its groove, as 💾 Keep names it');
+  assert.ok(hitsOf(kept[0]) > 0);
+  assert.equal(JSON.stringify(state.savedBeats.find((b) => b.id === named.id)), was, `“${named.name}” is as it was`);
+  assert.equal(hasUndo(), false);
 });
 
-test('⌨️ Keys on: 🆕 New opens the blank scratch; a full one is said on the keys\' line, with ↩️ Undo', () => {
+test('⌨️ Keys on: 🆕 New opens the blank scratch; a full one is kept, with a line', () => {
+  fillScratch();
   keysOn(page);
   const djName = () => $('#dj-beatbar').querySelector('[data-beat-name]').value;
-  const named = djName();
-  const count = mine().length;
+  const before = new Set(mine().map((b) => b.id));
   $('#dj-beatbar').querySelector('[data-beat-new]').dispatch('click');
   assert.equal(djName(), 'Scratch beat');
   assert.equal($('#dj-grid').children.length, 0, 'no rows');
   assert.equal($('#dj-no-rows').hidden, false, 'the line points to the keys');
   assert.equal(scratch(), undefined);
-  assert.equal(mine().length, count, 'nothing joins 🗂️ My beats');
-  assert.equal(hasUndo(), true);
-  assert.equal($('#banner-text').textContent, '🆕 Your scratch beat is blank now.');
-  tap('#banner-action');
+  const kept = added(before);
+  assert.equal(kept.length, 1, 'it joins 🗂️ My beats');
+  assert.equal(hitsOf(kept[0]), 1);
+  assert.equal($('#banner-text').textContent, `Kept as “${kept[0].name}” in 🗂️ My beats. A blank scratch beat.`);
   assert.equal(hasUndo(), false);
-  assert.equal(djName(), named, 'Undo: the beat open before');
-  assert.equal(hitsOf(scratch()), 1, 'and the scratch as it was');
-  // An empty scratch emptied: no line.
+  // An empty scratch: nothing kept.
   $('#dj-beatbar').querySelector('[data-beat-new]').dispatch('click');
-  $('#banner-close').dispatch('click');
-  $('#dj-beatbar').querySelector('[data-beat-new]').dispatch('click');
-  assert.equal(hasUndo(), false, 'nothing lost, nothing to undo');
+  assert.equal(added(before).length, 1, 'nothing more joins');
   keysOff(page);
 });
 
-test('🎼 Song: 🆕 New opens a blank scratch song; nothing joins 🗂️ My songs; a full one has ↩️ Undo', () => {
+test('🎼 Song: 🆕 New opens a blank scratch song; a scratch with blocks joins 🗂️ My songs, with a line', () => {
   tap('#song-tab');
   const songs = () => state.songbook.filter((s) => s.personId === state.personId && !s.id.startsWith('song-scratch-'));
   const songScratch = () => state.songbook.find((s) => s.personId === state.personId && s.id.startsWith('song-scratch-'));
@@ -138,25 +147,21 @@ test('🎼 Song: 🆕 New opens a blank scratch song; nothing joins 🗂️ My s
   tap('#song-new');
   assert.equal($('#song-name').value, 'Scratch song');
   assert.equal(allBlocks($).length, 0);
-  assert.equal(hasUndo(), false, 'the scratch was empty: no Undo');
+  assert.equal(hasUndo(), false, 'the scratch was empty: nothing kept, no Undo');
   assert.equal(JSON.stringify(songs()), before, `“${named}” stays as it was, and nothing joins the list`);
-  // A scratch with slots: emptied, with Undo.
+  // A scratch with blocks: kept, then blank.
   addBeat();
   addBeat();
   assert.equal(blocks(songScratch()), 2);
+  const ids = new Set(songs().map((x) => x.id));
   tap('#song-new');
+  assert.equal($('#song-name').value, 'Scratch song');
   assert.equal(allBlocks($).length, 0);
   assert.equal(songScratch(), undefined);
-  assert.equal(JSON.stringify(songs()), before);
-  assert.equal(hasUndo(), true);
-  assert.equal($('#banner-text').textContent, '🆕 Your scratch song is blank now.');
-  tap('#banner-action');
-  assert.equal(hasUndo(), false);
-  assert.equal(allBlocks($).length, 2, 'Undo: the blocks are back');
-  assert.equal(blocks(songScratch()), 2);
-  // A change ends the Undo: it would undo that too.
-  tap('#song-new');
-  addBeat();
+  const kept = songs().filter((x) => !ids.has(x.id));
+  assert.equal(kept.length, 1, 'it joins 🗂️ My songs');
+  assert.equal(blocks(kept[0]), 2, 'with its blocks');
+  assert.equal($('#banner-text').textContent, `Kept as “${kept[0].name}” in 🗂️ My songs. A blank scratch song.`);
   assert.equal(hasUndo(), false);
   tap('#pads-tab');
 });

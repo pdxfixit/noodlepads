@@ -887,10 +887,6 @@ export function createDJ({ el, deps }) {
       onClose: () => { beatLine = null; levelUndo = null; },
     });
   }
-  // From the beat maker: a line with ↩️ Undo running `fn` (🆕 New).
-  function offerUndo(text, fn) {
-    if (!beatRec) offerBeatUndo(null, text, fn);
-  }
   // The keys view: a key played whose sound has no row gets one at once,
   // recording or not (Ben, 2026-10-12: "pressing an instrument in beat
   // builder should cause its row to appear"). It comes quietly, with no
@@ -1585,5 +1581,5 @@ export function createDJ({ el, deps }) {
   showMode();
   // Recording a take, or playing one back: the update bar waits (update.js).
   const busy = () => recording() || !!replaying;
-  return { render, keydown, keyup, deck, touchNow, touching, letGo, level, flashClip, looping, escape, stopReplay, steps, renderGrid, showSetup, shown, leave, beatStopped, busy, setMode, recording, offerUndo, clickOff };
+  return { render, keydown, keyup, deck, touchNow, touching, letGo, level, flashClip, looping, escape, stopReplay, steps, renderGrid, showSetup, shown, leave, beatStopped, busy, setMode, recording, clickOff };
 }
