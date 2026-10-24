@@ -24,6 +24,7 @@ import { openDialog, setupDialog } from './dialogs.js';
 import { announce } from './ui.js';
 import { logEvent } from './log.js';
 import { markNew, offerWelcome } from './welcome.js';
+import { openThings } from './things.js';
 
 const el = {};
 let showPerson = () => {};
@@ -32,11 +33,14 @@ let profileFor = null;   // the person whose profile sheet is open
 // {id, name, avatar, color, key, pin}. Their sheet stays open for the third tap.
 let left = null;
 
-// What each person has on this device, as lists the way a backup holds them.
+// What each person has on this device, as lists the way a backup holds them:
+// what 👥 People counts and 🗂️ See all lists (model.js personThings).
 // `voices` is ⭐ My voices (IndexedDB `voices`, state.myVoices).
-const storedLists = () => ({
+export const storedLists = () => ({
   clips: state.userClips, beats: state.savedBeats, songs: [...state.songs.values()],
   songbook: state.songbook, takes: state.takes, voices: state.myVoices,
+  overrides: [...state.overrides.values()], decks: [...state.decks.values()],
+  layouts: state.layouts, touchLayouts: state.touchLayouts,
 });
 
 const anyone = (id) => people({ includeHidden: true }).find((x) => x.id === id);
@@ -212,7 +216,9 @@ function renderProfile(fresh = false) {
   el.profile.style.setProperty('--c', p.color);
   el.profileAvatar.replaceChildren(avatarBadge(p));
   el.profileName.textContent = p.name;
-  el.profileCounts.textContent = `On this device: ${countsText(personCounts(storedLists(), p.id))}`;
+  const counts = personCounts(storedLists(), p.id);
+  el.profileCountsText.textContent = `On this device: ${countsText(counts)}`;
+  el.profileCounts.setAttribute('aria-label', `See all: everything ${p.name} has on this device, ${countsWords(counts)}`);
   el.profileFace.replaceChildren(avatarBadge(p, 'pf-face'));
   el.profilePicture.setAttribute('aria-label', `Picture for ${p.name}`);
   el.profileReroll.dataset.reroll = p.id;
@@ -339,6 +345,7 @@ async function onProfileClick(e) {
   if (!id || !t) return;
   if (t !== el.profileDelete) disarmDelete();
   if (t.id !== 'profile-cloud') disarmCloud(id);
+  if (t === el.profileCounts) { openThings(id, { opener: t }); return; }
   const swatch = t.closest('[data-color]');
   if (swatch) {
     if (await editLook(id, { color: swatch.dataset.color })) swatch.focus({ preventScroll: true });
@@ -414,6 +421,7 @@ export function initPeople(hooks) {
     profileName: document.querySelector('#profile-name'),
     profileNote: document.querySelector('#profile-note'),
     profileCounts: document.querySelector('#profile-counts'),
+    profileCountsText: document.querySelector('#profile-counts-text'),
     profilePicture: document.querySelector('#profile-picture'),
     profileFace: document.querySelector('#profile-face'),
     profileReroll: document.querySelector('#profile-reroll'),

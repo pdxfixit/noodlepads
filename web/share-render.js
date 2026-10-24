@@ -3,9 +3,10 @@
 // rebuilding it (cloud.js shareItem). Mono at 22,050 Hz keeps a 3-minute
 // song near 8 MB, under the 25 MB a sound may be.
 
-import { audio } from './audio.js';
+import { audio, makeVoice, fadeStop } from './audio.js';
 import { encodeWav, normalize } from './sequencer.js';
 import { cleanSong, planSong, soundSong, MAX_SONG_SECONDS } from './song.js';
+import { planTake, MAX_TAKE_SECONDS } from './rhythm.js';
 
 export const PREVIEW_RATE = 22_050;
 export const BEAT_PASSES = 2;          // a beat plays round twice
@@ -19,11 +20,45 @@ export function beatPreview(seconds) {
   return { passes, seconds: Math.min(MAX_SONG_SECONDS, seconds * passes) + TAIL_SECONDS };
 }
 
-const offline = (seconds) => new OfflineAudioContext(1, Math.max(1, Math.ceil(seconds * PREVIEW_RATE)), PREVIEW_RATE);
+const offline = (seconds, rate = PREVIEW_RATE, channels = 1) => new OfflineAudioContext(channels, Math.max(1, Math.ceil(seconds * rate)), rate);
 
 // deps: {seq (the beat maker: beatPlan, prepareBeats, soundHit), clipById,
 // beatById, songById}. Returns a WAV Blob, or null when there is nothing to hear.
 export async function renderPreview(kind, id, deps) {
+  const out = await renderAudio(kind, id, deps);
+  return out ? encodeWav(out) : null;
+}
+
+// A take as it was heard (rhythm.js planTake): every play mixed, loops
+// repeated, a hit the next one cut off stopped there with the same short
+// fade, scaled just under full scale. Null when none of its sounds are here.
+// deps: {clipById, loadSound (clip -> {buffer, duration}), rate, channels}.
+export async function renderTake(take, { clipById, loadSound = (clip) => audio.load(clip), rate = PREVIEW_RATE, channels = 1 }) {
+  const clips = [...new Set((take?.events ?? []).map((e) => e.clipId))].map((cid) => clipById(cid)).filter(Boolean);
+  const loaded = new Map();
+  for (const clip of clips) { try { loaded.set(clip.id, await loadSound(clip)); } catch { /* left out */ } }
+  const plays = planTake(take, new Map([...loaded].map(([cid, l]) => [cid, l.duration])));
+  if (!plays.length) return null;
+  const seconds = Math.min(MAX_TAKE_SECONDS, Math.max(Number(take.duration) || 0, ...plays.map((p) => p.at + loaded.get(p.clipId).duration)));
+  const ctx = offline(seconds, rate, channels);
+  for (const { clipId, at, end } of plays) {
+    const { buffer, duration } = loaded.get(clipId);
+    const voice = makeVoice(ctx, buffer, ctx.destination);
+    voice.src.start(at, 0, duration);
+    if (end != null && end < at + duration) fadeStop(voice, end);
+  }
+  return normalize(await ctx.startRendering());
+}
+
+// The same as an AudioBuffer, at `deps.rate` (PREVIEW_RATE when not given),
+// for playing it here: 🗂️ See all plays a beat, song or take in its list.
+// `takeById` finds a take. Null when there is nothing to hear.
+export async function renderAudio(kind, id, deps) {
+  const rate = deps.rate ?? PREVIEW_RATE;
+  if (kind === 'take') {
+    const take = deps.takeById?.(id);
+    return take ? renderTake(take, { clipById: deps.clipById, rate }) : null;
+  }
   if (kind === 'sound' && Array.isArray(id)) {
     // Several sounds in one code: each in turn, a short gap between, up to the song limit.
     const loaded = [];
@@ -33,7 +68,7 @@ export async function renderPreview(kind, id, deps) {
     }
     if (!loaded.length) return null;
     const total = Math.min(MAX_SONG_SECONDS, loaded.reduce((t, l) => t + l.duration + SOUNDS_GAP, 0));
-    const ctx = offline(total);
+    const ctx = offline(total, rate);
     let at = 0;
     for (const { buffer, duration } of loaded) {
       if (at >= total) break;
@@ -43,18 +78,18 @@ export async function renderPreview(kind, id, deps) {
       src.start(at, 0, Math.min(duration, total - at));
       at += duration + SOUNDS_GAP;
     }
-    return encodeWav(normalize(await ctx.startRendering()));
+    return normalize(await ctx.startRendering());
   }
   if (kind === 'sound') {
     const clip = deps.clipById(id);
     if (!clip) return null;
     const { buffer, duration } = await audio.load(clip);
-    const ctx = offline(duration);
+    const ctx = offline(duration, rate);
     const src = ctx.createBufferSource();
     src.buffer = buffer;
     src.connect(ctx.destination);
     src.start(0, 0, duration);
-    return encodeWav(await ctx.startRendering());
+    return ctx.startRendering();
   }
   const { seq } = deps;
   let plans;
@@ -79,7 +114,7 @@ export async function renderPreview(kind, id, deps) {
     planned.events = planned.events.filter((e) => e.time < MAX_SONG_SECONDS);
     if (!planned.events.length) return null;
     await seq.prepareBeats([...planned.plans.values()].map((p) => p.pattern));
-    const ctx = offline(Math.min(MAX_SONG_SECONDS, planned.seconds) + TAIL_SECONDS);
+    const ctx = offline(Math.min(MAX_SONG_SECONDS, planned.seconds) + TAIL_SECONDS, rate);
     const gains = song.lanes.map((lane) => {
       const g = ctx.createGain();
       g.gain.value = lane.volume;
@@ -87,13 +122,13 @@ export async function renderPreview(kind, id, deps) {
       return g;
     });
     if (!soundSong(ctx, gains, planned, seq)) return null;
-    return encodeWav(normalize(await ctx.startRendering()));
+    return normalize(await ctx.startRendering());
   } else {
     return null;
   }
   if (!events.length) return null;
   await seq.prepareBeats([...plans.values()].map((p) => p.pattern));
-  const ctx = offline(seconds);
+  const ctx = offline(seconds, rate);
   const lists = new Map();
   let hits = 0;
   for (const e of events) {
@@ -102,5 +137,5 @@ export async function renderPreview(kind, id, deps) {
     if (seq.soundHit(ctx, ctx.destination, lists.get(key), plans.get(e.beatId).pattern, e.row, e.time, e.loud, e.note, e.len)) hits++;
   }
   if (!hits) return null;
-  return encodeWav(normalize(await ctx.startRendering()));
+  return normalize(await ctx.startRendering());
 }
