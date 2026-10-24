@@ -362,7 +362,7 @@
     { "id": "ufo", "label": "UFO", "emoji": "🛸", "color": "teal", "file": "clips/kit/ufo.wav", "group": "sci-fi", "level": -8 },
     { "id": "beam", "label": "Beam up", "emoji": "🔦", "color": "teal", "file": "clips/kit/beam.wav", "group": "sci-fi" },
     { "id": "red-alert", "label": "Red alert", "emoji": "🔴", "color": "red", "file": "clips/kit/red-alert.wav", "group": "sci-fi", "level": -6.5 },
-    { "id": "computer", "label": "Computer", "emoji": "🖥️", "color": "teal", "file": "clips/kit/computer.wav", "group": "sci-fi", "level": -10.5 },
+    { "id": "computer", "label": "Computer", "emoji": "🖥️", "color": "teal", "file": "clips/kit/computer.wav", "group": "sci-fi", "level": -20.5 },
     { "id": "lets-go", "label": "Let's go!", "emoji": "🗣️", "color": "white", "file": "clips/kit/lets-go.wav", "group": "voices" },
     { "id": "oh-yeah", "label": "Oh yeah!", "emoji": "😎", "color": "white", "file": "clips/kit/oh-yeah.wav", "group": "voices" },
     { "id": "bruh", "label": "Bruh", "emoji": "😐", "color": "white", "file": "clips/kit/bruh.wav", "group": "voices", "level": -2.5 },

@@ -23,6 +23,7 @@ until boards.json has the levels this works out.
 Stdlib only. Prints the quietest and loudest, in dB from the middle.
 """
 import array
+import signal
 import json
 import math
 import statistics
@@ -40,6 +41,13 @@ PHONE_HZ = 180    # a phone speaker plays little under this
 WINDOW = 0.4      # seconds: the loudest stretch of a tap
 EVEN = 1.0        # dB over the middle that still counts as even (web/loudness.js EVEN_ENOUGH)
 STEP = 0.5        # levels are written to the nearest half dB
+
+# Presets Ben hears as too loud even at the middle, and how many dB under it
+# each plays. The measure underrates pure tones where ears are keenest
+# (2 to 4 kHz): Computer's bleeps are sine waves at 1.8 to 3.4 kHz.
+BY_EAR = {
+    "computer": -10,   # Ben, 2026-10-24: "just too loud… should be a lot quieter"
+}
 
 
 def _highpass(x, rate, hz):
@@ -139,8 +147,13 @@ def measure(presets=None):
 
 def levels(rows):
     """{id: level} every preset should have: enough to bring one more than
-    EVEN dB over the middle down to it, to the nearest STEP."""
-    want = {k["id"]: -round(over / STEP) * STEP for _, over, k in rows if over > EVEN}
+    EVEN dB over the middle down to it, to the nearest STEP, then its BY_EAR
+    turn-down below the middle."""
+    want = {}
+    for _, over, k in rows:
+        v = (-round(over / STEP) * STEP if over > EVEN else 0) + BY_EAR.get(k["id"], 0)
+        if v:
+            want[k["id"]] = max(-24, v)
     return {i: int(v) if v == int(v) else v for i, v in want.items()}
 
 
@@ -162,7 +175,7 @@ def main(argv):
         new = fixed(text, rows)
         if new != text:
             BOARDS.write_text(new, encoding="utf-8")
-        print(f"🔊 web/boards.json: {len(levels(rows))} presets turned down to the middle" if new != text else "🔊 web/boards.json already even")
+        print(f"🔊 web/boards.json: {len(levels(rows))} presets have a level" if new != text else "🔊 web/boards.json already even")
         rows = measure()
     rows.sort(key=lambda r: r[0])
     for row in rows[:8] + [None] + rows[-8:]:
@@ -175,4 +188,5 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)   # `| head` ends it quietly
     sys.exit(main(sys.argv[1:]))

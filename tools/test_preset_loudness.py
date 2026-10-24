@@ -43,6 +43,11 @@ class Loudness(unittest.TestCase):
         one, two = pl.voiced(samples, (0,)), pl.voiced(samples, (0, 0))
         self.assertAlmostEqual(two[100], 2 * one[100])
 
+    def test_a_preset_turned_down_by_ear_plays_that_far_under_the_middle(self):
+        for d, _, k in self.rows:
+            if k["id"] in pl.BY_EAR:
+                self.assertAlmostEqual(d, pl.BY_EAR[k["id"]], delta=pl.STEP / 2, msg=k["id"])
+
     def test_a_level_is_only_given_to_a_preset_over_the_middle(self):
         k = lambda i: {"id": i}  # noqa: E731
         got = pl.levels([(0, 0.9, k("even")), (0, 3.2, k("loud")), (0, 5.0, k("louder")), (0, -6, k("kick"))])
