@@ -39,6 +39,8 @@ import { dropNameSounds } from './starters.js';
 import { count } from './util.js';
 import { cleanGroups, groupIdOf } from './groups.js';
 import { cleanStamp, STAMP, STAMPED } from './merge3.js';
+import { reIdDoc, PERSON_STORES } from './reid.js';
+import { scratchId, songScratchId } from './scratch.js';
 
 export const BACKUP_APP = 'noodlepads';
 // Backups saved before the 1.0 rename say 'noodle-pads'; they load the same.
@@ -157,6 +159,38 @@ export function personBackupLists(lists, personId) {
     voices: mine('voices'),
     touchLayouts: mine('touchLayouts'),
   };
+}
+
+// The one person a loaded backup is about, or null: a backup with exactly
+// one person in it (⬇️ Export a backup makes these) and nothing of anyone
+// else's. Loading one asks whether to restore them or load their things into
+// someone here (Ben, 2026-10-24). `data` is cleaned (cleanBackup). Pure.
+export function onePersonIn(data) {
+  const who = Array.isArray(data?.people) && data.people.length === 1 ? data.people[0] : null;
+  if (!who?.id) return null;
+  for (const name of PERSON_STORES) {
+    if (name === 'people' || name === 'overrides') continue;
+    if ((data[name] ?? []).some((r) => r?.personId !== undefined && r.personId !== who.id)) return null;
+  }
+  return (data.overrides ?? []).every((o) => typeof o?.id === 'string' && o.id.startsWith(`${who.id}-`)) ? who : null;
+}
+
+// A one-person backup's things as `to`'s, for "load it all into someone
+// here": every record that names `from` names `to` (reid.js, their copy of
+// the kit's edits too), their scratch beat and song become `to`'s (merge.js
+// keeps `to`'s own and adds this one beside it when they differ), and the
+// person, their settings and the device's settings stay out: `to` keeps
+// their own name, look and settings. Pure.
+export function intoPerson(data, from, to) {
+  const moved = reIdDoc(data, from, to);
+  const scratch = (r) => {
+    if (r?.id === scratchId(from)) return { ...r, id: scratchId(to) };
+    if (r?.id === songScratchId(from)) return { ...r, id: songScratchId(to) };
+    return r;
+  };
+  const out = { ...moved, people: [], prefs: [], settings: [] };
+  for (const name of ['beats', 'patterns', 'songs', 'songbook']) if (Array.isArray(moved[name])) out[name] = moved[name].map(scratch);
+  return out;
 }
 
 // file: the chosen zip. bundled: {peopleIds: Set, clipIds: Set} from boards.json,
