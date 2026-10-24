@@ -383,7 +383,10 @@ async function onProfileClick(e) {
   }
   await deleteHere(id);
   if (left?.id === id) {
-    refreshPeople();
+    // Nobody else shows while the sheet waits for the third tap: a PIN pad
+    // for the next person would cover it (Ben, 2026-10-24). The sheet's
+    // closing brings them on.
+    renderPeopleEditor();
     t.focus({ preventScroll: true });
     announce(`${p.name} is deleted from this device. Tap again to delete their cloud copy too.`);
     return;
@@ -446,7 +449,15 @@ export function initPeople(hooks) {
     b.setAttribute('aria-pressed', 'false');
     return b;
   }));
-  el.profile.addEventListener('close', () => { profileFor = null; left = null; stopHold(); });
+  el.profile.addEventListener('close', () => {
+    const waited = left;
+    profileFor = null;
+    left = null;
+    stopHold();
+    // Deleted while on show, the sheet open for the third tap: someone else
+    // comes on now.
+    if (waited && !person(state.personId)) refreshPeople();
+  });
   el.namesList.addEventListener('click', (e) => {
     const b = e.target.closest('[data-pick-name]');
     if (b) pickName(b.dataset.pickName);
