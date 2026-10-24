@@ -172,16 +172,17 @@ async function askOnce(personId, { locked = false } = {}) {
   }
 }
 
-// The profile sheet's guard (people.js): their PIN, asked before a change to
-// their name, picture or color. A wrong PIN says so and asks again; five wrong
+// The PIN guard (people.js, backup-ui.js): their PIN, asked before their
+// profile opens, a change to their name, picture or color, or a backup that
+// reads or changes them; `hint` says which. A wrong PIN says so and asks again; five wrong
 // tries mean the Worker's 10-minute wait. Resolves {ok: true}, {ok: false}
 // when the kid gives up, or {ok: false, note} when it can't be checked.
-export async function askEditPin(personId) {
+export async function askEditPin(personId, hint = 'Type their PIN to change their name, picture or color.') {
   const p = people({ includeHidden: true }).find((x) => x.id === personId);
   try {
     const done = await withPin((pin) => checkPin(personId, pin), {
       title: `${p?.avatar ? `${p.avatar} ` : ''}${p?.name ?? 'PIN'}`,
-      hint: 'Type their PIN to change their name, picture or color.',
+      hint,
     });
     return { ok: !!done };
   } catch (err) {

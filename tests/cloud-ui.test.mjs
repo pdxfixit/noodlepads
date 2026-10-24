@@ -270,30 +270,24 @@ const lineOf = (id) => rows().findIndex((r) => r.dataset.person === id);
 const swatch = (i) => $('#profile-colors').querySelectorAll('[data-color]')[i];
 
 // Ben, 2026-10-12: "choose their own color in their profile, protected by pin…
-// right now anyone can change a name or color".
-test('a PIN guards the name, picture and color: asked once per visit, a wrong one says so, closing it changes nothing', async () => {
+// right now anyone can change a name or color"; 2026-10-24: everything that
+// reads or changes a person is behind their PIN, so their profile opens only
+// past it, once per visit.
+test('a PIN guards the profile: asked before it opens, once per visit; a wrong one says so; closing it opens nothing', async () => {
   const id = 'p-guard';
   await personWithPin(id, '1357');
   assert.equal(cloud.pinGuards(id), true);
   $('#people-open').dispatch('click');
-  profile(lineOf(id));
-  assert.match($('#profile-pin-hint').textContent, /before the name, picture or color changes/);
-  assert.equal($('#profile-pin-state').textContent, '🔒 PIN on');
-  assert.ok($('#profile-lock') === null, "the title is the name alone: the PIN part says there's a PIN (Ben, 2026-10-24)");
-  const color = state.peopleEdits.get(id).color;
-
-  swatch(2).dispatch('click');
+  rows()[lineOf(id)].querySelector('[data-profile]').dispatch('click');
   await settle();
-  assert.equal($('#pin-dialog').open, true, 'a color change asks for the PIN');
-  assert.match($('#pin-hint').textContent, /change their name, picture or color/);
+  assert.equal($('#pin-dialog').open, true, 'opening their profile asks for the PIN');
+  assert.match($('#pin-hint').textContent, /open their profile/);
   $('#pin-dialog').close();
   await settle();
-  assert.equal(state.peopleEdits.get(id).color, color, 'closing the PIN pad changes nothing');
+  assert.equal($('#profile-dialog').open, false, 'closing the PIN pad opens nothing');
 
-  dice(lineOf(id)).dispatch('click');
+  rows()[lineOf(id)].querySelector('[data-profile]').dispatch('click');
   await settle();
-  assert.equal($('#pin-dialog').open, true, '🎲 asks too');
-  assert.equal($('#names-dialog').open, false);
   typePin('0000');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'asked again');
@@ -301,22 +295,28 @@ test('a PIN guards the name, picture and color: asked once per visit, a wrong on
   typePin('1357');
   await settle();
   assert.equal($('#pin-dialog').open, false);
-  assert.equal($('#names-dialog').open, true, 'the right PIN goes on to Pick a name');
-  $('#names-dialog').close();
+  assert.equal($('#profile-dialog').open, true, 'the right PIN opens it');
+  assert.match($('#profile-pin-hint').textContent, /before the name, picture or color changes/);
+  assert.equal($('#profile-pin-state').textContent, '🔒 PIN on');
+  assert.ok($('#profile-lock') === null, "the title is the name alone: the PIN part says there's a PIN (Ben, 2026-10-24)");
   assert.equal(cloud.pinGuards(id), false, 'typed once on this visit');
   assert.ok(cloud.keyOf(id), 'still open on this device');
 
   swatch(2).dispatch('click');
   await settle();
-  assert.equal($('#pin-dialog').open, false, 'not asked again');
+  assert.equal($('#pin-dialog').open, false, 'a change is not asked again');
   assert.equal(state.peopleEdits.get(id).color, swatch(2).dataset.color);
+  dice(lineOf(id)).dispatch('click');
+  await settle();
+  assert.equal($('#names-dialog').open, true, '🎲 opens at once');
+  $('#names-dialog').close();
   profile(lineOf(id)).querySelector('[data-avatar]').dispatch('click');
-  assert.equal($('#avatar-dialog').open, true, 'the picture opens at once now');
+  assert.equal($('#avatar-dialog').open, true, 'the picture opens at once');
   $('#avatar-dialog').close();
   $('#profile-dialog').close();
 });
 
-test('without a PIN anyone changes the color at once; five wrong PINs mean the 10-minute wait, said plainly', async () => {
+test('without a PIN anyone opens the profile and changes the color at once; five wrong PINs mean the 10-minute wait, said plainly', async () => {
   assert.equal(cloud.pinGuards(added), false, 'no PIN, no guard');
   profile(lineOf(added));
   swatch(4).dispatch('click');
@@ -327,33 +327,28 @@ test('without a PIN anyone changes the color at once; five wrong PINs mean the 1
 
   const id = 'p-lock';
   await personWithPin(id, '2580');
-  profile(lineOf(id)).querySelector('[data-avatar]').dispatch('click');
+  rows()[lineOf(id)].querySelector('[data-profile]').dispatch('click');
   await settle();
   for (let i = 0; i < 5; i++) { typePin('1111'); await settle(); }
   assert.equal($('#pin-dialog').open, false, 'the pad gives way to the wait');
-  assert.match($('#profile-note').textContent, /Too many wrong tries\. Wait 10 minutes/);
-  assert.equal($('#avatar-dialog').open, false);
+  assert.match($('#banner-text').textContent, /Too many wrong tries\. Wait 10 minutes/);
+  assert.equal($('#profile-dialog').open, false);
   assert.equal(cloud.pinGuards(id), true, 'still guarded');
-  $('#profile-dialog').close();
   $('#people-dialog').close();
 });
 
-test('the guard is a gate in the profile sheet only: a sync that changes a guarded person shows at once', async () => {
+test('the guard is a gate on this device\'s screens only: a sync that changes a guarded person shows at once', async () => {
   const id = 'p-lock';
   assert.equal(cloud.pinGuards(id), true);
   for (const file of ['state.js', 'cloud-sync.js', 'merge.js', 'merge3.js']) {
     assert.ok(!readFileSync(new URL(`../web/${file}`, import.meta.url), 'utf8').includes('pinGuards'), `${file} knows nothing of the guard`);
   }
   $('#people-open').dispatch('click');
-  profile(lineOf(id));
-  // What a pull does with another device's new name and color (the backup merge's setPersonEdit).
-  await setPersonEdit(id, { name: 'Captain Cranberries', color: swatch(2).dataset.color });
+  // What a pull does with another device's new name (the backup merge's setPersonEdit).
+  await setPersonEdit(id, { name: 'Captain Cranberries' });
   renderPeople();
   (await import('../web/people.js')).refreshPeople();
-  assert.equal($('#profile-name').textContent, 'Captain Cranberries');
-  assert.equal(swatch(2).getAttribute('aria-pressed'), 'true');
   assert.equal(rows()[lineOf(id)].querySelector('.pe-name').textContent, 'Captain Cranberries');
-  $('#profile-dialog').close();
   $('#people-dialog').close();
 });
 

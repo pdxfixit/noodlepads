@@ -38,7 +38,7 @@ import { initWhoNow, openWhoNow, closeWhoNow, whoNowOpen } from './who-now.js';
 import { initTips, tipsScreen } from './tips.js';
 import { initNudge } from './nudge.js';
 import { beatHasHits } from './firsts.js';
-import { initCloud, needsPin, leftPerson, onCloud } from './cloud.js';
+import { initCloud, needsPin, leftPerson, onCloud, pinGuards } from './cloud.js';
 import { initCloudUI, askToOpen, shareSounds } from './cloud-ui.js';
 import { renderPreview, renderAudio } from './share-render.js';
 import { initBackups, storeLoaded, whatIsHere, savePersonBackup } from './backup-ui.js';
@@ -586,18 +586,7 @@ function makeSequencer() {
     onGroovesOpen: () => showCard(),   // 🎧 From a song's card, for this person's level
     // ⇆ Move on or off: the ⇆ keys show it.
     onStop: () => dj?.beatStopped(),
-    // The chooser's sections: the shared kit once (this board's copies, so its
-    // renames and hides apply), then each person's own sounds, this board first.
-    groups: () => {
-      const list = people();
-      const ordered = [list.find((p) => p.id === state.personId), ...list.filter((p) => p.id !== state.personId)].filter(Boolean);
-      // The kit is in its groups; each can open and close, shared with the pads screen.
-      const kit = groupKit(clipsFor(state.personId).filter(isKitClip), state.manifest.kitGroups)
-        .map((g) => ({ id: `kit-${g.id}`, groupId: g.id, name: `${g.emoji ?? ''} ${g.name}`.trim(), plain: g.name, color: COMMON_COLOR, clips: g.clips, collapsible: true }));
-      // Each person's own sounds open and close too; they start open.
-      return [...kit, ...ordered.map((p) => ({ id: p.id, groupId: `person:${p.id}`, name: p.name, color: p.color, clips: clipsFor(p.id).filter((c) => !isKitClip(c)), collapsible: true }))]
-        .filter((g) => g.clips.length);
-    },
+    groups: groupsForChooser,
     isGroupOpen: (groupId) => (groupId.startsWith('person:') ? !closedPeople().has(groupId) : kitOpen().has(groupId)),
     toggleGroup: (groupId) => {
       if (groupId.startsWith('person:')) { toggleSet(closedPeople(), groupId); remember('chooser-closed', JSON.stringify([...closedPeople()])); return; }
@@ -1100,6 +1089,21 @@ async function start() {
       songById: (sid) => state.songbook.find((s) => s.id === sid),
     }),
   });
+}
+
+// The sound chooser's sections: the shared kit once (this board's copies, so
+// its renames and hides apply), then each person's own sounds, this board
+// first. Someone else with a PIN not typed on this visit is left out: their
+// sounds are read only past their PIN (Ben, 2026-10-24).
+export function groupsForChooser() {
+  const list = people().filter((p) => p.id === state.personId || !pinGuards(p.id));
+  const ordered = [list.find((p) => p.id === state.personId), ...list.filter((p) => p.id !== state.personId)].filter(Boolean);
+  // The kit is in its groups; each can open and close, shared with the pads screen.
+  const kit = groupKit(clipsFor(state.personId).filter(isKitClip), state.manifest.kitGroups)
+    .map((g) => ({ id: `kit-${g.id}`, groupId: g.id, name: `${g.emoji ?? ''} ${g.name}`.trim(), plain: g.name, color: COMMON_COLOR, clips: g.clips, collapsible: true }));
+  // Each person's own sounds open and close too; they start open.
+  return [...kit, ...ordered.map((p) => ({ id: p.id, groupId: `person:${p.id}`, name: p.name, color: p.color, clips: clipsFor(p.id).filter((c) => !isKitClip(c)), collapsible: true }))]
+    .filter((g) => g.clips.length);
 }
 
 // Resolves once the app is drawn and every control is wired. The tests wait

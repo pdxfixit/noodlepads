@@ -847,9 +847,20 @@ ADR 0002.
 - **PIN:** optional, 4 digits, in a person's profile sheet (once they are in
   the cloud). It is asked each time that person is opened, on every device;
   no device keeps the key (it lives for the visit only, `cloud.js`
-  `sessionKeys`), so a person with a PIN syncs only once it is typed. It is
-  also asked, once per visit, before their name, picture or color changes.
-  5 wrong tries mean a 10-minute wait.
+  `sessionKeys`), so a person with a PIN syncs only once it is typed.
+  **Nothing of theirs is read or changed past it** (Ben, 2026-10-24), and
+  once typed it holds until the page reloads (`cloud.js` `pinGuards`, the
+  PIN typed on this visit): their profile opens only after it (so 🗂️ See
+  all, ⬇️ Export a backup, Delete and the cloud tools are behind it;
+  `people.js` `openProfileSheet`), 👥 People shows "🔒 PIN to see" in place of
+  their counts, the sound chooser leaves out their own sounds
+  (`app.js` `groupsForChooser`), and 💾 Save a backup and 📂 Load a backup
+  ask for it before reading or adding to them, leaving them out when it isn't
+  typed ("Left out <name>: their PIN wasn't typed."; a one-person backup for
+  or into them loads nothing; `backup-ui.js` `pastPins`). A sync from
+  another device still changes them: the gate is on this device's screens.
+  It keeps kids out of each other's things; the browser's own storage on the
+  device is not encrypted. 5 wrong tries mean a 10-minute wait.
 - **A PIN new to this device:** a PIN set or changed on another device closes
   the profile on every device. The next sync here is refused (401); the
   public list says whether the profile has a PIN now (a reset: it opens again

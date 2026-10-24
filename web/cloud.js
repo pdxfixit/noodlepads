@@ -135,10 +135,11 @@ export function needsPin(personId) {
   return !!link?.pin && !unlocked.has(personId);
 }
 
-// The profile sheet's guard (people.js): whether changing this person's name,
-// picture or color asks for their PIN first. Only a person whose cloud
-// profile has a PIN, and only until it is typed once on this visit. A UI gate:
-// syncs from other devices change them as before.
+// The PIN guard: whether reading or changing anything of this person's asks
+// for their PIN first (Ben, 2026-10-24): their profile (people.js), their
+// counts and sounds on others' screens, backups (backup-ui.js). Only a person
+// whose cloud profile has a PIN, and only until it is typed once on this
+// visit. A gate on this device's screens: syncs change them as before.
 export const pinGuards = (personId) => !!linkOf(personId)?.pin && !pinTyped.has(personId);
 
 // Checks a PIN for the guard the way opening a person does (unlock: the

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeBackup, readBackup, cleanBackup, personBackupLists, onePersonIn, intoPerson, BACKUP_APP, BACKUP_FORMAT, MAX_SOUND_BYTES, refusal, beforeOne } from '../web/backup.js';
+import { makeBackup, readBackup, cleanBackup, personBackupLists, onePersonIn, intoPerson, namesPerson, withoutPeople, BACKUP_APP, BACKUP_FORMAT, MAX_SOUND_BYTES, refusal, beforeOne } from '../web/backup.js';
 import { buildZip, blobOf, bytes, utf8, failure } from './helpers.mjs';
 import { unzip } from '../web/zip.js';
 import { isFunName } from '../web/names.js';
@@ -803,4 +803,18 @@ test('loading into someone here: every thing becomes theirs; the person, their s
   assert.deepEqual(out.songbook.map((s) => s.id), ['song-scratch-p-toby-1']);
   assert.deepEqual(out.orders.map((o) => o.personId), ['p-toby-1']);
   assert.ok(!JSON.stringify({ ...out, clips: [] }).includes('p-wren-1'), 'nothing names them any more');
+});
+
+// A backup leaves out someone whose PIN wasn't typed (Ben, 2026-10-24).
+test('a backup can tell whether it holds anything of a person, and leave them out', () => {
+  const all = twoPeople();
+  assert.ok(namesPerson(all, 'p-wren-1'));
+  assert.ok(namesPerson({ overrides: [{ id: 'p-wren-1-kick' }] }, 'p-wren-1'), 'an edit of their kit counts');
+  assert.ok(!namesPerson({ clips: [{ id: 'u', personId: 'p-juno-1' }] }, 'p-wren-1'));
+  const out = withoutPeople(all, ['p-wren-1']);
+  assert.ok(!namesPerson(out, 'p-wren-1'), 'nothing of theirs is left');
+  assert.deepEqual(out.people.map((p) => p.id), ['p-juno-1']);
+  assert.deepEqual(out.clips.map((c) => c.personId), ['p-juno-1']);
+  assert.deepEqual(out.overrides.map((o) => o.id), ['p-juno-1-kick']);
+  assert.deepEqual(out.settings, all.settings, 'the device\'s settings stay');
 });

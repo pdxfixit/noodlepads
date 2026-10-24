@@ -4,7 +4,7 @@
 import { state, readStorage, deletePerson, reIdIncoming, rememberRenames } from './state.js';
 import { db } from './store.js';
 import { audio } from './audio.js';
-import { makeBackup, readBackup, leftOutNote, personBackupLists, onePersonIn, intoPerson } from './backup.js';
+import { makeBackup, readBackup, leftOutNote, personBackupLists, onePersonIn, intoPerson, namesPerson, withoutPeople } from './backup.js';
 import { mergeLoaded, mergeSummary } from './merge.js';
 import { colorName, people } from './board.js';
 import { renderPeople } from './pads.js';
@@ -16,19 +16,38 @@ import { logEvent } from './log.js';
 import { localDate } from './util.js';
 import { holdsWords, sizeWords } from './old-backup.js';
 import { openDialog, setupDialog } from './dialogs.js';
-import { avatarBadge } from './cloud-ui.js';
+import { avatarBadge, askEditPin } from './cloud-ui.js';
+import { pinGuards } from './cloud.js';
 import { personCounts, countsText } from './model.js';
 
 const el = {};
 
+// Everyone `data` holds anything of who has a PIN not typed on this visit is
+// asked for it, one after another; anyone whose PIN isn't given is left out
+// (Ben, 2026-10-24: nothing of a person is read or changed past their PIN).
+// `hint` says why it is asked. Returns the data that may go on, and the
+// names of who was left out.
+async function pastPins(data, hint) {
+  const left = [];
+  let out = data;
+  for (const p of people({ includeHidden: true })) {
+    if (!pinGuards(p.id) || !namesPerson(out, p.id)) continue;
+    const { ok } = await askEditPin(p.id, hint);
+    if (!ok) { left.push(p.name); out = withoutPeople(out, [p.id]); }
+  }
+  return { data: out, left };
+}
+const leftOutWords = (left) => (left.length
+  ? ` Left out ${left.join(', ')}: ${left.length === 1 ? 'their PIN wasn\'t' : 'their PINs weren\'t'} typed.` : '');
+
 async function saveBackup() {
   el.save.disabled = true;
   try {
-    const lists = storedLists();
+    const { data: lists, left } = await pastPins(storedLists(), 'Type their PIN to put them in the backup.');
     const blob = await makeBackup(lists, state.version);
     downloadBlob(blob, `noodlepads-backup-${localDate()}.zip`);
-    logEvent('backup', { saved: true, sounds: state.userClips.length, beats: state.savedBeats.length, bytes: blob.size });
-    showNotice(`Saved a backup: ${holdsWords(lists)}. The file is ${sizeWords(blob.size)}.`);
+    logEvent('backup', { saved: true, sounds: lists.clips.length, beats: lists.beats.length, bytes: blob.size });
+    showNotice(`Saved a backup: ${holdsWords(lists)}. The file is ${sizeWords(blob.size)}.${leftOutWords(left)}`);
   } catch (err) {
     console.error('Backup failed:', err);
     logEvent('backup', { saved: false, error: err.message || err.name });
@@ -195,12 +214,19 @@ async function loadBackup(file) {
         data = intoPerson(data, who.id, to);
       }
     }
+    // Whoever it would add to who has a PIN: theirs, or their part stays out.
+    const gate = await pastPins(data, into ? 'Type their PIN to load a backup into them.' : 'Type their PIN to load their backup.');
+    if (who && (gate.left.includes(into?.name) || (!into && gate.left.length))) {
+      showNotice(`Nothing loaded: ${(into ?? who).name}'s PIN wasn't typed.`);
+      return;
+    }
+    data = gate.data;
     const merged = await storeLoaded(data);
     const made = data.exported ? new Date(data.exported) : null;
     const when = made && !Number.isNaN(made.getTime()) ? ` from ${localDate(made)}` : '';
     logEvent('backup', { loaded: true, into: !!into, sounds: merged.added.sounds, beats: merged.added.beats, already: merged.already, skipped: data.skipped });
     const what = into ? `Loaded ${who.name}'s backup${when} into ${into.name}.` : `Loaded the backup${when}.`;
-    showNotice(`${what} ${mergeSummary(merged)}${leftOut(data, merged)}`);
+    showNotice(`${what} ${mergeSummary(merged)}${leftOut(data, merged)}${leftOutWords(gate.left)}`);
     showHolds();
   } catch (err) {
     console.error('Loading a backup failed:', err);
