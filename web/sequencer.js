@@ -3318,6 +3318,13 @@ export function createSequencer(deps) {
     if (clickOverride === null) clickOn = clickWanted;
     showClick();
   });
+  // ⏹️ Stop all turns the click off too, remembered as off.
+  function clickOff() {
+    clickWanted = false;
+    remember('beat-click', '');
+    if (clickOverride === null) clickOn = false;
+    showClick();
+  }
   // A pill tapped (or held, `loud`) elsewhere: the keys' grid.
   // A tune row's pill opens 🎹 the roll instead.
   function cyclePill(r, s, loud = false) {
@@ -3365,7 +3372,7 @@ export function createSequencer(deps) {
     // A beat in 🗂️ My beats opened by id (🎧 From a song's 🥁 Open part A); false when it is not there.
     openSaved: (id) => { const saved = library().find((b) => b.id === id); if (saved) openBeat(cleanPattern(saved, personId), { resume: false }); return !!saved; },
     lockChips, queuedBeat: () => (queued ? { ...queued } : null), openMixer, toggleSolo, setFx: setRowFx, setMaster, setMasterFx,
-    openRoll, rollRow: () => roll?.row() ?? -1,
+    openRoll, rollRow: () => roll?.row() ?? -1, clickOff,
     // ⇆ the lock, and the keys' grid's picker beside these rows' (dj.js).
     toggleLock: () => setLock(!locked), endLock: () => setLock(false), locked: () => locked, lockChanged: () => showLock(),
     addPicker: (pick, shown) => pickers.push({ pick, shown }),
