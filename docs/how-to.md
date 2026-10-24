@@ -10,6 +10,8 @@ Step by step for the common jobs, so a fresh session never has to guess. [AGENTS
 | The main checkout (`~/src/noodlepads`, on `main`) | All of the above, plus `just ship`, `just land` (GitHub deploys the push) | `just deploy`: Ben's fallback from his Mac; agents never deploy. |
 | A cloud session | Edit, `just test`, `just prove`, `just look`, commit, push a branch | Deploy, the live checks (they need no token, but run them after GitHub's deploy). Say so in your report, and what is unchecked. |
 
+**A cloud session's push to `main`, when `main` moved meanwhile:** commit first, then `git rebase origin/main`, then `just version` for the new count (it stamps for the *next* commit, so set PATCH to `git rev-list --count HEAD` and amend), test again, push. Never stash uncommitted work around a rebase: on 2026-10-24 a `git stash pop` conflicted in `web/version.js` inside a `|| { … }`, where `set -e` does not stop, and the commit after it held conflict markers (caught before the push).
+
 ## A bug fix in `web/`
 
 1. **Find the module.** [layout.md](layout.md) lists every file; each module's opening comment says what it owns. `grep -rn` for the label the kid sees (it is in `index.html` or the module that draws it).
