@@ -46,7 +46,7 @@ export const MAX_SONG_SECONDS = 180;     // the longest song that can be saved a
 const TICK_MS = 25;
 const LOOKAHEAD = 0.1;
 const ARM_MS = 3000;                     // how long a Remove? waits for its second tap
-const UNDO_MS = 8000;                    // how long 🆕 New's emptied scratch can be brought back
+const UNDO_MS = 8000;                    // how long a tempo change taken out can be brought back
 const MAX_UNDO = 40;                     // ↩️ Undo steps kept for the open song
 const TEMPO_STEP = 5;                    // ➖ ➕ beside the song's tempo
 export const SONG_ID = /^song-[a-z0-9-]{1,48}$/;
@@ -203,7 +203,6 @@ export function createSong(deps) {
   // not the kid, so the scratch opens.
   function setPerson(id) {
     stop();
-    offerUndo(null);
     personId = id;
     picked = null;
     wantedName = null;
@@ -230,57 +229,36 @@ export function createSong(deps) {
     cursor.clear();
   }
 
-  // 🆕 New (Ben, 2026-10-12): a blank scratch song opens. Nothing joins 🗂️ My
-  // songs; only 💾 Keep adds one. A named song open stays there as it is.
-  // A scratch with blocks that it empties is said in a line with Undo, which
-  // brings it back, and the song open before.
+  // 🆕 New (Ben, 2026-10-12): a blank scratch song opens. A named song open
+  // stays there as it is. A scratch with blocks is kept first (Ben,
+  // 2026-10-24: 🗂️ See all lists it as theirs, so New must never lose it):
+  // it joins 🗂️ My songs with a fun name, open or not, and a line says so.
   function newScratch() {
     const old = songScratchOf(allSongs(), personId);
-    const was = { song: song ? structuredClone(song) : null, scratch: old ? structuredClone(old) : null };
+    let kept = null;
+    if (old && blockCount(clean(old))) {
+      kept = deps.songName(songs().map((x) => x.name));
+      const now = Date.now();
+      deps.songs.put({ ...structuredClone(old), id: newId('song'), name: kept, created: now, saved: now });
+      logEvent('song', { action: 'keep' });
+    }
     if (old) deps.songs.remove(old.id);
     openSong(null);
-    const cleared = !!old && blockCount(clean(old)) > 0;
-    logEvent('song', { action: 'new', replaced: cleared });
-    if (cleared) offerUndo(was);
+    logEvent('song', { action: 'new' });
+    if (kept) note(`Kept as “${kept}” in 🗂️ My songs. A blank scratch song.`);
     else deps.announce?.('A blank scratch song.');
   }
 
-  // The Undo line, in the banner over the top of the screen (ui.js
-  // showBanner): for a few seconds after 🆕 New emptied the scratch. Another
-  // song opening, or another person, forgets it; focus on its vanishing Undo
-  // goes to ➕ Add a lane.
-  let undo = null;
-  let undoBanner = null;
-  function offerUndo(nextUndo) {
-    undo = nextUndo;
-    if (!nextUndo) { undoBanner?.close(); undoBanner = null; return; }
-    undoBanner = showBanner('🆕 Your scratch song is blank now.', {
-      action: { label: '↩️ Undo', fn: undoNew },
-      ms: UNDO_MS,
-      focusBack: () => el.addLane,
-      onClose: () => { if (undo === nextUndo) { undo = null; undoBanner = null; } },
-    });
-  }
   // A short note about the song (a lane full, the sound made), in the banner.
   let noteBanner = null;
   function note(text) {
     if (!text) { noteBanner?.close(); noteBanner = null; return; }
     noteBanner = showBanner(text);
   }
-  function undoNew() {
-    const was = undo;
-    offerUndo(null);
-    if (!was) return;
-    if (was.scratch) deps.songs.put(was.scratch);
-    const back = was.song && !isScratchSong(was.song) && songs().find((x) => x.id === was.song.id);
-    openSong(back ? clean(back) : null);
-  }
-
   // Saves the open song: as the person's open song (the scratch open is
   // no record), and into the list. Older copies read its `slots`.
   function save() {
     if (!song) return;
-    offerUndo(null);   // a change to the song: Undo of 🆕 New would undo it too
     song.slots = legacySlots(song.lanes);
     if (onScratch()) deps.close(personId); else deps.save(structuredClone(song));
     const before = allSongs().find((x) => x.id === song.id);
@@ -316,7 +294,6 @@ export function createSong(deps) {
   function openSong(nextSong) {
     stop();
     disarm(false);
-    offerUndo(null);
     wantedName = null;
     song = nextSong ?? scratchSong();
     forget();
