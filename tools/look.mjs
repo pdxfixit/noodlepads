@@ -431,6 +431,14 @@ const VIEWS = {
   'cloud-in': { screen: 'pads', js: `const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()][0];
     state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true });
     ${q('#people-open') + q('#people-edit [data-profile]')} ${nap} document.querySelector('#profile-cloud').scrollIntoView();` },
+  // who-now: 👋 Who's playing now? with four people, two with a PIN (faked
+  // links), as it comes up after the person on show is deleted.
+  'who-now': { screen: 'pads', js: `const { state } = await import('/state.js'); const { addPerson } = await import('/people.js');
+    while (state.peopleEdits.size < 4) await addPerson();
+    const ids = [...state.peopleEdits.keys()];
+    for (const id of ids.slice(0, 2)) state.cloud.set(id, { id, key: null, rev: 0, sent: {}, sounds: {}, pin: true });
+    document.body.dataset.locked = '';
+    (await import('/who-now.js')).openWhoNow('Admiral Acorn is deleted from this device. Tap your picture.'); ${nap}` },
   // profile-left: a new person in the cloud (a faked link, with a PIN), after
   // Delete's second tap: gone here, the sheet showing only Delete's third tap.
   'profile-left': { screen: 'pads', js: `${q('#people-open') + q('#person-add')} ${nap}
