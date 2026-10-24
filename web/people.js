@@ -131,11 +131,21 @@ export function renderPeopleEditor() {
   renderProfile();
 }
 
-// After anyone changes: show the same person (or the first, if theirs went
-// away) and redraw the list and any open profile sheet.
+// After anyone changes: show the same person, and redraw the list and any
+// open profile sheet. When theirs went away (deleted), the board starts over
+// as on opening: someone with no PIN shows, else it waits behind the PIN pad
+// (app.js setPerson). Asking with the deleted person still the one on show
+// left them there, in the corner menu too, when the pad was closed (Ben,
+// 2026-10-24). With nobody left, the caller adds someone (app.js
+// dropLockedPerson).
 export function refreshPeople() {
   const still = person(state.personId);
-  showPerson(still ? still.id : people()[0].id);
+  const next = people()[0];
+  if (still) showPerson(still.id);
+  else if (next) {
+    state.personId = null;
+    showPerson(next.id);
+  }
   renderPeopleEditor();
 }
 
