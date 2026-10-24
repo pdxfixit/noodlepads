@@ -625,7 +625,10 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   renames and recolors of people boards.json lists) live in IndexedDB
   `people`, with `avatar` (an emoji) and `fun: true` (a generated name).
   👥 People is a short list, one line per person: picture, name, counts and
-  ☁️ state (🔒 with a PIN). Tapping a line opens their profile sheet
+  ☁️ state (🔒 with a PIN): ☁️✓ in the cloud (a PIN not typed yet on this
+  visit included), ☁️ not yet, 📴 offline, ☁️⚠️ something to see to, which
+  their profile sheet says after a ⚠️ in its ☁️ part (`cloud-ui.js` `warns`).
+  The list follows a sync as it happens. Tapping a line opens their profile sheet
   (`#profile-dialog`, `people.js`): 🎲 Pick a name, the picture, every person
   color (eight, in two lines of four on a phone, one of eight from 601 px;
   chosen to stay apart for deuteranopia, `model.js` `PERSON_COLORS`; a
@@ -636,8 +639,8 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   keeps them here only (📴 Offline); a tap anywhere else takes the first tap
   back. Under it, when they are in the cloud, 🔄 Sync now and 🔗 Share… (both
   ask for the PIN first on a visit that hasn't had it). The 🔒 PIN part has a
-  pill, 🔒 PIN on or 🔓 No PIN, and 🔒 PIN shows by the name in the sheet's
-  title and 🔒 by it in the corner menu. 🔒 Set a PIN (which puts them in
+  pill, 🔒 PIN on or 🔓 No PIN, and 🔒 shows by the name in the corner
+  menu. 🔒 Set a PIN (which puts them in
   the cloud first if they aren't), or Change PIN and Remove PIN, which ask
   for the PIN they have now. A new PIN is typed twice; a second that doesn't
   match says so on the pad and asks again. What a button just did (✅ PIN

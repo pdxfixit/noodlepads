@@ -89,6 +89,8 @@ Other work:
 
 - [ ] Move `skills/noodlepads-logs` to `~/src/skills/noodlepads-logs` and link it (the skills workspace convention); the recurrent routine's leg is now named `noodlepads-logs`, and its state file `~/.local/state/skills/noodlepads-logs.state.json`
 
+- [ ] **Where Delete lands** (Ben, 2026-10-24): deleting the person on show switches at once, and when the next is behind a PIN the PIN pad covers the sheet that still offers Delete's third tap. He wants "an intermediate space" to land in; options and a mockup go to Ben first (new screen).
+
 ### Offered, not approved
 
 Agents suggested these; nothing happens until Ben says yes.

@@ -106,7 +106,10 @@ export async function dropLink(personId) {
 
 // ── status, for the screens ──
 
-const status = new Map();   // person id -> {state: 'syncing' | 'ok' | 'trouble' | 'locked', text, at}
+// person id -> {state, text, at}. 'trouble' and 'locked' (a PIN this device
+// hasn't had, which someone must type) are the ⚠️ ones; 'waiting' is a PIN
+// not typed yet on this visit, which every open asks for anyway.
+const status = new Map();   // state: 'syncing' | 'ok' | 'trouble' | 'locked' | 'waiting'
 const watchers = new Set();
 export const statusOf = (personId) => status.get(personId) ?? null;
 export function onCloud(fn) { watchers.add(fn); return () => watchers.delete(fn); }
@@ -282,7 +285,7 @@ function deps() {
 export function syncNow(personId) {
   if (!inCloud(personId) || !db.handle) return Promise.resolve(null);
   if (!keyOf(personId)) {
-    setStatus(personId, { state: 'locked', text: '🔒 Syncs once they are opened with their PIN.' });
+    setStatus(personId, { state: 'waiting', text: '🔒 Syncs once they are opened with their PIN.' });
     return Promise.resolve(null);
   }
   if (running.has(personId)) return running.get(personId);

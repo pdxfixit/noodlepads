@@ -249,6 +249,10 @@ let flash = null;   // {id, text, until}: what the pill says just after a change
 
 const nameOf = (p) => p?.name ?? 'them';
 
+// A cloud state someone has to see to: ☁️⚠️ on their line in 👥 People
+// (cloudLabel), and the same ⚠️ before what is wrong in their profile sheet.
+const warns = (s) => s?.state === 'trouble' || s?.state === 'locked';
+
 // What the Cloud part says about a person.
 function cloudText(p) {
   if (isOffline(p.id)) return '📴 Off: everything of theirs stays on this device only.';
@@ -257,6 +261,7 @@ function cloudText(p) {
       : `Off for now: they go up by themselves once they make something (a ${KIND_EMOJI.sounds} sound, a ${KIND_EMOJI.beats} beat, a ${KIND_EMOJI.songs} song or a ${KIND_EMOJI.takes} take), or now with the switch.`;
   }
   const s = statusOf(p.id);
+  if (warns(s)) return `⚠️ ${s.text.replace(/^🔒 /, '')}`;
   if (s?.text) return s.text;
   if (!keyOf(p.id)) return '🔒 Syncs once they are opened with their PIN.';
   return 'In the cloud ✓ Opens on any phone or tablet.';
@@ -778,6 +783,7 @@ export function cloudLabel(p) {
   const s = statusOf(p.id);
   if (isOffline(p.id)) return { text: '📴', label: `Cloud for ${p.name}: offline, this device only` };
   if (!inCloud(p.id)) return { text: '☁️', label: `Cloud for ${p.name}: not in the cloud yet` };
-  if (s?.state === 'trouble' || s?.state === 'locked') return { text: '☁️⚠️', label: `Cloud for ${p.name}: ${s.text}` };
+  if (warns(s)) return { text: '☁️⚠️', label: `Cloud for ${p.name}: ${s.text}` };
+  if (s?.state === 'waiting') return { text: '☁️✓', label: `Cloud for ${p.name}: in the cloud, synced once opened with their PIN` };
   return { text: '☁️✓', label: `Cloud for ${p.name}: in the cloud` };
 }
