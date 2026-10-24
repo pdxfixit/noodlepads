@@ -323,6 +323,11 @@ export function syncNow(personId) {
   return run;
 }
 
+// The sync running for a person, once it ends (null when none runs). Deleting
+// someone waits for it after dropping their link (people.js deleteHere): what
+// it pulled, their own record among it, would be stored again after the delete.
+export const syncEnded = (personId) => running.get(personId) ?? Promise.resolve(null);
+
 // Everyone on the device is in the cloud (Ben, 2026-10-11), except people set
 // Offline, and anyone who has made nothing yet (a new device's empty "Me"
 // would otherwise fill the public list).

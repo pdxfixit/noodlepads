@@ -18,7 +18,7 @@ import { people, person } from './board.js';
 import { PERSON_COLORS, PERSON_COLOR_NAMES, nextPersonColor, freePicture, personCounts, countsText, countsWords, KIND_EMOJI } from './model.js';
 import { newId } from './util.js';
 import { funName, nameChoices, isFunName } from './names.js';
-import { inCloud, dropLink, linkOf, keyOf, pinGuards, onCloud } from './cloud.js';
+import { inCloud, dropLink, linkOf, keyOf, pinGuards, onCloud, syncEnded } from './cloud.js';
 import { avatarBadge, openAvatar, cloudLabel, askEditPin, drawPin, pinClick, disarmCloud, deleteLeftCloud } from './cloud-ui.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { announce } from './ui.js';
@@ -166,10 +166,13 @@ export async function addPerson() {
 
 // Deletes a person and everything of theirs from this device: Delete in their
 // profile sheet, and 🤷 I don't know the PIN (cloud-ui.js). It never deletes
-// the cloud's profile: this device just stops syncing it.
+// the cloud's profile: this device just stops syncing it. A sync of theirs
+// still running ends first, or it would store them again (a tester,
+// 2026-10-24: someone deleted was back after a reload).
 export async function deleteHere(id) {
   const p = anyone(id);
   if (inCloud(id)) await dropLink(id);
+  await syncEnded(id);
   const gone = await deletePerson(id);
   for (const clipId of gone) audio.forget(clipId);
   logEvent('person', { deleted: id, bundled: !p?.added, sounds: gone.length });

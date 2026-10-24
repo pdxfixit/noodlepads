@@ -648,7 +648,10 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   one, anyone can. It gates the sheet only: syncs apply as before.
   Nobody types a name: a tap on 🎲 opens Pick a name, a dozen fun names and the
   special names to choose from (🎲 More names deals another dozen); closing it keeps the name. Anyone can be deleted from this device (two taps), with their recorded sounds,
-  saved beats, beat on screen and pad order. A boards.json person can't leave
+  saved beats, beat on screen, pad order and edits to preset pads (left
+  behind, any of these made them a person again on the next start,
+  `state.js` `adoptStoredPeople`); a sync of theirs still running ends first,
+  or it would store them again (`cloud.js` `syncEnded`). A boards.json person can't leave
   that file, so deleting one keeps only a hidden record; the People dialog
   lists hidden people under "Deleted — bring back". The last person on show
   can't be deleted. For someone in the cloud the second tap deletes them here

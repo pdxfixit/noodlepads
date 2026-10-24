@@ -292,7 +292,9 @@ export async function setPersonEdit(id, changes) {
 }
 
 // Deleting a person removes everything that was theirs: recorded sounds, saved
-// beats, the beat on screen and the pad order. A person added in the app is
+// beats, the beat on screen, the pad order and their edits to the kit's
+// sounds. A kit edit left behind once brought them back on the next start
+// (adoptStoredPeople makes a person of any id a record names). A person added in the app is
 // gone entirely. One from boards.json can't be removed from that file, so they
 // stay as a hidden record (name and color back to the file's) and can be
 // brought back; their bundled sounds return with them, recorded ones don't.
@@ -301,7 +303,11 @@ export async function setPersonEdit(id, changes) {
 export async function deletePerson(id) {
   const theirs = (list) => list.filter((x) => x.personId === id);
   const goneClips = theirs(state.userClips).map((c) => c.id);
+  // Kit edits are stored as `<person>-<kit sound>` and name no personId.
+  const kit = new Set((state.manifest.kit ?? []).map((k) => k.id));
+  const goneEdits = [...state.overrides.keys()].filter((o) => o.startsWith(`${id}-`) && kit.has(o.slice(id.length + 1)));
   for (const clipId of goneClips) await db.remove('clips', clipId).catch(() => {});
+  for (const o of goneEdits) await db.remove('overrides', o).catch(() => {});
   for (const b of theirs(state.savedBeats)) await db.remove('beats', b.id).catch(() => {});
   await db.remove('patterns', id).catch(() => {});
   await db.remove('orders', id).catch(() => {});
@@ -315,6 +321,7 @@ export async function deletePerson(id) {
   for (const l of theirs(state.touchLayouts)) await db.remove('touchLayouts', l.id).catch(() => {});
   await db.remove('people', id).catch((err) => console.error('Deleting a person failed:', err));
   state.userClips = state.userClips.filter((c) => c.personId !== id);
+  for (const o of goneEdits) state.overrides.delete(o);
   state.savedBeats = state.savedBeats.filter((b) => b.personId !== id);
   state.patterns.delete(id);
   state.orders.delete(id);
