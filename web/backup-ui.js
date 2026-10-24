@@ -4,7 +4,7 @@
 import { state, readStorage, deletePerson, reIdIncoming, rememberRenames } from './state.js';
 import { db } from './store.js';
 import { audio } from './audio.js';
-import { makeBackup, readBackup, leftOutNote } from './backup.js';
+import { makeBackup, readBackup, leftOutNote, personBackupLists } from './backup.js';
 import { mergeLoaded, mergeSummary } from './merge.js';
 import { colorName, people } from './board.js';
 import { renderPeople } from './pads.js';
@@ -32,6 +32,26 @@ async function saveBackup() {
     showNotice(`The backup didn't save (${err.message || err.name}).`);
   } finally {
     el.save.disabled = false;
+  }
+}
+
+// 🗂️ See all's ⬇️ Save a backup of them: one person's backup, named after
+// them ("noodlepads-plucky-walrus-2026-10-24.zip"; every name is a fun name).
+export async function savePersonBackup(personId, name, button) {
+  if (button) button.disabled = true;
+  try {
+    const lists = personBackupLists(storedLists(), personId);
+    const blob = await makeBackup(lists, state.version);
+    const slug = String(name).normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'person';
+    downloadBlob(blob, `noodlepads-${slug}-${localDate()}.zip`);
+    logEvent('backup', { saved: true, person: true, sounds: lists.clips.length, beats: lists.beats.length, bytes: blob.size });
+    showNotice(`Saved a backup of ${name}: ${holdsWords(lists)}. The file is ${sizeWords(blob.size)}.`);
+  } catch (err) {
+    console.error('Backup failed:', err);
+    logEvent('backup', { saved: false, person: true, error: err.message || err.name });
+    showNotice(`The backup didn't save (${err.message || err.name}).`);
+  } finally {
+    if (button) button.disabled = false;
   }
 }
 

@@ -1757,6 +1757,9 @@ button.sa-row { cursor: pointer; }
 .sa-empty { margin: 12px 0; }
 #things-note:empty { display: none; }
 .field-hint.sa-foot { margin-top: 14px; }
+.sa-export { display: grid; gap: 6px; margin-top: 14px; padding-top: 14px; border-top: 2px solid var(--line); }
+.sa-export .chip-dark { width: 100%; }
+.sa-export .field-hint { margin: 0; }
 .pf-looks { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .pf-pic {
   display: inline-flex;

@@ -143,7 +143,7 @@ export const RULES = {
   },
   // 👋 The welcome (welcome.js, ADR 0028): shown, the level a card set, skipped.
   welcome: { shown: bool, level: oneOf(['kids', 'regular', 'advanced']), skipped: bool },
-  backup: { saved: bool, loaded: bool, sounds: num, beats: num, bytes: num, settings: num, already: num, skipped: num, error: text },
+  backup: { saved: bool, loaded: bool, person: bool, sounds: num, beats: num, bytes: num, settings: num, already: num, skipped: num, error: text },
   // 🎧 From a song (listen-ui.js): listening started and stopped, what it
   // made (beats, a song), and how it ended: opened as a song or a beat,
   // thrown away or cancelled. Never the song, its name or its sound.

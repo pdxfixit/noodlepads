@@ -691,7 +691,15 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   newest own sound, else (none, or it won't load) their first preset. A second tap, another row or ✕
   stops it. Key sets and layouts have no sound of their own: no ▶. It reads
   this device, which for a person in the cloud is the cloud's copy, at most a
-  background sync behind (Cloud profiles, below). It only shows and plays;
+  background sync behind (Cloud profiles, below). At its foot,
+  **⬇️ Export a backup** (Ben, 2026-10-24) saves a backup of just that person
+  (`backup.js` `personBackupLists`, `backup-ui.js` `savePersonBackup`):
+  their person record, everything listed, their pad order, open beat and
+  song, and their own settings (`prefs`), in the same format as 💾 Save a
+  backup, named `noodlepads-<their fun name>-<date>.zip`; the device's
+  settings stay out. 📂 Load a backup on any device adds them as any backup
+  does. A beat row playing another person's own sound loses that row on a
+  device that lacks that person. The sheet only shows, plays and exports;
   deleting stays in Edit sounds, 🗂️ My beats and 🗂️ My songs.
 - **One emoji per kind** (`KIND_EMOJI` in `web/model.js`): 🔊 sounds,
   🥁 beats, 🎼 songs, 🎬 takes, ⭐ my voices, 👥 people, ✏️ sound edits,

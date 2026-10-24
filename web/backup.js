@@ -133,6 +133,32 @@ export async function makeBackup(state, version = 'dev') {
   return zip(files);
 }
 
+// One person's part of `lists` (the stores as lists), for 🗂️ See all's
+// ⬇️ Save a backup of them (Ben, 2026-10-24): their person record, all they
+// made, their pad order and their own settings, in the same format, so
+// 📂 Load a backup on any device adds them. The device's settings stay out:
+// they belong to the device. Pure.
+export function personBackupLists(lists, personId) {
+  const mine = (name) => (Array.isArray(lists?.[name]) ? lists[name] : []).filter((r) => r?.personId === personId);
+  return {
+    people: (lists?.people ?? []).filter((p) => p?.id === personId),
+    clips: mine('clips'),
+    overrides: (lists?.overrides ?? []).filter((o) => typeof o?.id === 'string' && o.id.startsWith(`${personId}-`)),
+    orders: mine('orders'),
+    patterns: mine('patterns'),
+    beats: mine('beats'),
+    settings: [],
+    decks: mine('decks'),
+    takes: mine('takes'),
+    songs: mine('songs'),
+    songbook: mine('songbook'),
+    prefs: mine('prefs'),
+    layouts: mine('layouts'),
+    voices: mine('voices'),
+    touchLayouts: mine('touchLayouts'),
+  };
+}
+
 // file: the chosen zip. bundled: {peopleIds: Set, clipIds: Set} from boards.json,
 // plus addedPeopleIds (people already added on this device) and colorOk(name)
 // (is this a palette color?) when known. Returns cleaned records, ready to

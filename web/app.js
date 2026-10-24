@@ -40,7 +40,7 @@ import { beatHasHits } from './firsts.js';
 import { initCloud, needsPin, leftPerson, onCloud } from './cloud.js';
 import { initCloudUI, askToOpen, shareSounds } from './cloud-ui.js';
 import { renderPreview, renderAudio } from './share-render.js';
-import { initBackups, storeLoaded, whatIsHere } from './backup-ui.js';
+import { initBackups, storeLoaded, whatIsHere, savePersonBackup } from './backup-ui.js';
 import { initSettingsUI, showSettings } from './settings-ui.js';
 import { initKids, showKids, refreshKids, kidsShowing, kidsBusy, askGrownUp, kidsKeydown, kidsKeyup } from './kids.js';
 import { initHelp } from './help.js';
@@ -839,6 +839,7 @@ async function start() {
         ?? [...state.songs.values()].find((s) => s.personId === personId && String(s.id ?? '') === sid),
       takeById: (tid) => state.takes.find((t) => t.id === tid),
     }),
+    backup: savePersonBackup,
   });
   // 👋 Who's playing? for a new person (ADR 0028). A card's sound is the
   // person's copy of a ready-made one.
