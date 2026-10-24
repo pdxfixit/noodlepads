@@ -141,8 +141,9 @@ export const RULES = {
     // ● on the Keys screen: a tune recording started and stopped (`tune`: notes landed).
     rec: oneOf(['start', 'stop']), tune: num,
   },
-  // 👋 The welcome (welcome.js, ADR 0028): shown, the level a card set, skipped.
-  welcome: { shown: bool, level: oneOf(['kids', 'regular', 'advanced']), skipped: bool },
+  // 👋 The welcome (welcome.js, ADR 0028): shown, the level a card set,
+  // skipped, ☁️ Open from the cloud tapped.
+  welcome: { shown: bool, level: oneOf(['kids', 'regular', 'advanced']), skipped: bool, cloud: bool },
   backup: { saved: bool, loaded: bool, person: bool, into: bool, sounds: num, beats: num, bytes: num, settings: num, already: num, skipped: num, error: text },
   // 🎧 From a song (listen-ui.js): listening started and stopped, what it
   // made (beats, a song), and how it ended: opened as a song or a beat,

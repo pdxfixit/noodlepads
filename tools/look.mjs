@@ -128,10 +128,10 @@ const NOTICE = `const { showNotice } = await import('/ui.js');
 // 👋 A new person's first steps (ADR 0028; web/firsts.js). Every view starts
 // with them off (the app's test hook), as a fresh device always looked; a
 // view with `firstSteps: true` turns them on. WELCOME opens the welcome for
-// the person showing, as if just made (the widths share one device, so only
-// the first width's person is new by itself).
+// the person showing, as if the device just made them (the widths share one
+// device, so only the first width's person is new by itself).
 const WELCOME = `const w = await import('/welcome.js'); const { state } = await import('/state.js');
-  if (!w.welcomeOpen()) { w.markNew(state.personId); w.offerWelcome(state.personId); } ${nap}`;
+  if (!w.welcomeOpen()) { w.markNew(state.personId, { device: true }); w.offerWelcome(state.personId); } ${nap}`;
 // A person with first steps on and nothing seen yet: the welcome (open on
 // the first width's new person) put away, and `seen` emptied (the widths
 // share one device).

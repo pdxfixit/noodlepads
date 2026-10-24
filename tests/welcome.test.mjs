@@ -40,6 +40,7 @@ test("a new device's first person is asked Who's playing?: three picture pads, n
     assert.doesNotMatch(c.getAttribute('aria-label'), /\d/, 'no ages');
   }
   assert.equal($('#wl-skip').textContent, 'Skip');
+  assert.equal($('#wl-cloud').hidden, false, "a fresh device offers the cloud beside a new player (Ben, 2026-10-24)");
 });
 
 test('a card sets the level for the person showing, then Pick your stage name', async () => {
@@ -88,6 +89,7 @@ test('➕ in 👥 People welcomes the new person; Skip on the first step keeps R
   const id = state.personId;
   assert.equal($('#welcome').open, true, 'asked again, for the new person');
   assert.equal($('#wl-who').hidden, false, 'from the first step');
+  assert.equal($('#wl-cloud').hidden, true, "someone added is a new player: 👥 People's own ☁️ is beside ➕");
   await tap($('#wl-skip'));
   assert.equal($('#welcome').open, false);
   assert.equal(state.personId, id);
