@@ -587,6 +587,20 @@
     </div>
   </dialog>
 
+  <!-- 👋 Who's playing now? (who-now.js): the board starts over here, once
+       the person on show is deleted, and at start when everyone has a PIN.
+       Only a pick closes it. -->
+  <dialog id="who-now" class="np-dialog welcome who-now" aria-labelledby="who-now-title">
+    <div class="chooser-body">
+      <h2 class="wl-title" id="who-now-title">👋 Who's playing now?</h2>
+      <p class="field-hint wn-note" id="who-now-note"></p>
+      <div class="wl-cards wn-cards" id="who-now-cards" role="group" aria-labelledby="who-now-title"></div>
+      <div class="wl-foot">
+        <button type="button" class="wl-skip" id="who-now-new">👋 Someone new</button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- 👥 People → tap someone: their profile sheet (people.js). With a PIN,
        a change to the name, picture or color asks for it once per visit. -->
   <dialog id="profile-dialog" class="np-dialog" aria-labelledby="profile-title">

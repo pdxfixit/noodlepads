@@ -34,6 +34,7 @@ import { registerOffline } from './offline.js';
 import { initPeople, refreshPeople, addPerson, deleteHere, editLook, openPictures, storedLists } from './people.js';
 import { initThings } from './things.js';
 import { initWelcome, markNew, offerWelcome } from './welcome.js';
+import { initWhoNow, openWhoNow, closeWhoNow, whoNowOpen } from './who-now.js';
 import { initTips, tipsScreen } from './tips.js';
 import { initNudge } from './nudge.js';
 import { beatHasHits } from './firsts.js';
@@ -86,6 +87,8 @@ function setPerson(id, { checked = false, again = false } = {}) {
   if (!checked && (again || p.id !== state.personId) && needsPin(p.id)) {
     const fresh = !state.personId || again;
     const free = fresh && people().find((x) => !needsPin(x.id));
+    // Everyone has a PIN: a kid picks themselves (Ben, 2026-10-24).
+    if (fresh && !free) { startOver(); return; }
     if (free) setPerson(free.id, { checked: true });
     else if (!state.personId) showPerson(p);
     const locked = !state.personId || state.personId === p.id;
@@ -97,19 +100,43 @@ function setPerson(id, { checked = false, again = false } = {}) {
 }
 
 // 🤷 I don't know the PIN (cloud-ui.js): they go from this device, with
-// everything of theirs, and someone else shows (a new person if nobody is left).
+// everything of theirs. When they were the one on show, the board starts
+// over (people.js refreshPeople).
 async function dropLockedPerson(id) {
+  const name = person(id)?.name;
   await deleteHere(id);
   renderPeople();
-  refreshPeople();
-  if (state.personId !== id) return;
-  const next = people().find((x) => !needsPin(x.id)) ?? people()[0];
-  if (!next) { addPerson(); return; }
-  state.personId = null;
-  setPerson(next.id);
+  if (state.personId === id || whoNowOpen()) startOver(name ? `${name} is deleted from this device. Tap your picture.` : undefined);
+  else refreshPeople();
 }
 
-function showPerson(p) {
+// Nobody is on show (the one who was is deleted, or at start everyone has a
+// PIN): 👋 Who's playing now? (who-now.js). The board behind it is drawn for
+// the first person but hidden, and nothing shows it until a pick: while the
+// chooser is open, that person is not "the one showing" (see onCloud below,
+// people.js refreshPeople). The only one left, with no PIN, just shows;
+// nobody left, a new person.
+function startOver(note) {
+  const left = people();
+  state.personId = null;
+  if (!left.length) { closeWhoNow(); addPerson(); return; }
+  if (left.length === 1 && !needsPin(left[0].id)) { setPerson(left[0].id); return; }
+  showPerson(left[0], { behind: true });
+  document.body.dataset.locked = '';
+  openWhoNow(note);
+}
+
+// A pick in 👋 Who's playing now?: their PIN first if they have one; closing
+// the PIN pad comes back to the chooser.
+function pickWhoNow(id) {
+  if (!person(id)) { openWhoNow(); return; }
+  if (!needsPin(id)) { setPerson(id, { checked: true }); return; }
+  askToOpen(id).then((ok) => { if (ok) setPerson(id, { checked: true }); });
+}
+
+// `behind`: drawn hidden behind 👋 Who's playing now?, which stays open.
+function showPerson(p, { behind = false } = {}) {
+  if (!behind) closeWhoNow();
   delete document.body.dataset.locked;
   if (state.personId && state.personId !== p.id) leftPerson(state.personId);
   state.personId = p.id;
@@ -817,7 +844,8 @@ async function start() {
   initPads({ openSheet, onPerson: setPerson, onLooping: (id, on) => dj?.looping(id, on) });
   initSheet();
   initBulk({ share: shareSounds });   // ✏️ Edit sounds with sounds chosen: Move, Color · picture, Voice, Share, Delete
-  initPeople({ showPerson: setPerson });
+  initPeople({ showPerson: setPerson, startOver });
+  initWhoNow({ pick: pickWhoNow, someoneNew: addPerson });
   // 🗂️ See all, from a profile's count line: everything of one person's,
   // each row playing in place; a beat, song or take is recorded as a share's
   // preview is, at the device's own rate.
@@ -860,7 +888,7 @@ async function start() {
   // A sync that finds a PIN new to this device on the person showing: the
   // board goes behind the PIN pad until it is typed (Ben, 2026-10-19).
   onCloud(() => {
-    if (state.personId && needsPin(state.personId)) setPerson(state.personId, { again: true });
+    if (state.personId && !whoNowOpen() && needsPin(state.personId)) setPerson(state.personId, { again: true });
   });
   initBackups();
   // ⚙️ while 🧸 Kids shows asks a grown-up sum first (kids.js).

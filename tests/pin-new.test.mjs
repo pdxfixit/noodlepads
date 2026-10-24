@@ -120,6 +120,7 @@ test('🤷 I don\'t know the PIN asks first, then deletes them from this device;
   $('#pin-unknown').dispatch('click');
   await settle();
   assert.equal($('#pin-dialog').open, false);
+  assert.equal($('#who-now').open, false, 'someone else was already on show: nothing starts over');
   assert.equal(state.peopleEdits.has(id), false, 'gone from this device');
   assert.equal(state.savedBeats.some((b) => b.personId === id), false, 'with everything of theirs');
   assert.equal(cloud.inCloud(id), false);

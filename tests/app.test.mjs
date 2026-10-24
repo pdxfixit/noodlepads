@@ -360,6 +360,12 @@ test('deleting Pip (from boards.json) asks twice, then removes his sounds, beats
   removeButton(0).dispatch('click');
   await page.settle();
 
+  // Pip was on show: the board starts over on 👋 Who's playing now? (Ben, 2026-10-24).
+  assert.equal($('#who-now').open, true);
+  assert.deepEqual($('#who-now-cards').children.map((b) => b.dataset.person), ['juno', 'toby', 'wren']);
+  $('#who-now-cards').children[0].dispatch('click');
+  await page.settle();
+  assert.equal($('#who-now').open, false);
   assert.deepEqual(people().map((b) => b.textContent), ['Juno', 'Toby', 'Wren']);
   assert.equal(who(), 'Juno');
   assert.deepEqual(state.userClips.map((c) => c.id), ['user-test-2'], 'only Juno keeps his recording');
@@ -367,6 +373,7 @@ test('deleting Pip (from boards.json) asks twice, then removes his sounds, beats
   assert.equal(state.patterns.has('pip'), false);
   assert.equal(state.orders.has('pip'), false);
   assert.deepEqual(state.peopleEdits.get('pip'), { id: 'pip', hidden: true }, 'kept only as a hidden record');
+  $('#people-open').dispatch('click');
   assert.equal($('#people-edit').children.length, 3);
   assert.equal($('#people-gone').hidden, false);
   assert.deepEqual($('#people-gone-list').children.map((li) => li.children[0].textContent), ['Pip']);

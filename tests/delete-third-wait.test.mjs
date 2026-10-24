@@ -1,8 +1,8 @@
 // Deleting the person on show who is in the cloud, when everyone left has a
 // PIN (Ben, 2026-10-24): the second tap left the sheet open for the third,
 // but switched to the next person at once, whose PIN pad covered it. Now
-// nobody else comes on while the sheet waits; closing it brings the next
-// person on, behind their PIN pad.
+// nobody else comes on while the sheet waits; closing it brings up 👋 Who's
+// playing now?
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
@@ -49,7 +49,7 @@ before(async () => {
   await page.settle();
 });
 
-test('the sheet waiting for the third tap is never covered by the next person\'s PIN pad; closing it brings them on', async () => {
+test('the sheet waiting for the third tap is never covered by the next person\'s PIN pad; closing it brings up the chooser', async () => {
   assert.equal(state.personId, SHOWN);
   $('#people-open').dispatch('click');
   $('#people-edit').children.find((r) => r.dataset.person === SHOWN).querySelector('[data-profile]').dispatch('click');
@@ -64,8 +64,10 @@ test('the sheet waiting for the third tap is never covered by the next person\'s
 
   $('#profile-dialog').close();   // ✕: their cloud copy stays
   await page.settle();
-  assert.notEqual(state.personId, SHOWN, 'someone else comes on');
+  assert.notEqual(state.personId, SHOWN, 'they are off the board');
   assert.equal($(`.person-list [data-person="${SHOWN}"]`), null, 'gone from the corner menu');
-  assert.equal($('#pin-dialog').open, true, 'their PIN is asked now');
-  assert.equal(document.body.dataset.locked, '', 'the board waits behind the pad');
+  assert.equal($('#pin-dialog').open, false);
+  assert.equal($('#who-now').open, true, "👋 Who's playing now?");
+  assert.match($('#who-now-note').textContent, /^Admiral Acorn is deleted from this device/);
+  assert.equal(document.body.dataset.locked, '', 'the board is hidden behind it');
 });

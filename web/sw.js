@@ -63,7 +63,7 @@ const MODULES = [
   'pill-select', 'pitch', 'play-count', 'playlist', 'privacy', 'reid', 'rhythm', 'roll', 'row-volume', 'scratch', 'sequencer',
   'settings-ui', 'settings', 'shape', 'share-render', 'sheet', 'skins', 'slide', 'song', 'starters', 'state', 'steps',
   'store', 'stretch-worker', 'stretch', 'sync-timing', 'synth', 'telemetry', 'things', 'tips', 'tooltips', 'touch-grid', 'touch', 'track-page', 'tweaks',
-  'ui', 'update', 'usage', 'util', 'voice-knobs', 'voices', 'wave', 'welcome', 'zip',
+  'ui', 'update', 'usage', 'util', 'voice-knobs', 'voices', 'wave', 'welcome', 'who-now', 'zip',
 ];
 
 // Every file the app can load, relative to this worker. './' is the page
