@@ -1455,6 +1455,15 @@ export function createDJ({ el, deps }) {
     showSetup();
   };
   for (const b of clicks) b.addEventListener('click', () => clickTapped(b));
+  // ⏹️ Stop all turns ⏲️ off too, remembered as off; taps so far start over.
+  function clickOff() {
+    clearTimeout(tapTimer);
+    tapped = null;
+    endTaps();
+    if (!clickWanted) return;
+    setClickWanted(false);
+    showMode();
+  }
   el.record.addEventListener('click', () => {
     if (rec) stopRec();
     else if (beatRec) stopBeatRec();
@@ -1592,5 +1601,5 @@ export function createDJ({ el, deps }) {
   showMode();
   // Recording a take, or playing one back: the update bar waits (update.js).
   const busy = () => recording() || !!replaying;
-  return { render, keydown, keyup, deck, touchNow, touching, letGo, level, flashClip, looping, escape, stopReplay, steps, renderGrid, showSetup, shown, leave, beatStopped, busy, setMode, recording, offerUndo };
+  return { render, keydown, keyup, deck, touchNow, touching, letGo, level, flashClip, looping, escape, stopReplay, steps, renderGrid, showSetup, shown, leave, beatStopped, busy, setMode, recording, offerUndo, clickOff };
 }

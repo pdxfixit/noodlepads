@@ -367,8 +367,8 @@ async function loadVersion() {
 
 // ── Events ─────────────────────────────────────────────────────────────
 
-// ⏹️ Stop all: every sound, the beat and the song.
-function stopEverything() { audio.stopAll(); seq.stop(); song.stop(); }
+// ⏹️ Stop all: every sound, the beat and the song, and both ⏲️ Click tracks off.
+function stopEverything() { audio.stopAll(); seq.stop(); song.stop(); seq.clickOff(); dj?.clickOff(); }
 
 // Space is Stop all almost everywhere (Ben, 2026-10-12): not while typing,
 // and not on a focused button, link or the like, which Space presses for
