@@ -143,3 +143,38 @@ test('⬇️ Export a backup saves one file of just this person, named after the
   assert.deepEqual(doc.settings, [], 'the device\'s settings stay here');
   assert.equal($('#things-backup').getAttribute('aria-label'), 'Export a backup of Juno');
 });
+
+// Ben, 2026-10-24: one tap from the profile's ☁️ part, beside 🔄 Sync now and
+// 🔗 Share…; it needs no cloud, so it shows for someone who isn't in it.
+test('⬇️ Back up in the profile\'s ☁️ part saves the same one-person file, cloud or not', async () => {
+  const { unzip } = await import('../web/zip.js');
+  if ($('#things-dialog').open) $('#things-dialog').close();
+  openProfile('juno');
+  assert.equal($('#profile-cloud-tools').hidden, false);
+  assert.equal($('#cloud-backup').hidden, false, 'Back up shows');
+  assert.equal($('#cloud-sync').hidden, true, 'not in the cloud: no Sync now');
+  assert.equal($('#cloud-share').hidden, true, 'nor Share');
+  assert.equal($('#cloud-backup').getAttribute('aria-label'), 'Back up Juno: one file of everything of theirs');
+  let blob;
+  let name;
+  const realUrl = URL.createObjectURL;
+  const realMake = document.createElement;
+  URL.createObjectURL = (b) => { blob = b; return 'blob:test'; };
+  document.createElement = (tag) => {
+    const made = realMake.call(document, tag);
+    if (tag === 'a') made.click = () => { name = made.download; };
+    return made;
+  };
+  try {
+    $('#cloud-backup').dispatch('click');
+    await page.settle();
+  } finally {
+    URL.createObjectURL = realUrl;
+    document.createElement = realMake;
+  }
+  assert.match(name, /^noodlepads-juno-\d{4}-\d{2}-\d{2}\.zip$/);
+  const doc = JSON.parse(new TextDecoder().decode((await unzip(blob)).get('backup.json')));
+  assert.deepEqual(doc.clips.map((c) => c.id).sort(), ['user-j1', 'user-j2', 'user-j3', 'user-j4'], 'Juno\'s sounds and no one else\'s');
+  assert.equal($('#profile-dialog').open, true, 'the sheet stays');
+  $('#profile-dialog').close();
+});

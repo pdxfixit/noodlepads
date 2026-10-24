@@ -638,7 +638,9 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   nothing made; off asks twice (and for the PIN), deletes the cloud copy and
   keeps them here only (📴 Offline); a tap anywhere else takes the first tap
   back. Under it, when they are in the cloud, 🔄 Sync now and 🔗 Share… (both
-  ask for the PIN first on a visit that hasn't had it). The 🔒 PIN part has a
+  ask for the PIN first on a visit that hasn't had it), and for everyone ⬇️
+  Back up: one tap saves the file 🗂️ See all's ⬇️ Export a backup makes
+  (`backup-ui.js` `savePersonBackup`). The 🔒 PIN part has a
   pill, 🔒 PIN on or 🔓 No PIN, and 🔒 shows by the name in the corner
   menu. 🔒 Set a PIN (which puts them in
   the cloud first if they aren't), or Change PIN and Remove PIN, which ask

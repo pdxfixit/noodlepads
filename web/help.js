@@ -221,6 +221,7 @@ export const HELP = [
       { pic: [word("👋 Who's playing now?")], text: 'When nobody is playing (the one playing was just deleted, or everyone on this device has a PIN): tap your picture. 🔒 in its corner means your PIN comes next. 👋 Someone new adds a person.' },
       { pic: [chip("🤷 I don't know the PIN")], text: 'On the PIN pad, when someone got a new PIN on another device: tap twice and they are deleted from this device, with everything of theirs here. Their cloud copy stays.' },
       { pic: [word(PIN_RESET_EMAIL)], text: `Forgot a PIN? A grown-up emails ${PIN_RESET_EMAIL} with the fun name, and it gets cleared.` },
+      { pic: [chip('⬇️ Back up')], text: 'In someone’s profile, under ☁️ In the cloud: one tap saves a backup file of just them, cloud or not. 📂 Load a backup in ⚙️ Settings puts them on any phone or tablet.' },
       { pic: [chip('🔗 Share…')], text: 'In someone’s profile, under ☁️ In the cloud: pick a sound, beat or song and get a code. Anyone who types it can play it, but never change yours.' },
       { pic: [chip('🚫 Unshare')], text: 'In 🔗 Share…, under Shared already: tap twice and that code stops working for everyone. Remixes others made stay theirs.' },
       { pic: [chip('🔗 Shared with me'), chip('🎛️ Remix')], text: 'In ⚙️ Settings → 🔗 Sharing: type a code to play what someone shared. 🎛️ Remix puts a copy on your board to change, and it stays yours. ✕ Remove (tap twice) takes it off your list.' },
