@@ -110,9 +110,7 @@ export const hitGain = (row, loud) => (loud ? ACCENT_GAIN : 1) * rowLevel(row);
 export const audible = (row, p = null) => !row.muted && rowLevel(row) > 0 && !(p && silencedBySolo(p, row));
 export { MAX_RINGING };                // overlapping hits one 🔔 Overlap row may have sounding (rhythm.js)
 const ARM_MS = 3000;                   // how long a Clear? or Remove? waits for its second tap
-const UNDO_MS = 8000;
-// The line 🆕 New shows when it has emptied a scratch beat with rows.
-const FRESH_TEXT = '🆕 Your scratch beat is blank now.';                  // how long a removed row can be brought back
+const UNDO_MS = 8000;                  // how long a removed row can be brought back
 export const MAX_CHIPS = 8;            // pattern chips under the beat bar: 8 spots
 export const MAX_PINS = MAX_CHIPS;     // beats pinned with 📌 in 🗂️ My beats, each taking a spot
 
@@ -846,23 +844,31 @@ export function createSequencer(deps) {
 
   // 🆕 New (Ben, 2026-10-12: "an entirely blank beat screen"): the beat
   // stops and the scratch opens, blank: no rows, the tempo and bars a new
-  // beat has. Nothing joins 🗂️ My beats; only 💾 Keep adds one. A named beat
-  // open stays there as it is (it saved itself). A scratch with rows that
-  // it empties is said in a line with Undo, as a groove replacing it is:
-  // Undo brings it back, and the beat open before. With ⌨️ Keys on the line
-  // is the keys' own (deps.offerKeysUndo).
+  // beat has. A named beat open stays there as it is (it saved itself). A
+  // scratch with hits is kept first (Ben, 2026-10-24: 🗂️ See all lists it
+  // as theirs, so New must never lose it): it joins 🗂️ My beats under the
+  // name 💾 Keep would give it, open or not, and a line says so. A scratch
+  // with no hits just empties.
   function newScratch() {
     stop();   // first: a recording ending saves its hits into the beat it was in
-    const old = scratchSaved();
-    const was = { before: pattern ? structuredClone(pattern) : null, scratchBefore: old ? structuredClone(old) : null, fresh: true };
     offerUndo(null);
+    const old = scratchSaved();
+    const kept = hasHits(old) ? keepAside(old) : null;
     if (old) deps.library.remove(old.id);
     openBeat(null, { resume: false });
-    const cleared = (old?.rows ?? []).length > 0;
-    logEvent('beat', { action: 'new', replaced: cleared });
-    if (!cleared) deps.announce?.('A blank scratch beat.');
-    else if (slot === 'dj') deps.offerKeysUndo?.(FRESH_TEXT, () => undoLoad(was));
-    else offerUndo({ ...was, pattern });
+    logEvent('beat', { action: 'new' });
+    if (kept) showBanner(`Kept as “${kept}” in 🗂️ My beats. A blank scratch beat.`);
+    else deps.announce?.('A blank scratch beat.');
+  }
+  // The stored scratch, put in 🗂️ My beats as a beat of its own, named
+  // after its groove or with a fun name. Its name.
+  function keepAside(scratch) {
+    const groove = grooveOf(scratch);
+    const name = groove && deps.keptName ? deps.keptName(groove.name, library().map((b) => b.name)) : freshName();
+    const now = Date.now();
+    deps.library.put({ ...cleanPattern(scratch, personId), id: newId('beat'), name, created: now, saved: now });
+    logEvent('beat', { action: 'keep', groove: !!groove });
+    return name;
   }
 
   // Saves the open beat into the library and keeps it as the open one (the
@@ -1975,7 +1981,6 @@ export function createSequencer(deps) {
     const clip = next.row && deps.clipById(next.row.clipId);
     const text = next.copy ? next.text
       : next.level ? `${levelState(next.level.at).name} loudness ${percent(rowLevel(pattern.rows[next.level.at]))} %.`
-      : next.fresh ? FRESH_TEXT
       : 'before' in next && next.added !== undefined ? `Added ${next.added} ${next.added === 1 ? 'hit' : 'hits'} from “${next.groove}”.`
       : 'before' in next && next.replaced ? `“${next.groove}” replaced your scratch beat.`
       : 'before' in next ? `Loaded “${next.groove}” into your scratch beat.`
