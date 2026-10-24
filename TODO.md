@@ -89,7 +89,7 @@ Other work:
 
 - [ ] Move `skills/noodlepads-logs` to `~/src/skills/noodlepads-logs` and link it (the skills workspace convention); the recurrent routine's leg is now named `noodlepads-logs`, and its state file `~/.local/state/skills/noodlepads-logs.state.json`
 
-- [ ] **Where Delete lands** (Ben, 2026-10-24): deleting the person on show switches at once, and when the next is behind a PIN the PIN pad covers the sheet that still offers Delete's third tap. He wants "an intermediate space" to land in; options and a mockup go to Ben first (new screen).
+- [ ] **Where Delete lands: 👋 Who's playing?** (Ben, 2026-10-24, "A and B"; A, holding the switch while the sheet waits for the third tap, is done). B: after deleting the person on show, closing the sheet lands on a chooser of everyone left (big pictures, 🔒 on those with a PIN, 👋 Someone new); a tap opens them, past their PIN. It may also replace the locked PIN pad at start when everyone has a PIN. Mockup to Ben first (new screen), then build.
 
 ### Offered, not approved
 

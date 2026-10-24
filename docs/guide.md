@@ -661,7 +661,9 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   and the sheet stays, showing only Delete ("☁️ Tap again to delete their
   cloud copy"): a third tap deletes their cloud profile too (asking for the
   PIN if they have one; `cloud-ui.js` `deleteLeftCloud`), and ✕ keeps it for
-  their other devices. Switching ☁️ In the cloud off deletes the cloud copy
+  their other devices. When they were the one on show, nobody else comes on
+  while the sheet waits (the next one's PIN pad would cover it); closing it
+  brings the next person on. Switching ☁️ In the cloud off deletes the cloud copy
   and keeps them here. Under each name, a row says how much that person has on
   this device, kinds with none left out: "🔊 27 · 🥁 4 · 🎼 1 · 🎬 1", or
   "nothing yet" (`personCounts` and `countsText` in `web/model.js`). It counts
