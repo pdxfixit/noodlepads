@@ -882,7 +882,7 @@ async function start() {
     keysOn: () => keysOn,
     beatHasHits: () => beatHasHits(seq?.beat()),
   });
-  initCloudUI({ refresh: () => { renderPeople(); refreshPeople(); }, addPerson, dropPerson: dropLockedPerson });
+  initCloudUI({ refresh: () => { renderPeople(); refreshPeople(); }, addPerson, dropPerson: dropLockedPerson, backup: savePersonBackup });
   // A sync that finds a PIN new to this device on the person showing: the
   // board goes behind the PIN pad until it is typed (Ben, 2026-10-19).
   onCloud(() => {

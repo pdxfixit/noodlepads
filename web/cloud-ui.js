@@ -29,6 +29,7 @@ const el = {};
 let refresh = () => {};    // redraws People and the corner, after a person changes
 let addPerson = () => {};  // 👋 Someone new, from a PIN pad that guards a locked board
 let dropPerson = async () => {};  // 🤷 I don't know the PIN: deletes them from this device (app.js)
+let backup = async () => {};      // ⬇️ Back up: one person's backup file (backup-ui.js savePersonBackup)
 
 const $ = (s) => document.querySelector(s);
 function make(tag, className, text) {
@@ -239,7 +240,7 @@ async function chooseAvatar(avatar) {
 // ☁️ In the cloud is a switch (Ben, 2026-10-19): on puts them in the cloud
 // now, even with nothing made; off deletes the cloud copy (two taps, and the
 // PIN if they have one) and keeps them on this device only (📴 Offline).
-// Under it, 🔄 Sync now and 🔗 Share…. The PIN part says at a glance whether
+// Under it, 🔄 Sync now and 🔗 Share… (in the cloud) and ⬇️ Back up (always). The PIN part says at a glance whether
 // a PIN is on (its pill), with 🔒 Set a PIN, or Change PIN and Remove PIN.
 // What a PIN button just did shows in the pill for a while, then the pill
 // fades back to saying what is on (Ben: "PIN set appears where PIN on is").
@@ -279,7 +280,11 @@ export function drawPin(personId) {
   if (!el.cloudSwitch.classList.contains('armed')) {
     el.cloudText.textContent = p.added ? cloudText(p) : "Someone from the app's own list stays on this device.";
   }
-  el.cloudTools.hidden = !linked;
+  // ⬇️ Back up needs no cloud: it shows for everyone (Ben, 2026-10-24).
+  el.cloudTools.hidden = false;
+  el.syncBtn.hidden = !linked;
+  el.shareBtn.hidden = !linked;
+  el.backupBtn.setAttribute('aria-label', `Back up ${nameOf(p)}: one file of everything of theirs`);
 
   const hasPin = !!link?.pin;
   const now = flash && flash.id === personId && flash.until > Date.now() ? flash : null;
@@ -353,7 +358,7 @@ export function disarmCloud(personId) {
 // A tap in the Cloud or PIN part: true when it was one of their buttons.
 // `note` says what went wrong (in the PIN part); the pill says what went right.
 export async function pinClick(personId, t, note = () => {}) {
-  const parts = [el.cloudSwitch, el.syncBtn, el.shareBtn, el.pinBtn, el.pinChange, el.pinOff];
+  const parts = [el.cloudSwitch, el.syncBtn, el.shareBtn, el.backupBtn, el.pinBtn, el.pinChange, el.pinOff];
   if (t !== el.cloudSwitch) disarmCloud(personId);
   if (!parts.includes(t)) return false;
   const p = people({ includeHidden: true }).find((x) => x.id === personId);
@@ -393,6 +398,12 @@ export async function pinClick(personId, t, note = () => {}) {
     await run(() => (inCloud(personId) && linkOf(personId)?.pin
       ? withPin(off, { title: '📴 Out of the cloud', hint: 'Type the PIN. Their cloud copy is deleted; this device keeps everything.' })
       : off()));
+    return true;
+  }
+  // ⬇️ Back up: one file of just them, as 🗂️ See all's ⬇️ Export a backup
+  // makes (backup-ui.js savePersonBackup), in one tap.
+  if (t === el.backupBtn) {
+    await backup(personId, nameOf(p), el.backupBtn);
     return true;
   }
   if (t === el.syncBtn) {
@@ -709,12 +720,13 @@ export function initCloudUI(hooks) {
   refresh = hooks.refresh;
   if (hooks.addPerson) addPerson = hooks.addPerson;
   if (hooks.dropPerson) dropPerson = hooks.dropPerson;
+  if (hooks.backup) backup = hooks.backup;
   Object.assign(el, {
     pin: $('#pin-dialog'), pinTitle: $('#pin-title'), pinHint: $('#pin-hint'), pinNote: $('#pin-note'), pinDots: $('#pin-dots'), pinKeys: $('#pin-keys'),
     pinForgot: $('#pin-forgot'), pinNew: $('#pin-new'), pinUnknown: $('#pin-unknown'),
     avatar: $('#avatar-dialog'), avatarGrid: $('#avatar-grid'),
     cloudSwitch: $('#profile-cloud'), cloudText: $('#profile-cloud-text'), cloudTools: $('#profile-cloud-tools'),
-    syncBtn: $('#cloud-sync'), shareBtn: $('#cloud-share'),
+    syncBtn: $('#cloud-sync'), shareBtn: $('#cloud-share'), backupBtn: $('#cloud-backup'),
     pinState: $('#profile-pin-state'), pinPartHint: $('#profile-pin-hint'), pinPartNote: $('#profile-pin-note'),
     pinBtn: $('#cloud-pin'), pinTools: $('#profile-pin-tools'), pinChange: $('#cloud-pin-change'), pinOff: $('#cloud-pin-off'),
     list: $('#cloud-list'), listNote: $('#cloud-list-note'), listItems: $('#cloud-list-items'),

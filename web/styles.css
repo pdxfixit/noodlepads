@@ -1803,6 +1803,9 @@ button.sa-row { cursor: pointer; }
 .pf-part { display: grid; gap: 8px; margin-top: 16px; padding: 12px; border: 2px solid var(--line); border-radius: 16px; }
 .pf-part .cl-head, .pf-part .field-hint, .pf-part .set-note, .pf-part .set-buttons { margin: 0; }
 .pf-part .set-note:empty { display: none; }
+/* ⬇️ Back up under 🔄 Sync now and 🔗 Share…: a line of its own, full width
+   (alone, too, for someone not in the cloud). */
+#profile-cloud-tools #cloud-backup { grid-column: 1 / -1; }
 .pf-row { display: flex; align-items: center; gap: 12px; }
 .pf-grow { flex: 1 1 auto; min-width: 0; }
 .pf-cloud-text.danger { color: #B3261E; font-weight: 700; }
