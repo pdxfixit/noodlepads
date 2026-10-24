@@ -7,7 +7,14 @@
 //    (Ben: "drop"). A tap is a real gesture, so it plays a ready-made sound
 //    (the audio may start there), sets the level and moves on. A quiet Skip
 //    keeps Regular and ends the welcome. A grown-up picks; the kid sees
-//    pictures, and leaving 🧸 Kids still needs the grown-up sum.
+//    pictures, and leaving 🧸 Kids still needs the grown-up sum. On a
+//    device's first open, ☁️ Open from the cloud sits beside Skip (Ben,
+//    2026-10-24: a fresh start offers a new player or the cloud): it opens
+//    👥 People's own cloud list over the welcome (cloud-ui.js), and once
+//    someone is opened from it and it closes, the welcome ends. Their
+//    arrival drops the device's empty first person (merge.js
+//    isDefaultPerson), and the board shows whoever came (people.js
+//    refreshPeople). Closing the list with nobody opened comes back here.
 // 2. Pick your stage name. A big face on the person's color with their name
 //    and 🎲; a few fun names (names.js, as 👥 People's Pick a name deals
 //    them; 🎲 deals more); a row of pictures ending in … (the full chooser);
@@ -21,7 +28,8 @@
 //
 // Who is new. Only the two places that make a person from nothing mark
 // one, in memory: app.js settlePeople, for a device's automatic first
-// person (model.js soloPerson), and people.js addPerson (➕ in 👥 People,
+// person (model.js soloPerson; `device`, so the cloud is offered), and
+// people.js addPerson (➕ in 👥 People,
 // 👋 Someone new on the PIN pad). A person read from storage, pulled from
 // the cloud or loaded from a backup never passes through either, so nobody
 // who exists before this ships, or arrives from elsewhere, is ever
@@ -34,7 +42,7 @@ import { setSetting, LEVELS } from './settings.js';
 import { makePad } from './pads.js';
 import { PERSON_COLORS, PERSON_COLOR_NAMES, PICTURES } from './model.js';
 import { nameChoices } from './names.js';
-import { avatarBadge } from './cloud-ui.js';
+import { avatarBadge, openCloudList } from './cloud-ui.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { announce } from './ui.js';
 import { logEvent } from './log.js';
@@ -53,23 +61,28 @@ export const STAGE_PICTURES = 7;   // pictures in the row, before …
 
 const el = {};
 let deps = { play: () => {}, edit: async () => false, pictures: () => {} };
-const fresh = new Set();   // people made this visit and not yet welcomed
-// The open welcome: whose, the step, the level waiting for its end (Kids),
-// the looks the app gave (for Skip), and the names and pictures dealt.
+// People made this visit and not yet welcomed: id -> true for a device's
+// first person (the cloud is offered), false for one added.
+const fresh = new Map();
+// The open welcome: whose, the step, whether the cloud is offered, the level
+// waiting for its end (Kids), the looks the app gave (for Skip), the names
+// and pictures dealt, and who was here when the cloud list opened.
 let now = null;
 
-// A person just made from nothing (see above).
-export function markNew(id) {
-  if (id) fresh.add(id);
+// A person just made from nothing (see above). `device`: the device's own
+// first person.
+export function markNew(id, { device = false } = {}) {
+  if (id) fresh.set(id, device);
 }
 
 // Opens the welcome for `id` when they are new and not yet welcomed, once.
 // True when it opened.
 export function offerWelcome(id) {
   if (!fresh.has(id) || !el.dialog || !firstStepsOn()) return false;
+  const device = fresh.get(id);
   fresh.delete(id);
   if (!person(id)) return false;
-  now = { id, step: 'who', kids: false, was: null, names: [], pics: [] };
+  now = { id, step: 'who', cloud: device, kids: false, was: null, names: [], pics: [], here: null };
   showStep();
   logEvent('welcome', { shown: true });
   openDialog(el.dialog, { focus: el.cards.querySelector('[data-level]') });
@@ -85,7 +98,7 @@ export async function replayWelcome() {
   const id = state.personId;
   if (!el.dialog || !person(id)) return false;
   await showTipsAgain();
-  now = { id, step: 'who', kids: false, was: null, names: [], pics: [] };
+  now = { id, step: 'who', cloud: false, kids: false, was: null, names: [], pics: [], here: null };
   showStep();
   logEvent('welcome', { shown: true });
   openDialog(el.dialog, { focus: el.cards.querySelector('[data-level]') });
@@ -98,6 +111,7 @@ function showStep() {
   const stage = now?.step === 'stage';
   el.who.hidden = stage;
   el.stage.hidden = !stage;
+  el.cloud.hidden = !now?.cloud;
   el.title.textContent = !stage ? "Who's playing?" : now.kids ? 'Pick your picture' : 'Pick your stage name';
   el.dialog.classList.toggle('wl-on-stage', stage);
   if (stage) renderStage();
@@ -119,6 +133,23 @@ async function pick(level) {
   showStep();
   (now.kids ? el.pics : el.names).querySelector('button')?.focus();
   if (!now.kids && state.personId === now.id) await setSetting('level', level);
+}
+
+// ☁️ Open from the cloud: 👥 People's list, over the welcome.
+function openCloud() {
+  if (!now || now.step !== 'who' || !now.cloud) return;
+  now.here = new Set(people({ includeHidden: true }).map((p) => p.id));
+  logEvent('welcome', { cloud: true });
+  openCloudList().catch((err) => console.error('Opening the cloud list failed:', err));
+}
+
+// The cloud list closed: someone opened from it ends the welcome (they are
+// on show already); nobody opened leaves Who's playing? as it was.
+function cloudClosed() {
+  if (!now?.here || !el.dialog.open) return;
+  const here = now.here;
+  now.here = null;
+  if (people({ includeHidden: true }).some((p) => !here.has(p.id))) end();
 }
 
 // ── 2. Pick your stage name ──
@@ -241,6 +272,7 @@ export function initWelcome(hooks = {}) {
     who: document.querySelector('#wl-who'),
     cards: document.querySelector('#wl-cards'),
     skip: document.querySelector('#wl-skip'),
+    cloud: document.querySelector('#wl-cloud'),
     stage: document.querySelector('#wl-stage'),
     face: document.querySelector('#wl-face'),
     name: document.querySelector('#wl-name'),
@@ -273,6 +305,8 @@ export function initWelcome(hooks = {}) {
   });
   // Skip on step 1 keeps Regular (nothing to set) and ends the welcome.
   el.skip.addEventListener('click', () => { logEvent('welcome', { skipped: true }); end(); });
+  el.cloud.addEventListener('click', openCloud);
+  document.querySelector('#cloud-list')?.addEventListener('close', cloudClosed);
   el.stage.addEventListener('click', onStageClick);
   // ⚙️ Settings → About → Show the welcome again: Settings closes, the welcome opens.
   document.querySelector('#welcome-again')?.addEventListener('click', () => {

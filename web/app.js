@@ -725,7 +725,7 @@ async function settlePeople() {
   state.peopleEdits.set(me.id, me);
   if (db.handle) await persist('people', me);
   logEvent('person', { soloStart: true });
-  markNew(me.id);   // made from nothing: welcomed once the app is drawn (welcome.js)
+  markNew(me.id, { device: true });   // made from nothing: welcomed once the app is drawn, with the cloud offered (welcome.js)
 }
 
 // After people here got new ids at start: the remembered person, the closed

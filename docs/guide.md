@@ -206,7 +206,13 @@ each drawn as a pad in the person's pad skin. 🧸 Little noodler sets 🧸 Kids
 🎵 Tap and make beats Regular, 🎛️ Show me everything Advanced. No ages. A tap
 plays a ready-made sound (Pop, Clap, the C chord), sets the level and moves
 on; Skip keeps Regular and ends the welcome. Leaving 🧸 Kids still needs the
-grown-up sum.
+grown-up sum. A device's first person also gets ☁️ Open from the cloud beside
+Skip, for a family already in the cloud: 👥 People's own cloud list opens over
+the welcome, and once someone is opened from it and it closes, the welcome
+ends with them on show; the empty person the device made goes, as it does
+whenever someone arrives (`merge.js` `isDefaultPerson`). Closing the list
+with nobody opened comes back to Who's playing?. Someone added later gets no
+☁️ there: 👥 People has it beside ➕.
 
 **Pick your stage name** follows in the same dialog: a big face on the
 person's color with their name and 🎲, six fun names (dealt as 👥 People's

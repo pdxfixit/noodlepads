@@ -5112,6 +5112,10 @@ dialog.welcome { width: min(640px, calc(100vw - 2 * var(--gutter))); }
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+/* A device's first open: ☁️ Open from the cloud, outlined as in 👥 People,
+   then Skip; on the narrowest phones Skip wraps under it, centered. */
+.wl-who-foot { flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.wl-cloud { min-height: 48px; padding: 0 18px; font-size: 1rem; }
 
 /* Pick your stage name: the person's face, name and 🎲 on a band of their
    color (it follows each tap), names to tap, a row of pictures ending in …,
