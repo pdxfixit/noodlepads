@@ -31,6 +31,7 @@ import { isScratch, isHiddenBeat, scratchOf, scratchId, scratchLabel, grooveOf, 
 import { cleanVolume, rowLevel, setRowLevel, drawSpeaker, speakerControls, percent } from './row-volume.js';
 import { rowParts, rowSpeaker, rowEmoji, twinRows } from './beat-row.js';
 import { moreMenu } from './overflow.js';
+import { follower, keepInView } from './follow.js';
 import { fitLine } from './lines.js';
 import { MAX_RINGING, ringOver } from './rhythm.js';
 import { cleanFx, masterLevel, silencedBySolo, mixKey, buildMix, createMixer } from './mixer.js';
@@ -618,8 +619,6 @@ export function createSequencer(deps) {
   const cell = { row: 0, step: 0 };  // the one pill in the Tab order; arrow keys move it
   let speakers = null;       // the rows' speakers and their loudness popover (set once the rows listen)
   let rowMenus = null;       // the rows' menus, each opened by its emoji (overflow.js)
-  let following = false;     // the rows' box keeps the playhead in sight, until the kid scrolls it
-  let scrolledTo = null;     // where following last scrolled the box, so that scroll isn't taken for the kid's
   let mixer = null;          // the 🎚️ Mixer sheet (mixer.js), set once the rows listen
   let locked = false;        // ⇆: the pills locked, nothing lights or unlights (pill-select.js)
   const pickers = [];        // the views' pickers, {pick, shown}: these rows', the keys' grid's
@@ -1102,7 +1101,7 @@ export function createSequencer(deps) {
     deps.onTempo?.();  // before the first schedule, so pads already looping join on the first "1"
     schedule();
     raf = requestAnimationFrame(follow);
-    following = true;
+    rowFollow.start();
     showPlayKeys(true);
   }
   // ▶ Play on Beats and in the keys view (el.djPlay): ■ Stop while playing.
@@ -1359,26 +1358,18 @@ export function createSequencer(deps) {
   // follows the playhead a screen at a time: once the pill being heard leaves
   // what shows beside the rows' heads, its beat moves to the left edge, as a
   // page turns. A scroll by the kid stops it until the next ▶ Play.
-  const rowBox = () => el.rows.closest?.('.seq-scroll') ?? null;
+  const rowBox = el.rows.closest?.('.seq-scroll') ?? null;
+  const rowFollow = follower(rowBox);   // follow.js
   function keepInSight() {
-    const box = rowBox();
     const pill = litPills.find(Boolean);
-    if (!following || !box?.clientWidth || !pill) return;
-    const head = el.rows.querySelector('.seq-head')?.offsetWidth ?? 0;
-    const b = box.getBoundingClientRect(), p = pill.getBoundingClientRect();
-    if (p.left >= b.left + head && p.right <= b.right) return;
+    if (!pill) return;
     const beat = pill.closest('.seq-beat') ?? pill;
-    const to = Math.max(0, Math.round(box.scrollLeft + beat.getBoundingClientRect().left - b.left - head - 6));
-    if (Math.abs(to - box.scrollLeft) < 1) return;
-    box.scrollLeft = to;
-    scrolledTo = box.scrollLeft;   // as far as it could go
+    const b = rowBox?.getBoundingClientRect(), p = pill.getBoundingClientRect();
+    // Turn when the pill leaves the view; turn to its beat's start.
+    if (!b || (p.left >= b.left + headWidth() && p.right <= b.right)) return;
+    keepInView(rowFollow, rowBox, beat, headWidth());
   }
-  rowBox()?.addEventListener('scroll', () => {
-    const box = rowBox();
-    if (scrolledTo !== null && Math.abs(box.scrollLeft - scrolledTo) < 2) { scrolledTo = null; return; }
-    scrolledTo = null;
-    following = false;
-  }, { passive: true });
+  const headWidth = () => el.rows.querySelector('.seq-head')?.offsetWidth ?? 0;
 
   // The playhead: a bar down through every row at the step being played.
   // When the rows are in step and each fits on one line, it is one bar from
@@ -1429,7 +1420,7 @@ export function createSequencer(deps) {
     if (!pattern) {
       pills.length = 0;
       el.rows.replaceChildren(el.playhead);
-      following = false;
+      rowFollow.stop();
       roll?.close();
       el.add.hidden = true;
       if (el.addTune) el.addTune.hidden = true;

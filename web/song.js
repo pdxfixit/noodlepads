@@ -35,6 +35,7 @@ import { isScratchSong, songScratchOf, songScratchId, SCRATCH_NAME } from './scr
 import { speakerControls, makeSpeaker, drawSpeaker, cleanVolume } from './row-volume.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
 import { getSetting, onSetting } from './settings.js';
+import { follower } from './follow.js';
 import {
   MAX_LANES, MAX_LANE_NAME, LANE_EMOJI, LANE_DEFAULTS, DEFAULT_TEMPO, MIN_TEMPO, MAX_TEMPO,
   cleanTempo, cleanLanes, defaultLane, slotsToLanes, legacySlots, blockSpan, blockAt, placeBlock, setTimes, maxTimes,
@@ -636,6 +637,7 @@ export function createSong(deps) {
   });
 
   let swallow = false;   // the click that ends a drag is not a tap
+  const laneFollow = follower(el.lanes);   // follow.js
   el.lanes.addEventListener('click', (e) => {
     if (swallow) { swallow = false; return; }
     if (e.target.closest('[data-speaker]')) return;   // the speakers' own controls
@@ -1190,6 +1192,7 @@ export function createSong(deps) {
     timer = setInterval(tick, TICK_MS);
     tick();
     raf = requestAnimationFrame(follow);
+    laneFollow.start();
     el.play.setAttribute('aria-pressed', 'true');
     el.play.textContent = '■ Stop song';
     showPlayhead();
@@ -1212,7 +1215,9 @@ export function createSong(deps) {
     if (ctx.currentTime > t0 + (planned.seconds - from) + 0.2) stop();
   }
 
-  // The playhead follows the clock; the lanes scroll to keep it in view.
+  // The playhead follows the clock; the lanes scroll to keep it in view, a
+  // screen at a time, until the kid scrolls them (Ben, 2026-10-25, as Beats'
+  // rows): then they stay put until the next ▶ Play song.
   function follow() {
     const t = audio.context().currentTime - t0 + from;
     const now = playingAt(planned.parts, t);
@@ -1227,7 +1232,7 @@ export function createSong(deps) {
     if (line && box.clientWidth) {
       const x = line.offsetLeft;
       const headW = el.lanes.querySelector('.lane-head')?.offsetWidth ?? 0;
-      if (x > box.scrollLeft + box.clientWidth - 24 || x < box.scrollLeft + headW) box.scrollLeft = Math.max(0, x - headW - 8);
+      if (x > box.scrollLeft + box.clientWidth - 24 || x < box.scrollLeft + headW) laneFollow.to(Math.max(0, x - headW - 8));
     }
     raf = requestAnimationFrame(follow);
   }

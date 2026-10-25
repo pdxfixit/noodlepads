@@ -18,6 +18,7 @@
 import { openDialog, setupDialog } from './dialogs.js';
 import { viewRows, homeView, moveView, addNote, removeNote, resizeNote, noteAt, noteLabel, isC, inScale, VIEW } from './notes.js';
 import { pickerButton, pickerList } from './inst-picker.js';
+import { follower, keepInView } from './follow.js';
 
 const SWIPE_PX = 40;     // a vertical swipe this long moves an octave
 const DRAG_PX = 8;       // a note moved this far sideways is being stretched, not tapped
@@ -38,6 +39,9 @@ export function createRoll(dialog, deps) {
     half: q('half'), undo: q('undo'), status: q('status'), scroll: q('scroll'), grid: q('grid'), done: q('done'),
     inst: q('inst'), insts: q('insts'),
   };
+  // While the beat plays the grid turns a page as the playhead leaves the view
+  // (follow.js, as Beats' rows); a scroll by the kid stops it until the next ▶ Play.
+  const gridFollow = follower(el.scroll);
   let instOpen = false;    // 🎹 the row's instrument list is open
   let at = -1;             // the row being edited
   let lo = 0;              // the lowest pitch in view
@@ -46,6 +50,7 @@ export function createRoll(dialog, deps) {
   let history = [];        // the tunes before each change, for ↩️ Undo
   let cursor = { p: 0, s: 0 };   // the square in the Tab order; arrow keys move it
   let playhead = null;
+
 
   const row = () => deps.row(at);
   const unit = () => (half && deps.advanced() ? 0.5 : 1);
@@ -111,8 +116,11 @@ export function createRoll(dialog, deps) {
     el.insts.replaceChildren(...(instOpen ? [pickerList(who.group, { where: 'roll', now: who.inst.id, label: 'Who plays this tune' })] : []));
   }
 
+  let wasPlaying = false;
   function showPlay() {
     const on = deps.playing();
+    if (on !== wasPlaying) { if (on) gridFollow.start(); else gridFollow.stop(); }   // a redraw while playing keeps the kid's scroll
+    wasPlaying = on;
     el.play.textContent = on ? '■ Stop' : '▶ Play';
     el.play.setAttribute('aria-pressed', String(on));
   }
@@ -242,7 +250,9 @@ export function createRoll(dialog, deps) {
     const s = shown?.[at] ?? -1;
     playhead.hidden = s < 0;
     if (s >= 0) playhead.style.gridColumn = `${2 + s * 2} / span 2`;
+    if (s >= 0) keepInView(gridFollow, el.scroll, playhead, el.grid.querySelector('.roll-name')?.offsetWidth ?? 0);
   }
+
 
   // ── Changing the notes ──
 
