@@ -148,7 +148,15 @@ test('🔒 Set a PIN on someone brand new puts them in the cloud; the pill says 
   assert.equal($('#profile-pin-tools').hidden, false, 'Change PIN and Remove PIN');
   assert.equal($('#profile-cloud').getAttribute('aria-checked'), 'true', 'the switch is on');
   assert.match(menuItem(OLD).textContent, /🔒$/, 'the corner menu says so too');
-  await new Promise((r) => setTimeout(r, ui.PIN_FLASH_MS + 100));
+  // A timer can fire a little before Date.now() says it is due (GitHub,
+  // 2026-10-25): the pill still fades. Here the clock is held back past due.
+  const now = Date.now;
+  Date.now = () => now() - ui.PIN_FLASH_MS - 5;
+  try {
+    await new Promise((r) => setTimeout(r, ui.PIN_FLASH_MS + 100));
+  } finally {
+    Date.now = now;
+  }
   assert.equal(pill(), '🔒 PIN on');
   closeSheets();
 });

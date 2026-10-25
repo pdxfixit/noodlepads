@@ -304,10 +304,14 @@ export function drawPin(personId) {
 }
 
 // The pill says `text` for PIN_FLASH_MS, then fades back to the PIN's state.
+// A later change flashes its own, so only the latest flash ends itself: by
+// which flash it is, not the clock, since a timer can fire a millisecond
+// before Date.now() reaches `until`, and the pill then said ✅ for good.
 function flashPin(personId, text) {
-  flash = { id: personId, text, until: Date.now() + PIN_FLASH_MS };
+  const mine = { id: personId, text, until: Date.now() + PIN_FLASH_MS };
+  flash = mine;
   setTimeout(() => {
-    if (flash?.until > Date.now()) return;   // a later change flashes its own
+    if (flash !== mine) return;
     flash = null;
     el.pinState.classList.add('settle');
     refresh();
