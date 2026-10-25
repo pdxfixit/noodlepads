@@ -120,7 +120,7 @@ export const HELP = [
       { pic: [chip('🔊 Make the open beat a sound')], text: 'In 🗂️ My beats: turns the beat into a pad.' },
       { pic: [tool('⬇️'), chip('📥 Load a beat file')], text: 'In 🗂️ My beats: ⬇️ saves a beat as a file to take to another phone or tablet; 📥 opens one. Only presets go with it.' },
       { pic: [play('▶ Play')], text: 'Plays the beat round and round. Pills only sound while it plays.' },
-      { pic: [play('▶'), tool('▾')], text: 'Scroll down and the bar with ▶ Play folds up into the slim line at the top: ▶ plays and stops, ● records (with ⌨️ Keys), and ▾ drops the whole bar down for the tempo, the bars and the rest. On a small screen ⬆️ and ❓ make room for them.' },
+      { pic: [play('▶'), tool('▾')], text: 'Scroll down and the bar with ▶ Play folds up into the slim line at the top: ▶ plays and stops, and ▾ drops the whole bar down for ● Record, the tempo, the bars and the rest. On a small screen ⬆️ and ❓ make room for them.' },
       { pic: [slider('', '120')], text: 'How fast. Tap the number to type one. On a small screen the slider turns into ⌄ ⌃.' },
       { pic: [tool('⏲️')], text: 'The click track: a tick on every beat while the beat plays, to keep time. It is never saved.' },
       { pic: [seg('1 bar', '2 bars', '4 bars')], text: 'How long the beat is.' },

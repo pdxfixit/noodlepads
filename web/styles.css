@@ -655,7 +655,7 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
 /* Beats' control bar scrolls up under the slim bar with its rows, at every
    width, the whole bar, and sticks there once it is all under it (its
    height, --deck-h, is measured by mini-deck.js), so its hiding leaves no
-   blank band over the rows (Ben, 2026-10-25). Then its ▶ ● ▾ ride in the
+   blank band over the rows (Ben, 2026-10-25). Then its ▶ ▾ ride in the
    slim bar instead, until ▾ drops it down under the slim bar ("The play bar
    tucks into the slim bar", below). Over the playhead and a dragged row. */
 .seq .beat-deck { position: sticky; top: calc(var(--head-h, 0px) - var(--deck-h, 0px)); z-index: 6; }
@@ -3538,10 +3538,10 @@ body.head-slim:is(.keys-on, .screen-live) .slim-edit::before { content: "✏️"
 /* 🥁 Beats: the play bar tucks into the slim bar (Ben, 2026-10-19: "rather
    than be full length, collapse into single buttons in the already-sticky
    space"). Once the control bar has scrolled all the way under the slim bar,
-   ▶ (■), ● (Keys on), ✏️ (Keys on) and ▾ ride at the slim bar's right
-   (mini-deck.js).
+   ▶ (■), ✏️ (Keys on) and ▾ ride at the slim bar's right (mini-deck.js);
+   ● Record stays on the bar, so ⬆️ has room (Ben, 2026-10-25).
    ▾ drops the whole bar down under the slim bar; ▴ puts it away. The slim
-   bar never grows: as room runs out ⬆️, ●, ❓, ✏️, then ⚙️ give way, one
+   bar never grows: as room runs out ⬆️, ❓, ✏️, then ⚙️ give way, one
    step at a time, measured (mini-deck.js STEPS). */
 .mini-deck { display: none; }
 /* At the right edge, apart from the round button, ❓, ⚙️ and ⬆️ at the
@@ -3554,7 +3554,7 @@ body.deck-tucked .mini-deck {
   display: flex;
   gap: 6px;
 }
-/* ▶ ● ✏️ ▾: ▾ at the very right, ✏️ between ● and it (Ben, 2026-10-19), in
+/* ▶ ✏️ ▾: ▾ at the very right, ✏️ between ▶ and it (Ben, 2026-10-19), in
    room ▾ keeps at its left. */
 body.deck-tucked.keys-on:not(.tuck-noedit) .mini-more { margin-left: calc(44px + 6px); }
 body.deck-tucked.keys-on .slim-edit { right: calc(max(var(--gutter), calc((100% - var(--max)) / 2 + var(--gutter))) + 44px + 6px); }
@@ -3562,9 +3562,6 @@ body.deck-tucked.keys-on .slim-edit { right: calc(max(var(--gutter), calc((100% 
 .mini-deck [hidden] { display: none; }
 .mini-play { background: var(--led); color: var(--ink); }
 .mini-play:disabled { opacity: 0.4; }
-.mini-rec { background: var(--chalk); color: #D93A2B; }
-.mini-rec.recording { background: #D93A2B; color: #fff; }
-.mini-rec:disabled { opacity: 0.45; }
 .mini-deck .mini-more { color: #fff; }
 .mini-more[aria-expanded="true"] { background: var(--led); color: var(--ink); }
 body.deck-tucked:not(.deck-open) .seq .beat-deck,
@@ -3572,7 +3569,6 @@ body.deck-tucked:not(.deck-open).keys-on .dj-bar { visibility: hidden; }
 body.deck-open .seq .beat-deck,
 body.deck-open.keys-on .dj-bar { top: var(--head-h, 0px); }
 body.deck-tucked.tuck-notop .to-top,
-body.deck-tucked.tuck-norec .mini-rec,
 body.deck-tucked.tuck-nohelp #help-open,
 body.deck-tucked.tuck-noedit .slim-edit,
 body.deck-tucked.tuck-nosettings #settings-open { display: none; }
