@@ -286,11 +286,11 @@ const VIEWS = {
   'builder-groove': { screen: 'beats', keys: true, js: q('#dj-beatbar [data-beat-new]') + q('#dj-beatbar [data-beat-grooves]')
     + GROOVE_GROUPS_OPEN('rock') + q('[data-groove="pop"]') + 'await new Promise((r) => setTimeout(r, 400));' },
   // Beats with Pop loaded into the scratch: 4 bars and 11 rows, to set beside builder-groove.
-  // A Beats row's ⋯ menu open (overflow.js): on a line short of room (under
-  // about 360 px) it holds 🔔 Overlap, 🧹 Clear and ✕ Remove; wider, ⋯ hides and nothing opens.
+  // A Beats row's menu open from its emoji (overflow.js): 🔄 Change sound,
+  // 🔔 Overlap, 🧹 Clear, ✕ Remove, ↑ Move up, ↓ Move down.
   // `still`: the shot is the 800 px window as the view left it (the menu closes on a scroll).
   'row-more': { screen: 'beats', still: true, js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('rock') + q('[data-groove="pop"]') + 'await new Promise((r) => setTimeout(r, 300));'
-    + 'document.querySelector(".seq-head").scrollIntoView({ block: "center" }); await new Promise((r) => setTimeout(r, 200));' + q('.seq-head [data-more]') + nap },
+    + 'document.querySelector(".seq-row .seq-head").scrollIntoView({ block: "center" }); await new Promise((r) => setTimeout(r, 200));' + q('.seq-head [data-more]') + nap },
   'beat-groove': { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('rock') + q('[data-groove="pop"]') + 'await new Promise((r) => setTimeout(r, 300));' },
   // ⇆ locked on Pop: every lit pill picked (All), the bar at the foot. Locked only if not (the widths share the page's beat, not the mode).
   'beat-move': { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('rock') + q('[data-groove="pop"]') + 'await new Promise((r) => setTimeout(r, 300));' + MOVE_OPEN + q('[data-move-pick="all"]') },

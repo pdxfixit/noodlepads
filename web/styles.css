@@ -589,8 +589,9 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
 
 /* ── Beat maker ─────────────────────────────────────────────────────── */
 
-/* Same bed as the pads. Each row is a sound and its 16 pills (one bar),
-   grouped four to a beat; on a phone the four beats wrap two and two. */
+/* Same bed as the pads. Each row is a sound and its pills on one line,
+   grouped four to a beat, its bars side by side; the rows scroll sideways
+   together under their heads (Ben, 2026-10-25). */
 .seq {
   padding: 14px 12px 18px;
   border-radius: 22px;
@@ -791,9 +792,24 @@ dialog .lib-empty { border-color: rgb(20 19 24 / 0.25); background: var(--chalk)
 .groove-sec .lib-list { margin: 4px 0 8px; }
 .groove-sec .lib-list[hidden] { display: none; }
 
-.seq-rows { position: relative; display: grid; gap: 14px; }
-/* A light line between rows, so a row's 2 or 4 bars of pills read as one row. */
-.seq-row + .seq-row { margin-top: 4px; padding-top: 18px; border-top: 2px solid rgb(255 255 255 / 0.5); }
+/* The rows' box scrolls sideways, edge to edge of the panel, and the rows'
+   heads stay put at its left (Ben, 2026-10-25: "allow horizontal scrolling",
+   an exception to nothing scrolling sideways, as the 🎚️ Mixer has). */
+.seq-scroll {
+  --seq-head-w: 112px;   /* a phone: emoji · 🔊 */
+  margin-inline: -12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-padding-left: var(--seq-head-w);   /* a pill reached by the keyboard is never under the heads */
+  scrollbar-width: thin;
+}
+@container panel (min-width: 600px) {
+  .seq-scroll { --seq-head-w: 250px; }   /* with room: ⠿ · emoji · name · 🔊 */
+}
+.seq-rows { position: relative; display: grid; width: max-content; min-width: 100%; }
+/* A light line between rows, brighter than the dashed one between bars. */
+.seq-row + .seq-row { border-top: 2px solid rgb(255 255 255 / 0.3); }
 
 /* The playhead bar, drawn over the rows at the step being played. */
 .seq-playhead { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
@@ -806,36 +822,43 @@ dialog .lib-empty { border-color: rgb(20 19 24 / 0.25); background: var(--chalk)
   /* The dark edge keeps it visible where it crosses the light sound pickers. */
   box-shadow: 0 0 0 1.5px var(--ink), 0 0 12px 2px rgb(255 255 255 / 0.45);
 }
-/* A Beats row (Ben, 2026-10-12: "like a list item"): one header line, ⠿
-   grip · ▾ fold · emoji at the left and 🔊 · 🧹 · ✕ at the right
-   (beat-row.js), then the pills across the row's whole width below it. A
-   collapsed row is just the header line. With ⌨️ Keys on the compact rows
-   keep their single line (.dj-grid). */
-.seq-row {
+/* A Beats row (Ben, 2026-10-25: the controls on the left): its head, stuck
+   at the left of the rows' box, then its pills on one line. The head is ⠿
+   grip · emoji · name · 🔊 with room, emoji · 🔊 on a phone; the emoji opens
+   the row's menu (🔄 Change sound, 🔔 Overlap, 🧹 Clear, ✕ Remove, ↑ ↓),
+   whose real buttons sit in the head out of sight (beat-row.js). With ⌨️
+   Keys on the compact rows keep their single line (.dj-grid). */
+.seq-row, .seq-ruler {
   --pill: var(--led);
-  display: grid;
-  row-gap: 10px;
-  min-width: 0;
+  display: flex;
+  align-items: center;
 }
-.seq-head { display: flex; align-items: center; gap: 4px; min-width: 0; min-height: 44px; }
+.seq-head {
+  position: sticky;
+  left: 0;
+  z-index: 3;   /* over the pills and the playhead passing under it */
+  flex: none;
+  align-self: stretch;
+  box-sizing: border-box;
+  width: var(--seq-head-w);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 4px 8px 4px 12px;
+  background: var(--bed);
+  box-shadow: 8px 0 8px -8px rgb(0 0 0 / 0.6);
+}
 .seq-head > .row-tools { margin-left: auto; flex: none; }
+.seq-head [data-more-word] { display: none; }   /* in the row's menu only */
 /* The sound's name after its emoji: fills the gap, cut short with … (Ben). */
 .seq-head > .seq-name { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 800; color: rgb(255 255 255 / 0.85); cursor: pointer; }
-/* Phones: the header line's 44 px targets sit closer, so all seven
-   (⠿ ▾ emoji 🔔 🔊 🧹 ✕) fit on one line from 360 px. */
-@media (max-width: 419px) {
-  .seq-head { gap: 2px; }
-  .seq-head > .row-tools { gap: 3px; }   /* outlined squares keep a gap, so they never read as one */
+/* A phone: emoji · 🔊 only; ↑ ↓ in the menu move a row. */
+@container panel (max-width: 599px) {
+  .seq-head > .seq-name, .seq-head > .seq-grip { display: none; }
 }
-/* Under 390 px the seven leave the name no room: it hides, rather than show a lone … */
-@media (max-width: 389px) {
-  .seq-head > .seq-name { display: none; }
-}
-.seq-head > .seq-fold, .seq-head > .row-emoji { flex: none; }   /* never squeezed: a line short of room overflows, and fitMore sees it */
-/* Where the line is short of room (under about 360 px, measured on the line
-   itself: overflow.js fitMore), 🔔 🧹 ✕ move into ⋯ at its end and every
-   button stays 44 px (Ben, 2026-10-12); see "⋯ menus" below. */
 .seq-head > .row-emoji { flex: none; min-width: 44px; min-height: 44px; padding: 0 4px; font-size: 1.75rem; text-align: center; }   /* a 44 px target, the emoji filling it */
+.seq-head > .row-emoji[aria-expanded="true"] { border-radius: 10px; background: rgb(255 255 255 / 0.14); }
 
 /* A small pad: the same look as on the board, at a size that fits a row or a
    chooser cell. Beats the board's wide-screen pad font sizes. */
@@ -937,38 +960,8 @@ dialog .lib-empty { border-color: rgb(20 19 24 / 0.25); background: var(--chalk)
 .vol-pop[hidden] { display: none; }
 .vol-slider { flex: 1 1 auto; min-width: 0; min-height: 44px; margin: 0; accent-color: var(--led); }
 .vol-num { flex: none; min-width: 3.4em; color: #fff; font: 800 0.95rem/1 var(--font-ui); text-align: right; font-variant-numeric: tabular-nums; }
-/* The fold, after the grip on a row's header line. */
-.seq-fold {
-  flex: none;
-  width: 44px;
-  min-height: 44px;
-  padding: 0;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: rgb(255 255 255 / 0.75);
-  font: 800 1.1rem/1 var(--font-ui);
-}
-.seq-fold:hover { background: rgb(255 255 255 / 0.08); }
 /* The grip on a row's header line: a 44 px target, its dots as narrow as before. */
 .seq-head .seq-grip { flex: none; min-width: 44px; min-height: 44px; margin-left: -8px; padding: 12px 8px; }
-/* A collapsed row: its header line, with the sound's emoji and name in a slim button. */
-.seq-slim {
-  flex: 0 1 auto;
-  min-width: 0;
-  min-height: 44px;
-  padding: 0 10px;
-  border: 0;
-  border-left: 6px solid var(--pill);
-  border-radius: 10px;
-  background: rgb(255 255 255 / 0.08);
-  color: #fff;
-  font: 800 1rem/1 var(--font-ui);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.seq-row.collapsed.muted .seq-slim { opacity: 0.55; }
 /* The grip: a column of dots, a tall target that only starts a drag. */
 .seq-grip {
   width: 28px;
@@ -990,22 +983,16 @@ dialog .lib-empty { border-color: rgb(20 19 24 / 0.25); background: var(--chalk)
 /* Pills past a row's length (Pills tempo mode) are hidden, not just dimmed. */
 .seq-beat[hidden], .pill[hidden] { display: none; }
 
-/* One group per beat of the time signature. A group grows with its pill
-   count (4 or 6) and needs ~30px a pill, so groups wrap onto more lines when
-   the row is narrow: two 4-pill beats a line on a phone, all of 4/4 on one
-   line when wide. */
-/* Bars stack, one block each; in a block, beat groups wrap to fit. */
-.seq-steps { display: grid; gap: 10px; }
-.seq-measure { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 10px; }   /* columns set by layoutMeasures */
+/* One group per beat of the time signature, its pills 32 px wide (as on a
+   phone before); the bars side by side, a dashed line between them. */
+.seq-steps { flex: none; display: flex; gap: 18px; padding: 6px 12px 6px 6px; }
+.seq-measure { position: relative; display: flex; gap: 10px; }
 .seq-measure[hidden] { display: none; }
-.seq-measure + .seq-measure { padding-top: 10px; border-top: 2px dashed rgb(255 255 255 / 0.15); }
+.seq-measure + .seq-measure::before { content: ''; position: absolute; left: -10px; top: -6px; bottom: -6px; border-left: 2px dashed rgb(255 255 255 / 0.15); }
 .seq-beat {
   --size: 4;
-  /* About 30px a pill at least, so a bar of 4/4 fits on one line from ~560px;
-     a group alone on a wrapped line doesn't stretch across the whole row. */
-  min-width: 0;
   display: grid;
-  grid-template-columns: repeat(var(--size), minmax(0, 1fr));
+  grid-template-columns: repeat(var(--size), 32px);
   gap: 5px;
   padding: 5px;
   border-radius: 14px;
@@ -1013,10 +1000,9 @@ dialog .lib-empty { border-color: rgb(20 19 24 / 0.25); background: var(--chalk)
 }
 
 /* Vertical pills: dim when off, the sound's pad color when on. The playhead
-   lights the column being played; a lit pill that is on flashes white.
-   --pill-h shortens them as more bars stack (pillHeight, sequencer.js). */
+   lights the column being played; a lit pill that is on flashes white. */
 .pill {
-  height: var(--pill-h, 64px);
+  height: 44px;
   min-width: 0;
   padding: 0;
   border: 0;
@@ -1024,7 +1010,18 @@ dialog .lib-empty { border-color: rgb(20 19 24 / 0.25); background: var(--chalk)
   background: rgb(255 255 255 / 0.13);
   transition: background-color 60ms, transform 60ms;
 }
+/* A pill is 32 px wide, under 44: the gaps around it take its taps too, so a
+   finger has its whole 37 × 54 px slot (Ben, 2026-10-25: pills too small to touch). */
+.seq-row .pill { position: relative; }
+.seq-row .pill::after { content: ''; position: absolute; inset: -5px -2.5px; }
+.seq-row .seq-beat > .pill:first-child::after { left: -5px; }
+.seq-row .seq-beat > .pill:last-child::after { right: -5px; }
 .pill.beat-start { background: rgb(255 255 255 / 0.19); }
+/* The ruler over the rows: each bar's number over its "1", a dot over each beat. */
+.seq-ruler .seq-steps { padding-block: 8px 2px; }
+.seq-ruler .seq-beat { padding-block: 0; background: transparent; }
+.seq-tick { font: 800 0.8rem/1 var(--font-display); color: rgb(255 255 255 / 0.55); text-align: center; }
+.seq-tick.one { color: #fff; }
 /* The "1" of every bar: brighter, with a small white dot while it is off. */
 .pill.one { background: rgb(255 255 255 / 0.26) radial-gradient(circle, rgb(255 255 255 / 0.75) 3px, transparent 3.5px) center / 100% 100% no-repeat; }
 .pill[aria-pressed="true"] { background: var(--pill); box-shadow: 0 3px 0 color-mix(in srgb, var(--pill) 55%, black); }
@@ -4344,9 +4341,6 @@ body.editing .pads .pad-cell .pad-emoji { margin-left: calc(var(--disc) * 0.8); 
 
 /* Bars side by side on wide screens (layoutMeasures sets the columns): the
    dashed line between bars stands up instead of lying down. */
-.seq-steps.bars-across { column-gap: 24px; }
-.seq-steps.bars-across .seq-measure + .seq-measure { padding-top: 0; border-top: 0; }
-.seq-steps.bars-across .seq-measure:not(:first-child) { box-shadow: -13px 0 0 -11px rgb(255 255 255 / 0.15); }
 
 /* The tab you're on needs no name on a narrow screen: its emoji is enough,
    and the room goes to the others (Ben, 2026-10-11). Screen readers still
@@ -4444,7 +4438,7 @@ dialog#mixer :focus-visible { outline-color: var(--board); }
 .mix-none { align-self: center; margin: 0 12px; font-weight: 800; }
 /* The compact rows show the mix too: a row another row's Solo silences dims
    like a muted one; a soloed row's emoji wears a lit ring. */
-.seq-row.silenced .seq-steps, .seq-row.silenced .row-emoji, .seq-row.collapsed.silenced .seq-slim { opacity: 0.4; }
+.seq-row.silenced .seq-steps, .seq-row.silenced .row-emoji { opacity: 0.4; }
 .dj-grid-row.silenced .row-emoji { opacity: 0.4; }
 .seq-row.solo .row-emoji, .dj-grid-row.solo .row-emoji { border-radius: 12px; box-shadow: 0 0 0 3px var(--led); }
 

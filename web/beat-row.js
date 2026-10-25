@@ -56,9 +56,13 @@ function tool(className, text, label, data, look = 'icon-btn') {
 // - labels: {remove, removeAsk, clear, clearAsk, pick}, for screen readers.
 // - more: {key, label} gives the tools a ⋯ at their end: where the line runs
 //   out of room, 🔔 🧹 ✕ move into its menu and 🔊 stays (overflow.js; Ben,
-//   2026-10-12). Beats' header line has one; the keys view's compact rows
-//   keep their small tools instead.
-export function rowParts({ asked = null, canClear = true, locked = false, emoji, title = '', pickable = true, ring = null, speaker, data, labels, more = null }) {
+//   2026-10-12).
+// - menu: {key, label, change: [icon, word], extra}: the emoji itself opens
+//   the row's menu (overflow.js) and only 🔊 shows beside it (Ben,
+//   2026-10-25: Beats' rows keep their controls on the left). The menu lists
+//   🔄 Change sound (a button carrying data.pick), 🔔 🧹 ✕ and `extra` (more
+//   buttons, ↑ ↓), each a real button the CSS keeps out of sight.
+export function rowParts({ asked = null, canClear = true, locked = false, emoji, title = '', pickable = true, ring = null, speaker, data, labels, more = null, menu = null }) {
   const x = tool('row-x', asked === 'remove' ? '✕?' : '✕', asked === 'remove' ? labels.removeAsk : labels.remove, data.remove);
   x.classList.toggle('armed', asked === 'remove');
   const sweep = tool('row-clear', asked === 'clear' ? '🧹?' : '🧹', asked === 'clear' ? labels.clearAsk : labels.clear, data.clear);
@@ -75,6 +79,21 @@ export function rowParts({ asked = null, canClear = true, locked = false, emoji,
   }
   const tools = document.createElement('div');
   tools.className = 'row-tools';
+  if (menu) {
+    const change = tool('row-change', menu.change[0], labels.pick, data.pick);
+    change.disabled = pick.disabled;
+    const opens = tool('row-emoji', emoji, menu.label, { more: menu.key }, '');
+    opens.title = title;
+    opens.disabled = locked;
+    opens.setAttribute('aria-haspopup', 'menu');
+    opens.setAttribute('aria-expanded', 'false');
+    movable(change, menu.change[1]);
+    movable(bell, 'Overlap');
+    movable(sweep, 'Clear');
+    movable(x, 'Remove');
+    tools.append(...[speaker, change, bell, sweep, x, ...(menu.extra ?? [])].filter(Boolean));
+    return { pick: opens, tools };
+  }
   if (more) {
     movable(bell, 'Overlap');
     movable(sweep, 'Clear');

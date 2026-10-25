@@ -716,29 +716,31 @@ test('a beat file: 📥 Load a beat file opens it under its own name; ⬇️ sav
   else $('#library').close();
 });
 
-test('a row collapses to one slim line with its sound\'s name, and opens again', () => {
+// Ben, 2026-10-25: the row's controls on its left, and a phone moves rows
+// from the menu. Its emoji opens it.
+test('a row\'s emoji opens its menu: Change sound, then ↑ ↓ move the row and the menu follows it', () => {
   const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
-  if (rows().length < 2) $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
-  const fold = () => rows()[0].querySelector('.seq-fold');
-  const name = rows()[0].querySelector('[data-pick]').getAttribute('aria-label').split(':')[1].split('.')[0].trim();
-  assert.equal(fold().getAttribute('aria-expanded'), 'true');
-  fold().dispatch('click');
-  assert.ok(rows()[0].classList.contains('collapsed'));
-  assert.equal(rows()[0].querySelectorAll('.pill').length, 0);           // no pills, tile or buttons
-  assert.equal(rows()[0].querySelector('[data-pick]'), null);
-  assert.match(rows()[0].querySelector('.seq-slim').textContent, new RegExp(`${name}$`));
-  // Just its header line: ⠿ ▾, the slim name, and 🔊 · 🧹 · ✕ at the right.
-  assert.deepEqual(rows()[0].children.map((c) => c.className.split(' ')[0]), ['seq-head']);
-  assert.deepEqual(rows()[0].querySelector('.seq-head').children.map((c) => c.className.split(' ')[0]), ['seq-grip', 'seq-fold', 'seq-slim', 'row-tools']);
-  assert.equal(document.activeElement, fold());
-  // Arrow keys from the next row step over it and stay put.
-  const below = rows()[1].querySelectorAll('.pill')[0];
-  below.focus();
-  below.dispatch('keydown', { key: 'ArrowUp' });
-  assert.equal(document.activeElement, below);
-  rows()[0].querySelector('.seq-slim').dispatch('click');               // the name opens it again
-  assert.equal(rows()[0].classList.contains('collapsed'), false);
-  assert.equal(rows()[0].querySelectorAll('.pill').length > 0, true);
+  while (rows().length < 2) { $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click'); }
+  const ids = () => state.patterns.get(state.personId).rows.map((r) => r.clipId);
+  const emoji = (r) => rows()[r].querySelector('.seq-head [data-more]');
+  const pop = () => document.body.children.find((c) => c.classList.contains('more-pop'));
+  const item = (word) => pop().querySelectorAll('[data-more-item]').find((b) => b.textContent.endsWith(word));
+  assert.ok(!rows()[0].querySelector('.seq-fold'), 'no fold: a row is one line');
+  assert.equal(emoji(0).getAttribute('aria-haspopup'), 'menu');
+  emoji(0).dispatch('click');
+  assert.equal(pop().hidden, false);
+  assert.ok(item('Move up').disabled, 'the first row can\'t go up');
+  const [first, second] = ids();
+  item('Move down').dispatch('click');
+  assert.deepEqual(ids().slice(0, 2), [second, first], 'moved down one');
+  assert.equal(pop().hidden, false, 'the menu stays open, on the moved row');
+  assert.equal(emoji(1).getAttribute('aria-expanded'), 'true');
+  item('Move up').dispatch('click');
+  assert.deepEqual(ids().slice(0, 2), [first, second], 'and back up');
+  item('Change sound').dispatch('click');
+  assert.ok($('#chooser').open, '🔄 Change sound opens the sound chooser');
+  $('#chooser').close();
+  pop().dispatch('keydown', { key: 'Escape' });
 });
 
 test('a beat row can use any person\'s sound: the kit once, in groups, then a section per person, current board first', () => {
@@ -885,12 +887,12 @@ test('a row\'s 🧹 and ✕ ask first: the second tap does it, any other tap tak
   assert.equal(tool(count - 1, 'remove').textContent, '✕?');
   tool(count - 1, 'remove').dispatch('click');
   assert.equal(rows().length, count - 1);
-  // One header line, like a list item (Ben, 2026-10-12): ⠿ ▾ emoji and the
-  // sound's name at the left, 🔔 · 🔊 · 🧹 · ✕ at the right; the pills below it.
+  // The row's head at its left (Ben, 2026-10-25): ⠿ · emoji · name · 🔊, its
+  // pills on one line after it; the menu's buttons wait in the head, unseen.
   assert.deepEqual(rows()[0].children.map((c) => c.className.split(' ')[0]), ['seq-head', 'seq-steps']);
   const head = rows()[0].querySelector('.seq-head');
-  assert.deepEqual(head.children.map((c) => c.className.split(' ')[0]), ['seq-grip', 'seq-fold', 'row-emoji', 'seq-name', 'row-tools']);
-  assert.deepEqual(head.querySelector('.row-tools').children.map((c) => c.className.split(' ')[0]), ['row-ring', 'speaker', 'row-clear', 'row-x', 'more-btn'], '⋯ last, shown only when the line is short of room');
+  assert.deepEqual(head.children.map((c) => c.className.split(' ')[0]), ['seq-grip', 'row-emoji', 'seq-name', 'row-tools']);
+  assert.deepEqual(head.querySelector('.row-tools').children.map((c) => c.className.split(' ')[0]), ['speaker', 'row-change', 'row-ring', 'row-clear', 'row-x', 'row-move', 'row-move'], '🔊 shows; the rest are the menu\'s');
   assert.equal(head.querySelectorAll('.pill').length, 0, 'no pills on the header line');
   assert.doesNotMatch(head.querySelector('.row-emoji').textContent, /[a-z]{2}/i, 'the emoji button holds the emoji');
   assert.ok(head.querySelector('.seq-name').textContent.length > 0, 'every row shows its sound\'s name');
@@ -935,60 +937,58 @@ test('🔔 Overlap is on each beat row\'s header line, at every level: a tap tur
   }
 });
 
-// Ben, 2026-10-12: "no need to muck about with smaller sizes… allow the
-// buttons to move into a sub menu where space requires it".
-test('a Beats row\'s ⋯: 🔔 🧹 ✕ move into its menu on a line short of room, and still work there (Overlap on, Clear and Remove ask first, Undo)', () => {
+// Ben, 2026-10-25: the emoji opens the row's menu, which holds what the
+// head has no room for. Each item taps the real button.
+test('a Beats row\'s menu: 🔄 🔔 🧹 ✕ ↑ ↓ from its emoji, and they still work there (Overlap on, Clear and Remove ask first, Undo)', () => {
   const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
   while (rows().length < 2) $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
   const beat = () => state.patterns.get(state.personId);
-  const more = () => rows()[0].querySelector('.seq-head .row-tools [data-more]');
+  const more = () => rows()[0].querySelector('.seq-head [data-more]');
   const pop = () => document.body.children.find((c) => c.classList.contains('more-pop'));
   const items = () => pop().querySelectorAll('[data-more-item]');
   const words = () => items().map((b) => b.textContent);
-  // Roomy (nothing measures a squeeze here): every button is on the line, and ⋯ waits, hidden by the CSS.
-  assert.ok(!$('#seq-rows').classList.contains('more-tight'), 'room enough: no ⋯ shows');
-  assert.equal(more().textContent, '⋯');
+  assert.ok(more().classList.contains('row-emoji'), 'the emoji is the menu\'s button');
   assert.equal(more().getAttribute('aria-haspopup'), 'menu');
-  assert.deepEqual(rows()[0].querySelectorAll('[data-more-word]').map((b) => b.getAttribute('data-more-word')), ['Overlap', 'Clear', 'Remove']);
-  assert.ok(!rows()[0].querySelector('[data-speaker]').hasAttribute('data-more-word'), 'the speaker stays on the line');
-  // Opens beside ⋯: icon + word for each, the focus on the first.
+  assert.deepEqual(rows()[0].querySelectorAll('[data-more-word]').map((b) => b.getAttribute('data-more-word')), ['Change sound', 'Overlap', 'Clear', 'Remove', 'Move up', 'Move down']);
+  assert.ok(!rows()[0].querySelector('[data-speaker]').hasAttribute('data-more-word'), 'the speaker stays in the head');
+  // Opens beside the emoji: icon + word for each, the focus on the first.
   more().dispatch('click');
   assert.equal(pop().hidden, false);
   assert.equal(more().getAttribute('aria-expanded'), 'true');
-  assert.deepEqual(words(), ['🔔 Overlap', '🧹 Clear', '✕ Remove']);
+  assert.deepEqual(words(), ['🔄 Change sound', '🔔 Overlap', '🧹 Clear', '✕ Remove', '↑ Move up', '↓ Move down']);
   assert.equal(document.activeElement, items()[0]);
   // 🔔 Overlap: on at once, shown checked; the menu stays open.
   const was = beat().rows[0].ring;
-  items()[0].dispatch('click');
+  items()[1].dispatch('click');
   assert.equal(beat().rows[0].ring, !was);
-  assert.equal(items()[0].getAttribute('aria-checked'), String(!was), 'its on state shows in the menu');
-  assert.equal(items()[0].getAttribute('role'), 'menuitemcheckbox');
-  items()[0].dispatch('click');
+  assert.equal(items()[1].getAttribute('aria-checked'), String(!was), 'its on state shows in the menu');
+  assert.equal(items()[1].getAttribute('role'), 'menuitemcheckbox');
+  items()[1].dispatch('click');
   assert.equal(beat().rows[0].ring, was);
   // 🧹 Clear asks first, in red, then clears.
   pop().dispatch('keydown', { key: 'Escape' });
   rows()[0].querySelectorAll('.pill')[1].dispatch('click');
   assert.ok(beat().rows[0].steps.some(Boolean));
   more().dispatch('click');
-  items()[1].dispatch('click');
-  assert.equal(items()[1].textContent, '🧹 Clear?', 'the first tap only asks');
-  assert.ok(items()[1].classList.contains('armed'), 'red while it asks');
+  items()[2].dispatch('click');
+  assert.equal(items()[2].textContent, '🧹 Clear?', 'the first tap only asks');
+  assert.ok(items()[2].classList.contains('armed'), 'red while it asks');
   assert.ok(beat().rows[0].steps.some(Boolean));
-  items()[1].dispatch('click');
+  items()[2].dispatch('click');
   assert.ok(!beat().rows[0].steps.some(Boolean), 'the second tap clears');
   assert.equal(pop().hidden, true, 'done: the menu closes');
   // ✕ Remove asks first, then removes, and ↩️ Undo brings the row back.
   const count = rows().length;
   more().dispatch('click');
-  items()[2].dispatch('click');
-  assert.equal(items()[2].textContent, '✕ Remove?');
+  items()[3].dispatch('click');
+  assert.equal(items()[3].textContent, '✕ Remove?');
   assert.equal(rows().length, count, 'the first tap only asks');
-  items()[2].dispatch('click');
+  items()[3].dispatch('click');
   assert.equal(rows().length, count - 1);
   assert.equal(pop().hidden, true);
   $('#banner-action').dispatch('click');
   assert.equal(rows().length, count, 'Undo puts it back');
-  // Esc closes it, the focus back on ⋯; a tap outside closes it too.
+  // Esc closes it, the focus back on the emoji; a tap outside closes it too.
   more().dispatch('click');
   pop().dispatch('keydown', { key: 'Escape' });
   assert.equal(pop().hidden, true);
@@ -1003,7 +1003,7 @@ test('a Beats row\'s ⋯: 🔔 🧹 ✕ move into its menu on a line short of ro
   assert.equal(document.activeElement, items()[1]);
   pop().dispatch('keydown', { key: 'ArrowUp' });
   pop().dispatch('keydown', { key: 'ArrowUp' });
-  assert.equal(document.activeElement, items()[2], 'wraps round');
+  assert.equal(document.activeElement, items()[5], 'wraps round');
   pop().dispatch('keydown', { key: 'Escape' });
 });
 

@@ -30,7 +30,7 @@ import { FAMILIES, instrumentById, instrumentsFor, presetInstrument, PLAYED, ver
 import { isScratch, isHiddenBeat, scratchOf, scratchId, scratchLabel, grooveOf, hasHits, SCRATCH_NAME } from './scratch.js';
 import { cleanVolume, rowLevel, setRowLevel, drawSpeaker, speakerControls, percent } from './row-volume.js';
 import { rowParts, rowSpeaker, rowEmoji, twinRows } from './beat-row.js';
-import { moreMenu, fitMore } from './overflow.js';
+import { moreMenu } from './overflow.js';
 import { fitLine } from './lines.js';
 import { MAX_RINGING, ringOver } from './rhythm.js';
 import { cleanFx, masterLevel, silencedBySolo, mixKey, buildMix, createMixer } from './mixer.js';
@@ -309,48 +309,6 @@ export function mergeGroove(rows, grooveRows, bar, bars, shape = { bar: STEPS, b
     }
   }
   return { rows: out.map(cleanRow), added };
-}
-
-// How a bar's beat groups go onto lines, so a bar that has to wrap wraps
-// evenly and its groups line up one above the other, in every time
-// signature: 4/4 as 4 or 2 + 2 (never 3 + 1), 5/4 as 5 or 3 + 2, 3/4 as 3 or
-// 2 + 1, 6/8 as 2 or 1 + 1, 7/8 (4 4 6) as 3 or 2 + 1. `sizes` are the
-// groups' pill counts. Returns the column widths in pills: each column is as
-// wide as its widest group, so a 6-pill beat never squeezes into a 4-pill
-// column. A pill needs about `pill` px, a group `pad` more, `gap` between.
-export function balancedColumns(sizes, width, { pill = 30, pad = 10, gap = 10 } = {}) {
-  const n = sizes.length;
-  if (!n) return [];
-  const columnsFor = (k) => Array.from({ length: k }, (_, c) => Math.max(...sizes.filter((_, i) => i % k === c)));
-  for (let k = n; k > 1; k--) {
-    const even = Math.ceil(n / Math.ceil(n / k));   // as many a line as an even split allows
-    const cols = columnsFor(even);
-    const need = cols.reduce((a, s) => a + s * pill + pad, 0) + (even - 1) * gap;
-    if (!(width > 0) || need <= width) return cols;
-  }
-  return columnsFor(1);
-}
-
-// How many bars go side by side on one line: as many as fit with every bar
-// on a single line of its own (1, 2 or 4, dividing the bars evenly), so a
-// wide screen shows 2 or 4 bars across instead of stacking them (Ben,
-// 2026-10-11). `sizes` are one bar's beat groups; `bars` how many bars show.
-export function barsPerLine(sizes, bars, width, { pill = 30, pad = 10, gap = 10, barGap = 24 } = {}) {
-  if (!(width > 0) || bars < 2 || !sizes.length) return 1;
-  const one = sizes.reduce((a, s) => a + s * pill + pad, 0) + (sizes.length - 1) * gap;
-  for (let k = bars; k > 1; k--) {
-    if (bars % k) continue;
-    if (k * one + (k - 1) * barGap <= width) return k;
-  }
-  return 1;
-}
-
-// How tall a row's pills are: 64 px at one bar, 10 px less each time the
-// bars double, down to 44 px (a finger's target), on every screen. So a
-// 4-bar beat on a phone, eight lines of pills a row, grows the page less
-// (Ben, 2026-10-19: "more of a balance"; "shrink on wide screens too").
-export function pillHeight(bars) {
-  return Math.max(44, Math.round(64 - 10 * Math.log2(Math.max(1, bars))));
 }
 
 // A beat file (🗂️ My beats → ⬇️ / 📥): one beat as JSON, to move it to another
@@ -659,8 +617,9 @@ export function createSequencer(deps) {
   const pills = [];          // pills[row][step]
   const cell = { row: 0, step: 0 };  // the one pill in the Tab order; arrow keys move it
   let speakers = null;       // the rows' speakers and their loudness popover (set once the rows listen)
-  let rowMenus = null;       // the header lines' ⋯ menus (overflow.js), and
-  let rowRoom = null;        // what decides they show: a line short of room
+  let rowMenus = null;       // the rows' menus, each opened by its emoji (overflow.js)
+  let following = false;     // the rows' box keeps the playhead in sight, until the kid scrolls it
+  let scrolledTo = null;     // where following last scrolled the box, so that scroll isn't taken for the kid's
   let mixer = null;          // the 🎚️ Mixer sheet (mixer.js), set once the rows listen
   let locked = false;        // ⇆: the pills locked, nothing lights or unlights (pill-select.js)
   const pickers = [];        // the views' pickers, {pick, shown}: these rows', the keys' grid's
@@ -1143,6 +1102,7 @@ export function createSequencer(deps) {
     deps.onTempo?.();  // before the first schedule, so pads already looping join on the first "1"
     schedule();
     raf = requestAnimationFrame(follow);
+    following = true;
     showPlayKeys(true);
   }
   // ▶ Play on Beats and in the keys view (el.djPlay): ■ Stop while playing.
@@ -1391,8 +1351,34 @@ export function createSequencer(deps) {
     });
     litPills.length = pills.length;
     drawPlayhead();
+    keepInSight();
     roll?.step(shown);
   }
+
+  // The rows scroll sideways (Ben, 2026-10-25). While a beat plays the box
+  // follows the playhead a screen at a time: once the pill being heard leaves
+  // what shows beside the rows' heads, its beat moves to the left edge, as a
+  // page turns. A scroll by the kid stops it until the next ▶ Play.
+  const rowBox = () => el.rows.closest?.('.seq-scroll') ?? null;
+  function keepInSight() {
+    const box = rowBox();
+    const pill = litPills.find(Boolean);
+    if (!following || !box?.clientWidth || !pill) return;
+    const head = el.rows.querySelector('.seq-head')?.offsetWidth ?? 0;
+    const b = box.getBoundingClientRect(), p = pill.getBoundingClientRect();
+    if (p.left >= b.left + head && p.right <= b.right) return;
+    const beat = pill.closest('.seq-beat') ?? pill;
+    const to = Math.max(0, Math.round(box.scrollLeft + beat.getBoundingClientRect().left - b.left - head - 6));
+    if (Math.abs(to - box.scrollLeft) < 1) return;
+    box.scrollLeft = to;
+    scrolledTo = box.scrollLeft;   // as far as it could go
+  }
+  rowBox()?.addEventListener('scroll', () => {
+    const box = rowBox();
+    if (scrolledTo !== null && Math.abs(box.scrollLeft - scrolledTo) < 2) { scrolledTo = null; return; }
+    scrolledTo = null;
+    following = false;
+  }, { passive: true });
 
   // The playhead: a bar down through every row at the step being played.
   // When the rows are in step and each fits on one line, it is one bar from
@@ -1432,27 +1418,6 @@ export function createSequencer(deps) {
 
   // ── Rendering ──
 
-  // Each bar's beat groups on even lines, matched up one above the other
-  // (see balancedColumns). Again whenever the rows change width. The pills
-  // have the row's whole width under its header line.
-  function layoutMeasures() {
-    for (const steps of el.rows.querySelectorAll('.seq-steps')) {
-      const width = steps.clientWidth;
-      if (!width) continue;
-      const measures = [...steps.querySelectorAll('.seq-measure')].filter((m) => !m.hidden);
-      const sizesOf = (m) => [...m.children].filter((g) => !g.hidden).map((g) => Number(g.style.getPropertyValue('--size')) || 4);
-      const across = measures.length ? barsPerLine(sizesOf(measures[0]), measures.length, width) : 1;
-      steps.style.gridTemplateColumns = across > 1 ? `repeat(${across}, minmax(0, 1fr))` : '';
-      steps.classList.toggle('bars-across', across > 1);
-      steps.style.setProperty('--pill-h', `${pillHeight(measures.length)}px`);
-      const each = across > 1 ? (width - (across - 1) * 24) / across : width;
-      for (const measure of measures) {
-        measure.style.gridTemplateColumns = balancedColumns(sizesOf(measure), each).map((s) => `minmax(0, ${s}fr)`).join(' ');
-      }
-    }
-  }
-  if (typeof ResizeObserver === 'function') new ResizeObserver(() => layoutMeasures()).observe(el.rows);
-
   function render() {
     el.bpm.min = 0;
     el.bpm.max = STOPS.length - 1;
@@ -1464,6 +1429,7 @@ export function createSequencer(deps) {
     if (!pattern) {
       pills.length = 0;
       el.rows.replaceChildren(el.playhead);
+      following = false;
       roll?.close();
       el.add.hidden = true;
       if (el.addTune) el.addTune.hidden = true;
@@ -1483,25 +1449,18 @@ export function createSequencer(deps) {
     // sound somewhere, not on this board.
     const clips = deps.groups().flatMap((g) => g.clips);
     cell.row = Math.min(cell.row, Math.max(0, pattern.rows.length - 1));
-    // The one pill in the Tab order must be on an open row.
-    if (pattern.rows[cell.row]?.collapsed) {
-      const open = pattern.rows.findIndex((r) => !r.collapsed);
-      if (open >= 0) cell.row = open;
-    }
     pills.length = 0;
     twins = twinRows(pattern.rows.map((r) => deps.clipById(r.clipId)?.emoji || '🔊'));
-    el.rows.replaceChildren(el.playhead, ...pattern.rows.map((row, i) => renderRow(row, i, clips)));
+    el.rows.replaceChildren(el.playhead, ruler(), ...pattern.rows.map((row, i) => renderRow(row, i, clips)));
     el.add.hidden = pattern.rows.length >= MAX_ROWS;
     el.add.disabled = clips.length === 0;
     if (el.addTune) { el.addTune.hidden = el.add.hidden; el.addTune.disabled = el.add.disabled; }
     el.empty.hidden = clips.length > 0;
     el.noRows.hidden = clips.length === 0 || pattern.rows.length > 0;
     if (undo && undo.pattern !== pattern) offerUndo(null);
-    layoutMeasures();
     drawPlayhead();
     speakers?.refresh();   // an open loudness popover follows its row, or closes with it
-    rowRoom?.refit();      // a header line short of room shows ⋯ for 🔔 🧹 ✕
-    rowMenus?.refresh();   // and an open ⋯ menu shows its row as it is now
+    rowMenus?.refresh();   // an open row menu shows its row as it is now
     if (mixer?.isOpen()) mixer.render();   // another beat, or a row gone: the open mixer follows
     roll?.refresh();       // and 🎹 the roll, or it closes when its row is gone
     select?.decorate();    // the pick (pill-select.js)
@@ -1518,15 +1477,14 @@ export function createSequencer(deps) {
   let twins = new Set();   // rows whose emoji another row shows too: a letter tells them apart
   function renderRow(row, i, clips) {
     const clip = deps.clipById(row.clipId);
-    if (row.collapsed) { pills[i] = []; return renderSlimRow(row, i, clip); }
     const wrap = document.createElement('div');
     wrap.className = 'seq-row';
     wrap.dataset.row = i;
     if (clip) wrap.style.setProperty('--pill', deps.colorOf(clip));
 
-    // The emoji and 🔊 · 🧹 · ✕ on the header line, the pills under it
-    // (beat-row.js draws the emoji and tools); the emoji opens the sound
-    // chooser. The muted look and faint pills follow the speaker.
+    // The row's controls at its left, its pills on one line after them
+    // (beat-row.js draws the emoji and tools); the emoji opens the row's
+    // menu. The muted look and faint pills follow the speaker.
     const { pick, tools } = rowTools(row, i, clip);
     wrap.classList.toggle('muted', row.muted);
     showMix(wrap, row);
@@ -1541,9 +1499,9 @@ export function createSequencer(deps) {
     const steps = document.createElement('div');
     steps.className = tune ? 'seq-steps seq-tune' : 'seq-steps';
     const rowPills = [];
-    // One block per bar, stacked; in each, one group of pills per beat of the
-    // time signature. A group's width follows its pill count, and groups wrap
-    // onto more lines when narrow.
+    // One block per bar, side by side on one line (the rows scroll sideways
+    // together, Ben, 2026-10-25); in each, one group of pills per beat of
+    // the time signature.
     let s0 = 0;
     for (let m = 0; m < pattern.bars; m++) {
     const measure = document.createElement('div');
@@ -1578,18 +1536,50 @@ export function createSequencer(deps) {
     steps.append(measure);
     }
     pills[i] = rowPills;
-    // A header line, like a list item: ⠿ ▾ emoji and the sound's name at the
-    // left, 🔊 · 🧹 · ✕ at the right; the pills use the whole width below it.
-    // Every row shows its name, a long one cut short with …, so rows match
-    // (Ben, 2026-10-12). The name is the emoji's too: a tap on it does the same.
+    // The row's head, stuck at the left while its pills scroll: ⠿ · emoji ·
+    // name · 🔊 with room, emoji · 🔊 on a phone (styles.css). A long name is
+    // cut short with … (Ben, 2026-10-12). The name is the emoji's too: a tap
+    // on it opens the menu.
     const name = document.createElement('span');
     name.className = 'seq-name';
     name.textContent = clip ? clip.label : 'No sound';
     name.setAttribute('aria-hidden', 'true');   // the emoji's label says it
     name.addEventListener('click', () => pick.click());
-    wrap.append(header(row, i, [pick, name], tools), steps);
+    wrap.append(header(i, [pick, name], tools), steps);
     return wrap;
   }
+
+  // The bar numbers over the rows, laid out as a row's pills are, so a kid
+  // scrolled along a long beat knows which bar they are in.
+  function ruler() {
+    const line = document.createElement('div');
+    line.className = 'seq-ruler';
+    line.setAttribute('aria-hidden', 'true');
+    const head = document.createElement('div');
+    head.className = 'seq-head';
+    const steps = document.createElement('div');
+    steps.className = 'seq-steps';
+    for (let m = 0; m < pattern.bars; m++) {
+      const measure = document.createElement('div');
+      measure.className = 'seq-measure';
+      groups().forEach((size, b) => {
+        const beat = document.createElement('div');
+        beat.className = 'seq-beat';
+        beat.style.setProperty('--size', size);
+        for (let k = 0; k < size; k++) {
+          const tick = document.createElement('span');
+          tick.className = k === 0 && b === 0 ? 'seq-tick one' : 'seq-tick';
+          tick.textContent = k > 0 ? '' : b === 0 ? String(m + 1) : '·';
+          beat.append(tick);
+        }
+        measure.append(beat);
+      });
+      steps.append(measure);
+    }
+    line.append(head, steps);
+    return line;
+  }
+
 
   // The pills a tune row's notes go on sounding through (not their first).
   function heldPills(row) {
@@ -1598,48 +1588,20 @@ export function createSequencer(deps) {
     return out;
   }
 
-  // A row's header line (Ben, 2026-10-12: one line, like a list item): the
-  // grip that drags it (once there is somewhere to move), then the button
-  // that folds or opens it, then `middle` (the emoji, or a collapsed row's
-  // slim name), and the row's 🔊 · 🧹 · ✕ at the right.
-  function header(row, i, middle, tools) {
+  // A row's head: the grip that drags it (once there is somewhere to move;
+  // with room only, a phone moves rows from the menu), then `middle` (the
+  // emoji and name), then 🔊 and the menu's buttons, out of sight.
+  function header(i, middle, tools) {
     const head = document.createElement('div');
     head.className = 'seq-head';
-    const fold = document.createElement('button');
-    fold.type = 'button';
-    fold.className = 'seq-fold';
-    fold.dataset.fold = i;
-    fold.textContent = row.collapsed ? '▸' : '▾';
-    fold.setAttribute('aria-expanded', String(!row.collapsed));
-    fold.setAttribute('aria-label', `${row.collapsed ? 'Open' : 'Collapse'} row ${i + 1}`);
     const grip = document.createElement('button');
     grip.type = 'button';
     grip.className = 'seq-grip';
     grip.dataset.grip = i;
     grip.hidden = pattern.rows.length < 2;
     grip.setAttribute('aria-label', `Move row ${i + 1}: drag it, or use the up and down arrow keys`);
-    head.append(grip, fold, ...[middle].flat(), tools);
+    head.append(grip, ...[middle].flat(), tools);
     return head;
-  }
-
-  // A collapsed row: just its header line, with one slim button for the
-  // sound's emoji and name in the emoji's place. Tapping the name opens the
-  // row again; its speaker shows when it is muted or turned down.
-  function renderSlimRow(row, i, clip) {
-    const wrap = document.createElement('div');
-    wrap.className = 'seq-row collapsed';
-    wrap.dataset.row = i;
-    wrap.classList.toggle('muted', row.muted);
-    showMix(wrap, row);
-    if (clip) wrap.style.setProperty('--pill', deps.colorOf(clip));
-    const slim = document.createElement('button');
-    slim.type = 'button';
-    slim.className = 'seq-slim';
-    slim.dataset.fold = i;
-    slim.textContent = `${clip?.emoji || '🔊'} ${clip ? clip.label : 'No sound'}`;
-    slim.setAttribute('aria-label', `Row ${i + 1}: ${clip ? clip.label : 'no sound'}${row.muted ? ', muted' : rowLevel(row) < 1 ? `, loudness ${percent(rowLevel(row))} %` : ''}. Collapsed; tap to open.`);
-    wrap.append(header(row, i, slim, rowTools(row, i, clip).tools));
-    return wrap;
   }
 
   // A row's emoji and its 🔔 · 🔊 · 🧹 · ✕, shared with the keys view (beat-row.js). ✕ and 🧹
@@ -1658,8 +1620,9 @@ export function createSequencer(deps) {
       emoji: clip ? rowEmoji(clip.emoji || '🔊', twin, [...clip.label][0]?.toUpperCase()) : '➕',
       title: clip ? clip.label : 'Pick a sound',
       data: { remove: { remove: i }, clear: { clear: i }, pick: { pick: i } },
-      // Where the header line runs out of room, 🔔 🧹 ✕ move into ⋯ (Ben, 2026-10-12).
-      more: { key: i, label: `More for row ${i + 1}: ${row.melody ? '' : 'Overlap, '}Clear, Remove` },
+      // The emoji opens the row's menu (Ben, 2026-10-25).
+      menu: { key: i, label: `Row ${i + 1}: ${name}. Menu: ${row.melody ? 'notes' : 'sound, Overlap'}, Clear, Remove, move`,
+        change: row.melody ? ['🎹', 'Edit notes'] : ['🔄', 'Change sound'], extra: moveButtons(i) },
       labels: {
         remove: `Remove row ${i + 1}`, removeAsk: `Tap again to remove row ${i + 1}`,
         clear: row.melody ? `Clear row ${i + 1}: take out all its notes` : `Clear row ${i + 1}: turn off all its pills`, clearAsk: `Tap again to clear row ${i + 1}`,
@@ -1668,6 +1631,22 @@ export function createSequencer(deps) {
     });
     parts.pick.classList.toggle('tune', !!row.melody);
     return parts;
+  }
+
+  // ↑ Move up and ↓ Move down, in a row's menu: how a phone, which has no
+  // room for the grip, moves a row (Ben, 2026-10-25).
+  function moveButtons(i) {
+    return [['up', '↑', 'Move up', i > 0], ['down', '↓', 'Move down', i < pattern.rows.length - 1]].map(([dir, icon, word, can]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'row-move icon-btn';
+      b.textContent = icon;
+      b.dataset.move = dir;
+      b.disabled = !can;
+      b.setAttribute('aria-label', `${word}: row ${i + 1}`);
+      b.setAttribute('data-more-word', word);
+      return b;
+    });
   }
 
   // A row's 🔔 Overlap for beat-row.js, here and in the keys view. A tune
@@ -2294,7 +2273,6 @@ export function createSequencer(deps) {
   // ⋯ on a header line short of room (under about 360 px): 🔔 🧹 ✕ move into its
   // menu and stay 44 px; the speaker stays on the line (decisions.md, Screens).
   rowMenus = moreMenu(el.rows);
-  rowRoom = fitMore(el.rows, '.seq-head');
   speakers = speakerControls(el.rows, {
     state: (key) => levelState(Number(key)),
     toggle: (key) => toggleMute(Number(key)),
@@ -2391,19 +2369,24 @@ export function createSequencer(deps) {
     if (!rowEl) return;
     const i = Number(rowEl.dataset.row);
     const row = pattern.rows[i];
+    if (e.target.closest('[data-more]')) return;   // the emoji: its menu opens (overflow.js)
+    const mover = e.target.closest('[data-move]');
+    if (mover) {
+      const to = i + (mover.dataset.move === 'up' ? -1 : 1);
+      if (to < 0 || to >= pattern.rows.length) return;
+      if (asking) arm(null);
+      moveRow(i, to);
+      // The menu follows the row, so ↓ ↓ ↓ walks it down.
+      rowMenus?.close();
+      el.rows.querySelector(`[data-more="${to}"]`)?.click();
+      return;
+    }
     // A tune row's emoji opens 🎹 the roll (its sound changes from there).
     if (e.target.closest('[data-pick]')) { if (row?.melody) openRoll(i); else openChooser(i); return; }
     if (e.target.closest('[data-ring]')) {
       if (asking) arm(null);
       toggleRing(i);
       el.rows.querySelector(`[data-ring="${i}"]`)?.focus();
-      return;
-    }
-    if (e.target.closest('[data-fold]')) {
-      row.collapsed = !row.collapsed;
-      save();
-      render();
-      el.rows.querySelector(`[data-fold="${i}"]`)?.focus();  // the fold button comes first
       return;
     }
     const ask = e.target.closest('[data-clear]') || e.target.closest('[data-remove]');
@@ -2484,15 +2467,9 @@ export function createSequencer(deps) {
     const pill = e.target.closest('.pill');
     if (!pill || e.altKey || e.ctrlKey || e.metaKey) return;
     const row = Number(pill.closest('.seq-row').dataset.row);
-    let to = pillTarget(e.key, row, Number(pill.dataset.step), pattern.rows.length, countOf);
+    const to = pillTarget(e.key, row, Number(pill.dataset.step), pattern.rows.length, countOf);
     if (!to) return;
     e.preventDefault();
-    // Up and down step over collapsed rows; with none open that way, stay put.
-    while (to && pattern.rows[to[0]]?.collapsed) {
-      const further = pillTarget(e.key, to[0], to[1], pattern.rows.length, countOf);
-      to = further[0] === to[0] ? null : further;
-    }
-    if (!to) return;
     pills[row][Number(pill.dataset.step)].tabIndex = -1;
     [cell.row, cell.step] = to;
     const next = pills[to[0]][to[1]];

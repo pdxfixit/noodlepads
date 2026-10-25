@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanPattern, encodeWav, STEPS, mergeGroove, cleanRow, balancedColumns, SIGNATURES, beatToFile, beatFromFile, BEAT_FILE, rowSlot, nextSound } from '../web/sequencer.js';
+import { cleanPattern, encodeWav, STEPS, mergeGroove, cleanRow, SIGNATURES, beatToFile, beatFromFile, BEAT_FILE, rowSlot, nextSound } from '../web/sequencer.js';
 import { fakeBuffer } from './helpers.mjs';
 
 test('cleanPattern: defaults for nothing at all', () => {
@@ -136,25 +136,6 @@ test('mergeGroove: a 3/4 bar takes the start of the groove; a full beat gets no 
   assert.deepEqual(mergeGroove([], [{ clipId: 'k', steps: on(0, 12) }], 12, 1).rows[0].steps.slice(0, 13).map(Number), [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   const full = Array.from({ length: 16 }, (_, i) => cleanRow({ clipId: `r${i}` }));
   assert.equal(mergeGroove(full, [{ clipId: 'new', steps: on(0) }], 16, 1).rows.length, 16);
-});
-
-test('balancedColumns: a bar wraps evenly in every time signature, and its groups line up', () => {
-  const lines = (sig, width) => {
-    const cols = balancedColumns(SIGNATURES[sig], width);
-    const per = cols.length;
-    const n = SIGNATURES[sig].length;
-    return Array.from({ length: Math.ceil(n / per) }, (_, l) => Math.min(per, n - l * per));
-  };
-  assert.deepEqual(lines('4/4', 2000), [4], 'room for all: one line');
-  assert.deepEqual(lines('4/4', 500), [2, 2], 'never 3 + 1');
-  assert.deepEqual(lines('4/4', 200), [1, 1, 1, 1]);
-  assert.deepEqual(lines('5/4', 600), [3, 2]);
-  assert.deepEqual(lines('3/4', 400), [2, 1]);
-  assert.deepEqual(lines('6/8', 300), [1, 1]);
-  assert.deepEqual(lines('7/8', 400), [2, 1]);
-  assert.deepEqual(balancedColumns([4, 4, 6], 400), [6, 4], 'a column is as wide as its widest group: 6 pills, then 4');
-  assert.deepEqual(balancedColumns([4, 4, 6], 2000), [4, 4, 6]);
-  assert.deepEqual(balancedColumns([4, 4, 4, 4], 0), [4, 4, 4, 4], 'no width yet: one line');
 });
 
 test('beat file: kit sounds travel by their kit id; recorded sounds stay behind and are counted', () => {
