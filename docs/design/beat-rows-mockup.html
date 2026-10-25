@@ -103,6 +103,14 @@ h1 { font: 800 clamp(26px, 5vw, 38px)/1.05 var(--font-display); font-stretch: 12
 .menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 6px; width: auto; }
 .toast { position: absolute; left: 50%; transform: translateX(-50%); bottom: 18px; z-index: 30; background: #0B0E22; border-radius: 14px; padding: 8px 8px 8px 14px; display: flex; gap: 10px; align-items: center; box-shadow: 0 8px 24px rgb(0 0 0 / 0.5); white-space: nowrap; font-weight: 700; }
 
+/* ⌨️ Keys on: today's slivers, the whole beat on one line */
+.slivers { flex: 1; min-width: 0; display: grid; gap: 1px; padding: 8px 10px 8px 8px; }
+.sliver { height: 26px; border-radius: 2px; background: rgb(255 255 255 / 0.13); cursor: pointer; }
+.sliver.barstart { margin-left: 4px; }
+.sliver.on { background: var(--c); }
+.sliver.now { background: rgb(255 255 255 / 0.6); }
+.sliver.on.now { background: #fff; }
+.frame .row.muted .slivers { opacity: 0.4; }
 /* Keys stub */
 .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 14px; border-top: 2px solid rgb(255 255 255 / 0.12); }
 .key { border: 0; border-radius: 16px; min-height: 76px; font: 700 13px var(--font-ui); color: #fff; display: grid; place-items: center; gap: 2px; padding: 8px; cursor: pointer; }
@@ -135,7 +143,7 @@ h1 { font: 800 clamp(26px, 5vw, 38px)/1.05 var(--font-display); font-stretch: 12
 
 <div class="page">
   <h1>Beat rows with the controls on the left</h1>
-  <p class="lede">A mockup of every beat row in the app with its controls in a column on the left, its pills on one line, and the grid scrolling sideways. It uses the real 🍭 <b>Pop</b> groove (8 rows, 4 bars). It has no sound. <b>On a phone:</b> the emoji opens the row's menu and 🔊 mutes. <b>Wide:</b> every button shows. <b>▶ Play</b> follows the playhead a screen at a time. Scroll it yourself and it stops following until the next Play.</p>
+  <p class="lede">A mockup of every beat row in the app with its controls in a column on the left, its pills on one line, and the grid scrolling sideways. It uses the real 🍭 <b>Pop</b> groove (8 rows, 4 bars). It has no sound. <b>On a phone:</b> the emoji opens the row's menu and 🔊 mutes. <b>Wide:</b> the ⠿ grip and the sound's name join them. <b>▶ Play</b> follows the playhead a screen at a time. Scroll it yourself and it stops following until the next Play.</p>
 
   <div class="pickers">
     <div><span class="label">View</span><span class="seg" id="views">
@@ -153,15 +161,15 @@ h1 { font: 800 clamp(26px, 5vw, 38px)/1.05 var(--font-display); font-stretch: 12
   <div class="notes">
     <div class="note"><h2>Try this</h2><ul>
       <li>Tap a pill to turn it on. Swipe sideways across the pills: the grid scrolls and nothing turns on.</li>
-      <li>At 375 px, tap an emoji: the menu holds 🔄 Change sound, 🔔 Overlap, 🧹 Clear, ✕ Remove and ↑ ↓ to move the row.</li>
+      <li>Tap an emoji: the menu holds 🔄 Change sound, 🔔 Overlap, 🧹 Clear, ✕ Remove and ↑ ↓ to move the row.</li>
       <li>Press ▶ Play, then swipe the grid: "Following" turns off until you press Play again.</li>
       <li>Switch 1, 2 or 4 bars, and the widths, and compare "Time on screen".</li>
     </ul></div>
     <div class="note"><h2>What changes from today</h2><ul>
       <li>Each row is one line, at every width. Today a 4-bar row on a phone wraps into 8 lines of pills.</li>
       <li>▾ Fold goes. A row that's one line has nothing to fold.</li>
-      <li>The ⠿ grip stays on wide screens. On a phone, ↑ ↓ are in the menu.</li>
-      <li>⌨️ Keys on and off use the same rows. 🎹 Piano roll and 🎼 Song use the same left column and the same sideways scroll.</li>
+      <li>The emoji opens the row's menu at every width. Wide screens add the ⠿ grip and the name; on a phone, ↑ ↓ in the menu move the row.</li>
+      <li>⌨️ Keys on keeps its slivers (the whole beat on one line) with the same left column. 🎹 Piano roll and 🎼 Song use the same left column and the same sideways scroll.</li>
       <li>"Nothing scrolls sideways" (decisions.md) gets an exception for these grids, as the Mixer has.</li>
     </ul></div>
   </div>
@@ -212,7 +220,7 @@ h1 { font: 800 clamp(26px, 5vw, 38px)/1.05 var(--font-display); font-stretch: 12
     closeMenu();
     frame.style.width = state.width + 'px';
     frame.classList.toggle('wide', wide());
-    hw = state.view === 'roll' ? 52 : wide() ? 360 : 100;
+    hw = state.view === 'roll' ? 52 : wide() ? 250 : 100;
     if (state.view === 'song') hw = wide() ? 150 : 100;
     frame.style.setProperty('--hw', hw + 'px');
     const panel = h('div', { class: 'panel' });
@@ -242,6 +250,7 @@ h1 { font: 800 clamp(26px, 5vw, 38px)/1.05 var(--font-display); font-stretch: 12
       h('button', { class: 'btn', 'aria-label': 'Click track' }, '⏲️'),
       bars, h('button', { class: 'btn', 'aria-label': 'Mixer' }, '🎚️'), h('button', { class: 'btn', 'aria-label': 'Move pills' }, '⇆'));
 
+    if (keys) return keysView(top, ctl);
     const inner = h('div', { class: 'inner' });
     inner.append(ruler());
     pills = state.rows.map((row, ri) => {
@@ -275,14 +284,31 @@ h1 { font: 800 clamp(26px, 5vw, 38px)/1.05 var(--font-display); font-stretch: 12
     return out;
   }
 
+  // ⌨️ Keys on keeps today's slivers: the whole beat on one line, no scroll. Only the controls move left.
+  function keysView(top, ctl) {
+    const inner = h('div', { class: 'inner', style: 'width:100%' });
+    pills = state.rows.map((row, ri) => {
+      const sl = h('div', { class: 'slivers', style: `grid-template-columns:repeat(${total()}, 1fr)` });
+      const rowPills = row.hits.slice(0, total()).map((on, i) => {
+        const p = h('span', { class: 'sliver' + (on ? ' on' : '') + (i % 16 === 0 && i ? ' barstart' : ''), style: `--c:${COLORS[row.c]}` });
+        tapOnly(p, () => { row.hits[i] = !row.hits[i]; p.classList.toggle('on', row.hits[i]); });
+        sl.append(p); return p;
+      });
+      inner.append(h('div', { class: 'row' + (row.muted ? ' muted' : '') }, rowHead(row, ri, true), sl));
+      return rowPills;
+    });
+    playhead = h('div', { class: 'playhead', hidden: true });
+    inner.append(playhead);
+    grid = h('div', { class: 'grid', style: 'overflow:hidden' }, inner);
+    watchScroll();
+    return [top, ctl, grid, h('div', { class: 'keys' }, ...keyPads())];
+  }
+
   function rowHead(row, ri, keys) {
     const emoji = h('button', { class: 'emoji', 'aria-label': `${row.name}: row menu`, 'aria-haspopup': 'menu', onclick: (e) => openMenu(e.currentTarget, row, ri) }, row.emoji, row.tune ? h('span', { class: 'tune' }, '🎹') : null);
     const vol = h('button', { class: 'ib vol' + (row.muted ? ' on' : ''), 'aria-label': row.muted ? `Unmute ${row.name}` : `Mute ${row.name}`, onclick: () => { row.muted = !row.muted; render(); } }, row.muted ? '🔇' : '🔊');
     if (!wide()) return h('div', { class: 'head' }, emoji, vol);
-    const bell = h('button', { class: 'ib' + (row.overlap ? ' on' : ''), 'aria-label': 'Overlap', onclick: () => { row.overlap = !row.overlap; render(); } }, '🔔');
-    const clear = askButton('🧹', `Clear ${row.name}`, `clear-${ri}`, () => clearRow(row));
-    const remove = askButton('✕', `Remove ${row.name}`, `remove-${ri}`, () => removeRow(ri));
-    return h('div', { class: 'head' }, h('span', { class: 'grip', 'aria-hidden': 'true' }, '⠿'), emoji, h('span', { class: 'name' }, row.name), row.tune ? null : bell, vol, clear, remove);
+    return h('div', { class: 'head' }, h('span', { class: 'grip', 'aria-hidden': 'true' }, '⠿'), emoji, h('span', { class: 'name' }, row.name), vol);
   }
 
   function askButton(icon, label, key, act) {
@@ -376,7 +402,6 @@ h1 { font: 800 clamp(26px, 5vw, 38px)/1.05 var(--font-display); font-stretch: 12
   // ---------- Row menu (phone) ----------
   let menu = null;
   function openMenu(btn, row, ri) {
-    if (wide()) { flash('In the app: the sound chooser opens here, as today.'); return; }
     closeMenu();
     const fr = frame.getBoundingClientRect(), br = btn.getBoundingClientRect(), s = scale();
     const item = (label, act, opts = {}) => h('button', { class: opts.cls || '', disabled: opts.disabled, role: 'menuitem', onclick: act }, label);
@@ -470,9 +495,11 @@ h1 { font: 800 clamp(26px, 5vw, 38px)/1.05 var(--font-display); font-stretch: 12
         for (const row of pills) { row[state.step]?.classList.remove('now'); row[step]?.classList.add('now'); }
         state.step = step;
         const x = TP + stepX(step);
-        playhead.hidden = false; playhead.style.left = hw + x + PW / 2 + 'px';
+        const cur = pills.find((r) => r.length)?.[step];
+        playhead.hidden = false;
+        playhead.style.left = state.view === 'keys' && cur ? cur.offsetLeft + cur.offsetWidth / 2 + 'px' : hw + x + PW / 2 + 'px';
         const groupStart = TP + stepX(step - (step % 4)) - GP;
-        if (state.following) followTo(x, PW, groupStart);
+        if (state.following && state.view !== 'keys') followTo(x, PW, groupStart);
       }
     }
     state.raf = requestAnimationFrame(tick);
@@ -496,7 +523,8 @@ h1 { font: 800 clamp(26px, 5vw, 38px)/1.05 var(--font-display); font-stretch: 12
     if (!grid) return;
     const vis = grid.clientWidth - hw - TP;
     let time;
-    if (state.view === 'song') time = `${(vis / 48).toFixed(1)} of ${SONG_BARS} bars`;
+    if (state.view === 'keys') time = `the whole beat (${total()} slivers)`;
+    else if (state.view === 'song') time = `${(vis / 48).toFixed(1)} of ${SONG_BARS} bars`;
     else { const pillsOn = Math.max(0, Math.floor((vis + PG) / ((BW + BG) / 16))); time = `${pillsOn} pills ≈ ${(vis / (BW + BG)).toFixed(2)} of ${state.bars} bar${state.bars > 1 ? 's' : ''}`; }
     const chips = [
       ['Time on screen', time],
