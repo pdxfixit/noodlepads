@@ -3541,7 +3541,7 @@ body.head-slim:is(.keys-on, .screen-live) .slim-edit::before { content: "✏️"
    ▶ (■), ✏️ (Keys on) and ▾ ride at the slim bar's right (mini-deck.js);
    ● Record stays on the bar, so ⬆️ has room (Ben, 2026-10-25).
    ▾ drops the whole bar down under the slim bar; ▴ puts it away. The slim
-   bar never grows: as room runs out ⬆️, ❓, ✏️, then ⚙️ give way, one
+   bar never grows: as room runs out ❓, ⬆️, ✏️, then ⚙️ give way, one
    step at a time, measured (mini-deck.js STEPS). */
 .mini-deck { display: none; }
 /* At the right edge, apart from the round button, ❓, ⚙️ and ⬆️ at the

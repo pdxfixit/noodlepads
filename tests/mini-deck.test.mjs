@@ -2,7 +2,7 @@
 // control bar has scrolled all the way under it, it hides, and ▶ (■) and ▾ ride
 // in the slim bar beside ⬆️; ▾ drops the whole bar down. ● Record stays on the
 // bar, so ⬆️ has room (Ben, 2026-10-25). As the slim bar runs out of room,
-// ⬆️, ❓, ✏️, then ⚙️ give way. Where they sit
+// ❓ (it is back at the top; Ben, 2026-10-25), ⬆️, ✏️, then ⚙️ give way. Where they sit
 // is checked with `just look beat-groove keys-on --scroll 700 --wide`; this
 // checks the rule, the order and the wiring.
 
@@ -38,8 +38,8 @@ test('the bar is tucked once it reaches where it sticks, on Beats with the heade
   assert.equal(isTucked({ ...at, shown: false }), false, 'a bar not on screen');
 });
 
-test('the slim bar gives way in Ben\'s order: ⬆️, ❓, ✏️, ⚙️', () => {
-  assert.deepEqual(STEPS, ['tuck-notop', 'tuck-nohelp', 'tuck-noedit', 'tuck-nosettings']);
+test('the slim bar gives way in Ben\'s order: ❓, ⬆️, ✏️, ⚙️', () => {
+  assert.deepEqual(STEPS, ['tuck-nohelp', 'tuck-notop', 'tuck-noedit', 'tuck-nosettings']);
   for (const [cls, what] of [['tuck-notop', '.to-top'], ['tuck-nohelp', '#help-open'], ['tuck-noedit', '.slim-edit'], ['tuck-nosettings', '#settings-open']]) {
     assert.ok(css.includes(`body.deck-tucked.${cls} ${what}`), `${cls} hides ${what}`);
   }
