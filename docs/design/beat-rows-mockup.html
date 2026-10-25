@@ -1,0 +1,520 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0">
+<title>Beat Rows Mockup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@75..150,500..900&family=Atkinson+Hyperlegible+Next:wght@400;700&display=swap">
+<style>
+/* Layout: a notes column over a scaled "device frame" that renders the app at a true width (375 / 1100 / 1920). Single dark look, as the app. */
+:root {
+  color-scheme: dark;
+  --page: #10132B;          /* the page around the frame */
+  --board: #2638C8;         /* the app's casing blue, behind the panel */
+  --bed: #171E3B;           /* the app's panel */
+  --bed-2: #1D2547;         /* a raised part of the panel (header column) */
+  --ink: #ECEAF2;           /* text on dark */
+  --muted: #A9A5BA;
+  --led: #FFE58A;           /* lit buttons */
+  --record: #D8261F;
+  --blue: #4B8DFF; --teal: #22C9A8; --yellow: #FFD23F;
+  --line: rgb(255 255 255 / 0.10);
+  --font-display: "Anybody", "Arial Narrow", system-ui, sans-serif;
+  --font-ui: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+body { background: var(--page); color: var(--ink); font: 15px/1.45 var(--font-ui); }
+.page { max-width: 1240px; margin: 0 auto; padding-block: 20px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 18px; }
+h1 { font: 800 clamp(26px, 5vw, 38px)/1.05 var(--font-display); font-stretch: 125%; margin: 0; text-wrap: balance; }
+.lede { margin: 0; max-width: 68ch; color: var(--muted); }
+.lede b { color: var(--ink); }
+.pickers { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; }
+.seg { display: inline-flex; border: 2px solid rgb(255 255 255 / 0.25); border-radius: 12px; overflow: hidden; }
+.seg button { font: 700 14px var(--font-ui); color: var(--ink); background: transparent; border: 0; padding: 10px 14px; min-height: 44px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--led); color: #1C1740; }
+.seg button:focus-visible, .frame button:focus-visible { outline: 3px solid #fff; outline-offset: -3px; }
+.label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
+.stage { width: 100%; overflow: hidden; border-radius: 22px; }
+.readout { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 700 13px var(--font-ui); padding: 6px 10px; border-radius: 999px; background: rgb(255 255 255 / 0.08); font-variant-numeric: tabular-nums; }
+.chip.on { background: color-mix(in srgb, var(--teal) 30%, transparent); }
+.notes { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+.note { background: rgb(255 255 255 / 0.05); border-radius: 14px; padding: 14px 16px; min-width: 0; }
+.note h2 { font: 800 17px var(--font-display); font-stretch: 115%; margin: 0 0 6px; }
+.note ul { margin: 0; padding-left: 18px; }
+.note li + li { margin-top: 4px; }
+
+/* ===== The frame: the app at a true width ===== */
+.frame { --hw: 100px; box-sizing: border-box; transform-origin: top left; background: var(--board); padding: 16px; font: 15px/1.3 var(--font-ui); position: relative; }
+.panel { background: var(--bed); border-radius: 22px; overflow: hidden; position: relative; }
+.bar1 { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.title { font: italic 800 17px var(--font-display); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 14px; border-bottom: 2px solid rgb(255 255 255 / 0.12); }
+.btn { font: 700 15px var(--font-ui); color: var(--ink); background: transparent; border: 2px solid rgb(255 255 255 / 0.3); border-radius: 12px; min-height: 44px; min-width: 44px; padding: 0 12px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn.play { background: var(--led); color: #1C1740; border-color: var(--led); min-width: 110px; }
+.btn.rec { background: #ECEAF2; color: #1C1740; border-color: #ECEAF2; }
+.btn.lit { background: var(--led); color: #1C1740; border-color: var(--led); }
+.btn.ask { background: var(--record); border-color: var(--record); color: #fff; }
+.tempo { font: 800 15px var(--font-display); text-align: center; line-height: 1; padding: 0 4px; }
+.bars { display: inline-flex; border: 2px solid rgb(255 255 255 / 0.3); border-radius: 12px; overflow: hidden; }
+.bars button { border: 0; background: transparent; color: var(--ink); font: 700 14px var(--font-ui); min-height: 40px; padding: 0 10px; cursor: pointer; }
+.bars button[aria-pressed="true"] { background: var(--led); color: #1C1740; }
+.grow { flex: 1; }
+
+/* The grid: one scroller, rows of [sticky header | pills]. */
+.grid { overflow-x: auto; overflow-y: hidden; position: relative; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.inner { position: relative; width: max-content; padding-bottom: 8px; }
+.row { display: flex; align-items: center; border-top: 1px solid var(--line); }
+.row:first-of-type { border-top: 0; }
+.head { position: sticky; left: 0; z-index: 3; flex: none; width: var(--hw); align-self: stretch; display: flex; align-items: center; gap: 4px; padding: 4px 6px 4px 8px; background: var(--bed-2); box-shadow: 6px 0 10px -6px rgb(0 0 0 / 0.6); box-sizing: border-box; }
+.emoji { font-size: 22px; background: transparent; border: 0; min-width: 44px; height: 44px; border-radius: 12px; cursor: pointer; position: relative; padding: 0; }
+.emoji:hover { background: rgb(255 255 255 / 0.08); }
+.emoji .tune { position: absolute; right: 0; bottom: 0; font-size: 11px; }
+.name { flex: 1; min-width: 0; font: 700 14px var(--font-ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grip { color: var(--muted); font-size: 16px; width: 22px; text-align: center; cursor: grab; flex: none; }
+.ib { width: 44px; height: 44px; flex: none; border-radius: 12px; border: 2px solid rgb(255 255 255 / 0.3); background: transparent; color: var(--ink); font-size: 17px; cursor: pointer; padding: 0; position: relative; overflow: hidden; }
+.ib.on { background: var(--led); border-color: var(--led); }
+.ib.ask { background: var(--record); border-color: var(--record); }
+.ib.vol::after { content: ""; position: absolute; left: 6px; right: 6px; bottom: 4px; height: 3px; border-radius: 2px; background: var(--led); }
+.ib.vol.on::after { background: #1C1740; opacity: 0.4; }
+.track { display: flex; gap: 14px; padding: 6px 10px 6px 8px; }
+.barx { display: flex; gap: 6px; position: relative; }
+.barx + .barx::before { content: ""; position: absolute; left: -8px; top: -6px; bottom: -6px; border-left: 2px dashed rgb(255 255 255 / 0.18); }
+.grp { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: rgb(255 255 255 / 0.06); }
+.pill { width: 28px; height: var(--ph, 44px); border: 0; padding: 0; border-radius: 999px; background: rgb(255 255 255 / 0.13); cursor: pointer; transition: background-color 60ms, transform 60ms; touch-action: pan-x pan-y; }
+.pill.bs { background: rgb(255 255 255 / 0.19); }
+.pill.one { background: rgb(255 255 255 / 0.26) radial-gradient(circle, rgb(255 255 255 / 0.75) 3px, transparent 3.5px) center / 100% 100% no-repeat; }
+.pill.on { background: var(--c); box-shadow: 0 3px 0 color-mix(in srgb, var(--c) 55%, black); }
+.pill.now { outline: 2px solid rgb(255 255 255 / 0.7); outline-offset: 1px; }
+.pill.on.now { background: #fff; transform: scale(1.06); }
+.row.muted .track { opacity: 0.4; }
+.ruler .track { padding-block: 4px 2px; }
+.ruler .grp { background: transparent; padding-block: 0; }
+.tick { width: 28px; text-align: center; font: 800 12px var(--font-display); color: var(--muted); }
+.tick.b1 { color: var(--ink); }
+.playhead { position: absolute; top: 0; bottom: 8px; width: 3px; margin-left: -1.5px; border-radius: 2px; background: #fff; box-shadow: 0 0 10px rgb(255 255 255 / 0.8); z-index: 2; pointer-events: none; }
+.addrow { display: flex; gap: 8px; padding: 10px 14px 14px; }
+.addrow .btn { border-style: dashed; font-size: 14px; }
+
+/* Row menu (phone: the emoji opens it) */
+.menu { position: absolute; z-index: 20; background: #26305C; border-radius: 16px; padding: 6px; box-shadow: 0 12px 30px rgb(0 0 0 / 0.5); display: grid; min-width: 210px; }
+.menu button { text-align: left; font: 700 15px var(--font-ui); color: var(--ink); background: transparent; border: 0; border-radius: 10px; min-height: 44px; padding: 0 12px; cursor: pointer; display: flex; gap: 10px; align-items: center; }
+.menu button:hover { background: rgb(255 255 255 / 0.08); }
+.menu button.ask { background: var(--record); }
+.menu button[disabled] { opacity: 0.45; cursor: default; }
+.menu .tick-on::after { content: "✓"; margin-left: auto; color: var(--led); }
+.menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 6px; width: auto; }
+.toast { position: absolute; left: 50%; transform: translateX(-50%); bottom: 18px; z-index: 30; background: #0B0E22; border-radius: 14px; padding: 8px 8px 8px 14px; display: flex; gap: 10px; align-items: center; box-shadow: 0 8px 24px rgb(0 0 0 / 0.5); white-space: nowrap; font-weight: 700; }
+
+/* Keys stub */
+.keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 14px; border-top: 2px solid rgb(255 255 255 / 0.12); }
+.key { border: 0; border-radius: 16px; min-height: 76px; font: 700 13px var(--font-ui); color: #fff; display: grid; place-items: center; gap: 2px; padding: 8px; cursor: pointer; }
+.key span { font-size: 26px; }
+.frame.wide .keys { grid-template-columns: repeat(8, 1fr); }
+
+/* Piano roll */
+.roll .head { justify-content: center; font: 800 13px var(--font-display); color: var(--muted); }
+.roll .row.c .head { color: var(--ink); background: #2E3866; }
+.cell { width: 28px; height: 26px; border-radius: 6px; background: rgb(255 255 255 / 0.05); cursor: pointer; flex: none; }
+.roll .grp { background: transparent; padding-block: 0; }
+.roll .row { border-top-color: rgb(255 255 255 / 0.05); }
+.roll .row.c { background: rgb(255 255 255 / 0.04); }
+.note-bar { position: absolute; height: 22px; margin-top: 2px; border-radius: 7px; background: var(--yellow); box-shadow: 0 2px 0 color-mix(in srgb, var(--yellow) 55%, black); pointer-events: none; z-index: 1; }
+.dot { width: 28px; height: 14px; display: flex; gap: 2px; align-items: center; justify-content: center; }
+.dot i { width: 7px; height: 7px; border-radius: 2px; background: var(--c); }
+
+/* Song lanes */
+.lane-track { display: flex; padding: 6px 10px 6px 8px; }
+.bcell { width: 48px; height: 52px; box-sizing: border-box; border-left: 1px solid var(--line); position: relative; flex: none; }
+.bcell.b4 { border-left-color: rgb(255 255 255 / 0.22); }
+.block { position: absolute; top: 4px; bottom: 4px; left: 3px; border-radius: 10px; background: #2F3A73; border: 2px solid rgb(255 255 255 / 0.25); border-left: 6px solid var(--blue); font: 700 13px var(--font-ui); padding: 0 8px; display: flex; align-items: center; white-space: nowrap; overflow: hidden; z-index: 1; }
+.block.lit { background: #4252A6; }
+.barnum { width: 48px; flex: none; font: 800 13px var(--font-display); color: var(--muted); padding-left: 6px; box-sizing: border-box; }
+.lane-name { font: 700 11px var(--font-ui); display: block; text-align: center; }
+.lanehead { display: grid; justify-items: center; line-height: 1; }
+
+@media (prefers-reduced-motion: reduce) { .pill { transition: none; } }
+</style>
+
+<div class="page">
+  <h1>Beat rows with the controls on the left</h1>
+  <p class="lede">A mockup of every beat row in the app with its controls in a column on the left, its pills on one line, and the grid scrolling sideways. It uses the real 🍭 <b>Pop</b> groove (8 rows, 4 bars). It has no sound. <b>On a phone:</b> the emoji opens the row's menu and 🔊 mutes. <b>Wide:</b> every button shows. <b>▶ Play</b> follows the playhead a screen at a time. Scroll it yourself and it stops following until the next Play.</p>
+
+  <div class="pickers">
+    <div><span class="label">View</span><span class="seg" id="views">
+      <button data-v="beats" aria-pressed="true">🥁 Beats</button><button data-v="keys" aria-pressed="false">⌨️ Keys on</button><button data-v="roll" aria-pressed="false">🎹 Piano roll</button><button data-v="song" aria-pressed="false">🎼 Song</button>
+    </span></div>
+    <div><span class="label">Width</span><span class="seg" id="widths">
+      <button data-w="375" aria-pressed="true">375</button><button data-w="1100" aria-pressed="false">1100</button><button data-w="1920" aria-pressed="false">1920</button>
+    </span></div>
+  </div>
+
+  <div class="readout" id="readout" aria-live="polite"></div>
+
+  <div class="stage" id="stage"><div class="frame" id="frame"></div></div>
+
+  <div class="notes">
+    <div class="note"><h2>Try this</h2><ul>
+      <li>Tap a pill to turn it on. Swipe sideways across the pills: the grid scrolls and nothing turns on.</li>
+      <li>At 375 px, tap an emoji: the menu holds 🔄 Change sound, 🔔 Overlap, 🧹 Clear, ✕ Remove and ↑ ↓ to move the row.</li>
+      <li>Press ▶ Play, then swipe the grid: "Following" turns off until you press Play again.</li>
+      <li>Switch 1, 2 or 4 bars, and the widths, and compare "Time on screen".</li>
+    </ul></div>
+    <div class="note"><h2>What changes from today</h2><ul>
+      <li>Each row is one line, at every width. Today a 4-bar row on a phone wraps into 8 lines of pills.</li>
+      <li>▾ Fold goes. A row that's one line has nothing to fold.</li>
+      <li>The ⠿ grip stays on wide screens. On a phone, ↑ ↓ are in the menu.</li>
+      <li>⌨️ Keys on and off use the same rows. 🎹 Piano roll and 🎼 Song use the same left column and the same sideways scroll.</li>
+      <li>"Nothing scrolls sideways" (decisions.md) gets an exception for these grids, as the Mixer has.</li>
+    </ul></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const COLORS = { blue: 'var(--blue)', teal: 'var(--teal)', yellow: 'var(--yellow)' };
+  const rep = (s) => [s, s, s, s].join('');
+  const E = '................';
+  const CH = 'x.....x.....x...';
+  const START = [
+    { id: 'kick', emoji: '🦶', name: 'Kick', c: 'blue', p: rep('x.......x.x.....') },
+    { id: 'snare', emoji: '🥁', name: 'Snare', c: 'blue', p: rep('....x.......x...') },
+    { id: 'hihat', emoji: '🎩', name: 'Hi-hat', c: 'teal', p: rep('x.x.x.x.x.x.x.x.') },
+    { id: 'chord-c', emoji: '🌞', name: 'C chord', c: 'yellow', p: CH + E + E + E },
+    { id: 'chord-g', emoji: '🌊', name: 'G chord', c: 'yellow', p: E + CH + E + E },
+    { id: 'chord-am', emoji: '🌙', name: 'Am chord', c: 'yellow', p: E + E + CH + E },
+    { id: 'chord-f', emoji: '🌈', name: 'F chord', c: 'yellow', p: E + E + E + CH },
+    { id: 'tune', emoji: '🐘', name: 'Bass C', c: 'yellow', p: rep(CH), tune: true },
+  ];
+  // Pill geometry, shared by every view so a step sits at the same x everywhere.
+  const PW = 28, PG = 4, GP = 4, GG = 6, BG = 14, TP = 8;
+  const GW = 4 * PW + 3 * PG + 2 * GP, BW = 4 * GW + 3 * GG;
+  const stepX = (i) => Math.floor(i / 16) * (BW + BG) + Math.floor((i % 16) / 4) * (GW + GG) + GP + (i % 4) * (PW + PG);
+  const BPM = 110, STEP_MS = 60000 / BPM / 4;
+
+  const state = {
+    view: 'beats', width: 375, bars: 4,
+    rows: START.map((r) => ({ ...r, hits: [...r.p].map((ch) => ch === 'x'), muted: false, overlap: false })),
+    playing: false, following: false, step: -1, t0: 0, raf: 0,
+    roll: null, ask: null, undo: null,
+  };
+  // Bass notes for the piano roll: [start step, length, row index from the top]. Rows: C B A G F E D C B A G F E D C.
+  state.roll = [[0,5,14],[6,5,14],[12,4,14],[16,5,10],[22,5,10],[28,4,10],[32,5,9],[38,5,9],[44,4,9],[48,5,11],[54,5,11],[60,4,11]];
+
+  const frame = document.getElementById('frame');
+  const stage = document.getElementById('stage');
+  const readout = document.getElementById('readout');
+  const h = (tag, props = {}, ...kids) => { const el = document.createElement(tag); for (const [k, v] of Object.entries(props)) { if (k === 'class') el.className = v; else if (k === 'style') el.style.cssText = v; else if (k.startsWith('on')) el.addEventListener(k.slice(2), v); else if (v !== false && v != null) el.setAttribute(k, v === true ? '' : v); } el.append(...kids.flat().filter((k) => k != null)); return el; };
+  const wide = () => state.width >= 700;
+  const total = () => state.bars * 16;
+
+  let grid = null, playhead = null, pills = [], hw = 100;
+
+  function render() {
+    stop(false);
+    closeMenu();
+    frame.style.width = state.width + 'px';
+    frame.classList.toggle('wide', wide());
+    hw = state.view === 'roll' ? 52 : wide() ? 360 : 100;
+    if (state.view === 'song') hw = wide() ? 150 : 100;
+    frame.style.setProperty('--hw', hw + 'px');
+    const panel = h('div', { class: 'panel' });
+    if (state.view === 'roll') panel.append(...rollView());
+    else if (state.view === 'song') panel.append(...songView());
+    else panel.append(...beatView(state.view === 'keys'));
+    frame.replaceChildren(panel);
+    if (state.undo) showUndo();
+    fit();
+    updateReadout();
+  }
+
+  // ---------- Beats (⌨️ Keys off and on) ----------
+  function beatView(keys) {
+    const top = h('div', { class: 'bar1' },
+      h('span', { style: 'font-size:22px' }, '🥁'), h('span', { class: 'title' }, 'Pop (scratch)'),
+      h('button', { class: 'btn' }, '💾', wide() ? ' Keep' : null),
+      h('button', { class: 'btn' }, '💃', wide() ? ' Grooves' : null),
+      h('button', { class: 'btn' + (keys ? ' lit' : ''), onclick: () => { state.view = keys ? 'beats' : 'keys'; syncPickers(); render(); } }, '⌨️', wide() ? ' Keys' : null),
+      wide() ? h('button', { class: 'btn' }, '🆕 New') : null,
+      wide() ? h('button', { class: 'btn' }, '🗂️ My beats') : null);
+    const bars = h('span', { class: 'bars' }, ...[1, 2, 4].map((b) => h('button', { 'aria-pressed': String(state.bars === b), onclick: () => { state.bars = b; render(); } }, b === 1 ? '1 bar' : b + ' bars')));
+    const ctl = h('div', { class: 'ctl' },
+      playButton(),
+      keys ? h('button', { class: 'btn rec' }, '● Record') : null,
+      h('button', { class: 'btn', 'aria-label': 'Slower' }, '⌄'), h('span', { class: 'tempo' }, '110', h('br'), 'BPM'), h('button', { class: 'btn', 'aria-label': 'Faster' }, '⌃'),
+      h('button', { class: 'btn', 'aria-label': 'Click track' }, '⏲️'),
+      bars, h('button', { class: 'btn', 'aria-label': 'Mixer' }, '🎚️'), h('button', { class: 'btn', 'aria-label': 'Move pills' }, '⇆'));
+
+    const inner = h('div', { class: 'inner' });
+    inner.append(ruler());
+    pills = state.rows.map((row, ri) => {
+      const rowPills = [];
+      const track = h('div', { class: 'track' });
+      for (let b = 0; b < state.bars; b++) {
+        const bar = h('div', { class: 'barx' });
+        for (let g = 0; g < 4; g++) {
+          const grp = h('div', { class: 'grp' });
+          for (let k = 0; k < 4; k++) {
+            const i = b * 16 + g * 4 + k;
+            const p = h('button', { class: 'pill' + (i % 16 === 0 ? ' one' : k === 0 ? ' bs' : '') + (row.hits[i] ? ' on' : ''), 'aria-pressed': String(!!row.hits[i]), 'aria-label': `${row.name}, bar ${b + 1}, step ${i % 16 + 1}`, style: `--c:${COLORS[row.c]}` });
+            tapOnly(p, () => { row.hits[i] = !row.hits[i]; p.classList.toggle('on', row.hits[i]); p.setAttribute('aria-pressed', String(row.hits[i])); });
+            rowPills.push(p); grp.append(p);
+          }
+          bar.append(grp);
+        }
+        track.append(bar);
+      }
+      const el = h('div', { class: 'row' + (row.muted ? ' muted' : ''), style: keys ? '--ph:34px' : '' }, rowHead(row, ri, keys), track);
+      inner.append(el);
+      return rowPills;
+    });
+    playhead = h('div', { class: 'playhead', hidden: true });
+    inner.append(playhead);
+    grid = h('div', { class: 'grid' }, inner);
+    watchScroll();
+    const out = [top, ctl, grid];
+    if (keys) out.push(h('div', { class: 'keys' }, ...keyPads()));
+    else out.push(h('div', { class: 'addrow' }, h('button', { class: 'btn' }, '+ Add a row'), h('button', { class: 'btn' }, '🎹 Add a tune')));
+    return out;
+  }
+
+  function rowHead(row, ri, keys) {
+    const emoji = h('button', { class: 'emoji', 'aria-label': `${row.name}: row menu`, 'aria-haspopup': 'menu', onclick: (e) => openMenu(e.currentTarget, row, ri) }, row.emoji, row.tune ? h('span', { class: 'tune' }, '🎹') : null);
+    const vol = h('button', { class: 'ib vol' + (row.muted ? ' on' : ''), 'aria-label': row.muted ? `Unmute ${row.name}` : `Mute ${row.name}`, onclick: () => { row.muted = !row.muted; render(); } }, row.muted ? '🔇' : '🔊');
+    if (!wide()) return h('div', { class: 'head' }, emoji, vol);
+    const bell = h('button', { class: 'ib' + (row.overlap ? ' on' : ''), 'aria-label': 'Overlap', onclick: () => { row.overlap = !row.overlap; render(); } }, '🔔');
+    const clear = askButton('🧹', `Clear ${row.name}`, `clear-${ri}`, () => clearRow(row));
+    const remove = askButton('✕', `Remove ${row.name}`, `remove-${ri}`, () => removeRow(ri));
+    return h('div', { class: 'head' }, h('span', { class: 'grip', 'aria-hidden': 'true' }, '⠿'), emoji, h('span', { class: 'name' }, row.name), row.tune ? null : bell, vol, clear, remove);
+  }
+
+  function askButton(icon, label, key, act) {
+    const asking = state.ask === key;
+    return h('button', { class: 'ib' + (asking ? ' ask' : ''), 'aria-label': asking ? label + '?' : label, onclick: () => { if (state.ask === key) { state.ask = null; act(); } else { state.ask = key; render(); setTimeout(() => { if (state.ask === key) { state.ask = null; render(); } }, 3000); } } }, icon);
+  }
+
+  function ruler() {
+    const track = h('div', { class: 'track' });
+    for (let b = 0; b < state.bars; b++) {
+      const bar = h('div', { class: 'barx' });
+      for (let g = 0; g < 4; g++) bar.append(h('div', { class: 'grp' }, ...[0, 1, 2, 3].map((k) => h('span', { class: 'tick' + (g === 0 && k === 0 ? ' b1' : '') }, k === 0 ? (g === 0 ? String(b + 1) : '·') : ''))));
+      track.append(bar);
+    }
+    return h('div', { class: 'row ruler' }, h('div', { class: 'head', style: 'font:800 12px var(--font-display);color:var(--muted)' }, 'Bar'), track);
+  }
+
+  function keyPads() {
+    const pads = [['🦶', 'Kick', '#C2410C'], ['🥁', 'Snare', '#C2410C'], ['🎩', 'Hi-hat', '#C2410C'], ['👏', 'Clap', '#C2410C'], ['🌞', 'C chord', '#6D28D9'], ['🌙', 'Am chord', '#6D28D9'], ['🌈', 'F chord', '#6D28D9'], ['🌊', 'G chord', '#6D28D9']];
+    return pads.map(([e, n, c]) => h('button', { class: 'key', style: `background:${c}` }, h('span', {}, e), n));
+  }
+
+  // ---------- Piano roll ----------
+  function rollView() {
+    const NOTES = ['C', 'B', 'A', 'G', 'F', 'E', 'D', 'C', 'B', 'A', 'G', 'F', 'E', 'D', 'C'];
+    const top = h('div', { class: 'bar1' }, h('span', { class: 'title', style: 'font-style:normal' }, '🎹 🐘 Bass C'), h('button', { class: 'btn lit', onclick: () => { state.view = 'beats'; syncPickers(); render(); } }, '✅ Done'));
+    const ctl = h('div', { class: 'ctl' }, playButton(), h('button', { class: 'btn' }, '🐘 Sound'), h('button', { class: 'btn', 'aria-label': 'Higher' }, '⌃'), h('button', { class: 'btn', 'aria-label': 'Lower' }, '⌄'), h('button', { class: 'btn' }, '♯ All notes'));
+    const inner = h('div', { class: 'inner roll' });
+    // The drums strip: one dot per drum hit, colored by its row.
+    const strip = h('div', { class: 'track', style: 'padding-block:8px' });
+    for (let b = 0; b < state.bars; b++) {
+      const bar = h('div', { class: 'barx' });
+      for (let g = 0; g < 4; g++) bar.append(h('div', { class: 'grp', style: 'background:transparent' }, ...[0, 1, 2, 3].map((k) => { const i = b * 16 + g * 4 + k; return h('span', { class: 'dot' }, ...state.rows.slice(0, 3).filter((r) => r.hits[i]).map((r) => h('i', { style: `--c:${COLORS[r.c]}` }))); })));
+      strip.append(bar);
+    }
+    inner.append(h('div', { class: 'row' }, h('div', { class: 'head', style: 'font-size:18px' }, '🥁'), strip));
+    const rowEls = NOTES.map((n, ni) => {
+      const track = h('div', { class: 'track', style: 'padding-block:1px' });
+      for (let b = 0; b < state.bars; b++) {
+        const bar = h('div', { class: 'barx' });
+        for (let g = 0; g < 4; g++) bar.append(h('div', { class: 'grp' }, ...[0, 1, 2, 3].map((k) => { const i = b * 16 + g * 4 + k; const c = h('span', { class: 'cell' }); tapOnly(c, () => toggleNote(i, ni)); return c; })));
+        track.append(bar);
+      }
+      const r = h('div', { class: 'row' + (n === 'C' ? ' c' : '') }, h('div', { class: 'head' }, n), track);
+      inner.append(r);
+      return r;
+    });
+    for (const [s, len, ni] of state.roll) {
+      if (s >= total()) continue;
+      const end = Math.min(s + len, total()) - 1;
+      const bar = h('div', { class: 'note-bar', style: `left:${hw + TP + stepX(s)}px;width:${stepX(end) - stepX(s) + PW}px` });
+      rowEls[ni].style.position = 'relative';
+      rowEls[ni].append(bar);
+    }
+    pills = [];
+    playhead = h('div', { class: 'playhead', hidden: true });
+    inner.append(playhead);
+    grid = h('div', { class: 'grid' }, inner);
+    watchScroll();
+    return [top, ctl, grid, h('p', { style: 'margin:0;padding:10px 14px 14px;color:var(--muted);font-size:13px' }, 'Tap a square for a note. The drums strip and the notes scroll together, with the note names fixed on the left.')];
+  }
+  function toggleNote(i, ni) {
+    const at = state.roll.findIndex(([s, len, n]) => n === ni && i >= s && i < s + len);
+    if (at >= 0) state.roll.splice(at, 1); else state.roll.push([i, 1, ni]);
+    const x = grid.scrollLeft; render(); grid.scrollLeft = x;
+  }
+
+  // ---------- Song ----------
+  const LANES = [['🥁', 'Drums', [[0, 4, 'Tiny Donut (Pop version)', 'var(--blue)'], [4, 4, 'Tiny Donut (Pop version)', 'var(--blue)'], [8, 4, 'Mega Donut', 'var(--teal)']]], ['🎸', 'Bass', [[0, 2, 'Robot', 'var(--yellow)'], [4, 2, 'Robot', 'var(--yellow)'], [8, 4, 'Robot', 'var(--yellow)']]], ['🎹', 'Keys', [[2, 2, 'Rowdy Dino', 'var(--teal)'], [10, 2, 'Rowdy Dino', 'var(--teal)']]], ['🎤', 'Voice', [[12, 4, 'Sunny Hum', '#ff7aa8']]]];
+  const SONG_BARS = 16;
+  function songView() {
+    const top = h('div', { class: 'bar1' }, h('span', { style: 'font-size:22px' }, '🎼'), h('span', { class: 'title' }, 'Scratch song'), h('button', { class: 'btn' }, '🆕', wide() ? ' New' : null), h('button', { class: 'btn' }, '🗂️', wide() ? ' My songs' : null));
+    const ctl = h('div', { class: 'ctl' }, playButton('▶ Play song'), h('button', { class: 'btn', 'aria-label': 'Slower' }, '−'), h('span', { class: 'tempo' }, '110', h('br'), 'BPM'), h('button', { class: 'btn', 'aria-label': 'Faster' }, '+'));
+    const inner = h('div', { class: 'inner' });
+    inner.append(h('div', { class: 'row' }, h('div', { class: 'head', style: 'font:800 12px var(--font-display);color:var(--muted)' }, 'Bar'), h('div', { class: 'lane-track', style: 'padding-block:8px' }, ...Array.from({ length: SONG_BARS }, (_, b) => h('span', { class: 'barnum' }, String(b + 1))))));
+    for (const [e, n, blocks] of LANES) {
+      const cells = Array.from({ length: SONG_BARS }, (_, b) => h('div', { class: 'bcell' + (b % 4 === 0 ? ' b4' : '') }));
+      for (const [s, len, name, c] of blocks) cells[s].append(h('div', { class: 'block', style: `width:${len * 48 - 6}px;border-left-color:${c}`, 'data-s': s, 'data-len': len }, name));
+      const vol = h('button', { class: 'ib vol', 'aria-label': `Mute ${n}` }, '🔊');
+      const head = wide() ? h('div', { class: 'head' }, h('span', { class: 'emoji', style: 'display:grid;place-items:center' }, e), h('span', { class: 'name' }, n), vol) : h('div', { class: 'head' }, h('span', { class: 'emoji lanehead', style: 'display:grid;place-items:center' }, h('span', {}, e), h('span', { class: 'lane-name' }, n)), vol);
+      inner.append(h('div', { class: 'row' }, head, h('div', { class: 'lane-track' }, ...cells)));
+    }
+    pills = [];
+    playhead = h('div', { class: 'playhead', hidden: true });
+    inner.append(playhead);
+    grid = h('div', { class: 'grid' }, inner);
+    watchScroll();
+    return [top, ctl, grid, h('div', { class: 'addrow' }, h('button', { class: 'btn' }, '➕ Add a lane'))];
+  }
+
+  // ---------- Row menu (phone) ----------
+  let menu = null;
+  function openMenu(btn, row, ri) {
+    if (wide()) { flash('In the app: the sound chooser opens here, as today.'); return; }
+    closeMenu();
+    const fr = frame.getBoundingClientRect(), br = btn.getBoundingClientRect(), s = scale();
+    const item = (label, act, opts = {}) => h('button', { class: opts.cls || '', disabled: opts.disabled, role: 'menuitem', onclick: act }, label);
+    const asking = (k) => state.ask === k;
+    const ask = (k, act) => () => { if (state.ask === k) { state.ask = null; closeMenu(); act(); } else { state.ask = k; closeMenu(); openMenu(findEmoji(ri), row, ri); } };
+    menu = h('div', { class: 'menu', role: 'menu', style: `left:${(br.left - fr.left) / s}px;top:${(br.bottom - fr.top) / s + 4}px` },
+      item('🔄 Change sound', () => { closeMenu(); flash('In the app: the sound chooser opens.'); }),
+      row.tune ? item('🎹 Edit notes', () => { closeMenu(); state.view = 'roll'; syncPickers(); render(); }) : item('🔔 Overlap', () => { row.overlap = !row.overlap; closeMenu(); }, { cls: row.overlap ? 'tick-on' : '' }),
+      item(asking('c' + ri) ? '🧹 Clear?' : '🧹 Clear', ask('c' + ri, () => clearRow(row)), { cls: asking('c' + ri) ? 'ask' : '' }),
+      item(asking('r' + ri) ? '✕ Remove?' : '✕ Remove', ask('r' + ri, () => removeRow(ri)), { cls: asking('r' + ri) ? 'ask' : '' }),
+      h('hr'),
+      item('↑ Move up', () => move(ri, -1), { disabled: ri === 0 }),
+      item('↓ Move down', () => move(ri, 1), { disabled: ri === state.rows.length - 1 }));
+    frame.append(menu);
+    menu.querySelector('button')?.focus();
+  }
+  const findEmoji = (ri) => grid.querySelectorAll('.row:not(.ruler) .emoji')[ri];
+  function closeMenu() { menu?.remove(); menu = null; }
+  document.addEventListener('pointerdown', (e) => { if (menu && !menu.contains(e.target) && !e.target.closest('.emoji')) { closeMenu(); state.ask = null; } });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeMenu(); state.ask = null; } });
+  function move(ri, d) { const [r] = state.rows.splice(ri, 1); state.rows.splice(ri + d, 0, r); const x = grid.scrollLeft; render(); grid.scrollLeft = x; }
+  function clearRow(row) { const before = [...row.hits]; row.hits.fill(false); state.undo = { label: `Cleared ${row.name}`, act: () => { row.hits = before; } }; rerenderKeepScroll(); }
+  function removeRow(ri) { const [r] = state.rows.splice(ri, 1); state.undo = { label: `Removed ${r.name}`, act: () => state.rows.splice(ri, 0, r) }; rerenderKeepScroll(); }
+  function rerenderKeepScroll() { const x = grid?.scrollLeft || 0; render(); if (grid) grid.scrollLeft = x; }
+  let undoTimer = 0;
+  function showUndo() {
+    const u = state.undo; if (!u) return;
+    frame.querySelector('.toast')?.remove();
+    frame.append(h('div', { class: 'toast', role: 'status' }, u.label, h('button', { class: 'btn lit', onclick: () => { u.act(); state.undo = null; rerenderKeepScroll(); } }, '↩️ Undo')));
+    clearTimeout(undoTimer); undoTimer = setTimeout(() => { state.undo = null; frame.querySelector('.toast')?.remove(); }, 8000);
+  }
+  function flash(text) { frame.querySelector('.toast')?.remove(); const t = h('div', { class: 'toast', role: 'status' }, text); frame.append(t); setTimeout(() => t.remove(), 2200); }
+
+  // A tap acts; a finger that moves (a scroll) never does. As pads and keys already work.
+  function tapOnly(el, act) {
+    let x = 0, y = 0, live = false;
+    el.addEventListener('pointerdown', (e) => { x = e.clientX; y = e.clientY; live = true; });
+    el.addEventListener('pointermove', (e) => { if (live && Math.hypot(e.clientX - x, e.clientY - y) > 10) live = false; });
+    el.addEventListener('pointercancel', () => { live = false; });
+    el.addEventListener('pointerup', () => { if (live) act(); live = false; });
+    el.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); act(); } });
+  }
+
+  // ---------- Play and follow ----------
+  function playButton(label = '▶ Play') {
+    return h('button', { class: 'btn play', id: 'play', onclick: () => (state.playing ? stop(true) : play()) }, state.playing ? '■ Stop' : label);
+  }
+  let expected = null;
+  function watchScroll() {
+    grid.addEventListener('scroll', () => {
+      if (expected != null && Math.abs(grid.scrollLeft - expected) < 2) { expected = null; return; }
+      expected = null;
+      if (state.playing && state.following) { state.following = false; updateReadout(); }
+      updateReadout();
+    }, { passive: true });
+  }
+  function jumpTo(x) {
+    const max = grid.scrollWidth - grid.clientWidth;
+    const target = Math.max(0, Math.min(max, Math.round(x)));
+    if (Math.abs(target - grid.scrollLeft) < 1) return;
+    expected = target; grid.scrollLeft = target;
+  }
+  function play() {
+    state.playing = true; state.following = true; state.t0 = performance.now(); state.step = -1;
+    frame.querySelector('#play').textContent = '■ Stop';
+    jumpTo(0);
+    tick(); updateReadout();
+  }
+  function stop(redraw) {
+    cancelAnimationFrame(state.raf);
+    if (!state.playing) return;
+    state.playing = false; state.following = false; state.step = -1;
+    if (redraw) { const b = frame.querySelector('#play'); if (b) b.textContent = state.view === 'song' ? '▶ Play song' : '▶ Play'; }
+    if (playhead) playhead.hidden = true;
+    frame.querySelectorAll('.pill.now').forEach((p) => p.classList.remove('now'));
+    frame.querySelectorAll('.block.lit').forEach((p) => p.classList.remove('lit'));
+    updateReadout();
+  }
+  function tick() {
+    const now = performance.now();
+    if (state.view === 'song') {
+      const beats = (now - state.t0) / (60000 / BPM);
+      const pos = (beats / 4) % SONG_BARS; // bars
+      const x = TP + pos * 48;
+      playhead.hidden = false; playhead.style.left = hw + x + 'px';
+      frame.querySelectorAll('.block').forEach((b) => { const s = +b.dataset.s, l = +b.dataset.len; b.classList.toggle('lit', pos >= s && pos < s + l); });
+      if (state.following) followTo(x, 48 * 4, TP + Math.floor(pos / 4) * 4 * 48);
+    } else {
+      const step = Math.floor((now - state.t0) / STEP_MS) % total();
+      if (step !== state.step) {
+        for (const row of pills) { row[state.step]?.classList.remove('now'); row[step]?.classList.add('now'); }
+        state.step = step;
+        const x = TP + stepX(step);
+        playhead.hidden = false; playhead.style.left = hw + x + PW / 2 + 'px';
+        const groupStart = TP + stepX(step - (step % 4)) - GP;
+        if (state.following) followTo(x, PW, groupStart);
+      }
+    }
+    state.raf = requestAnimationFrame(tick);
+  }
+  // Page turn: once the playhead leaves the visible part, jump so its beat starts at the left edge.
+  function followTo(x, w, start) {
+    const vis = grid.clientWidth - hw;
+    if (x < grid.scrollLeft || x + w > grid.scrollLeft + vis - 4) jumpTo(start - 6);
+  }
+
+  // ---------- Fit the frame to the page ----------
+  function scale() { return Math.min(1, stage.clientWidth / state.width); }
+  function fit() {
+    const s = scale();
+    frame.style.transform = s < 1 ? `scale(${s})` : '';
+    stage.style.height = frame.offsetHeight * s + 'px';
+  }
+  new ResizeObserver(() => { fit(); updateReadout(); }).observe(stage);
+
+  function updateReadout() {
+    if (!grid) return;
+    const vis = grid.clientWidth - hw - TP;
+    let time;
+    if (state.view === 'song') time = `${(vis / 48).toFixed(1)} of ${SONG_BARS} bars`;
+    else { const pillsOn = Math.max(0, Math.floor((vis + PG) / ((BW + BG) / 16))); time = `${pillsOn} pills ≈ ${(vis / (BW + BG)).toFixed(2)} of ${state.bars} bar${state.bars > 1 ? 's' : ''}`; }
+    const chips = [
+      ['Time on screen', time],
+      ['Panel height', `${Math.round(frame.querySelector('.panel').offsetHeight)} px`],
+      ['Row header', `${hw} px`],
+    ];
+    readout.replaceChildren(...chips.map(([k, v]) => h('span', { class: 'chip' }, `${k}: ${v}`)),
+      h('span', { class: 'chip' + (state.following ? ' on' : '') }, state.playing ? (state.following ? 'Following the playhead' : 'Not following (you scrolled)') : 'Stopped'));
+  }
+
+  function syncPickers() {
+    document.querySelectorAll('#views button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === state.view)));
+    document.querySelectorAll('#widths button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.w === state.width)));
+  }
+  document.getElementById('views').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; state.view = b.dataset.v; syncPickers(); render(); });
+  document.getElementById('widths').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; state.width = +b.dataset.w; syncPickers(); render(); });
+
+  render();
+})();
+</script>
+</body></html>
