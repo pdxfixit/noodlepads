@@ -1,5 +1,5 @@
 // 🥁 Beats' play bar tucks into the slim bar (Ben, 2026-10-19): once the
-// control bar reaches the top it hides, and ▶ (■), ● (⌨️ Keys on) and ▾ ride
+// control bar has scrolled all the way under it, it hides, and ▶ (■), ● (⌨️ Keys on) and ▾ ride
 // in the slim bar beside ⬆️; ▾ drops the whole bar down. As the slim bar runs
 // out of room, ⬆️, ●, ❓, ✏️, then ⚙️ give way. Where they sit
 // is checked with `just look beat-groove keys-on --scroll 700 --wide`; this
@@ -51,6 +51,33 @@ test('the slim bar gives way in Ben\'s order: ⬆️, ●, ❓, ✏️, ⚙️',
   const head = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
   const ids = [...head.slice(head.indexOf('id="mini-deck"'), head.indexOf('</header>')).matchAll(/id="(mini-(?:play|rec|more))"/g)].map((m) => m[1]);
   assert.deepEqual(ids, ['mini-play', 'mini-rec', 'mini-more'], '▾ last, at the very right');
+});
+
+// Ben, 2026-10-25: the bar hid where it stuck, at the slim bar's foot, and
+// left a blank band its height over the rows until scrolled that far again.
+// It sticks all under the slim bar instead, so it scrolls away whole; ▾ drops
+// it down to the slim bar's foot; the band stays over it on its way under.
+test('the bar scrolls all the way under the slim bar before it tucks, leaving no blank band', () => {
+  const top = 'top: calc(var(--head-h, 0px) - var(--deck-h, 0px));';
+  assert.ok(css.includes(`.seq .beat-deck { position: sticky; ${top}`), 'Keys off');
+  assert.ok(css.includes(`body.keys-on .dj-bar { position: sticky; ${top}`), 'Keys on');
+  assert.match(css, /body\.deck-open \.seq \.beat-deck,\nbody\.deck-open\.keys-on \.dj-bar \{ top: var\(--head-h, 0px\); \}/, '▾ drops it to the slim bar\'s foot');
+  const band = css.match(/body\.head-slim \.top::before \{[^}]*z-index: (\d+);/);
+  const deck = css.match(/\.seq \.beat-deck \{ position: sticky;[^}]*z-index: (\d+);/);
+  assert.ok(Number(band[1]) > Number(deck[1]), 'the slim band covers the bar as it goes under');
+  assert.match(css, /:root\[data-bg\] body\.head-slim \.top::after \{[^}]*z-index: 7;/, 'and the band\'s pattern');
+});
+
+test('the bar\'s height is measured into --deck-h, Keys off and on', () => {
+  $('#beats-toggle').dispatch('click');
+  for (const [on, sel] of [[false, '#seq-deck'], [true, '.dj-bar']]) {
+    if (on) keysOn(page); else keysOff(page);
+    const d = document.querySelector(sel);
+    d.getBoundingClientRect = () => ({ left: 0, top: 300, right: 375, bottom: 503.4, width: 375, height: 203.4 });
+    page.winEvent('scroll');
+    assert.equal(d.style.getPropertyValue('--deck-h'), '203px', sel);
+  }
+  keysOff(page);
 });
 
 // The bar where it sticks: the slim bar's height, as a browser would measure it.

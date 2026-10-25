@@ -133,7 +133,7 @@ test('the slim header\'s band draws the tile at the top of the screen, over its 
   const ink = rule(':root[data-bg] body.head-slim .top::after');
   assert.match(ink, /position: fixed;/);
   assert.match(ink, /inset: 0 0 auto 0;/, 'at the top left of the screen, like the page layer');
-  assert.match(ink, /z-index: 6;/, 'over the band (z-index 6), under what sticks');
+  assert.match(ink, /z-index: 7;/, 'over the band (z-index 7), under what sticks, over Beats\' control bar going under');
   assert.match(ink, /height: calc\(var\(--slim-top\) \+ var\(--slim-h\)\);/, 'as tall as the band');
   assert.match(ink, /background: var\(--backdrop-ink\);[\s\S]*(^|[^-])mask: var\(--backdrop\) repeat;/);
   assert.match(rule(':root[data-bg] body.head-slim.screen-pads .top::after'), /height: calc\(var\(--slim-top\) \+ 64px\);/, 'on Pads, as tall as its band');

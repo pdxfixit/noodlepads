@@ -142,8 +142,9 @@ const block = (query) => {
 
 test('Beats with ⌨️ Keys: the control bar sticks under the slim bar while the keys scroll, at every width, as with Keys off', () => {
   // Ben, 2026-10-19: on a computer it scrolled away. edge-scroll.test.mjs checks neither rule is inside an @media.
-  assert.match(css, /\n\.seq \.beat-deck \{ position: sticky; top: var\(--head-h, 0px\);/);
-  assert.match(css, /\nbody\.keys-on \.dj-bar \{ position: sticky; top: var\(--head-h, 0px\); z-index: 6; \}/,
+  // It sticks all under the slim bar (--deck-h, mini-deck.test.mjs), until ▾ drops it down.
+  assert.match(css, /\n\.seq \.beat-deck \{ position: sticky; top: calc\(var\(--head-h, 0px\) - var\(--deck-h, 0px\)\);/);
+  assert.match(css, /\nbody\.keys-on \.dj-bar \{ position: sticky; top: calc\(var\(--head-h, 0px\) - var\(--deck-h, 0px\)\); z-index: 6; \}/,
     'the whole bar, under the slim bar (never over it or its ✏️), over the keys and the beat\'s rows');
   assert.doesNotMatch(css, /screen-live[^{]*\.dj-bar[^{]*\{[^}]*position: sticky/, '🎤 Live\'s bar scrolls');
 });

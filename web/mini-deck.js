@@ -1,5 +1,5 @@
 // The play bar tucked into the slim top band (Ben, 2026-10-19): on 🥁 Beats,
-// once the control bar reaches the top and would stick, it hides and single
+// once the control bar has scrolled all the way under the slim band, single
 // buttons ride at the right of the slim band instead, apart from its round
 // button, ❓, ⚙️ and ⬆️ at the left: ▶ Play (■ Stop), ● Record (⌨️ Keys on),
 // then ✏️ Layout (Keys on), and ▾ at the very right, which drops the whole
@@ -69,6 +69,11 @@ export function initMiniDeck({ doc = globalThis.document, win = globalThis.windo
   function update() {
     const d = deck();
     const rect = d?.getBoundingClientRect();
+    // The bar sticks once it is all under the slim bar (styles.css), so it
+    // scrolls away whole, leaving no blank band where it hid. Written only
+    // when it changes, as this runs on every scroll.
+    const h = `${Math.round(rect?.height || 0)}px`;
+    if (rect?.height && d.style.getPropertyValue('--deck-h') !== h) d.style.setProperty('--deck-h', h);
     const tucked = isTucked({
       beats: body.classList.contains('screen-beats'),
       slim: body.classList.contains('head-slim'),

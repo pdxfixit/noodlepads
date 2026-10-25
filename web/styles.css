@@ -652,11 +652,13 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
   .beat-go .seq-click { width: 44px; font-size: 1.2rem; }
   .beat-go .seq-bpm-num { font-size: 0.9rem; }
 }
-/* Beats' control bar sticks under the slim bar while its rows scroll, at
-   every width, the whole bar. Stuck, it hides and its ▶ ● ▾ ride in the slim
-   bar instead, until ▾ drops it down ("The play bar tucks into the slim
-   bar", below). Over the playhead and a dragged row. */
-.seq .beat-deck { position: sticky; top: var(--head-h, 0px); z-index: 6; }
+/* Beats' control bar scrolls up under the slim bar with its rows, at every
+   width, the whole bar, and sticks there once it is all under it (its
+   height, --deck-h, is measured by mini-deck.js), so its hiding leaves no
+   blank band over the rows (Ben, 2026-10-25). Then its ▶ ● ▾ ride in the
+   slim bar instead, until ▾ drops it down under the slim bar ("The play bar
+   tucks into the slim bar", below). Over the playhead and a dragged row. */
+.seq .beat-deck { position: sticky; top: calc(var(--head-h, 0px) - var(--deck-h, 0px)); z-index: 6; }
 @media (max-width: 600px) {
   .seq .beat-deck { row-gap: 10px; }
 }
@@ -665,7 +667,7 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
    ▶ Play · ● Record, the tempo and ⏲️, then the bars. Over the keys, the
    beat's rows and their playhead; the count-in's disc (z-index 8) stays over
    it. 🎤 Live's bar (● Record, 🎬 Takes) scrolls. */
-body.keys-on .dj-bar { position: sticky; top: var(--head-h, 0px); z-index: 6; }
+body.keys-on .dj-bar { position: sticky; top: calc(var(--head-h, 0px) - var(--deck-h, 0px)); z-index: 6; }
 @media (max-width: 600px) {
   body.keys-on .dj-bar { row-gap: 10px; }
   body.keys-on .dj-bar > .beat-go { display: contents; }
@@ -3433,12 +3435,13 @@ body.head-slim { --head-h: calc(var(--slim-top) + var(--slim-h)); }
 body.head-slim.screen-pads { --head-h: var(--slim-top); }   /* the Edit sounds band is the bar */
 
 /* The band: the page's color across the top, under what sticks (Edit
-   sounds, the Play bar) and over what scrolls (the title, pads, rows). */
+   sounds, z-index 7 later in the page) and over what scrolls (the title,
+   pads, rows, and Beats' control bar on its way under). */
 body.head-slim .top::before {
   content: "";
   position: fixed;
   inset: 0 0 auto 0;
-  z-index: 6;
+  z-index: 7;
   height: calc(var(--slim-top) + var(--slim-h));
   background: var(--board);
   box-shadow: 0 2px 0 var(--board-deep);
@@ -3453,7 +3456,7 @@ body.head-slim.screen-pads .top::before { height: calc(var(--slim-top) + 64px); 
   content: "";
   position: fixed;
   inset: 0 0 auto 0;
-  z-index: 6;
+  z-index: 7;
   height: calc(var(--slim-top) + var(--slim-h));
   pointer-events: none;
   background: var(--backdrop-ink);
@@ -3534,7 +3537,7 @@ body.head-slim:is(.keys-on, .screen-live) .slim-edit::before { content: "✏️"
 
 /* 🥁 Beats: the play bar tucks into the slim bar (Ben, 2026-10-19: "rather
    than be full length, collapse into single buttons in the already-sticky
-   space"). Once the control bar reaches the top it hides where it sticks,
+   space"). Once the control bar has scrolled all the way under the slim bar,
    ▶ (■), ● (Keys on), ✏️ (Keys on) and ▾ ride at the slim bar's right
    (mini-deck.js).
    ▾ drops the whole bar down under the slim bar; ▴ puts it away. The slim
@@ -3566,6 +3569,8 @@ body.deck-tucked.keys-on .slim-edit { right: calc(max(var(--gutter), calc((100% 
 .mini-more[aria-expanded="true"] { background: var(--led); color: var(--ink); }
 body.deck-tucked:not(.deck-open) .seq .beat-deck,
 body.deck-tucked:not(.deck-open).keys-on .dj-bar { visibility: hidden; }
+body.deck-open .seq .beat-deck,
+body.deck-open.keys-on .dj-bar { top: var(--head-h, 0px); }
 body.deck-tucked.tuck-notop .to-top,
 body.deck-tucked.tuck-norec .mini-rec,
 body.deck-tucked.tuck-nohelp #help-open,

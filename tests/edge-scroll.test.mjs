@@ -70,7 +70,8 @@ const depthAt = (needle) => {
 };
 
 test('the beat control bar sticks under the slim header at every width, Keys off and on', () => {
-  for (const rule of ['.seq .beat-deck { position: sticky; top: var(--head-h, 0px);', 'body.keys-on .dj-bar { position: sticky; top: var(--head-h, 0px);']) {
+  const top = 'top: calc(var(--head-h, 0px) - var(--deck-h, 0px));';
+  for (const rule of [`.seq .beat-deck { position: sticky; ${top}`, `body.keys-on .dj-bar { position: sticky; ${top}`]) {
     assert.equal(depthAt(rule), 0, `${rule} is in no @media`);
   }
 });
