@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import worker, { FEEDBACK_OPTS } from '../worker/index.js';
 import { ORIGIN } from '../worker/http.js';
+import { appVersion } from '../web/feedback.js';
 
 const ID = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
 const TEXT = 'The kids love the burp pad. Could Beats have a cowbell? 🐄';
@@ -55,6 +56,14 @@ test('feedback from the site is stored as typed, under v1/noodlepads/<day>/<vers
   // A dev copy's version.
   assert.equal((await post(b, { version: 'dev' })).status, 204);
   assert.match(b.put[2].key, /\/dev-/);
+});
+
+test("the live site's version label, as the app sends it, is stored under that version", async () => {
+  const b = bindings();
+  const live = 'v1.0.277-b328291';   // versionLabel's version on noodlepads.com
+  assert.equal((await post(b, { version: live })).status, 400, 'the Worker refuses a dash');
+  assert.equal((await post(b, { version: appVersion(live) })).status, 204);
+  assert.match(b.put[0].key, new RegExp(`/v1\\.0\\.277\\+b328291-${ID}\\.txt$`));
 });
 
 test('another origin, no origin, a bad id or version, the wrong type or method, an empty or too long body are refused', async () => {

@@ -30,9 +30,14 @@ export const SAY = {
   'too-long': "That's too long to send. Please make it shorter.",
 };
 
-// The X-App-Version header: the deployed commit, or 'dev' for anything the
-// Worker would refuse (a dev copy, a missing version.json).
-export const appVersion = (v) => (typeof v === 'string' && /^[0-9A-Za-z.+_]{1,32}$/.test(v) ? v : 'dev');
+// The X-App-Version header: the deployed version, or 'dev' for anything the
+// Worker would refuse (a dev copy, a missing version.json). The Worker allows
+// A-Z a-z 0-9 . + _ only, and a live label has a dash (v1.0.277-b328291), so
+// the dash is sent as a + (v1.0.277+b328291, semver's build part).
+export const appVersion = (v) => {
+  const sent = typeof v === 'string' ? v.replace(/-/g, '+') : '';
+  return /^[0-9A-Za-z.+_]{1,32}$/.test(sent) ? sent : 'dev';
+};
 
 // The sending, apart from the page so it can be tested.
 // deps: {fetch, live(), version(), newId()}

@@ -351,7 +351,7 @@ The player id is localStorage `telemetry-player` (a random UUID, `newPlayer`), n
 
 ## Feedback
 
-⚙️ Settings → About → Feedback → `grown-up.js askSum` → `#feedback-dialog` → `feedback.js createFeedbackSender`: live host only, ≤ 4096 UTF-8 bytes, one `X-Feedback` UUID per text (a retry of the same text reuses it), `X-App-Version` = `appVersion(state.version)`, `credentials: 'omit'`. 204 means sent. The text never enters the log, reports or usage events.
+⚙️ Settings → About → Feedback → `grown-up.js askSum` → `#feedback-dialog` → `feedback.js createFeedbackSender`: live host only, ≤ 4096 UTF-8 bytes, one `X-Feedback` UUID per text (a retry of the same text reuses it), `X-App-Version` = `appVersion(state.version)` (the label's `-` sent as `+`), `credentials: 'omit'`. 204 means sent. The text never enters the log, reports or usage events.
 
 ## The service worker (`sw.js`)
 
@@ -395,7 +395,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 | nobody types a profile name | `funNamed` before upload; Worker `isFunName` | true |
 | ☁️ off stays on this device | `isOffline` keeps them out; usage events are still sent from the device (not per person) | true for their things |
 | problem reports: cleaned log, settings, counts, browser/system/type, screen size, time zone, sound timing, a random code; deleted after 14 days | the payload also holds the app version, a per-page session id, the send time and the device pixel ratio. Expired reports are deleted only when the next report arrives | deletion is lazy: with no new report, an expired one stays in D1 |
-| feedback: only what was typed and the app's version; no name or IP | as typed; `X-App-Version` is `'dev'` on the live site (see gotchas); 90 days is the runner's job (unverified here) | true; the version part does not work |
+| feedback: only what was typed and the app's version; no name or IP | as typed; `X-App-Version` is the live label with its dash sent as `+` (`v1.0.277+b328291`), since the Worker allows `[0-9A-Za-z.+_]` only; 90 days is the runner's job (unverified here) | true |
 | deleting a profile: gone from the cloud at once, with every share code it made | `deleteProfile` deletes records, keys, shares, audio, profile, and `forgetProfile` its metrics | true |
 
 ## Seams (one job done twice, or in an odd home)
@@ -445,7 +445,6 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 
 **Gotchas found while reading:**
 
-- **Feedback's version is always `'dev'` on the live site.** `feedback.js appVersion` allows `[0-9A-Za-z.+_]` only, and the live `state.version` is `"v1.0.277-b328291"` (has a `-`). Checked: `appVersion('v1.0.215-4d5ef56')` returns `'dev'`. The test checks only a bare commit (`'fd576a9'`). The Worker's `VERSION` regex refuses `-` too, so the fix is in what the app sends (for example the release or the commit part).
 - **A person's settings clash always goes to the cloud (as read).** `cloud.js storedLists` passes `prefs` through `settings.js cleanPrefs`, which returns only `{personId, values}` and drops the `changed` stamp. Both sides of a `prefs` merge then have stamp 0, `ctx.localNewer` is false, and a key changed on both devices takes the cloud's value. Other kinds keep their stamp. Likely unintended; no test covers it.
 - **Edits during a sync do not schedule a sync.** `cloud.js` counts `applying` for the whole of `syncNow`, network waits included, and `db.onChange` ignores every store while it is non-zero. An edit pushed in the same sync is fine; one made after its last push slice waits for the next focus, blur, 5-minute tick or change.
 - **Every sync redraws.** `storeLoaded` (always called by `pullOnce`) ends with `readStorage`, `notifyAllSettings`, `renderPeople`, `refreshPeople`, and `syncNow` reads storage again.

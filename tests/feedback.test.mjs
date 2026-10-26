@@ -30,6 +30,8 @@ function sender({ live = true, version = 'fd576a9', answer = () => ({ status: 20
 test('the version header is the deployed commit, or "dev" for anything the Worker would refuse', () => {
   assert.equal(appVersion('fd576a9'), 'fd576a9');
   assert.equal(appVersion('1.0.3+dirty'), '1.0.3+dirty');
+  // The live site's label (versionLabel's version) has a dash, which the Worker refuses.
+  assert.equal(appVersion('v1.0.277-b328291'), 'v1.0.277+b328291');
   for (const bad of ['dev copy', '', 'a'.repeat(33), 'v1/../x', null, undefined, 7]) assert.equal(appVersion(bad), 'dev', String(bad));
 });
 
