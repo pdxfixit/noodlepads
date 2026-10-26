@@ -91,7 +91,8 @@ export function createCloudApi({ fetch, base = '/api', meta = null }) {
       } catch {
         throw signal?.aborted ? stalled() : new CloudError(0, { error: 'offline' });
       }
-      if (!res.ok) throw new CloudError(res.status, { error: 'sound' });
+      // Over the download limit (worker/cloud.js getSound): a minute's wait, as any 429 'slow'.
+      if (!res.ok) throw new CloudError(res.status, { error: res.status === 429 ? 'slow' : 'sound' });
       let blob;
       const reader = (onBytes || max) && res.body?.getReader ? res.body.getReader() : null;
       try {

@@ -67,7 +67,7 @@ The pieces:
   every Worker on the Cloudflare account, and nothing in flarepress assigns
   them. The apps so far give their feedback limiter `415N` (Isopix `4150`,
   Noodle Pads `4151`); Noodle Pads' other limiters take its own block,
-  `41510`–`41519` (`41511`–`41514` today, the cloud's per-profile limits). A
+  `41510`–`41519` (`41511`–`41516` today, the cloud's per-profile limits). A
   new app takes the next `415N` and the block `415N0`–`415N9`.
   `tests/worker-limits.test.mjs` checks this app's.
 - Secrets in GitHub (Settings → Secrets and variables → Actions):

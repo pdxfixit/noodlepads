@@ -15,9 +15,9 @@
 //   FEEDBACK          the R2 bucket `app-suggestions`, shared by every app's feedback, ours under v1/noodlepads/
 //                     (the telemetry runner's daily pull copies each message to Ben's notes and deletes it)
 //   FEEDBACK_LIMITER  a rate limit on POST /api/feedback, counted for the app as a whole, never per sender
-//   PUSH_LIMITER, SOUND_LIMITER, SHARE_LIMITER, OPEN_LIMITER
-//                     rate limits on a push, a sound's start or piece, a share and an open, per profile
-//                     once its key is checked (an open: the profile it opens), never per address (worker/cloud.js LIMITERS)
+//   PUSH_LIMITER, SOUND_LIMITER, SHARE_LIMITER, OPEN_LIMITER, PULL_LIMITER, DOWNLOAD_LIMITER
+//                     rate limits on a push, a sound's start or piece, a share, an open, a pull and a download, per profile
+//                     once its key is checked (an open: the profile it opens; a download: the sound's owner), never per address (worker/cloud.js LIMITERS)
 // One secret: CHECKS_KEY, which the deploy checks send to prove who they are (worker/cloud.js provenCheck);
 // the deploy puts it in from the GitHub secret of the same name.
 

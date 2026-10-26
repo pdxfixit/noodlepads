@@ -354,6 +354,7 @@ async function deleteProfile(request, env, id, now) {
 
 async function pull(request, url, env, id, now, seen) {
   await needKey(request, env, id, now);
+  await slowDown(env, LIMITERS.pull, id);
   Object.assign(seen, { kind: 'pull', profile: id });
   await touch(env, id, now).run();
   const since = Math.max(0, Number.parseInt(url.searchParams.get('since') || '0', 10) || 0);
@@ -660,10 +661,13 @@ async function putPiece(request, env, soundId, n, now) {
 }
 
 // The audio, piece by piece, so the Worker never holds a whole sound. No key:
-// anyone with the id can play it (the disclosure says so).
+// anyone with the id can play it (the disclosure says so). Counted on the
+// download limiter by the profile that owns it (a sound a deleted profile
+// shared, by its own id), so no one can spend D1's daily reads on it.
 async function getSound(env, soundId) {
-  const s = await env.DB.prepare('SELECT mime, bytes, chunks, got FROM sounds WHERE id = ?').bind(soundId).first();
+  const s = await env.DB.prepare('SELECT profile_id, mime, bytes, chunks, got FROM sounds WHERE id = ?').bind(soundId).first();
   if (!s || s.got < s.chunks) return fail(404, 'sound');
+  await slowDown(env, LIMITERS.download, s.profile_id || soundId);
   let n = 0;
   const stream = new ReadableStream({
     async pull(controller) {
@@ -816,15 +820,19 @@ async function takeUses(request, env, id, now) {
 // ── per-profile rate limits ──
 
 // Rate-limit bindings (site/wrangler.toml), one per route that spends a
-// shared daily cap or writes a lot, so one profile can't use them up for
-// every family: a push (5,000 a day), a sound's start, a share (500 a day)
-// and an open (it makes a key). Each counts by the profile id, never by an
+// shared daily cap or writes or reads a lot, so one profile can't use them up
+// for every family: a push (5,000 a day), a sound's start, a share (500 a
+// day), an open (it makes a key), and a pull and a sound's download (D1's
+// daily reads; generous, as a restore makes many, one at a time). Each counts by the profile id, never by an
 // IP address: a push, a start and a share once the key has been checked
 // (needKey), so a profile's 20 keys share one count, and a made-up key is
 // refused before it counts against anyone; an open (it has no key yet) by
 // the profile it opens. The limits are far above what a family meets, a big
 // restore included (docs/architecture/cloud.md).
-export const LIMITERS = { records: 'PUSH_LIMITER', sounds: 'SOUND_LIMITER', shares: 'SHARE_LIMITER', open: 'OPEN_LIMITER' };
+export const LIMITERS = {
+  records: 'PUSH_LIMITER', sounds: 'SOUND_LIMITER', shares: 'SHARE_LIMITER', open: 'OPEN_LIMITER',
+  pull: 'PULL_LIMITER', download: 'DOWNLOAD_LIMITER',
+};
 
 // Throws 429 'slow' when `profileId` is over the binding's limit: a minute's
 // wait, apart from the daily caps' 429 'busy' (the app says "busy right

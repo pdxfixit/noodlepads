@@ -1,7 +1,8 @@
 // Per-profile rate limits in the Worker (worker/cloud.js LIMITERS): a push,
-// a sound's start, a share and an open are each counted by a rate-limit
-// binding (site/wrangler.toml), keyed by the profile id once its key has
-// been checked (an open: by the profile it opens), never by an address. Over the limit is 429 'slow',
+// a sound's start or piece, a share, an open, a pull and a sound's download
+// are each counted by a rate-limit binding (site/wrangler.toml), keyed by
+// the profile id once its key has been checked (an open: by the profile it
+// opens; a download: by the sound's owner), never by an address. Over the limit is 429 'slow',
 // apart from the daily caps' 429 'busy': the app says "busy right now" and
 // syncs again in a minute. Without the bindings (the other tests' env)
 // nothing is limited.
@@ -38,7 +39,8 @@ function cloud(limit = 2) {
     const res = await worker.fetch(new Request(`https://noodlepads.com/api/${path}`, {
       method, headers, body: raw ?? (body === undefined ? undefined : JSON.stringify(body)),
     }), env);
-    return { status: res.status, data: await res.json() };
+    const isJson = (res.headers.get('Content-Type') || '').startsWith('application/json');
+    return { status: res.status, data: isJson ? await res.json() : await res.arrayBuffer() };
   };
   return { env, call };
 }
@@ -70,8 +72,6 @@ test('a push, a sound start and a share are limited per profile, by its id, and 
   // Another family's profile has its own count.
   const other = await made(c, 'p-two');
   assert.equal((await c.call('POST', 'profiles/p-two/records', { key: other, body: { put: [] } })).status, 200);
-  // Reading is never limited: a big restore pulls as much as it needs.
-  assert.equal((await c.call('GET', 'profiles/p-one/records', { key })).status, 200);
 });
 
 test('a sound\'s pieces count on the sound limiter, by the profile, as its start does', async () => {
@@ -83,6 +83,25 @@ test('a sound\'s pieces count on the sound limiter, by the profile, as its start
   assert.equal((await put()).status, 200, 'the second call in the window');
   assert.deepEqual([(await put()).status, (await put()).data.error], [429, 'slow'], 'the third waits a minute');
   assert.deepEqual([...new Set(c.env.SOUND_LIMITER.keys)], ['p-one']);
+});
+
+test('a pull and a sound\'s download are limited per profile (a download by its owner: it has no key), and over it are 429 slow', async () => {
+  const c = cloud(2);
+  const key = await made(c, 'p-one');
+  const pull = () => c.call('GET', 'profiles/p-one/records', { key });
+  assert.equal((await pull()).status, 200);
+  assert.equal((await pull()).status, 200);
+  assert.deepEqual([(await pull()).status, (await pull()).data.error], [429, 'slow']);
+  assert.deepEqual([...new Set(c.env.PULL_LIMITER.keys)], ['p-one']);
+  const start = await c.call('POST', 'profiles/p-one/sounds', { key, body: { sha256: sha(1), bytes: 10, mime: 'audio/wav' } });
+  assert.equal((await c.call('PUT', `sounds/${start.data.id}/0`, { key, raw: new Uint8Array(10) })).status, 200);
+  const download = () => c.call('GET', `sounds/${start.data.id}`, {});
+  assert.equal((await download()).status, 200);
+  assert.equal((await download()).status, 200);
+  assert.deepEqual([(await download()).status, (await download()).data.error], [429, 'slow']);
+  assert.deepEqual([...new Set(c.env.DOWNLOAD_LIMITER.keys)], ['p-one'], "counted on the sound's owner");
+  assert.equal((await c.call('GET', 'sounds/s-aaaaaaaaaaaaaaaaaaaaaaaaaa', {})).status, 404, 'no such sound: nothing counted');
+  assert.equal(c.env.DOWNLOAD_LIMITER.keys.length, 4);
 });
 
 test('a profile\'s keys share one count, and a made-up key is refused before it counts against the family', async () => {
@@ -135,6 +154,7 @@ test('site/wrangler.toml declares each limiter, a minute window, far above what 
     .map(([, name, ns, limit, period]) => [name, { ns, limit: Number(limit), period: Number(period) }]));
   assert.deepEqual(Object.values(LIMITERS).map((n) => [n, declared.get(n)?.limit, declared.get(n)?.period]), [
     ['PUSH_LIMITER', 60, 60], ['SOUND_LIMITER', 600, 60], ['SHARE_LIMITER', 10, 60], ['OPEN_LIMITER', 10, 60],
+    ['PULL_LIMITER', 600, 60], ['DOWNLOAD_LIMITER', 1200, 60],
   ]);
   const ids = [...declared.values()].map((d) => d.ns);
   assert.equal(new Set(ids).size, ids.length, 'each limiter its own namespace');

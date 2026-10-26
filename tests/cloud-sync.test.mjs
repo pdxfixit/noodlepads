@@ -454,6 +454,10 @@ test('a 429 that names no reason reads as slow: the edge rule\'s page, or JSON w
   const busy = await createCloudApi({ fetch: async () => new Response('{"error":"busy"}', { status: 429, headers: { 'Content-Type': 'application/json' } }) })
     .pull('p-mv4cyiqj-b8bt', 'k', 0).catch((e) => e);
   assert.equal(busy.error, 'busy', "the Worker's own reason is kept");
+  // A sound's download over its limit (worker/cloud.js getSound) is a minute's wait too.
+  const download = await createCloudApi({ fetch: async () => new Response('{"error":"slow"}', { status: 429, headers: { 'Content-Type': 'application/json' } }) })
+    .fetchSound('s-aaaaaaaaaaaaaaaaaaaaaaaaaa', 'audio/wav').catch((e) => e);
+  assert.deepEqual([download.status, download.error], [429, 'slow']);
 });
 
 test('a rate limit says busy right now, a daily cap says busy today', () => {

@@ -82,3 +82,21 @@ simple = { limit = 10, period = 60 }
 name = "OPEN_LIMITER"
 namespace_id = "41514"
 simple = { limit = 10, period = 60 }
+
+# A pull: 600 a minute a profile (a page is 500 records; a restore of a full
+# profile is a few dozen pages, one after another), so one key can't spend
+# D1's daily reads for every family.
+[[ratelimits]]
+name = "PULL_LIMITER"
+namespace_id = "41515"
+simple = { limit = 600, period = 60 }
+
+# A sound's download: 1,200 a minute for the profile that owns it (no key: a
+# share's sounds count on their sharer). A restore fetches its sounds one at
+# a time, each at least two D1 reads in turn and the trip to the phone, so a
+# device stays well under 20 a second; one that meets it is told to wait a
+# minute (429 slow), and its sync tries again by itself.
+[[ratelimits]]
+name = "DOWNLOAD_LIMITER"
+namespace_id = "41516"
+simple = { limit = 1200, period = 60 }
