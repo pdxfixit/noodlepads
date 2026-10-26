@@ -79,7 +79,7 @@ let session = null;
 let frameId = 0;
 let dirty = false;
 let armTimer = 0;
-const prints = new Map();   // clip id → Promise<print | null>, for the visit
+const prints = new Map();   // audio.key(clip) → Promise<print | null>, for the visit
 
 const $ = (sel) => document.querySelector(sel);
 const make = (tag, className, text) => {
@@ -400,16 +400,20 @@ const counts = (result) => { const c = resultCounts(result); return { seconds: c
 
 // ── Making the beats and the song ──
 
+// Kept by how the sound plays now (audio.key), so a kit sound re-voiced in
+// this visit gets a new print.
 function printFor(kit) {
   const id = `${deps.personId()}-${kit}`;
   if (listenEnv.printOf) return Promise.resolve(listenEnv.printOf(kit)).catch(() => null);
-  if (!prints.has(id)) {
-    const clip = deps.clipById(id);
-    prints.set(id, !clip ? Promise.resolve(null) : Promise.resolve(deps.audio.load(clip))
+  const clip = deps.clipById(id);
+  if (!clip) return Promise.resolve(null);
+  const key = deps.audio.key(clip);
+  if (!prints.has(key)) {
+    prints.set(key, Promise.resolve(deps.audio.load(clip))
       .then(({ buffer }) => fingerprint(buffer.getChannelData(0), buffer.sampleRate))
       .catch(() => null));
   }
-  return prints.get(id);
+  return prints.get(key);
 }
 
 async function makeAll(result) {
@@ -548,7 +552,7 @@ function closed() {
 }
 
 // deps: {
-//   audio         the app's (wake, for the capture's context; load, for the kit's prints)
+//   audio         the app's (wake, for the capture's context; load and key, for the kit's prints)
 //   seq, song     the beat maker and 🎼 Song (hearBeat, stopHearing, openSaved)
 //   personId()    who is showing
 //   clipById(id)  any sound

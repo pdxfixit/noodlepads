@@ -446,3 +446,41 @@ test('▶ on one part while another plays: the new one shows ■, the old one �
   assert.deepEqual(keys().map((b) => b.textContent), ['▶', '▶', '▶'], 'the same ▶ again stops it');
   $('#listen').close();
 });
+
+// The kit's prints are taken from each sound as it plays now. A kit sound
+// re-voiced in the same visit gets a new print, so 🎧 matches what the
+// board plays: the Kick turned high no longer matches a low thump, and the
+// Boom (a low thump) is picked instead.
+test('a kit sound re-voiced in the same visit is matched by how it sounds now', async () => {
+  const { audio } = await import('../web/audio.js');
+  const { fingerprint } = await import('../web/listen-dsp.js');
+  const RATE = 16000;
+  const tone = (hz) => Float32Array.from({ length: RATE / 2 }, (_, i) => Math.sin((2 * Math.PI * hz * i) / RATE) * Math.exp((-8 * i) / RATE));
+  const buffer = (samples) => ({ sampleRate: RATE, getChannelData: () => samples });
+  const pid = state.personId;
+  const kick = `${pid}-kick`;
+  const sound = (clip) => (clip.id === kick ? tone(clip.voice === 'chipmunk' ? 3000 : 60) : clip.id === `${pid}-boom` ? tone(90) : tone(6000));
+  const realLoad = audio.load;
+  const realPrints = L.listenEnv.printOf;
+  const had = state.overrides.get(kick);
+  audio.load = async (clip) => ({ buffer: buffer(sound(clip)), duration: 0.5 });
+  L.listenEnv.printOf = null;   // the real prints, from audio.load
+  const heard = { ...RESULT, parts: [{ ...RESULT.parts[0], prints: { kick: fingerprint(tone(60), RATE), snare: null, hat: null } }], order: [{ partId: 'A', startBar: 1, bars: 8 }], tempos: [] };
+  const kickRow = async () => {
+    const { cap, lis } = await listening(heard);
+    feed(cap, lis, snap({ bar: 8, partId: 'A', parts: PARTS.slice(0, 1) }));
+    $('#listen-stop').dispatch('click');
+    await page.settle();
+    $('#listen').close();
+    return mine().at(-1).rows[0].clipId;
+  };
+  try {
+    assert.equal(await kickRow(), kick, 'the Kick as it was: a low thump');
+    state.overrides.set(kick, { id: kick, voice: 'chipmunk' });
+    assert.equal(await kickRow(), `${pid}-boom`, 'the Kick is high now: the Boom matches');
+  } finally {
+    audio.load = realLoad;
+    L.listenEnv.printOf = realPrints;
+    if (had) state.overrides.set(kick, had); else state.overrides.delete(kick);
+  }
+});

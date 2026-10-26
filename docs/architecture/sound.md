@@ -157,7 +157,7 @@ presets again. So most taps hit the `rendered` cache.
 | `audio.rendered` | `audio.key(clip)` = `` `${id}:${recipeKey(clip)}${cutKey(clip)}` `` | `load` | `dropRendered(id, keep)` (every key of the id but `keep`), `forget(id)` | `level`, `shift`, `chord`, `exact`, the blob: fixed per id, or `forget` is called |
 | `sheet.js sheet.previews` | `recipeKey({fx, tweaks})`, or `head:…` for the live head | `rendered`, `startLive`, Find its note | replaced with a new Map when the sound, trim or recording changes, and on close | the trim: the whole map is of one trim |
 | `sequencer.js ready` | clip id → loaded | `prepare` (on play, per row) | `prepareBeats` clears it | a voice change: `prepare` re-reads `audio.load` each play |
-| `listen-ui.js prints` | `` `${personId}-${kit}` `` → fingerprint | `printFor` | never (one per visit) | the clip's voice: a kit sound re-voiced in the same visit keeps its old print |
+| `listen-ui.js prints` | `audio.key(clip)` of `` `${personId}-${kit}` `` → fingerprint | `printFor` | never (one per sound as it plays, per visit) | the blob: a kit sound's file never changes |
 | `wave.js` `cache` | the buffer drawn and the column count | `draw` | `clear`, a new buffer | — |
 
 `voices.js recipeKey` keeps old keys stable on purpose: a one-voice clip keys
