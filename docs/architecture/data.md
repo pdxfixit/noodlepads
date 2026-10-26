@@ -105,7 +105,7 @@ The `state.screen` comment in `state.js` says `'dj'`. The values are `app.js` `S
 | `state.js setOverride(next)` | puts when the override changes something, else deletes it so the preset follows boards.json again | as `persist` |
 | `state.js setPersonEdit(id, changes)` | `model.js personEditRecord`: a boards.json person keeps only differences (none: record deleted); an added person stores everything and gets `edited` on a name/color/avatar change | put: as `persist`; delete: console only |
 | `state.js deleteUserClip`, `deleteMyVoice` | memory first, then `db.remove` | banner: "…it may come back after a reload" |
-| `state.js deletePerson(id)` | one `db.batch` of every removal (and, for a boards.json person, the hidden record), then memory | refused: nothing changes, a notice says so, returns null; `people.js deleteHere` then puts their cloud link back (`cloud.js restoreLink`) and returns false |
+| `state.js deletePerson(id)` | one `db.batch` of every removal (and, for a boards.json person, the hidden record), then memory | refused, or storage not open (still opening, or closed for another tab's upgrade): nothing changes, a notice says so, returns null; `people.js deleteHere` then puts their cloud link back (`cloud.js restoreLink`; its bases were kept, `dropLink keepBases`) and returns false. With no storage at all (the open failed), memory only |
 | app.js `beatLibrary.remove`, `songBook.remove` | `db.remove` | banner, as above |
 | app.js `setOpen(null)`, song `close`, `deleteTake`, `deleteLayout`, `deleteTouchLayout` | `db.remove` | console only |
 | app.js `adoptKidsBeat` | `db.batch` (unstamped) | console only |
@@ -352,7 +352,7 @@ Nothing found is changed or deleted.
 | A sound from its sheet | `sheet.js removeFromSheet` → `state.js deleteUserClip` | yes for own; hide is one tap | none (hide: Show sound) |
 | A group | `bulk.js editGroup` | yes | none; its sounds stay, in no group |
 | An own voice | `sheet.js` `deleteVoice` → `state.js deleteMyVoice` | yes | none |
-| A person | `people.js` profile Delete → `deleteHere` → `cloud.js dropLink`, `syncEnded`, `state.js deletePerson`, `audio.forget` | yes; a third tap deletes the cloud copy | boards.json people: Bring back (their own sounds don't come back) |
+| A person | `people.js` profile Delete → `deleteHere` → `cloud.js dropLink` (bases kept), `syncEnded`, `state.js deletePerson`, then `cloud.js forgetBases`, `audio.forget` | yes; a third tap deletes the cloud copy | boards.json people: Bring back (their own sounds don't come back) |
 
 `state.js deletePerson` removes their clips, preset edits (`<id>-<kitId>`), beats, songbook, takes, layouts, voices, touch layouts, open beat, order, deck, open song, prefs, and the people record, all in one transaction (a boards.json person's record is put back hidden in the same one). It returns the clip ids so the caller can forget their audio, or null when the browser refused it (nothing changed).
 

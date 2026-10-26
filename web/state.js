@@ -216,6 +216,9 @@ export async function rememberRenames(pairs) {
   await persist('settings', { key: RENAMED_KEY, value: map });
 }
 
+// This browser gave no storage at all: the board runs from memory only.
+let storageFailed = false;
+
 // How long the board waits for saved data before showing without it.
 export const STORAGE_WAIT_MS = 1500;
 const WAITING = 'Your saved sounds are waiting for another soundboard tab to let go. Close or reload the other tab and they will appear.';
@@ -235,6 +238,7 @@ export async function loadStorage({ onLateOpen = () => {}, waitMs = STORAGE_WAIT
     if (late) { showNotice(''); onLateOpen(); }
     return 'open';
   }, (err) => {
+    storageFailed = true;
     console.error('IndexedDB unavailable:', err);
     logEvent('error', { storage: String(err.message || err.name) });
     showNotice(`Sounds you add can't be saved in this browser (${err.message || err.name}). They'll play until you reload the page.`);
@@ -322,9 +326,10 @@ export async function deletePerson(id) {
     hidden ? { store: 'people', put: hidden } : { store: 'people', del: id },
   ];
   // With no storage at all (a browser that gives none), there is nothing
-  // stored to leave behind.
+  // stored to leave behind. Storage not open (still opening, or closed for
+  // another tab's upgrade) is a refusal: what is stored would come back.
   try {
-    if (db.handle) await db.batch(ops);
+    if (db.handle || !storageFailed) await db.batch(ops);
   } catch (err) {
     console.error('Deleting a person failed:', err);
     const name = state.peopleEdits.get(id)?.name ?? bundled?.name ?? 'They';

@@ -142,7 +142,7 @@ The 13 per-person stores that sync: `clips, overrides, orders, patterns, beats, 
 ### Bases and `sent` hashes
 
 - `sent` (in the link): the hash of each record as the cloud holds it. `cloud-sync.js hashOf(record, sha)` = cyrb53 of `canonical(record)` plus the clip's audio SHA-256. `canonical` drops `blob`, `sound`, `sha256`, `bytes` and `changed`.
-- `bases` (IndexedDB, since DB version 14, keyPath `id` = `"<person>|<kind>:<id>"`, value `{id, personId, body}`): each record as last synced, without audio. `cloud.js bases.load/save`; `dropBases` on `dropLink`. `state.js readStorage` skips it.
+- `bases` (IndexedDB, since DB version 14, keyPath `id` = `"<person>|<kind>:<id>"`, value `{id, personId, body}`): each record as last synced, without audio. `cloud.js bases.load/save`; `dropBases` on `dropLink`, except `people.js deleteHere`, which keeps them (`keepBases`) until the person's delete has committed (`forgetBases`). `state.js readStorage` skips it.
 - A base is trusted only when `hashOf(base) === sent[k]` (`cloud-sync.js decideRecord`): a sync cut off between the two saves is not trusted.
 
 ### The `changed` stamp

@@ -18,7 +18,7 @@ import { people, person } from './board.js';
 import { PERSON_COLORS, PERSON_COLOR_NAMES, nextPersonColor, freePicture, personCounts, countsText, countsWords, KIND_EMOJI } from './model.js';
 import { newId } from './util.js';
 import { funName, nameChoices, isFunName } from './names.js';
-import { inCloud, isOffline, dropLink, restoreLink, linkOf, keyOf, pinGuards, onCloud, syncEnded } from './cloud.js';
+import { inCloud, isOffline, dropLink, restoreLink, forgetBases, linkOf, keyOf, pinGuards, onCloud, syncEnded } from './cloud.js';
 import { avatarBadge, openAvatar, cloudLabel, askEditPin, drawPin, pinClick, disarmCloud, deleteLeftCloud } from './cloud-ui.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { announce, showNotice } from './ui.js';
@@ -194,13 +194,14 @@ export async function addPerson() {
 export async function deleteHere(id) {
   const p = anyone(id);
   const link = linkOf(id);
-  if (link) await dropLink(id);
+  if (link) await dropLink(id, { keepBases: true });
   await syncEnded(id);
   const gone = await deletePerson(id);
   if (!gone) {
     if (link) await restoreLink(link);
     return false;
   }
+  if (link) await forgetBases(id);
   for (const clipId of gone) audio.forget(clipId);
   logEvent('person', { deleted: id, bundled: !p?.added, sounds: gone.length });
   return true;

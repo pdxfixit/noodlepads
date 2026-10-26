@@ -27,6 +27,7 @@ const KIT = manifest.kit[0].id;
 const SHOWN = 'p-shown-1';
 const OTHER = 'p-other-1';
 const SYNCING = 'p-syncing-1';   // in the cloud, mid-sync when deleted
+const KEPT = 'p-kept-1';         // in the cloud: a delete refused, then one with storage closed
 const REFUSED = 'p-refused-1';   // the browser refuses the first try at deleting them (📴, so no cloud link to drop first)
 const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') } };
 let hold = null;   // set: the next pull of SYNCING waits for it
@@ -41,8 +42,8 @@ before(async () => {
     body: JSON.stringify({ id: SYNCING, name: 'Count Cupcake', avatar: '', color: '#B3141C' }),
   }), env)).json();
   idb.seed(DB_NAME, DB_VERSION, SCHEMA, {
-    people: [person(SHOWN, 'Admiral Acorn', 1), person(OTHER, 'Baron Bagel', 2), person(SYNCING, 'Count Cupcake', 3), { ...person(REFUSED, 'Duke Dumpling', 4), offline: true }],
-    overrides: [edit(SHOWN), edit(OTHER), edit(REFUSED)],
+    people: [person(SHOWN, 'Admiral Acorn', 1), person(OTHER, 'Baron Bagel', 2), person(SYNCING, 'Count Cupcake', 3), { ...person(REFUSED, 'Duke Dumpling', 4), offline: true }, person(KEPT, 'Earl Eggplant', 5)],
+    overrides: [edit(SHOWN), edit(OTHER), edit(REFUSED), edit(KEPT)],
     beats: [{ id: 'beat-refused', personId: REFUSED, name: 'Wobbly Taco', bpm: 100, bars: 1, swing: 0, rows: [], created: 4, saved: 4 }],
     orders: [{ personId: REFUSED, ids: [] }],
     cloud: [{ id: SYNCING, key: made.key, rev: 0, sent: {}, sounds: {} }],
@@ -122,6 +123,58 @@ test('a browser that refuses the delete keeps all of them, and says so; the next
   await tapDelete(false);
   assert.equal(state.peopleEdits.has(REFUSED), false);
   assert.deepEqual(personIdsIn(stored(), manifest.kit.map((k) => k.id)).filter((x) => x === REFUSED), [], 'no store names them');
+  $('#people-dialog').close();
+});
+
+// Someone in the cloud whose delete fails stays whole: the link is back with
+// its last-synced copies (bases), so the next clash still merges three ways.
+// Storage closed under the page (another tab upgrading after a deploy) is a
+// refusal too: what is stored would bring them back after a reload.
+test('a refused delete of someone in the cloud keeps their link and its bases; storage closed under the page is refused too', async () => {
+  const { db } = await import('../web/store.js');
+  const cloud = await import('../web/cloud.js');
+  await cloud.syncNow(KEPT);
+  const basesOf = () => idb.rows(DB_NAME, 'bases').filter((b) => b.personId === KEPT);
+  const before = basesOf().length;
+  assert.ok(cloud.inCloud(KEPT) && before > 0, 'in the cloud, with bases');
+  const tapDelete = async () => {
+    if (!$('#people-dialog').open) $('#people-open').dispatch('click');
+    $('#people-edit').children.find((r) => r.dataset.person === KEPT).querySelector('[data-profile]').dispatch('click');
+    $('#profile-delete').dispatch('click');
+    $('#profile-delete').dispatch('click');
+    await page.settle();
+    await page.settle();
+    if ($('#profile-dialog').open) $('#profile-dialog').close();
+  };
+  const kept = (how) => {
+    assert.equal(state.peopleEdits.has(KEPT), true, `${how}: still here`);
+    assert.ok(idb.rows(DB_NAME, 'people').some((p) => p.id === KEPT), `${how}: still stored`);
+    assert.ok(idb.rows(DB_NAME, 'overrides').some((o) => o.id === `${KEPT}-${KIT}`), `${how}: their kit edit too`);
+    assert.ok(cloud.inCloud(KEPT), `${how}: the link is back`);
+    assert.equal(basesOf().length, before, `${how}: with every base`);
+    assert.match($('#banner-text').textContent, /nothing of theirs is gone\. Try again\.$/, how);
+  };
+
+  // The browser refuses the person's own transaction.
+  const batch = db.batch;
+  db.batch = function (ops) {
+    if (ops.some((o) => o.store === 'people')) { db.batch = batch; return Promise.reject(new Error('QuotaExceededError')); }
+    return batch.call(this, ops);
+  };
+  await tapDelete();
+  db.batch = batch;
+  kept('refused');
+
+  // Storage closed (no handle) while the page runs.
+  const handle = db.handle;
+  db.handle = null;
+  await tapDelete();
+  db.handle = handle;
+  kept('storage closed');
+
+  await tapDelete();
+  assert.equal(state.peopleEdits.has(KEPT), false, 'the next try deletes them');
+  assert.deepEqual(basesOf(), [], 'and their bases');
   $('#people-dialog').close();
 });
 

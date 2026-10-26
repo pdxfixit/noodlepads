@@ -106,16 +106,20 @@ async function saveLink(link) {
 export const restoreLink = (link) => saveLink(link);
 
 // This device stops syncing the person; the profile stays in the cloud.
-export async function dropLink(personId) {
+// `keepBases`: their last-synced copies stay until `forgetBases` (people.js
+// deleteHere drops them only once the person is really gone, so a link put
+// back keeps its three-way merges).
+export async function dropLink(personId, { keepBases = false } = {}) {
   state.cloud.delete(personId);
   sessionKeys.delete(personId);
   unlocked.delete(personId);
   status.delete(personId);
   fetchedFor.delete(personId);
   try { await db.remove('cloud', personId); } catch { /* not stored */ }
-  await dropBases(personId);
+  if (!keepBases) await dropBases(personId);
   tell();
 }
+export const forgetBases = (personId) => dropBases(personId);
 
 // ── status, for the screens ──
 
