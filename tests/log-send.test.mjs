@@ -39,7 +39,7 @@ test('a damaged stored code is replaced', () => {
 
 // ── Sending, with a stand-in fetch, clock and timer ──
 
-function rig({ enabled = true, live = true, reply = { ok: true, status: 204 } } = {}) {
+function rig({ enabled = true, live = true, reply = { ok: true, status: 204 }, problemsOnly = false } = {}) {
   const log = [];
   let n = 0;
   const r = {
@@ -59,6 +59,7 @@ function rig({ enabled = true, live = true, reply = { ok: true, status: 204 } } 
     now: () => r.clock,
     setTimer: (fn, ms) => { r.timers.push({ fn, ms }); return r.timers.length; },
     clearTimer: (id) => { r.timers[id - 1].fn = null; },
+    problemsOnly: () => problemsOnly,
   });
   r.sender = sender;
   return r;
@@ -160,4 +161,19 @@ test('an upload too big for one request leaves out the oldest entries, and count
 
 test('the live site is the only host that sends', () => {
   assert.equal(LIVE_HOST, 'noodlepads.com');
+});
+
+// Ben, 2026-10-26: a device on only by the default sends only problems.
+test('on only by the default, hiding the page sends nothing until an error or a silent tap waits, then all of it', async () => {
+  const r = rig({ problemsOnly: true });
+  r.add('storage', { opened: true });
+  r.add('beat', { action: 'stop', seconds: 4 });
+  assert.equal(await r.sender.hidden(), false);
+  assert.equal(r.calls.length, 0, 'normal play stays on the device');
+  r.add('tap', { screen: 'pads', on: 'pad', why: 'unheard' });
+  assert.equal(await r.sender.hidden(), true);
+  assert.deepEqual(r.calls[0].body.entries.map((e) => e.kind), ['storage', 'beat', 'tap'], 'the session leading to it goes with it');
+  const ticked = rig();
+  ticked.add('storage', { opened: true });
+  assert.equal(await ticked.sender.hidden(), true, 'someone ticked 📮: every session goes');
 });
