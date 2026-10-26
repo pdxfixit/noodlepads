@@ -17,6 +17,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 ## Ben does
 
+- **Set a PIN on Major Meatball** (1 min): 👥 People → Major Meatball → 🔒 Set PIN. It is the one cloud profile with no PIN (checked 2026-10-26), and the cloud is about to list and open only profiles with one. Never write the PIN in a file or a chat log that gets committed.
+
 - **Read the mission and make it yours** (2 min): `AGENTS.md` → Mission, drafted from your interview answers (2026-10-26). Reword anything that isn't how you'd say it; the council checks every change against it.
 
 - **Delete the old address's DNS record** (1 min): in Cloudflare, open the old address's domain → DNS and delete its `soundboard` record if it is still there (the Worker is gone and the name answers 530). The domain's apex stays. Also, if you like, delete the old address's leftover folder in `~/src/flarepress/` (only wrangler's local `.wrangler/` cache is in it).
@@ -102,6 +104,22 @@ Other work:
   - A key hit counts as both `pads` and `keys` in `noodlepads.play` (keys-kids.md).
   - 🧸 Kids' tune row ignores 🎵 Find its note's root, accents and row speed (keys-kids.md).
   - Stale docs and comments: AGENTS.md cites a missing `tests/pill-height.test.mjs` and says `just look` flags only short buttons; docs/deploy-cloudflare.md lists the removed `just deploy-migrated`; docs/layout.md's `follow.js`, `overflow.js`, `worker/clean.js` and `tests/` lines; `dialogs.js` says four dialogs (there are 33); `state.js` lists the old `'dj'` screen; `track-page.js errorOf` names a retired `visits` module.
+
+- **The cloud needs a PIN** (Ben, 2026-10-26; decisions.md, Hosting and data). New people stay on the device; ☁️ on goes through the grown-up sum and sets a PIN, with one line on what becomes public. The Worker creates, lists and opens only profiles with a PIN; removing the PIN takes the profile out of the cloud; the deploy checks' throwaway profiles get one. Rewrite ADR 0002 and web/privacy.js in the same change. Convene architect, storage-sync, privacy-safety, security, parent and kids-ux on the plan first. Waits on the Worker-caps fixes landing (same files).
+- **Council round 1, fixes in flight** (2026-10-26): Kids keyboard/tune/mic/sum; Live take Undo and audio clock, iOS silent switch, context resume, late pills; sync re-uploads edited audio and splits pushes by bytes; Worker caps, the PIN race, keys, shares deleted with a profile; `just test` fails on cut tests, deploy.yml version checks, the no-names self-test, stale deploy docs. Delete this line when they land.
+- **Council round 1, next fixes** (approved: each fixes a seat's finding inside the rules). Most urgent first:
+  1. Sound designer ⛔: about 20 real-world presets are still synthesized (Quack, Roar, Airhorn, Burp, Heartbeat, Djembe, Dhol…, `tools/make_placeholders.py` KIT) against decisions.md's recordings rule. Source CC0 recordings (Freesound, Kenney, VCSL), animals first; add a loudness floor to `tools/test_preset_loudness.py` (8 presets sit 8–10 dB under the middle).
+  2. Mission keeper: show the scratch beat in 🎼 Song's strip so a goofed-on beat goes on a lane without 💾 Keep; drop the groove card's creative prompt ("Can you hum a tune over them?").
+  3. Storage and sync: a sync's change to the open beat is undone by the next pill tap while it plays (web/sequencer.js ~734); `cleanPrefs` drops `changed`; an older copy of the app strips newer fields from the cloud (keep unknown fields, or refuse pushes from an older app); `navigator.storage.persist()`.
+  4. Architect: fixed golden 1.0 and 1.1 backups (and a v15 IndexedDB snapshot) that must always load with nothing dropped; one test that every store round-trips through a backup.
+  5. Reliability and browser compat: a classic boot script that reloads once when modules from two versions meet; the service worker installs the app first and the clips after; the daily live check reaches D1; deploy checks call /api/log, /api/events, /api/feedback.
+  6. Performance: load the open groups' sounds first and the rest when idle; keep one decoded copy; `drawPlayhead` and `meter.run` without layout thrash; looping pulses on opacity/transform.
+  7. Pre-reader and child psychologist: no picture used twice on a Kids screen (a test across tabs, pads, drums, voices, skins); ▶️ page arrows become 👉/👈; ⏹️ set apart from the tabs; a Kids visit no longer changes the grown-up's pad size, skin, instrument or scratch beat.
+  8. Accessibility: a slow tap no longer turns into a loop by accident (hold time as a setting); a Loop action without a hold; `aria-pressed` on looping pads; flash rate capped.
+  9. Audio engineer and sound designer: a soft clip after the limiter; 2–3 ms edge fades on recordings; seed the reverb noise; voice extremes that a phone can play.
+  10. Producer: Seven, Motown, Bossa and Salsa texts match their patterns; dB-like fader taper; a 6/8 or 3/4 beat in Song rounds to whole song bars.
+  11. Kids UX: 🧸 Kids fits a phone held sideways; `just look --landscape`; the tap-size check covers links, text fields and `[tabindex]`.
+  12. Docs: CHANGELOG catches up with 1.0.280; README, guide and the manifest say the mission's words; ADRs 0018, 0021, 0029 marked built; state.md back to present tense.
 
 ### Offered, not approved
 

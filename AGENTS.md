@@ -77,7 +77,7 @@ Every change serves this. Why, and the north star it steers: [ADR 0022](docs/adr
 
 - **Convene them by the change:** all seats on a new screen, control or layout (at the mockup, before building); the data seats on a stored format or the cloud; the one or two a fix touches. The table is in docs/council.md.
 - **Brief them blind:** the change itself, never your reasoning or another seat's verdict. Run one round's seats in parallel.
-- **A block against one of Ben's rules is a question card**, batched with the round's other questions up front. Blocked work waits on its branch; move to the next TODO item.
+- **A block against one of Ben's rules goes to Ben**: asked at once while he is in the chat, else a question card batched up front. Blocked work waits on its branch; move to the next TODO item.
 - **Never a rollback:** a seat's finding on what is live is fixed forward, at once when the seat says it is urgent.
 - **Results go into the work** (code, tests, docs, decisions, ADRs). No council log. Each commit carries a `Council:` trailer naming the seats and their verdicts.
 
@@ -174,7 +174,7 @@ Ben: *"Optimizing the user interface for a variety of screens is very important.
 **Questions**
 - For a real judgement call (layout, naming, what a control does), name the options, recommend one, and ask. For a change across several files, give a numbered plan and wait for Ben's OK.
 - **Mockups first for a new screen, a new layout or a moved control** (Ben, 2026-10-12): show them (an HTML widget or `just look` screenshots of a draft) and get his OK before building. Fixes and restyles inside an agreed design don't need one.
-- **Before a long build, ask every decision up front, in one batch** (Ben, 2026-10-10: "ask questions up front so that you're able to run autonomously longer"). Then run; make the smaller calls yourself and name them in your report, without logging them anywhere (Ben, 2026-10-12: "no need for them to be logged").
+- **While Ben is in the chat, ask each question as it comes up**, one at a time, and act on the answer (Ben, 2026-10-26: "so that we can solve them instead of a whole bunch at once"). **Before a long build he won't watch, ask every decision up front, in one batch** (Ben, 2026-10-10: "ask questions up front so that you're able to run autonomously longer"). Then run; make the smaller calls yourself and name them in your report, without logging them anywhere (Ben, 2026-10-12: "no need for them to be logged").
 - Every question explains itself: what the thing is, where it shows, and what each option changes and costs.
 - Ben often answers mid-task. Fold the answer in and say how.
 

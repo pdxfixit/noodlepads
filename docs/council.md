@@ -47,7 +47,7 @@ Seats advise throughout: a seat asked at the plan stage may say what it wants to
 1. **Blind brief.** The lead agent gives each seat the change itself (the plan, mockup, diff, screenshots, the files touched), never its own reasoning, its preferred answer or another seat's verdict. A seat reads the mission and `docs/decisions.md` for itself.
 2. **Independent first round.** Every seat in the round runs in parallel, in its own agent, with no view of the others.
 3. **Second round, only on a conflict.** Where two seats ask for opposite things, those two see each other's findings once and answer. The lead agent then picks the option closest to the mission and `docs/decisions.md`. A block stands until the seat that made it lifts it or Ben decides.
-4. **Questions are batched.** Everything that needs Ben goes to him in one batch, up front, so autonomous work can keep going (a card each in [questions.md](questions.md)). Blocked work waits on its branch; the agent moves on to the next TODO item.
+4. **Questions go to Ben as they come up.** While he is in the chat, ask each one at once, most important first, and act on the answer. Before a run he won't watch, batch them up front (a card each in [questions.md](questions.md)) so autonomous work can keep going. Blocked work waits on its branch; the agent moves on to the next TODO item.
 
 ## What a seat returns
 
@@ -66,7 +66,7 @@ Questions for Ben: one line each, only what the seat cannot decide
 
 - **A block needs the mission or a red line in the seat's area, plus evidence.** Anything weaker is a change asked for, which the lead agent makes or answers.
 - **A block stops the feature or the deploy.** The work is not landed until the block is lifted.
-- **A block against one of Ben's rules** in `docs/decisions.md` becomes a question card; Ben upholds or overrules it. The council never changes a decision.
+- **A block against one of Ben's rules** in `docs/decisions.md` goes to Ben (asked at once, or a question card); he upholds or overrules it. The council never changes a decision.
 - **Never a rollback.** A problem found in what is live gets an immediate fix forward. A seat may call it urgent: then it goes ahead of everything else in TODO "Agents do".
 
 ## Where the results go
