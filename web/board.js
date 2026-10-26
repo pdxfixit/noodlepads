@@ -44,7 +44,11 @@ export function paletteNames() {
 // pick: for the person's default keys and touch layout, which never change
 // under them when they pick another instrument.
 export function clipsFor(personId, { includeHidden = false, allPresets = false, ownSounds = false } = {}) {
-  return clipsForPerson(person(personId), {
+  // Someone just deleted is still on show while their sheet waits on their
+  // cloud copy (people.js): a redraw then (a phone turned) finds no sounds.
+  const p = person(personId);
+  if (!p) return [];
+  return clipsForPerson(p, {
     overrides: state.overrides,
     userClips: state.userClips,
     order: state.orders.get(personId)?.ids,

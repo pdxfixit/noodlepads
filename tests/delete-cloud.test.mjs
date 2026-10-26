@@ -82,6 +82,8 @@ test('in the cloud with no PIN: the second tap deletes them here and keeps the s
   assert.equal($('#profile-name').textContent, 'Admiral Acorn');
   assert.equal(del().textContent, '☁️ Delete their cloud copy too');
   assert.match($('#profile-delete-hint').textContent, /is deleted from this device\. Their cloud copy is still there/);
+  const { clipsFor } = await import('../web/board.js');
+  assert.deepEqual(clipsFor(OPEN), [], 'a redraw meanwhile (a phone turned) finds no sounds, and throws nothing');
   assert.ok($('.pf-zone').classList.contains('left'), 'the red button moves to the top of the box');
   assert.equal($('#profile-keep').hidden, false, '☁️ Keep takes the spot the taps hit');
   assert.equal($('#profile-keep').getAttribute('aria-describedby'), 'profile-delete-hint', 'and reads why when it gets the focus');
