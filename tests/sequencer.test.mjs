@@ -154,6 +154,8 @@ test('beat file: kit sounds travel by their kit id; recorded sounds stay behind 
   assert.equal(file.version, 1);
   assert.equal('id' in file, false, 'no id: a loaded beat gets its own');
   assert.deepEqual(file.rows.map((r) => r.sound), ['kick', null, 'snare'], 'a person id with dashes still finds the kit sound');
+  const voices = cleanPattern({ name: 'Go', bpm: 120, bars: 1, rows: [{ clipId: 'p-mv3-x9-lets-go', steps: on(0) }] }, 'p-mv3-x9');
+  assert.deepEqual(beatToFile(voices, ['go', 'lets-go']).file.rows.map((r) => r.sound), ['lets-go'], 'the longest kit id, whatever the kit order');
   assert.equal(file.signature, '3/4');
   const back = beatFromFile(JSON.stringify(file), 'juno', ['kick', 'snare', 'hihat']);
   assert.deepEqual(back.rows.map((r) => r.clipId), ['juno-kick', null, 'juno-snare'], 'onto this person\'s own kit');

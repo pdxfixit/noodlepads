@@ -355,10 +355,23 @@ export function personIdsIn(doc, kitIds = []) {
     for (const r of list(name)) ids.push(r?.personId);
   }
   for (const o of list('overrides')) {
-    const k = typeof o?.id === 'string' ? [...kitIds].find((kit) => o.id.endsWith(`-${kit}`)) : null;
+    const k = kitIdOf(o?.id, kitIds);
     if (k) ids.push(o.id.slice(0, -k.length - 1));
   }
   return [...new Set(ids.filter((id) => typeof id === 'string' && PERSON_ID.test(id)))];
+}
+
+// The kit id a person's preset copy (`<person>-<kit id>`) ends with, or null.
+// The longest one that leaves a person id wins, whatever the kit's order:
+// with kit ids `go` and `lets-go`, `p-x-lets-go` is p-x's 🗣️ Let's go, never
+// a person `p-x-lets` editing `go` (a phantom adoptStoredPeople would make).
+export function kitIdOf(id, kitIds = []) {
+  if (typeof id !== 'string') return null;
+  let best = null;
+  for (const k of kitIds) {
+    if ((best === null || k.length > best.length) && id.endsWith(`-${k}`) && PERSON_ID.test(id.slice(0, -k.length - 1))) best = k;
+  }
+  return best;
 }
 
 // boards.json once listed people of its own, and a device stored only what

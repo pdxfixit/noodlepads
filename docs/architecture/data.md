@@ -14,7 +14,7 @@
 |---|---|---|---|
 | `store.js` | `DB_NAME`, `SCHEMA`, `DB_VERSION`, `STORE_NAMES`, `upgradeStores`, the `db` handle (`open`, `run`, `all`, `put`, `remove`, `batch`, `onChange`) | no (IndexedDB) | state.js; direct writes in app.js, backup-ui.js, cloud.js; leftover.js reads `DB_NAME` |
 | `state.js` | `state`; `readStorage`, `loadStorage`, `persist`, `setOverride`, `setPersonEdit`, `deletePerson`, `deleteUserClip`, `saveMyVoice`, `deleteMyVoice`, `adoptStoredPeople`, `reIdStoredPeople`, `reIdIncoming`, `rememberRenames`, `renamedId` | no | nearly every screen |
-| `model.js` | person colors, `kitFor`, `mergePeople`, `clipsForPerson`, `orderClips`, `withNewPresets`, `overrideFor`, `withBulkChanges`, `withHidden`, `overrideWithEmoji`, `personEditRecord`, `validateManifest`, `soloPerson`, `isDefaultPerson`, `personIdsIn`, `adoptPeople`, `groupKit`, `PICTURES`, `KIND_EMOJI`, `PERSON_KINDS`, `personThings`, `personCounts` | yes | state.js, board.js, backup.js, merge.js, screens |
+| `model.js` | person colors, `kitFor`, `mergePeople`, `clipsForPerson`, `orderClips`, `withNewPresets`, `overrideFor`, `withBulkChanges`, `withHidden`, `overrideWithEmoji`, `personEditRecord`, `validateManifest`, `soloPerson`, `isDefaultPerson`, `personIdsIn`, `kitIdOf`, `adoptPeople`, `groupKit`, `PICTURES`, `KIND_EMOJI`, `PERSON_KINDS`, `personThings`, `personCounts` | yes | state.js, board.js, backup.js, merge.js, screens |
 | `board.js` | `people`, `person`, `currentPerson`, `clipsFor`, `anyClip`, `findClip`, `instrumentPicks`, `colorName`, `padColor`, `nextClipColor` | reads `state` | every screen |
 | `settings.js` | `SETTINGS`, `LEVELS`, `levelOf`, `getSetting`, `setSetting`, `onSetting`, `followPerson`, `notifyAllSettings`, `cleanPrefs`, `allowedValue`, `inBackups`, `storedPair` | reads/writes `state.prefs`, `state.settings` | ~20 modules |
 | `groups.js` | a kid's own groups: `cleanGroups`, `groupOwn`, `pruneGroups`, `moveGroup`, `joinGroups`, `newGroupId` | yes | pads.js, bulk.js, backup.js, merge.js, app.js |
@@ -184,7 +184,7 @@ A preset clip is the kit entry (`label, emoji, color, file, group, inst?, plays?
 
 ### Preset edits (`overrides`)
 
-An override holds only what differs from boards.json (`model.js overrideFor`; the sheet's and bulk's changes). `state.js setOverride` deletes one that holds only its `id`, so a later boards.json change shows through. Hiding a preset is `hidden: true` on its override (`model.js withHidden`): 🗑️ / 👁 in Edit sounds (`pads.js cornerBadge`), Hide/Show in the sheet, and bulk 🗑️. A picture change from the emoji chooser uses `model.js overrideWithEmoji` (`app.js setClipEmoji`). An override's person is found by its id prefix: exactly (`state.js deletePerson`), or by suffix search over kit ids (`model.js personIdsIn`, `backup.js` `isKitCopy`, `app.js setClipEmoji`).
+An override holds only what differs from boards.json (`model.js overrideFor`; the sheet's and bulk's changes). `state.js setOverride` deletes one that holds only its `id`, so a later boards.json change shows through. Hiding a preset is `hidden: true` on its override (`model.js withHidden`): 🗑️ / 👁 in Edit sounds (`pads.js cornerBadge`), Hide/Show in the sheet, and bulk 🗑️. A picture change from the emoji chooser uses `model.js overrideWithEmoji` (`app.js setClipEmoji`). An override's person is found by its id prefix: exactly (`state.js deletePerson`), or by suffix search over kit ids (`model.js kitIdOf`, the longest match, for `personIdsIn`; `backup.js` `isKitCopy`). `app.js setClipEmoji` reads the clip's own `kitId`.
 
 ### People
 
@@ -389,14 +389,14 @@ Nothing found is changed or deleted.
    A new required field on `clips` must be added to all five, and to `backup.js cleanBackup`.
 7. **Editing one sound is done in three ways:** `sheet.js saveSheet`, `bulk.js changeSounds` (through `model.js withBulkChanges`) and `app.js setClipEmoji`. All three branch on own sound or preset, then call `persist('clips')` or `setOverride(overrideFor…)`.
 8. **The open-beat and open-song wiring lives in `app.js`** (`setOpen`, `beatLibrary`, `songBook`, the dj `deps`), not in `state.js`. A change to how a beat or song is stored is made there.
-9. **Finding a preset edit's person.** It is done by exact prefix plus kit lookup (`state.js deletePerson`), by `.some` over kit ids (`backup.js` `isKitCopy`), and by the first kit id that is a suffix (`model.js personIdsIn`, `app.js setClipEmoji`). The last two depend on kit order (gotcha 1).
+9. **Finding a preset edit's person.** It is done by exact prefix plus kit lookup (`state.js deletePerson`), by `.some` over kit ids (`backup.js` `isKitCopy`), and by the longest kit id that is a suffix (`model.js kitIdOf` for `personIdsIn`; `sequencer.js beatToFile` sorts its own). None depends on kit order (gotcha 1).
 10. **`SOLO_COLOR` is an old person color.** `model.js` `SOLO_COLOR` is `#1F3FA8`, a key of `OLD_PERSON_COLORS`. A new device's first person is made in that color. They show in it until the next `readStorage` moves it to `#2D3FD6` in memory; storage keeps the old one until the record saves again. Until then the profile's color picker shows no color as chosen.
 
 ## Invariants and gotchas
 
 | # | Rule the code depends on | Guarded by |
 |---|---|---|
-| 1 | **Kit order:** no kit id may be a `-`suffix of a kit id listed *before* it. `personIdsIn` takes the first suffix match: with `go` listed before `lets-go`, an edit of `p-x-lets-go` names a person `p-x-lets`, and `adoptStoredPeople` makes a phantom person at the next start (checked with Node: `lets-go` is 337th and `go` 348th today, so it holds by luck). | none (check 6 below) |
+| 1 | **A kit id may end another** (`go`, `lets-go`). A preset copy's kit id is the longest that leaves a person id (`model.js kitIdOf`), in any kit order, so an edit of `p-x-lets-go` never names a phantom person `p-x-lets`. Code that splits `<person>-<kit id>` uses it, or the clip's own `kitId`. | `tests/model.test.mjs` (`kitIdOf`), `tests/sequencer.test.mjs` (beat file) |
 | 2 | `SCHEMA` only grows: a new store gets a new `since`, never an edit of an old line | `tests/store.test.mjs` |
 | 3 | `readStorage`'s destructuring matches `STORE_NAMES` minus `bases`, by position | none (check 5 below) |
 | 4 | Every per-person store is in `reid.js PERSON_STORES`, or a renamed person loses it | none (check 2 below) |
@@ -423,7 +423,7 @@ Nothing found is changed or deleted.
 | **A new field on an own sound** | the five places that make one (Seam 6); `sheet.js saveSheet`'s edit branch (it deletes fields before assigning); `backup.js cleanBackup` clips; `model.js overrideFor` and `cleanBackup` overrides if presets get it too; `model.js withBulkChanges` if bulk edits change it; `merge.js` skip list if it is not content |
 | **A new setting** | `settings.js SETTINGS` (scope; `values` or `clean`); a control in settings-ui.js; `onSetting` where it acts; `tests/startup-remembered.test.mjs` only if it uses localStorage. Backups carry it automatically. |
 | **A new person field** | people.js `addPerson`; `model.js soloPerson`, `mergePeople` (it copies named fields only), `adoptPeople`, `personEditRecord` (`edited` stamping); `backup.js cleanBackup` people; `merge.js` people rule (its field list); cloud (cloud area) |
-| **A new kit sound** | `boards.json` `kit` (id, label, emoji, palette color, file, group); `validateManifest` checks it; `just preset-loudness --fix`; place it *after* any kit id it is a `-`suffix of (gotcha 1). A saved order slots it in by `withNewPresets`. |
+| **A new kit sound** | `boards.json` `kit` (id, label, emoji, palette color, file, group); `validateManifest` checks it; `just preset-loudness --fix`; any place in the list (gotcha 1). A saved order slots it in by `withNewPresets`. |
 | **A new id kind** | `util.js newId(prefix)`; an id regex for `cleanBackup`; `merge.js byId` with its prefix and the references it must follow |
 | **A new way data comes in** | `backup.js cleanBackup` then `backup-ui.js storeLoaded`; never `db.put` raw input |
 | **A destructive action** | two taps (`armed` class) and, where work is lost, `ui.js showBanner` with `action: {label: '↩️ Undo', fn}` as `bulk.js showUndo` does |

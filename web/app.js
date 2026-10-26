@@ -698,7 +698,7 @@ async function setClipEmoji(clipId, emoji) {
   } else {
     const base = people().flatMap((p) => clipsFor(p.id, { includeHidden: true, allPresets: true })).find((c) => c.id === clipId);
     if (!base) return;
-    const file = state.manifest.kit.find((k) => clipId.endsWith(`-${k.id}`)) ?? state.manifest.people.flatMap((p) => p.clips).find((c) => c.id === clipId);
+    const file = state.manifest.kit.find((k) => k.id === base.kitId) ?? state.manifest.people.flatMap((p) => p.clips).find((c) => c.id === clipId);
     await setOverride(overrideWithEmoji({ id: clipId, emoji: file?.emoji ?? base.emoji }, state.overrides.get(clipId), emoji));
   }
   renderPads();

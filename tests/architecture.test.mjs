@@ -214,10 +214,3 @@ test('✅ every setting has a scope and exactly one of values or clean', async (
   assert.deepEqual(bad.map(([k]) => k), [], FIX);
 });
 
-// data.md, gotcha: model.js personIdsIn takes the first kit id a clip id ends
-// with, so a kit id that is a `-`suffix of one listed before it would make a
-// phantom person out of an edit to the longer one.
-test('✅ no kit id is a -suffix of a kit id listed before it', () => {
-  const kit = JSON.parse(read('web/boards.json')).kit.map((k) => k.id);
-  assert.deepEqual(kit.flatMap((a, i) => kit.slice(i + 1).filter((b) => b.endsWith(`-${a}`)).map((b) => `${b} after ${a}`)), [], FIX);
-});

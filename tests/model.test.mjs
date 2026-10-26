@@ -7,7 +7,7 @@ import {
 } from '../web/model.js';
 import { PICTURES, pictureTakenBy, overrideWithEmoji } from '../web/model.js';
 import { isFunName, FUN_NAMES } from '../web/names.js';
-import { groupKit, openKitGroups, isKitClip, kitFor, boardTitle, ownSoundsTitle, soloPerson, adoptPeople, personIdsIn, isDefaultPerson, SOLO_NAME, SOLO_COLOR } from '../web/model.js';
+import { groupKit, openKitGroups, isKitClip, kitFor, boardTitle, ownSoundsTitle, soloPerson, adoptPeople, personIdsIn, kitIdOf, isDefaultPerson, SOLO_NAME, SOLO_COLOR } from '../web/model.js';
 import { whiteReadsOn } from '../web/contrast.js';
 import { testManifest } from './test-board.mjs';
 
@@ -503,6 +503,17 @@ test('personIdsIn: people first, then owners in a fixed order, and kit edits by 
     people: [{ id: 'b' }], songs: [{ personId: 'c' }], clips: [{ personId: 'a' }, { personId: 'b' }],
     overrides: [{ id: 'd-kick' }, { id: 'stray' }],
   }, ['kick']), ['b', 'a', 'c', 'd']);
+});
+
+test('personIdsIn: a kit id that ends another names the right person, whatever the kit order', () => {
+  // `go` listed before `lets-go`: an edit of p-x's Let's go is p-x's, never a person "p-x-lets".
+  for (const kit of [['go', 'lets-go'], ['lets-go', 'go']]) {
+    assert.deepEqual(personIdsIn({ overrides: [{ id: 'p-x-lets-go' }, { id: 'p-y-go' }] }, kit), ['p-x', 'p-y'], kit.join(' '));
+    assert.equal(kitIdOf('p-x-lets-go', kit), 'lets-go');
+    assert.equal(kitIdOf('p-y-go', kit), 'go');
+  }
+  assert.equal(kitIdOf('lets-go', ['go', 'lets-go']), 'go', 'an old plain person "lets" editing Go: no person is left by "lets-go"');
+  assert.equal(kitIdOf('p-x-snare', ['go']), null);
 });
 
 // ── kit groups ──

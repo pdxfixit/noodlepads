@@ -322,7 +322,8 @@ export const BEAT_FILE = 'noodlepads-beat';
 const BEAT_FILES = new Set([BEAT_FILE, 'noodle-pads-beat']);
 export const MAX_BEAT_FILE_BYTES = 64 * 1024;
 export function beatToFile(pattern, kitIds) {
-  const kitOf = (clipId) => (typeof clipId === 'string' ? kitIds.find((k) => clipId.endsWith(`-${k}`)) : undefined);
+  // The longest kit id the row's id ends with: `p-x-lets-go` is "lets-go", not "go".
+  const kitOf = (clipId) => (typeof clipId === 'string' ? kitIds.filter((k) => clipId.endsWith(`-${k}`)).sort((a, b) => b.length - a.length)[0] : undefined);
   let dropped = 0;
   const rows = [];
   for (const r of pattern.rows) {
