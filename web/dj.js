@@ -34,6 +34,7 @@ import { createPillSelect } from './pill-select.js';
 import { moreMenu } from './overflow.js';
 import { follower, keepInView } from './follow.js';
 import { tempoKey } from './tempo-key.js';
+import { refitLines } from './lines.js';
 
 const STOPS = tempoStops();   // the click track slider's positions (see sequencer.js)
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
@@ -1383,9 +1384,13 @@ export function createDJ({ el, deps }) {
     for (const b of [...el.tempo.querySelectorAll('button'), ...el.setup.querySelectorAll('button')]) b.disabled = b.closest('.beat-tempo') ? locked : !!beatRec;
     // The beat's shape can't change once hits are landing on its grid, so
     // the bars and time signature go away while recording.
+    const shapeWas = `${el.bars.hidden}${el.sigs.hidden}`;
     el.bars.hidden = !!beatRec;
     for (const b of el.sigs.querySelectorAll('[data-sig]')) putAttr(b, 'aria-pressed', String(b.dataset.sig === deps.seq.signature()));
     el.sigs.hidden = !deps.seq.advanced() || !!beatRec;
+    // The line's width stays the same when they come back, so nothing else
+    // tells it to fit them again (at 320 px ⇆ stuck out after a recording).
+    if (`${el.bars.hidden}${el.sigs.hidden}` !== shapeWas) refitLines();
   }
   // The click track's tempo slider (Live): Live's own tempo for the visit (no beat is open there), with
   // the same pull toward common tempos as the Beats slider.

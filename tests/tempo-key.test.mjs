@@ -54,10 +54,11 @@ test('🎤 Live: a tap opens the click\'s tempo as its own line, a tap again or 
   const slider = $('#dj-click-bpm');
   slider.value = String(Number(slider.max));
   slider.dispatch('input');
-  assert.equal($(k).querySelector('.tempo-key-num').textContent, '180', 'the key reads the tempo the slider set');
-  assert.equal($(k).getAttribute('aria-label'), 'Tempo 180 BPM: tap to close it');
+  assert.equal($(k).querySelector('.tempo-key-num').textContent, 'BPM', 'open, the key says BPM (Ben, 2026-10-26)');
+  assert.equal($(k).getAttribute('aria-label'), 'Tempo 180 BPM: tap to close it', 'and is named with the tempo the slider set');
   box.dispatch('keydown', { key: 'Escape' });
   assert.equal(open(k), false, 'Esc closes it');
+  assert.equal($(k).querySelector('.tempo-key-num').textContent, '180', 'closed, it reads the tempo again');
   assert.ok(!box.classList.contains('tempo-open'));
   assert.equal($(k).getAttribute('aria-label'), 'Tempo 180 BPM: tap to change it');
   $(k).dispatch('click');
@@ -148,4 +149,15 @@ test('🎤 Live and ⌨️ Keys: a drag of the slider brings loops in line once,
   } finally {
     audio.syncLoops = real;
   }
+});
+
+// Ben, 2026-10-26: "the buttons should generally be on a grid"; at 320 px
+// "record and takes should have equal amount of width"; no dotted line under
+// the number. Where each key lands is layout (`just look beats keys-on live
+// --widths 320,375,430,600` measures the columns); these pin the rules.
+test('the CSS: Beats\' keys on a grid, 🎤 Live at 320 px half and half, no dotted line under the tempo', () => {
+  assert.match(css, /@media \(max-width: 600px\) \{\n {2}\.beat-deck \.beat-go \.seq-click, \.beat-deck \.tempo-key \{ width: 48px; padding: 0; \}\n {2}\.beat-deck > :is\(\.beat-go, \.beat-shape\) \{ gap: 8px; \}/);
+  assert.match(css, /@container panel \(max-width: 18\.6rem\) \{\n {2}body\.screen-live \.dj-bar :is\(\.dj-rec, #dj-takes-open\) \{ order: 0; flex: 1 1 calc\(50% - 3px\);/);
+  assert.match(css, /body\.screen-live \.dj-bar :is\(\.tempo-key, #dj-click, #dj-overlap, #dj-change\) \{ order: 1; flex: 1 1 0; width: auto; \}/);
+  assert.doesNotMatch(css, /underline dotted/, 'no dotted line under the tempo');
 });

@@ -147,7 +147,7 @@ export const HELP = [
       { pic: [play('▶ Play')], text: 'Plays the beat round and round. Pills only sound while it plays.' },
       { pic: [play('▶'), tool('▾')], text: 'Scroll down and the bar with ▶ Play folds up into the slim line at the top: ▶ plays and stops, and ▾ drops the whole bar down for ● Record, the tempo, the bars and the rest. On a small screen ❓ (and on the smallest ⬆️) make room for them.' },
       { pic: [slider('', '120')], text: 'How fast. Tap the number to type one. On a small screen the slider turns into ⌄ ⌃.' },
-      { pic: [eg('100 ▾')], text: 'On a phone the tempo is one key with its number: tap to change it. A line opens under the bar: 🐢 slow to 🐇 fast on the slider, ⌄ ⌃ to the next common tempo, the number to type one. Tap the key again to close it. Nothing is covered, so you can keep playing. The same key is on 🎤 Live and 🎼 Song.' },
+      { pic: [eg('100 ▾')], text: 'On a phone the tempo is one key with its number: tap to change it. A line opens under the bar: 🐢 slow to 🐇 fast on the slider, ⌄ ⌃ to the next common tempo, the number to type one. While it is open the key says BPM; tap it again to close it. Nothing is covered, so you can keep playing. The same key is on 🎤 Live and 🎼 Song.' },
       { pic: [tool('▶'), tool('●'), tool('🎬')], text: 'When a phone’s bar runs short of room, its buttons keep just their picture: ▶ is Play, ● is Record, 🎬 is Takes.' },
       { pic: [tool('⏲️')], text: 'The click track: a tick on every beat while the beat plays, to keep time. It is never saved.' },
       { pic: [seg('1 bar', '2 bars', '4 bars')], text: 'How long the beat is.' },

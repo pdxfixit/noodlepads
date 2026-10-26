@@ -27,7 +27,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 
 
-
 ### v1: prove out the interface
 
 - [ ] Attach any real sound clips in chat (5 min) 🔼
@@ -65,19 +64,12 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 - **First, when no other session has this repo open: rewrite git history to remove the old PIN-reset address** (Ben, 2026-10-26; the security seat found it in plain text in the first public commit). Rewriting breaks every clone and worktree, so Ben picks the moment: about ten sessions were open when he asked. Then every checkout re-clones. The app already uses a new address.
 
-- **⇆ sticks out at 320 px on Beats with ⌨️ Keys once a beat has rows** (found 2026-10-26, on main before the tempo key): the bars' line (1 bar 2 bars 4 bars · 🎚️ · ⇆) runs about 27 px past the screen (`just look builder-rows --widths 320`). About 20 minutes.
-
-
-
 
 
 
 
 - **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (`docs/design/more-kinds-of-music.md`; decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups, the emoji rule's exceptions). The grooves, 🧸 Kids' pentatonic toy keys and instruments' phase 1 are built; next:
   1. Instruments, phase 3 (ADR 0030; the pickers everywhere, 🧸 Kids' instrument button, the grooves' instruments and chips, Soca and Chiptune are built): one ready-made key layout per family in ✏️ Layout's keys.
-
-
-
 
 
 
