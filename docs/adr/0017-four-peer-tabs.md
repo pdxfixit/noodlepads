@@ -1,6 +1,6 @@
 # 0017. Four peer tabs: Pads, Beats, Song, Live
 
-**Status:** Accepted (2026-10-12), built (2026-10-12)
+**Status:** Accepted (2026-10-12), built (2026-10-12). Its four peer tabs and "no sub-switch" are replaced by [ADR 0033](0033-play-and-make.md) (2026-10-26): the bar groups the same four screens as 🎉 Play and 🛠️ Make.
 
 ## Context
 

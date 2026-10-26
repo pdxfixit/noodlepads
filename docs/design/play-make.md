@@ -1,6 +1,6 @@
 # Play and Make: two tabs instead of four
 
-Status: Ben's answers in (2026-10-25); the mockup waits for his OK before building.
+Status: built (2026-10-26), as [ADR 0033](../adr/0033-play-and-make.md): the switch in the bottom bar, Ben's pick over a switch at the top.
 Mockup: a private artifact shown to Ben (screenshots of today's screens under the new bar and switch); the layout is described below.
 
 ## Why

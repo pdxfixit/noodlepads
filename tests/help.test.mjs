@@ -22,7 +22,7 @@ test('Help opens on the tab for the screen you are on, and Pads for anything els
 });
 
 test('Help covers every part of the app, each with something to show', () => {
-  assert.deepEqual(HELP.map((s) => s.id), ['pads', 'sounds', 'beats', 'song', 'live', 'settings']);
+  assert.deepEqual(HELP.map((s) => s.id), ['pads', 'sounds', 'live', 'beats', 'song', 'settings']);
   for (const s of HELP) assert.ok(shownItems(s).length >= 4, s.id);
 });
 
@@ -41,7 +41,7 @@ test('every screen in the toolbar has its own part of Help, in toolbar order', (
 // line can't be dropped or left behind). Add a line here with a new control.
 const MUST_MENTION = [
   // Pads
-  '✏️ Edit sounds', '✅ Done', 'Stop all', '👥 People', '⬆️', 'Who plays',
+  '✏️ Edit sounds', '✅ Done', 'Stop all', '🎉 Play', '🛠️ Make', '👥 People', '⬆️', 'Who plays',
   // Making a sound
   'New sound', 'Record', 'Choose a file', '✨ Make one', '🎲 Surprise me', '👂 Plain', 'Save sound', 'Keep editing', 'Throw away', 'All emoji', 'Layers', 'Deeper ↔ higher', 'Slower ↔ faster', '+ Add a layer', '🔈', 'Backwards', 'Warble', '⭐ Save voice', 'My voices ▾', '↩️ Reset voice', '⤢ Turn into knobs', '↩️ The old way', 'Muffled ↔ Bright', 'Crunch', 'Stutter',
   '🎲 Surprise steps', '⚙️ Advanced', '⤢', '🥁 On the beat', 'Smooth', 'Buzzy', 'Hiss', '🎵 Find its note', '➕ Mix with another sound', '✂️ Trim and edit', '✂️ Ends', '📐 Fades',
@@ -93,7 +93,7 @@ test('Beats Help explains 💃 Grooves with ⌨️ Keys on: a groove behind you,
 test('Help names the four tabs and ⌨️ Keys, never DJ, Freestyle or Beat Builder', () => {
   const words = HELP.flatMap((s) => [s.tab, s.title, ...shownItems(s).flatMap((i) => [i.text, ...i.pic.flatMap((p) => p.t ?? [])])]).join('\n');
   assert.doesNotMatch(words, /\bDJ\b|Freestyle|Beat Builder/);
-  assert.deepEqual(HELP.filter((s) => s.screen).map((s) => s.tab), ['🔊 Pads', '🥁 Beats', '🎼 Song', '🎤 Live']);
+  assert.deepEqual(HELP.filter((s) => s.screen).map((s) => s.tab), ['🔊 Pads', '🎤 Live', '🥁 Beats', '🎼 Song'], '🎉 Play\'s, then 🛠️ Make\'s');
   assert.ok(shownItems(HELP.find((s) => s.id === 'beats')).some((i) => i.pic.some((p) => p.t === '⌨️ Keys')));
 });
 

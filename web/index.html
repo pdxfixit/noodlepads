@@ -323,11 +323,21 @@
   <p class="sr-only" id="announce" role="status"></p>
 
   <nav class="toolbar" aria-label="Tools">
+    <!-- 🎉 Play and 🛠️ Make (ADR 0033): the open one shows its two screens,
+         the other is one button back to the screen it last had. -->
     <div class="screens" role="group" aria-label="Screen">
-      <button type="button" class="tool" id="pads-tab" data-screen="pads" aria-pressed="true"><span aria-hidden="true">🔊</span><span class="tool-name"> Pads</span></button>
-      <button type="button" class="tool" id="beats-toggle" data-screen="beats" aria-pressed="false"><span aria-hidden="true">🥁</span><span class="tool-name"> Beats</span></button>
-      <button type="button" class="tool" id="song-tab" data-screen="song" aria-pressed="false"><span aria-hidden="true">🎼</span><span class="tool-name"> Song</span></button>
-      <button type="button" class="tool" id="live-tab" data-screen="live" aria-pressed="false"><span aria-hidden="true">🎤</span><span class="tool-name"> Live</span></button>
+      <div class="mode open" data-mode="play" role="group" aria-label="Play">
+        <button type="button" class="tool mode-open" data-mode-open="play" aria-label="Play: Pads and Live"><span aria-hidden="true">🎉</span><span class="tool-name"> Play</span></button>
+        <span class="mode-cap" aria-hidden="true">🎉<span class="mode-word"> Play</span></span>
+        <button type="button" class="tool" id="pads-tab" data-screen="pads" aria-pressed="true"><span aria-hidden="true">🔊</span><span class="tool-name"> Pads</span></button>
+        <button type="button" class="tool" id="live-tab" data-screen="live" aria-pressed="false"><span aria-hidden="true">🎤</span><span class="tool-name"> Live</span></button>
+      </div>
+      <div class="mode" data-mode="make" role="group" aria-label="Make">
+        <button type="button" class="tool mode-open" data-mode-open="make" aria-label="Make: Beats and Song"><span aria-hidden="true">🛠️</span><span class="tool-name"> Make</span></button>
+        <span class="mode-cap" aria-hidden="true">🛠️<span class="mode-word"> Make</span></span>
+        <button type="button" class="tool" id="beats-toggle" data-screen="beats" aria-pressed="false"><span aria-hidden="true">🥁</span><span class="tool-name"> Beats</span></button>
+        <button type="button" class="tool" id="song-tab" data-screen="song" aria-pressed="false"><span aria-hidden="true">🎼</span><span class="tool-name"> Song</span></button>
+      </div>
     </div>
     <button type="button" class="tool tool-stop" id="stop-all" aria-label="Stop all"><span aria-hidden="true">⏹️</span><span class="tool-name"> Stop<span class="tool-more"> all</span></span></button>
   </nav>

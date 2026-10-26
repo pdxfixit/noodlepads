@@ -41,7 +41,7 @@ A small rule (a label, a color, a layout) needs only its row in `decisions.md`.
 | [0014](0014-dj-key-layouts.md) | Saved DJ key layouts are their own records (`layouts`), apart from the live keyboard (`decks`) | Accepted |
 | [0015](0015-row-volume.md) | A beat row's loudness is stored as `volume`, left out at full | Accepted |
 | [0016](0016-player-metrics.md) | Player metrics, for people in the cloud: devices, places (nothing of the IP), activity, feature use and visits, 14 days in D1, then the telemetry runner's mirror | Accepted (feature use and visits superseded by 0027) |
-| [0017](0017-four-peer-tabs.md) | Four peer tabs, Pads · Beats · Song · Live; Beat Builder becomes Beats' ⌨️ Keys; one open beat | Accepted, built |
+| [0017](0017-four-peer-tabs.md) | Four peer tabs, Pads · Beats · Song · Live; Beat Builder becomes Beats' ⌨️ Keys; one open beat | Accepted, built; its four tabs replaced by 0033 |
 | [0018](0018-mixer-fields.md) | The 🎚️ Mixer's solo, effects and master are stored on the beat, left out at normal | Proposed |
 | [0019](0019-kids-level.md) | Three levels per person, 🧸 Kids · Regular · Advanced; Kids is four big picture screens, left by a grown-up sum | Accepted, built |
 | [0020](0020-scratch-documents.md) | A scratch beat and song per person, open by default; grooves load into it; 💾 Keep names it "<fun name> (<groove> version)" | Accepted, built |
@@ -57,6 +57,7 @@ A small rule (a label, a color, a layout) needs only its row in `decisions.md`.
 | [0030](0030-instruments-who-plays.md) | 🎹 Instruments: who plays Notes, Chords and Bass, a view over the kit (`inst`, `plays`, `shift`, `chord` in boards.json; a person setting each) | Accepted, phase 1 built |
 | [0031](0031-tempo-marks-in-songs.md) | Tempo marks in songs: `tempos: [{bar, bpm}]`, every lane following them | Accepted, built |
 | [0032](0032-layout-grids.md) | 👆 Layout grids: a tree of splits in twelfths placing the touch layout's bands in blocks side by side | Accepted, built |
+| [0033](0033-play-and-make.md) | 🎉 Play (Pads, Live) and 🛠️ Make (Beats, Song): two modes in the bottom bar, the open one showing its two screens | Accepted, built |
 
 ## Template
 

@@ -1,8 +1,9 @@
-// ADR 0017 (Ben, 2026-10-12): four peer tabs in the bottom bar, 🔊 Pads ·
-// 🥁 Beats · 🎼 Song · 🎤 Live, and no screen has a sub-switch. Beats' ⌨️ Keys
-// shows the keys under the open beat (once DJ's Beat Builder); Live is what
-// DJ's Freestyle was. How the bar fits at 320 px needs a browser
-// (`just look --wide`); this checks the page, the rules and the wiring.
+// The bottom bar's four screens, 🔊 Pads · 🎤 Live · 🥁 Beats · 🎼 Song, in
+// two modes, 🎉 Play and 🛠️ Make (ADR 0033, after ADR 0017's four peer
+// tabs). Beats' ⌨️ Keys shows the keys under the open beat (once DJ's Beat
+// Builder); Live is what DJ's Freestyle was. How the bar fits at 320 px
+// needs a browser (`just look --wide`); this checks the page, the rules and
+// the wiring.
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
@@ -24,12 +25,16 @@ before(async () => {
   await page.settle();
 });
 
-test('the bottom bar is four tabs in order, then Stop all; no screen has a sub-switch', () => {
+test('the bottom bar is 🎉 Play (Pads, Live) and 🛠️ Make (Beats, Song), then Stop all; no screen has a sub-switch', () => {
   const tabs = $('.screens').querySelectorAll('[data-screen]');
-  assert.deepEqual(tabs.map((b) => b.dataset.screen), ['pads', 'beats', 'song', 'live']);
+  assert.deepEqual(tabs.map((b) => b.dataset.screen), ['pads', 'live', 'beats', 'song']);
+  assert.deepEqual($('.screens').querySelectorAll('[data-mode]').map((m) => [m.dataset.mode, m.querySelectorAll('[data-screen]').map((b) => b.dataset.screen)]),
+    [['play', ['pads', 'live']], ['make', ['beats', 'song']]]);
   // The stand-in page keeps no text of nested spans on one line: read the labels from the page source.
   const labels = [...html.matchAll(/data-screen="(\w+)"[^>]*><span aria-hidden="true">(\S+)<\/span><span class="tool-name"> (\w+)<\/span>/g)].map((m) => `${m[1]}: ${m[2]} ${m[3]}`);
-  assert.deepEqual(labels, ['pads: 🔊 Pads', 'beats: 🥁 Beats', 'song: 🎼 Song', 'live: 🎤 Live']);
+  assert.deepEqual(labels, ['pads: 🔊 Pads', 'live: 🎤 Live', 'beats: 🥁 Beats', 'song: 🎼 Song']);
+  const modes = [...html.matchAll(/data-mode-open="(\w+)"[^>]*><span aria-hidden="true">(\S+)<\/span><span class="tool-name"> (\w+)<\/span>/g)].map((m) => `${m[1]}: ${m[2]} ${m[3]}`);
+  assert.deepEqual(modes, ['play: 🎉 Play', 'make: 🛠️ Make']);
   assert.equal($('#dj-modes'), null, 'no 🎤 Freestyle · 🥁 Beat Builder');
   assert.equal($('#beats-modes'), null, 'no 🥁 Beat · 🎼 Song');
   assert.equal($('#dj-tab'), null, 'DJ is 🎤 Live now');
@@ -113,4 +118,34 @@ test('a screen remembered by an older copy opens its new home', async () => {
   assert.deepEqual(startScreen('beats', 'beat'), { screen: 'beats' }, 'only DJ\'s own mode moves');
   assert.deepEqual(startScreen('live', null), { screen: 'live' });
   assert.deepEqual(startScreen('nowhere', null), { screen: 'pads' });
+});
+
+// ADR 0033 (Ben, 2026-10-26): the open mode shows its two screens; the other
+// is one button back to the screen it last had, so the bar never grows.
+test('🎉 Play and 🛠️ Make: the open mode holds the screen showing; the other goes back to the screen it last had', async () => {
+  const { modeOf, sideOf, MODES } = await import('../web/app.js');
+  assert.equal(modeOf('live'), 'play');
+  assert.equal(modeOf('song'), 'make');
+  assert.equal(sideOf('make', 'song'), 'song');
+  assert.equal(sideOf('make', 'pads'), 'beats', 'a screen of the other mode: its first');
+  assert.equal(sideOf('play', null), 'pads');
+  assert.deepEqual(Object.values(MODES).flat().sort(), ['beats', 'live', 'pads', 'song']);
+  const open = () => $('.screens').querySelectorAll('[data-mode]').filter((m) => m.classList.contains('open')).map((m) => m.dataset.mode);
+  keysOff(page);
+  $('#pads-tab').dispatch('click');
+  assert.deepEqual(open(), ['play']);
+  $('.screens').querySelector('[data-mode-open="make"]').dispatch('click');
+  assert.deepEqual(open(), ['make']);
+  $('#song-tab').dispatch('click');
+  assert.equal($('#song').hidden, false);
+  $('.screens').querySelector('[data-mode-open="play"]').dispatch('click');
+  assert.equal($('#pads').hidden, false, 'Play goes back to Pads');
+  $('.screens').querySelector('[data-mode-open="make"]').dispatch('click');
+  assert.equal($('#song').hidden, false, 'and Make to Song, where it was left');
+  $('#pads-tab').dispatch('click');
+});
+
+test('the closed mode is one button and the open one hides its own; the bar keeps its height', () => {
+  assert.match(css, /\.mode:not\(\.open\) > :not\(\.mode-open\), \.mode\.open > \.mode-open \{ display: none; \}/);
+  assert.match(css, /\.mode\.open \.tool \{ min-height: 44px;/, '44 px inside the box\'s 4 px: as tall as a 52 px tab');
 });

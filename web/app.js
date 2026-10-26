@@ -232,10 +232,19 @@ function setEditing(on) {
   renderPads();
 }
 
-// Four peer screens, chosen in the toolbar (ADR 0017): 🔊 Pads, 🥁 Beats,
-// 🎼 Song and 🎤 Live. No screen has a sub-switch: Beats' ⌨️ Keys shows the
-// keys under its beat. Edit sounds belongs to the pads screen.
+// Four screens, chosen in the toolbar: 🔊 Pads, 🥁 Beats, 🎼 Song and 🎤 Live.
+// Beats' ⌨️ Keys shows the keys under its beat. Edit sounds belongs to the
+// pads screen.
 export const SCREENS = ['pads', 'beats', 'song', 'live'];
+// Two modes in the toolbar (ADR 0033; Ben, 2026-10-26): 🎉 Play is Pads and
+// Live, 🛠️ Make is Beats and Song. The open mode shows both its screens; the
+// other is one button that goes back to the screen it last had (remembered
+// per device as `play-side` and `make-side`), else its first.
+export const MODES = { play: ['pads', 'live'], make: ['beats', 'song'] };
+export const modeOf = (screen) => Object.keys(MODES).find((m) => MODES[m].includes(screen)) ?? 'play';
+export const sideOf = (mode, remembered) => (MODES[mode]?.includes(remembered) ? remembered : MODES[mode]?.[0] ?? 'pads');
+// The screen each mode last had, in memory too (storage may be blocked).
+const sides = { play: recall('play-side'), make: recall('make-side') };
 // A screen remembered by an older copy: DJ is 🎤 Live now, and DJ's Beat
 // Builder is Beats with ⌨️ Keys on (`dj-mode` was 'beat'). Anything unknown
 // is Pads.
@@ -299,6 +308,9 @@ function setScreen(name) {
   if (leftBeats) seq.endLock();   // ⇆ unlocks with the screen
   for (const s of SCREENS) document.body.classList.toggle(`screen-${s}`, s === name);
   for (const b of el.screens.querySelectorAll('[data-screen]')) b.setAttribute('aria-pressed', String(b.dataset.screen === name));
+  for (const m of el.screens.querySelectorAll('[data-mode]')) m.classList.toggle('open', m.dataset.mode === modeOf(name));
+  sides[modeOf(name)] = name;
+  remember(`${modeOf(name)}-side`, name);
   showView();
   el.song.hidden = name !== 'song';
   if (name === 'song') song.render();  // beats may have changed too; shown first, so its lanes can fill the width
@@ -416,7 +428,9 @@ function bindEvents() {
   el.editToggle.addEventListener('click', () => setEditing(!state.editing));
   el.screens.addEventListener('click', (e) => {
     const b = e.target.closest('[data-screen]');
-    if (b) setScreen(b.dataset.screen);
+    if (b) { setScreen(b.dataset.screen); return; }
+    const mode = e.target.closest('[data-mode-open]')?.dataset.modeOpen;
+    if (mode) setScreen(sideOf(mode, sides[mode]));
   });
   // ⌨️ Keys in the beat bar, with Keys off (Beats' rows) and on (the keys).
   for (const b of document.querySelectorAll('[data-beat-keys]')) b.addEventListener('click', () => setKeys(!keysOn));

@@ -42,9 +42,9 @@ test('a beat row grip is a 44 px target both ways, at every width (a line short 
   assert.equal(css.indexOf('@media (max-width: 359px) {\n  .seq-row .seq-head'), -1);
 });
 
-test('on a narrow screen the tab you are on shows only its emoji', () => {
+test('every screen keeps its word in the bar: the open mode\'s two stack emoji over word on a phone', () => {
   const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
-  assert.match(css, /@media \(max-width: 559px\) \{\s*\.screens \.tool\[aria-pressed="true"\] \.tool-name \{[^}]*clip-path: inset\(50%\)/);
+  assert.doesNotMatch(css, /\.screens \.tool\[aria-pressed="true"\] \.tool-name \{/, 'the screen showing is lit yellow, its word kept');
   const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
-  for (const word of ['Pads', 'Beats', 'Song', 'Live']) assert.match(html, new RegExp(`<span class="tool-name"> ${word}</span>`));
+  for (const word of ['Pads', 'Beats', 'Song', 'Live', 'Play', 'Make']) assert.match(html, new RegExp(`<span class="tool-name"> ${word}</span>`));
 });

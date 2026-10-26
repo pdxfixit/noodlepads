@@ -17,6 +17,8 @@ const remembered = new Map(Object.entries({
   'beats-mode': 'song',
   'dj-mode': 'beat',
   'beat-keys': '1',
+  'play-side': 'live',   // 🎉 Play's screen last had (ADR 0033)
+  'make-side': 'nope',   // not one of Make's: Beats
   'dj-click': '1',
   'dj-layer': '1',
   'dj-size': 'l',

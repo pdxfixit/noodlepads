@@ -1541,9 +1541,30 @@ button.tempo-chip:focus-visible { outline: 3px solid var(--led); outline-offset:
 .toolbar.fit-stack { gap: 6px; }
 @media (max-width: 360px) { .toolbar { padding-left: 10px; padding-right: 10px; } }
 .tool:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--bed-edge); }
-/* The three screens, side by side as one switch. */
+/* 🎉 Play · 🛠️ Make (ADR 0033; Ben, 2026-10-26): the open mode is one
+   light box holding its name and its two screens, the one showing lit
+   yellow; the other mode is one button. Play stays at the left and Make in
+   the middle, open or not, so neither moves under a finger. The bar is as
+   tall as with four tabs. */
 .screens { display: flex; gap: 8px; }
-@media (max-width: 600px) { .screens { flex: 3 1 auto; } .screens .tool { flex: 1 1 0; } }
+.mode { display: flex; }
+.mode:not(.open) > :not(.mode-open), .mode.open > .mode-open { display: none; }
+.mode.open { gap: 4px; padding: 4px; border-radius: 12px; background: var(--chalk); box-shadow: 0 1px 0 var(--chalk-edge); }
+.mode.open .tool { min-height: 44px; padding: 0 16px; background: transparent; color: var(--ink); box-shadow: none; transform: none; }
+.mode.open .tool[aria-pressed="true"] { background: var(--led); box-shadow: inset 0 0 0 2px rgb(28 23 64 / 0.25); }
+.mode-cap { display: flex; align-items: center; gap: 6px; padding: 0 6px 0 8px; color: var(--ink); font-weight: 800; font-size: 1.05rem; white-space: nowrap; }
+/* A phone: the open mode fills the room the closed one and ⏹️ leave, its two
+   screens halves of it; every button stacks its emoji over its word. */
+@media (max-width: 600px) {
+  .screens { flex: 1 1 auto; min-width: 0; }
+  .mode.open { flex: 1 1 auto; min-width: 0; }
+  .mode.open .tool { flex: 1 1 0; min-width: 0; }
+  .mode-open { flex: none; min-width: 60px; }
+  .mode .tool, .mode-cap { flex-direction: column; justify-content: center; gap: 1px; padding: 0 4px; font-size: 0.8rem; line-height: 1.1; }
+  .mode .tool span[aria-hidden], .mode-cap { font-size: 1.15rem; }
+  .mode-cap .mode-word { font-size: 0.7rem; }
+}
+@media (max-width: 359px) { .mode-cap .mode-word { display: none; } }
 .fit-stack .screens { gap: 4px; }
 .fit-stack .screens .tool { flex-direction: column; justify-content: center; gap: 1px; padding: 0 4px; font-size: 0.8rem; line-height: 1.1; }
 .fit-stack .screens .tool span[aria-hidden] { font-size: 1.15rem; }
@@ -4378,13 +4399,6 @@ body.editing .pads .pad-cell .pad-emoji { margin-left: calc(var(--disc) * 0.8); 
 /* Bars side by side on wide screens (layoutMeasures sets the columns): the
    dashed line between bars stands up instead of lying down. */
 
-/* The tab you're on needs no name on a narrow screen: its emoji is enough,
-   and the room goes to the others (Ben, 2026-10-11). Screen readers still
-   hear the name. */
-@media (max-width: 559px) {
-  .screens .tool[aria-pressed="true"] .tool-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .screens .tool[aria-pressed="true"] { min-width: 52px; }
-}
 
 /* "✅ 4 notes added" floats over the beat's name and fades (Ben, 2026-10-12). */
 .dj-beatbar { position: relative; }
