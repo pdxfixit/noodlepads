@@ -20,7 +20,11 @@ steps below are kept as the record of how it was built, and for rebuilding it.
 ## How it is deployed
 
 **GitHub deploys every push to `main`** ([ADR 0025](adr/0025-github-deploys.md)),
-in `.github/workflows/deploy.yml`, one run at a time in push order:
+in `.github/workflows/deploy.yml`, one run at a time (a newer push waits; of
+several waiting, only the newest runs, and GitHub shows the others as
+cancelled. The newest push holds their commits, so its run deploys them and
+runs the deploy checks (smoke, e2e, taps) on them: cancelled is not
+unchecked):
 
 1. `just test`.
 2. The release checks: `tools/version_bumped.sh` (no `web/` change since the

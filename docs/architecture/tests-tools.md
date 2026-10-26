@@ -386,10 +386,13 @@ Who reads the label after that:
 24.04, Node 26.11.1, just 1.58.0, full history): `just test`, then
 `tools/version_bumped.sh`, then `bump_version.py --check`. No secrets.
 
-**On every push to `main`**, `.github/workflows/deploy.yml`, one at a time in
-push order (a newer push waits): checkout with full history; flarepress at
+**On every push to `main`**, `.github/workflows/deploy.yml`, one at a time
+(a newer push waits; of several waiting, GitHub runs only the newest and
+cancels the rest, which is safe: it deploys main with their commits in it):
+checkout with full history; flarepress at
 `v1` into `.flarepress/` (for the recipes); Node and just; `just test`;
-`version_bumped.sh` and `bump_version.py --check`; the
+`version_bumped.sh` and `bump_version.py --check`; `just cloud-migrate --yes`
+(the migrations D1 lacks); the
 `pdxfixit/flarepress@v1` action on `site/` (check, gate, stamp, wrangler
 deploy, verify); `just deploy-checks` with `CHROME=/usr/bin/google-chrome`.
 

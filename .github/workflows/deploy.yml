@@ -15,7 +15,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-# One deploy at a time, in push order; a newer push waits rather than cancels.
+# One deploy at a time: a newer push waits rather than cancels the running
+# one. Of several waiting, GitHub keeps only the newest (it cancels the
+# others), which deploys main with their commits in it.
 concurrency:
   group: deploy
   cancel-in-progress: false
