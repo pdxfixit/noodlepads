@@ -143,7 +143,7 @@ The footer's how-to (`app.js showHint`, `screenHint`) uses the same `pointer: fi
 
 ### Takes (🎤 Live)
 
-**Record.** ● → `startRec`: `rec = {started: false, events: []}`, a 250 ms timer for the status line and the 180 s cap. The take starts at the first non-`'beat'` event. Each event is `{at, clipId, kind, ring?}` on the audio clock (`deps.now()` = `audio.context().currentTime`, no latency moved). ■ → `stopRec` → `rhythm.js takeFrom(events, now)`.
+**Record.** ● → `startRec`: `rec = {started: false, events: []}`, a 250 ms timer for the status line and the 180 s cap. The take starts at the first non-`'beat'` event. Each event is `{at, clipId, kind, ring?}` on the audio clock (`deps.now()` = `audio.context().currentTime`, no latency moved). ■ → `stopRec` → `rhythm.js takeFrom(events, now)`. A screen change or 🧸 Kids (`dj.leave`) stops it too, keeping the take, as Esc does.
 
 **Stored record** (IndexedDB `takes`, `state.takes`; cleaned by `rhythm.js cleanTake`):
 
@@ -424,6 +424,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | A finger plays on the lift; a scroll or cancel plays nothing | `finger.test.mjs`, `touch-play.test.mjs` |
 | Every element `app.js` hands `createDJ` is read, and every method `dj.js` returns is called | `dj-wiring.test.mjs` |
 | A key's play counts once for usage, as `'keys'` (`tapPad`'s `kind`) | `play-count-app.test.mjs` |
+| A take ends, kept, when the keys leave the screen or Kids shows (`dj.leave`) | `live-take-leave.test.mjs` |
 | A held key loops only on OS repeat past 350 ms; lifting a modifier forgets all holds | no test found (`shift-holds.test.mjs` covers Shift-click only) |
 | Every remembered key (`dj-input`, `dj-size`, `dj-click`, `beat-keys`, `kids-tab`) starts the app safely | `startup-remembered.test.mjs` |
 | A take's `ring` is stored only when true, only on a hit | `overlap.test.mjs`, `rhythm.test.mjs` |
@@ -435,7 +436,6 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | The page's keydown stands down behind any open dialog, so the grown-up sum gets no toy-key presses | no test found |
 
 More gotchas:
-- A 🎤 Live take keeps recording across a screen change: `dj.leave` ends only `beatRec`. While it runs, `dj.recording()` is true, so ⌨️ Keys and ⇆ refuse on Beats (as the code reads; untested).
 - `seq.tempo()` on Live is `LOOSE`, never saved; tap tempo there does not touch any beat.
 - `dj.js deck()` is called many times per key press; it runs `clipsFor` each time.
 - The keys editor gets `...deps`, so `deps.layouts` there is key layouts; the touch editor's `deps.layouts` is touch layouts.

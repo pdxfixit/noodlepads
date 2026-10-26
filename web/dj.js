@@ -1614,9 +1614,11 @@ export function createDJ({ el, deps }) {
   setupDialog(el.takes);
 
   // Leaving the keys view ends a recording into the beat (the beat maker
-  // switches to the next screen's own beat).
+  // switches to the next screen's own beat), and a 🎤 Live take, kept as Esc
+  // keeps it: out of sight it would run on, silent, and hold ⌨️ Keys still.
   function leave() {
     if (beatRec) stopBeatRec('leave');
+    if (rec) stopRec();
   }
   // The beat stopped (sequencer onStop): a recording into it ends too, so
   // ● Record never says recording with nothing playing.
