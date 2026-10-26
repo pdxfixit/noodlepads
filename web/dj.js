@@ -1657,9 +1657,11 @@ export function createDJ({ el, deps }) {
     return true;
   }
 
-  // Leaving the window or the tab drops every hold.
+  // Leaving the window or the tab drops every hold. A page hidden (the phone
+  // locked, another app) also ends a take, kept, as Esc does: out of sight it
+  // would run on, silent, for up to 3 minutes.
   globalThis.addEventListener?.('blur', letGo);
-  globalThis.document?.addEventListener?.('visibilitychange', () => { if (document.hidden) letGo(); });
+  globalThis.document?.addEventListener?.('visibilitychange', () => { if (document.hidden) { letGo(); if (rec) stopRec(); } });
 
   // ⌨️ Keys | 👆 Pads at the top of ✏️ Layout: the keys or the touch layout,
   // remembered on this device. The beat's rows follow the one showing, so

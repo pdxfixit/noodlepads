@@ -143,7 +143,7 @@ The footer's how-to (`app.js showHint`, `screenHint`) uses the same `pointer: fi
 
 ### Takes (🎤 Live)
 
-**Record.** ● → `startRec`: `rec = {started: false, events: []}`, a 250 ms timer for the status line and the 180 s cap. The take starts at the first non-`'beat'` event. Each event is `{at, clipId, kind, ring?}` on the audio clock (`deps.now()` = `audio.context().currentTime`, no latency moved). ■ → `stopRec` → `rhythm.js takeFrom(events, now)`. A screen change, 🧸 Kids (`dj.leave`) or a change of person (`dj.personLeft`) stops it too, keeping the take, as Esc does.
+**Record.** ● → `startRec`: `rec = {started: false, events: []}`, a 250 ms timer for the status line and the 180 s cap. The take starts at the first non-`'beat'` event. Each event is `{at, clipId, kind, ring?}` on the audio clock (`deps.now()` = `audio.context().currentTime`, no latency moved). ■ → `stopRec` → `rhythm.js takeFrom(events, now)`. A screen change, 🧸 Kids (`dj.leave`) a change of person (`dj.personLeft`) or the page hidden (`visibilitychange`: the phone locked, another app) stops it too, keeping the take, as Esc does.
 
 **Stored record** (IndexedDB `takes`, `state.takes`; cleaned by `rhythm.js cleanTake`):
 
@@ -424,7 +424,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | A finger plays on the lift; a scroll or cancel plays nothing | `finger.test.mjs`, `touch-play.test.mjs` |
 | Every element `app.js` hands `createDJ` is read, and every method `dj.js` returns is called | `dj-wiring.test.mjs` |
 | A key's play counts once for usage, as `'keys'` (`tapPad`'s `kind`) | `play-count-app.test.mjs` |
-| A take ends, kept, when the keys leave the screen or Kids shows (`dj.leave`) | `live-take-leave.test.mjs` |
+| A take ends, kept, when the keys leave the screen or Kids shows (`dj.leave`), or the page is hidden | `live-take-leave.test.mjs`, `take-hidden.test.mjs` |
 | ⏹️ Stop all and 🧸 Kids stop a take playing back, its hits still to come too | `take-stop-all.test.mjs` |
 | A change of person leaves nothing of the first person's live (`dj.personLeft`, from `app.js showPerson` and `startOver`, before the person changes): a take or a recording into the beat ends as theirs (a deleted person's take in progress is dropped), a take playing back stops, the take card and the beat's ↩️ Undo go | `keys-person-change.test.mjs`, `keys-person-deleted.test.mjs` |
 | The keys' ⏲️ never ticks over 🧸 Kids; out of Kids it ticks again | `kids-click-off.test.mjs` |
