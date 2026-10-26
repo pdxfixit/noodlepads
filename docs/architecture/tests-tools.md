@@ -207,7 +207,7 @@ Grouped by what they guard. Files marked ▶ start the real app. A few call `ins
 | 🥁 Beats | `sequencer` (`cleanPattern`), `beat-edit`, `row-tempo` (the hit timetable), `overlap`, `tune-rows`, `notes`, `slide`, `grooves`, `beat-row`, ▶`beat-rows-left`, `row-buttons`, ▶`row-handle`, ▶`row-volume`, ▶`add-rows`, ▶`beat-chips`, `beat-pins`, ▶`beat-bar`, ▶`beat-bar-refit`, ▶`mini-deck`, `edge-scroll`, ▶`pill-select`, ▶`mixer`, ▶`roll`, `follow`, ▶`new-scratch`, ▶`scratch`, ▶`dj-grooves`, `overflow`, `lines`, ▶`beat-sounds-kept`, ▶`mix-let-go` |
 | ⌨️ Keys and 🎤 Live | `rhythm`, `keyset`, `beat-builder` (tempo and bars while recording, pure), ▶`keys-playhead`, ▶`rec-empty-rows`, ▶`beat-rec-stop`, `key-stagger`, `live-bar`, ▶`touch-play`, ▶`touch-edit`, `touch`, `touch-grid`, ▶`touch-grid-edit`, ▶`slim-edit`, `slim-head` |
 | 🎹 Instruments | `instruments` (notes checked by `pitch.js findNote`), ▶`inst-picker`, ▶`inst-everywhere` |
-| 🎼 Song | `song`, `playlist`, `tempo-marks`, ▶`song-tempo-ui`, ▶`song-playhead`, ▶`song-undo-mute` |
+| 🎼 Song | `song`, `playlist`, `tempo-marks`, ▶`song-tempo-ui`, ▶`song-playhead`, ▶`song-undo-mute`, ▶`song-unsigned` |
 | 🎧 From a song | `listen` (on `listen-synth.mjs`), `listen-make`, `listen-input` (stand-in capture, decoder and worklet scope), ▶`listen-ui` (through `listen-ui.js listenEnv`) |
 | 🧸 Kids and levels | ▶`kids` (37), ▶`kids-hints`, `levels` |
 | First steps (ADR 0028) | ▶`welcome`, ▶`welcome-existing`, ▶`welcome-cloud`, ▶`tips`, ▶`nudge`, ▶`who-now` |

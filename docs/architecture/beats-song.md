@@ -286,7 +286,7 @@ A song from before lanes (only `slots`) becomes lane 1's blocks, back to back, a
 
 ### The song's clock
 
-- **Time is in song bars:** one bar of 4/4, 16 pills (`BAR_STEPS`), at the tempo of that bar. A beat plays at the **song's** tempo (`planSong` overrides each beat's `bpm` with `song.tempo`), pass after pass. A 2-bar beat takes 2 song bars a pass; a 3/4 beat takes ¾ of one (`beatSteps`). A beat saved with no signature counts as `beatPlan` plays it: the old `timeSignature` with Advanced on, else 4/4.
+- **Time is in song bars:** one bar of 4/4, 16 pills (`BAR_STEPS`), at the tempo of that bar. A beat plays at the **song's** tempo (`planSong` overrides each beat's `bpm` with `song.tempo`), pass after pass. A 2-bar beat takes 2 song bars a pass; a 3/4 beat takes ¾ of one (`beatSteps`). A beat saved with no signature (a legacy beat, from before each beat had its own) counts as `beatPlan` plays it: the old `timeSignature` with Advanced on, else 4/4. So such a beat's block length in a song follows the playing person's Advanced and old-signature settings, and changes when they do (`song.js` redraws on `timeSignature`). Stamping a signature on such a beat when it opens would fix the length for good, but that is a stored-shape change, not made here.
 - `playlist.js songClock(song)`: `barStart`, `at(pill)`, `barAt(seconds)` and `tempoOf(bar)` with the marks; the plain arithmetic when there are none.
 - `playParts(lanes, stepsOf, clock)`: every pass of every block, cut where the next block on its lane starts.
 - `playEvents(parts, plans, {from, skipLanes, clock})`: every hit of the song in time order. With marks, a hit is placed by its pill on the clock, and a held note's length follows the bars.
@@ -434,7 +434,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | `cleanPattern` sets `personId` from its argument | a beat moved between people must not keep the old owner | `tests/sequencer.test.mjs` (only for a missing `raw`) |
 | Stopping the beat ends a ⌨️ Keys recording (`onStop`) | anything that calls `seq.stop()` (a screen change, a sync, 🆕 New) ends the take | `tests/beat-rec-stop.test.mjs` |
 | `ready` is never emptied: `play` and `prepareBeats` load afresh over it (`refresh`). `play` then keeps only the open beat's sounds, unless a `prepareBeats` caller may still be booking (`preparing`) | a beat or song playing reads it while 🗂️ See all or a share renders another beat; a sound deleted or dropped from every row must not stay decoded all visit | `tests/beat-sounds-kept.test.mjs` (the pruning itself is not visible from the page: untested) |
-| `song.js beatSteps` and `sequencer.js barOf` read a missing `signature` the same way | a pass's length in a song must match its plan, or each pass leaves a gap | `tests/song.test.mjs` |
+| `song.js beatSteps` and `sequencer.js barOf` read a missing `signature` the same way | a pass's length in a song must match its plan, or each pass leaves a gap | `tests/song.test.mjs`, `tests/song-unsigned.test.mjs` (through the real beat maker) |
 | A song plays every beat at the song's tempo | a beat's own `bpm` is ignored in a song | `tests/song.test.mjs` |
 | Pills past `total()` stay stored | going back to more bars loses nothing | none found |
 | The click goes straight to `audio.master` | it is never in a render or a preview | none |
