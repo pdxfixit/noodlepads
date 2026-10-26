@@ -40,6 +40,11 @@ test('a pill under 44 px wide takes taps in the gaps around it too', () => {
   assert.match(rule('.pill'), /height: 44px/);
 });
 
+test('the piano roll\'s squares are as wide as Beats\' pills, half pills too', () => {
+  assert.match(rule('.roll-grid'), /--half-min: 16px/, 'two columns a pill: 32 px');
+  assert.doesNotMatch(css, /^\.roll-grid\.half \{ --half-min/m, 'Advanced half pills don\'t shrink the squares');
+});
+
 test('with a menu, the emoji opens it and 🔊 shows alone; the rest are its items', () => {
   const labels = { remove: 'Remove', removeAsk: 'Remove?', clear: 'Clear', clearAsk: 'Clear?', pick: 'Change' };
   const data = { remove: { remove: 0 }, clear: { clear: 0 }, pick: { pick: 0 } };

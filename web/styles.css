@@ -1074,7 +1074,7 @@ dialog#roll::backdrop { background: var(--bed); }
 .roll-scroll { overflow-x: auto; overscroll-behavior-x: contain; touch-action: pan-x; border-radius: 12px; background: rgb(0 0 0 / 0.28); }
 .roll-grid {
   --name-w: 2.6rem;
-  --half-min: 10px;     /* half a pill: a pill is at least 20 px wide */
+  --half-min: 16px;     /* half a pill: a pill is at least 32 px wide, as on Beats (Ben, 2026-10-26: "grow to 32") */
   --row-h: clamp(22px, calc((100dvh - 300px) / var(--lines, 15)), 38px);
   position: relative;
   display: grid;
@@ -1083,7 +1083,6 @@ dialog#roll::backdrop { background: var(--bed); }
   min-width: 100%;
   width: max-content;
 }
-.roll-grid.half { --half-min: 9px; }
 .roll-name {
   grid-column: 1;
   position: sticky;
