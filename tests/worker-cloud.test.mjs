@@ -399,6 +399,24 @@ test("a profile's record bytes stay exact through edits, deletes, tombstones and
   exact();
 });
 
+// The security seat, 2026-10-26: starts sent at once all passed the sums
+// before any was made, past 40 MB a profile and a check's one sound.
+test('sound starts sent at once are checked and made one at a time', async () => {
+  const c = cloud();
+  const a = await made(c, 'p-a');
+  const check = await made(c, 'p-smoke-mv4cyiqj-b8bt');
+  c.env.DB.slow = true;
+  const start = (key, id, n, bytes) => c.call('POST', `profiles/${id}/sounds`, { key, body: { sha256: sha(n), bytes, mime: 'audio/wav' } });
+  const mine = await Promise.all([1, 2, 3, 4].map((n) => start(a, 'p-a', n, 15 * 1024 * 1024)));
+  const checks = await Promise.all([5, 6, 7].map((n) => start(check, 'p-smoke-mv4cyiqj-b8bt', n, 1000)));
+  c.env.DB.slow = false;
+  assert.deepEqual(mine.map((r) => r.status).sort(), [201, 201, 507, 507], 'two of 15 MB fit in 40 MB');
+  assert.deepEqual(checks.map((r) => r.status).sort(), [201, 507, 507], "a check's one sound");
+  assert.ok(c.env.DB.rows("SELECT SUM(bytes) AS b FROM sounds WHERE profile_id = 'p-a'")[0].b <= LIMITS.profileBytes);
+  // (Everyone's 400 MB counts others' unfinished starts only as far as they
+  // uploaded, so starts alone can't overshoot it: the same statement checks it.)
+});
+
 // The council's review, 2026-10-26: a start counted its declared bytes before
 // anything uploaded, and an unfinished sound never went, so a few 25 MB starts
 // made the cloud "full" for everyone.

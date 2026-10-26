@@ -512,12 +512,14 @@ const WHOLE = 'sounds.got >= sounds.chunks';
 // as declared, so it can't start more than it may keep; `all` counts the
 // pieces others' unfinished sounds have received, so a start that never
 // uploads can't make the cloud full for everyone.
+// Sound sums (SQL): MINE_SOUNDS binds the profile's id and `fresh`; ALL_SOUNDS `fresh` and CHUNK_BYTES.
+const MINE_SOUNDS = `FROM sounds WHERE profile_id = ? AND (${WHOLE} OR created >= ?)`;
+const ALL_SOUNDS = `SELECT COALESCE(SUM(CASE WHEN ${WHOLE} THEN bytes WHEN created >= ? THEN MIN(bytes, got * ?) ELSE 0 END), 0) FROM sounds`;
+
 async function storedBytes(env, profileId, now) {
   const fresh = now - PENDING_MS;
-  const mine = await env.DB.prepare(`SELECT COALESCE(SUM(bytes), 0) AS b, COUNT(*) AS n FROM sounds WHERE profile_id = ? AND (${WHOLE} OR created >= ?)`)
-    .bind(profileId, fresh).first();
-  const all = await env.DB.prepare(`SELECT COALESCE(SUM(CASE WHEN ${WHOLE} THEN bytes WHEN created >= ? THEN MIN(bytes, got * ?) ELSE 0 END), 0) AS b FROM sounds`)
-    .bind(fresh, CHUNK_BYTES).first();
+  const mine = await env.DB.prepare(`SELECT COALESCE(SUM(bytes), 0) AS b, COUNT(*) AS n ${MINE_SOUNDS}`).bind(profileId, fresh).first();
+  const all = await env.DB.prepare(`SELECT (${ALL_SOUNDS}) AS b`).bind(fresh, CHUNK_BYTES).first();
   return { mine: mine.b, count: mine.n, all: all.b };
 }
 
@@ -543,14 +545,23 @@ async function startSound(request, env, id, now) {
   const have = await env.DB.prepare('SELECT id, chunks FROM sounds WHERE profile_id = ? AND sha256 = ? AND bytes = ?')
     .bind(id, sha256, bytes).first();
   if (have) return json(200, { id: have.id, need: await need(env, have.id, have.chunks) });
-  const used = await storedBytes(env, id, now);
-  if (used.mine + bytes > (isCheck(id) ? CHECK_LIMITS.soundBytes : LIMITS.profileBytes)) throw new Refuse(507, 'profile full');
-  if (isCheck(id) && used.count >= CHECK_LIMITS.sounds) throw new Refuse(507, 'profile full');
-  if (used.all + bytes > LIMITS.totalBytes) throw new Refuse(507, 'cloud full');
+  const cap = isCheck(id) ? CHECK_LIMITS.soundBytes : LIMITS.profileBytes;
+  const most = isCheck(id) ? CHECK_LIMITS.sounds : Number.MAX_SAFE_INTEGER;
   const soundId = newSoundId();
   const chunks = pieceCount(bytes);
-  await env.DB.prepare('INSERT INTO sounds (id, profile_id, mime, bytes, chunks, sha256, got, created) VALUES (?, ?, ?, ?, ?, ?, 0, ?)')
-    .bind(soundId, id, mime, bytes, chunks, sha256, now).run();
+  const fresh = now - PENDING_MS;
+  // Checked and made in one statement, so starts sent at once can't all
+  // pass on the same sums.
+  const made = await env.DB.prepare(`INSERT INTO sounds (id, profile_id, mime, bytes, chunks, sha256, got, created)
+    SELECT ?, ?, ?, ?, ?, ?, 0, ?
+    WHERE (SELECT COALESCE(SUM(bytes), 0) ${MINE_SOUNDS}) + ? <= ?
+    AND (SELECT COUNT(*) ${MINE_SOUNDS}) < ?
+    AND (${ALL_SOUNDS}) + ? <= ? RETURNING id`)
+    .bind(soundId, id, mime, bytes, chunks, sha256, now, id, fresh, bytes, cap, id, fresh, most, fresh, CHUNK_BYTES, bytes, LIMITS.totalBytes).first();
+  if (!made) {
+    const used = await storedBytes(env, id, now);
+    throw new Refuse(507, used.mine + bytes > cap || used.count >= most ? 'profile full' : 'cloud full');
+  }
   return json(201, { id: soundId, need: Array.from({ length: chunks }, (_, n) => n) });
 }
 
