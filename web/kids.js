@@ -222,6 +222,13 @@ function wirePads() {
     if (!pad || pinch) return;
     if (isFinger(e)) fingers.down(e, pad); else play(pad);
   });
+  // Enter or Space on a focused pad, a switch or a screen reader's tap
+  // arrive as a click with no pointer press before it (detail 0), as on
+  // Pads: it plays. A pointer's own click (detail 1) already played above.
+  el.pages.addEventListener('click', (e) => {
+    const pad = e.target.closest?.('.kids-pad');
+    if (pad && e.detail === 0) play(pad);
+  });
   // On the window: a finger may lift off the pads.
   window.addEventListener('pointermove', (e) => fingers.move(e));
   window.addEventListener('pointerup', (e) => fingers.up(e));
@@ -515,8 +522,21 @@ async function tapVoice(id) {
   renderRecord();
 }
 
+// Enter or Space on the mic, a switch or a screen reader (a click with no
+// pointer press, detail 0): the tap's way, 3, 2, 1 and then it listens; the
+// same again during the count calls it off, and while it listens stops it.
+function micKey(e) {
+  if (e.detail !== 0) return;   // a pointer's click: micDown and micUp had it
+  if (rec.mode === 'count') { stopRecording({ discard: true }); return; }
+  if (rec.mode === 'tap') { stopRecording(); return; }
+  if (rec.mode || !canRecord()) return;
+  rec.mode = 'count';
+  askMicrophone();
+}
+
 function wireRecord() {
   el.mic.addEventListener('pointerdown', micDown);
+  el.mic.addEventListener('click', micKey);
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) el.mic.addEventListener(type, micUp);
   el.mic.addEventListener('contextmenu', (e) => e.preventDefault());
   el.last.addEventListener('click', playLast);
@@ -875,7 +895,20 @@ function stopTune() {
 }
 
 function releaseKeys() {
+  clearTimeout(tapTimer);
   for (const id of [...held.keys()]) lift(id);
+}
+
+// A key played without a pointer (Enter or Space on it, a switch, a screen
+// reader): a short press, as a quick tap of a finger, so it sounds and, while
+// ● records, lands as a note.
+const KEY_TAP_MS = 250;
+let tapTimer = 0;
+function tapKey(i) {
+  clearTimeout(tapTimer);
+  lift('kb-tap');
+  press('kb-tap', i);
+  tapTimer = setTimeout(() => lift('kb-tap'), KEY_TAP_MS);
 }
 
 function wireRec() {
@@ -899,6 +932,13 @@ function wireKeys() {
   });
   for (const type of ['pointerup', 'pointercancel']) el.keys.addEventListener(type, (e) => lift(e.pointerId));
   el.keys.addEventListener('pointerleave', (e) => lift(e.pointerId));
+  // A click with no pointer press before it (detail 0): Enter or Space on a
+  // focused key, a switch or a screen reader. A pointer's click is ignored:
+  // its press and lift played it.
+  el.keys.addEventListener('click', (e) => {
+    const key = e.target.closest?.('.kids-key');
+    if (key && e.detail === 0) tapKey(Number(key.dataset.key));
+  });
   el.keys.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 

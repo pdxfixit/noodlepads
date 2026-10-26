@@ -308,6 +308,21 @@ test('Pads: big picture pads, the kit and the kid\'s own; a tap plays, nothing t
   assert.ok(pads[0].classList.contains('boing'), 'a bounce');
 });
 
+// Keyboard, switch and screen-reader users press a pad as a click with no
+// pointer press before it (detail 0), as on Pads; a mouse's or a finger's
+// own click (detail 1) must not play it a second time.
+test('Pads, Enter or Space on a pad (a click with no pointer) plays it; a pointer\'s own click adds nothing', () => {
+  const pads = $('#kids-pages').querySelectorAll('.kids-pad');
+  played.length = 0;
+  pads[2].classList.remove('boing');
+  pads[2].dispatch('click', { detail: 0 });
+  assert.deepEqual(played, [pads[2].dataset.clip], 'the key press plays it');
+  assert.ok(pads[2].classList.contains('boing'), 'with its bounce');
+  played.length = 0;
+  pads[2].dispatch('click', { detail: 1 });
+  assert.deepEqual(played, [], 'a mouse click already played on its press');
+});
+
 // Ben, 2026-10-13: "dragging a finger should not trigger a sound (like when
 // one is scrolling)". A finger plays on the lift, if it stayed put.
 // Not tested here: a real swipe's feel and the browser's own pointercancel.
@@ -410,6 +425,16 @@ test('Keys: eight colored keys; a held key plays', async () => {
   assert.ok(!keys[0].classList.contains('down'));
   assert.ok(keys[4].classList.contains('down'));
   keys[4].dispatch('pointerup', { pointerId: 2 });
+  // Enter or Space on a focused key (a click with no pointer, detail 0)
+  // plays it as a short tap; a pointer's own click plays nothing more.
+  played.length = 0;
+  keys[3].dispatch('click', { detail: 0 });
+  assert.equal(played.length, 1, 'the key press plays it');
+  assert.ok(keys[3].classList.contains('down'), 'pressed');
+  await new Promise((r) => setTimeout(r, 320));
+  assert.ok(!keys[3].classList.contains('down'), 'and let go by itself');
+  keys[3].dispatch('click', { detail: 1 });
+  assert.equal(played.length, 1, 'a pointer\'s click already played on its press');
 });
 
 // Ben, 2026-10-22: the instrument toggle "should be far more indicative of
@@ -584,6 +609,37 @@ test('Record: a tap during 3, 2, 1 calls it off, and nothing is kept', async () 
   assert.equal(mic.streams.at(-1).stopped, 1);
   $('[data-kids-tab="record"]').dispatch('click');
   assert.equal(state.userClips.length, before);
+});
+
+// Keyboard, switch and screen-reader users: the mic is pressed as a click
+// with no pointer press (detail 0). It goes the tap's way: 3, 2, 1, then it
+// listens until the next press, which keeps the sound.
+test('Record, Enter or Space on the mic: 3, 2, 1, it listens, and the next press stops it and keeps the sound', async () => {
+  fakeMicrophone();
+  const before = state.userClips.length;
+  const micEl = $('#kids-mic');
+  micEl.dispatch('click', { detail: 1 });
+  await page.settle();
+  assert.equal(micEl.classList.contains('counting'), false, 'a pointer\'s own click does nothing more');
+  micEl.dispatch('click', { detail: 0 });
+  await page.settle();
+  assert.ok(micEl.classList.contains('counting'), 'it counts');
+  await until(() => micEl.classList.contains('recording'), 'listening');
+  await new Promise((r) => setTimeout(r, 400));
+  micEl.dispatch('click', { detail: 0 });
+  await page.settle();
+  assert.equal(micEl.classList.contains('recording'), false, 'stopped');
+  assert.equal(mic.streams.at(-1).stopped, 1, 'the microphone is let go');
+  assert.equal(state.userClips.length, before + 1, 'a new pad');
+  // Pressed again during the count: called off, nothing kept.
+  micEl.dispatch('click', { detail: 0 });
+  await page.settle();
+  assert.ok(micEl.classList.contains('counting'));
+  micEl.dispatch('click', { detail: 0 });
+  assert.equal(micEl.classList.contains('counting'), false, 'called off');
+  await new Promise((r) => setTimeout(r, 200));
+  assert.equal(micEl.classList.contains('recording'), false);
+  assert.equal(state.userClips.length, before + 1);
 });
 
 test('the page\'s keys stand down in Kids: ← → never change the person', () => {

@@ -970,7 +970,11 @@ sounds, Enter picks a pad up, Enter on another swaps them, Enter on the same
 one again opens its editor. In the beat maker the 16 pills are one Tab stop;
 arrow keys move between them and Space toggles one. Dialogs trap focus and hand
 it back when they close. Changes with no visible text (a swap, a pick-up) are
-spoken through a hidden live region.
+spoken through a hidden live region. In 🧸 Kids, Enter or Space on a pad or a
+toy key plays it (a key as a short tap, which ● records like one), and on the
+mic it goes the tap's way: 3, 2, 1, then it listens until the next press (a
+press during the count calls it off). A switch or a screen reader's tap does
+the same: each is a click with no pointer press before it (`detail` 0).
 
 The people row shows one tab per person while their names fit on a line. It
 measures that (on load, on resize and when the web fonts arrive), and when the
