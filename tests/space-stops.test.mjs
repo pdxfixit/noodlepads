@@ -93,3 +93,37 @@ test("every 'Escape' handler in web/ calls preventDefault, so the page's Stop al
   }
   assert.deepEqual(missing, [], 'an Esc handler that does not call preventDefault');
 });
+
+// Esc is the whole Stop all: a playing song stops, and both ⏲️ click tracks
+// go off, as ⏹️ and Space do (app.js stopEverything).
+test('Esc stops a playing song and turns both click tracks off', async () => {
+  const { dropBeat } = await import('./song-ui.mjs');
+  const on = (sel) => page.$(sel).getAttribute('aria-pressed') === 'true';
+  page.$('#beats-toggle').dispatch('click');
+  if (!on('#seq-click')) page.$('#seq-click').dispatch('click');
+  if (!on('#dj-click')) page.$('#dj-click').dispatch('click');
+  assert.ok(on('#seq-click') && on('#dj-click'), 'both click tracks on');
+  page.$('#song-tab').dispatch('click');
+  dropBeat(page.$);
+  page.$('#song-play').dispatch('click');
+  await page.settle();
+  assert.ok(on('#song-play'), 'the song plays');
+  page.key('Escape');
+  assert.ok(!on('#song-play'), 'Esc stopped the song');
+  assert.ok(!on('#seq-click') && !on('#dj-click'), 'and turned both click tracks off');
+});
+
+// With sounds chosen in ✏️ Edit sounds, Esc only lets go of them (Stop all
+// stands down). A beat can't play there: Pads stops it as it shows.
+test('Esc with sounds chosen only lets go of them', async () => {
+  page.$('#pads-tab').dispatch('click');
+  page.$('#edit-toggle').dispatch('click');
+  const pad = page.$('#pads').querySelectorAll('.pad').find((p) => p.dataset.id);
+  pad.dispatch('click');
+  assert.equal(page.$('#pads-chosen').hidden, false, 'a sound is chosen');
+  const before = stops;
+  page.key('Escape');
+  assert.equal(page.$('#pads-chosen').hidden, true, 'Esc let go of it');
+  assert.equal(stops, before, 'and stopped nothing');
+  page.$('#edit-toggle').dispatch('click');
+});
