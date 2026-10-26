@@ -34,3 +34,10 @@ test('Space on a focused button, in a text box, held down, or with Shift does no
   page.key(' ', { shiftKey: true });
   assert.equal(stops, before);
 });
+
+// Help: on a focused button Space presses it, so Esc is the stop that works there.
+test('Esc on a focused button stops everything, where Space would press the button', () => {
+  const before = stops;
+  page.key('Escape', { target: page.$('#stop-all') ?? document.querySelector('button') });
+  assert.equal(stops, before + 1);
+});
