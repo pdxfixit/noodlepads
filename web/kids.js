@@ -438,8 +438,9 @@ function listen() {
   const started = rec.started;
   recorder.ondataavailable = (e) => { if (e.data.size) rec.chunks.push(e.data); };
   // `discard` is set on the recorder itself as it is stopped, so a late
-  // onstop of a thrown-away hold can never keep anything.
-  recorder.onstop = () => { if (!recorder.discard) keep(new Blob(rec.chunks, { type: recorder.mimeType || mime || 'audio/webm' }), (performance.now() - started) / 1000, how); };
+  // onstop of a thrown-away hold can never keep anything; `quiet` (⏹️)
+  // keeps it without playing it.
+  recorder.onstop = () => { if (!recorder.discard) keep(new Blob(rec.chunks, { type: recorder.mimeType || mime || 'audio/webm' }), (performance.now() - started) / 1000, how, { play: !recorder.quiet }); };
   recorder.start();
   try {
     const ctx = audio.wake();
@@ -465,15 +466,17 @@ function listen() {
   rec.raf = requestAnimationFrame(step);
 }
 
-// The recorder stops (its onstop keeps the sound, unless `discard`), the
-// meter goes, and the mic sits still again; the stream stays.
-function endRecorder(discard = false) {
+// The recorder stops (its onstop keeps the sound, unless `discard`; it
+// plays, unless `quiet`), the meter goes, and the mic sits still again; the
+// stream stays.
+function endRecorder(discard = false, quiet = false) {
   clearTimeout(rec.timer);
   cancelAnimationFrame(rec.raf);
   const { recorder } = rec;
   rec.recorder = null;
   if (recorder) {
     recorder.discard = discard;
+    recorder.quiet = quiet;
     if (recorder.state !== 'inactive') recorder.stop();
   }
   rec.source?.disconnect();
@@ -486,20 +489,21 @@ function endRecorder(discard = false) {
 }
 
 // Everything off, in any state: a hold's or a tap's recording is kept (or
-// thrown away with `discard`), a count is called off, the microphone is let go.
-function stopRecording({ discard = false } = {}) {
+// thrown away with `discard`; kept without playing with `quiet`), a count is
+// called off, the microphone is let go.
+function stopRecording({ discard = false, quiet = false } = {}) {
   if (!rec.mode) return;
   rec.mode = null;
   clearTimeout(rec.count);
   showCount('');
-  endRecorder(discard);
+  endRecorder(discard, quiet);
   dropStream(rec.stream);
   rec.stream = null;
 }
 
 // A recording made into a pad of the kid's own, as the sound sheet saves one,
-// in the lit voice; then it plays.
-async function keep(blob, seconds, how) {
+// in the lit voice; then it plays (not after ⏹️: `play` false).
+async function keep(blob, seconds, how, { play = true } = {}) {
   if (seconds < MIN_RECORD_SECONDS) { wiggle(el.mic); return; }
   try {
     const buffer = await audio.decode(await blob.arrayBuffer());
@@ -527,7 +531,7 @@ async function keep(blob, seconds, how) {
   logEvent('kids', { recorded: Math.round(seconds * 10) / 10, voice: voice ?? 'normal', how });
   page = 0;   // the new pad is the first one on Pads
   renderRecord();
-  playLast();
+  if (play) playLast();
 }
 
 function playLast() {
@@ -1000,9 +1004,13 @@ export function kidsKeyup(e) {
 
 // ── ⏹️ and the grown-up sum ──
 
+// ⏹️ (and Esc, or Space): every sound, the beat, a tune recording, held
+// keys, and a mic recording, which is kept as its pad, quietly; a 3, 2, 1
+// is called off.
 function stopAll() {
   stopTune();
   stopBeat();
+  stopRecording({ quiet: true });
   releaseKeys();
   audio.stopAll();
   boing(el.stop);

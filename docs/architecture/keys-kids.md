@@ -253,7 +253,7 @@ And back the other way, `app.js makeSequencer` wires `onHit` → `dj.flashClip`,
 
 ### Screens
 
-Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, 🎹 Keys. Plus ⏹️ (`stopAll`), and ⚙️ (the regular `#settings-open`, gated). The tab is remembered on the device (`kids-tab`).
+Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, 🎹 Keys. Plus ⏹️ (`stopAll`: sounds, the beat, ●, held keys, and a mic recording, kept without playing: `stopRecording({ quiet: true })`), and ⚙️ (the regular `#settings-open`, gated). The tab is remembered on the device (`kids-tab`).
 
 | Tab | Draws | Plays by |
 |---|---|---|

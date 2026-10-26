@@ -188,7 +188,9 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   no Undo, and a kid can't read a "Kept as …" line. A grown-up finds the tune row on 🥁 Beats and in 🎹
   the piano roll, and keeps the beat with 💾 Keep.
 
-⏹️ stops everything. The ⚙️ gear asks a grown-up sum (two numbers from 6 to
+⏹️ (or Esc, or Space) stops everything: every sound, the beat, a ● tune
+and a mic recording, which is kept as its pad without playing (a 3, 2, 1
+is called off). The ⚙️ gear asks a grown-up sum (two numbers from 6 to
 9, big number keys; `grown-up.js`, which ⚙️ Settings → About → Feedback asks
 too); right opens Settings and the regular app until the page reloads, wrong
 goes quietly back. 🧸 Kids mode at the end of the corner menu (the round

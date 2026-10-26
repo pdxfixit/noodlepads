@@ -683,6 +683,38 @@ test('Record, Enter or Space on the mic: 3, 2, 1, it listens, and the next press
   assert.equal(state.userClips.length, before + 1);
 });
 
+// ⏹️ stops everything: a mic recording ends too, kept as the kid's pad
+// (they made it), without playing it (⏹️ asked for quiet).
+test('⏹️ ends a mic recording: what was recorded is kept, quietly; a 3, 2, 1 is called off', async () => {
+  fakeMicrophone();
+  const before = state.userClips.length;
+  const micEl = $('#kids-mic');
+  played.length = 0;
+  micEl.dispatch('pointerdown', { pointerId: 40 });   // a hold, listening
+  await page.settle();
+  assert.ok(micEl.classList.contains('recording'));
+  await new Promise((r) => setTimeout(r, 400));
+  $('#kids-stop').dispatch('click');
+  await page.settle();
+  assert.equal(micEl.classList.contains('recording'), false, 'it stops');
+  assert.equal(mic.streams.at(-1).stopped, 1, 'the microphone is let go');
+  assert.equal(state.userClips.length, before + 1, 'what was recorded is kept');
+  assert.deepEqual(played, [], 'and stays quiet');
+  assert.equal($('#kids-last').hidden, false, 'the new sound waits beside the mic');
+  micEl.dispatch('pointerup', { pointerId: 40 });   // the finger lifts later: nothing more
+  await page.settle();
+  assert.equal(state.userClips.length, before + 1);
+  // A tap's count: ⏹️ calls it off.
+  micEl.dispatch('click', { detail: 0 });
+  await page.settle();
+  assert.ok(micEl.classList.contains('counting'));
+  $('#kids-stop').dispatch('click');
+  assert.equal(micEl.classList.contains('counting'), false);
+  await new Promise((r) => setTimeout(r, 200));
+  assert.equal(micEl.classList.contains('recording'), false, 'and it never starts');
+  assert.equal(state.userClips.length, before + 1);
+});
+
 test('the page\'s keys stand down in Kids: ← → never change the person', () => {
   const who = state.personId;
   page.key('ArrowRight');
