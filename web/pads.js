@@ -97,25 +97,25 @@ function makePeopleMenu(list) {
     li.append(item);
     menu.append(li);
   }
-  // 🧸 Kids, now, for whoever is showing (app.js enterKids), then 👥 People.
-  const kidsLi = document.createElement('li');
+  // 🧸 Kids, now, for whoever is showing (app.js enterKids), and 👥 People:
+  // one line under a rule, held at the menu's foot, so they never read as
+  // two more people and a long list never scrolls them out of sight.
+  const tools = document.createElement('li');
+  tools.className = 'person-tools';
   const kids = document.createElement('button');
   kids.type = 'button';
   kids.className = 'person-item person-edit';
   kids.dataset.kidsOpen = '';
   kids.id = 'kids-open-menu';
   kids.textContent = '🧸 Kids mode';
-  kidsLi.append(kids);
-  menu.append(kidsLi);
-  const li = document.createElement('li');
   const edit = document.createElement('button');
   edit.type = 'button';
   edit.className = 'person-item person-edit';
   edit.dataset.peopleEdit = '';
   edit.id = 'people-open';
   edit.textContent = '👥 People';
-  li.append(edit);
-  menu.append(li);
+  tools.append(kids, edit);
+  menu.append(tools);
   wrap.append(button, menu);
   return wrap;
 }
@@ -144,7 +144,11 @@ function peopleMenuKey(e) {
   const to = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: items.length - 1 }[e.key];
   if (to !== undefined) { e.preventDefault(); items[(to + items.length) % items.length].focus(); }
   else if (e.key === 'Escape') { e.preventDefault(); setPeopleMenu(false, { focus: true }); }
-  else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') e.preventDefault();
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    e.preventDefault();
+    // On the foot's line, 🧸 Kids mode and 👥 People sit side by side.
+    if (e.target.closest('.person-tools')) items[e.key === 'ArrowLeft' ? items.length - 2 : items.length - 1].focus();
+  }
 }
 
 // A pad's look: color, picture, name and voice. The board and the beat maker

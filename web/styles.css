@@ -189,11 +189,12 @@ h1 { min-width: 0; overflow-wrap: anywhere; }
   gap: 6px;
   width: max-content;
   min-width: 200px;
-  max-width: min(80vw, 320px);
+  max-width: min(86vw, 320px);   /* room on a 320 px phone for 🧸 Kids mode and 👥 People on one line */
   max-height: min(60dvh, 420px);
   margin: 0;
   padding: 8px;
   overflow-y: auto;
+  scroll-padding-bottom: 72px;   /* a person reached by arrow key is never under the foot line */
   border-radius: 14px;
   background: var(--bed);
   box-shadow: 0 10px 24px rgb(0 0 0 / 0.45);
@@ -215,8 +216,29 @@ h1 { min-width: 0; overflow-wrap: anywhere; }
 }
 .person-item[aria-current="true"] { outline: 3px solid #fff; outline-offset: -3px; }
 .person-item[aria-current="true"]::after { content: " ✓"; }
-.person-item.person-edit { margin-top: 4px; border: 2px solid rgb(255 255 255 / 0.5); background: transparent; font-family: var(--font-ui); }
-li:has(> .person-edit) + li > .person-edit { margin-top: 0; }   /* 🧸 Kids mode and 👥 People sit together */
+/* 🧸 Kids mode and 👥 People: one line under a rule, held at the foot of a
+   long list, in the plain type of a tool rather than a person's name. */
+.person-tools {
+  position: sticky;
+  bottom: -8px;   /* over the list's own padding, so no person shows below */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 2px -8px -8px;
+  padding: 8px;
+  border-top: 2px solid rgb(255 255 255 / 0.25);
+  background: var(--bed);
+}
+.person-item.person-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  border: 2px solid rgb(255 255 255 / 0.5);
+  background: transparent;
+  font: 700 0.95rem/1.15 var(--font-ui);
+  text-align: center;
+}
 
 /* ── Pad bed ────────────────────────────────────────────────────────── */
 
