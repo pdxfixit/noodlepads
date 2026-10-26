@@ -63,7 +63,9 @@ const bytes = (text) => new TextEncoder().encode(text).length;
 
 // The sending, apart from the page so it can be tested.
 // deps: {fetch, getLog, enabled(), live(), build(entries) -> cleaned payload | null,
-//   now(), setTimer(fn, ms), clearTimer(id)}
+//   now(), setTimer(fn, ms), clearTimer(id), problemsOnly()}
+// problemsOnly() true: hiding the page sends only when what waits holds an
+// error or a silent tap (a device on by the default; Ben, 2026-10-26).
 export function createLogSender(deps) {
   const { now = Date.now, setTimer = setTimeout, clearTimer = clearTimeout } = deps;
   let sentUpTo = 0;          // the `n` of the newest entry that got through
@@ -116,7 +118,7 @@ export function createLogSender(deps) {
   return {
     send,
     // The page was hidden: send now, if the minute allows.
-    hidden: () => send(),
+    hidden: () => (deps.problemsOnly?.() && !unsent().some((e) => SEND_SOON.includes(e.kind)) ? Promise.resolve(false) : send()),
     // A new log entry: an error, or a tap that played nothing, sends 10 s
     // later (later still if the last upload was under a minute ago).
     entry(e) {
@@ -197,6 +199,8 @@ export function initLogSend() {
     fetch: (...args) => globalThis.fetch(...args),
     getLog,
     enabled: () => getSetting('sendLogs') === true,
+    // On only by the default (nobody ticked 📮 here): only problems go.
+    problemsOnly: () => !state.settings?.has?.('sendLogs'),
     live: () => globalThis.location?.hostname === LIVE_HOST,
     build: buildPayload,
   });

@@ -409,7 +409,9 @@ it isn't pressed by accident) opens Settings: 🔗 Sharing (🔗 Shared with me)
 2026-10-26, per device; one switched off stays off, and a backup that carries
 off brings it; 📋 beside this device's code copies it) sends the event log,
 cleaned by `log-clean.js` so it holds no names and no audio, to the site's own
-`/api/log` when the page is hidden and 10 s after an error or a silent tap
+`/api/log` when the page is hidden and 10 s after an error or a silent tap (a
+device on only by the default, where nobody ticked it, sends only when an error
+or a silent tap waits: `problemsOnly`)
 (`log-send.js`; plan in `docs/design/automatic-logs.md`). A silent tap
 (`web/tap-watch.js`) is a finger tap on a pad on Pads or 🧸 Kids, or a key or
 tile on 🎤 Live, that made no sound within 3 s; its `tap` entry says how far it
