@@ -322,7 +322,7 @@ Kids writes it with `deps.saveBeat` (`state.savedBeats` + `persist('beats')`). I
 
 - `KIDS_KEYS`: C D E G A, then high C D E (pentatonic). A high key plays its low note at `keyRate` (2×) under its own play id (`keyPlayId`, `<clipId>+12`), so both can sound.
 - The instrument button cycles `KIDS_INSTRUMENTS` and writes the person's `instNotes`, the same setting 🎹 Who plays on Notes keeps. `keyClip` finds `keyKitId(k, inst)` among `clips({ includeHidden: true, allPresets: true })`.
-- Keyboard: `kidsKeydown` maps `e.key` a s d f g h j k (not `rhythm.js keyFor`); Esc or Space stops all; ← → turn pages.
+- Keyboard: `kidsKeydown` maps `e.key` a s d f g h j k (not `rhythm.js keyFor`); Esc or Space stops all; ← → turn pages. On a focused button Enter's repeats are taken (`initKids`, on `#kids`), so a held Enter clicks once. `.kids :focus-visible` is a dark band and a white ring.
 - ● (`startTune`): grows the beat to 4 bars, books 3 beeps on the audio clock, then `playBeat({ from: t0, onPass })`; the recording stops as the beat comes round once (`onPass`), at the next ● tap, ⏹️, a tab change, or leaving. A key held during it lands on lift (`landNote`): `kids-logic.js pillAt` (nearest pill, no latency moved), length the pills held (1–16), `withTuneNote` (the first note of a new recording starts the tune again, after `keepOldTune` puts the beat with the tune it replaces in 🗂️ My beats: `kids-logic.js keptTune`, a fun name from `names.js beatName`).
 
 ### What Kids shares with the regular app
@@ -434,6 +434,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | Leaving Kids shows the beat maker again, so it holds the kid's squares, never an older copy to save over them | `kids-scratch-back.test.mjs` |
 | A Kids recording is kept as the kid's who was recording, named, pictured and colored among their sounds, even if the person changes before it is kept (`listen` → `keep(…, { pid })`); a tune recording lands in their beat (`tuneRec.pid`); nothing of theirs shows for the next kid | `kids-mic-person.test.mjs`, `kids-person-change.test.mjs` |
 | Nothing of the grown-up app sounds in Kids (the keys' ⏲️, a take playing back, the beat, the song, a loop), on the way in and at start-up; Kids' ⏹️ is the app's Stop all | `kids-quiet.test.mjs`, `kids-quiet-start.test.mjs` |
+| A held Enter on a Kids button clicks it once; a finger's tap and its click play a pad once | `kids-keyboard-repeat.test.mjs` |
 | Kids' square *i* is pill 2*i* of a 16-pill bar, in every bar | `kids.test.mjs` |
 | Kids' keys mean `instNotes` changes for the whole person | `kids.test.mjs` (🎹 instrument button) |
 | `kids-logic.js` stays importable in Node; it imports `sequencer.js`, so that module must stay importable too | every Kids unit test |

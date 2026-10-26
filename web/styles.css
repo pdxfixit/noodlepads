@@ -5244,6 +5244,10 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
    it read as part of the pad's picture (Ben, 2026-10-16). A white edge sets
    it apart from any pad's emoji. */
 .kids-pad:has(> .kids-hand) { position: relative; z-index: 2; }
+/* Kids' buttons focused from a keyboard or a switch: a dark band round the
+   button, then a white ring, so it shows on the board's color and on a pad's,
+   light or dark. */
+.kids :focus-visible { outline: 4px solid #fff; outline-offset: 4px; box-shadow: 0 0 0 4px #111; }
 .kids-hand {
   position: absolute;
   z-index: 3;

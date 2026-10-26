@@ -1090,6 +1090,12 @@ export function initKids(d) {
     keys: q('#kids-keys'), inst: q('#kids-inst'), rec: q('#kids-rec'), recFace: q('#kids-rec-face'),
   });
   for (const b of el.tabs) b.addEventListener('click', () => { boing(b); setTab(b.dataset.kidsTab); });
+  // Enter held on a button repeats its keydown, and each repeat clicks it
+  // again: a pad would play on and on, the mic toggle on and off. One press,
+  // one click: the repeats are taken.
+  el.root.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.repeat && e.target.closest?.('button')) e.preventDefault?.();
+  });
   el.stop.addEventListener('click', stopAll);
   el.skin.addEventListener('click', nextLook);
   showSkinButton();
