@@ -78,7 +78,7 @@ the cloud database show what they would do, or ask, before they do it.
 | Check the live cloud | `just deploy-checks` runs `just cloud-smoke` and `just cloud-e2e` (each makes and deletes its own test profile) |
 | Back up the cloud database | `just cloud-backup` (a `.sql` file in `~/.local/state/noodlepads/backups/`) |
 | Look in the cloud database | `just cloud-profiles`, `just cloud-stats`, `just cloud-sql "SELECT …"`, or any wrangler command with `just cloud-db …` |
-| Change the cloud database | `just cloud-migrate` (then `--yes`) before a deploy that needs it; `just cloud-prune` (then `--yes`); `just cloud-reset-pin <profile id>`; `just cloud-schema` for a new, empty database only |
+| Change the cloud database | `just cloud-migrate` (then `--yes`) before a deploy that needs it; `just cloud-prune` (then `--yes`); `just cloud-reset-pin "<fun name>" --to 1234` (no `--to` clears it); `just cloud-schema` for a new, empty database only |
 | Bring problem reports and metrics home | `python3 ~/src/telemetry/telemetry.py pull`: the telemetry runner (pdxfixit/telemetry) harvests them, and this copies its store to `~/.local/state/telemetry/telemetry.sqlite3` |
 | Problem reports | `just logs`, `--errors`, `--digest` read them from that copy |
 | Move the old Mac archives into the runner (once) | `just runner-export all LOGS METRICS OUT` (both in the one file to import), `just runner-export check FILE` (docs/how-to.md, "Retire the old Mac archives") |

@@ -124,10 +124,10 @@ cloud-smoke *args:
 cloud-e2e *args:
     @node tools/look.mjs cloud-e2e "$@"
 
-# Clear a profile's forgotten PIN (from an email to the PIN-reset address): shows the profile, asks, then runs it and checks
+# A forgotten PIN: just cloud-reset-pin "Captain Cranberries" --to 1234 (or the id; no --to clears it). Shows who, then --yes does it
 [positional-arguments]
-cloud-reset-pin id:
-    @python3 tools/cloud_admin.py reset-pin "$1"
+cloud-reset-pin who *args:
+    @python3 tools/cloud_admin.py reset-pin "$@"
 
 #   just cloud-backup                       ~/.local/state/noodlepads/backups/d1-<date>-<time>.sql
 #   just cloud-backup ~/Desktop/cloud.sql   anywhere else (a relative path is from where you run it)

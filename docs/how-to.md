@@ -86,7 +86,7 @@ From the main checkout:
 
 ## Problem reports, metrics and the cloud database
 
-Agents may read the live database without asking (`just cloud-sql`, `just cloud-profiles`). They never write to it, except the deploy checks and `just cloud-prune --smoke --yes`; every other write is Ben's.
+Agents may read the live database without asking (`just cloud-sql`, `just cloud-profiles`). They never write to it, except the deploy checks, `just cloud-prune --smoke --yes`, and a PIN reset Ben asks for (below); every other write is Ben's.
 
 | Job | Command | Notes |
 |---|---|---|
@@ -95,10 +95,21 @@ Agents may read the live database without asking (`just cloud-sql`, `just cloud-
 | Weekly digest | `just logs --digest [--file-new TODO.md] [--mark]` | The `noodlepads-logs` recurrent leg (`skills/noodlepads-logs/`) runs it weekly, filing new errors in TODO.md; `--mark` records the date in `~/.local/state/noodlepads/logs-digest.json`. |
 | Player metrics | `just cloud-stats [--days N]` | Run `telemetry.py pull` first (pdxfixit/telemetry). Reports per player from its store, `~/.local/state/telemetry/telemetry.sqlite3` (read only; the `noodlepads__` tables, and nothing else; ADR 0016): devices, places and activity. App-wide use (screens, controls, dialogs, errors, speed, play) is in `noodlepads_events__daily_events` (ADR 0026). Ask anything else with `sqlite3 ~/.local/state/telemetry/telemetry.sqlite3` (tables `noodlepads__activity`, `__devices`, `__players`, `__cf_*`; `__uses` is empty and `__visits` does not exist: they were dropped from D1 before any harvest, ADR 0027). |
 | Profiles | `just cloud-profiles`, `just cloud-prune [--days N] [--empty] [--yes]` | Prune is a dry run without `--yes`. |
-| A forgotten PIN | `just cloud-reset-pin <id>` | From an email to the PIN-reset address; it asks before it changes anything. |
+| A forgotten PIN | `just cloud-reset-pin "<fun name>" --to 1234` | See "Reset a forgotten PIN" below. |
 | Schema | `just cloud-migrate [--yes]`; `just cloud-schema` (a new, empty database only) | Ben runs migrate right before the deploy that needs it. A migration that drops a table D1 holds rows of is refused until the telemetry mirror holds at least as many (`just pull noodlepads` in ~/src/telemetry first); `--allow-drop TABLE` drops them anyway (it cannot be undone). |
 | Back up the database | `just cloud-backup [file]` | A whole-database `.sql` export (reads only), by default in `~/.local/state/noodlepads/backups/`; it refuses a path inside the repo. |
 | Anything else | `just cloud-sql "…"`, `just cloud-db …` | Ben's. |
+
+### Reset a forgotten PIN
+
+Ben says something like "reset Captain Cranberries' PIN to 1234". A grown-up emailed the `forgot` address with the fun name. Do it, no questions, from **Ben's Mac** (the main checkout or a worktree): the write goes through `just cloud-db`, whose Cloudflare login is in the Mac's Keychain. A cloud session has no login: say so, and ask Ben to run the same two commands in a terminal on his Mac.
+
+1. `just cloud-reset-pin "Captain Cranberries" --to 1234`: finds the profile by its fun name (any case; or give the `p-…` id) and shows it, changing nothing.
+   - "Close ones" (Ben said "Cranberry's"): pick the one meant, and run it again with its exact name or id.
+   - Two profiles with that name: it lists both with their ids, the last active first. Ask Ben which, unless he said.
+2. The same command with `--yes` on the end sets the PIN and checks it took: "✅ Captain Cranberries's PIN is 1234 now."
+
+Without `--to` it clears the PIN instead (each device then opens the profile with no PIN). Either way every device's key is deleted: each device asks for the new PIN once ("They have a new PIN"), and a device that remembered them (🔑) asks too. Tell Ben the new PIN works on the next open; nothing to deploy.
 
 ### Retire the old Mac archives (once, on Ben's Mac)
 
