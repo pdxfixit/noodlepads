@@ -206,7 +206,7 @@ function applyKids() {
   if (on === kidsShowing()) return;
   if (on) {
     if (state.editing) setEditing(false);
-    if (keysShow()) dj.leave();
+    if (keysShow()) { dj.leave(); dj.shown(false); }   // the keys' ⏲️ ticks only on screen
     seq.stop();
     song.stop();
     audio.stopAll();

@@ -193,7 +193,7 @@ While recording: `seq.lockChips(true)`, bars and time signature hide, ▶ Play i
 ### The click track and tap tempo
 
 - Two ⏲️ wishes exist: the keys' (`dj.js clickWanted`, `dj-click`) and Beats' (`sequencer.js clickWanted`, `beat-click`). `seq.setClick(on)` overrides Beats' while the keys record or play; `setClick(null)` hands it back.
-- With the beat stopped and the keys on screen, `dj.js tick` → `seq.metronome(clickWanted && onScreen)`: the sequencer's own `setInterval` ticks the click alone (`scheduleClicks`). `onScreen` comes from `dj.shown`, called by `app.js showView`.
+- With the beat stopped and the keys on screen, `dj.js tick` → `seq.metronome(clickWanted && onScreen)`: the sequencer's own `setInterval` ticks the click alone (`scheduleClicks`). `onScreen` comes from `dj.shown`, called by `app.js showView`, and with `false` as 🧸 Kids shows (`applyKids`).
 - Tap tempo (`dj.js clickTapped`): a third tap within `TAP_GAP_MAX` (1.5 s) of the last → `rhythm.js tapTempo(taps, groups[0], { common: COMMON_BPMS })` → `seq.setTempo`; with the beat stopped, `seq.clickAt(now + one beat)`. Not during the count-in.
 - ⏹️ Stop all (`app.js stopEverything`) calls both `seq.clickOff` and `dj.clickOff`, and `dj.stopReplay` (a take playing back).
 
@@ -265,7 +265,7 @@ Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, �
 
 `app.js applyKids` decides: Kids shows when `kidsVisit || (level === 'kids' && !grownUp)`. It runs on start, on `showPerson`, on `onSetting('level')`, from `enterKids` (🧸 `#kids-open`, or `[data-kids-open]` in the person menu), from Settings' 🧸 Kids (`onKids`), and from the right sum (`deps.grownUp`).
 
-- **In:** ends Edit sounds, `dj.leave()`, `seq.stop()`, `song.stop()`, `audio.stopAll()`, `dj.stopReplay()`, closes every open dialog, `body.kids`, `kids.js showKids(true)`, usage screen `'kids'`.
+- **In:** ends Edit sounds, `dj.leave()` and `dj.shown(false)` (the keys' ⏲️ stops ticking), `seq.stop()`, `song.stop()`, `audio.stopAll()`, `dj.stopReplay()`, closes every open dialog, `body.kids`, `kids.js showKids(true)`, usage screen `'kids'`.
 - **Out:** `showKids(false)` stops the tune, the beat, the recorder and held keys, and closes its sum (`closeSum('kids')`); then `showView` (the beat maker reads the kid's squares again) and `refitLines`.
 - `grownUp` (a grown-up let out a Kids-level person) and `kidsVisit` (a Regular or Advanced person visiting) last until reload. The level never changes by the sum (questions.md Q63).
 - A person change calls `refreshKids` (stops tune and beat, redraws).
@@ -427,6 +427,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | A take ends, kept, when the keys leave the screen or Kids shows (`dj.leave`) | `live-take-leave.test.mjs` |
 | ⏹️ Stop all and 🧸 Kids stop a take playing back, its hits still to come too | `take-stop-all.test.mjs` |
 | A change of person ends a take or a recording into the beat as the first person's; a beat Undo offered before does nothing for the next person | `keys-person-change.test.mjs` |
+| The keys' ⏲️ never ticks over 🧸 Kids; out of Kids it ticks again | `kids-click-off.test.mjs` |
 | A held key loops only on OS repeat past 350 ms; a press that stopped a loop never loops it again, held by key, mouse or finger; lifting a modifier forgets all holds | `keys-stop-hold.test.mjs` (repeats and the mouse; the modifier: no test found) |
 | Every remembered key (`dj-input`, `dj-size`, `dj-click`, `beat-keys`, `kids-tab`) starts the app safely | `startup-remembered.test.mjs` |
 | A take's `ring` is stored only when true, only on a hit | `overlap.test.mjs`, `rhythm.test.mjs` |
