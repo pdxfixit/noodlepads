@@ -80,6 +80,7 @@ Every change serves this. Why, and the north star it steers: [ADR 0022](docs/adr
 - **A block against one of Ben's rules goes to Ben**: asked at once while he is in the chat, else a question card batched up front. Blocked work waits on its branch; move to the next TODO item.
 - **Never a rollback:** a seat's finding on what is live is fixed forward, at once when the seat says it is urgent.
 - **Results go into the work** (code, tests, docs, decisions, ADRs). No council log. Each commit carries a `Council:` trailer naming the seats and their verdicts.
+- **A finding that would become a TODO line goes to Ben first**; only his yes adds it. Fixing it inside the change at hand needs no ask.
 
 ## Ship
 
@@ -160,7 +161,7 @@ Ben: *"Optimizing the user interface for a variety of screens is very important.
 ### Tooling
 
 - Improve the tooling in every session, not only when asked. If a step was slow, repeated or easy to get wrong, fix it in `justfile` or `tools/` in its own commit. Propose bigger fixes with a time estimate. Say what each fix saves.
-- `tools/` is stdlib Python or plain shell, except `look.mjs` and the two files it loads (Node, no packages; Ben, 2026-10-11). Do not add another Node tool or any npm package without asking.
+- `tools/` is stdlib Python or plain shell, except `look.mjs` and the two files it loads (Node, no packages; Ben, 2026-10-11). Do not add another Node tool or any npm package without asking. Node test helpers and reporters in `tests/` (such as `tests/unended-reporter.mjs`) are test code, not tools (Ben, 2026-10-26).
 - **Pay it forward.** Whatever cost you a search, a retry or a wrong turn, write down where the next agent will look first: this file, or the doc for that area.
 
 ## Working with Ben

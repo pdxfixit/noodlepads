@@ -71,7 +71,7 @@ Questions for Ben: one line each, only what the seat cannot decide
 
 ## Where the results go
 
-Into the work itself: the code, its tests, the docs, `docs/decisions.md` rows Ben approves, and an ADR's "Council" note where the decision is big enough for an ADR. There is no council log. Findings outside the change become lines in TODO.md ("Offered, not approved" when they need Ben's yes).
+Into the work itself: the code, its tests, the docs, `docs/decisions.md` rows Ben approves, and an ADR's "Council" note where the decision is big enough for an ADR. There is no council log. A finding that would become new work is put to Ben first, as a question in the chat (or a card when he is away); only a yes puts it in TODO.md. A finding fixed inside the change needs no ask. Otherwise the list only grows.
 
 Each commit says which seats reviewed it, in one trailer line above `Co-Authored-By`:
 
