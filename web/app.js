@@ -207,6 +207,7 @@ function applyKids() {
     seq.stop();
     song.stop();
     audio.stopAll();
+    dj.stopReplay();   // a 🎬 take playing back: its hits still to come
     for (const d of document.querySelectorAll('dialog[open]')) d.close();
   }
   document.body.classList.toggle('kids', on);
@@ -422,7 +423,7 @@ async function loadVersion() {
 // ── Events ─────────────────────────────────────────────────────────────
 
 // ⏹️ Stop all: every sound, the beat and the song, and both ⏲️ Click tracks off.
-function stopEverything() { audio.stopAll(); seq.stop(); song.stop(); seq.clickOff(); dj?.clickOff(); }
+function stopEverything() { audio.stopAll(); dj?.stopReplay(); seq.stop(); song.stop(); seq.clickOff(); dj?.clickOff(); }
 
 // Space is Stop all almost everywhere (Ben, 2026-10-12): not while typing,
 // and not on a focused button, link or the like, which Space presses for

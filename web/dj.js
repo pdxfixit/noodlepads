@@ -1696,5 +1696,5 @@ export function createDJ({ el, deps }) {
   showMode();
   // Recording a take, or playing one back: the update bar waits (update.js).
   const busy = () => recording() || !!replaying;
-  return { render, keydown, keyup, touching, level, flashClip, looping, escape, steps, renderGrid, showSetup, shown, leave, beatStopped, busy, setMode, recording, clickOff };
+  return { render, keydown, keyup, touching, level, flashClip, looping, escape, stopReplay, steps, renderGrid, showSetup, shown, leave, beatStopped, busy, setMode, recording, clickOff };
 }
