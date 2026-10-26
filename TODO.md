@@ -17,6 +17,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 ## Ben does
 
+- **Read the mission and make it yours** (2 min): `AGENTS.md` → Mission, drafted from your interview answers (2026-10-26). Reword anything that isn't how you'd say it; the council checks every change against it.
+
 - **Delete the old address's DNS record** (1 min): in Cloudflare, open the old address's domain → DNS and delete its `soundboard` record if it is still there (the Worker is gone and the name answers 530). The domain's apex stays. Also, if you like, delete the old address's leftover folder in `~/src/flarepress/` (only wrangler's local `.wrangler/` cache is in it).
 
 - **Check the PIN-reset address reaches you** (2 min): noodlepads.com mail is Google Workspace (MX checked 2026-10-11). Add `pin.reset` as an alias or group in the Admin console unless a catch-all already covers it, then send it a test. The app shows it for PIN resets.
@@ -88,9 +90,6 @@ Other work:
 
 - [ ] Move `skills/noodlepads-logs` to `~/src/skills/noodlepads-logs` and link it (the skills workspace convention); the recurrent routine's leg is now named `noodlepads-logs`, and its state file `~/.local/state/skills/noodlepads-logs.state.json`
 
-
-- **An agent council for every future change** (Ben, 2026-10-26). Decided: 23 seats, technical ones included; they can block a feature or a deploy, in service of the mission and their own area; a block against one of Ben's rules becomes a question card he decides; a block needs the mission or a red line plus evidence, anything less is a required change; a seat never forces a rollback, only an immediate fix forward; questions are batched up front so work runs on; scaled by change type (full council on a new screen or control at mockup stage; stored format or cloud: architect, privacy, parent; a fix: the seats it touches); they advise throughout, and the first round reviews the app as it is now, comprehensively; seats that keep agreeing merge only after Ben approves; results land in the code, the docs and ADRs, with no council-only log. Drift guards: blind brief, an independent first round, evidence used but returned only as a pointer (more on request), a mandatory biggest risk, a model matched to the seat's weight, a tripwire, spot checks. Then build: `.claude/agents/` seats, a Council section in AGENTS.md, decisions.md rows, an ADR, and the first round.
-- **A mission statement for the app** (Ben, 2026-10-26): interview answered; a draft is with Ben for his wording. It goes in AGENTS.md and an ADR that widens the north star (ADR 0022) to amateurs. The council serves it.
 
 ### Offered, not approved
 
