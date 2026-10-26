@@ -8,18 +8,6 @@ When Ben answers, record the answer in [decisions.md](decisions.md) (and an ADR 
 
 From the council's first round (2026-10-26, `docs/council.md`), asked in the chat one at a time; a card is deleted when its answer is recorded. Cards marked ⛔ are blocks against one of your rules: the seat stopped the work, and only you can uphold or overrule it.
 
-### Q60. The PIN-reset address is in plain text in the public first commit. Rotate it?
-
-**Recommend:** rotate to a new alias (minutes): change `web/contact.js`, retire the old alias.
-The security seat found it in commit 2140c42 (help.js, cloud-ui.js, README). Harvesters read git history. The other way is rewriting history, which breaks every clone.
-**Answer:**
-
-### Q61. ⛔ A deploy goes out even when D1 lacks a migration. Add a read-only check?
-
-**Recommend:** yes: the deploy refuses to upload while any `worker/migrations/*.sql` is missing from D1, using the read-only token it already has.
-Your rule (2026-10-16): no migration guard. The reliability seat asks for one, because a missing table makes every cloud error say "resting". Docs still describe a `just deploy-migrated` that no longer exists; I fix those either way.
-**Answer:**
-
 ### Q62. Pin the flarepress action to a commit instead of the rolling `v1` tag?
 
 **Recommend:** pin it, and add `just flarepress-bump` to move it on purpose.
