@@ -716,6 +716,8 @@ async function makeShare(request, env, id, now, seen) {
     songs: Array.isArray(b.songs) ? b.songs : [],
   };
   if (bundle.clips.length > 100 || bundle.beats.length > 100 || bundle.songs.length > 20) throw new Refuse(413, 'bundle');
+  // A sound share with no sound would play and remix nothing.
+  if (body.kind === 'sound' && !bundle.clips.length) throw new Refuse(400, 'empty');
   const sounds = new Set();
   for (const c of bundle.clips) {
     if (!c || typeof c !== 'object') throw new Refuse(400, 'sound');

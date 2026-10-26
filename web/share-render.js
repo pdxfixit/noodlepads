@@ -23,7 +23,9 @@ export function beatPreview(seconds) {
 const offline = (seconds, rate = PREVIEW_RATE, channels = 1) => new OfflineAudioContext(channels, Math.max(1, Math.ceil(seconds * rate)), rate);
 
 // deps: {seq (the beat maker: beatPlan, prepareBeats, soundHit), clipById,
-// beatById, songById}. Returns a WAV Blob, or null when there is nothing to hear.
+// beatById, songById, leave?}. `leave`: clip ids never to sound in it (a share
+// leaves out sounds too long for the cloud, cloud.js shareItem): their rows are
+// taken out of every beat. Returns a WAV Blob, or null when there is nothing to hear.
 export async function renderPreview(kind, id, deps) {
   const out = await renderAudio(kind, id, deps);
   return out ? encodeWav(out) : null;
@@ -50,10 +52,23 @@ export async function renderTake(take, { clipById, loadSound = (clip) => audio.l
   return normalize(await ctx.startRendering());
 }
 
+// `deps` with the sounds in `deps.leave` gone: no clip by those ids, and no
+// beat row playing one.
+function leaving(deps) {
+  const leave = deps.leave;
+  if (!leave?.size) return deps;
+  const beatById = (bid) => {
+    const beat = deps.beatById?.(bid);
+    return beat && Array.isArray(beat.rows) ? { ...beat, rows: beat.rows.filter((r) => !leave.has(r?.clipId)) } : beat;
+  };
+  return { ...deps, beatById, clipById: (cid) => (leave.has(cid) ? null : deps.clipById?.(cid)) };
+}
+
 // The same as an AudioBuffer, at `deps.rate` (PREVIEW_RATE when not given),
 // for playing it here: 🗂️ See all plays a beat, song or take in its list.
 // `takeById` finds a take. Null when there is nothing to hear.
-export async function renderAudio(kind, id, deps) {
+export async function renderAudio(kind, id, given) {
+  const deps = leaving(given);
   const rate = deps.rate ?? PREVIEW_RATE;
   if (kind === 'take') {
     const take = deps.takeById?.(id);

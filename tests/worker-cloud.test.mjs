@@ -591,6 +591,14 @@ async function sound(c, key, id, n, bytes = [7, 7]) {
   return data.id;
 }
 
+test('a sound share with no sound is refused: it would play and remix nothing', async () => {
+  const c = cloud();
+  const key = await made(c, 'p-a');
+  const r = await c.call('POST', 'profiles/p-a/shares', { key, body: { kind: 'sound', title: 'Hush', bundle: { clips: [], beats: [], songs: [] } } });
+  assert.deepEqual([r.status, r.data.error], [400, 'empty']);
+  assert.equal(c.env.DB.rows('SELECT COUNT(*) AS n FROM shares')[0].n, 0);
+});
+
 test('a share code: anyone who has it sees the snapshot, read-only, with no key, PIN or Origin', async () => {
   const c = cloud();
   const a = await made(c, 'p-a', { pin: '1234' });

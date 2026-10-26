@@ -12,7 +12,7 @@ import { audio } from './audio.js';
 import { cleanBackup } from './backup.js';
 import { followPerson, cleanPrefs } from './settings.js';
 import { createCloudApi, CloudError, cloudTrouble } from './cloud-api.js';
-import { syncProfile, shareBundle, shareDoc, uploadAudio, hasMade, syncNote, CLOUD_KINDS } from './cloud-sync.js';
+import { syncProfile, shareBundle, shareDoc, uploadAudio, hasMade, syncNote, CLOUD_KINDS, CLOUD_MAX_SOUND } from './cloud-sync.js';
 import { funName, isFunName } from './names.js';
 import { isHiddenBeat, isScratchSong } from './scratch.js';
 import { people } from './board.js';
@@ -26,7 +26,7 @@ import { track } from './telemetry.js';
 // which imports the People screen, which imports this.
 let storeLoaded = async () => {};
 let whatIsHere = () => ({ peopleIds: new Set(), clipIds: new Set() });
-let renderShare = async () => null;   // (kind, id) -> a Blob of it as it plays, or null
+let renderShare = async () => null;   // (kind, id, {leave}) -> a Blob of it as it plays, or null
 
 // Every call says the app's version, a screen-width bucket and touch (ADR 0016).
 const deviceMeta = () => appMeta(state.version, globalThis.screen?.width, (globalThis.navigator?.maxTouchPoints ?? 0) > 0);
@@ -39,6 +39,7 @@ export const REMEMBER_DAYS = 90;       // how long 🔑 Remember on this device 
 const REMEMBER_MS = REMEMBER_DAYS * 24 * 60 * 60 * 1000;
 const SHARED_KEY = 'shared';           // localStorage: the codes this device opened (Shared with me)
 export const MAX_SHARED = 100;
+export const SHARE_TOO_LONG = `That sound is too long to share (the most is ${CLOUD_MAX_SOUND / 1048576} MB).`;
 
 // ── is the cloud there? ──
 
@@ -665,16 +666,42 @@ export async function shareItem(personId, kind, itemId) {
   const link = linkOf(personId);
   const key = keyOf(personId);
   const bundle = { ...made.bundle, clips: made.bundle.clips.map((c) => ({ ...c, sound: link.sounds?.[c.id]?.sound })).filter((c) => c.sound) };
+  // A sound that stays on this device (too long for the cloud, or empty)
+  // can't be shared: never a code with nothing in it. Sharing several, or a
+  // beat or song that plays one, keeps what fits and names what was left out
+  // (Ben, 2026-10-26).
+  const kept = new Set(bundle.clips.map((c) => c.id));
+  const leftClips = made.bundle.clips.filter((c) => !kept.has(c.id));
+  const tooLong = (c) => state.userClips.some((u) => u.id === c.id && u.blob?.size > CLOUD_MAX_SOUND);
+  if (made.kind === 'sound' && !bundle.clips.length) {
+    throw new Error(leftClips.some(tooLong) ? SHARE_TOO_LONG : "That sound has nothing in it to share.");
+  }
   let preview = null;
   try {
-    const blob = await renderShare(kind, itemId);
+    // The public preview holds only what the code shares: a sound left out
+    // (a kid's long recording) is never in it.
+    const leave = new Set(leftClips.map((c) => c.id));
+    const ids = Array.isArray(itemId) ? itemId.filter((x) => !leave.has(x)) : itemId;
+    const blob = await renderShare(kind, ids, { leave });
     if (blob) preview = (await uploadAudio(api, personId, key, blob, 'audio/wav', sha256)).sound;
   } catch (err) {
     console.error('Recording the share to play failed:', err);   // shared without one: it can still be copied
   }
   const { code } = await api.share(personId, key, { kind: made.kind, title: made.title, bundle, preview });
   logEvent('cloud', { shared: kind });
-  return { code, title: made.title };
+  return { code, title: made.title, left: leftOutNote(leftClips.map((c) => ({ name: c.label || 'Sound', tooLong: tooLong(c) }))) };
+}
+
+// The line under a share code naming the sounds it left out, or ''.
+// `left`: [{name, tooLong}].
+export function leftOutNote(left) {
+  const names = (list) => list.map((l) => l.name).join(', ');
+  const long = left.filter((l) => l.tooLong);
+  const empty = left.filter((l) => !l.tooLong);
+  return [
+    long.length ? `Left out, too long for the cloud: ${names(long)}.` : '',
+    empty.length ? `Left out, nothing in it: ${names(empty)}.` : '',
+  ].filter(Boolean).join(' ');
 }
 
 // A share code as people write it: ABCD-2345.

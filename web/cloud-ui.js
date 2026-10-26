@@ -584,11 +584,11 @@ async function onShareClick(e) {
     el.shareNote.textContent = 'Making a share code…';
     el.shareMade.hidden = true;
     try {
-      const { code, title } = await shareItem(shareFrom, shareKind, t.dataset.item);
+      const { code, title, left } = await shareItem(shareFrom, shareKind, t.dataset.item);
       el.shareCode.textContent = showCode(code);
       el.shareTitle.textContent = title;
       el.shareMade.hidden = false;
-      el.shareNote.textContent = '';
+      el.shareNote.textContent = left ?? '';
       announce(`Share code for ${title}: ${showCode(code).split('').join(' ')}`);
       loadMine();
     } catch (err) {
@@ -603,12 +603,12 @@ export async function shareSounds(personId, ids) {
   openShareDialog(personId);
   el.shareNote.textContent = 'Making a share code…';
   try {
-    const { code, title } = await shareItem(personId, 'sound', ids);
+    const { code, title, left } = await shareItem(personId, 'sound', ids);
     if (shareFrom !== personId) return;
     el.shareCode.textContent = showCode(code);
     el.shareTitle.textContent = title;
     el.shareMade.hidden = false;
-    el.shareNote.textContent = '';
+    el.shareNote.textContent = left ?? '';
     announce(`Share code for ${title}: ${showCode(code).split('').join(' ')}`);
     loadMine();
   } catch (err) {

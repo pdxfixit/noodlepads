@@ -1163,8 +1163,9 @@ async function start() {
   initCloud({
     storeLoaded,
     whatIsHere,
-    renderShare: (kind, id) => renderPreview(kind, id, {
+    renderShare: (kind, id, { leave } = {}) => renderPreview(kind, id, {
       seq,
+      leave,
       clipById: (cid) => anyClip(cid),
       beatById: (bid) => state.savedBeats.find((b) => b.id === bid),
       songById: (sid) => state.songbook.find((s) => s.id === sid),
