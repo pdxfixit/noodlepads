@@ -103,13 +103,15 @@ export async function noteEvent(env, request, seen, now) {
   }, seen.kind);
 }
 
-// Rows past KEEP_MS (a device's past DEVICE_KEEP_MS) go, as reports past
-// their expiry do: nothing scheduled.
+// Rows past KEEP_MS (a device's past DEVICE_KEEP_MS) go: nothing scheduled.
+// So do problem reports past their expiry (reports.js deletes them too, when
+// the next one arrives), so one goes after 14 days even if no report comes.
 export function sweep(env, now) {
   const before = now - KEEP_MS;
   return [
     env.DB.prepare('DELETE FROM activity WHERE at < ?').bind(before),
     env.DB.prepare('DELETE FROM devices WHERE last_seen < ?').bind(now - DEVICE_KEEP_MS),
+    env.DB.prepare('DELETE FROM reports WHERE expires < ?').bind(now),
   ];
 }
 

@@ -97,6 +97,22 @@ test('"They are deleted from the cloud after 14 days": the report table keeps 14
   assert.equal(TTL_MS, 14 * 24 * 60 * 60 * 1000);
 });
 
+test('an expired report goes even when no new report comes: any cloud write sweeps it', async () => {
+  const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('') } };
+  const now = Date.now();
+  const report = (key, expires) => env.DB.db.prepare('INSERT INTO reports (key, device, app, errors, body, created, expires) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(key, 'K7Q4-M2XD', 'v1.0.1-abc1234', 0, '{}', expires - TTL_MS, expires);
+  report('old', now - 1000);
+  report('new', now + 1000);
+  // Every device has switched reports off; a kid's tablet makes a profile (no X-Noodle-App: usage off too).
+  const res = await worker.fetch(new Request('https://noodlepads.com/api/profiles', {
+    method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8' }),
+  }), env);
+  assert.equal(res.status, 201);
+  assert.deepEqual(env.DB.rows('SELECT key FROM reports').map((r) => r.key), ['new']);
+});
+
 // Feedback (Ben, 2026-10-19: privacy changes "all approved", kept "90d?"):
 // what the line says, tied to the dialog, the gate and the Worker.
 test('"Feedback is sent only when a grown-up answers a sum and taps Send": always gated, only the text, no name or IP', async () => {
