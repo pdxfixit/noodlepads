@@ -135,6 +135,11 @@ export function withNewPresets(order, bundled) {
   return ids;
 }
 
+// A preset edit that changes nothing: only its id, and maybe the edit stamp
+// of its last save (`changed`, merge3.js STAMP). Never stored or kept: one
+// would keep a backup's real edit of that preset out (merge.js keepMine).
+export const isEmptyOverride = (o) => !Object.keys(o ?? {}).some((k) => k !== 'id' && k !== 'changed');
+
 // What to store for an edited boards.json clip: only what differs from the
 // file, so a later change to it (a real clip replacing a placeholder, say) is
 // not masked by old values. `wanted` is {label, emoji, color, voice, amount}

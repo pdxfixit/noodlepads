@@ -336,8 +336,7 @@ test('overrides: only boards.json clips, typed fields only', async () => {
     ],
   });
   assert.deepEqual(out.overrides[0], { id: 'pip-airhorn', label: 'Honk', emoji: '📯', color: 'red', voice: 'monster', amount: 2.5, hidden: true });
-  assert.deepEqual(out.overrides[1], { id: 'pip-airhorn' });
-  assert.equal(out.overrides.length, 2);
+  assert.equal(out.overrides.length, 1, 'one with nothing left changes nothing: no edit (model.js isEmptyOverride)');
   assert.equal(out.skipped, 3);
 });
 
@@ -603,7 +602,7 @@ test('a sound\'s note (root) comes back on sounds and kit edits; anything but a 
   assert.equal(out.clips[0].root, 67);
   for (const c of out.clips.slice(1)) assert.ok(!('root' in c), JSON.stringify(c.id));
   assert.equal(out.overrides[0].root, 0);
-  const junk = await read({ overrides: [{ id: 'pip-airhorn', root: 1e6 }] });
+  const junk = await read({ overrides: [{ id: 'pip-airhorn', root: 1e6, label: 'Honk' }] });
   assert.ok(!('root' in junk.overrides[0]));
 });
 

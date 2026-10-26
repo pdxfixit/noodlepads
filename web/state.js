@@ -4,12 +4,12 @@
 // told it will not survive a reload.
 
 import { db, STORE_NAMES, SCHEMA } from './store.js';
-import { personEditRecord, adoptPeople, personIdsIn, personColor } from './model.js';
+import { personEditRecord, adoptPeople, personIdsIn, personColor, isEmptyOverride } from './model.js';
 import { isCloudId, reIdDoc } from './reid.js';
 import { newId } from './util.js';
 import { showNotice } from './ui.js';
 import { logEvent } from './log.js';
-import { stampEdit, STAMP } from './merge3.js';
+import { stampEdit } from './merge3.js';
 
 export const state = {
   manifest: null,
@@ -72,7 +72,8 @@ export async function readStorage() {
   const [clips, overrides, orders, patterns, beats, peopleEdits, settings, decks, takes, songs, songbook, cloud, prefs, layouts, voices, touchLayouts] = await Promise.all(
     STORE_NAMES.filter((s) => s !== 'bases').map((s) => db.all(s)));
   state.userClips = clips;
-  state.overrides = new Map(overrides.map((o) => [o.id, o]));
+  // One that changes nothing (an older copy stored `{id, changed}`) is left out.
+  state.overrides = new Map(overrides.filter((o) => !isEmptyOverride(o)).map((o) => [o.id, o]));
   state.orders = new Map(orders.map((o) => [o.personId, o]));
   state.patterns = new Map(patterns.map((p) => [p.personId, p]));
   state.savedBeats = beats;
@@ -285,7 +286,7 @@ export async function persist(store, value) {
 // the last save) is no change: hidden then shown again is nothing.
 // Resolves as persist() does.
 export async function setOverride(next) {
-  if (Object.keys(next).some((k) => k !== 'id' && k !== STAMP)) {
+  if (!isEmptyOverride(next)) {
     state.overrides.set(next.id, next);
     return persist('overrides', next);
   }

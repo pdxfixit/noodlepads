@@ -14,7 +14,10 @@ import { withHidden, overrideWithEmoji } from '../web/model.js';
 const { text: notice } = stubBanner();
 const idb = fakeIndexedDB();
 globalThis.indexedDB = idb;
-const { loadStorage, setOverride, state } = await import('../web/state.js');
+const { loadStorage, readStorage, setOverride, state } = await import('../web/state.js');
+const { db } = await import('../web/store.js');
+const { mergeLoaded } = await import('../web/merge.js');
+const { cleanBackup } = await import('../web/backup.js');
 await loadStorage({ waitMs: 1000 });
 const stored = () => idb.rows(DB_NAME, 'overrides');
 
@@ -43,4 +46,21 @@ test('putting a preset back that the browser won\'t save: the words say the edit
   await setOverride(withHidden(state.overrides.get(id), id, false));
   assert.match(notice.textContent, /^This browser wouldn't save that change .*After a reload it may be back as it was\.$/);
   assert.doesNotMatch(notice.textContent, /then it's gone/);
+});
+
+// Empty edits older copies already stored stay out of memory, so a backup's
+// real edit of that preset comes in; a backup's own empty ones are dropped.
+test('an empty edit already stored is left out when read, and a backup\'s real edit of that preset then comes in', async () => {
+  const id = 'p-y-kick';
+  await db.put('overrides', { id, changed: 5 });
+  await db.put('overrides', { id: 'p-y-snare' });
+  await readStorage();
+  assert.equal(state.overrides.has(id), false);
+  assert.equal(state.overrides.has('p-y-snare'), false);
+  const { put } = await mergeLoaded({ overrides: [...state.overrides.values()] }, { overrides: [{ id, label: 'Boom' }] });
+  assert.deepEqual(put.overrides, [{ id, label: 'Boom' }]);
+  const out = cleanBackup({ app: 'noodlepads', format: '1.1', overrides: [{ id: 'pip-kick', changed: 5 }, { id: 'pip-snare', label: 'Crack' }] },
+    () => null, { peopleIds: new Set(['pip']), clipIds: new Set(['pip-kick', 'pip-snare']), colorOk: () => true });
+  assert.deepEqual(out.overrides.map((o) => o.id), ['pip-snare'], 'a backup\'s empty edit is dropped');
+  assert.equal(out.skipped, 0, 'and not counted as left out');
 });

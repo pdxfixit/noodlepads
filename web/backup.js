@@ -32,7 +32,7 @@ import { cleanTouchLayout, MAX_TOUCH_LAYOUTS } from './touch.js';
 import { cleanMyVoice } from './voice-knobs.js';
 import { cleanSong, SONG_ID } from './song.js';
 import { cleanSynth } from './synth.js';
-import { adoptPeople, nextPersonColor, freePicture, PERSON_ID } from './model.js';
+import { adoptPeople, nextPersonColor, freePicture, PERSON_ID, isEmptyOverride } from './model.js';
 import { isListedEmoji } from './emoji-check.js';
 import { funName, isFunName, MAX_PERSON, cutName } from './names.js';
 import { dropNameSounds } from './starters.js';
@@ -402,7 +402,7 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
     fade: cleanFade(o.fade) ?? undefined,
     root: rootNote(o.root),
     hidden: o.hidden === true ? true : undefined,
-  }) : 'overrides:gone'));
+  }) : 'overrides:gone')).filter((o) => !isEmptyOverride(o));   // one that changes nothing is no edit
 
   // A pad order, and the person's groups of their own sounds (groups.js).
   const orders = clean('orders', (o) => (knownPerson(o?.personId) && Array.isArray(o.ids)

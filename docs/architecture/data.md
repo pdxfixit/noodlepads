@@ -398,7 +398,7 @@ Nothing found is changed or deleted.
 | 4 | Every per-person store is in `reid.js PERSON_STORES`, or a renamed person loses it | none (check 2 below) |
 | 5 | Ids from `newId` stay `[a-z0-9-]`; backups refuse others | `tests/backup.test.mjs` (id tests) |
 | 6 | A 1.x backup from 1.0 on must load in every newer copy (ADR 0011) | `tests/backup.test.mjs` ("any 1.x loads") |
-| 7 | An override holding only its id (and its `changed` stamp) is deleted, never stored | `tests/model.test.mjs` (`overrideFor`), `tests/override-empty.test.mjs` |
+| 7 | An override holding only its id (and its `changed` stamp, `model.js isEmptyOverride`) is deleted, never stored; one an older copy stored is left out by `readStorage` and by `cleanBackup` | `tests/model.test.mjs` (`overrideFor`), `tests/override-empty.test.mjs` |
 | 8 | A boards.json person's record holds only differences; added people never lose their record to `personEditRecord` | `tests/model.test.mjs` (`personEditRecord`) |
 | 9 | `readStorage` replaces memory. Anything held only in memory (a change `persist` failed to save, a solo person made while storage waited) is gone after a backup load, a cloud sync or a late open. | `tests/storage-wait.test.mjs` (late open) |
 | 10 | `deletePerson` must remove every record naming the person. One left behind (a preset edit once did) brings them back through `adoptStoredPeople`. Its removals are one transaction, so a refused delete keeps all of them. | `tests/delete-shown.test.mjs`, `tests/delete-cloud.test.mjs`, `tests/delete-leftover.test.mjs` |
