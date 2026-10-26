@@ -8,12 +8,6 @@ When Ben answers, record the answer in [decisions.md](decisions.md) (and an ADR 
 
 From the council's first round (2026-10-26, `docs/council.md`), asked in the chat one at a time; a card is deleted when its answer is recorded. Cards marked ⛔ are blocks against one of your rules: the seat stopped the work, and only you can uphold or overrule it.
 
-### Q66. Swing for everyone, and on the eighths?
-
-**Recommend:** yes: Swing moves to Regular, swings eighth notes (most grooves' hats), and Lo-fi and Boom bap carry it.
-Now Swing is Advanced only, swings only sixteenths, so it does nothing audible on most grooves, and a beat saved with Shuffle plays straight for a Regular person. The producer and amateur seats both raised it.
-**Answer:**
-
 ### Q67. 🧸 Kids' first impressions: startle sounds, and an empty first beat?
 
 **Recommend:** move 💥 siren, alarm, airhorn, 😈 and buzzer to the last Kids page; start the first Kids beat with a simple kick and snare lit.
