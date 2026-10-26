@@ -226,6 +226,13 @@ test('a sound uploads in pieces of the right size, plays back whole, and is neve
   assert.deepEqual(back.data, audio);
   const again = await c.call('POST', 'profiles/p-a/sounds', { key, body: { sha256: sha(1), bytes, mime: 'audio/webm' } });
   assert.deepEqual(again.data, { id, need: [] }, 'the same audio is already there');
+  // A stored piece is never written again (the security seat, 2026-10-26: a
+  // key rewriting one forever spent D1's daily writes for every family).
+  const writes = c.env.DB.queries.length;
+  const rewrite = await c.call('PUT', `sounds/${id}/0`, { key, raw: new Uint8Array(CHUNK_BYTES) });
+  assert.deepEqual([rewrite.status, rewrite.data.error, rewrite.data.need], [409, 'piece', []], 'a stored piece is refused');
+  assert.ok(!c.env.DB.queries.slice(writes).some((q) => /INSERT|UPDATE/.test(q)), 'and nothing is written');
+  assert.deepEqual((await c.call('GET', `sounds/${id}`, { origin: null })).data, audio, 'the audio is as it was');
   const other = await made(c, 'p-b');
   assert.equal((await c.call('PUT', `sounds/${id}/0`, { key: other, raw: audio.slice(0, CHUNK_BYTES) })).status, 404, "only its owner adds pieces");
   assert.equal((await c.call('POST', 'profiles/p-a/sounds', { key, body: { sha256: sha(2), bytes: MAX_SOUND_BYTES + 1, mime: 'audio/wav' } })).status, 413);

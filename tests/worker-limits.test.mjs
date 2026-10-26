@@ -31,12 +31,12 @@ function fakeLimiter(limit) {
 function cloud(limit = 2) {
   const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') } };
   for (const name of Object.values(LIMITERS)) env[name] = fakeLimiter(limit);
-  const call = async (method, path, { body, key } = {}) => {
+  const call = async (method, path, { body, key, raw } = {}) => {
     const headers = { Origin: ORIGIN };
     if (key) headers.Authorization = `Bearer ${key}`;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     const res = await worker.fetch(new Request(`https://noodlepads.com/api/${path}`, {
-      method, headers, body: body === undefined ? undefined : JSON.stringify(body),
+      method, headers, body: raw ?? (body === undefined ? undefined : JSON.stringify(body)),
     }), env);
     return { status: res.status, data: await res.json() };
   };
@@ -72,6 +72,17 @@ test('a push, a sound start and a share are limited per profile, by its id, and 
   assert.equal((await c.call('POST', 'profiles/p-two/records', { key: other, body: { put: [] } })).status, 200);
   // Reading is never limited: a big restore pulls as much as it needs.
   assert.equal((await c.call('GET', 'profiles/p-one/records', { key })).status, 200);
+});
+
+test('a sound\'s pieces count on the sound limiter, by the profile, as its start does', async () => {
+  const c = cloud(2);
+  const key = await made(c, 'p-one');
+  const start = await c.call('POST', 'profiles/p-one/sounds', { key, body: { sha256: sha(1), bytes: 10, mime: 'audio/wav' } });
+  assert.equal(start.status, 201);
+  const put = () => c.call('PUT', `sounds/${start.data.id}/0`, { key, raw: new Uint8Array(10) });
+  assert.equal((await put()).status, 200, 'the second call in the window');
+  assert.deepEqual([(await put()).status, (await put()).data.error], [429, 'slow'], 'the third waits a minute');
+  assert.deepEqual([...new Set(c.env.SOUND_LIMITER.keys)], ['p-one']);
 });
 
 test('a profile\'s keys share one count, and a made-up key is refused before it counts against the family', async () => {

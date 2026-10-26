@@ -632,18 +632,28 @@ async function startSound(request, env, id, now) {
   return json(201, { id: soundId, need: Array.from({ length: chunks }, (_, n) => n) });
 }
 
+// One piece of a sound its start asked for. A piece already stored is
+// refused (409 'piece', with what is still needed), never written again: a
+// stored sound never changes (its id is made for its audio), and a key that
+// rewrote pieces forever would spend D1's daily writes for every family.
+// Counted on the sound limiter, as its start is.
 async function putPiece(request, env, soundId, n, now) {
   if (request.headers.get('Origin') !== ORIGIN) throw new Refuse(403, 'origin');
   const who = await needKey(request, env, null, now);
+  await slowDown(env, LIMITERS.sounds, who);
   const s = await env.DB.prepare('SELECT profile_id, bytes, chunks, got, created FROM sounds WHERE id = ?').bind(soundId).first();
   if (!s || s.profile_id !== who) throw new Refuse(404, 'sound');
   // Given up (PENDING_MS): the device starts it again.
   if (s.got < s.chunks && s.created < now - PENDING_MS) throw new Refuse(404, 'sound');
   if (!Number.isInteger(n) || n < 0 || n >= s.chunks) throw new Refuse(400, 'piece');
+  if (await env.DB.prepare('SELECT 1 AS x FROM sound_chunks WHERE sound_id = ? AND n = ?').bind(soundId, n).first()) {
+    throw new Refuse(409, 'piece', { need: await need(env, soundId, s.chunks) });
+  }
   const data = await readBytes(request, CHUNK_BYTES);
   if (data === null || data.byteLength !== pieceSize(s.bytes, n)) throw new Refuse(400, 'piece size');
+  // Two of the same piece sent at once: the second writes nothing.
   await env.DB.batch([
-    env.DB.prepare('INSERT OR REPLACE INTO sound_chunks (sound_id, n, data) VALUES (?, ?, ?)').bind(soundId, n, data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)),
+    env.DB.prepare('INSERT INTO sound_chunks (sound_id, n, data) VALUES (?, ?, ?) ON CONFLICT (sound_id, n) DO NOTHING').bind(soundId, n, data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)),
     env.DB.prepare('UPDATE sounds SET got = (SELECT COUNT(*) FROM sound_chunks WHERE sound_id = ?) WHERE id = ?').bind(soundId, soundId),
   ]);
   return json(200, { need: await need(env, soundId, s.chunks) });

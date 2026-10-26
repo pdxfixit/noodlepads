@@ -63,8 +63,9 @@ name = "PUSH_LIMITER"
 namespace_id = "41511"
 simple = { limit = 60, period = 60 }
 
-# A sound's start: 600 a minute a profile (a restore asks once per sound, one at
-# a time, and starts again from the first when it is cut off).
+# A sound's start or one of its pieces: 600 a minute a profile (a restore asks
+# once per sound, one at a time, then sends the pieces it needs, and starts
+# again from the first when it is cut off).
 [[ratelimits]]
 name = "SOUND_LIMITER"
 namespace_id = "41512"
