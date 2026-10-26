@@ -31,6 +31,8 @@ import { fingerTaps, isFinger } from './finger.js';
 import { soundsOf, defaultTouch, touchOrder, touchSounds } from './touch.js';
 import { drawBands, createTouchEditor } from './dj-touch.js';
 import { createPillSelect } from './pill-select.js';
+import { moreMenu } from './overflow.js';
+import { follower, keepInView } from './follow.js';
 
 const STOPS = tempoStops();   // the click track slider's positions (see sequencer.js)
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
@@ -470,6 +472,7 @@ export function createDJ({ el, deps }) {
   let beatLine = null;   // the banner with ↩️ Undo for a change to the beat (ui.js showBanner)
   let levelUndo = null;  // {at, before}: a row's loudness before the drags that line undoes
   let gridSpeakers = null;   // the grid's speakers and their loudness popover (renderGrid draws them)
+  let gridMenus = null;      // the rows' menus, each opened by its emoji (overflow.js)
   let replay = [];       // timers of a take being played back
   let replaying = null;  // the id of the take playing back, or null
   const replayed = new Set();   // the sounds a playback started, to stop them
@@ -987,18 +990,20 @@ export function createDJ({ el, deps }) {
     const twins = twinRows(beat.rows.map((r) => deps.clipById(r.clipId)?.emoji || '🔊'));
     const touch = touching();
     const order = touch ? touchOrder(beat.rows, touchNow()) : keyboardOrder(beat.rows, keys);
+    drawRuler(groups, total, bar, starts);
     el.grid.replaceChildren(...order.map((at) => beat.rows[at]).map((r) => {
       const line = document.createElement('div');
       line.className = 'dj-grid-row beat-row';
       line.dataset.row = beat.rows.indexOf(r);
       const clip = deps.clipById(r.clipId);
       const at = Number(line.dataset.row);
-      // The emoji, then 🔔 · 🔊 · 🧹 · ✕ after the pills, at the right, shared with
-      // Beats (beat-row.js). 🔔 turns the row's Overlap on or off. ✕ and 🧹 are as small
-      // as the emoji (Ben, 2026-10-11 and 2026-10-12): a first tap asks (in
-      // red), a second removes the row or clears its pills, with Undo. While
-      // recording they keep their place, unseen. The emoji opens the picture
-      // chooser for this sound; if two rows share an emoji, its key's letter
+      // As on Beats (Ben, 2026-10-26: "scrolling rows for consistent views as
+      // much as possible no matter the size"): the row's head stays at the
+      // left, emoji · 🔊 (and its name with room), its pills on one line after
+      // it, scrolling sideways with the others. The emoji opens the row's menu
+      // (beat-row.js, overflow.js): 🖼️ Change picture, 🔔 Overlap, 🧹 Clear
+      // and ✕ Remove, the last two asking first (in red), with Undo. While
+      // recording the menu waits. If two rows share an emoji, its key's letter
       // (or its name's first) tells them apart.
       const e = clip?.emoji || '🔊';
       const code = twins.has(at) && !touch && Object.entries(keys).find(([, id]) => id === r.clipId)?.[0];
@@ -1016,13 +1021,22 @@ export function createDJ({ el, deps }) {
         title: clip?.label ?? '',
         pickable: !!clip,
         data: { remove: { removeRow: at }, clear: { clearRow: at }, pick: { picture: r.clipId ?? '' } },
+        menu: { key: at, label: `${name}: menu. Picture, ${r.melody ? '' : 'Overlap, '}Clear, Remove`, change: ['🖼️', 'Change picture'] },
         labels: {
           remove: `Remove the ${name} row`, removeAsk: `Tap again to remove the ${name} row`,
           clear: `Clear the ${name} row`, clearAsk: `Tap again to clear the ${name} row`,
           pick: `Change the picture for ${clip?.label ?? 'this row'}`,
         },
       });
-      line.append(pick);
+      const head = document.createElement('div');
+      head.className = 'dj-grid-head';
+      const label = document.createElement('span');
+      label.className = 'dj-grid-name';
+      label.textContent = clip?.label ?? '';
+      label.setAttribute('aria-hidden', 'true');   // the emoji's label says it
+      label.addEventListener('click', () => pick.click());
+      head.append(pick, label, tools);
+      line.append(head);
       const pills = document.createElement('span');
       pills.className = 'dj-grid-pills';
       pills.setAttribute('aria-hidden', 'true');   // a picture of the beat; the pills are on Beats for screen readers
@@ -1037,6 +1051,8 @@ export function createDJ({ el, deps }) {
         if (r.steps[i]) p.className = r.accents?.[i] ? 'on loud' : 'on';
         else if (held.has(i)) p.className = 'held';
         if (starts.has(i % bar)) p.classList.add('beat-start');
+        if (i % bar === 0) p.classList.add('one');   // the "1" of each bar, as on Beats
+        if (i > 0 && i % bar === 0) p.classList.add('bar-start');
         pills.append(p);
       }
       // Room to grow: a dashed empty bar after the last, while it still can.
@@ -1045,15 +1061,33 @@ export function createDJ({ el, deps }) {
         more.className = 'dj-grid-grow';
         pills.append(more);
       }
-      // Its tools at the end: the speaker (tap mutes, hold or drag sets its
-      // loudness), 🧹 and ✕.
-      line.append(pills, tools);
+      line.append(pills);
       return line;
     }));
     gridSpeakers?.refresh();
+    gridMenus?.refresh();   // an open row menu shows its row as it is now
     gridPick?.decorate();   // a mouse's pick (pill-select.js)
     // New pills: the playhead goes back on at once, not a pill later.
     if (deps.seq.playing()) steps(lastShown);
+  }
+  // The bar numbers over the rows (outside the grid, whose children are its
+  // rows), laid out as a row's pills are: each bar's number over its "1".
+  function drawRuler(groups, total, bar, starts) {
+    const ruler = el.grid.parentElement?.querySelector('.dj-grid-ruler');
+    if (!ruler) return;
+    const head = document.createElement('div');
+    head.className = 'dj-grid-head';
+    const ticks = document.createElement('span');
+    ticks.className = 'dj-grid-pills';
+    for (let i = 0; i < total; i++) {
+      const t = document.createElement('i');
+      t.className = i % bar === 0 ? 'one' : '';
+      if (starts.has(i % bar)) t.classList.add('beat-start');
+      if (i > 0 && i % bar === 0) t.classList.add('bar-start');
+      t.textContent = i % bar === 0 ? String(i / bar + 1) : starts.has(i % bar) ? '·' : '';
+      ticks.append(t);
+    }
+    ruler.replaceChildren(head, ticks);
   }
   // A row's faintness and mixer state: muted or silenced by another row's
   // Solo draws faintest (and dimmed), a soloed row's emoji gets a lit ring.
@@ -1075,6 +1109,7 @@ export function createDJ({ el, deps }) {
   // A level change here has Undo on the done bar, as removing a row does:
   // one step for a whole drag, and for a run of changes to one row.
   let levelBefore = null;   // {at, before}: the row's level as this gesture started
+  gridMenus = moreMenu(el.grid);
   gridSpeakers = speakerControls(el.grid, {
     state: (key) => deps.seq.levelState(Number(key)),
     toggle: (key) => { deps.seq.toggleMute(Number(key)); showGridLevel(Number(key)); },
@@ -1096,20 +1131,35 @@ export function createDJ({ el, deps }) {
       levelUndo = { at: i, before: kept };
     },
   });
+  // While the beat plays the rows turn a page as the playhead leaves the view,
+  // until the kid scrolls them (follow.js, as Beats' rows).
+  const gridBox = el.grid.parentElement?.classList.contains('dj-grid-scroll') ? el.grid.parentElement : null;
+  const gridFollow = follower(gridBox);
+  let gridPlaying = false;
   function steps(shown) {
     lastShown = [...shown];
+    const on = shown.some((s) => s >= 0);
+    if (on && !gridPlaying) gridFollow.start();
+    if (!on) gridFollow.stop();
+    gridPlaying = on;
     if (el.grid.hidden) return;
     // Only the pills that change: the one each row leaves and the one it
     // reaches (16 rows of 4 bars are over a thousand pills).
+    let lit = null;   // the first row's pill being heard, for the page turn
     for (const line of [...el.grid.children]) {
       const i = Number(line.dataset.row);   // lines are in keyboard order, not the beat's
       const p = line.querySelector('.dj-grid-pills')?.children[shown[i]] ?? null;
+      lit ??= p;
       const was = litPill.get(line);
       if (was === p) continue;
       was?.classList.remove('now');
       p?.classList.add('now');
       litPill.set(line, p);
     }
+    // Once the pill being heard leaves the view, its beat turns to the left edge.
+    let from = lit;
+    while (from && !from.classList.contains('beat-start') && from.previousElementSibling) from = from.previousElementSibling;
+    keepInView(gridFollow, gridBox, lit, el.grid.querySelector('.dj-grid-head')?.offsetWidth ?? 0, from);
   }
 
   // The grid takes taps too (mouse or touch), as in Beats: a tap switches a
@@ -1178,6 +1228,7 @@ export function createDJ({ el, deps }) {
     if (b) choosePicture(b.dataset.pick);
   });
   el.grid.addEventListener('click', (e) => {
+    if (e.target.closest('[data-more]')) return;   // the emoji: its menu opens (overflow.js)
     const pic = e.target.closest('[data-picture]');
     if (pic) {
       const clip = deps.clipById(pic.dataset.picture);

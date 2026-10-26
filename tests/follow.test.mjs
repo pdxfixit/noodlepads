@@ -12,6 +12,8 @@ test('pageTurn: nothing while the playhead shows; else it goes to the left edge,
   assert.equal(at(360), 360 - 112 - 6, 'off the right edge: a page turns');
   assert.equal(at(100, 500), 500 + 100 - 112 - 6, 'under the heads (after a loop round): back');
   assert.equal(at(-400, 300), 0, 'never before the start');
+  const turn = pageTurn({ left: 360, right: 392, view: 375, head: 112, scroll: 0, start: 264 });
+  assert.equal(turn, 264 - 112 - 6, 'a pill off the edge turns the page to its beat\'s start, though that start still shows');
 });
 
 // A stand-in box: a scroll event follows every change of scrollLeft, a

@@ -1510,8 +1510,9 @@ test('the click only ticks when its toggle is on: recording an empty beat with �
 test('Beats with ⌨️ Keys: tapping a row\'s emoji picks a new picture for that sound everywhere; one already taken asks first', async () => {
   keysOn(page);
   await newBuilderBeatWithRow(page);   // a new beat is empty: one key recorded gives it a row
-  const emoji = () => $('#dj-grid').children[0].querySelector('[data-picture]');
-  const before = emoji().textContent;
+  const emoji = () => $('#dj-grid').children[0].querySelector('[data-picture]');   // 🖼️ Change picture, in the emoji's menu
+  const shown = () => $('#dj-grid').children[0].querySelector('.row-emoji');
+  const before = shown().textContent;
   emoji().dispatch('click');
   assert.equal($('#pictures').open, true);
   assert.match($('#pictures-title').textContent, /^Pick a picture for /);
@@ -1525,7 +1526,7 @@ test('Beats with ⌨️ Keys: tapping a row\'s emoji picks a new picture for tha
   pick('🦄').dispatch('click');
   await page.settle();
   assert.equal($('#pictures').open, false);
-  assert.match(emoji().textContent, /🦄/);
+  assert.match(shown().textContent, /🦄/);
   // Back as it was.
   emoji().dispatch('click');
   $('#pictures-grid').querySelector(`[data-pick="${[...before][0] === '🔊' ? '🦶' : before.split(' ')[0]}"]`)?.dispatch('click');
@@ -1570,8 +1571,9 @@ test('Beats with ⌨️ Keys: a row\'s 🧹 beside ✕ asks first, then clears i
   const sweep = () => line().querySelector('[data-clear-row]');
   const lit = () => line().querySelectorAll('[data-step]').map((p, i) => (p.classList.contains('on') ? i : -1)).filter((i) => i >= 0);
   const kids = line().children.map((c) => c.className.split(' ')[0]);
-  assert.deepEqual(kids, ['row-emoji', 'dj-grid-pills', 'row-tools'], 'emoji · pills · tools');
-  assert.deepEqual(line().querySelector('.row-tools').children.map((c) => c.className.split(' ')[0]), ['row-ring', 'speaker', 'row-clear', 'row-x'], '🔔 · 🔊 · 🧹 · ✕ at the right');
+  assert.deepEqual(kids, ['dj-grid-head', 'dj-grid-pills'], 'its head at the left, then its pills, as on Beats');
+  assert.deepEqual(line().querySelector('.dj-grid-head').children.map((c) => c.className.split(' ')[0]), ['row-emoji', 'dj-grid-name', 'row-tools']);
+  assert.deepEqual(line().querySelector('.row-tools').children.map((c) => c.className.split(' ')[0]), ['speaker', 'row-change', 'row-ring', 'row-clear', 'row-x'], '🔊 shows; the rest are the emoji\'s menu');
   // 🔔 on a compact row turns that row's Overlap on and off, as on Beats.
   const at = Number(line().dataset.row);
   const ring = () => state.patterns.get(state.personId).rows[at].ring;
@@ -1622,7 +1624,7 @@ test('Beats with ⌨️ Keys: a key played makes its sound\'s row at once, witho
   keysOn(page);
   $('#dj-beatbar').querySelector('[data-beat-new]').dispatch('click');
   const lines = () => $('#dj-grid').children;
-  const shown = () => lines().map((l) => l.querySelector('[data-picture]').title);
+  const shown = () => lines().map((l) => l.querySelector('.row-emoji').title);
   const soundOn = (code) => $('#dj-keys').querySelector(`[data-code="${code}"]`).getAttribute('aria-label').replace(/^.*?: /, '');
   const [q, a, z] = [soundOn('KeyQ'), soundOn('KeyA'), soundOn('KeyZ')];
   assert.equal(a, 'Kick');
@@ -1651,10 +1653,10 @@ test('Beats with ⌨️ Keys: a key played makes its sound\'s row at once, witho
   // The saved beat keeps its own order (what 🥁 Beats shows): as played.
   // (🆕 New opened the scratch, which is no `patterns` record.)
   const stored = () => state.savedBeats.find((b) => b.id.startsWith('beat-scratch-') && b.personId === state.personId).rows.map((r) => anyLabel(r.clipId));
-  const anyLabel = (id) => lines().find((l) => l.querySelector('[data-picture]').dataset.picture === id)?.querySelector('[data-picture]').title;
+  const anyLabel = (id) => lines().find((l) => l.querySelector('[data-picture]').dataset.picture === id)?.querySelector('.row-emoji').title;
   assert.deepEqual(stored(), [z, a, q]);
   // A tap on a pill, the speaker and 🧹 act on the row they are drawn on.
-  const line = (name) => lines().find((l) => l.querySelector('[data-picture]').title === name);
+  const line = (name) => lines().find((l) => l.querySelector('.row-emoji').title === name);
   line(a).querySelectorAll('[data-step]')[4].dispatch('click');
   assert.ok(line(a).querySelectorAll('[data-step]')[4].classList.contains('on'));
   assert.equal(line(z).querySelectorAll('[data-step].on').length + line(q).querySelectorAll('[data-step].on').length, 0, 'only Kick\'s pill');
@@ -1869,7 +1871,7 @@ test('Beats with ⌨️ Keys: the tempo waits out the count-in, then changes whi
   ctx.currentTime = 903.65 + 4 * (60 / 140 / 4);
   page.key('a', { code: 'KeyA' });
   $('#dj-record').dispatch('click');
-  const kick = $('#dj-grid').children.find((line) => line.querySelector('[data-picture]')?.title === 'Kick');
+  const kick = $('#dj-grid').children.find((line) => line.querySelector('.row-emoji')?.title === 'Kick');
   const lit = kick.querySelector('.dj-grid-pills').children.map((p, i) => (p.classList.contains('on') ? i : -1)).filter((i) => i >= 0);
   assert.deepEqual(lit, [12]);
   keysOff(page);
@@ -1940,7 +1942,7 @@ test('Beats with ⌨️ Keys: the beat grows while you keep playing into its las
   const pillsOf = () => $('#dj-grid').querySelector('.dj-grid-pills').children.filter((p) => p.tagName.toLowerCase() === 'i').length;
   const ghost = () => !!$('#dj-grid').querySelector('.dj-grid-grow');
   const kickLit = () => {
-    const kick = $('#dj-grid').children.find((line) => line.querySelector('[data-picture]')?.title === 'Kick');
+    const kick = $('#dj-grid').children.find((line) => line.querySelector('.row-emoji')?.title === 'Kick');
     return kick ? kick.querySelector('.dj-grid-pills').children.map((p, i) => (p.classList.contains('on') ? i : -1)).filter((i) => i >= 0) : [];
   };
   ctx.currentTime = 1100;

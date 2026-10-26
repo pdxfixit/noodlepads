@@ -2539,33 +2539,74 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
    (recording, a take) and 🎬 Takes after ⏲️ in Freestyle. */
 .dj-bar .dj-status:empty { display: none; }   /* takes no room until there is something to say */
 .dj-bar #dj-takes-open { flex: none; margin-left: auto; }
-/* The beat, small and still, while recording into it: pills fill as hits land. */
-.dj-grid { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 6px; margin: 0 0 12px; padding: 8px; border-radius: 12px; background: rgb(0 0 0 / 0.25); }
+/* ⌨️ Keys on: the same rows as Beats (Ben, 2026-10-26: "scrolling rows for
+   consistent views as much as possible no matter the size"): each row's head
+   stuck at the left (emoji · 🔊, and the name with room), its pills on one
+   line, 32 × 44 px and spaced as Beats' are, every row scrolling sideways
+   together under a ruler of bar numbers. Pills fill as hits land. */
+.dj-grid-scroll {
+  --seq-head-w: 112px;
+  margin: 0 -12px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-padding-left: var(--seq-head-w);
+  scrollbar-width: thin;
+}
+@container panel (min-width: 600px) {
+  .dj-grid-scroll { --seq-head-w: 220px; }
+}
+/* A new beat has no rows yet: no ruler over nothing (#dj-no-rows). */
+.dj-grid-scroll:has(> .dj-grid:is([hidden], :empty)) { display: none; }
+.dj-grid { display: grid; width: max-content; min-width: 100%; }
 .dj-grid[hidden] { display: none; }
-/* A new beat has no rows yet: no empty dark band under its line (#dj-no-rows). */
-.dj-grid:empty { display: none; }
 .dj-grid-note { margin: 4px 6px; color: rgb(255 255 255 / 0.8); font-weight: 700; }
-/* A row takes the grid's columns (subgrid), as on Beats: the emoji column is
-   as wide as the widest emoji shown, just the emoji unless two rows share
-   one ("🥁 S"), and every row's pills start at the same place. */
-.dj-grid-row { --c: var(--led); grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; }
-/* Beat Builder's speaker: as small as the ✕ and emoji beside it, so the grid keeps its height. */
-.dj-grid-row .speaker.row-vol { padding-bottom: 3px; }
-.dj-grid-row .speaker.row-vol::before { left: 4px; right: 4px; bottom: 2px; height: 2px; border-radius: 1px; }
-.dj-grid-pills { display: flex; gap: 2px; }
-.dj-grid-pills i { cursor: pointer; flex: 1 1 0; min-width: 2px; height: 14px; border-radius: 3px; background: rgb(255 255 255 / 0.13); }
-/* Four bars (up to 80 pills) on a phone: thinner gaps and pills, so the row
-   fits between its emoji and its 🔊 🧹 ✕ instead of pushing the page wide. */
-.dj-grid-pills:has(> i:nth-child(41)) { gap: 1px; }
-.dj-grid-pills:has(> i:nth-child(41)) i { min-width: 1px; border-radius: 1px; }
-.dj-grid-pills i.beat-start { background: rgb(255 255 255 / 0.22); }
-.dj-grid-pills i.on { background: var(--c); opacity: calc(0.35 + 0.65 * var(--vol, 1)); }
-.dj-grid-pills i.loud { box-shadow: inset 0 0 0 2px #fff; }
-.dj-grid-pills i.now { outline: 2px solid #fff; outline-offset: 0; }
-/* Beat Builder can still grow (recording, first pass): a dashed empty bar
-   after the last. Dropped on the narrowest phones, where pills are 2 px. */
-.dj-grid-grow { flex: 0 0 1.6rem; height: 14px; margin-left: 4px; border: 2px dashed rgb(255 255 255 / 0.45); border-radius: 4px; box-sizing: border-box; }
-@media (max-width: 359px) { .dj-grid-grow { display: none; } }
+.dj-grid-row, .dj-grid-ruler { --c: var(--led); display: flex; align-items: center; width: max-content; min-width: 100%; }
+.dj-grid-row + .dj-grid-row { border-top: 2px solid rgb(255 255 255 / 0.3); }
+.dj-grid-head {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  flex: none;
+  align-self: stretch;
+  box-sizing: border-box;
+  width: var(--seq-head-w);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 4px 8px 4px 12px;
+  background: var(--bed);
+  box-shadow: 8px 0 8px -8px rgb(0 0 0 / 0.6);
+}
+.dj-grid-head > .row-emoji { flex: none; min-width: 44px; min-height: 44px; padding: 0 4px; font-size: 1.75rem; text-align: center; }
+.dj-grid-head > .row-emoji[aria-expanded="true"] { border-radius: 10px; background: rgb(255 255 255 / 0.14); }
+.dj-grid-head > .row-tools { margin-left: auto; flex: none; }
+.dj-grid-head [data-more-word] { display: none; }   /* in the row's menu only */
+.dj-grid-name { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 800; color: rgb(255 255 255 / 0.85); cursor: pointer; }
+@container panel (max-width: 599px) {
+  .dj-grid-name { display: none; }
+}
+/* The pills: Beats' sizes and gaps, without its beat boxes. 15 px more
+   before each beat, 23 before each bar (a dashed line there). */
+.dj-grid-pills { flex: none; display: flex; gap: 5px; padding: 6px 12px 6px 11px; }
+.dj-grid-pills i { position: relative; flex: none; width: 32px; height: 44px; border-radius: 999px; background: rgb(255 255 255 / 0.13); cursor: pointer; }
+.dj-grid-pills i.beat-start:not(:first-child) { margin-left: 15px; }
+.dj-grid-pills i.bar-start { margin-left: 23px; }
+.dj-grid-pills i.bar-start::before { content: ''; position: absolute; left: -16px; top: -6px; bottom: -6px; border-left: 2px dashed rgb(255 255 255 / 0.15); }
+.dj-grid-row .dj-grid-pills i::after { content: ''; position: absolute; inset: -6px -2.5px; }   /* the gaps take a pill's taps too */
+.dj-grid-pills i.beat-start { background: rgb(255 255 255 / 0.19); }
+.dj-grid-pills i.one { background: rgb(255 255 255 / 0.26) radial-gradient(circle, rgb(255 255 255 / 0.75) 3px, transparent 3.5px) center / 100% 100% no-repeat; }
+.dj-grid-pills i.on { background: var(--c); box-shadow: 0 3px 0 color-mix(in srgb, var(--c) 55%, black); opacity: calc(0.35 + 0.65 * var(--vol, 1)); }
+.dj-grid-pills i.loud { box-shadow: inset 0 0 0 4px rgb(255 255 255 / 0.9), 0 3px 0 color-mix(in srgb, var(--c) 55%, black); }
+.dj-grid-pills i.now { outline: 2px solid rgb(255 255 255 / 0.7); outline-offset: 1px; }
+.dj-grid-pills i.on.now { background: #fff; }
+/* The ruler: each bar's number over its "1", a dot over each beat. */
+.dj-grid-ruler .dj-grid-pills { padding-block: 8px 2px; }
+.dj-grid-ruler .dj-grid-pills i { height: auto; background: none; font: 800 0.8rem/1 var(--font-display); font-style: normal; color: rgb(255 255 255 / 0.55); text-align: center; cursor: default; }
+.dj-grid-ruler .dj-grid-pills i.one { color: #fff; }
+/* While recording, the beat can still grow (first pass): a dashed empty pill after the last. */
+.dj-grid-grow { flex: none; width: 32px; height: 44px; margin-left: 23px; border: 2px dashed rgb(255 255 255 / 0.45); border-radius: 999px; box-sizing: border-box; }
 /* The DJ bar: Record (Stop while recording), what is happening, Takes. */
 .dj-bar .dj-status { flex: 1 1 8em; }
 .dj-rec {
@@ -2999,11 +3040,7 @@ dialog#help :focus-visible { outline-color: var(--board); }
    sheet's layer rows (🔈 then ✕). Asked, ✕ and 🧹 go red and read ✕? and 🧹?. */
 .row-tools { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 /* Each is an .icon-btn (above): 🔔 lit while Overlap is on, 🔊 lit while
-   muted, 🧹 faded with nothing to clear. With ⌨️ Keys on the compact rows
-   keep them as small as the emoji (Ben's call over the 44 px rule): the
-   same squares, scaled down. */
-.dj-grid-row .icon-btn { min-width: 26px; height: 26px; padding: 0 2px; border-width: 1.5px; border-radius: 7px; font-size: 0.8rem; }
-.dj-grid-row .row-tools { gap: 3px; }
+   muted, 🧹 faded with nothing to clear. */
 /* The emoji sits right next to its pills (Ben, 2026-10-12): its column is only as wide as the widest emoji. */
 .row-emoji { padding: 0; border: 0; background: transparent; color: inherit; font: 800 0.95rem/1 var(--font-ui); text-align: right; white-space: nowrap; cursor: pointer; }
 .row-emoji:disabled { cursor: default; }

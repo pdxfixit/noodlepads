@@ -268,7 +268,8 @@ test('the sound sheet: … then "rocket" picks 🚀, which shows pressed in the 
 test('Beats with ⌨️ Keys: a picture from … that another sound has asks first, like the short list; a free one is used at once', async () => {
   keysOn(page);
   await newBuilderBeatWithRow(page);   // a new beat is empty: one key recorded gives it a row
-  const emoji = () => $('#dj-grid').children[0].querySelector('[data-picture]');
+  const emoji = () => $('#dj-grid').children[0].querySelector('[data-picture]');   // 🖼️ Change picture, in the emoji's menu
+  const shown = () => $('#dj-grid').children[0].querySelector('.row-emoji');
   emoji().dispatch('click');
   assert.equal($('#pictures').open, true);
   // 🥁 is the kit Snare's picture.
@@ -286,7 +287,7 @@ test('Beats with ⌨️ Keys: a picture from … that another sound has asks fir
   anyButton(panel, '🦥').dispatch('click');
   await page.settle();
   assert.equal($('#pictures').open, false);
-  assert.match(emoji().textContent, /🦥/);
+  assert.match(shown().textContent, /🦥/);
   // Reopened: the short list, with 🦥 at its end, pressed, before ….
   emoji().dispatch('click');
   const grid = $('#pictures-grid');

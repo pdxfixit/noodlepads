@@ -39,7 +39,7 @@ test('the CSS: one 44 px outlined square; on is the yellow fill; asking is red; 
   assert.match(rule('.icon-btn.armed'), /background: #B3261E;/, 'asking first: red');
   for (const old of ['.row-ring[aria-pressed="true"]', '.row-ring', '.row-x, .row-clear', '.speaker:hover', '.speaker.muted'])
     assert.equal(rule(old), '', `${old} no longer draws its own look`);
-  assert.match(rule('.dj-grid-row .icon-btn'), /height: 26px;/, 'the compact rows: the same squares, scaled down');
+  assert.equal(rule('.dj-grid-row .icon-btn'), '', 'with ⌨️ Keys on too, the full 44 px squares (Ben, 2026-10-26)');
 });
 
 test('the speaker draws its loudness as a bar along its bottom, not a ring', () => {

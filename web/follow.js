@@ -7,10 +7,11 @@
 // Where to scroll for a playhead running from `left` to `right` (px from the
 // box's left edge, as it shows now) in a box `view` px wide whose first
 // `head` px are covered by stuck heads: null while it is in sight, else the
-// new scrollLeft (at least 0), `margin` px of the page before it.
-export function pageTurn({ left, right, view, head, scroll, margin = 6 }) {
+// new scrollLeft (at least 0) that puts `start` (the start of its beat, at or
+// before `left`) `margin` px after the heads.
+export function pageTurn({ left, right, view, head, scroll, start = left, margin = 6 }) {
   if (left >= head && right <= view) return null;
-  const to = Math.max(0, Math.round(scroll + left - head - margin));
+  const to = Math.max(0, Math.round(scroll + start - head - margin));
   return Math.abs(to - scroll) < 1 ? null : to;
 }
 
@@ -37,9 +38,11 @@ export function follower(box) {
   };
 }
 
-// Keeps `target`'s left edge in sight in `box`, beside `head` px of stuck heads.
-export function keepInView(follow, box, target, head) {
+// Keeps `target` (the pill being heard) in sight in `box`, beside `head` px
+// of stuck heads; a page turn puts `from` (its beat's first pill) at the left.
+export function keepInView(follow, box, target, head, from = target) {
   if (!follow.on || !box?.clientWidth || !target) return;
   const b = box.getBoundingClientRect(), t = target.getBoundingClientRect();
-  follow.to(pageTurn({ left: t.left - b.left, right: t.right - b.left, view: b.width || box.clientWidth, head, scroll: box.scrollLeft }));
+  const start = (from ?? target).getBoundingClientRect().left - b.left;
+  follow.to(pageTurn({ left: t.left - b.left, right: t.right - b.left, view: b.width || box.clientWidth, head, scroll: box.scrollLeft, start }));
 }

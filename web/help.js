@@ -155,7 +155,7 @@ export const HELP = [
       { pic: [pills('x...x...'), word('┊ ┊')], text: 'Keep playing into the last bar and the beat grows: 1 → 2 → 4 bars, each new bar a copy to play over (the dashed bar shows there is room). Rest for a bar and it goes round instead. ↩️ Undo puts it back.' },
       { pic: [word('Shift + key')], text: 'While recording: a hit one pill earlier, for when you were a bit late.' },
       { pic: [tool('💃 Grooves'), tool('↩️ My beat')], text: 'With ⌨️ Keys on, a groove loads into your scratch beat, stopped, behind you. ▶ Play plays it round while you play the keys. ● Record adds your hits on top; 💾 Keep saves it, named after the groove. ↩️ My beat takes the groove back out: the beat you had open comes back.' },
-      { pic: [word('🦶'), pills('.x.L'), word('🔊 🧹 ✕')], text: 'With ⌨️ Keys on, the rows work the same: tap a pill on or off, hold it for a loud hit, and with a mouse pick and drag them; ✕, 🧹 and the speaker as above. A full beat makes room by reusing an empty row. Tap a row\'s emoji to pick a new picture for that sound: its pad, its key and its rows all change. A picture another sound has asks first.' },
+      { pic: [word('🦶 🔊'), pills('.x.L')], text: 'With ⌨️ Keys on, the rows look and work the same: emoji and speaker at the left, pills scrolling sideways and following the beat, tap a pill on or off, hold it for a loud hit, and with a mouse pick and drag them. A full beat makes room by reusing an empty row. The emoji’s menu has 🖼️ Change picture (its pad, key and rows all change; a picture another sound has asks first), 🔔, 🧹 and ✕.' },
     ],
   },
   {

@@ -1363,13 +1363,8 @@ export function createSequencer(deps) {
   function keepInSight() {
     const pill = litPills.find(Boolean);
     if (!pill) return;
-    const beat = pill.closest('.seq-beat') ?? pill;
-    const b = rowBox?.getBoundingClientRect(), p = pill.getBoundingClientRect();
-    // Turn when the pill leaves the view; turn to its beat's start.
-    if (!b || (p.left >= b.left + headWidth() && p.right <= b.right)) return;
-    keepInView(rowFollow, rowBox, beat, headWidth());
+    keepInView(rowFollow, rowBox, pill, el.rows.querySelector('.seq-head')?.offsetWidth ?? 0, pill.closest('.seq-beat') ?? pill);
   }
-  const headWidth = () => el.rows.querySelector('.seq-head')?.offsetWidth ?? 0;
 
   // The playhead: a bar down through every row at the step being played.
   // When the rows are in step and each fits on one line, it is one bar from

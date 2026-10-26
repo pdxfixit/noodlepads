@@ -29,16 +29,14 @@ test('Beats draws its rows with beat-row.js, ⌨️ Keys off and on', () => {
   }
 });
 
-test('with ⌨️ Keys on, the emoji column is as wide as the widest emoji shown: rows are a subgrid, no fixed width', () => {
+test('with ⌨️ Keys on, a row is Beats\' row: its head stuck at the left, its pills 32 px on one line, scrolling sideways', () => {
   const css = read('styles.css');
-  for (const [parent, row] of [['.dj-grid', '.dj-grid-row']]) {
-    const cols = css.match(new RegExp(`^\\${parent} \\{[^}]*grid-template-columns: ([^;]+);`, 'm'))?.[1];
-    assert.ok(cols, `${parent} has its columns`);
-    const emojiCol = cols.split(/ (?![^(]*\))/).at(-3);   // emoji · pills · tools: the emoji is third from the end
-    assert.equal(emojiCol, 'auto', `${parent}: the emoji column sizes to its widest emoji`);
-    const rule = css.match(new RegExp(`^\\${row} \\{[^}]*\\}`, 'm'))?.[0] ?? '';
-    assert.match(rule, /grid-template-columns: subgrid/, `${row} shares its parent's columns, so pills line up`);
-  }
+  const rule = (sel) => css.match(new RegExp(`^${sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\{([^}]*)\\}`, 'm'))?.[1] ?? '';
+  assert.match(rule('.dj-grid-scroll'), /overflow-x: auto/);
+  assert.match(rule('.dj-grid-head'), /position: sticky/);
+  assert.match(rule('.dj-grid-pills i'), /width: 32px/);
+  assert.match(rule('.dj-grid-pills i'), /height: 44px/);
+  assert.doesNotMatch(rule('.dj-grid-row'), /subgrid/, 'the old compact grid is gone');
   assert.doesNotMatch(css, /2\.6rem minmax/, 'the old fixed emoji column is gone');
 });
 
