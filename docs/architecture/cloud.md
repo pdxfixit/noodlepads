@@ -70,7 +70,7 @@ Shape (as written by `cloud.js saveLink`):
 | `key` | the device key; stored only when the profile has no PIN, or this device remembers the PIN (`keepsKey`). Any other PIN profile's key lives in `cloud.js sessionKeys` for this page's life |
 | `rev` | the profile `rev` this device has caught up to |
 | `sent` | `{"<kind>:<id>": hash}`: each record as the cloud has it (`cloud-sync.js hashOf`) |
-| `sounds` | `{<clip id>: {sha256, sound}}`: the audio's hash and its cloud sound id |
+| `sounds` | `{<clip id>: {sha256, sound, print?}}`: the cloud's audio for the clip (its hash and sound id), and `print` (`<blob size>:<changed stamp>`) of the device's blob last hashed equal to it, so an unchanged clip is not hashed again (`cloud-sync.js hashAudio`) |
 | `pin` | the profile has a PIN |
 | `check` | `{salt, hash}`: PBKDF2 of the PIN, so the device can check it with no network |
 | `newPin` | the profile got a PIN this device never had typed; until typed, the person can't open, and 🤷 I don't know the PIN deletes them here |
@@ -209,6 +209,8 @@ Three things send only from noodlepads.com, each checked on its own: `log-send.j
 
 ### Merge (`decideRecord` → `merge3.js resolve`/`merge3`)
 
+Before each pull and each push, `hashAudio` hashes the audio of every clip whose `print` changed: a made sound whose sliders moved keeps its id and gets new audio (`sheet.js saveSheet`). merge3 compares records without audio, so for a clip on both sides `audioDecides` then lets the audio hashes overrule: new audio on one side wins it the audio (a `take` of the cloud's fields keeps this device's audio, as a `merged`), new audio on both keeps both sounds (`keepBoth`).
+
 | Action | Meaning | Stored by |
 |---|---|---|
 | `same` | both sides agree | nothing |
@@ -225,8 +227,8 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 
 ### Push (`cloud-sync.js pushAll`)
 
-1. Clips over `CLOUD_MAX_SOUND` (25 MB) with no cloud sound stay home (`report.tooBig`).
-2. Audio first: `uploadAudio` → `api.startSound({sha256, bytes, mime})` → `{id, need}` → `api.putPiece` for each needed piece (`pieces`). `link.sounds[clip] = {sha256, sound}`.
+1. Clips over `CLOUD_MAX_SOUND` (25 MB) whose audio the cloud lacks stay home (`report.tooBig`).
+2. Audio first, for each clip with no cloud sound or with audio changed here (`hashAudio`): `uploadAudio` → `api.startSound({sha256, bytes, mime})` → `{id, need}` → `api.putPiece` for each needed piece (`pieces`). `link.sounds[clip] = {sha256, sound, print}`. The Worker lets the clip's old audio go when the push names the new one.
 3. `planPush(local, sent)`: put what hashes differently, delete what is in `sent` but gone. A clip still on the device is never a delete.
 4. Slices of `PER_PUSH` (200): `api.push(id, key, put, del, link.rev)`. A clip body is the record minus `blob`, plus `sound`, `sha256`, `bytes`.
 5. The Worker writes only records with `rev <= since`; the rest come back in `stale`. Landed records update `sent` and the base. `link.rev` moves to the new rev only when `res.was === link.rev` (nobody else pushed in between). Bases and link are saved after each slice.
@@ -261,7 +263,7 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 | `profiles` | `id` | `makeProfile`, `changeProfile`, `checkSecret`, `touch`, push (rev) | list, open, pull, every keyed route | until deleted or pruned |
 | `keys` | `hash` (SHA-256 of the key) | `newKey`, `openProfile` (old sessions), `forgetKey`, `changeProfile` (new PIN), `deleteProfile` | `keyProfile` | session keys a week |
 | `records` | `(profile_id, kind, id)` | push (tombstones `deleted = 1`) | pull, push (orphan sounds), unshare | tombstones forever |
-| `sounds` | `id` | `startSound`, `putPiece` (`got`), push and unshare (orphans), `dropSounds` (profile_id `''`) | `getSound`, `ownSound`, push | until no record or share uses it |
+| `sounds` | `id` | `startSound`, `putPiece` (`got`), push (orphans: a deleted clip's, and a changed clip's old audio) and unshare, `dropSounds` (profile_id `''`) | `getSound`, `ownSound`, push | until no record or share uses it |
 | `sound_chunks` | `(sound_id, n)` | `putPiece` | `getSound`, `need` | with its sound |
 | `shares`, `share_sounds` | `code`; `(code, sound_id)` | `makeShare`, `unshare` | `getShare`, `myShares` | until unshared |
 | `reports` | `key` = `<ISO>_<device>_<random>` | `reports.js handleLog` | the telemetry runner | `TTL_MS` 14 days, deleted when the next report arrives |

@@ -128,6 +128,30 @@ export function decideRecord(kind, { base = null, local = null, remote = null, s
   return resolve(kind, trusted, local, remote);
 }
 
+// A sound's audio, decided by its hashes. merge3.js compares records without
+// their audio, so a sound whose audio alone changed (a made sound whose
+// sliders moved, sheet.js) looks unchanged to `decision` (decideRecord's).
+// `was` is the audio the cloud had at the last sync, `mine` this device's
+// now, `theirs` the cloud's now (null: the sound is gone there). New audio
+// on one side wins it the audio; new audio on both keeps both sounds. A
+// merge says whose audio it keeps (`audio`: 'local' or 'remote').
+export function audioDecides(decision, { was, mine, theirs, here, there }) {
+  const d = decision;
+  const mineNew = mine !== was;
+  if (theirs === null) return mineNew && d.action === 'delete' ? { action: 'keep' } : d;
+  const theirsNew = theirs !== was;
+  if (mine === theirs || (!mineNew && !theirsNew)) return d;
+  if (mineNew && theirsNew) return { action: 'keepBoth' };
+  if (mineNew) {
+    if (d.action === 'same') return { action: 'keep' };
+    if (d.action === 'take') return { action: 'merged', record: there, audio: 'local' };
+    return d.action === 'merged' ? { ...d, audio: 'local' } : d;
+  }
+  if (d.action === 'same') return { action: 'take' };
+  if (d.action === 'keep') return { action: 'merged', record: here, audio: 'remote' };
+  return d.action === 'merged' ? { ...d, audio: 'remote' } : d;
+}
+
 // Pulled records as a backup-shaped document for cleanBackup: each record in
 // its store, made this person's, and the person themselves.
 export function pulledDoc(personId, person, records) {
@@ -323,11 +347,41 @@ const noAudio = (record) => {
   return rest;
 };
 
+// What a clip's audio looked like when it was last hashed: its size and the
+// clip's edit stamp. Every edit through state.js persist stamps the clip, so
+// new audio under the same id (a made sound whose sliders moved, sheet.js)
+// changes it, and only then is the audio hashed again.
+const printOf = (clip) => `${clip.blob?.size ?? 0}:${clip[STAMP] ?? ''}`;
+
+// The SHA-256 of the audio each of the person's clips holds now, in `here`
+// (clip id -> hex), for clips the cloud has audio for (`link.sounds`). A
+// clip whose print still matches its sound's is not hashed again. One whose
+// audio is no longer the cloud's keeps its new hash here, and the push puts
+// the new audio up.
+async function hashAudio(link, deps, here) {
+  for (const clip of list(deps.lists(), 'clips')) {
+    if (clip?.personId !== link.id || typeof clip.id !== 'string' || !clip.blob) continue;
+    const s = link.sounds[clip.id];
+    if (!s) { here.delete(clip.id); continue; }
+    const print = printOf(clip);
+    if (s.print === print) { here.set(clip.id, s.sha256); continue; }
+    const { blob } = clip;   // the clip may change while this waits
+    const sha = await deps.sha256(blob);
+    here.set(clip.id, sha);
+    if (sha === s.sha256) link.sounds[clip.id] = { ...s, print };
+  }
+}
+
 export async function syncProfile(link, deps) {
   const id = link.id;
   link.sent ??= {};
   link.sounds ??= {};
+  // A clip's audio hash: as the cloud has it (shaOf), and as this device
+  // holds it now (shaHere), which differ once its audio is changed here.
   const shaOf = (k) => (k.startsWith('clips:') ? link.sounds[k.slice(6)]?.sha256 ?? '' : '');
+  const here = new Map();
+  const shaHere = (k) => (k.startsWith('clips:') ? here.get(k.slice(6)) ?? shaOf(k) : '');
+  const sha = { of: shaOf, here: shaHere, map: here };
   const report = { pulled: 0, pushed: 0, deleted: 0, sounds: 0, merged: 0, clashes: 0, kept: 0 };
   const bases = deps.bases ? await deps.bases.load(id) : new Map();
   const baseChanges = new Map();
@@ -350,17 +404,18 @@ export async function syncProfile(link, deps) {
   // record this push carried after this device's pull (`stale`), so that
   // record is merged too, never overwritten.
   for (let round = 1; ; round++) {
-    profile = await pullOnce(link, deps, shaOf, report, bases, bases_, tell, progress) ?? profile;
+    await hashAudio(link, deps, here);
+    profile = await pullOnce(link, deps, sha, report, bases, bases_, tell, progress) ?? profile;
     tell({ phase: 'storing', now: null, stored: true });
     let stale;
     try {
-      stale = await pushAll(link, deps, shaOf, report, bases_);
+      stale = await pushAll(link, deps, sha, report, bases_);
     } catch (err) {
       // The cloud no longer has a sound this device thought it had: send it
       // again, once.
       if (err?.status !== 409 || err.error !== 'sound') throw err;
       for (const [clipId, s] of Object.entries(link.sounds)) if (s.sound === err.sound) delete link.sounds[clipId];
-      stale = await pushAll(link, deps, shaOf, report, bases_);
+      stale = await pushAll(link, deps, sha, report, bases_);
     }
     if (!stale || round >= SYNC_ROUNDS) break;
   }
@@ -369,7 +424,7 @@ export async function syncProfile(link, deps) {
   return report;
 }
 
-async function pullOnce(link, deps, shaOf, report, bases, bases_, tell, progress) {
+async function pullOnce(link, deps, { of: shaOf, here: shaHere, map: hereSha }, report, bases, bases_, tell, progress) {
   const { api } = deps;
   const id = link.id;
   const pulled = [];
@@ -399,9 +454,9 @@ async function pullOnce(link, deps, shaOf, report, bases, bases_, tell, progress
     const here = local.get(k)?.record;
     const hashed = hashOf(p.body, remoteSha(p));
     if (!here && link.sent[k] === hashed) { latest.set(k, { ...p, skip: true }); continue; }
-    if (here && hashOf(here, shaOf(k)) === hashed) { latest.set(k, { ...p, same: true }); continue; }
+    if (here && hashOf(here, shaHere(k)) === hashed) { latest.set(k, { ...p, same: true }); continue; }
     if (p.kind === 'clips' && typeof p.body?.sound === 'string') {
-      if (here?.blob && (link.sounds[p.id]?.sha256 ?? p.body.sha256) === p.body.sha256) audio.set(p.id, here.blob);
+      if (here?.blob && (hereSha.get(p.id) ?? link.sounds[p.id]?.sha256 ?? p.body.sha256) === p.body.sha256) audio.set(p.id, here.blob);
       else toFetch.push(p);
     }
     toClean.push(p);
@@ -453,10 +508,11 @@ async function pullOnce(link, deps, shaOf, report, bases, bases_, tell, progress
     const there = p.deleted ? null : remote.get(k);
     if (there === undefined) continue;   // dropped by the checks, like a bad backup record
     const sha = p.kind === 'clips' ? (remoteSha(p) || shaOf(k)) : '';
-    const d = decideRecord(p.kind, {
+    let d = decideRecord(p.kind, {
       base: bases.get(k) ?? null, local: here, remote: there, sent: link.sent[k],
-      hash: (r) => hashOf(r, r === there ? sha : shaOf(k)),
+      hash: (r) => hashOf(r, r === there ? sha : r === here ? shaHere(k) : shaOf(k)),
     });
+    if (p.kind === 'clips' && here) d = audioDecides(d, { was: shaOf(k), mine: shaHere(k), theirs: there ? sha : null, here, there });
     fate.set(k, { p, ...d, there });
   }
   const by = (action) => [...fate.values()].filter((f) => f.action === action);
@@ -464,7 +520,7 @@ async function pullOnce(link, deps, shaOf, report, bases, bases_, tell, progress
 
   for (const f of by('take')) await deps.put(f.p.kind, f.there);
   for (const f of by('merged')) {
-    if (f.p.kind === 'clips') audio.set(f.p.id, local.get(keyOf('clips', f.p.id))?.record?.blob ?? audio.get(f.p.id));
+    if (f.p.kind === 'clips' && f.audio !== 'remote') audio.set(f.p.id, local.get(keyOf('clips', f.p.id))?.record?.blob ?? audio.get(f.p.id));
     const one = deps.clean(pulledDoc(id, person, [{ kind: f.p.kind, body: f.record }]), audioOf)[f.p.kind]?.[0];
     if (one) await deps.put(f.p.kind, one);
     report.merged++;
@@ -482,7 +538,12 @@ async function pullOnce(link, deps, shaOf, report, bases, bases_, tell, progress
   const after = recordsOf(deps.lists(), id, deps.kitIds);
   for (const [k, f] of fate) {
     const { p, action } = f;
-    if (p.kind === 'clips' && p.body?.sound && action !== 'delete' && !p.deleted) link.sounds[p.id] = { sha256: p.body.sha256, sound: p.body.sound };
+    if (p.kind === 'clips' && p.body?.sound && action !== 'delete' && !p.deleted) {
+      const was = link.sounds[p.id];
+      const wrote = action === 'take' || action === 'merged' || action === 'fresh';
+      if (wrote || was?.sha256 !== p.body.sha256 || was.sound !== p.body.sound) link.sounds[p.id] = { sha256: p.body.sha256, sound: p.body.sound };
+      if (wrote) hereSha.delete(p.id);   // the push hashes what this device holds now
+    }
     const cloudIs = (record) => { link.sent[k] = hashOf(record, shaOf(k)); bases_.set(k, record); };
     if (p.deleted || action === 'delete') {
       // Gone in the cloud: forgotten here. A record this device changed (or
@@ -511,21 +572,28 @@ async function pullOnce(link, deps, shaOf, report, bases, bases_, tell, progress
 
 // Pushes what differs from the cloud. Returns how many records the cloud
 // left because another device wrote them after this device's pull.
-async function pushAll(link, deps, shaOf, report, bases_) {
+async function pushAll(link, deps, { of: shaOf, map: hereSha }, report, bases_) {
   const { api } = deps;
   const { id } = link;
+  await hashAudio(link, deps, hereSha);
   const now = recordsOf(deps.lists(), id, deps.kitIds);
+  // A clip whose audio the cloud lacks: new, or changed here since it went up.
+  const needsAudio = (r) => r.kind === 'clips' && r.record.blob
+    && (!link.sounds[r.id] || (hereSha.has(r.id) && hereSha.get(r.id) !== link.sounds[r.id].sha256));
   for (const [k, r] of now) {
-    if (r.kind === 'clips' && !link.sounds[r.id] && r.record.blob?.size > CLOUD_MAX_SOUND) {
+    if (needsAudio(r) && r.record.blob.size > CLOUD_MAX_SOUND) {
       now.delete(k);
       report.tooBig = (report.tooBig ?? 0) + 1;
     }
   }
   // Every clip's audio is in the cloud before its record.
   for (const r of now.values()) {
-    if (r.kind !== 'clips' || link.sounds[r.id] || !r.record.blob) continue;
-    const up = await uploadAudio(api, id, link.key, r.record.blob, r.record.mime, deps.sha256);
-    link.sounds[r.id] = { sha256: up.sha256, sound: up.sound };
+    if (!needsAudio(r)) continue;
+    const { blob } = r.record;
+    const print = printOf(r.record);
+    const up = await uploadAudio(api, id, link.key, blob, r.record.mime, deps.sha256);
+    link.sounds[r.id] = { sha256: up.sha256, sound: up.sound, print };
+    hereSha.set(r.id, up.sha256);
     if (up.sent) report.sounds++;
   }
   const plan = planPush(now, link.sent, shaOf);

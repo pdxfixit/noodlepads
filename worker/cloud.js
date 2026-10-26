@@ -317,6 +317,16 @@ async function push(request, env, id, now, seen) {
     const row = await env.DB.prepare("SELECT sound_id FROM records WHERE profile_id = ? AND kind = 'clips' AND id = ?").bind(id, clipId).first();
     if (row?.sound_id) orphans.push(row.sound_id);
   }
+  // And the audio a sound held before its new audio (a made sound changed).
+  // D1 binds at most 100 values to one query.
+  const putClips = put.filter((r) => r.kind === 'clips');
+  for (let i = 0; i < putClips.length; i += 90) {
+    const part = putClips.slice(i, i + 90);
+    const soundNow = new Map(part.map((r) => [r.id, r.body.sound]));
+    const rows = (await env.DB.prepare(`SELECT id, sound_id FROM records WHERE profile_id = ? AND kind = 'clips' AND id IN (${part.map(() => '?').join(', ')})`)
+      .bind(id, ...part.map((r) => r.id)).all()).results;
+    for (const row of rows) if (row.sound_id && row.sound_id !== soundNow.get(row.id)) orphans.push(row.sound_id);
+  }
   const revNow = '(SELECT rev FROM profiles WHERE id = ?)';
   // Only a record nobody wrote since the device's pull, when it says which.
   const unseen = since === null ? '' : ' WHERE records.rev <= ?';

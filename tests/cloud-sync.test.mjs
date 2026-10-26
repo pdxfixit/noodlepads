@@ -233,6 +233,63 @@ test('a sound too long for the cloud stays on the device, and the rest still syn
   assert.equal((await syncProfile(link, a.deps(api))).deleted, 0, 'and never sent as a delete');
 });
 
+// A made sound whose sliders moved keeps its id and gets new audio
+// (sheet.js saveSheet), stamped by state.js persist. The audio is the same
+// size here, as a re-render of the same length is.
+test('a made sound changed after it synced sends its new audio: the other device and a new one play the new sound', async () => {
+  const { api, env } = server();
+  const { a, link } = await startA(api);
+  await syncProfile(link, a.deps(api));
+  const { d: b, link: bl } = await openOn(api, 'p-a');
+  await syncProfile(bl, b.deps(api));
+  assert.deepEqual(await bytesOf(b.stores.clips[0].blob), [1, 2, 3]);
+
+  await a.put('clips', { ...a.stores.clips[0], blob: blob(9, 8, 7), changed: Date.now() });
+  const r = await syncProfile(link, a.deps(api));
+  assert.deepEqual([r.sounds, r.pushed], [1, 1], 'the new audio went up, then its record');
+  await syncProfile(bl, b.deps(api));
+  assert.deepEqual(await bytesOf(b.stores.clips[0].blob), [9, 8, 7]);
+  const { d: c, link: cl } = await openOn(api, 'p-a');
+  await syncProfile(cl, c.deps(api));
+  assert.deepEqual(await bytesOf(c.stores.clips[0].blob), [9, 8, 7], 'a device opening it now gets the new audio');
+  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM sounds')[0].n, 1, 'the old audio is let go');
+
+  // Changed on B now, longer: it goes back the other way.
+  await b.put('clips', { ...b.stores.clips[0], blob: blob(4, 4, 4, 4), changed: Date.now() + 1 });
+  assert.equal((await syncProfile(bl, b.deps(api))).sounds, 1);
+  await syncProfile(link, a.deps(api));
+  assert.deepEqual(await bytesOf(a.stores.clips[0].blob), [4, 4, 4, 4]);
+
+  // A new name only: the audio is hashed again once, and nothing goes up twice.
+  await a.put('clips', { ...a.stores.clips[0], label: 'Big Burp', changed: Date.now() + 2 });
+  assert.deepEqual(moved(await syncProfile(link, a.deps(api))), { pulled: 0, pushed: 1, deleted: 0, sounds: 0 });
+  assert.deepEqual(moved(await syncProfile(link, a.deps(api))), { pulled: 0, pushed: 0, deleted: 0, sounds: 0 });
+  await syncProfile(bl, b.deps(api));
+  assert.deepEqual(moved(await syncProfile(bl, b.deps(api))), { pulled: 0, pushed: 0, deleted: 0, sounds: 0 }, 'settled');
+});
+
+test('new audio on one device and a new name on the other: one sound with both; new audio on both keeps both sounds', async () => {
+  for (const order of ['audio first', 'name first']) {
+    const { a, b, syncA, syncB } = await twoDevices();
+    await a.put('clips', { ...a.stores.clips[0], blob: blob(9, 8, 7), changed: Date.now() });
+    await b.put('clips', { ...b.stores.clips[0], label: 'Big Burp', changed: Date.now() + 1 });
+    const [first, second] = order === 'audio first' ? [syncA, syncB] : [syncB, syncA];
+    await first(); await second(); await first();
+    for (const d of [a, b]) {
+      assert.deepEqual(d.stores.clips.map((c) => c.label), ['Big Burp'], order);
+      assert.deepEqual(await bytesOf(d.stores.clips[0].blob), [9, 8, 7], `${order}: the new audio stays`);
+    }
+  }
+  const { a, b, syncA, syncB } = await twoDevices();
+  await a.put('clips', { ...a.stores.clips[0], blob: blob(9, 8, 7), changed: Date.now() });
+  await b.put('clips', { ...b.stores.clips[0], blob: blob(5, 5, 5), changed: Date.now() + 1 });
+  await syncA(); await syncB(); await syncA();
+  for (const d of [a, b]) {
+    const got = await Promise.all(d.stores.clips.map((c) => bytesOf(c.blob)));
+    assert.deepEqual(got.map(String).sort(), ['5,5,5', '9,8,7'], 'both new sounds are kept');
+  }
+});
+
 test("a person's settings travel with their profile", async () => {
   const { api } = server();
   const { a, link } = await startA(api);
