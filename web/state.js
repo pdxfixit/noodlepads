@@ -287,6 +287,20 @@ export async function setOverride(next) {
   return true;
 }
 
+// Deletes one record a kid deleted (a sound, a beat, a take, a layout…).
+// A browser that refuses is told so, since it may come back after a reload.
+// `what` names it in the notice ("That take"). Resolves to whether it went.
+export async function removeRecord(store, key, what) {
+  try {
+    await db.remove(store, key);
+    return true;
+  } catch (err) {
+    console.error(`Deleting from ${store} failed:`, err);
+    showNotice(`${what} is gone for now, but this browser wouldn't delete it (${err.message || err.name}), so it may come back after a reload.`);
+    return false;
+  }
+}
+
 // Bundled people store only what differs from boards.json; a record that
 // changes nothing is deleted. People added in the app store everything.
 export async function setPersonEdit(id, changes) {
@@ -294,7 +308,10 @@ export async function setPersonEdit(id, changes) {
   const next = personEditRecord(base, state.peopleEdits.get(id) || { id }, changes);
   if (!next) {
     state.peopleEdits.delete(id);
-    try { await db.remove('people', id); } catch (err) { console.error('Removing a person edit failed:', err); }
+    try { await db.remove('people', id); } catch (err) {
+      console.error('Removing a person edit failed:', err);
+      showNotice(wouldNotSave(err));
+    }
     return;
   }
   state.peopleEdits.set(id, next);

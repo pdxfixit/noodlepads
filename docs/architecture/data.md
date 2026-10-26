@@ -13,7 +13,7 @@
 | File | Owns | Pure? | Called by |
 |---|---|---|---|
 | `store.js` | `DB_NAME`, `SCHEMA`, `DB_VERSION`, `STORE_NAMES`, `upgradeStores`, the `db` handle (`open`, `run`, `all`, `put`, `remove`, `batch`, `onChange`) | no (IndexedDB) | state.js; direct writes in app.js, backup-ui.js, cloud.js; leftover.js reads `DB_NAME` |
-| `state.js` | `state`; `readStorage`, `loadStorage`, `persist`, `setOverride`, `setPersonEdit`, `deletePerson`, `deleteUserClip`, `saveMyVoice`, `deleteMyVoice`, `adoptStoredPeople`, `reIdStoredPeople`, `reIdIncoming`, `rememberRenames`, `renamedId` | no | nearly every screen |
+| `state.js` | `state`; `readStorage`, `loadStorage`, `persist`, `setOverride`, `removeRecord`, `setPersonEdit`, `deletePerson`, `deleteUserClip`, `saveMyVoice`, `deleteMyVoice`, `adoptStoredPeople`, `reIdStoredPeople`, `reIdIncoming`, `rememberRenames`, `renamedId` | no | nearly every screen |
 | `model.js` | person colors, `kitFor`, `mergePeople`, `clipsForPerson`, `orderClips`, `withNewPresets`, `overrideFor`, `withBulkChanges`, `withHidden`, `overrideWithEmoji`, `personEditRecord`, `validateManifest`, `soloPerson`, `isDefaultPerson`, `personIdsIn`, `kitIdOf`, `adoptPeople`, `groupKit`, `PICTURES`, `KIND_EMOJI`, `PERSON_KINDS`, `personThings`, `personCounts` | yes | state.js, board.js, backup.js, merge.js, screens |
 | `board.js` | `people`, `person`, `currentPerson`, `clipsFor`, `anyClip`, `findClip`, `instrumentPicks`, `colorName`, `padColor`, `nextClipColor` | reads `state` | every screen |
 | `settings.js` | `SETTINGS`, `LEVELS`, `levelOf`, `getSetting`, `setSetting`, `onSetting`, `followPerson`, `notifyAllSettings`, `cleanPrefs`, `allowedValue`, `inBackups`, `storedPair` | reads/writes `state.prefs`, `state.settings` | ~20 modules |
@@ -99,11 +99,12 @@ The comments on `state` in `state.js` give older shapes for `patterns` (`rows: [
 |---|---|---|
 | `state.js persist(store, value)` | `stampEdit` (in place), then `db.put` | console error and a banner: "This browser wouldn't save that change…", or "Not saved: another soundboard tab…" while `loadStorage` waits. Resolves false when storage refused it, open or not (waiting for another tab, closed for an upgrade); true only with no storage at all (`storageFailed`: the visit keeps everything in memory); `setOverride` passes it on. The sound sheet's Save and ➕ Mix roll the in-memory clip back on false and keep the sheet open (`tests/sheet-save-fail.test.mjs`) |
 | `state.js setOverride(next)` | puts when the override changes something, else deletes it so the preset follows boards.json again | as `persist` |
-| `state.js setPersonEdit(id, changes)` | `model.js personEditRecord`: a boards.json person keeps only differences (none: record deleted); an added person stores everything and gets `edited` on a name/color/avatar change | put: as `persist`; delete: console only |
-| `state.js deleteUserClip`, `deleteMyVoice` | memory first, then `db.remove` | banner: "…it may come back after a reload" |
+| `state.js setPersonEdit(id, changes)` | `model.js personEditRecord`: a boards.json person keeps only differences (none: record deleted); an added person stores everything and gets `edited` on a name/color/avatar change | as `persist` |
+| `state.js deleteUserClip`, `deleteMyVoice`, `removeRecord(store, key, what)` | memory first, then `db.remove` | banner: "…it may come back after a reload" |
 | `state.js deletePerson(id)` | one `db.batch` of every removal (and, for a boards.json person, the hidden record), then memory | refused, or storage not open (still opening, or closed for another tab's upgrade): nothing changes, a notice says so, returns null; `people.js deleteHere` then puts their cloud link back (`cloud.js restoreLink`; its bases were kept, `dropLink keepBases`) and returns false. With no storage at all (the open failed), memory only |
 | app.js `beatLibrary.remove`, `songBook.remove` | `db.remove` | banner, as above |
-| app.js `setOpen(null)`, song `close`, `deleteTake`, `deleteLayout`, `deleteTouchLayout` | `db.remove` | console only |
+| app.js `deleteTake`, `deleteLayout`, `deleteTouchLayout` | `state.js removeRecord` | banner, as above (`tests/delete-unsaved.test.mjs`) |
+| app.js `setOpen(null)`, song `close` | `db.remove` | console only (nothing is lost: the beat or song stays in the library) |
 | app.js `adoptKidsBeat` | `db.batch` (unstamped) | console only |
 | `backup-ui.js storeLoaded` | `db.put` per merged record (unstamped; keeps the incoming `changed`) | collected into `failed`; the notice names up to 5 |
 | cloud.js (`deps.put`, `deps.remove`, links, bases) | `db.put` / `db.remove` / `db.batch` | the cloud area's own status |
@@ -371,7 +372,7 @@ Nothing found is changed or deleted.
    - `leftover.js` `STORES`
 
    A new store missed in `deletePerson` outlives its person, and `adoptStoredPeople` then brings the person back. Missed in `PERSON_STORES`, the store keeps old plain ids. Missed in `merge.js STORES`, it never loads from a backup.
-2. **Writes bypass `persist`** (see the table above). A fix to failure reporting in `persist` misses `storeLoaded`, the app.js deletes, `adoptKidsBeat` and cloud.js. The app.js deletes report failure two different ways.
+2. **Writes bypass `persist`** (see the table above). A fix to failure reporting in `persist` misses `storeLoaded`, the app.js deletes, `adoptKidsBeat` and cloud.js. A refused delete is told by `removeRecord`, by its own copy of the same words (`deleteUserClip`, `deleteMyVoice`, `beatLibrary.remove`, `songBook.remove`), or not at all (`setOpen(null)`, song `close`, where nothing is lost).
 3. **Four "stores as lists" builders** (above). A new store added to one is easy to miss in the others: `people.js storedLists` feeds 👥 counts and See all, `backup-ui.js` feeds backups, `cloud.js` feeds sync.
 4. **Three counters of what is here** (above). "A backup now holds…" does not mention voices or key/touch layouts, though a backup carries them.
 5. **`extensionFor` is defined twice:** `util.js extensionFor` and `old-backup.js extensionFor` (the second says it copies the first). Pluralizers are three: `util.js count`, `old-backup.js plural`, and `model.js`'s private `plural`.

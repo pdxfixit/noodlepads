@@ -12,7 +12,7 @@
 // audio.js + meter.js (sound), pads.js, sheet.js, people.js, backup-ui.js,
 // settings-ui.js, help.js, sequencer.js (screens).
 
-import { state, loadStorage, persist, setOverride, adoptStoredPeople, reIdStoredPeople, renamedId } from './state.js';
+import { state, loadStorage, persist, setOverride, adoptStoredPeople, reIdStoredPeople, renamedId, removeRecord } from './state.js';
 import { audio, voicesMade, fadeStop } from './audio.js';
 import { meter, buildGrille } from './meter.js';
 import { createSequencer } from './sequencer.js';
@@ -1016,7 +1016,7 @@ async function start() {
       },
       deleteTake: (id) => {
         state.takes = state.takes.filter((t) => t.id !== id);
-        db.remove('takes', id).catch((err) => console.error('Deleting a take failed:', err));
+        removeRecord('takes', id, 'That take');
       },
       // Saved key layouts (✏️ Layout with ⌨️ Keys, ADR 0013).
       layouts: (pid) => state.layouts.filter((l) => l.personId === pid),
@@ -1026,7 +1026,7 @@ async function start() {
       },
       deleteLayout: (id) => {
         state.layouts = state.layouts.filter((l) => l.id !== id);
-        db.remove('layouts', id).catch((err) => console.error('Deleting a key layout failed:', err));
+        removeRecord('layouts', id, 'That key layout');
       },
       // Saved 👆 touch layouts (✏️ Layout with 👆 Pads, ADR 0029).
       touchLayouts: (pid) => state.touchLayouts.filter((l) => l.personId === pid),
@@ -1036,7 +1036,7 @@ async function start() {
       },
       deleteTouchLayout: (id) => {
         state.touchLayouts = state.touchLayouts.filter((l) => l.id !== id);
-        db.remove('touchLayouts', id).catch((err) => console.error('Deleting a touch layout failed:', err));
+        removeRecord('touchLayouts', id, 'That touch layout');
       },
       kitGroups: () => state.manifest.kitGroups ?? [],
       inputChanged: () => showHint(),   // ⌨️ Keys | 👆 Pads: the footer's how-to follows
