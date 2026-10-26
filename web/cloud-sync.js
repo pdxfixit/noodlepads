@@ -281,10 +281,42 @@ export function shareDoc(bundle, toId, kitIds, newId, { kind, title } = {}) {
 //   bases                    optional: {load(personId) -> Map "kind:id" -> record,
 //                            save(personId, Map "kind:id" -> record | null)}, the
 //                            last-synced copy of each record (IndexedDB `bases`)
+//   onProgress(p)            optional: how far it has got, a whole snapshot each
+//                            time (newProgress below); a throw from it is ignored
+//   signal                   optional: an AbortSignal that stops its cloud calls
+//   fetched                  optional: Map sound id -> Blob, sounds fetched before
+//                            (a try cut short), used instead of fetching again
 // }
 // `link`: {id, key, rev, sent, sounds}. Returns what happened, for a notice
 // and the log: {pulled, pushed, deleted, sounds, merged, clashes, kept}.
 export const SYNC_ROUNDS = 3;
+
+// How far a sync has got (☁️ Open from the cloud's bar, cloud-ui.js).
+// `phase`: 'finding' (pulling the records), 'sounds' (fetching audio),
+// 'storing' (writing it here and pushing back), 'done'. `sounds` to fetch
+// and `done` of them; `total` their bytes, null when a record doesn't say
+// (one from before the records carried `bytes`); `got` bytes so far; `now`
+// the sound arriving ({bytes, got}). `stored`: the person is on this device.
+export const newProgress = () => ({ phase: 'finding', sounds: 0, done: 0, total: 0, got: 0, now: null, stored: false });
+
+// A record's own size for its sound, as the bar's measure: a number from
+// outside, so only a whole one between 1 byte and CLOUD_MAX_SOUND counts.
+export function soundBytes(body) {
+  const n = body?.bytes;
+  return Number.isInteger(n) && n > 0 && n <= CLOUD_MAX_SOUND ? n : null;
+}
+
+// How full the bar is, 0 to 1. By bytes when every sound's size is known,
+// else by sounds, the one arriving counted by its share. Never over 1.
+export function progressShare(p) {
+  if (!p || p.phase === 'finding') return 0;
+  if (p.phase === 'storing' || p.phase === 'done') return 1;
+  if (!p.sounds) return 0;
+  const share = p.total
+    ? p.got / p.total
+    : (p.done + (p.now?.bytes ? Math.min(1, p.now.got / p.now.bytes) : 0)) / p.sounds;
+  return Math.max(0, Math.min(1, share));
+}
 const noAudio = (record) => {
   if (!record || typeof record !== 'object') return record;
   const { blob: _audio, ...rest } = record;
@@ -308,11 +340,18 @@ export async function syncProfile(link, deps) {
     },
   };
   let profile = null;
+  const progress = newProgress();
+  const tell = (changes) => {
+    Object.assign(progress, changes);
+    try { deps.onProgress?.({ ...progress, now: progress.now && { ...progress.now } }); } catch { /* the bar never stops a sync */ }
+  };
+  tell({});
   // Pull, merge and push; again while the cloud says another device wrote a
   // record this push carried after this device's pull (`stale`), so that
   // record is merged too, never overwritten.
   for (let round = 1; ; round++) {
-    profile = await pullOnce(link, deps, shaOf, report, bases, bases_) ?? profile;
+    profile = await pullOnce(link, deps, shaOf, report, bases, bases_, tell, progress) ?? profile;
+    tell({ phase: 'storing', now: null, stored: true });
     let stale;
     try {
       stale = await pushAll(link, deps, shaOf, report, bases_);
@@ -326,17 +365,18 @@ export async function syncProfile(link, deps) {
     if (!stale || round >= SYNC_ROUNDS) break;
   }
   await pushLook(link, deps, profile);
+  tell({ phase: 'done' });
   return report;
 }
 
-async function pullOnce(link, deps, shaOf, report, bases, bases_) {
+async function pullOnce(link, deps, shaOf, report, bases, bases_, tell, progress) {
   const { api } = deps;
   const id = link.id;
   const pulled = [];
   let since = link.rev ?? 0;
   let profile = null;
   for (;;) {
-    const page = await api.pull(id, link.key, since);
+    const page = await api.pull(id, link.key, since, deps.signal);
     pulled.push(...page.records);
     profile = page.profile ?? profile;
     since = page.rev;
@@ -353,6 +393,7 @@ async function pullOnce(link, deps, shaOf, report, bases, bases_) {
   // sound's audio from this device when it has it, else from the cloud.
   const audio = new Map();
   const toClean = [];
+  const toFetch = [];
   for (const [k, p] of latest) {
     if (p.deleted) continue;
     const here = local.get(k)?.record;
@@ -361,9 +402,39 @@ async function pullOnce(link, deps, shaOf, report, bases, bases_) {
     if (here && hashOf(here, shaOf(k)) === hashed) { latest.set(k, { ...p, same: true }); continue; }
     if (p.kind === 'clips' && typeof p.body?.sound === 'string') {
       if (here?.blob && (link.sounds[p.id]?.sha256 ?? p.body.sha256) === p.body.sha256) audio.set(p.id, here.blob);
-      else audio.set(p.id, await api.fetchSound(p.body.sound, p.body.mime));
+      else toFetch.push(p);
     }
     toClean.push(p);
+  }
+  // Every sound to fetch is known before the first one comes, so the bar
+  // has its whole measure; a later round adds its own.
+  if (toFetch.length) {
+    const sizes = toFetch.map((p) => soundBytes(p.body));
+    tell({
+      phase: 'sounds',
+      sounds: progress.sounds + toFetch.length,
+      total: progress.total === null || sizes.includes(null) ? null : progress.total + sizes.reduce((a, b) => a + b, 0),
+    });
+    for (const [i, p] of toFetch.entries()) {
+      const bytes = sizes[i];
+      const kept = deps.fetched?.get(p.body.sound);
+      if (kept) {
+        audio.set(p.id, kept);
+        tell({ done: progress.done + 1, got: progress.got + kept.size, now: null });
+        continue;
+      }
+      tell({ now: { bytes, got: 0 } });
+      const blob = await api.fetchSound(p.body.sound, p.body.mime, {
+        signal: deps.signal,
+        // Never more than the cloud's biggest sound. Not the record's own
+        // size: one that disagrees would stop every sync of this profile.
+        max: CLOUD_MAX_SOUND,
+        onBytes: deps.onProgress && ((n) => tell({ got: progress.got + n, now: { bytes, got: progress.now.got + n } })),
+      });
+      deps.fetched?.set(p.body.sound, blob);
+      audio.set(p.id, blob);
+      tell({ done: progress.done + 1, now: null });
+    }
   }
   const audioOf = (c) => audio.get(c.id) ?? null;
   const person = profile ? personFrom({ ...profile, id }) : null;
@@ -472,7 +543,7 @@ async function pushAll(link, deps, shaOf, report, bases_) {
     const slice = work.slice(i, i + PER_PUSH);
     const put = slice.filter((w) => w.put).map((w) => ({ kind: w.put.kind, id: w.put.id, body: body(w.put) }));
     const del = slice.filter((w) => w.del).map((w) => w.del);
-    const res = await api.push(id, link.key, put, del, link.rev ?? 0);
+    const res = await api.push(id, link.key, put, del, link.rev ?? 0, deps.signal);
     const left = new Set((res.stale ?? []).map((s) => keyOf(s.kind, s.id)));
     stale += left.size;
     for (const w of slice) {

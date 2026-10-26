@@ -112,6 +112,16 @@ async function dropLockedPerson(id) {
   else refreshPeople();
 }
 
+// 🎉 Play as them, once someone has come down from the cloud (cloud-ui.js):
+// 👥 People closes, and they show on Pads.
+function playAs(id) {
+  const sheet = document.querySelector('#people-dialog');
+  if (sheet?.open) sheet.close();
+  renderPeople();
+  setPerson(id);
+  setScreen('pads');
+}
+
 // Nobody is on show (the one who was is deleted, or at start everyone has a
 // PIN): 👋 Who's playing now? (who-now.js). The board behind it is drawn for
 // the first person but hidden, and nothing shows it until a pick: while the
@@ -887,7 +897,7 @@ async function start() {
     keysOn: () => keysOn,
     beatHasHits: () => beatHasHits(seq?.beat()),
   });
-  initCloudUI({ refresh: () => { renderPeople(); refreshPeople(); }, addPerson, dropPerson: dropLockedPerson, backup: savePersonBackup });
+  initCloudUI({ refresh: () => { renderPeople(); refreshPeople(); }, addPerson, dropPerson: dropLockedPerson, backup: savePersonBackup, play: playAs });
   // A sync that finds a PIN new to this device on the person showing: the
   // board goes behind the PIN pad until it is typed (Ben, 2026-10-19).
   onCloud(() => {

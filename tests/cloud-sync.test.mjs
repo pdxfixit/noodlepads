@@ -11,6 +11,7 @@ import { FakeD1 } from './fake-d1.mjs';
 import { createCloudApi, CloudError, cloudTrouble } from '../web/cloud-api.js';
 import {
   syncProfile, recordsOf, planPush, decideRecord, hashOf, pieces, shareBundle, shareDoc, hasMade, CHUNK_BYTES, CLOUD_MAX_SOUND, keyOf,
+  progressShare, soundBytes, newProgress,
 } from '../web/cloud-sync.js';
 import { cleanBackup } from '../web/backup.js';
 import { mergeLoaded } from '../web/merge.js';
@@ -580,4 +581,140 @@ test('a device synced before bases were kept still merges safely: unchanged side
   await syncA(); await syncB(); await syncA();
   assert.deepEqual(beatOf(a).map((x) => x.bpm).sort(), [111, 99], 'no base, both changed: both kept, as before');
   assert.deepEqual(contentOf(a), contentOf(b));
+});
+
+// ☁️ Open from the cloud's bar (Ben, 2026-10-26: a real one, never 0 then 100).
+test('opening on another device tells how far it has got: the whole measure before the first byte, bytes that only grow, then stored and done', async () => {
+  const { api } = server();
+  const { a, link } = await startA(api);
+  // Three pieces in the cloud: here each arrives whole (a phone's network
+  // brings far smaller ones), so the bar must stop between them.
+  const size = 2 * CHUNK_BYTES + 5;
+  const big = new Uint8Array(size).map((_, i) => (i * 7) % 256);
+  a.stores.clips.push({ id: 'user-2', personId: 'p-a', label: 'Long', mime: 'audio/wav', blob: new Blob([big], { type: 'audio/wav' }), created: 7 });
+  await syncProfile(link, a.deps(api));
+
+  const { d: b, link: bl } = await openOn(api, 'p-a');
+  const heard = [];
+  await syncProfile(bl, { ...b.deps(api), onProgress: (p) => heard.push(p) });
+  assert.equal(heard[0].phase, 'finding');
+  assert.equal(progressShare(heard[0]), 0, 'nothing to measure yet: the spinner');
+  const first = heard.findIndex((p) => p.phase === 'sounds');
+  assert.ok(first > 0);
+  assert.deepEqual([heard[first].sounds, heard[first].total, heard[first].got], [2, 3 + size, 0], 'every sound and byte known before any arrives');
+  const sounds = heard.filter((p) => p.phase === 'sounds');
+  assert.ok(sounds.length > 5, `the bar moves inside a sound, not once per sound (${sounds.length} steps)`);
+  for (let i = 1; i < sounds.length; i++) {
+    assert.ok(sounds[i].got >= sounds[i - 1].got, 'bytes only grow');
+    assert.ok(progressShare(sounds[i]) >= progressShare(sounds[i - 1]), 'the bar never goes back');
+  }
+  assert.equal(sounds.at(-1).got, 3 + size);
+  assert.equal(sounds.at(-1).done, 2);
+  assert.ok(sounds.some((p) => progressShare(p) > 0.3 && progressShare(p) < 0.9), 'part way, not 0 then 100');
+  const stored = heard.findIndex((p) => p.stored);
+  assert.ok(stored > first && heard[stored].phase === 'storing', 'stored once every sound has come');
+  assert.equal(heard.at(-1).phase, 'done');
+  assert.equal(b.stores.clips.length, 2);
+
+  // A bar that throws never stops the sync.
+  const { d: c, link: cl } = await openOn(api, 'p-a');
+  await syncProfile(cl, { ...c.deps(api), onProgress: () => { throw new Error('a broken bar'); } });
+  assert.equal(c.stores.clips.length, 2);
+});
+
+test('a person with no sounds to fetch never has a bar to fill: the spinner, then done', async () => {
+  const { api } = server();
+  const { a, link } = await startA(api);
+  a.stores.clips = [];
+  a.stores.beats[0].rows = [{ clipId: 'p-a-kick', steps: [1, 0, 0, 0] }];
+  a.stores.orders = [];
+  await syncProfile(link, a.deps(api));
+  const { d: b, link: bl } = await openOn(api, 'p-a');
+  const heard = [];
+  await syncProfile(bl, { ...b.deps(api), onProgress: (p) => heard.push(p) });
+  assert.ok(!heard.some((p) => p.phase === 'sounds'));
+  assert.deepEqual(heard.map((p) => p.phase).filter((x, i, all) => x !== all[i - 1]), ['finding', 'storing', 'done']);
+});
+
+test('an open cut short keeps the sounds it fetched: the next try fetches only the rest', async () => {
+  const { api } = server();
+  const { a, link } = await startA(api);
+  a.stores.clips.push({ id: 'user-2', personId: 'p-a', label: 'Toot', mime: 'audio/wav', blob: blob(4, 5, 6, 7), created: 7 });
+  await syncProfile(link, a.deps(api));
+
+  const { d: b, link: bl } = await openOn(api, 'p-a');
+  const fetched = new Map();
+  let calls = 0;
+  const dropsSecond = { ...api, fetchSound: (...args) => (++calls === 2 ? Promise.reject(new CloudError(0, { error: 'offline' })) : api.fetchSound(...args)) };
+  await assert.rejects(syncProfile(structuredClone(bl), { ...b.deps(dropsSecond), fetched }), (err) => err.status === 0);
+  assert.equal(fetched.size, 1, 'the first sound is kept');
+  assert.equal(b.stores.clips.length, 0, 'nothing is stored until every sound has come');
+
+  calls = 0;
+  const counting = { ...api, fetchSound: (...args) => { calls++; return api.fetchSound(...args); } };
+  const heard = [];
+  await syncProfile(bl, { ...b.deps(counting), fetched, onProgress: (p) => heard.push(p) });
+  assert.equal(calls, 1, 'only the one missing');
+  assert.equal(b.stores.clips.length, 2);
+  assert.equal(heard.filter((p) => p.phase === 'sounds').at(-1).got, 7, 'the kept one counts as come');
+});
+
+test("the bar's measure: a record's size counts only when it is a whole number the cloud could hold; the share stays 0 to 1", () => {
+  assert.equal(soundBytes({ bytes: 1000 }), 1000);
+  for (const bytes of [undefined, 0, -5, 1.5, '1000', CLOUD_MAX_SOUND + 1, Infinity, NaN]) assert.equal(soundBytes({ bytes }), null, String(bytes));
+  const p = newProgress();
+  assert.equal(progressShare(p), 0);
+  assert.equal(progressShare({ ...p, phase: 'sounds', sounds: 2, total: 100, got: 50 }), 0.5);
+  assert.equal(progressShare({ ...p, phase: 'sounds', sounds: 2, total: 100, got: 500 }), 1, 'a record that said too little: never over');
+  assert.equal(progressShare({ ...p, phase: 'sounds', sounds: 4, total: null, done: 1, now: { bytes: 10, got: 5 } }), 1.5 / 4, 'by sounds when a size is missing');
+  assert.equal(progressShare({ ...p, phase: 'sounds', sounds: 4, total: null, done: 1, now: { bytes: null, got: 5 } }), 1 / 4);
+  assert.equal(progressShare({ ...p, phase: 'storing', sounds: 2 }), 1);
+});
+
+test('a sound read as it arrives: its bytes told piece by piece, a stop is a CloudError "stalled", and too many bytes are refused', async () => {
+  // A body that, with `hang`, sends nothing more until the call is stopped,
+  // then fails as a browser's does.
+  const body = (chunks, { hang = false, signal } = {}) => new ReadableStream({
+    async pull(c) {
+      if (chunks.length) { c.enqueue(new Uint8Array(chunks.shift())); return; }
+      if (hang) {
+        await new Promise((_, fail) => {
+          const stopped = () => fail(new DOMException('Aborted', 'AbortError'));
+          if (signal.aborted) stopped(); else signal.addEventListener('abort', stopped);
+        });
+      }
+      c.close();
+    },
+  });
+  const respond = (stream) => new Response(stream, { headers: { 'Content-Type': 'audio/wav' } });
+  let next;
+  const fetch = async (url, init = {}) => next(init);
+  const api = createCloudApi({ fetch });
+
+  next = () => respond(body([[1, 2], [3, 4, 5]]));
+  const told = [];
+  const got = await api.fetchSound('s-x', 'audio/wav', { onBytes: (n) => told.push(n), max: 10 });
+  assert.deepEqual(told, [2, 3]);
+  assert.deepEqual(await bytesOf(got), [1, 2, 3, 4, 5]);
+  assert.equal(got.type, 'audio/wav');
+
+  next = () => respond(body([[1, 2, 3], [4, 5, 6]]));
+  await assert.rejects(api.fetchSound('s-x', 'audio/wav', { max: 4 }), (err) => err instanceof CloudError && err.status === 0 && err.error === 'sound size');
+
+  const stop = new AbortController();
+  next = (init) => respond(body([[1, 2]], { hang: true, signal: init.signal }));
+  const stalled = api.fetchSound('s-x', 'audio/wav', { signal: stop.signal, onBytes: () => stop.abort() });
+  await assert.rejects(stalled, (err) => err instanceof CloudError && err.status === 0 && err.error === 'stalled');
+
+  // A response with no stream to read (an older browser): the whole thing at once.
+  next = () => ({ ok: true, headers: new Headers({ 'Content-Type': 'audio/wav' }), blob: async () => new Blob([new Uint8Array([9, 9])], { type: 'audio/wav' }) });
+  const once = [];
+  assert.deepEqual(await bytesOf(await api.fetchSound('s-x', 'audio/wav', { onBytes: (n) => once.push(n) })), [9, 9]);
+  assert.deepEqual(once, [2]);
+
+  // A pull stopped mid-answer is "stalled" too, not an empty page.
+  const halt = new AbortController();
+  halt.abort();
+  const pulls = createCloudApi({ fetch: async () => new Response('{"records":[]}', { headers: { 'Content-Type': 'application/json' } }) });
+  await assert.rejects(pulls.pull('p-abcdefghij', 'k', 0, halt.signal), (err) => err.status === 0 && err.error === 'stalled');
 });

@@ -2,8 +2,8 @@
 // a fresh start offers a new player or the cloud). The real app on the
 // stand-in page as a new device (an empty stand-in IndexedDB), first steps
 // on, against the real Worker and a fake D1, so the real sync brings them in: the list opens over the welcome, closing it with nobody opened
-// comes back to Who's playing?, and opening someone ends the welcome with
-// them on show and the device's empty first person gone. How it looks needs
+// comes back to Who's playing?, and opening someone (then ▶ Play as them)
+// ends the welcome with them on show and the device's empty first person gone. How it looks needs
 // a browser: `just look welcome`.
 
 import { test, before } from 'node:test';
@@ -62,10 +62,10 @@ test('opening someone from it ends the welcome: they show, and the empty first p
   const open = $('#cloud-list-items').querySelector('[data-open="p-far"]');
   assert.ok(open, 'the profile is listed');
   await tap(open);
-  assert.equal($('#cloud-list-note').textContent, '☁️ On this device now ✓');
+  assert.equal($('#cloud-open-line').textContent, '✓ On this device now');
   assert.ok(cloud.inCloud('p-far'));
-  $('#cloud-list').close();
-  await page.settle();
+  await tap($('#cloud-open-play'));
+  assert.equal($('#cloud-list').open, false, 'Play as them closes the list');
   assert.equal($('#welcome').open, false, 'the welcome ends');
   assert.equal(state.personId, 'p-far', 'the one opened is on show');
   assert.deepEqual(people().map((p) => p.id), ['p-far'], 'the empty first person made for this device is dropped');
