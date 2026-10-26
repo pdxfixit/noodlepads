@@ -1,7 +1,7 @@
 // Per-profile rate limits in the Worker (worker/cloud.js LIMITERS): a push,
 // a sound's start, a share and an open are each counted by a rate-limit
-// binding (site/wrangler.toml), keyed by the hash of the request's key (an
-// open: by the profile), never by an address. Over the limit is 429 'slow',
+// binding (site/wrangler.toml), keyed by the profile id once its key has
+// been checked (an open: by the profile it opens), never by an address. Over the limit is 429 'slow',
 // apart from the daily caps' 429 'busy': the app says "busy right now" and
 // syncs again in a minute. Without the bindings (the other tests' env)
 // nothing is limited.
@@ -9,7 +9,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
 import worker from '../worker/index.js';
 import { LIMITERS } from '../worker/cloud.js';
 import { ORIGIN } from '../worker/http.js';
@@ -45,7 +44,6 @@ function cloud(limit = 2) {
 }
 
 const look = (id) => ({ id, name: 'Admiral Acorn', avatar: '🦖', color: '#1F3FA8' });
-const hashOf = (key) => createHash('sha256').update(key).digest('hex');
 const sha = (n) => n.toString(16).padStart(64, '0');
 
 async function made(c, id) {
@@ -54,7 +52,7 @@ async function made(c, id) {
   return r.data.key;
 }
 
-test('a push, a sound start and a share are limited per key, by its hash, and over it are 429 slow, never the daily caps\' busy', async () => {
+test('a push, a sound start and a share are limited per profile, by its id, and over it are 429 slow, never the daily caps\' busy', async () => {
   const c = cloud(2);
   const key = await made(c, 'p-one');
   const push = (n) => c.call('POST', 'profiles/p-one/records', { key, body: { put: [{ kind: 'beats', id: `beat-${n}`, body: { name: 'x' } }] } });
@@ -67,13 +65,27 @@ test('a push, a sound start and a share are limited per key, by its hash, and ov
     assert.deepEqual([over.status, over.data.error], [429, 'slow'], `${what}: the third in the window`);
   }
   for (const name of ['PUSH_LIMITER', 'SOUND_LIMITER', 'SHARE_LIMITER']) {
-    assert.deepEqual([...new Set(c.env[name].keys)], [hashOf(key)], `${name} counts the key's hash, never the key itself`);
+    assert.deepEqual([...new Set(c.env[name].keys)], ['p-one'], `${name} counts the profile, never its key`);
   }
-  // Another family's key has its own count.
+  // Another family's profile has its own count.
   const other = await made(c, 'p-two');
   assert.equal((await c.call('POST', 'profiles/p-two/records', { key: other, body: { put: [] } })).status, 200);
   // Reading is never limited: a big restore pulls as much as it needs.
   assert.equal((await c.call('GET', 'profiles/p-one/records', { key })).status, 200);
+});
+
+test('a profile\'s keys share one count, and a made-up key is refused before it counts against the family', async () => {
+  const c = cloud(2);
+  const first = await made(c, 'p-one');
+  const second = (await c.call('POST', 'profiles/p-one/open', { body: {} })).data.key;
+  assert.ok(second && second !== first);
+  const push = (key) => c.call('POST', 'profiles/p-one/records', { key, body: { put: [] } });
+  // A stranger with made-up bearers: each is refused, and none is counted.
+  for (let i = 0; i < 5; i++) assert.equal((await push(`${'a'.repeat(31)}${'bcdefg'[i]}`)).status, 401);
+  assert.equal(c.env.PUSH_LIMITER.keys.length, 0, 'a refused key is never counted');
+  assert.equal((await push(first)).status, 200);
+  assert.equal((await push(second)).status, 200);
+  assert.deepEqual([(await push(first)).status, (await push(second)).status], [429, 429], 'two keys, one profile: one count');
 });
 
 test('an open is limited per profile (it has no key yet), and a call with no key is left to the key check', async () => {

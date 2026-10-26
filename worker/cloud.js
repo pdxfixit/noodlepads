@@ -429,6 +429,7 @@ const release = (env, id, bytes) => (bytes ? settle(env, id, bytes).run().catch(
 async function push(request, env, id, now, seen) {
   const body = await readJson(request, LIMITS.pushBytes);
   await needKey(request, env, id, now);
+  await slowDown(env, LIMITERS.records, id);
   Object.assign(seen, { kind: 'push', profile: id });
   const put = Array.isArray(body.put) ? body.put : [];
   const del = Array.isArray(body.del) ? body.del : [];
@@ -578,6 +579,7 @@ async function need(env, soundId, chunks) {
 async function startSound(request, env, id, now) {
   const body = await readJson(request);
   await needKey(request, env, id, now);
+  await slowDown(env, LIMITERS.sounds, id);
   const { sha256, bytes, mime } = body;
   if (!SHA.test(sha256 ?? '')) throw new Refuse(400, 'sha256');
   if (!Number.isInteger(bytes) || bytes < 1 || bytes > MAX_SOUND_BYTES) throw new Refuse(413, 'size');
@@ -666,6 +668,7 @@ async function ownSound(env, profileId, soundId) {
 async function makeShare(request, env, id, now, seen) {
   const body = await readJson(request, LIMITS.shareBytes + 4096);
   await needKey(request, env, id, now);
+  await slowDown(env, LIMITERS.shares, id);
   if (!SHARE_KINDS.includes(body.kind)) throw new Refuse(400, 'kind');
   const title = typeof body.title === 'string' ? body.title.trim().slice(0, 24) : '';
   if (!title) throw new Refuse(400, 'title');
@@ -782,25 +785,24 @@ async function takeUses(request, env, id, now) {
 // Rate-limit bindings (site/wrangler.toml), one per route that spends a
 // shared daily cap or writes a lot, so one profile can't use them up for
 // every family: a push (5,000 a day), a sound's start, a share (500 a day)
-// and an open (it makes a key). Each counts by the hash of the key the
-// request carries, or for an open (which has no key yet) by the profile it
-// opens; never by an IP address. The limits are far above what a family
-// meets, a big restore included (docs/architecture/cloud.md).
+// and an open (it makes a key). Each counts by the profile id, never by an
+// IP address: a push, a start and a share once the key has been checked
+// (needKey), so a profile's 20 keys share one count, and a made-up key is
+// refused before it counts against anyone; an open (it has no key yet) by
+// the profile it opens. The limits are far above what a family meets, a big
+// restore included (docs/architecture/cloud.md).
 export const LIMITERS = { records: 'PUSH_LIMITER', sounds: 'SOUND_LIMITER', shares: 'SHARE_LIMITER', open: 'OPEN_LIMITER' };
 
-// Throws 429 'slow' over the limit: a minute's wait, apart from the daily
-// caps' 429 'busy' (the app says "busy right now" and syncs again in a
-// minute). No binding (the tests' env), no key (needKey refuses it next), or
-// a limiter that fails: the call goes on.
-async function slowDown(request, env, binding, profileId) {
+// Throws 429 'slow' when `profileId` is over the binding's limit: a minute's
+// wait, apart from the daily caps' 429 'busy' (the app says "busy right
+// now" and syncs again in a minute). No binding (the tests' env), or a
+// limiter that fails: the call goes on.
+async function slowDown(env, binding, profileId) {
   const limiter = env[binding];
   if (!limiter) return;
-  const held = bearer(request);
-  const key = binding === LIMITERS.open ? profileId : held && await sha256Hex(held);
-  if (!key) return;
   let success = true;
   try {
-    ({ success } = await limiter.limit({ key }));
+    ({ success } = await limiter.limit({ key: profileId }));
   } catch (err) {
     console.error('cloud: rate limit', err);
   }
@@ -846,7 +848,7 @@ async function route(request, env, now, seen) {
         if (m === 'POST') return await makeProfile(request, env, now, seen);
       } else if (typeof b === 'string' && PERSON_ID.test(b)) {
         needProvenCheck(request, env, b);
-        if (parts.length === 3 && m === 'POST' && Object.hasOwn(LIMITERS, c)) await slowDown(request, env, LIMITERS[c], b);
+        if (parts.length === 3 && c === 'open' && m === 'POST') await slowDown(env, LIMITERS.open, b);
         if (parts.length === 2 && m === 'PATCH') return await changeProfile(request, env, b, now, seen);
         if (parts.length === 2 && m === 'DELETE') return await deleteProfile(request, env, b, now);
         if (parts.length === 3 && c === 'open' && m === 'POST') return await openProfile(request, env, b, now, seen);
