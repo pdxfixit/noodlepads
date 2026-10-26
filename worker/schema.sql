@@ -25,7 +25,9 @@ CREATE TABLE IF NOT EXISTS profiles (
   created      INTEGER NOT NULL,
   active       INTEGER NOT NULL DEFAULT 0,-- last open, pull or push, to the hour (`just cloud-prune`)
   record_bytes INTEGER NOT NULL DEFAULT 0,-- its records' and shares' size: JSON + 100 a row (worker/cloud.js ROW_BYTES), capped
-  bytes_counted INTEGER NOT NULL DEFAULT 0 -- 1 once the Worker that keeps record_bytes counted it (0: an older Worker may have written since)
+  bytes_counted INTEGER NOT NULL DEFAULT 0,-- 1 once the Worker that keeps record_bytes counted it (0: an older Worker may have written since)
+  reserved_bytes INTEGER NOT NULL DEFAULT 0,-- room writes in flight have taken, not yet in record_bytes (worker/cloud.js reserve)
+  reserved_at  INTEGER NOT NULL DEFAULT 0 -- the last reservation; older than a minute, reserved_bytes counts for nothing
 );
 
 -- A device that opened a profile (with its PIN, if it has one) keeps a key.

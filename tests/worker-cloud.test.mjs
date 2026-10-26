@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../worker/index.js';
-import { CHUNK_BYTES, MAX_SOUND_BYTES, LIMITS, SESSION_KEY_MS, ACTIVE_STEP_MS, ROW_BYTES, KEY_IDLE_MS, KEYS_PER_PROFILE, PENDING_MS, CHECK_MS, pieceCount, pieceSize } from '../worker/cloud.js';
+import { CHUNK_BYTES, MAX_SOUND_BYTES, LIMITS, SESSION_KEY_MS, ACTIVE_STEP_MS, ROW_BYTES, KEY_IDLE_MS, KEYS_PER_PROFILE, PENDING_MS, CHECK_MS, RESERVE_MS, pieceCount, pieceSize } from '../worker/cloud.js';
 import { ORIGIN } from '../worker/http.js';
 import { WAIT_MS } from '../worker/pin.js';
 import { FakeD1 } from './fake-d1.mjs';
@@ -322,6 +322,36 @@ test('pushes sent at once take their room one at a time, so they never overshoot
   c.env.DB.batch = realBatch;
   assert.equal(failed.status, 503);
   assert.equal(c.env.DB.rows("SELECT record_bytes AS b FROM profiles WHERE id = 'p-a'")[0].b, kept);
+  assert.equal(c.env.DB.rows("SELECT reserved_bytes AS b FROM profiles WHERE id = 'p-a'")[0].b, 0, 'and holds no room');
+});
+
+// The security seat, 2026-10-26: when a write took longer than its take, a
+// refused push recounted what was written, wiped the room the others had
+// taken, and got in: 14 MB on the 10 MB cap. Reservations are kept apart now.
+test('pushes whose writes are slower than their takes still never overshoot; a reservation left behind lapses', async () => {
+  const c = cloud();
+  const key = await made(c, 'p-a');
+  const batch = (p) => ({ put: Array.from({ length: 7 }, (_, i) => ({ kind: 'takes', id: `take-${p}-${i}`, body: { notes: 'x'.repeat(499_990) } })) });
+  c.env.DB.slow = true;
+  const realBatch = c.env.DB.batch.bind(c.env.DB);
+  c.env.DB.batch = async (statements) => {
+    for (let i = 0; i < 4; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+    return realBatch(statements);
+  };
+  const res = await Promise.all(Array.from({ length: 8 }, (_, p) => c.call('POST', 'profiles/p-a/records', { key, body: batch(p) })));
+  c.env.DB.slow = false;
+  c.env.DB.batch = realBatch;
+  assert.equal(res.filter((r) => r.status === 200).length, 2, 'two fit in 10 MB');
+  const [{ kept, counted, reserved }] = c.env.DB.rows(`SELECT (SELECT record_bytes FROM profiles WHERE id = 'p-a') AS kept,
+    (SELECT reserved_bytes FROM profiles WHERE id = 'p-a') AS reserved, (SELECT SUM(LENGTH(CAST(body AS BLOB)) + 100) FROM records) AS counted`);
+  assert.deepEqual([kept, reserved], [counted, 0]);
+  assert.ok(counted <= LIMITS.profileRecordBytes);
+  // A write that died after taking its room (no settle, no release) stops holding it after a minute.
+  c.env.DB.db.prepare("UPDATE profiles SET reserved_bytes = ?, reserved_at = ? WHERE id = 'p-a'").run(LIMITS.profileRecordBytes, T0);
+  const small = { put: [{ kind: 'beats', id: 'beat-1', body: {} }] };
+  assert.equal((await c.call('POST', 'profiles/p-a/records', { key, body: small })).data.error, 'records full', 'held, for now');
+  c.later(RESERVE_MS + 1);
+  assert.equal((await c.call('POST', 'profiles/p-a/records', { key, body: small })).status, 200, 'lapsed');
 });
 
 // The security seat, 2026-10-26: a push the older Worker takes between

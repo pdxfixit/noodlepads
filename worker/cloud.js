@@ -360,31 +360,42 @@ const recount = (env, id) => env.DB.prepare(`UPDATE profiles SET record_bytes = 
 const countUncounted = (env, id) => env.DB.prepare(`UPDATE profiles SET record_bytes = ${COUNT}, bytes_counted = 1
   WHERE bytes_counted = 0 AND (id = ? OR id IN (SELECT id FROM profiles WHERE bytes_counted = 0 AND id <> ? LIMIT 5))`).bind(id, id).run();
 
+// Room taken by writes not yet written is kept apart, in
+// profiles.reserved_bytes, so a recount (of what is written) never wipes it.
+// A reservation older than RESERVE_MS belongs to a write that died between
+// taking and settling (a Worker past its CPU limit): it no longer counts.
+export const RESERVE_MS = 60 * 1000;
+const RESERVED = (at) => `(CASE WHEN reserved_at < ${at} THEN 0 ELSE reserved_bytes END)`;
+
 // Takes `growth` more bytes for profile `id`, or a 507: its own cap
 // ('records full'), else everyone's ('cloud full'). One UPDATE checks both
-// caps and adds, so writes sent at once can't all pass on the same count;
-// the write that follows settles the difference (or `release` gives it
-// back). Before refusing, the profile is counted again from what it holds,
-// in case its count drifted high. (A recount while another write holds a
-// reservation leaves the count that much low until that write settles:
-// rare, and only ever generous.)
-async function reserve(env, id, growth) {
+// caps, counting what is written and what other writes have reserved, and
+// adds to the reservations, so writes sent at once can't all pass on the
+// same count. The write settles it (`settle`), or `release` gives it back.
+// Before refusing, the profile's written bytes are counted again, in case
+// that count drifted high; reservations are left as they are.
+async function reserve(env, id, growth, now) {
   if (growth <= 0) return 0;
   const cap = isCheck(id) ? CHECK_LIMITS.recordBytes : LIMITS.profileRecordBytes;
   await countUncounted(env, id);
-  const take = () => env.DB.prepare(`UPDATE profiles SET record_bytes = record_bytes + ?
-    WHERE id = ? AND record_bytes + ? <= ? AND (SELECT SUM(record_bytes) FROM profiles) + ? <= ? RETURNING record_bytes`)
-    .bind(growth, id, growth, cap, growth, LIMITS.totalRecordBytes).first();
+  const old = now - RESERVE_MS;
+  const take = () => env.DB.prepare(`UPDATE profiles SET reserved_bytes = ${RESERVED('?')} + ?, reserved_at = ?
+    WHERE id = ? AND record_bytes + ${RESERVED('?')} + ? <= ?
+    AND (SELECT SUM(p.record_bytes + CASE WHEN p.reserved_at < ? THEN 0 ELSE p.reserved_bytes END) FROM profiles AS p) + ? <= ? RETURNING record_bytes`)
+    .bind(old, growth, now, id, old, growth, cap, old, growth, LIMITS.totalRecordBytes).first();
   if (await take()) return growth;
-  const mine = (await recount(env, id))?.record_bytes ?? 0;
+  await recount(env, id);
   if (await take()) return growth;
-  throw new Refuse(507, mine + growth > cap ? 'records full' : 'cloud full');
+  const mine = await env.DB.prepare(`SELECT record_bytes + ${RESERVED('?')} AS b FROM profiles WHERE id = ?`).bind(old, id).first();
+  throw new Refuse(507, (mine?.b ?? 0) + growth > cap ? 'records full' : 'cloud full');
 }
 
-// Gives back a reservation whose write failed (best effort: a count left
-// high is counted again before it refuses anyone).
-const release = (env, id, bytes) => (bytes ? env.DB.prepare('UPDATE profiles SET record_bytes = record_bytes - ? WHERE id = ?').bind(bytes, id).run()
-  .catch((err) => console.error('cloud: release', err)) : null);
+// The statement that ends a reservation, in the write's own batch.
+const settle = (env, id, bytes) => env.DB.prepare('UPDATE profiles SET reserved_bytes = MAX(0, reserved_bytes - ?) WHERE id = ?').bind(bytes, id);
+
+// Gives back a reservation whose write failed (best effort: one left behind
+// stops counting after RESERVE_MS).
+const release = (env, id, bytes) => (bytes ? settle(env, id, bytes).run().catch((err) => console.error('cloud: release', err)) : null);
 
 // A push puts and deletes records, all in one rev. With `since` (the rev the
 // device has pulled up to), a record another device wrote after that is left
@@ -451,12 +462,11 @@ async function push(request, env, id, now, seen) {
   // Only a record nobody wrote since the device's pull, when it says which.
   const unseen = since === null ? '' : ' WHERE records.rev <= ?';
   const guard = since === null ? [] : [since];
-  const reserved = await reserve(env, id, growth);
-  const statements = [env.DB.prepare('UPDATE profiles SET rev = rev + 1 WHERE id = ?').bind(id), touch(env, id, now)];
-  // The profile's bytes: less the room reserved and what the records about
-  // to be written hold now…
-  statements.push(env.DB.prepare(`UPDATE profiles SET record_bytes = record_bytes - ? - (SELECT COALESCE(SUM(${SIZE}), 0) FROM ${TOUCHED}${unseen})
-    WHERE id = ?`).bind(reserved, touched, id, ...guard, id));
+  const reserved = await reserve(env, id, growth, now);
+  const statements = [env.DB.prepare('UPDATE profiles SET rev = rev + 1 WHERE id = ?').bind(id), touch(env, id, now), settle(env, id, reserved)];
+  // The profile's bytes: less what the records about to be written hold now…
+  statements.push(env.DB.prepare(`UPDATE profiles SET record_bytes = record_bytes - (SELECT COALESCE(SUM(${SIZE}), 0) FROM ${TOUCHED}${unseen})
+    WHERE id = ?`).bind(touched, id, ...guard, id));
   put.forEach((r, i) => statements.push(env.DB.prepare(`INSERT INTO records (profile_id, kind, id, body, sound_id, rev, deleted)
     VALUES (?, ?, ?, ?, ?, ${revNow}, 0)
     ON CONFLICT (profile_id, kind, id) DO UPDATE SET body = excluded.body, sound_id = excluded.sound_id, rev = excluded.rev, deleted = 0${unseen}`)
@@ -637,9 +647,12 @@ async function makeShare(request, env, id, now, seen) {
   }
   if (!code) throw new Refuse(503, 'busy');
   // Its bytes count against the profile's records and everyone's (SHARE_SIZE).
-  const reserved = await reserve(env, id, byteLength(text) + byteLength(title) + ROW_BYTES * (1 + sounds.size));
+  const size = byteLength(text) + byteLength(title) + ROW_BYTES * (1 + sounds.size);
+  const reserved = await reserve(env, id, size, now);
   try {
     await env.DB.batch([
+      settle(env, id, reserved),
+      env.DB.prepare('UPDATE profiles SET record_bytes = record_bytes + ? WHERE id = ?').bind(size, id),
       env.DB.prepare('INSERT INTO shares (code, profile_id, kind, title, bundle, preview, hash, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
         .bind(code, id, body.kind, title, text, preview, hash, now),
       ...[...sounds].map((s) => env.DB.prepare('INSERT OR IGNORE INTO share_sounds (code, sound_id) VALUES (?, ?)').bind(code, s)),
