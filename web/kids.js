@@ -515,6 +515,7 @@ async function keep(blob, seconds, how, { play = true, pid } = {}) {
     wiggle(el.mic);
     return;
   }
+  if (!deps.isPerson(pid)) return;   // deleted while it was checked: nothing is kept for nobody
   const mine = deps.clips({ includeHidden: true }, pid);
   const clip = {
     id: newId('user'),

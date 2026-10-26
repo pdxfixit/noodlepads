@@ -30,6 +30,7 @@ import { openThings } from './things.js';
 const el = {};
 let showPerson = () => {};
 let startOver = () => {};
+let letGoOf = () => {};
 let profileFor = null;   // the person whose profile sheet is open
 // Someone Delete just took off this device whose cloud copy is still there:
 // {id, name, avatar, color, key, pin}. Their sheet stays open for the cloud copy's Delete.
@@ -192,6 +193,7 @@ export async function addPerson() {
 // 2026-10-24: someone deleted was back after a reload). Returns false when
 // this browser wouldn't delete them: they stay whole, in the cloud too.
 export async function deleteHere(id) {
+  letGoOf(id);   // what they are recording or playing stops now, kept for nobody (app.js)
   const p = anyone(id);
   const link = linkOf(id);
   if (link) await dropLink(id, { keepBases: true });
@@ -491,6 +493,7 @@ async function deleteCloudToo() {
 export function initPeople(hooks) {
   showPerson = hooks.showPerson;
   startOver = hooks.startOver ?? startOver;
+  letGoOf = hooks.letGoOf ?? letGoOf;
   Object.assign(el, {
     // 👥 People is the last line of the corner menu (pads.js), redrawn with it,
     // so the menu's box listens for it.

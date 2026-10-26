@@ -50,8 +50,11 @@ test('deleting the person on show mid-take, with a take taken out: the take stop
   assert.equal($('#dj-record').textContent, '■ Stop');
   $('#people-open').dispatch('click');
   $('#people-edit').children.find((r) => r.dataset.person === GONE).querySelector('[data-profile]').dispatch('click');
-  $('#profile-delete').dispatch('click');
-  $('#profile-delete').dispatch('click');
+  $('#profile-delete').dispatch('click', { timeStamp: 1000 });
+  $('#profile-delete').dispatch('click', { timeStamp: 5000 });
+  // At the tap, before the delete's own awaits: the take stops now, so no
+  // wait (a sync ending, a third tap for the cloud copy) can save it for nobody.
+  assert.equal($('#dj-record').textContent, '● Record', 'stopped at the tap');
   await page.settle();
   assert.notEqual(state.personId, GONE);
   assert.equal($('#dj-record').textContent, '● Record', 'not recording for the next person');

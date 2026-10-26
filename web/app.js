@@ -112,6 +112,16 @@ async function dropLockedPerson(id) {
   else refreshPeople();
 }
 
+// The person on show is being deleted (people.js deleteHere, at the
+// grown-up's tap, before its awaits): the keys' take or beat recording, a
+// take playing back, Kids' mic and tune all stop now, and nothing of theirs
+// is kept.
+function letGoOf(id) {
+  if (id !== state.personId) return;
+  dj?.personLeft({ keep: false });
+  kidsPersonLeaving({ keep: false });
+}
+
 // 🎉 Play as them, once someone has come down from the cloud (cloud-ui.js):
 // 👥 People closes, and they show on Pads.
 function playAs(id) {
@@ -130,12 +140,11 @@ function playAs(id) {
 // nobody left, a new person.
 function startOver(note) {
   const left = people();
-  // Before nobody is on show, so the keys let go of the one who was (gone:
-  // their take in progress goes with them).
+  // Before nobody is on show, so the keys let go of the one who was. A
+  // deleted one let go at the delete tap (`letGoOf`), keeping nothing.
   if (state.personId) {
-    const keep = !!person(state.personId);
-    dj?.personLeft({ keep });
-    kidsPersonLeaving({ keep });
+    dj?.personLeft();
+    kidsPersonLeaving();
   }
   state.personId = null;
   if (!left.length) { closeWhoNow(); addPerson(); return; }
@@ -878,7 +887,7 @@ async function start() {
   initPads({ openSheet, onPerson: setPerson, onLooping: (id, on) => dj?.looping(id, on) });
   initSheet();
   initBulk({ share: shareSounds });   // ✏️ Edit sounds with sounds chosen: Move, Color · picture, Voice, Share, Delete
-  initPeople({ showPerson: setPerson, startOver });
+  initPeople({ showPerson: setPerson, startOver, letGoOf });
   initWhoNow({ pick: pickWhoNow, someoneNew: addPerson });
   // 🗂️ See all, from a profile's count line: everything of one person's,
   // each row playing in place; a beat, song or take is recorded as a share's
@@ -1055,6 +1064,7 @@ async function start() {
     personId: () => state.personId,
     stopAll: () => stopEverything(),   // Kids' ⏹️ is the whole app's Stop all
     clips: (opts, pid = state.personId) => clipsFor(pid, opts),
+    isPerson: (pid) => people({ includeHidden: true }).some((p) => p.id === pid),
     colorOf: (clip) => padColor(clip.color),
     nextColor: (pid = state.personId) => nextClipColor(pid),
     // A recording, saved as the sound sheet saves one; `changed`: its voice changed.
