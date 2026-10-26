@@ -25,8 +25,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 - **Delete the old address's DNS record** (1 min): in Cloudflare, open the old address's domain → DNS and delete its `soundboard` record if it is still there (the Worker is gone and the name answers 530). The domain's apex stays. Also, if you like, delete the old address's leftover folder in `~/src/flarepress/` (only wrangler's local `.wrangler/` cache is in it).
 
-
-
 ### v1: prove out the interface
 
 - [ ] Attach any real sound clips in chat (5 min) 🔼
@@ -35,20 +33,11 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
   open Presets on a phone: 🐵 Animals, 👽 Sci-fi, the new 🤪 Silly ones, and the new drums, notes, chords and bass, plus the sharps and flats (⚙️ Advanced on: Notes, Chords, Bass). Say which to redo or drop (each is a short recipe in `tools/make_placeholders.py`).
 - [ ] Record three one-liners and try every voice on them (10 min) 🔼
   on https://noodlepads.com/, tap New sound. Say which voices are funny and which to drop. Listen for a stutter at word endings on Slow, and how crunchy Loud gets at 10.
-- [x] Decide: when a row's sound is still playing at its next hit, cut it off or let hits overlap ✅ 2026-10-10
-  both: hits cut off with a short fade; Advanced beats adds a per-row Overlap switch.
 
 ### Hosting at noodlepads.com
 
-- [x] Retire the feature-use counts and visits: migration 005 applied ✅ 2026-10-16 (Ben). It ran before the runner had harvested `uses` and `visits`, so their 52 and 25 rows (2026-10-14 to 16) are gone; `activity` and `devices` stay in D1 and are still waiting for the runner's first real harvest (`just pull noodlepads` in ~/src/telemetry). `docs/adr/0027-retire-feature-counts-and-visits.md`
-- [x] Apply migration 004, country only (`just cloud-migrate --yes`) ✅ 2026-10-16 (checked in D1's `migrations`)
-  the live Worker already writes only the country; this drops the city, region, network and ASN columns from the activity log, with what they hold (Ben, 2026-10-16: country only). `docs/adr/0016-player-metrics.md`
-- [x] Apply the player-metrics migration (`just cloud-migrate --yes`) ✅ 2026-10-13
 - [ ] Re-clone flarepress on the Mac: it is public code now, and the old one is archived as `flarepress-archive` (2 min)
   `mv ~/src/flarepress ~/src/flarepress-archive && git clone https://github.com/pdxfixit/flarepress ~/src/flarepress`. Then `just doctor`. Migration 003 adds `visits` and drops the always-empty `ip_hash` column; events written in the minute between the two are skipped, never failed. `docs/adr/0016-player-metrics.md`
-- [x] Move the cloud ids and the logs token to their new names ✅ 2026-10-13
-- [x] Pick the address: noodlepads.com ✅ 2026-10-11
-- [x] Pick public or family-only: public ✅ 2026-10-10
 - [ ] Before real voice clips go into `web/clips/`, remember the site is public: anyone can play them (1 min)
 
 ### v2: Android app
@@ -64,18 +53,8 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 - **First, when no other session has this repo open: rewrite git history to remove the old PIN-reset address** (Ben, 2026-10-26; the security seat found it in plain text in the first public commit). Rewriting breaks every clone and worktree, so Ben picks the moment: about ten sessions were open when he asked. Then every checkout re-clones. The app already uses a new address.
 
-
-
-
-
 - **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (`docs/design/more-kinds-of-music.md`; decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups, the emoji rule's exceptions). The grooves, 🧸 Kids' pentatonic toy keys and instruments' phase 1 are built; next:
   1. Instruments, phase 3 (ADR 0030; the pickers everywhere, 🧸 Kids' instrument button, the grooves' instruments and chips, Soca and Chiptune are built): one ready-made key layout per family in ✏️ Layout's keys.
-
-
-
-
-
-
 
 - **Toward a kid-sized music studio** (Ben, 2026-10-12; north star: ADR 0022). Done: pattern chips, mixer, four tabs, the piano roll, the playlist (ADR 0024). Next: Ben's call.
 
