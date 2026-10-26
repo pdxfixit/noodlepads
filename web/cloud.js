@@ -318,6 +318,12 @@ const stops = new Map();     // person id -> AbortController of the sync running
 // 🔄 Try again picks up there (this visit only; cleared once it's done).
 const fetchedFor = new Map();
 let applying = 0;            // while a sync stores what it pulled, those writes are not "changes"
+// Runs `fn` as the sync's own writes. Only these: a kid's edit while a sync
+// waits on the network is a change like any other, and schedules the next sync.
+const quietly = (fn) => async (...args) => {
+  applying++;
+  try { return await fn(...args); } finally { applying--; }
+};
 // Shown and focused: the 5-minute sync runs only then.
 const pageActive = () => {
   const doc = globalThis.document;
@@ -354,15 +360,15 @@ function deps() {
     kitIds: kitIds(),
     sha256,
     clean: (doc, audioOf) => cleanBackup(doc, audioOf, whatIsHere()),
-    merge: (cleaned) => storeLoaded(cleaned),
-    put: async (store, record) => {
+    merge: quietly((cleaned) => storeLoaded(cleaned)),
+    put: quietly(async (store, record) => {
       await db.put(store, record);
       if (store === 'clips' || store === 'overrides') audio.forget(record.id);
-    },
-    remove: async (store, key) => {
+    }),
+    remove: quietly(async (store, key) => {
       await db.remove(store, key);
       if (store === 'clips' || store === 'overrides') audio.forget(key);
-    },
+    }),
     // A sync's progress, without undoing what happened meanwhile: a new key
     // (PIN changed) stays, and a link dropped while it ran stays dropped.
     saveLink: async (l) => {
@@ -391,7 +397,6 @@ export function syncNow(personId, { onProgress } = {}) {
   stops.set(personId, stop);
   const run = (async () => {
     setStatus(personId, { state: 'syncing', text: 'Syncing…' });
-    applying++;
     const id = personId;
     try {
       const link = linkOf(id);
@@ -402,8 +407,7 @@ export function syncNow(personId, { onProgress } = {}) {
         onProgress: (p) => { for (const fn of hearing.get(id) ?? []) fn(p); },
       });
       fetchedFor.delete(id);
-      await readStorage();
-      followPerson();
+      await quietly(async () => { await readStorage(); followPerson(); })();
       logEvent('cloud', { sync: true, pulled: report.pulled, pushed: report.pushed, deleted: report.deleted, sounds: report.sounds, merged: report.merged, clashes: report.clashes, kept: report.kept });
       setStatus(id, { state: 'ok', text: syncNote(report) });
       return report;
@@ -428,7 +432,6 @@ export function syncNow(personId, { onProgress } = {}) {
       }
       return null;
     } finally {
-      applying--;
       running.delete(personId);
       hearing.delete(personId);
       stops.delete(personId);
@@ -522,6 +525,9 @@ async function syncEveryone() {
 export function scheduleSync() {
   timing.changed();
 }
+
+// What waits to sync (sync-timing.js pending): for the tests.
+export const syncWaiting = () => timing.pending();
 
 // ── putting someone in the cloud, and taking them out ──
 

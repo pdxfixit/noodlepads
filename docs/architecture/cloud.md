@@ -193,7 +193,7 @@ Three things send only from noodlepads.com, each checked on its own: `log-send.j
 | Trigger | Wiring | Timing |
 |---|---|---|
 | start | `initCloud` → `syncAll()` | once |
-| a change | `store.js db.onChange(store)` (after every successful put, delete or batch) → `cloud.js` filter (a `CLOUD_KINDS` store or `people`; not while `applying`) → `scheduleSync` → `timing.changed()` | `SYNC_DELAY_MS` 20 s after the last change |
+| a change | `store.js db.onChange(store)` (after every successful put, delete or batch) → `cloud.js` filter (a `CLOUD_KINDS` store or `people`; not while `applying`, which counts only the sync's own writes: `deps.put`, `deps.remove`, `deps.merge` and the `readStorage` after, each wrapped in `quietly`) → `scheduleSync` → `timing.changed()`. A kid's edit while a sync waits on the network schedules the next one (`tests/cloud-sync-edits.test.mjs`) | `SYNC_DELAY_MS` 20 s after the last change |
 | focus, blur, visibility, pagehide | `timing.transition()` | gathered for `TRANSITION_MS` 1.5 s; skipped if a sync ran within `MIN_GAP_MS` 10 s and nothing changed; hiding with a change waiting syncs at once |
 | active | `timing.arm()` | every `ACTIVE_MS` 5 min, only while shown and focused (`pageActive`) |
 | slowed down | `syncNow` on a 429 `slow` → `timing.slow()` | `SLOW_MS` 1 minute later, if shown and focused; else on the next focus |
@@ -445,7 +445,6 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 
 **Gotchas found while reading:**
 
-- **Edits during a sync do not schedule a sync.** `cloud.js` counts `applying` for the whole of `syncNow`, network waits included, and `db.onChange` ignores every store while it is non-zero. An edit pushed in the same sync is fine; one made after its last push slice waits for the next focus, blur, 5-minute tick or change.
 - **Every sync redraws.** `storeLoaded` (always called by `pullOnce`) ends with `readStorage`, `notifyAllSettings`, `renderPeople`, `refreshPeople`, and `syncNow` reads storage again.
 - **Reports expire lazily.** `reports.js` deletes expired rows only when a new report arrives.
 - **`log-clean.js RULES.cloud` lists `forgot`**, which no code logs any more (dead entry; harmless). `remember` is logged again by 🔑 Remember (`true`) and `forgetHere` (`false`).
