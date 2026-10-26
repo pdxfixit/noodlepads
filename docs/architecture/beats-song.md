@@ -121,7 +121,7 @@ The library is the truth. `patterns` only says which named beat is open; no reco
 | Song's `raf` | `song.js follow` | every frame | the playhead line and the lit blocks |
 | 🧸 Kids' `run.timer` | `kids.js playBeat` | 25 ms | its own, 0.12 s ahead |
 
-`play()` waits for every row's sound (`prepare` → `audio.load`, into the `ready` map), then sets `t0 = currentTime + 0.05` (plus one bar with a count-in).
+`play()` waits for every row's sound (`refresh` → `audio.load`, into the `ready` map), then sets `t0 = currentTime + 0.05` (plus one bar with a count-in).
 
 ### Per-row clocks
 
@@ -206,7 +206,7 @@ Three methods at the end of `createSequencer`:
 | Method | Does | Notes |
 |---|---|---|
 | `beatPlan(raw)` | `cleanPattern`, then `planHits` for one pass: `{pattern, seconds, hits: [{row, step, time, loud, note, len}]}` | uses **this device's** Advanced: `playMode()`, swing, and `oldSignature` for a beat with no signature (`barOf`) |
-| `prepareBeats(patterns)` | loads every row's sound into `ready` | **clears `ready` first** (a voice may have changed) |
+| `prepareBeats(patterns)` | loads every row's sound into `ready`, afresh (a voice may have changed) | never empties `ready` (`refresh`), so a beat or song playing keeps its sounds; a sound gone or failing to load is taken out |
 | `soundHit(ctx, dest, list, p, i, time, loud, note, len)` | `sound()` through `busFor(ctx, dest, p).input(i)` | false when the sound is not in `ready` |
 
 Who uses what:
@@ -221,7 +221,7 @@ Who uses what:
 | 🎼 Song 🔊 Save as a sound | `planSong` | `song.js soundSong` → `soundHit` | offline |
 | Share previews (`cloud.js shareItem` → `renderShare`) and 🗂️ See all (`things.js` → `deps.render`) | `share-render.js renderAudio` → `beatPlan` / `planSong` | `soundHit` | offline |
 
-The beat sounds the same in all of them because they share `sound()`, `busFor()` and `planHits()`. A new place that plays a beat should use `beatPlan` + `prepareBeats` + `soundHit`, and should stop the live beat first (see "Seams": `ready`).
+The beat sounds the same in all of them because they share `sound()`, `busFor()` and `planHits()`. A new place that plays a beat should use `beatPlan` + `prepareBeats` + `soundHit`, and should stop the live beat first, so one thing plays at a time.
 
 **One thing plays at a time.** `seq.play` and `hearBeat` call `deps.onPlay` (`app.js`: `song.stop()`); `song.play` calls `seq.stop()`; `hearBeat` stops the beat. `app.js stopEverything` (⏹️, Space) stops all three and both clicks. Leaving Beats or Song stops it (`app.js setScreen`), and so does 🧸 Kids showing (`applyKids`).
 
@@ -407,7 +407,6 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | **Four beat schedulers.** `sequencer.js schedule` (live), `song.js tick`, `kids.js playBeat`, and `hearBeat` (all at once). Kids' looks 0.12 s ahead; the others 0.1 s | Kids ignores accents, swing, signatures (always 16 pills a bar), rates, row level, mute, solo, the 🎚️ Mixer, and a tune row's `rootShift` (`noteRate(n.p)` only). A timing fix in one reaches none of the others |
 | **`TICK_MS` and `LOOKAHEAD`** are separate constants in `sequencer.js` and `song.js` | change one, the beat and the song drift apart in feel |
 | **Output latency** is summed in `sequencer.js outputDelay` and again in `app.js`'s `deps.latency` for `dj.js` | a change to the cap (0.2 s) or the sum must be made twice; Song and Kids ignore latency |
-| **The `ready` cache is shared.** `prepareBeats` clears it. `hearBeat` and `song.play` stop the beat first, but `things.js` (🗂️ See all ▶) and `cloud.js shareItem` render through it without stopping the beat | likely: a beat playing on Beats while a See all row plays or a share is made loses its sounds until the next ▶ (`hit` returns early). Not checked in a browser |
 | **A beat with no `signature`.** The sequencer plays it as the person's old `timeSignature` with Advanced on (`sigOf`, `barOf`); `song.js beatSteps` always counts it as 4/4 | with Advanced on and an old 3/4 setting, a song gives such a beat 16 pills a pass while its plan fills 12: a gap each pass |
 | **The beat id pattern** `/^beat-[a-z0-9-]{1,48}$/` is written in `sequencer.js BEAT_ID`, `playlist.js BEAT_REF`, `backup.js` (a local `BEAT_ID`) and inline in `rhythm.js` | only `playlist.js` vs `sequencer.js` is tested (`tests/playlist.test.mjs`) |
 | **Listing a person's beats** happens three ways: `sequencer.js library()` (via `beatLibrary.list`, minus hidden), `makeSong`'s `deps.beats` (its own filter and sort), `kids.js`'s `deps.beats` | a new hidden kind of beat must be filtered in each |
@@ -434,7 +433,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | The scratch's id is made from the person's id | two devices make the same record, and the cloud merges it | `tests/scratch.test.mjs` |
 | `cleanPattern` sets `personId` from its argument | a beat moved between people must not keep the old owner | `tests/sequencer.test.mjs` (only for a missing `raw`) |
 | Stopping the beat ends a ⌨️ Keys recording (`onStop`) | anything that calls `seq.stop()` (a screen change, a sync, 🆕 New) ends the take | `tests/beat-rec-stop.test.mjs` |
-| `hearBeat`/`song.play` stop the live beat before `prepareBeats` | `prepareBeats` clears `ready` | none (see Seams) |
+| `ready` is never emptied: `play` and `prepareBeats` load afresh over it (`refresh`) | a beat or song playing reads it while 🗂️ See all or a share renders another beat | `tests/beat-sounds-kept.test.mjs` |
 | A song plays every beat at the song's tempo | a beat's own `bpm` is ignored in a song | `tests/song.test.mjs` |
 | Pills past `total()` stay stored | going back to more bars loses nothing | none found |
 | The click goes straight to `audio.master` | it is never in a render or a preview | none |

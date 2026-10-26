@@ -711,6 +711,16 @@ export function createSequencer(deps) {
     if (!clip) return Promise.resolve();
     return audio.load(clip).then((loaded) => { ready.set(clip.id, loaded); }, () => {});
   }
+  // These rows' sounds, loaded afresh (a voice may have changed since the
+  // last play) without emptying `ready`: a beat or a song still playing
+  // reads it. A sound that is gone, or will not load, is taken out.
+  function refresh(rows) {
+    return Promise.all(rows.map((r) => {
+      const clip = deps.clipById(r.clipId);
+      if (!clip) { ready.delete(r.clipId); return undefined; }
+      return audio.load(clip).then((loaded) => { ready.set(clip.id, loaded); }, () => { ready.delete(clip.id); });
+    }));
+  }
 
   // One open beat per person (ADR 0017, replacing ADR 0008's one per
   // screen for beats). `slot` is the view showing it: 'beats' (Beats),
@@ -1089,9 +1099,8 @@ export function createSequencer(deps) {
     if (playing() || !pattern) return;
     deps.onPlay?.();   // a song playing stops: one thing plays at a time
     const ctx = audio.wake();
-    ready.clear();  // a sound's voice may have changed since the last play
     const asked = pattern;
-    await Promise.all(pattern.rows.map((r) => prepare(deps.clipById(r.clipId))));
+    await refresh(pattern.rows);
     if (playing() || pattern !== asked) return;   // stopped, or another beat opened, while its sounds loaded
     queue = [];
     t0 = ctx.currentTime + 0.05;
@@ -3337,11 +3346,9 @@ export function createSequencer(deps) {
     const hits = planHits(p, playMode(), seconds, steps, advanced ? p.swing || 0 : 0);
     return { pattern: p, seconds, hits };
   }
-  // Loads every sound the beats use (fresh: a voice may have changed).
-  function prepareBeats(patterns) {
-    ready.clear();
-    return Promise.all(patterns.flatMap((p) => p.rows.map((r) => prepare(deps.clipById(r.clipId)))));
-  }
+  // Loads every sound the beats use (fresh: a voice may have changed),
+  // keeping the ones a beat or song playing now still needs.
+  const prepareBeats = (patterns) => refresh(patterns.flatMap((p) => p.rows));
   // Sounds row i of beat `p` at `time` into `dest`, cutting off or
   // overlapping the row's earlier hits in `list`. False if its sound is gone.
   function soundHit(ctx, dest, list, p, i, time, loud, note, len = 0) {
