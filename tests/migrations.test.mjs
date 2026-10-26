@@ -70,10 +70,15 @@ test('migration 006 counts each profile\'s record bytes as the Worker does', () 
   db.exec(`
     INSERT INTO profiles (id, name, avatar, color, rev, edited, created) VALUES ('p-a', 'Admiral Acorn', '', '#1F3FA8', 2, 1, 1), ('p-b', 'Sir Squid', '', '#1F3FA8', 0, 1, 1);
     INSERT INTO records (profile_id, kind, id, body, rev, deleted) VALUES ('p-a', 'beats', 'b-1', '{"name":"Ünï"}', 1, 0), ('p-a', 'beats', 'b-2', NULL, 2, 1);
+    INSERT INTO shares (code, profile_id, kind, title, bundle, hash, created) VALUES ('ABCD2345', 'p-b', 'sound', 'Burp', '{"clips":[]}', 'h', 1);
+    INSERT INTO share_sounds (code, sound_id) VALUES ('ABCD2345', 's-1'), ('ABCD2345', 's-2');
   `);
   db.exec(read(`../worker/migrations/${MIGRATIONS.find((m) => m.startsWith('006'))}`));
   const bytes = Object.fromEntries(db.prepare('SELECT id, record_bytes FROM profiles').all().map((r) => [r.id, r.record_bytes]));
-  assert.deepEqual(bytes, { 'p-a': Buffer.byteLength('{"name":"Ünï"}') + ROW_BYTES + ROW_BYTES, 'p-b': 0 }, 'bytes, not characters; a tombstone costs a row');
+  assert.deepEqual(bytes, {
+    'p-a': Buffer.byteLength('{"name":"Ünï"}') + ROW_BYTES + ROW_BYTES,
+    'p-b': Buffer.byteLength('{"clips":[]}') + Buffer.byteLength('Burp') + 3 * ROW_BYTES,
+  }, 'bytes, not characters; a tombstone costs a row; a share its bundle, title and rows');
 });
 
 // 007: every key there counts as used now, so none expires before 180 days of its own.

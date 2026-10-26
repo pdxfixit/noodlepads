@@ -475,6 +475,37 @@ test('a share outlives the sound it uses, until its profile is deleted: then its
   assert.deepEqual((await c.call('GET', `sounds/${theirs}`)).data, new Uint8Array([7, 7]), 'the remix still plays');
 });
 
+// The security seat, 2026-10-26: 200 shares a profile of up to 1 MB each was
+// storage no cap counted. A share's bundle now counts with the records.
+test("a share's bundle counts against the profile's 10 MB and everyone's 60 MB; unsharing gives it back; 50 a profile", async () => {
+  const c = cloud();
+  const a = await made(c, 'p-a');
+  const s = await sound(c, a, 'p-a', 7);
+  await c.call('POST', 'profiles/p-a/records', { key: a, body: { put: [{ kind: 'clips', id: 'user-1', body: { sound: s } }] } });
+  const clip = Buffer.byteLength(JSON.stringify({ sound: s })) + ROW_BYTES;
+  const bytes = () => c.env.DB.rows("SELECT record_bytes AS b FROM profiles WHERE id = 'p-a'")[0].b - clip;
+  const body = (title, n = 900_000) => ({ kind: 'beat', title, bundle: { clips: [{ id: 'user-1', sound: s }], beats: [{ id: 'beat-1', name: 'x'.repeat(n) }], songs: [] } });
+  const { data: { code } } = await c.call('POST', 'profiles/p-a/shares', { key: a, body: body('Boom') });
+  const bundle = JSON.stringify(body('Boom').bundle);
+  assert.equal(bytes(), Buffer.byteLength(bundle) + Buffer.byteLength('Boom') + 2 * ROW_BYTES, 'its bundle, title, row and sound row');
+  assert.equal((await c.call('DELETE', `profiles/p-a/shares/${code}`, { key: a })).status, 200);
+  assert.equal(bytes(), 0, 'unsharing gives it back');
+  // Everyone's.
+  c.env.DB.db.prepare("INSERT INTO profiles (id, name, color, edited, created, record_bytes) VALUES ('p-z', 'Sir Squid', '#1F3FA8', 0, 0, ?)")
+    .run(LIMITS.totalRecordBytes - 500_000);
+  const full = await c.call('POST', 'profiles/p-a/shares', { key: a, body: body('Boom') });
+  assert.deepEqual([full.status, full.data.error], [507, 'cloud full']);
+  assert.equal(c.env.DB.rows('SELECT COUNT(*) AS n FROM shares')[0].n, 0, 'nothing was shared');
+  assert.equal((await c.call('POST', 'profiles/p-a/shares', { key: a, body: body('Small', 10) })).status, 201, 'a small one fits');
+  // 50 a profile.
+  assert.equal(LIMITS.sharesPerProfile, 50);
+  for (let i = 0; i < 49; i++) {
+    c.env.DB.db.prepare("INSERT INTO shares (code, profile_id, kind, title, bundle, hash, created) VALUES (?, 'p-a', 'beat', 'x', '{}', ?, 0)").run(`CODE${i}`, `h${i}`);
+  }
+  const many = await c.call('POST', 'profiles/p-a/shares', { key: a, body: body('One more', 10) });
+  assert.deepEqual([many.status, many.data.error], [507, 'shares full']);
+});
+
 // Ben, 2026-10-11 (Q18): "allow to be unshared. copies remain". The sharer
 // lists their own shares and can end one: the code stops working for
 // everyone, and audio only that share used goes with it. A remix holds its

@@ -275,7 +275,7 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 | `activity` | autoincrement `id` | `metrics.js noteEvent` | the runner | 14 days |
 | `migrations` | `name` | each migration; schema.sql lists 001–007 as applied | `just cloud-migrate` | — |
 
-Migrations: 001 drops gifts and families, adds `active`, `keys.session`, shares; 002 adds `devices`, `activity`, `uses`; 003 adds `visits`, drops `ip_hash`; 004 keeps country only; 005 drops `uses` and `visits`; 006 adds `profiles.record_bytes`, counted from the records; 007 adds `keys.used`. `tests/migrations.test.mjs` checks the migrations reach `schema.sql`.
+Migrations: 001 drops gifts and families, adds `active`, `keys.session`, shares; 002 adds `devices`, `activity`, `uses`; 003 adds `visits`, drops `ip_hash`; 004 keeps country only; 005 drops `uses` and `visits`; 006 adds `profiles.record_bytes`, counted from the records and shares; 007 adds `keys.used`. `tests/migrations.test.mjs` checks the migrations reach `schema.sql`.
 
 ## Every /api/ route and its limits
 
@@ -295,9 +295,9 @@ All JSON bodies go through `http.js readJson`: `Origin` must be `https://noodlep
 | `POST /api/profiles/:id/sounds` | Origin, key | ≤ 25 MB; `audio/*` mime; 507 over 40 MB a profile (its unfinished sounds counted whole) or 400 MB in all (others' unfinished ones only as far as they uploaded); first deletes every sound left unfinished over `PENDING_MS` (an hour) |
 | `PUT /api/sounds/:sid/:n` | Origin, owner's key | `n` 0–99 by the path, < `chunks`; exact piece size; 404 on a sound left unfinished over an hour |
 | `GET`/`HEAD /api/sounds/:sid` | — | 404 until every piece is in |
-| `POST /api/profiles/:id/shares` | Origin, key | body ≤ 1 MB + 4 KB; ≤ 100 clips, 100 beats, 20 songs; title ≤ 24; 200 shares a profile; 500 a UTC day; same snapshot → same code |
+| `POST /api/profiles/:id/shares` | Origin, key | body ≤ 1 MB + 4 KB; ≤ 100 clips, 100 beats, 20 songs; title ≤ 24; 50 shares a profile; its bundle, title and rows count in the profile's 10 MB and everyone's 60 MB (507 `records full` / `cloud full`); 500 a UTC day; same snapshot → same code |
 | `GET /api/profiles/:id/shares` | key | — |
-| `DELETE /api/profiles/:id/shares/:code` | Origin, key | only the sharer |
+| `DELETE /api/profiles/:id/shares/:code` | Origin, key | only the sharer; gives its bytes back |
 | `GET /api/shares/:code` | — | case and dashes ignored |
 | `POST /api/profiles/:id/uses` | Origin, key | retired: ≤ 32 KB, stores nothing, answers ok; to remove about 2026-11-16 |
 | `POST /api/log` | Origin | JSON, 64 KB, `cleanUpload`; 10 a minute a device code; 1,000 a UTC day (`reports`), and 1,000 more holding an error or a silent tap (`reports-problems`, `isProblem`); all kept reports at most 40 MB (`MAX_STORED_BYTES`, else 507); 204 |

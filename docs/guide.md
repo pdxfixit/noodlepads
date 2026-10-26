@@ -1041,16 +1041,17 @@ The cloud checks everything it is sent, too (`worker/cloud.js` `LIMITS`), so
 one device can't fill the free plan's 500 MB database for every family. A
 sound is at most 25 MB; a profile's sounds at most 40 MB and everyone's 400
 MB. A record (a beat, a take…) is at most 512 KB of JSON, a push at most 4 MB
-and 200 records; a profile's records at most 10 MB and everyone's 60 MB (each
-counts its JSON and 100 bytes, so a deleted one's tombstone counts too). A
+and 200 records; a profile's records and share codes at most 10 MB and
+everyone's 60 MB (each record counts its JSON and 100 bytes, so a deleted
+one's tombstone counts too; a share its snapshot, up to 1 MB). A profile has
+at most 50 share codes. A
 push or sound over a cap is refused (507) and stays on the device. A sound
 not whole an hour after its upload started is given up, and its device
 starts it again; until then it counts in full for its own profile, and for
 everyone else only as far as it has uploaded. A push
 that adds nothing (an edit that shrinks, a delete) always lands. A day (UTC)
 allows 10 new profiles across the site (one deleted again still counts; the deploy checks'
-throwaway ones have 100 of their own), 5,000 pushes and 500 shares; a
-profile, 200 shares.
+throwaway ones have 100 of their own), 5,000 pushes and 500 shares.
 A profile keeps the keys of its 20 most recently used devices, and a device
 that hasn't used its key for 180 days opens the profile again (by itself
 with no PIN; else it asks the PIN).

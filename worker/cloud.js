@@ -30,19 +30,23 @@ export const LIMITS = {
   perPush: 200,                      // records in one push
   recordBytes: 512 * 1024,           // one record's JSON (a long take is about 400 KB)
   pushBytes: 4 * 1024 * 1024,        // one push's body
-  profileRecordBytes: 10 * 1024 * 1024, // one profile's records (ROW_BYTES each, plus its JSON)
-  totalRecordBytes: 60 * 1024 * 1024,   // every profile's records: with every sound, under the 500 MB
+  profileRecordBytes: 10 * 1024 * 1024, // one profile's records and shares (ROW_BYTES each, plus its JSON)
+  totalRecordBytes: 60 * 1024 * 1024,   // every profile's: with every sound, under the 500 MB
   pullPage: 500,                     // records in one pull
-  sharesPerProfile: 200,
+  sharesPerProfile: 50,              // and their bundles count in profileRecordBytes
   shareBytes: 1024 * 1024,           // one share's bundle
 };
 
 // What a record costs in the database: its JSON, plus about 100 bytes for its
 // ids, rev and index entries, so a tombstone (no body) costs something too.
-// profiles.record_bytes keeps each profile's total (migration 006 counts it
-// the same way).
+// A share costs its bundle and title, plus a row for it and one for each
+// sound it names. profiles.record_bytes keeps each profile's total of both
+// (migration 006 counts it the same way).
 export const ROW_BYTES = 100;
 const SIZE = `COALESCE(LENGTH(CAST(records.body AS BLOB)), 0) + ${ROW_BYTES}`;
+const SHARE_SIZE = `LENGTH(CAST(shares.bundle AS BLOB)) + LENGTH(CAST(shares.title AS BLOB))
+  + ${ROW_BYTES} * (1 + (SELECT COUNT(*) FROM share_sounds WHERE share_sounds.code = shares.code))`;
+const byteLength = (text) => new TextEncoder().encode(text).length;
 // The records a push names, one bound JSON list of [kind, id] (D1 binds at
 // most 100 values a query), each found by its primary key.
 const TOUCHED = `json_each(?) AS j JOIN records ON records.profile_id = ?
@@ -323,9 +327,9 @@ function checkRecordKey(r) {
   if (!r || !KINDS.includes(r.kind) || typeof r.id !== 'string' || !RECORD_ID.test(r.id)) throw new Refuse(400, 'record');
 }
 
-// A profile's bytes counted again from what it holds (its records).
+// A profile's bytes counted again from what it holds (its records and shares).
 const recount = (env, id) => env.DB.prepare(`UPDATE profiles SET record_bytes = (SELECT COALESCE(SUM(${SIZE}), 0) FROM records WHERE records.profile_id = ?)
-  WHERE id = ? RETURNING record_bytes`).bind(id, id).first();
+  + (SELECT COALESCE(SUM(${SHARE_SIZE}), 0) FROM shares WHERE shares.profile_id = ?) WHERE id = ? RETURNING record_bytes`).bind(id, id, id).first();
 
 // Takes `growth` more bytes for profile `id`, or a 507: its own cap
 // ('records full'), else everyone's ('cloud full'). One UPDATE checks both
@@ -389,7 +393,7 @@ async function push(request, env, id, now, seen) {
   // holds now. A push that adds nothing is never refused, so a full profile
   // can still delete and edit.
   const after = new Map();
-  put.forEach((r, i) => after.set(`${r.kind}:${r.id}`, { kind: r.kind, id: r.id, size: new TextEncoder().encode(texts[i]).length + ROW_BYTES }));
+  put.forEach((r, i) => after.set(`${r.kind}:${r.id}`, { kind: r.kind, id: r.id, size: byteLength(texts[i]) + ROW_BYTES }));
   for (const r of del) after.set(`${r.kind}:${r.id}`, { kind: r.kind, id: r.id, size: ROW_BYTES });
   const touched = JSON.stringify([...after.values()].map((r) => [r.kind, r.id]));
   const before = (await env.DB.prepare(`SELECT ${SIZE} AS size FROM ${TOUCHED}`).bind(touched, id).all()).results;
@@ -600,11 +604,18 @@ async function makeShare(request, env, id, now, seen) {
     if (!await env.DB.prepare('SELECT 1 AS x FROM shares WHERE code = ?').bind(c).first()) code = c;
   }
   if (!code) throw new Refuse(503, 'busy');
-  await env.DB.batch([
-    env.DB.prepare('INSERT INTO shares (code, profile_id, kind, title, bundle, preview, hash, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(code, id, body.kind, title, text, preview, hash, now),
-    ...[...sounds].map((s) => env.DB.prepare('INSERT OR IGNORE INTO share_sounds (code, sound_id) VALUES (?, ?)').bind(code, s)),
-  ]);
+  // Its bytes count against the profile's records and everyone's (SHARE_SIZE).
+  const reserved = await reserve(env, id, byteLength(text) + byteLength(title) + ROW_BYTES * (1 + sounds.size));
+  try {
+    await env.DB.batch([
+      env.DB.prepare('INSERT INTO shares (code, profile_id, kind, title, bundle, preview, hash, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(code, id, body.kind, title, text, preview, hash, now),
+      ...[...sounds].map((s) => env.DB.prepare('INSERT OR IGNORE INTO share_sounds (code, sound_id) VALUES (?, ?)').bind(code, s)),
+    ]);
+  } catch (err) {
+    await release(env, id, reserved);
+    throw err;
+  }
   return json(201, { code });
 }
 
@@ -643,6 +654,7 @@ async function unshare(request, env, id, raw, now) {
   const used = (await env.DB.prepare('SELECT sound_id FROM share_sounds WHERE code = ?').bind(code).all()).results.map((r) => r.sound_id);
   const unused = `id = ? AND NOT EXISTS (SELECT 1 FROM records WHERE sound_id = sounds.id AND deleted = 0) AND ${UNSHARED}`;
   await env.DB.batch([
+    env.DB.prepare(`UPDATE profiles SET record_bytes = MAX(0, record_bytes - (SELECT ${SHARE_SIZE} FROM shares WHERE code = ?)) WHERE id = ?`).bind(code, id),
     env.DB.prepare('DELETE FROM share_sounds WHERE code = ?').bind(code),
     env.DB.prepare('DELETE FROM shares WHERE code = ?').bind(code),
     ...used.flatMap((sound) => [
