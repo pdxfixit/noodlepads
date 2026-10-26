@@ -118,8 +118,10 @@ in the cloud on this device:
   local record whose hash differs was changed here; one in `sent` but gone
   here was deleted here.
 - `sounds`: each clip's audio SHA-256 and cloud sound id, so audio is hashed
-  and uploaded once. A clip's audio never changes (trims, voices and edits are
-  settings), so a clip id's entry never goes stale.
+  and uploaded once. Trims, voices and edits are settings, so a recording's
+  audio never changes; a ✨ made sound's does when its sliders move (the
+  sound sheet's Save), so the sync hashes a clip's audio again when its size
+  or edit stamp changes, and new audio goes up as a new sound.
 
 The link also holds `pin` (the profile has one), `rememberUntil` (this
 device remembers it until then, in ms: the key is stored; otherwise it lives

@@ -56,8 +56,9 @@ export const stampOf = (r) => cleanStamp(r?.[STAMP]) ?? time(r?.saved) ?? time(r
 
 // ── content ──
 
-// Not content: the audio and where it is kept (a sound's audio never changes
-// under its id), and the stamp.
+// Not content: the audio and where it is kept, and the stamp. A cloud sound
+// id's audio never changes; a clip's can (a made sound's sliders moved), and
+// cloud-sync.js audioDecides compares the audio itself by its SHA.
 const NOT_CONTENT = new Set(['blob', 'sound', 'sha256', 'bytes', STAMP]);
 
 function canon(value) {
@@ -312,8 +313,8 @@ export function merge3(kind, base, local, remote) {
   const fields = mergeFields(strip(base) ?? {}, strip(local), strip(remote), ctx, KIND_RULES[kind] ?? {});
   if (fields === UNSAFE) return { keepBoth: true };
   if (derived && Array.isArray(fields.lanes)) fields.slots = legacySlots(fields.lanes);
-  // The audio is this device's (it never changes under a sound's id); the
-  // stamp is the newer of the two.
+  // The audio is this device's here; cloud-sync.js audioDecides says when
+  // the cloud's goes with the merge instead. The stamp is the newer of the two.
   if (local?.blob !== undefined) fields.blob = local.blob;
   const stamp = Math.max(cleanStamp(local?.[STAMP]) ?? 0, cleanStamp(remote?.[STAMP]) ?? 0);
   if (stamp) fields[STAMP] = stamp;

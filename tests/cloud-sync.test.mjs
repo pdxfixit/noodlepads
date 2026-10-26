@@ -211,6 +211,59 @@ test('a new look (🎲 or an avatar) goes both ways by the newer edit', async ()
   assert.deepEqual([p.name, p.avatar], ['Agent Alpaca', '🐙']);
 });
 
+// A made sound on two devices: one moves its sliders (new audio, new recipe),
+// the other renames it.
+async function madeSoundOnTwo() {
+  const BOOM = { tone: 'smooth', from: 160, to: 38, length: 0.8, shape: 'drop', pulses: 1 };   // synth.js's Boom
+  const t = await twoDevicesWith((a) => a.put('clips', { ...a.stores.clips[0], synth: BOOM, changed: Date.now() - 9000 }));
+  return { ...t, BOOM };
+}
+async function twoDevicesWith(before) {
+  const { api, env } = server();
+  const { a, link } = await startA(api);
+  await before(a);
+  await syncProfile(link, a.deps(api));
+  const { d: b, link: bl } = await openOn(api, 'p-a');
+  await syncProfile(bl, b.deps(api));
+  return { api, env, a, b, syncA: () => syncProfile(link, a.deps(api)), syncB: () => syncProfile(bl, b.deps(api)) };
+}
+const clipOf = async (d) => {
+  const mine = d.stores.clips.filter((c) => c.personId === 'p-a');
+  return Promise.all(mine.map(async (c) => ({ label: c.label, from: c.synth?.from, audio: await bytesOf(c.blob) })));
+};
+
+test('sliders moved on one device, the same sound renamed on the other: every device gets the new audio, recipe and name', async () => {
+  for (const order of ['sliders first', 'name first']) {
+    const { api, env, a, b, syncA, syncB, BOOM } = await madeSoundOnTwo();
+    await a.put('clips', { ...a.stores.clips[0], blob: blob(9, 8, 7, 6), synth: { ...BOOM, from: 400 }, changed: Date.now() - 2000 });
+    await b.put('clips', { ...b.stores.clips[0], label: 'Big Boom', changed: Date.now() - 1000 });
+    const [first, second] = order === 'sliders first' ? [syncA, syncB] : [syncB, syncA];
+    await first(); await second(); await first();
+    const want = [{ label: 'Big Boom', from: 400, audio: [9, 8, 7, 6] }];
+    assert.deepEqual(await clipOf(a), want, `${order}: A`);
+    assert.deepEqual(await clipOf(b), want, `${order}: B`);
+    const { d: c, link: cl } = await openOn(api, 'p-a');
+    await syncProfile(cl, c.deps(api));
+    assert.deepEqual(await clipOf(c), want, `${order}: a device opened later`);
+    assert.deepEqual(env.DB.rows('SELECT bytes FROM sounds').map((r) => r.bytes), [4], `${order}: only the new audio is kept`);
+  }
+});
+
+test('sliders moved differently on two devices: both sounds are kept, each with its own audio', async () => {
+  for (const order of ['A first', 'B first']) {
+    const { a, b, syncA, syncB, BOOM } = await madeSoundOnTwo();
+    await a.put('clips', { ...a.stores.clips[0], blob: blob(9, 8, 7, 6), synth: { ...BOOM, from: 400 }, changed: Date.now() - 2000 });
+    await b.put('clips', { ...b.stores.clips[0], blob: blob(5, 5, 5), synth: { ...BOOM, from: 900 }, changed: Date.now() - 1000 });
+    const [first, second] = order === 'A first' ? [syncA, syncB] : [syncB, syncA];
+    const r = (await first(), await second());
+    assert.equal(r.kept, 1, order);
+    await first();
+    const sorted = async (d) => (await clipOf(d)).map((c) => `${c.from}:${c.audio.join('')}`).sort();
+    assert.deepEqual(await sorted(a), ['400:9876', '900:555'], `${order}: A`);
+    assert.deepEqual(await sorted(b), ['400:9876', '900:555'], `${order}: B`);
+  }
+});
+
 test('a sound over 1.9 MB goes up and comes down in pieces, byte for byte', async () => {
   const { api, env } = server();
   const { a, link } = await startA(api);
