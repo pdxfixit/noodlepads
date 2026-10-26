@@ -22,7 +22,7 @@ computer, at https://noodlepads.com/.
 - 125 ready-made sounds (145 with Advanced's sharps and flats): drums, hand
   drums, hip hop, notes, chords, bass, game, effects, animals, sci-fi, voices
   and silly ones. The drums and most animals are real recordings, and they
-  all play about as loud as each other.
+  nearly all play about as loud as each other.
 - 🎹 Who plays: pick the instrument for Notes, Chords and Bass, from piano,
   strings, marimba, steel drum, guitar and more (11 for Notes).
 - 🎨 Pad skins: every pad as Tiles, Slam buttons, Lit pads, Switch, Spinner,

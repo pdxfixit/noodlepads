@@ -42,19 +42,19 @@ A small rule (a label, a color, a layout) needs only its row in `decisions.md`.
 | [0015](0015-row-volume.md) | A beat row's loudness is stored as `volume`, left out at full | Accepted |
 | [0016](0016-player-metrics.md) | Player metrics, for people in the cloud: devices, places (nothing of the IP), activity, feature use and visits, 14 days in D1, then the telemetry runner's mirror | Accepted (feature use and visits superseded by 0027) |
 | [0017](0017-four-peer-tabs.md) | Four peer tabs, Pads · Beats · Song · Live; Beat Builder becomes Beats' ⌨️ Keys; one open beat | Accepted, built; its four tabs replaced by 0033 |
-| [0018](0018-mixer-fields.md) | The 🎚️ Mixer's solo, effects and master are stored on the beat, left out at normal | Accepted |
+| [0018](0018-mixer-fields.md) | The 🎚️ Mixer's solo, effects and master are stored on the beat, left out at normal | Accepted, built |
 | [0019](0019-kids-level.md) | Three levels per person, 🧸 Kids · Regular · Advanced; Kids is four big picture screens, left by a grown-up sum | Accepted, built |
 | [0020](0020-scratch-documents.md) | A scratch beat and song per person, open by default; grooves load into it; 💾 Keep names it "<fun name> (<groove> version)" | Accepted, built |
-| [0021](0021-beat-pins.md) | A 📌 pin is a time on the beat record, left out when not pinned | Accepted |
+| [0021](0021-beat-pins.md) | A 📌 pin is a time on the beat record, left out when not pinned | Accepted, built |
 | [0022](0022-north-star.md) | Mission and north star: a music studio for kids and amateurs (sounds, patterns, a playlist, live play); no ads, accounts, socials or AI-made music; no brand named | Accepted |
 | [0023](0023-piano-roll-notes.md) | A tune row stores notes (pitch, start, length) for 🎹 the piano roll; old melody rows are read as notes, and older copies still play them roughly | Accepted |
 | [0024](0024-playlist-lanes.md) | Song is a playlist: up to 8 lanes of beat blocks at one song tempo; pick a beat, tap a spot | Accepted, built |
 | [0025](0025-github-deploys.md) | GitHub deploys every push to main with this repo's own token; agents hold no Cloudflare credentials; the site folder and its ID placeholders live in this repo | Accepted |
 | [0026](0026-telemetry-standard.md) | Usage events in the shared telemetry standard: one `track()` call, hooks per category, on by default with the `sendUsage` switch, which also gates the older metrics | Accepted |
 | [0027](0027-retire-feature-counts-and-visits.md) | Retire the feature-use counts and visit summaries now the shared events are live; keep devices and activity | Accepted |
-| [0028](0028-welcome-and-tips.md) | New people get a welcome (Who's playing?), a stage name and one-time tips; a level-up nudge | Accepted, to build |
-| [0029](0029-touch-layouts.md) | 👆 Touch layouts: bands of sounds on the deck (`decks.touch`), named saves as their own records (`touchLayouts`) | Accepted |
-| [0030](0030-instruments-who-plays.md) | 🎹 Instruments: who plays Notes, Chords and Bass, a view over the kit (`inst`, `plays`, `shift`, `chord` in boards.json; a person setting each) | Accepted, phase 1 built |
+| [0028](0028-welcome-and-tips.md) | New people get a welcome (Who's playing?), a stage name and one-time tips; a level-up nudge | Accepted, built |
+| [0029](0029-touch-layouts.md) | 👆 Touch layouts: bands of sounds on the deck (`decks.touch`), named saves as their own records (`touchLayouts`) | Accepted, built |
+| [0030](0030-instruments-who-plays.md) | 🎹 Instruments: who plays Notes, Chords and Bass, a view over the kit (`inst`, `plays`, `shift`, `chord` in boards.json; a person setting each) | Accepted, phases 1 and 2 built |
 | [0031](0031-tempo-marks-in-songs.md) | Tempo marks in songs: `tempos: [{bar, bpm}]`, every lane following them | Accepted, built |
 | [0032](0032-layout-grids.md) | 👆 Layout grids: a tree of splits in twelfths placing the touch layout's bands in blocks side by side | Accepted, built |
 | [0033](0033-play-and-make.md) | 🎉 Play (Pads, Live) and 🛠️ Make (Beats, Song): two modes in the bottom bar, the open one showing its two screens | Accepted, built |

@@ -747,8 +747,8 @@ def pitch_up(path, factor):
 
 
 def cackle(path):
-    """An original goblin cackle (not a recording of anything): a fast run of
-    laughs from a macOS voice, pitched up."""
+    """A goblin cackle: a fast run of laughs from a macOS voice (Apple's, to be
+    replaced: web/clips/kit/LICENSE-samples.txt), pitched up."""
     # [[slnc N]] is a pause of N ms in macOS speech: it keeps each laugh short
     # and separate, which is what makes it a cackle rather than a chuckle.
     gap = " [[slnc 45]] "
