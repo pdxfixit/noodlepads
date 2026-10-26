@@ -177,6 +177,8 @@ function renderMode() {
   el.layerExtra.hidden = !adv;
   el.shapeSurprise.hidden = !adv;
   el.sheetAdvanced.checked = adv;
+  // Its box is marked .on: Firefox before 121 has no :has(input:checked).
+  el.sheetAdvanced.closest('label').classList.toggle('on', adv);
 }
 
 // ── Voices as knob settings (voice-knobs.js) ──────────────────────────

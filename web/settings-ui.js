@@ -103,8 +103,10 @@ function chips() {
 export function syncSettingsControls() {
   for (const radio of el.radios) radio.checked = radio.dataset.value === getSetting(radio.getAttribute('name'));
   // The chosen look's sample shows itself playing (a lever down, a lit pad, a dial part way round).
+  // Its box is marked .on for its ring: Firefox before 121 has no :has(input:checked).
   for (const sample of el.skinPicks.querySelectorAll('.skin-sample')) {
     const on = sample.closest('label').querySelector('input').checked;
+    sample.closest('label').classList.toggle('on', on);
     sample.classList.toggle('playing', on);
     sample.style.setProperty('--progress', on ? 0.35 : 0);
   }

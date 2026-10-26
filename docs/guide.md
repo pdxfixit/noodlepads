@@ -1108,16 +1108,22 @@ copy never asks (`web/update.js`).
 ## Which browsers
 
 Noodle Pads needs about Chrome 117, Firefox 115 or Safari 16.4 (Edge and
-Samsung Internet follow Chrome). An older browser would half-draw the page,
+Samsung Internet follow Chrome). The floor is about, not exact: the checks
+below let a slightly older browser through (Safari 16.0 to 16.3, Firefox
+112 to 114). An older browser would half-draw the page,
 so it shows one plain notice instead: "This browser is too old for Noodle
 Pads. Update it, or open noodlepads.com in a newer Chrome, Firefox or
 Safari." `web/too-old.js`, a small classic script that runs before the app,
 checks a few of the newest things the app leans on (CSS subgrid,
 `color-mix()`, container queries and `dvh`; `findLast`, `.at()`,
 `structuredClone` and `inert`); when one is missing it shows the notice and
-marks the page, and `app.js` does not start. `:has()` and `@scope` are newer
-than the floor in some browsers and the app gets by without them (pads show
-Tiles), so they are not checked.
+marks the page, and `app.js` does not start. `:has()` (Firefox 121) and
+`@scope` (the pad skins) are newer than the floor in some browsers, so they
+are not checked. Without `@scope` every pad shows Tiles; without `:has()`
+a few small layout touches are lost (how some bars and outlines fit), and
+the choices that show
+by a ring (🎨 Look's skins, the sound sheet's ⚙️ Advanced) are marked by a
+class the code sets, with the focus ring on any focus.
 
 ## Installing it
 

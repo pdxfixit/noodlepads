@@ -1156,10 +1156,13 @@ test('the Advanced switch sits at the bottom of Layers and flips the same settin
   await page.settle();
   assert.equal(getSetting('advancedBeats'), true);
   assert.equal($('#layer-extra').hidden, false, 'the sheet follows at once');
+  // Its box is marked on by the code: Firefox 115 to 120 (at the browser floor) has no :has(input:checked).
+  assert.equal(sw.closest('label').classList.contains('on'), true);
   sw.checked = false;
   sw.dispatch('change');
   await page.settle();
   assert.equal($('#layer-extra').hidden, true);
+  assert.equal(sw.closest('label').classList.contains('on'), false);
   $('#sheet').close();
 });
 

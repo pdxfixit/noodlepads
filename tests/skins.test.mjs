@@ -165,6 +165,8 @@ test('🎨 Look: seven choices, each a sample in its own skin; choosing one skin
   assert.equal(chip().textContent, 'Switch');
   assert.ok(picks[3].querySelector('.skin-sample').classList.contains('playing'), 'the chosen sample shows itself playing');
   assert.equal(picks[0].querySelector('.skin-sample').classList.contains('playing'), false);
+  // The ring is a class, not :has(input:checked): Firefox 115 to 120 (at the browser floor) has no :has().
+  assert.deepEqual(picks.map((p) => p.classList.contains('on')), SKIN_IDS.map((id) => id === 'switch'), 'only the chosen box is marked');
   // Another person's skin shows in the dialog when they are showing.
   $('#settings-dialog').close();
   people()[1].dispatch('click');
