@@ -112,6 +112,29 @@ test('with a mouse: Delete turns the pick off and offers Undo; a double-click tu
   assert.deepEqual(lit(0), [2, 10]);
 });
 
+// Esc on the page is ⏹️ Stop all (app.js), but its first job is closer to
+// hand: letting go of a pick, or closing a row's ⋯ menu. Those leave a
+// playing beat playing.
+test('Esc while the beat plays: it lets go of the pick, or closes a row\'s menu, and the beat keeps going', async () => {
+  const playing = () => page.$('#seq-play').getAttribute('aria-pressed') === 'true';
+  page.$('#seq-play').dispatch('click');
+  await page.settle();
+  assert.equal(playing(), true);
+  click(pill(0, 2));
+  assert.deepEqual(chosen(), [2]);
+  page.key('Escape');
+  assert.deepEqual(chosen(), [], 'let go');
+  assert.equal(playing(), true, 'still playing');
+  const pop = () => document.body.children.find((c) => c.classList.contains('more-pop'));
+  rows().querySelector('.seq-head [data-more]').dispatch('click');
+  assert.equal(pop()?.hidden, false, 'the menu is open');
+  page.key('Escape');
+  assert.equal(pop().hidden, true, 'closed');
+  assert.equal(playing(), true, 'still playing');
+  page.key('Escape');
+  assert.equal(playing(), false, 'a third Esc stops it');
+});
+
 test('a finger\'s tap still lights and unlights, and picks nothing', () => {
   const tap = (p) => { p.dispatch('pointerdown', { pointerType: 'touch', button: 0, clientX: 5, clientY: 5 }); p.dispatch('pointerup', { pointerType: 'touch' }); p.dispatch('click'); };
   tap(pill(0, 2));

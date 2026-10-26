@@ -211,7 +211,8 @@ export function createPillSelect(deps) {
   function key(e) {
     if (!pick.size || !deps.enabled() || e.target?.closest?.('input, textarea, select, dialog') || document.querySelector?.('dialog[open]')) return;
     if (!deps.root.isConnected || deps.root.closest?.('[hidden]')) return;
-    if (e.key === 'Escape') { set(new Set()); return; }
+    // Handled: the page's Esc (⏹️ Stop all, app.js) stands down.
+    if (e.key === 'Escape') { e.preventDefault(); set(new Set()); return; }
     if ((e.key !== 'Delete' && e.key !== 'Backspace') || deps.locked?.()) return;
     e.preventDefault();
     const copy = deps.snapshot();

@@ -193,7 +193,8 @@ export function moreMenu(root, { opened } = {}) {
     if (more && more.getAttribute('data-more') === pop.key && root.contains(more)) return;
     close(false);
   }, true);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && pop && !pop.box.hidden && !pop.box.contains(e.target)) close(true); });
+  // Handled: the page's Esc (⏹️ Stop all, app.js) stands down.
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && pop && !pop.box.hidden && !pop.box.contains(e.target)) { e.preventDefault(); close(true); } });
   // It stays where it opened (fixed, over the page), so a scroll closes it.
   window.addEventListener('scroll', () => close(false), { passive: true });
   return { close, refresh, isOpen: () => !!pop && !pop.box.hidden, key: () => pop?.key ?? null };
