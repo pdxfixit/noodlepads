@@ -137,6 +137,10 @@ test('1 · What to listen to: the ways this device has, as large choices, a file
   assert.equal(choices[3].tagName, 'LABEL', 'the file choice is the file picker\'s label');
   assert.equal(choices[3].querySelector('input').type, 'file');
   assert.match(choices[3].querySelector('input').accept, /audio\/\*/);
+  // No other product is named (decisions.md, Product): a music site, not a brand.
+  const about = choices.map((c) => c.querySelector('.listen-source-about').textContent).join(' ');
+  assert.match(about, /A music site, or any site, playing in Chrome or Edge/);
+  assert.doesNotMatch(about, /Spotify|YouTube/);
   assert.match($('#listen-how').textContent, /leave Also share tab audio ticked/);
   assert.equal($('#listen').querySelector('.listen-private').textContent, 'The song stays on this device and is never saved. Only the beat is kept.');
   $('#listen').close();
@@ -144,7 +148,8 @@ test('1 · What to listen to: the ways this device has, as large choices, a file
   L.listenEnv.sources = () => ['mic', 'file'];
   await openSources();
   assert.deepEqual($('#listen-sources').querySelectorAll('[data-source]').map((c) => c.dataset.source), ['mic', 'file']);
-  assert.match($('#listen-how').textContent, /another tab needs Chrome or Edge on a computer/);
+  assert.match($('#listen-how').textContent, /a music site in another tab needs Chrome or Edge on a computer/);
+  assert.doesNotMatch($('#listen-how').textContent, /Spotify|YouTube/);
   $('#listen').close();
   L.listenEnv.sources = () => ['tab', 'screen', 'mic', 'file'];
   assert.deepEqual(ended(), [], 'nothing started, so nothing ends');

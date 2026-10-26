@@ -48,7 +48,7 @@ export const listenEnv = {
 
 // The ways to listen, as the first view offers them.
 export const SOURCE_LOOK = {
-  tab: { emoji: '🗂️', name: 'Another tab', about: 'Spotify, YouTube or any site playing in Chrome or Edge. The clearest sound.', title: 'Listening to a tab' },
+  tab: { emoji: '🗂️', name: 'Another tab', about: 'A music site, or any site, playing in Chrome or Edge. The clearest sound.', title: 'Listening to a tab' },
   screen: { emoji: '🖥️', name: 'Everything on this computer', about: 'For a music app outside the browser. Other sounds get in too.', title: 'Listening to this computer' },
   mic: { emoji: '🎤', name: 'The microphone', about: 'Play the song out loud nearby. Works everywhere, phones too.', title: 'Listening' },
   file: { emoji: '📁', name: 'A song file', about: `An MP3 or other audio or video file on this device, under ${MAX_SONG_FILE_BYTES / 1048576} MB.`, title: 'Listening to a file' },
@@ -138,7 +138,7 @@ function showSources(error = '') {
   }));
   el.how.textContent = kinds.includes('tab')
     ? 'Next, your browser asks which tab. Pick the one playing the song and leave Also share tab audio ticked. Then press play there.'
-    : 'Listening to Spotify or YouTube in another tab needs Chrome or Edge on a computer. Here, play it out loud and use the microphone.';
+    : 'Listening to a music site in another tab needs Chrome or Edge on a computer. Here, play it out loud and use the microphone.';
   el.error.textContent = error;
   el.error.hidden = !error;
   showView('sources', '🎧 From a song');
