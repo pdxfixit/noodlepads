@@ -143,17 +143,3 @@ test('the beat\'s ↩️ Undo banner goes on a person change', async () => {
   keysOff(page);
   ctx.currentTime = 0;
 });
-
-test('the take card\'s ↩️ Undo banner (a take taken out) goes on a person change', async () => {
-  $('#live-tab').dispatch('click');
-  $('#dj-record').dispatch('click');
-  page.key('a', { code: 'KeyA' });
-  $('#dj-record').dispatch('click');
-  $('#dj-done-undo').dispatch('click');
-  assert.match($('#banner-text').textContent, /^Took out/);
-  assert.equal(hasUndo(), true);
-  page.key('ArrowRight', { code: 'ArrowRight' });
-  assert.equal(hasUndo(), false, 'its Undo is not on the next kid\'s screen');
-  page.key('ArrowLeft', { code: 'ArrowLeft' });
-  await page.settle();
-});

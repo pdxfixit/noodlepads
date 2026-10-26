@@ -1580,14 +1580,17 @@ export function createDJ({ el, deps }) {
     deps.deleteTake(take.id);
     lastTake = null;
     el.done.hidden = true;
+    takenOut = take;
     takeLine = showBanner(`Took out “${take.name}”.`, {
-      action: { label: '↩️ Undo', fn: () => bringBack(take) },
+      action: { label: '↩️ Undo', fn: () => { takenOut = null; bringBack(take); } },
       ms: LINE_MS,
       focusBack: () => el.record,
+      onClose: () => { takeLine = null; takenOut = null; },   // its time is up (or another notice took its place)
     });
     deps.announce?.(`Took out ${take.name}. Undo is available.`);
   });
   let takeLine = null;   // the banner with ↩️ Undo for a take taken out
+  let takenOut = null;   // that take, while its banner can still bring it back
   function bringBack(take) {
     if (deps.takes(take.personId).some((t) => t.id === take.id)) return;
     deps.saveTake(take);
@@ -1641,6 +1644,11 @@ export function createDJ({ el, deps }) {
     lastTake = null;
     el.done.hidden = true;
     beatLine?.close();
+    // A take taken out whose ↩️ Undo is still up: that banner is its only way
+    // back, so it goes back quietly as this person's (no card, no word for
+    // the next one) before the banner goes. A deleted person's stays gone.
+    if (takenOut && keep && !deps.takes(takenOut.personId).some((t) => t.id === takenOut.id)) deps.saveTake(takenOut);
+    takenOut = null;
     if (takeLine?.open) takeLine.close();
   }
   // The beat stopped (sequencer onStop): a recording into it ends too, so

@@ -3,7 +3,8 @@
 // the next person shows, so the keys never heard of the change. A 🎤 Live
 // take recording then ran on, its card stayed, and once stopped it was
 // saved for nobody on this device (2026-10-26). Now the keys let go first;
-// the deleted kid's take in progress goes with them.
+// the deleted kid's take in progress goes with them, and a take of theirs
+// taken out (its banner's ↩️ Undo still up) stays gone.
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
@@ -33,9 +34,17 @@ before(async () => {
   audio.play = async () => {};
 });
 
-test('deleting the person on show mid-take: the take stops, its card goes, and nothing is saved for nobody', async () => {
+test('deleting the person on show mid-take, with a take taken out: the take stops, its card and the banner go, and nothing comes back for nobody', async () => {
   assert.equal(state.personId, GONE);
   $('#live-tab').dispatch('click');
+  // A take of theirs taken out on its card: its banner's ↩️ Undo is up.
+  $('#dj-record').dispatch('click');
+  page.key('a', { code: 'KeyA' });
+  $('#dj-record').dispatch('click');
+  await page.settle();
+  $('#dj-done-undo').dispatch('click');
+  assert.match($('#banner-text').textContent, /^Took out/);
+  // And another one recording.
   $('#dj-record').dispatch('click');
   page.key('a', { code: 'KeyA' });
   assert.equal($('#dj-record').textContent, '■ Stop');
@@ -47,5 +56,7 @@ test('deleting the person on show mid-take: the take stops, its card goes, and n
   assert.notEqual(state.personId, GONE);
   assert.equal($('#dj-record').textContent, '● Record', 'not recording for the next person');
   assert.equal($('#dj-done').hidden, true, 'no take card');
-  assert.deepEqual(state.takes.filter((t) => t.personId === GONE), [], 'no take left for the deleted person');
+  assert.deepEqual(state.takes.filter((t) => t.personId === GONE), [], 'no take left for the deleted person, nor brought back');
+  assert.deepEqual(idb.rows(DB_NAME, 'takes').filter((t) => t.personId === GONE), [], 'none stored');
+  assert.ok(!/^Took out/.test($('#banner-text').textContent) || $('#banner').hidden, 'the banner went');
 });
