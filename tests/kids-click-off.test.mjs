@@ -3,7 +3,9 @@
 // ticked on over the kid's screens, where no ⏲️ shows and Kids' ⏹️ could
 // not reach it (2026-10-26). Back out of Kids, it ticks again: the kid's
 // wish is kept. Not tested here: the ticks as heard (counted as oscillators
-// booked on the stand-in audio clock).
+// booked on the stand-in audio clock). One tick already booked when Kids
+// shows (the click books up to 0.1 s ahead, sequencer.js LOOKAHEAD) still
+// sounds: it is counted before Kids, so this test does not see it.
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';

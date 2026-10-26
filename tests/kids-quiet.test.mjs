@@ -106,13 +106,24 @@ test('the song: silent in Kids', async () => {
   $('#pads-tab').dispatch('click');
 });
 
-test('Kids\' ⏹️ is the whole app\'s Stop all: every ⏲️ off too, as the toolbar\'s', async () => {
+// Decided (council, 2026-10-26): Kids' ⏹️ quiets everything for now, and
+// leaves the grown-up's saved ⏲️ choices as they were (the toolbar's ⏹️ is
+// the one that turns them off).
+test('Kids\' ⏹️ quiets the whole app but keeps the grown-up\'s ⏲️ choices', async () => {
+  $('#live-tab').dispatch('click');
   if ($('#seq-click').getAttribute('aria-pressed') !== 'true') $('#seq-click').dispatch('click');
   if ($('#dj-click').getAttribute('aria-pressed') !== 'true') $('#dj-click').dispatch('click');
   $('#kids-open').dispatch('click');
   await page.settle();
   $('#kids-stop').dispatch('click');
-  assert.equal($('#seq-click').getAttribute('aria-pressed'), 'false');
-  assert.equal($('#dj-click').getAttribute('aria-pressed'), 'false');
+  ticks = 0;
+  await run();
+  assert.equal(ticks, 0, 'nothing ticks in Kids');
+  assert.equal($('#seq-click').getAttribute('aria-pressed'), 'true', "Beats' ⏲️ kept");
+  assert.equal($('#dj-click').getAttribute('aria-pressed'), 'true', "the keys' ⏲️ kept (clickOff, which would save it off, never ran)");
   await outOfKids();
+  ticks = 0;
+  await run();
+  assert.ok(ticks > 0, 'back on Live, the click ticks again');
+  $('#stop-all').dispatch('click');
 });

@@ -252,7 +252,7 @@ And back the other way, `app.js makeSequencer` wires `onHit` → `dj.flashClip`,
 
 ### Screens
 
-Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, 🎹 Keys. Plus ⏹️ (`stopAll`: sounds, the beat, ●, held keys, and a mic recording, kept without playing: `stopRecording({ quiet: true })`; then `deps.stopAll` = `app.js stopEverything`, the whole app's Stop all), and ⚙️ (the regular `#settings-open`, gated). The tab is remembered on the device (`kids-tab`).
+Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, 🎹 Keys. Plus ⏹️ (`stopAll`: sounds, the beat, ●, held keys, and a mic recording, kept without playing: `stopRecording({ quiet: true })`; then `deps.stopAll` = `app.js stopEverything({ keepClicks: true })`: the whole app quiet, the grown-up's saved ⏲️ choices kept), and ⚙️ (the regular `#settings-open`, gated). The tab is remembered on the device (`kids-tab`).
 
 | Tab | Draws | Plays by |
 |---|---|---|
@@ -433,7 +433,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | A take's `ring` is stored only when true, only on a hit | `overlap.test.mjs`, `rhythm.test.mjs` |
 | Leaving Kids shows the beat maker again, so it holds the kid's squares, never an older copy to save over them | `kids-scratch-back.test.mjs` |
 | A Kids recording is kept as the kid's who was recording (never for a kid deleted meanwhile: `deps.isPerson`, and `letGoOf` drops one listening), named, pictured and colored among their sounds, even if the person changes before it is kept (`listen` → `keep(…, { pid })`); a tune recording lands in their beat (`tuneRec.pid`); nothing of theirs shows for the next kid | `kids-mic-person.test.mjs`, `kids-person-change.test.mjs`, `kids-person-deleted.test.mjs` |
-| Nothing of the grown-up app sounds in Kids (the keys' ⏲️, a take playing back, the beat, the song, a loop), on the way in and at start-up; Kids' ⏹️ is the app's Stop all | `kids-quiet.test.mjs`, `kids-quiet-start.test.mjs` |
+| Nothing of the grown-up app sounds in Kids (the keys' ⏲️, a take playing back, the beat, the song, a loop), on the way in and at start-up; Kids' ⏹️ quiets the whole app and keeps the grown-up's ⏲️ choices (one tick already booked as Kids shows, up to 0.1 s, still sounds) | `kids-quiet.test.mjs`, `kids-quiet-start.test.mjs` |
 | A held Enter on a Kids button clicks it once; a finger's tap and its click play a pad once | `kids-keyboard-repeat.test.mjs` |
 | Kids' square *i* is pill 2*i* of a 16-pill bar, in every bar | `kids.test.mjs` |
 | Kids' keys mean `instNotes` changes for the whole person | `kids.test.mjs` (🎹 instrument button) |

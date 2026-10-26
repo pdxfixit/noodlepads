@@ -443,7 +443,16 @@ async function loadVersion() {
 // ── Events ─────────────────────────────────────────────────────────────
 
 // ⏹️ Stop all: every sound, the beat and the song, and both ⏲️ Click tracks off.
-function stopEverything() { audio.stopAll(); dj?.stopReplay(); seq.stop(); song.stop(); seq.clickOff(); dj?.clickOff(); }
+// `keepClicks` (🧸 Kids' ⏹️): quiet for now, the grown-up's saved ⏲️ choices kept.
+function stopEverything({ keepClicks = false } = {}) {
+  audio.stopAll();
+  dj?.stopReplay();
+  seq.stop();
+  song.stop();
+  if (keepClicks) return;
+  seq.clickOff();
+  dj?.clickOff();
+}
 
 // Space is Stop all almost everywhere (Ben, 2026-10-12): not while typing,
 // and not on a focused button, link or the like, which Space presses for
@@ -1062,7 +1071,7 @@ async function start() {
   });
   initKids({
     personId: () => state.personId,
-    stopAll: () => stopEverything(),   // Kids' ⏹️ is the whole app's Stop all
+    stopAll: () => stopEverything({ keepClicks: true }),   // Kids' ⏹️: the whole app quiet, the grown-up's ⏲️ choices kept
     clips: (opts, pid = state.personId) => clipsFor(pid, opts),
     isPerson: (pid) => people({ includeHidden: true }).some((p) => p.id === pid),
     colorOf: (clip) => padColor(clip.color),
