@@ -599,13 +599,6 @@ body.editing .pad.hidden-clip { opacity: 0.45; }
 /* Edit sounds: a kit group with every sound hidden, dimmed like its pads.
    Outside Edit sounds it has no heading at all. */
 body.editing :is(.pad-group, .pad-section).all-hidden { opacity: 0.6; }
-/* Tapped once in edit mode: held still and ringed, waiting for a swap. */
-body.editing .pads .pad.selected {
-  animation: none;
-  outline: 4px solid #fff;
-  outline-offset: 4px;
-  scale: 1.04;
-}
 
 /* Dragging to reorder: the held pad lifts and follows the pointer. */
 body.editing .pad:not(.pad-add) { cursor: grab; }

@@ -33,9 +33,7 @@ export const state = {
   myVoices: [],           // IndexedDB "voices": {id, personId, name, emoji, knobs, created, used}, a kid's own voices (voice-knobs.js)
   version: 'dev',         // from version.json, stamped by the deploy (every push to main)
   screen: 'pads',         // which screen shows: 'pads', 'beats' (the beat maker, ⌨️ Keys on or off), 'song' or 'live' (app.js showView)
-  beats: false,           // the beat maker is showing (screen === 'beats')
-  editing: false,
-  selected: null,         // edit mode: the pad tapped once, waiting for a second tap to swap with
+  editing: false,         // ✏️ Edit sounds is on (app.js setEditing)
 };
 
 // True while another tab holds the database (see loadStorage): changes can't

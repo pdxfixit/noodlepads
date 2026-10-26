@@ -16,7 +16,7 @@ handful of classes and `data-*` attributes that JS sets on `<body>` and
 
 | File | Owns (state) | Called by | Calls / hears |
 |---|---|---|---|
-| `app.js` | `el` (page elements), `seq`, `song`, `dj`, `telemetry`, `page`; `keysOn`, `sides`, `grownUp`, `kidsVisit`, `closedSections`; writes `state.personId`, `state.screen`, `state.editing`, `state.selected` | `index.html` (the only module `<script>`); tests import `ready`, `SCREENS`, `MODES`, `modeOf`, `sideOf`, `startScreen`, `screenHint`, `spaceStops`, `groupsForChooser` | every `create*`/`init*` (see [the composition root](#the-composition-root)); `onSetting` for `level`, `padSkin`, `advancedBeats`, the instrument picks, `sendUsage`; `onCloud` |
+| `app.js` | `el` (page elements), `seq`, `song`, `dj`, `telemetry`, `page`; `keysOn`, `sides`, `grownUp`, `kidsVisit`, `closedSections`; writes `state.personId`, `state.screen`, `state.editing` | `index.html` (the only module `<script>`); tests import `ready`, `SCREENS`, `MODES`, `modeOf`, `sideOf`, `startScreen`, `screenHint`, `spaceStops`, `groupsForChooser` | every `create*`/`init*` (see [the composition root](#the-composition-root)); `onSetting` for `level`, `padSkin`, `advancedBeats`, the instrument picks, `sendUsage`; `onCloud` |
 | `ui.js` | `showing` (the one banner), `lastNotice`, `home` (the banner's place in `index.html`), the `fading` WeakMap | almost every screen (`showNotice`, `announce`, `showBanner`, `fadeAway`) | `log.js logEvent` (every notice is logged) |
 | `dialogs.js` | `openers`, `returns` (focus to hand back), `openWatchers` | every module with a `<dialog>` (`setupDialog`, `openDialog`) | the watchers: `tips.js`, `nudge.js`, `track-page.js` (via `onDialogOpen`) |
 | `tooltips.js` | nothing but a queued set | `app.js watchTips`; `track-page.js` imports `CONTROLS` and `tipFor` | a `MutationObserver` on `<body>` |
@@ -175,7 +175,7 @@ held for the visit). `groupsForChooser` uses `pinGuards`.
 2. Leaving the keys: `dj.leave()` (a recording ends with the screen).
 3. Leaving Beats: `seq.stop()`, then `seq.endLock()` (⇆ unlocks). Leaving
    Song: `song.stop()`.
-4. Sets `state.screen` (and `state.beats`, which nothing reads).
+4. Sets `state.screen`.
 5. Toggles `body.screen-<name>`, `aria-pressed` on every `[data-screen]`,
    `.open` on the `[data-mode]` holding the screen; remembers the mode's side
    (`sides`, localStorage `play-side`/`make-side`).
@@ -230,8 +230,8 @@ on ▶ / ● / 🎬 give way by `@container panel` width, showing `data-icon`
 
 ### ✏️ Edit sounds (the shell's part)
 
-`app.js setEditing(on)`: goes to Pads first, sets `state.editing`, clears
-`state.selected`, `pads.js cancelDrag`, toggles `body.editing`, redraws
+`app.js setEditing(on)`: goes to Pads first, sets `state.editing`,
+`pads.js cancelDrag`, toggles `body.editing`, redraws
 `#edit-toggle` (✏️ Edit sounds ↔ ✅ Done, words in `.edit-word` and
 `.edit-more` spans the slim header can drop), the footer hint,
 `audio.stopAll()` when turning on, `renderPads`. Everything else of Edit
@@ -610,10 +610,6 @@ blocks beside each animation. Pads size by container queries (`@container`,
 **Stale bits found:**
 
 - `dialogs.js` opening comment: "the app's four `<dialog>`s"; there are 33.
-- `state.js` comment on `screen`: "'pads', 'beats' (the beat maker) or 'dj'";
-  the screens are `pads`, `beats`, `song`, `live`.
-- `state.beats` is written by `app.js setScreen` and read by nothing
-  (`backup.js` has its own `state` parameter).
 - `app.js` header comment lists "help.js, sequencer.js (screens)" as the
   module list; long out of date.
 

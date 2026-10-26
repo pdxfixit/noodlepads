@@ -155,6 +155,14 @@ test('✅ three Node tools: look.mjs and the two it loads', () => {
   assert.deepEqual(listJs('tools').sort(), ['chrome.mjs', 'look-cloud.mjs', 'look.mjs'], FIX);
 });
 
+// data.md, "The in-memory state": a field nobody reads is dead state, which
+// misleads (state.beats and state.selected were written and never read).
+test('✅ every field of state.js state is read somewhere in web/', async () => {
+  const { state } = await web('state.js');
+  const reads = (f) => WEB.some((file) => new RegExp(`\\bstate\\??\\.${f}\\b(?!\\s*=[^=])`).test(src[file]));
+  assert.deepEqual(Object.keys(state).filter((f) => !reads(f)), [], FIX);
+});
+
 // ── ✅ Lists kept in step by hand ──
 
 test('✅ the stores: a person\'s, the backup\'s and the cloud\'s lists follow store.js', async () => {

@@ -175,7 +175,6 @@ function showPerson(p, { behind = false } = {}) {
   }
   state.personId = p.id;
   followPerson();   // their own settings (Advanced, pad size…) take over
-  state.selected = null;
   el.root.style.setProperty('--board', p.color);
   el.themeColor.content = p.color;
   const title = boardTitle(people(), p);
@@ -254,7 +253,6 @@ function stepPerson(delta) {
 function setEditing(on) {
   if (on && state.screen !== 'pads') setScreen('pads');
   state.editing = on;
-  state.selected = null;
   cancelDrag();
   document.body.classList.toggle('editing', on);
   el.editToggle.setAttribute('aria-pressed', String(on));
@@ -341,7 +339,6 @@ function setScreen(name) {
   if (leftBeats) seq.stop();
   if (state.screen === 'song' && name !== 'song') song.stop();
   state.screen = name;
-  state.beats = name === 'beats';
   if (leftBeats) seq.endLock();   // ⇆ unlocks with the screen
   for (const s of SCREENS) document.body.classList.toggle(`screen-${s}`, s === name);
   for (const b of el.screens.querySelectorAll('[data-screen]')) b.setAttribute('aria-pressed', String(b.dataset.screen === name));

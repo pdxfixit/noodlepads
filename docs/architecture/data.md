@@ -68,7 +68,7 @@ The comments on `state` in `state.js` give older shapes for `patterns` (`rows: [
 
 ## The in-memory `state`, field by field
 
-`state` is one exported object in `state.js`. `readStorage` replaces every stored field at once, from IndexedDB (all stores but `bases`).
+`state` is one exported object in `state.js`. `readStorage` replaces every stored field at once, from IndexedDB (all stores but `bases`). Every field is read somewhere ✅.
 
 | Field | From | Written by | Read by |
 |---|---|---|---|
@@ -91,11 +91,7 @@ The comments on `state` in `state.js` give older shapes for `patterns` (`rows: [
 | `myVoices` | `voices` | `state.js saveMyVoice`, `deleteMyVoice` | sheet.js, bulk.js (🪄 Voice), things |
 | `version` | version.json (`app.js loadVersion`) | app.js | backups, update.js, cloud.js, feedback, log-send |
 | `screen` | localStorage `screen` | `app.js setScreen` | help.js, app.js |
-| `beats` | — | `app.js setScreen` | nothing (dead) |
 | `editing` | — | `app.js setEditing` | pads.js, bulk.js, app.js |
-| `selected` | — | app.js sets it to null | nothing (dead) |
-
-The `state.screen` comment in `state.js` says `'dj'`. The values are `app.js` `SCREENS` (`pads`, `beats`, `song`, `live`).
 
 ## Writing: `persist` and the other ways in
 
