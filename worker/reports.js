@@ -1,4 +1,4 @@
-// POST /api/log: an opt-in problem report (ADR 0009), checked, cleaned again
+// POST /api/log: a problem report (ADR 0009; on by default since 2026-10-26), checked, cleaned again
 // and kept in D1's `reports` table for 14 days. Each report first deletes the
 // ones past their expiry, and so does every make, open, pull, push, share and
 // PIN change, and every look at the profile list (worker/metrics.js

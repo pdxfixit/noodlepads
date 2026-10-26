@@ -21,6 +21,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 - **Read the mission and make it yours** (2 min): `AGENTS.md` → Mission, drafted from your interview answers (2026-10-26). Reword anything that isn't how you'd say it; the council checks every change against it.
 
+- **Say in the public policy that problem reports are on by default** (5 min), before this lands: `src/noodlepads/policy.md` in `pdxfixit/privacy` (privacy.pdxfixit.com/noodlepads). 📮 Send problem reports is on for every device unless someone switches it off, and a report can carry a silent tap: the screen, what it tapped, how far the tap got, what lay on top of it (an element's id or class), the open dialog's id, the audio's state, how long the page had run. No names, no sounds.
+
 - **Delete the old address's DNS record** (1 min): in Cloudflare, open the old address's domain → DNS and delete its `soundboard` record if it is still there (the Worker is gone and the name answers 530). The domain's apex stays. Also, if you like, delete the old address's leftover folder in `~/src/flarepress/` (only wrangler's local `.wrangler/` cache is in it).
 
 ### v1: prove out the interface

@@ -271,27 +271,22 @@ test('a kept beat gets a fun name, not "Beat 1"', () => {
   assert.match(name, /^[A-Z][a-z]+ [A-Z][a-z]+$/);
 });
 
-// 📮 Problem reports (Ben, 2026-10-11): off by default, a grown-up line, a
+// 📮 Problem reports (Ben, 2026-10-11; on by default since 2026-10-26): a line under it, a
 // device code shown while on and forgotten when switched off. Since
 // 2026-10-16 a plain checkbox in About, right under 📊 Share play data, with
 // no words about what a report holds (the shared policy says that).
-test('Send problem reports is a checkbox under Share play data, off by default, with a grown-up line and a device code while on', async () => {
+test('Send problem reports is a checkbox under Share play data, on by default, with a line under it and a device code while on', async () => {
   const sw = $('#send-logs');
   assert.equal($('#set-reports'), null, 'no Problem reports fold');
   assert.equal(sw.getAttribute('role'), null, 'a checkbox, not a switch');
   assert.equal(sw.closest('.set-fold'), $('#set-data'), 'in 📊 Data sharing');
   const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
-  assert.match(html, /id="share-usage"> 📊 Share play data<\/label>\s*<label class="set-check"><input type="checkbox" id="send-logs" aria-describedby="send-logs-grownup"> 📮 Send problem reports<\/label>\s*<p class="field-hint set-check-hint" id="send-logs-grownup">Ask a grown-up before you turn this on\.<\/p>/);
+  assert.match(html, /id="share-usage"> 📊 Share play data<\/label>\s*<label class="set-check"><input type="checkbox" id="send-logs" aria-describedby="send-logs-grownup"> 📮 Send problem reports<\/label>\s*<p class="field-hint set-check-hint" id="send-logs-grownup">You can switch this off any time\.<\/p>/);
   assert.doesNotMatch(html, /never hold sounds|go only to Ben/, 'what a report holds is in the policy');
-  assert.equal(getSetting('sendLogs'), false);
-  $('#settings-open').dispatch('click');
-  assert.equal(sw.checked, false);
-  assert.equal($('#send-logs-code').hidden, true);
-
-  sw.checked = true;
-  sw.dispatch('change');
-  await page.settle();
+  // Ben, 2026-10-26: "default problem reports to being on all devices".
   assert.strictEqual(getSetting('sendLogs'), true);
+  $('#settings-open').dispatch('click');
+  assert.equal(sw.checked, true);
   assert.equal($('#send-logs-code').hidden, false);
   const code = $('#send-logs-device').textContent;
   assert.match(code, /^[0-9A-Z]{4}-[0-9A-Z]{4}$/);
@@ -300,14 +295,12 @@ test('Send problem reports is a checkbox under Share play data, off by default, 
   sw.checked = false;
   sw.dispatch('change');
   await page.settle();
+  assert.strictEqual(getSetting('sendLogs'), false, 'switched off, it stays off');
   assert.equal($('#send-logs-code').hidden, true);
   sw.checked = true;
   sw.dispatch('change');
   await page.settle();
   assert.notEqual($('#send-logs-device').textContent, code, 'switching off forgot the old code');
-  sw.checked = false;
-  sw.dispatch('change');
-  await page.settle();
   $('#settings-dialog').close();
 });
 
@@ -337,7 +330,7 @@ test('📋 beside the device code copies it to the clipboard in one tap, and say
     assert.equal(getLog().filter((e) => e.kind === 'notice').at(-1).data.text, "Copying isn't allowed here: write the code down instead.");
   } finally {
     Object.defineProperty(globalThis, 'navigator', { configurable: true, value: nav });
-    sw.checked = false;
+    sw.checked = true;   // as it was: on by default
     sw.dispatch('change');
     await page.settle();
     $('#settings-dialog').close();
@@ -367,14 +360,14 @@ test('📊 Share play data is a checkbox in 📊 Data sharing, the last fold, on
   assert.equal(getSetting('sendUsage'), true);
   $('#settings-open').dispatch('click');
   assert.equal(sw.checked, true);
-  assert.equal($('#set-data').querySelector('.set-head-chip').textContent, '📊 On');
+  assert.equal($('#set-data').querySelector('.set-head-chip').textContent, '📊📮 On', 'both on by default');
   const { dataChip } = await import('../web/settings-ui.js');
   assert.deepEqual([dataChip(true, true), dataChip(false, true), dataChip(false, false)], ['📊📮 On', '📮 On', 'Off']);
   sw.checked = false;
   sw.dispatch('change');
   await page.settle();
   assert.strictEqual(getSetting('sendUsage'), false);
-  assert.equal($('#set-data').querySelector('.set-head-chip').textContent, 'Off', 'the chip says both at a glance');
+  assert.equal($('#set-data').querySelector('.set-head-chip').textContent, '📮 On', 'the chip says both at a glance');
   sw.checked = true;
   sw.dispatch('change');
   await page.settle();
