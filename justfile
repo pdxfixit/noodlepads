@@ -184,6 +184,9 @@ prove test +files:
     files=({{files}})
     for f in "${files[@]}"; do mkdir -p "$keep/$(dirname "$f")"; cp "$f" "$keep/$f"; done
     trap 'for f in "${files[@]}"; do cp "$keep/$f" "$f"; done; rm -rf "$keep"' EXIT
+    # A kill (a timeout, Ctrl-C) puts your copies back too: bash runs no EXIT
+    # trap on a signal it doesn't catch (2026-10-26: a timeout left the committed copies).
+    trap 'exit 143' INT TERM
     # A file new in your change is taken away for the run (it has no committed copy).
     # PROVE_BASE=main proves a change already committed on a branch (default HEAD).
     base="${PROVE_BASE:-HEAD}"
