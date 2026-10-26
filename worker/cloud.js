@@ -788,9 +788,10 @@ async function takeUses(request, env, id, now) {
 // meets, a big restore included (docs/architecture/cloud.md).
 export const LIMITERS = { records: 'PUSH_LIMITER', sounds: 'SOUND_LIMITER', shares: 'SHARE_LIMITER', open: 'OPEN_LIMITER' };
 
-// Throws 429 'busy' (the app's "try later") over the limit. No binding (the
-// tests' env), no key (needKey refuses it next), or a limiter that fails:
-// the call goes on.
+// Throws 429 'slow' over the limit: a minute's wait, apart from the daily
+// caps' 429 'busy' (the app says "busy right now" and syncs again in a
+// minute). No binding (the tests' env), no key (needKey refuses it next), or
+// a limiter that fails: the call goes on.
 async function slowDown(request, env, binding, profileId) {
   const limiter = env[binding];
   if (!limiter) return;
@@ -803,7 +804,7 @@ async function slowDown(request, env, binding, profileId) {
   } catch (err) {
     console.error('cloud: rate limit', err);
   }
-  if (!success) throw new Refuse(429, 'busy');
+  if (!success) throw new Refuse(429, 'slow');
 }
 
 // ── routing ──

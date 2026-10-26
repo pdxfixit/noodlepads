@@ -456,6 +456,8 @@ Ben: "login sprawl is a concern."
 | No `/api` (the dev server, `just look`, a static copy) | `GET /api/cloud` fails: cloud buttons say "The cloud isn't reachable from here"; nothing else changes (tested) |
 | Offline | Everything works on the device; the sync runs on the next open or change |
 | D1 over a daily limit (503 `over`) | "The cloud is resting until tomorrow…"; sync tries again on the next open after a 30-minute pause |
+| A profile over the Worker's minute limit (429 `slow`) | "Busy right now: trying again in a minute."; the sync runs again a minute later |
+| The site over a daily cap (429 `busy`) | "The cloud is busy today. Try again tomorrow." |
 | Profile full (40 MB) or everyone full (400 MB) | 507: "This profile's cloud is full: delete some sounds." The sound stays on the device |
 | Wrong PIN, waiting | the PIN pad says how many tries are left, or how many minutes to wait |
 | Key no longer valid (PIN changed elsewhere) | 401 on sync: the person shows 🔒 "Open again"; their records stay on the device |

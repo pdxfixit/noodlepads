@@ -127,6 +127,8 @@ export function cloudTrouble(err) {
   if (err.status === 0) return "The cloud isn't reachable from here. Everything still works on this device.";
   if (err.status === 503) return 'The cloud is resting until tomorrow. Everything still works here, and it will catch up.';
   if (err.status === 429 && err.wait) return `Too many wrong tries. Wait ${Math.ceil(err.wait / 60)} minutes, then try again.`;
+  // A minute's rate limit (worker/cloud.js slowDown), apart from the daily caps.
+  if (err.status === 429 && err.error === 'slow') return 'The cloud is busy right now. Try again in a minute.';
   if (err.status === 429) return 'The cloud is busy today. Try again tomorrow.';
   if (err.status === 401 && err.error === 'pin') return `That PIN isn't right. ${err.tries} ${err.tries === 1 ? 'try' : 'tries'} left before a 10-minute wait.`;
   if (err.status === 401) return 'This device needs to open this profile again (its PIN changed).';

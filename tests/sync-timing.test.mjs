@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createSyncTiming, SYNC_DELAY_MS, ACTIVE_MS, TRANSITION_MS, MIN_GAP_MS } from '../web/sync-timing.js';
+import { createSyncTiming, SYNC_DELAY_MS, ACTIVE_MS, TRANSITION_MS, MIN_GAP_MS, SLOW_MS } from '../web/sync-timing.js';
 
 function clock() {
   let t = 0;
@@ -126,4 +126,35 @@ test('the request budget: an hour shown and focused, idle, is 12 syncs', () => {
   const { c, runs } = setup();
   c.advance(60 * 60_000);
   assert.equal(runs.length, 12);
+});
+
+// The cloud's minute limit (429 slow): the sync comes back by itself a minute
+// later, while shown and focused; hidden, the next focus brings it.
+test('after a slow down, it syncs again in a minute; in the background, on the next focus', () => {
+  const { c, runs, page, timing } = setup();
+  assert.equal(SLOW_MS, 60_000);
+  timing.slow();
+  assert.equal(timing.pending().slow, true);
+  c.advance(SLOW_MS - 1);
+  assert.deepEqual(runs, []);
+  c.advance(1);
+  assert.deepEqual(runs, [[SLOW_MS, 'slow']]);
+  assert.equal(timing.pending().slow, false);
+  timing.slow();
+  page.active = false;
+  c.advance(SLOW_MS);
+  assert.deepEqual(runs.length, 1, 'nothing while away');
+  assert.equal(timing.pending().dirty, true);
+  page.active = true;
+  timing.transition();
+  c.advance(TRANSITION_MS);
+  assert.deepEqual(runs.at(-1), [2 * SLOW_MS + TRANSITION_MS, 'focus']);
+});
+
+test('a sync that runs first covers the slow down', () => {
+  const { c, runs, timing } = setup();
+  timing.slow();
+  timing.ran();
+  c.advance(SLOW_MS);
+  assert.deepEqual(runs, []);
 });

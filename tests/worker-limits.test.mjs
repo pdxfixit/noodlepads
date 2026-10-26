@@ -1,9 +1,10 @@
 // Per-profile rate limits in the Worker (worker/cloud.js LIMITERS): a push,
 // a sound's start, a share and an open are each counted by a rate-limit
 // binding (site/wrangler.toml), keyed by the hash of the request's key (an
-// open: by the profile), never by an address. Over the limit is 429 'busy',
-// which the app already reads as "try later". Without the bindings (the
-// other tests' env) nothing is limited.
+// open: by the profile), never by an address. Over the limit is 429 'slow',
+// apart from the daily caps' 429 'busy': the app says "busy right now" and
+// syncs again in a minute. Without the bindings (the other tests' env)
+// nothing is limited.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -53,7 +54,7 @@ async function made(c, id) {
   return r.data.key;
 }
 
-test('a push, a sound start and a share are limited per key, by its hash, and over it are 429 busy', async () => {
+test('a push, a sound start and a share are limited per key, by its hash, and over it are 429 slow, never the daily caps\' busy', async () => {
   const c = cloud(2);
   const key = await made(c, 'p-one');
   const push = (n) => c.call('POST', 'profiles/p-one/records', { key, body: { put: [{ kind: 'beats', id: `beat-${n}`, body: { name: 'x' } }] } });
@@ -63,7 +64,7 @@ test('a push, a sound start and a share are limited per key, by its hash, and ov
     assert.equal((await send(1)).status, ok, what);
     assert.equal((await send(2)).status, ok, what);
     const over = await send(3);
-    assert.deepEqual([over.status, over.data.error], [429, 'busy'], `${what}: the third in the window`);
+    assert.deepEqual([over.status, over.data.error], [429, 'slow'], `${what}: the third in the window`);
   }
   for (const name of ['PUSH_LIMITER', 'SOUND_LIMITER', 'SHARE_LIMITER']) {
     assert.deepEqual([...new Set(c.env[name].keys)], [hashOf(key)], `${name} counts the key's hash, never the key itself`);
@@ -82,7 +83,7 @@ test('an open is limited per profile (it has no key yet), and a call with no key
   const open = (id) => c.call('POST', `profiles/${id}/open`, { body: {} });
   assert.equal((await open('p-one')).status, 200);
   assert.equal((await open('p-one')).status, 200);
-  assert.deepEqual([(await open('p-one')).status, (await open('p-one')).data.error], [429, 'busy']);
+  assert.deepEqual([(await open('p-one')).status, (await open('p-one')).data.error], [429, 'slow']);
   assert.equal((await open('p-two')).status, 200, 'another profile opens');
   assert.deepEqual([...new Set(c.env.OPEN_LIMITER.keys)], ['p-one', 'p-two']);
   const before = c.env.PUSH_LIMITER.keys.length;

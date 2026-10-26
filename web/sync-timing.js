@@ -10,6 +10,7 @@ export const SYNC_DELAY_MS = 20_000;       // after the last change
 export const ACTIVE_MS = 5 * 60_000;       // while shown and focused
 export const TRANSITION_MS = 1_500;        // focus and blur gathered into one sync
 export const MIN_GAP_MS = 10_000;          // a focus or blur this soon after a sync, with nothing changed, skips
+export const SLOW_MS = 60_000;             // after the cloud said slow down (its limits count a minute)
 
 // run(why): starts a sync (cloud.js syncAll, which never runs two at once).
 // active(): whether the page is shown and focused.
@@ -21,6 +22,7 @@ export function createSyncTiming({
   let changeTimer = null;
   let transitionTimer = null;
   let activeTimer = null;
+  let slowTimer = null;
   let dirty = false;          // a change is waiting for its sync
   let lastRun = -Infinity;
 
@@ -46,6 +48,7 @@ export function createSyncTiming({
   function ran() {
     changeTimer = stop(changeTimer);
     transitionTimer = stop(transitionTimer);
+    slowTimer = stop(slowTimer);
     dirty = false;
     lastRun = now();
     arm();
@@ -71,7 +74,16 @@ export function createSyncTiming({
         if (dirty || now() - lastRun >= MIN_GAP_MS) fire('focus');
       }, TRANSITION_MS);
     },
+    // The cloud said slow down (429 'slow'): sync again in SLOW_MS, if shown
+    // and focused then; else the next focus does, as for a change.
+    slow() {
+      slowTimer = stop(slowTimer);
+      slowTimer = setTimer(() => {
+        slowTimer = null;
+        if (active()) fire('slow'); else dirty = true;
+      }, SLOW_MS);
+    },
     // For tests and the ☁️ sheet: what is waiting.
-    pending: () => ({ change: changeTimer !== null, transition: transitionTimer !== null, active: activeTimer !== null, dirty }),
+    pending: () => ({ change: changeTimer !== null, transition: transitionTimer !== null, active: activeTimer !== null, slow: slowTimer !== null, dirty }),
   };
 }

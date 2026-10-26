@@ -436,6 +436,13 @@ test('no cloud here (the dev server, a static copy) or no network: a CloudError 
   assert.match(cloudTrouble(r), /resting until tomorrow/);
 });
 
+// A minute's rate limit (429 slow) is not a daily cap (429 busy): it never says "tomorrow".
+test('a rate limit says busy right now, a daily cap says busy today', () => {
+  assert.equal(cloudTrouble(new CloudError(429, { error: 'slow' })), 'The cloud is busy right now. Try again in a minute.');
+  assert.equal(cloudTrouble(new CloudError(429, { error: 'busy' })), 'The cloud is busy today. Try again tomorrow.');
+  assert.match(cloudTrouble(new CloudError(429, { error: 'wait', wait: 600 })), /Too many wrong tries\. Wait 10 minutes/);
+});
+
 test('a full cloud says what is full: the profile\'s sounds, its records, or everyone\'s', () => {
   const full = (error) => cloudTrouble(new CloudError(507, { error }));
   assert.match(full('profile full'), /full for this profile\. Delete some sounds/);

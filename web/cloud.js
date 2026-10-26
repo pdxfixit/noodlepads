@@ -324,6 +324,10 @@ const pageActive = () => {
   return doc.visibilityState !== 'hidden' && (typeof doc.hasFocus !== 'function' || doc.hasFocus());
 };
 const timing = createSyncTiming({ run: () => syncAll(), active: pageActive });
+// What waits to sync (sync-timing.js pending), for the tests.
+export const syncPending = () => timing.pending();
+// A sync the cloud's minute limit stopped says so, and goes again in a minute.
+export const SLOW_TEXT = 'Busy right now: trying again in a minute.';
 
 const storedLists = () => ({
   people: [...state.peopleEdits.values()], clips: state.userClips, overrides: [...state.overrides.values()],
@@ -414,6 +418,10 @@ export function syncNow(personId, { onProgress } = {}) {
         await keyRefused(id);
       } else if (err?.name === 'QuotaExceededError') {
         setStatus(id, { state: 'trouble', text: 'This device is full. Make some room on it, then try again.' });
+      } else if (err instanceof CloudError && err.status === 429 && err.error === 'slow') {
+        // A minute's rate limit: the sync comes back by itself (sync-timing.js slow).
+        setStatus(id, { state: 'trouble', text: SLOW_TEXT });
+        timing.slow();
       } else {
         setStatus(id, { state: 'trouble', text: cloudTrouble(err) });
       }
