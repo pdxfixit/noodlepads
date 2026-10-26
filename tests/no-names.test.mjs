@@ -22,17 +22,20 @@ const ANY_CASE = new Set([
 ]);
 // A name that is also an everyday word in code (a maximum): caught when
 // written as a name (capitalized) or as an id ('…', "…", #…, …-kick).
-const AS_NAME = '9baf3a40312f39849f46dad1040f2f039f1cffa1238c41e9db675315cfad39b6';
+const AS_NAME = new Set(['9baf3a40312f39849f46dad1040f2f039f1cffa1238c41e9db675315cfad39b6']);
 
-// Every place in `text` a name is written, as "word" strings.
-export function namesIn(text) {
+// Every place in `text` a name is written, as "word" strings. The hash sets
+// are parameters so the self-test below runs on made-up names: a test that
+// spelled out a real name, even built from parts, would show it in a public
+// file.
+export function namesIn(text, { anyCase = ANY_CASE, asName = AS_NAME } = {}) {
   const found = [];
   for (const m of text.matchAll(/[A-Za-z]+/g)) {
     const word = m[0];
     const lower = word.toLowerCase();
     const hash = sha(lower);
-    if (ANY_CASE.has(hash)) { found.push(word); continue; }
-    if (hash !== AS_NAME) continue;
+    if (anyCase.has(hash)) { found.push(word); continue; }
+    if (!asName.has(hash)) continue;
     const before = text[m.index - 1] ?? '';
     const next = text.slice(m.index + word.length, m.index + word.length + 8);
     const capitalized = word === lower[0].toUpperCase() + lower.slice(1);
@@ -46,15 +49,18 @@ export function namesIn(text) {
 }
 
 test('namesIn finds a name however it is written, and leaves everyday words alone', () => {
-  // Built from parts so this file holds no name either.
-  const n = ['Cr', 'aig'].join('');
-  const m = ['M', 'ax'].join('');
-  assert.deepEqual(namesIn(`hello ${n} and ${n.toUpperCase()}`), [n, n.toUpperCase()]);
-  assert.deepEqual(namesIn(`${m} plays`), [m]);
-  assert.deepEqual(namesIn(`id: '${m.toLowerCase()}', '${m.toLowerCase()}-kick', #${m.toLowerCase()}`).length, 3);
-  assert.deepEqual(namesIn('Math.max(1, 2); max-width: 3px; maxSeconds; MAX_RECORDS; slider.max'), []);
-  assert.deepEqual(namesIn(`~/src/${n.toLowerCase()}-soundboard`), [n.toLowerCase()], 'the old folder name is caught too');
-  assert.deepEqual(namesIn(`${n.toLowerCase()}-kick`), [n.toLowerCase()]);
+  // Made-up names with their own hashes: Pip and Juno as names in any case,
+  // Wren as a name that is also a word in code (as the real one is).
+  const madeUp = { anyCase: new Set([sha('pip'), sha('juno')]), asName: new Set([sha('wren')]) };
+  const names = (text) => namesIn(text, madeUp);
+  assert.deepEqual(names('hello Pip and PIP, juno too'), ['Pip', 'PIP', 'juno']);
+  assert.deepEqual(names('Wren plays'), ['Wren']);
+  assert.deepEqual(names("id: 'wren', 'wren-kick', #wren").length, 3);
+  assert.deepEqual(names('Math.wren(1, 2); wren-width: 3px; wrenSeconds; WREN_RECORDS; slider.wren'), []);
+  assert.deepEqual(names('~/src/pip-soundboard'), ['pip'], 'an old folder name is caught too');
+  assert.deepEqual(names('pip-kick'), ['pip']);
+  assert.deepEqual(names('Toby and Pippa'), [], 'only whole words with those hashes');
+  assert.deepEqual(namesIn('Pip, Juno, Toby and Wren'), [], 'the real hashes are not the made-up names');
 });
 
 test('no tracked file, and no file name, holds a kid\'s name', () => {
