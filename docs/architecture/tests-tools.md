@@ -176,7 +176,7 @@ what it forces an agent to do.
 | `architecture.test.mjs` | (since `22b41aa`; the first test is TODO until the area files land) every `web/` and `worker/` module is named in `docs/architecture/`; every backticked file and every backticked "file.js name" pair it cites exists; the ✅ claims (one AudioContext, the offline renders, the recorders, the schedulers) | update `docs/architecture/` in the same commit |
 | `question-cards.test.mjs` | every card in docs/questions.md has its own number | renumber |
 | `justfile.test.mjs` | every public recipe has a `just --list` line that does not start mid-sentence; every recipe is named in AGENTS.md, README.md, how-to, deploy-cloudflare or layout; every `just <recipe>` that AGENTS.md, README.md, TODO.md, `docs/*.md` and `docs/architecture/` name exists (`ELSEWHERE` lists other repos' recipes); every tool in `tools/` is named there; deploy runs flarepress's check, stamp and verify; `site.conf committed=` holds web, worker and site; `wrangler.toml` holds no ids; deploy.yml runs the tests and the release checks before the action and the live checks after | document the recipe or tool; fix a doc that names a gone recipe |
-| `look-views.test.mjs` | `tools/look.mjs VIEWS` (through `--views PATH`): each view name taken once; `beat` is Beats, `dj` is Live | rename the new view |
+| `look-views.test.mjs` | `tools/look.mjs VIEWS` (through `--views PATH`): each view name taken once; `beat` is Beats, `dj` is Live; every `web/` export, `state` field, id, class and `data-` attribute the views and `look-cloud.mjs` name still exists; `look-cloud.mjs` loads | rename the new view; rename it in `tools/` too |
 | `tools/test_justfile.py` | every recipe has a doc; README "Running it yourself" names exactly the recipes; `test-quiet` prints only the failures and keeps the log | add the recipe to README |
 | `tools/test_node_tests.py`, `unended-reporter.test.mjs` | a file a cut run left a test unreported in runs again alone, and fails the run when it fails there; a "▶" with no file named fails | — |
 | `headers.test.mjs` | `web/_headers`: the CSP closed by default, no inline or eval, no outside origin but Cloudflare's beacon, fonts only from `web/fonts/`, microphone and screen share for this site | change the CSP line on purpose |
@@ -228,9 +228,9 @@ yourself" lists them all.
 | Cloud and deploy (Ben's) | `cloud-db` (any wrangler d1 command), `cloud-sql`, `cloud-schema`, `cloud-migrate`, `cloud-profiles`, `cloud-stats`, `cloud-prune`, `cloud-reset-pin`, `cloud-backup`, `logs`, `runner-export`, `deploy-check`, `deploy-plan`, `stamp`, `deploy`, `deploy-verify`, `live`, `rollback`; plus `cloud-smoke`, `cloud-e2e`, `deploy-checks`, `live-check`, which need no token | `flarepress := $FLAREPRESS or ~/src/flarepress`; the `ids` line fills `D1_DATABASE_ID` from `cloud_config.py --exports` when it is not set |
 
 `just test` checks the syntax of `web/*.js`, `worker/*.js` and `tools/*.mjs`.
-No test imports `look.mjs`, `chrome.mjs` or `look-cloud.mjs`
-(`overflow.test.mjs` only reads `look.mjs` as text), so a `look.mjs` that
-parses but breaks shows first when someone runs it.
+`look-views.test.mjs` runs `look.mjs --views` and imports `look-cloud.mjs`
+(and so `chrome.mjs`), so a missing import from `web/` fails there too. No
+test runs Chrome.
 
 The Node tests run through `node_tests.sh`: the spec reporter to the screen,
 and `tests/unended-reporter.mjs` to a file, listing the test files with a
@@ -314,9 +314,13 @@ by string: module exports (`pads.js renderPads`, `pads.js ownClosed`,
 `cloud.js syncAll`, `cloud.js syncNow`, `cloud.js statusOf`, `store.js db`…),
 `state.js state` fields (`userClips`, `orders`, `savedBeats`, `peopleEdits`,
 `cloud`, `takes`, `layouts`, `songbook`) and dozens of ids and `data-`
-attributes. `modules.test.mjs` checks only `web/*.js`, so a rename in `web/`
-breaks a view (as "script failed: …") or the live e2e check without any test
-going red.
+attributes. `look-views.test.mjs` finds them in the text (each view's script
+from `--views`, each line of `look.mjs`, `look-cloud.mjs` whole) and fails
+when `web/` no longer has one: an export, a `state` field, an id written as
+`id="…"`/`id: '…'`/`.id = '…'` or built from a prefix (`inst-list-${…}`), a
+class or a `data-` attribute (or its `dataset` name). It reads only
+`import('/x.js')` written out, `const { … } =`, `(await import(…)).name` and
+`const alias =`; a module reached another way is not checked.
 
 ## The live checks (`look-cloud.mjs`)
 
@@ -467,7 +471,7 @@ them, once older than `TEST_GRACE_MS`, for `cloud-prune --smoke`.
 
 | Seam | Kept in step by | What a fix in one place misses |
 |---|---|---|
-| `look.mjs` views and `look-cloud.mjs` call `web/` exports, `state` fields, ids and `data-` attributes by string | nothing | a rename in `web/` passes `just test`; a view fails at `just look`, the e2e check fails after the deploy is live |
+| `look.mjs` views and `look-cloud.mjs` call `web/` exports, `state` fields, ids and `data-` attributes by string | `look-views.test.mjs` (names only) | a control that is still there but now works differently (a tab that needs two taps) still fails only at `just look` or in the e2e check after the deploy |
 | `cloud-sync.test.mjs` `KEYS` lists every synced store's key path by hand | by hand | a new store in `store.js SCHEMA` is not synced by the test's devices until added (today: all but `cloud` and `bases`) |
 | Four IndexedDB stand-ins (`fake-idb.mjs`, and inline ones in `store`, `storage-wait`, `holds` tests) | by hand | a new store.js call works in one and throws in another |
 | Two justfile guards: `tests/justfile.test.mjs` (docs name every recipe and tool) and `tools/test_justfile.py` (README "Running it yourself" names exactly the recipes) | both | a new recipe must be named in both places |
