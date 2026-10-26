@@ -114,12 +114,12 @@ cloud-prune *args:
 # The live cloud API end to end: a throwaway profile (p-smoke-…) made, PIN, push, pull, a 2-piece sound, a share, deleted. just deploy runs it
 [positional-arguments]
 cloud-smoke *args:
-    @node tools/look.mjs cloud-smoke "$@"
+    @{{checks-if-any}}; node tools/look.mjs cloud-smoke "$@"
 
 # Two devices syncing on the live site in headless Chrome: a throwaway profile (p-e2e-…) made on A, opened on B, renamed on B, back on A, deleted. just deploy runs it
 [positional-arguments]
 cloud-e2e *args:
-    @node tools/look.mjs cloud-e2e "$@"
+    @{{checks-if-any}}; node tools/look.mjs cloud-e2e "$@"
 
 # A finger on a phone in headless Chrome: a tap on 🔊 Pads, 🎤 Live and 🧸 Kids must sound, fresh, after 🛠️ Make and back, and after a freeze and thaw; a covered pad is logged as a silent tap. CI runs it on every push; --url checks another copy
 [positional-arguments]
@@ -252,6 +252,11 @@ site := justfile_directory() / "site"
 # on CI, ~/.config/noodlepads/cloud.json on the Mac. Recipes that run wrangler
 # start with this line.
 ids := '[ -n "${D1_DATABASE_ID:-}" ] || eval "$(python3 tools/cloud_config.py --exports)"'
+# The deploy checks' proof, CHECKS_KEY: a GitHub secret on CI, cloud.json's
+# "checksKey" on the Mac. `checks` stops the recipe when neither has one (it
+# says how to add it); `checks-if-any` goes on without (the checks then say so).
+checks := 'line=$(python3 tools/cloud_config.py --checks-key) || exit 1; eval "$line"'
+checks-if-any := 'eval "$(python3 tools/cloud_config.py --checks-key 2>/dev/null)" || true'
 
 [doc("Read-only pre-flight: main checkout on main, web/ worker/ site/ committed (ALLOW_DIRTY=1 overrides), HEAD pushed, tests pass")]
 deploy-check:
@@ -274,16 +279,22 @@ stamp:
     @"{{flarepress}}/tools/site.sh" "{{site}}" stamp
 
 # Ben's fallback when GitHub cannot deploy: the same steps from this Mac, with
-# the Keychain token. Agents never run it.
+# the Keychain token. Agents never run it. Before anything, it needs the
+# checks' key (cloud.json "checksKey", or CHECKS_KEY exported): without it the
+# live checks after the upload would be refused, so it stops here instead.
+# It puts the key into the Worker before the upload, as deploy.yml does, so
+# the checks and the Worker agree.
 [doc("Ben's fallback: deploy main to noodlepads.com from this Mac (GitHub deploys every push by itself). Agents never run it")]
 [confirm("Deploy the soundboard to noodlepads.com (public) from this Mac? GitHub deploys every push to main by itself. (y/N)")]
 deploy:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{checks}}
     just deploy-check
     "{{flarepress}}/tools/site.sh" "{{site}}" gate
     just stamp
     {{ids}}
+    printf '%s' "$CHECKS_KEY" | "{{flarepress}}/tools/wrangler.sh" "{{site}}" secret put CHECKS_KEY
     "{{flarepress}}/tools/wrangler.sh" "{{site}}" deploy
     just deploy-verify
     just deploy-checks
@@ -397,6 +408,7 @@ ship msgfile +files:
 deploy-checks:
     #!/usr/bin/env bash
     set -uo pipefail
+    {{checks-if-any}}
     failed=""
     node tools/look.mjs cloud-smoke || failed="$failed cloud-smoke"
     # The two-device check sometimes times out loading the app right after a

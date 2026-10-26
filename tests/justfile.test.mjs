@@ -105,6 +105,25 @@ test('a deploy runs the shared flarepress check, stamp and verify on site/', () 
   assert.doesNotMatch(just, /describe[^\n]*--dirty/);
 });
 
+// Ben's fallback `just deploy` on the Mac (the reliability seat, 2026-10-26):
+// once the Worker holds CHECKS_KEY, live checks sent without it are refused,
+// so the deploy would go red after the upload. It reads cloud.json's
+// "checksKey" (tools/cloud_config.py --checks-key) before anything, stops
+// when there is none, and puts it into the Worker before the upload.
+test("the Mac's deploy needs the checks' key before anything, and puts it in before the upload", () => {
+  const just = readFileSync(join(root, 'justfile'), 'utf8');
+  const body = just.split('\ndeploy:')[1].split('\n\n')[0];
+  const lines = body.split('\n').map((l) => l.trim()).filter(Boolean);
+  assert.deepEqual(lines.slice(0, 3), ['#!/usr/bin/env bash', 'set -euo pipefail', '{{checks}}'], 'first, before the tests');
+  assert.match(just, /^checks := 'line=\$\(python3 tools\/cloud_config\.py --checks-key\) \|\| exit 1; eval "\$line"'$/m, 'none: it stops');
+  const put = body.indexOf('secret put CHECKS_KEY');
+  assert.ok(put > 0 && put < body.indexOf('wrangler.sh" "{{site}}" deploy'), 'the secret before the upload');
+  assert.match(body, /printf '%s' "\$CHECKS_KEY" \| "\{\{flarepress\}\}\/tools\/wrangler\.sh" "\{\{site\}\}" secret put CHECKS_KEY/, 'from stdin');
+  for (const name of ['deploy-checks:', 'cloud-smoke *args:', 'cloud-e2e *args:']) {
+    assert.match(just.split(`\n${name}`)[1].split('\n\n')[0], /\{\{checks-if-any\}\}/, `${name} reads the Mac's key when there is one`);
+  }
+});
+
 test('a deploy refuses uncommitted edits in everything it uploads', () => {
   // site/wrangler.toml ships web/ (the site), worker/ (the /api Worker) and
   // itself; the shared check reads the paths from site/site.conf.

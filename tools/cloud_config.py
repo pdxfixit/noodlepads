@@ -3,8 +3,10 @@
 public, so none of them belong in it):
 
   ~/.config/noodlepads/cloud.json   the Cloudflare account and D1 database ids
-                                    ($NOODLEPADS_CONFIG); tools/cloud.example.json
-                                    is the template
+                                    ($NOODLEPADS_CONFIG), and `checksKey`, the
+                                    deploy checks' proof (the GitHub secret
+                                    CHECKS_KEY's value) for `just deploy` here;
+                                    tools/cloud.example.json is the template
   ~/.local/state/noodlepads/        the last marked problem-report digest
                                     (logs-digest.json); an older
                                     ~/.local/state/noodle-pads is moved here
@@ -108,12 +110,37 @@ def exports(cfg, environ=None):
     return "\n".join(lines)
 
 
+def checks_export(cfg, environ=None, path=None):
+    """The shell line that gives the deploy checks their proof, CHECKS_KEY
+    (worker/cloud.js provenCheck), from cloud.json's `checksKey`, trimmed. A
+    value already in the environment wins (exported again, trimmed, as
+    deploy.yml and look-cloud.mjs trim it). None in either is a ConfigError saying how to add it: once the Worker holds the
+    secret, checks sent without it are refused (400 id), so `just deploy`
+    stops before the upload instead of going red after it."""
+    environ = os.environ if environ is None else environ
+    value = environ.get("CHECKS_KEY", "").strip() or str(cfg.get("checksKey") or "").strip()
+    if not value or value.startswith("<"):
+        where = path or config_path()
+        raise ConfigError(
+            f"no checksKey in {where}: the live checks after the upload would be refused. "
+            f"Add \"checksKey\": \"<the GitHub secret CHECKS_KEY's value>\" to it (a new value: "
+            "`openssl rand -hex 24`, then set the GitHub secret to the same; this deploy puts it "
+            "into the Worker), or export CHECKS_KEY first (docs/deploy-cloudflare.md, Ben's fallback)")
+    return f"export CHECKS_KEY={shlex.quote(value)}"
+
+
 if __name__ == "__main__":
     # `python3 tools/cloud_config.py`: one line for just doctor; exit 1 when missing.
     # `--exports`: the ids as shell exports, for the recipes that run wrangler.
+    # `--checks-key`: CHECKS_KEY as a shell export, for `just deploy`; exit 1 when missing.
+    quiet = sys.argv[1:] in (["--exports"], ["--checks-key"])
     try:
-        cfg = load()
-        print(exports(cfg) if sys.argv[1:] == ["--exports"] else f"cloud config: {config_path()}")
+        if sys.argv[1:] == ["--checks-key"]:
+            # The environment's wins before cloud.json is even read (CI has none).
+            print(checks_export({} if os.environ.get("CHECKS_KEY", "").strip() else load()))
+        else:
+            cfg = load()
+            print(exports(cfg) if quiet else f"cloud config: {config_path()}")
     except ConfigError as e:
-        print(e, file=sys.stderr if sys.argv[1:] == ["--exports"] else sys.stdout)
+        print(e, file=sys.stderr if quiet else sys.stdout)
         sys.exit(1)

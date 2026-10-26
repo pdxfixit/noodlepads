@@ -85,7 +85,14 @@ The pieces:
 Agents push `main` (`just ship`, `just land`) and read the deploy run; they
 never deploy and hold no Cloudflare token. **Ben's fallback** is the same steps
 from his Mac, through a clone of the public flarepress at `~/src/flarepress`,
-with his Keychain token and the ids from `~/.config/noodlepads/cloud.json`:
+with his Keychain token and the ids from `~/.config/noodlepads/cloud.json`.
+`just deploy` also needs the checks' key there, `"checksKey"` (the GitHub
+secret `CHECKS_KEY`'s value; or `CHECKS_KEY` exported): without it, it stops
+before anything, saying how to add it, since the live checks after the
+upload would be refused. It puts that value into the Worker before the
+upload, as GitHub's deploy does. GitHub never shows a secret again, so keep
+the value in `cloud.json` when you make it; a lost one is replaced by a new
+one (`openssl rand -hex 24`) in both places.
 
 ```
 just deploy-check     # read-only pre-flight: flarepress's check (main, committed, pushed), then the tests
@@ -116,7 +123,9 @@ https://noodlepads.com, both even if one fails, in about 8 s together:
   (`worker/cloud.js TEST_PROFILE`) works only with the proof: every `/api/`
   request carries `X-Checks-Key`, the Worker secret `CHECKS_KEY`, which
   `tools/look-cloud.mjs` reads from the environment (deploy.yml passes the
-  GitHub secret; on the Mac, export it before `just deploy`). Without it the
+  GitHub secret; on the Mac, `cloud.json`'s `"checksKey"`, read by
+  `just deploy`, `just deploy-checks`, `just cloud-smoke` and
+  `just cloud-e2e`). Without it the
   Worker refuses the id (400 `id`); while the Worker has no `CHECKS_KEY` yet,
   the id alone passes. A check's profile gets only what a check needs
   (`CHECK_LIMITS`): a cap of their own, 100 a UTC day, so the checks
@@ -166,7 +175,11 @@ The site folder is `site/` in this repo since 2026-10-15 (ADR 0025).
 - **Before real voice recordings go into `web/clips/`**, remember they become
   public on the next deploy.
 - **The Worker has one secret, `CHECKS_KEY`** (the deploy checks' proof, put
-  in by the deploy from the GitHub secret). The player metrics keep nothing of the IP
+  in by the deploy from the GitHub secret). Clearing the GitHub secret does
+  not clear the Worker's: the deploy then leaves it as it is, and the checks,
+  sending none, are refused. To go back to no secret, delete it from the
+  Worker too, from the Mac's checkout: `eval "$(python3 tools/cloud_config.py --exports)" && ~/src/flarepress/tools/wrangler.sh site secret delete CHECKS_KEY`
+  (`wrangler secret delete CHECKS_KEY`). The player metrics keep nothing of the IP
   ([ADR 0016](adr/0016-player-metrics.md)). If an `IP_KEY` secret was ever
   set, nothing reads it: `npx wrangler secret delete IP_KEY` from
   `~/src/flarepress/noodlepads.com` removes it.

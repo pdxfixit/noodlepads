@@ -67,7 +67,9 @@ jobs:
       # GitHub secret goes into the Worker as its secret of the same name, by
       # wrangler (wrangler first), each deploy, so a new value takes at once.
       # Unset, this says so and goes on: the Worker then lets the checks' ids
-      # pass on the id alone, as before. A failed put stops the deploy here,
+      # pass on the id alone, as before. Clearing the GitHub secret leaves the
+      # Worker's as it is (wrangler secret delete CHECKS_KEY clears it; see
+      # docs/deploy-cloudflare.md). A failed put stops the deploy here,
       # before the upload, so the live Worker never runs without the secret
       # the live checks send.
       - name: Put the checks' secret into the Worker

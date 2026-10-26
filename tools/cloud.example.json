@@ -1,6 +1,7 @@
 {
-  "_about": "Copy to ~/.config/noodlepads/cloud.json and fill in. The site's D1 database, for the cloud-db recipes on this Mac. The ids are printed by `just cloud-db list` (database_id) and the Cloudflare dashboard (account_id). The read-only token (D1: Read) lives in the Keychain under keychain_service.",
+  "_about": "Copy to ~/.config/noodlepads/cloud.json and fill in. The site's D1 database, for the cloud-db recipes on this Mac. The ids are printed by `just cloud-db list` (database_id) and the Cloudflare dashboard (account_id). The read-only token (D1: Read) lives in the Keychain under keychain_service. checksKey is the deploy checks' proof: just deploy refuses without it.",
   "account_id": "<Cloudflare account id>",
   "database_id": "<D1 database id of noodle-pads>",
-  "keychain_service": "noodlepads-logs"
+  "keychain_service": "noodlepads-logs",
+  "checksKey": "<the GitHub secret CHECKS_KEY's value, for just deploy from this Mac>"
 }
