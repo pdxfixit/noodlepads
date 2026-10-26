@@ -119,7 +119,8 @@ Other work:
   9. Audio engineer and sound designer: a soft clip after the limiter; 2–3 ms edge fades on recordings; seed the reverb noise; voice extremes that a phone can play.
   10. Producer: Seven, Motown, Bossa and Salsa texts match their patterns; dB-like fader taper; a 6/8 or 3/4 beat in Song rounds to whole song bars.
   11. Kids UX: 🧸 Kids fits a phone held sideways; `just look --landscape`; the tap-size check covers links, text fields and `[tabindex]`.
-  12. Docs: CHANGELOG catches up with 1.0.280; README, guide and the manifest say the mission's words; ADRs 0018, 0021, 0029 marked built; state.md back to present tense.
+  12. Privacy text: web/privacy.js says what the cloud's player metrics keep (per profile, with a device hash and country, up to a year) and that the Cloudflare beacon runs; the mission no longer says "anonymous" (Ben, 2026-10-26).
+  13. Docs: CHANGELOG catches up with 1.0.280; README, guide and the manifest say the mission's words; ADRs 0018, 0021, 0029 marked built; state.md back to present tense.
 
 ### Offered, not approved
 

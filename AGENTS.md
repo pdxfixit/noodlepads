@@ -9,7 +9,7 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 
 > Noodle Pads is a music studio anyone can pick up: kids, families, and grown-ups who love music but don't have the time for a pro studio. It starts as a soundboard: tap a pad, make a noise, annoy your family. Every next tool is one tap from what you are already playing with, so you learn by goofing around, never by lessons. Real depth (voices, beats, tunes, whole songs) is there when you reach for it. Goofing around counts as much as finishing a song.
 >
-> No ads. No required account. No social feed. No AI makes the music for you. What we measure is anonymous, and only makes the app better.
+> No ads. No required account. No social feed. No AI makes the music for you. What we measure is only to make the app better.
 
 Every change serves this. Why, and the north star it steers: [ADR 0022](docs/adr/0022-north-star.md).
 

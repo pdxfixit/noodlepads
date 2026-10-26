@@ -8,12 +8,6 @@ When Ben answers, record the answer in [decisions.md](decisions.md) (and an ADR 
 
 From the council's first round (2026-10-26, `docs/council.md`), asked in the chat one at a time; a card is deleted when its answer is recorded. Cards marked ⛔ are blocks against one of your rules: the seat stopped the work, and only you can uphold or overrule it.
 
-### Q58. ⛔ Player metrics are kept per profile for up to a year. Keep them, given "anonymous" in the mission?
-
-**Recommend:** drop the profile id from `activity` and `devices` (or swap it for one that changes monthly).
-Now: every make, open, push, share and wrong PIN is stored with the profile id, a device hash and a country, which ties it to a public fun name (worker/metrics.js:91; your rule, ADR 0016). The mission keeper and privacy seat blocked it. The other way out is to reword the mission.
-**Answer:**
-
 ### Q59. The kids' names: the no-names test spells two of them, and the hashes can be reversed. What now?
 
 **Recommend:** move the hashes into a GitHub secret and `~/.config/noodlepads/` (the check skips without them), and test the checker on made-up names. I fix the spelled-out names now either way.

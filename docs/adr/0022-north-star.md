@@ -11,6 +11,7 @@ Ben (2026-10-12) named the classic pattern-and-playlist music studios as what he
 - Learning: "I don't really want to do coached education … if I'm goofing around with something and a brand new tool is right there in terms of a button and I can just start goofing around with it and suddenly I'm learning a new technique and I didn't even realize it, that's kind of the purpose."
 - A good session: "hitting the buttons a little bit and annoying your family", goofing with the voices and filters, or "creating a really cool beat or a song".
 - Never: ads, required accounts, socials, AI generating the music. Tracking is "anonymous only for like feature improvement". Paid "very, very, very unlikely", so "free" is not promised.
+- Measurement: the cloud's player metrics stay per profile (ADR 0016), so the mission promises what measurement is for, not that it is anonymous (Ben, 2026-10-26, when the mission keeper and privacy seats blocked "anonymous").
 
 ## Decision
 
@@ -18,7 +19,7 @@ Ben (2026-10-12) named the classic pattern-and-playlist music studios as what he
 
 > Noodle Pads is a music studio anyone can pick up: kids, families, and grown-ups who love music but don't have the time for a pro studio. It starts as a soundboard: tap a pad, make a noise, annoy your family. Every next tool is one tap from what you are already playing with, so you learn by goofing around, never by lessons. Real depth (voices, beats, tunes, whole songs) is there when you reach for it. Goofing around counts as much as finishing a song.
 >
-> No ads. No required account. No social feed. No AI makes the music for you. What we measure is anonymous, and only makes the app better.
+> No ads. No required account. No social feed. No AI makes the music for you. What we measure is only to make the app better.
 
 **The north star:** Noodle Pads grows toward a music studio sized for kids and amateurs:
 
