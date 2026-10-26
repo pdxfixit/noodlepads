@@ -376,7 +376,7 @@ function fitLines() {
 
 // ── Version ────────────────────────────────────────────────────────────
 
-// version.json is written by `just deploy`; without it this is a dev copy.
+// version.json is stamped by the deploy (every push to main); without it this is a dev copy.
 // The version's parts. The corner says only when it went live, in the
 // device's time ("Updated Oct 19, 9:27 PM"), a button that opens ⚙️ Settings
 // at About (settings-ui.js listens for [data-about]); About says it too, with

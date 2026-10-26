@@ -155,7 +155,7 @@ export function appEventOf(entry) {
   return null;
 }
 
-// An error as the standard keeps it: what kind, and where (visits.js errorSig).
+// An error as the standard keeps it: what kind, and where (errorSig, above).
 export function errorOf(data = {}) {
   const kind = data.storage ? 'storage' : data.source ? 'error' : 'promise';
   return { kind, where: errorSig(data), fatal: false };

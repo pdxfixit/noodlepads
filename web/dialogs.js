@@ -1,5 +1,6 @@
-// Dialogs: the app's four <dialog>s share one way of closing (the ✕ button,
-// a click on the backdrop, Esc) and of handing focus back.
+// Dialogs: every <dialog> wired with setupDialog (most of index.html's
+// sheets) shares one way of closing (the ✕ button, a click on the backdrop,
+// Esc) and of handing focus back.
 
 const openers = new WeakMap();   // dialog -> what had focus when it opened
 const returns = new WeakMap();   // dialog -> where to put focus if that is gone

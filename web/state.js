@@ -26,13 +26,13 @@ export const state = {
   takes: [],              // IndexedDB "takes": {id, personId, name, created, duration, events: [{t, clipId, kind}]}
   songs: new Map(),       // IndexedDB "songs": person id -> {id, personId, name, slots: [{beatId, times}]}, the open song
   songbook: [],           // IndexedDB "songbook": {id, personId, name, slots, created, saved}, every saved song
-  cloud: new Map(),       // IndexedDB "cloud": person id -> {id, key, rev, sent, sounds, pin, remember, check}, this device's link to their profile (cloud.js)
+  cloud: new Map(),       // IndexedDB "cloud": person id -> {id, key, rev, sent, sounds, pin, check, newPin, rememberUntil, noOffer}, this device's link to their profile (cloud.js)
   prefs: new Map(),       // IndexedDB "prefs": person id -> {personId, values: {advancedBeats, padSize, …}}, read through settings.js
   layouts: [],            // IndexedDB "layouts": {id, personId, name, created, keys: {KeyA: clipId | null}}, saved DJ key layouts (keyset.js)
   touchLayouts: [],       // IndexedDB "touchLayouts": {id, personId, name, created, bands: [{group, size, sounds}]}, saved 👆 touch layouts (touch.js, ADR 0029)
   myVoices: [],           // IndexedDB "voices": {id, personId, name, emoji, knobs, created, used}, a kid's own voices (voice-knobs.js)
-  version: 'dev',         // from version.json, written by `just deploy`
-  screen: 'pads',         // which screen shows: 'pads', 'beats' (the beat maker) or 'dj'
+  version: 'dev',         // from version.json, stamped by the deploy (every push to main)
+  screen: 'pads',         // which screen shows: 'pads', 'beats' (the beat maker, ⌨️ Keys on or off), 'song' or 'live' (app.js showView)
   beats: false,           // the beat maker is showing (screen === 'beats')
   editing: false,
   selected: null,         // edit mode: the pad tapped once, waiting for a second tap to swap with
