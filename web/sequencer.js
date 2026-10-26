@@ -2819,6 +2819,7 @@ export function createSequencer(deps) {
       const { rows, added } = mergeGroove(pattern.rows, grooveBeat(g, personId, hasClip).rows, bar(), pattern.bars, grooveShape(g));
       el.grooves.close();
       pattern.rows = rows;
+      if (playing()) for (const r of rows) prepare(deps.clipById(r.clipId));   // new rows join from their next pill
       save();
       render();
       deps.onBeatChange?.();
