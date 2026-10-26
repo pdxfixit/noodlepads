@@ -134,8 +134,11 @@ test('rows a groove adds while the beat plays are heard at once', async () => {
   assert.equal(heardSince(0, kick), 0, 'no kick in the beat yet');
   $('#seq-grooves').dispatch('click');
   $('#groove-how').querySelector('[data-how="add"]').dispatch('click');
+  const l0 = loads.length;
   $('#groove-list').querySelector('[data-groove="four"]').dispatch('click');
   await page.settle();
+  assert.ok(loads.slice(l0).includes(kick), "the groove's new rows load");
+  assert.ok(!loads.slice(l0).includes(mine.rows[0].clipId), 'the rows already playing are not loaded again');
   await run(200.1, 202.6);
   assert.ok(heardSince(0, kick) > 0, "the groove's kick plays while the beat goes on");
   $('#seq-play').dispatch('click');
