@@ -118,7 +118,7 @@ setProgress` ignores ids that are not a pad.
    reach the same `tapPad` through `dj.js hit` → `deps.tap` (with Live's 🔔
    Let it ring as `ring`), and loops through `deps.loop` → `audio.loop`.
 2. `tapPad`: a looping pad stops (`audio.stop`), else `audio.play(clip, {ring})`
-   and `play-count.js countPlay(kind)` (`'pads'`, or `'keys'` from `dj.js hit`).
+   and `play-count.js countPlay(kind)` (`'pads'`, or `'keys'` from `dj.js hit`). A pad's loop started with no tap first (a finger held, Shift) counts once too (`startLoop`).
 3. `audio.play`: `wake()`, then `await load(clip)`. A failed load shows a
    notice (`ui.js showNotice`) and returns.
 4. `audio.load(clip)`: key `audio.key(clip)`; on a miss,

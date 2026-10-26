@@ -846,9 +846,12 @@ export function initPads(hooks) {
   // Shift does what a hold does: Shift-click, Shift+Enter or Shift+Space
   // starts the loop at once (and stops a looping pad, as a tap does).
   const holds = new Map();  // mouse pointer id -> timer that turns the loop on
+  // A loop started with no tap first (a finger held, Shift) is one play, as
+  // a key's is; a mouse's hold already counted its tap.
+  const startLoop = (clip) => { audio.loop(clip); countPlay('pads'); };
   const fingers = fingerTaps({
     onTap: (clip) => tapPad(clip),
-    onHold: (clip) => audio.loop(clip),
+    onHold: startLoop,
     holdMs: HOLD_TO_LOOP_MS,
   });
   el.pads.addEventListener('pointerdown', (e) => {
@@ -858,7 +861,7 @@ export function initPads(hooks) {
     const clip = findClip(pad.dataset.id);
     if (!clip) return;
     if (isFinger(e)) { fingers.down(e, clip, { hold: !audio.isLooping(clip.id) }); return; }
-    if (e.shiftKey && !audio.isLooping(clip.id)) { audio.loop(clip); return; }
+    if (e.shiftKey && !audio.isLooping(clip.id)) { startLoop(clip); return; }
     if (tapPad(clip)) return;
     holds.set(e.pointerId, setTimeout(() => audio.loop(clip), HOLD_TO_LOOP_MS));
   });
@@ -907,7 +910,7 @@ export function initPads(hooks) {
       padFor(clip.id)?.focus({ preventScroll: true });
     } else if (e.detail === 0) {
       flash(pad);
-      if (e.shiftKey && !audio.isLooping(clip.id)) audio.loop(clip); else tapPad(clip);
+      if (e.shiftKey && !audio.isLooping(clip.id)) startLoop(clip); else tapPad(clip);
     }
   });
   el.pads.addEventListener('contextmenu', (e) => { if (e.target.closest('.pad')) e.preventDefault(); });

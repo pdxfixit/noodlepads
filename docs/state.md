@@ -90,7 +90,7 @@ Where things stand **now**. Present tense only: replace lines, never append hist
   - **Heard:** 🔊 Even it out; 🗂️ See all's playing; the real recordings in the app; every preset's loudness; the ⚙️ Advanced sharps and flats; the row speakers; 🎹 the instruments (by anyone, anywhere); 💃 Grooves; 🎚️ Mixer; 🎼 Song; 🎹 the piano roll; 🔔 Let it ring; 👆 touch layouts; 🧸 Kids' pads, the mic's count and the tune; 🎧 From a song through a real tab or microphone.
   - **Tried by touch:** 🎉 Play and 🛠️ Make; the beat bar; the scratch beat and song; 📌 pattern chips; ⇆ Move; Beats' control bar and row drags (and with a real mouse); ⌨️ Keys recording for feel; 🎼 Song; 🎹 the piano roll; ✏️ Layout; 👆 touch layouts; ▦ layout grids (with a real finger); notices; 👥 People and 👋 Who's playing now?; beat rows on the left; 🎧 From a song.
   - **By a kid:** 🧸 Kids (by a five-year-old); a new person's first steps; the four key rows on a real keyboard.
-  - **Elsewhere:** pad skins on a tablet and under a finger; the app installed, and offline; ⌨️ Keys' playhead beside the click on a real device; ☁️ Open from the cloud's bar over a slow network, and the back gesture on Android and iOS Safari suspending its fetch; two real phones or tablets syncing; Feedback sent for real.
+  - **Elsewhere:** the play counts (`noodlepads.play`) from 🎤 Live's keys and 👆 tiles and a pad's loop, in the usage events from a real phone; pad skins on a tablet and under a finger; the app installed, and offline; ⌨️ Keys' playhead beside the click on a real device; ☁️ Open from the cloud's bar over a slow network, and the back gesture on Android and iOS Safari suspending its fetch; two real phones or tablets syncing; Feedback sent for real.
 
 ## Known quirks
 
