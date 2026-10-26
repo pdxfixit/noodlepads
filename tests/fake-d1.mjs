@@ -3,7 +3,9 @@
 // the parts of D1's API the Worker uses: prepare().bind() with first(), all()
 // and run(), and batch() as one transaction. Like D1, it refuses `undefined`
 // as a bound value. `fail` makes every query throw, as D1 does once a daily
-// limit is used up.
+// limit is used up. `slow` makes every query wait a turn of the event loop
+// first, as a network round trip does, so requests sent at once interleave
+// query by query (a race shows).
 
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
@@ -34,12 +36,13 @@ class Statement {
     return { results: [], success: true, meta: { changes: Number(r.changes), last_row_id: Number(r.lastInsertRowid) } };
   }
   async first(column) {
+    await this.d1.turn();
     const row = plain(this.#stmt().get(...this.params));
     if (column) return row ? row[column] : null;
     return row;
   }
-  async all() { return this.run_(); }
-  async run() { return this.run_(); }
+  async all() { await this.d1.turn(); return this.run_(); }
+  async run() { await this.d1.turn(); return this.run_(); }
 }
 
 export class FakeD1 {
@@ -48,10 +51,13 @@ export class FakeD1 {
     this.db.exec(schema);
     this.queries = [];
     this.fail = null;
+    this.slow = false;
   }
   check() { if (this.fail) throw new Error(this.fail); }
+  turn() { return this.slow ? new Promise((resolve) => setTimeout(resolve, 0)) : null; }
   prepare(sql) { return new Statement(this, sql); }
   async batch(statements) {
+    await this.turn();
     this.check();
     this.db.exec('BEGIN');
     try {

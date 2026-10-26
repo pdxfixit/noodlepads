@@ -298,6 +298,32 @@ test('a profile holds at most 10 MB of records, and everyone 60 MB; a push that 
   assert.equal(c.env.DB.rows("SELECT record_bytes AS b FROM profiles WHERE id = 'p-b'")[0].b, 2 * (2 + ROW_BYTES));
 });
 
+// The security seat, 2026-10-26: checked first and written later, pushes sent
+// at once all passed on the same count and overshot the cap.
+test('pushes sent at once take their room one at a time, so they never overshoot the cap', async () => {
+  const c = cloud();
+  const key = await made(c, 'p-a');
+  const batch = (p) => ({ put: Array.from({ length: 7 }, (_, i) => ({ kind: 'takes', id: `take-${p}-${i}`, body: { notes: 'x'.repeat(499_990) } })) });
+  c.env.DB.slow = true;
+  const res = await Promise.all([0, 1, 2, 3, 4].map((p) => c.call('POST', 'profiles/p-a/records', { key, body: batch(p) })));
+  assert.deepEqual(res.map((r) => r.status).sort(), [200, 200, 507, 507, 507], 'two fit in 10 MB; three wait');
+  c.env.DB.slow = false;
+  const [{ kept, counted }] = c.env.DB.rows(`SELECT (SELECT record_bytes FROM profiles WHERE id = 'p-a') AS kept,
+    (SELECT SUM(LENGTH(CAST(body AS BLOB)) + 100) FROM records) AS counted`);
+  assert.equal(kept, counted, 'the reservations settled to the exact count');
+  assert.ok(kept <= LIMITS.profileRecordBytes);
+  // A write that fails gives its room back.
+  const realBatch = c.env.DB.batch.bind(c.env.DB);
+  c.env.DB.batch = async () => { throw new Error('D1_ERROR: boom'); };
+  const realError = console.error;
+  console.error = () => {};
+  const failed = await c.call('POST', 'profiles/p-a/records', { key, body: { put: [{ kind: 'beats', id: 'beat-1', body: {} }] } });
+  console.error = realError;
+  c.env.DB.batch = realBatch;
+  assert.equal(failed.status, 503);
+  assert.equal(c.env.DB.rows("SELECT record_bytes AS b FROM profiles WHERE id = 'p-a'")[0].b, kept);
+});
+
 test("a profile's record bytes stay exact through edits, deletes, tombstones and stale writes", async () => {
   const c = cloud();
   const key = await made(c, 'p-a');

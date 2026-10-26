@@ -323,20 +323,33 @@ function checkRecordKey(r) {
   if (!r || !KINDS.includes(r.kind) || typeof r.id !== 'string' || !RECORD_ID.test(r.id)) throw new Refuse(400, 'record');
 }
 
-// Room for `growth` more bytes of records, or a 507: the profile's own cap
-// ('records full'), then everyone's ('cloud full'). Before refusing a
-// profile, its count is made again from its records, in case it drifted
-// (pushes from a Worker older than migration 006).
-async function roomForRecords(env, p, growth) {
-  let mine = p.record_bytes;
-  if (mine + growth > LIMITS.profileRecordBytes) {
-    mine = (await env.DB.prepare(`UPDATE profiles SET record_bytes = (SELECT COALESCE(SUM(${SIZE}), 0) FROM records WHERE records.profile_id = ?)
-      WHERE id = ? RETURNING record_bytes`).bind(p.id, p.id).first()).record_bytes;
-    if (mine + growth > LIMITS.profileRecordBytes) throw new Refuse(507, 'records full');
-  }
-  const { b } = await env.DB.prepare('SELECT COALESCE(SUM(record_bytes), 0) AS b FROM profiles').first();
-  if (b + growth > LIMITS.totalRecordBytes) throw new Refuse(507, 'cloud full');
+// A profile's bytes counted again from what it holds (its records).
+const recount = (env, id) => env.DB.prepare(`UPDATE profiles SET record_bytes = (SELECT COALESCE(SUM(${SIZE}), 0) FROM records WHERE records.profile_id = ?)
+  WHERE id = ? RETURNING record_bytes`).bind(id, id).first();
+
+// Takes `growth` more bytes for profile `id`, or a 507: its own cap
+// ('records full'), else everyone's ('cloud full'). One UPDATE checks both
+// caps and adds, so writes sent at once can't all pass on the same count;
+// the write that follows settles the difference (or `release` gives it
+// back). Before refusing, the profile is counted again from what it holds,
+// in case its count drifted high. (A recount while another write holds a
+// reservation leaves the count that much low until that write settles:
+// rare, and only ever generous.)
+async function reserve(env, id, growth) {
+  if (growth <= 0) return 0;
+  const take = () => env.DB.prepare(`UPDATE profiles SET record_bytes = record_bytes + ?
+    WHERE id = ? AND record_bytes + ? <= ? AND (SELECT SUM(record_bytes) FROM profiles) + ? <= ? RETURNING record_bytes`)
+    .bind(growth, id, growth, LIMITS.profileRecordBytes, growth, LIMITS.totalRecordBytes).first();
+  if (await take()) return growth;
+  const mine = (await recount(env, id))?.record_bytes ?? 0;
+  if (await take()) return growth;
+  throw new Refuse(507, mine + growth > LIMITS.profileRecordBytes ? 'records full' : 'cloud full');
 }
+
+// Gives back a reservation whose write failed (best effort: a count left
+// high is counted again before it refuses anyone).
+const release = (env, id, bytes) => (bytes ? env.DB.prepare('UPDATE profiles SET record_bytes = record_bytes - ? WHERE id = ?').bind(bytes, id).run()
+  .catch((err) => console.error('cloud: release', err)) : null);
 
 // A push puts and deletes records, all in one rev. With `since` (the rev the
 // device has pulled up to), a record another device wrote after that is left
@@ -370,7 +383,7 @@ async function push(request, env, id, now, seen) {
     const row = await env.DB.prepare('SELECT got, chunks FROM sounds WHERE id = ? AND profile_id = ?').bind(s, id).first();
     if (!row || row.got < row.chunks) throw new Refuse(409, 'sound', { sound: s });
   }
-  const p = await getProfile(env, id);
+  await getProfile(env, id);
   // What the push adds to the profile's bytes, if every record lands: the
   // last word on each record (a put, or a delete's tombstone) less what it
   // holds now. A push that adds nothing is never refused, so a full profile
@@ -381,7 +394,6 @@ async function push(request, env, id, now, seen) {
   const touched = JSON.stringify([...after.values()].map((r) => [r.kind, r.id]));
   const before = (await env.DB.prepare(`SELECT ${SIZE} AS size FROM ${TOUCHED}`).bind(touched, id).all()).results;
   const growth = [...after.values()].reduce((sum, r) => sum + r.size, 0) - before.reduce((sum, r) => sum + r.size, 0);
-  if (growth > 0) await roomForRecords(env, p, growth);
   if (!await withinDaily(env, 'pushes', LIMITS.pushesPerDay, now)) throw new Refuse(429, 'busy');
   // The sounds deleted clips held, to delete once nothing names them.
   const goneClips = del.filter((r) => r.kind === 'clips').map((r) => r.id);
@@ -404,10 +416,12 @@ async function push(request, env, id, now, seen) {
   // Only a record nobody wrote since the device's pull, when it says which.
   const unseen = since === null ? '' : ' WHERE records.rev <= ?';
   const guard = since === null ? [] : [since];
+  const reserved = await reserve(env, id, growth);
   const statements = [env.DB.prepare('UPDATE profiles SET rev = rev + 1 WHERE id = ?').bind(id), touch(env, id, now)];
-  // The profile's bytes: less what the records about to be written hold now…
-  statements.push(env.DB.prepare(`UPDATE profiles SET record_bytes = record_bytes - (SELECT COALESCE(SUM(${SIZE}), 0) FROM ${TOUCHED}${unseen})
-    WHERE id = ?`).bind(touched, id, ...guard, id));
+  // The profile's bytes: less the room reserved and what the records about
+  // to be written hold now…
+  statements.push(env.DB.prepare(`UPDATE profiles SET record_bytes = record_bytes - ? - (SELECT COALESCE(SUM(${SIZE}), 0) FROM ${TOUCHED}${unseen})
+    WHERE id = ?`).bind(reserved, touched, id, ...guard, id));
   put.forEach((r, i) => statements.push(env.DB.prepare(`INSERT INTO records (profile_id, kind, id, body, sound_id, rev, deleted)
     VALUES (?, ?, ?, ?, ?, ${revNow}, 0)
     ON CONFLICT (profile_id, kind, id) DO UPDATE SET body = excluded.body, sound_id = excluded.sound_id, rev = excluded.rev, deleted = 0${unseen}`)
@@ -426,7 +440,12 @@ async function push(request, env, id, now, seen) {
   // …plus what the ones that landed (this rev) hold now.
   statements.push(env.DB.prepare(`UPDATE profiles SET record_bytes = record_bytes + (SELECT COALESCE(SUM(${SIZE}), 0) FROM ${TOUCHED}
     AND records.rev = profiles.rev) WHERE id = ?`).bind(touched, id, id));
-  await env.DB.batch(statements);
+  try {
+    await env.DB.batch(statements);
+  } catch (err) {
+    await release(env, id, reserved);
+    throw err;
+  }
   const { rev } = await getProfile(env, id);
   if (since === null) return json(200, { rev, was: rev - 1 });
   // What did not land: written by someone else since the device's pull.
