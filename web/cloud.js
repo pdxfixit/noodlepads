@@ -321,10 +321,27 @@ const fetchedFor = new Map();
 let applying = 0;            // while a sync stores what it pulled, those writes are not "changes"
 // Runs `fn` as the sync's own writes. Only these: a kid's edit while a sync
 // waits on the network is a change like any other, and schedules the next sync.
+// The merge (storeLoaded: many writes, no network) is skipped whole, so an
+// edit landing in that short window waits for the next trigger.
 const quietly = (fn) => async (...args) => {
   applying++;
   try { return await fn(...args); } finally { applying--; }
 };
+// One write of the sync's own (deps.put, deps.remove): db.onChange then hears
+// the store once more than a kid's edits, and skips exactly that once, so an
+// edit to any store made while it is written still schedules the next sync.
+const expected = new Map();   // store -> the sync's own writes not yet heard
+async function ownWrite(store, write) {
+  expected.set(store, (expected.get(store) ?? 0) + 1);
+  try {
+    return await write();
+  } catch (err) {
+    // A failed write is never heard. A kid's edit heard meanwhile may have
+    // used up its expectation already: never below 0.
+    expected.set(store, Math.max(0, (expected.get(store) ?? 0) - 1));
+    throw err;
+  }
+}
 // Shown and focused: the 5-minute sync runs only then.
 const pageActive = () => {
   const doc = globalThis.document;
@@ -362,14 +379,14 @@ function deps() {
     sha256,
     clean: (doc, audioOf) => cleanBackup(doc, audioOf, whatIsHere()),
     merge: quietly((cleaned) => storeLoaded(cleaned)),
-    put: quietly(async (store, record) => {
-      await db.put(store, record);
+    put: async (store, record) => {
+      await ownWrite(store, () => db.put(store, record));
       if (store === 'clips' || store === 'overrides') audio.forget(record.id);
-    }),
-    remove: quietly(async (store, key) => {
-      await db.remove(store, key);
+    },
+    remove: async (store, key) => {
+      await ownWrite(store, () => db.remove(store, key));
       if (store === 'clips' || store === 'overrides') audio.forget(key);
-    }),
+    },
     // A sync's progress, without undoing what happened meanwhile: a new key
     // (PIN changed) stays, and a link dropped while it ran stays dropped.
     saveLink: async (l) => {
@@ -814,6 +831,7 @@ export function initCloud(hooks = {}) {
     else if (link.pin && link.key) saveLink(link);
   }
   db.onChange = (store) => {
+    if ((expected.get(store) ?? 0) > 0) { expected.set(store, expected.get(store) - 1); return; }
     if (applying || store === 'cloud' || store === 'bases' || store === 'settings') return;
     if (CLOUD_KINDS.includes(store) || store === 'people') scheduleSync();
   };
