@@ -63,7 +63,7 @@ export const HELP = [
       { pic: [tool('Select all'), word('☑️ Select its 6 sounds')], text: 'Once one is picked, Select all picks every sound you made. A group\'s ✏️ can pick just that group\'s sounds.' },
       { pic: [tool('Move to group'), tool('Color · picture'), tool('Voice'), tool('Share'), tool('Delete')], text: 'Then act on them all at once: put them in a group of yours (or a new one), give them one color or picture, one voice, one share code, or delete them (tap twice; Undo brings them back). Presets keep their own groups and can’t be shared.' },
       { pic: [word('▾ 📁 My group  ✏️')], text: 'Your own groups show under your sounds, like the presets’ groups. Tap one to open or close it. In Edit sounds, its ✏️ renames it, moves it up or down, or deletes it (its sounds stay). A group with no sounds goes away.' },
-      { pic: [word('1 … 9  ←  →  Space')], text: 'On a keyboard: 1 to 9 play the first pads, ← → change whose sounds. Space stops everything, but on a focused button or slider it presses that instead; Esc stops everything wherever you are, once it has let go of picked pills or sounds or closed a menu.' },
+      { pic: [word('1 … 9  ←  →  Space')], text: 'On a keyboard: 1 to 9 play the first pads, ← → change whose sounds, Space or Esc stops everything.' },
       { pic: [word('💬 Tap a pad to play it.')], text: 'The line at the bottom of each screen says how to use it.' },
     ],
   },

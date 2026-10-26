@@ -1014,8 +1014,11 @@ Space plays it; **Shift+Enter** (or Shift-click) keeps it repeating (Enter again
 a key does the same. Shift does what a hold does wherever there is one: a
 row's speaker opens its slider, a voice chip shows its recipe, 🎲 opens Pick a
 name, a pill turns loud. 1–9
-play the first nine pads on 🔊 Pads (where the keys show, the number row plays them), ← → change person, Space or Esc stops everything. Space
-does not while typing or on a focused button, link or slider, which it presses (Shift+Space is a pill's loud hit), so on a focused control Esc is the stop that always works; Esc first lets go of picked pills or sounds, or closes a ⋯ menu, and stops only when there is none. In Edit
+play the first nine pads on 🔊 Pads (where the keys show, the number row plays them), ← → change person, Space or Esc stops everything (⏹️ Stop all). The exact rules: Esc first lets go
+of picked pills or picked sounds, or closes a ⋯ menu, and stops only when there is
+none of those; neither key does anything while typing (a text box, a select) or while a sheet is open, where Esc closes the
+sheet; Space on a focused button, link or slider presses it instead of stopping (Shift+Space is a pill's loud hit), so on a
+focused control Esc is the stop. In 🧸 Kids Esc stops at once. In Edit
 sounds, Enter picks a pad up, Enter on another swaps them, Enter on the same
 one again opens its editor. In the beat maker the 16 pills are one Tab stop;
 arrow keys move between them and Space toggles one. Dialogs trap focus and hand
