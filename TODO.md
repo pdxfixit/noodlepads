@@ -61,6 +61,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
+- **☁️ Open from the cloud shows its progress** (Ben, 2026-10-26): today a tap shows only "Opening…" and the list stays live, so a kid taps again. While a person comes down, the list goes modal (nothing else to tap) and a real progress bar says how far it has got, never one that jumps 0 to 100; where nothing can be measured, a spinner. Mockup first.
+
 
 
 
