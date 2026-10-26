@@ -199,8 +199,9 @@ export async function unlock(personId, pin) {
     await saveLink({ ...link, key: opened.key, pin: !!opened.pin, check: await pinCheck(pin), newPin: undefined });
     status.delete(personId);
   } catch (err) {
-    // The cloud said no to the PIN (wrong, or too many wrong tries): a usage event, no log entry.
-    if (err instanceof CloudError && (err.status === 401 || err.status === 429)) track('noodlepads.cloud', { action: 'pin-wrong' });
+    // The cloud said no to the PIN (wrong, or too many wrong tries): a usage
+    // event, no log entry. A 429 'slow' (a minute's rate limit) is no PIN at all.
+    if (err instanceof CloudError && (err.status === 401 || (err.status === 429 && err.error === 'wait'))) track('noodlepads.cloud', { action: 'pin-wrong' });
     if (!(err instanceof CloudError) || err.status !== 0 || !link.check || await pinHash(pin, link.check.salt) !== link.check.hash) throw err;
   }
   unlocked.add(personId);

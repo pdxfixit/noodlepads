@@ -42,6 +42,10 @@ export function createCloudApi({ fetch, base = '/api', meta = null }) {
     const isJson = (res.headers?.get?.('Content-Type') || '').startsWith('application/json');
     const data = isJson ? await res.json().catch(() => ({})) : {};
     if (signal?.aborted) throw stalled();
+    // A 429 that names no reason is a minute's wait, as the Worker's own
+    // 'slow' (worker/cloud.js slowDown): the edge's per-IP rate-limit rule
+    // answers in a page of its own, never the Worker's JSON.
+    if (res.status === 429 && !data.error) throw new CloudError(429, { ...data, error: 'slow' });
     // A page with no API (the dev server, a static copy) answers 404 in plain text or HTML.
     if (!isJson) throw new CloudError(res.ok ? 0 : res.status === 404 ? 0 : res.status, { error: 'no cloud' });
     if (!res.ok) throw new CloudError(res.status, data);

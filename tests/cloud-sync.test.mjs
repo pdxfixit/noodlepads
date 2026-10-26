@@ -437,6 +437,25 @@ test('no cloud here (the dev server, a static copy) or no network: a CloudError 
 });
 
 // A minute's rate limit (429 slow) is not a daily cap (429 busy): it never says "tomorrow".
+// The edge's per-IP rate-limit rule answers 429 in a page of its own, with
+// no JSON reason: a minute's wait, never "busy today".
+test('a 429 that names no reason reads as slow: the edge rule\'s page, or JSON with no error', async () => {
+  for (const res of [
+    new Response('<html>Too many requests</html>', { status: 429, headers: { 'Content-Type': 'text/html' } }),
+    new Response('', { status: 429 }),
+    new Response('{}', { status: 429, headers: { 'Content-Type': 'application/json' } }),
+  ]) {
+    const api = createCloudApi({ fetch: async () => res });
+    const err = await api.pull('p-mv4cyiqj-b8bt', 'k', 0).catch((e) => e);
+    assert.ok(err instanceof CloudError);
+    assert.deepEqual([err.status, err.error], [429, 'slow']);
+    assert.equal(cloudTrouble(err), 'The cloud is busy right now. Try again in a minute.');
+  }
+  const busy = await createCloudApi({ fetch: async () => new Response('{"error":"busy"}', { status: 429, headers: { 'Content-Type': 'application/json' } }) })
+    .pull('p-mv4cyiqj-b8bt', 'k', 0).catch((e) => e);
+  assert.equal(busy.error, 'busy', "the Worker's own reason is kept");
+});
+
 test('a rate limit says busy right now, a daily cap says busy today', () => {
   assert.equal(cloudTrouble(new CloudError(429, { error: 'slow' })), 'The cloud is busy right now. Try again in a minute.');
   assert.equal(cloudTrouble(new CloudError(429, { error: 'busy' })), 'The cloud is busy today. Try again tomorrow.');
