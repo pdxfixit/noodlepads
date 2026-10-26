@@ -23,14 +23,20 @@ steps below are kept as the record of how it was built, and for rebuilding it.
 in `.github/workflows/deploy.yml`, one run at a time in push order:
 
 1. `just test`.
-2. `just deploy-migrated`: stops while D1 lacks any `worker/migrations/*.sql`.
-   Migrating is Ben's (`just cloud-migrate --yes`); then re-run the deploy
-   (Actions → deploy → Re-run all jobs).
+2. The release checks: `tools/version_bumped.sh` (no `web/` change since the
+   last `just version`) and `python3 tools/bump_version.py --check` (PATCH is
+   the commit count). A push that fails either stops here, before anything is
+   uploaded.
 3. The public **flarepress** action (`pdxfixit/flarepress@v1`, its rolling tag) on `site/`:
    check (the run is for `main`; `web/`, `worker/` and `site/` committed;
    `index.html` there), gate, stamp `web/version.json`, `wrangler deploy`, then
    verify: wait until the live site serves that version.
 4. `just deploy-checks` (below).
+
+Nothing in the deploy checks the database. A push whose Worker needs a new
+`worker/migrations/*.sql` waits for Ben to run `just cloud-migrate --yes`
+first (a line in TODO.md "Ben does"); pushed before that, the new Worker
+meets the old tables.
 
 The pieces:
 
@@ -60,7 +66,7 @@ from his Mac, through a clone of the public flarepress at `~/src/flarepress`,
 with his Keychain token and the ids from `~/.config/noodlepads/cloud.json`:
 
 ```
-just deploy-check     # read-only pre-flight: main, committed, pushed, migrations applied, tests pass
+just deploy-check     # read-only pre-flight: flarepress's check (main, committed, pushed), then the tests
 just deploy-plan      # deploy-check, then wrangler's dry run: validates, lists files, sends nothing
 just deploy           # deploy-check, stamp, wrangler deploy (asks to confirm), verify, live checks
 just live             # what is live now, and whether it is main's web/ and worker/ (read-only)
@@ -182,28 +188,50 @@ is answered 503, so the app says "resting until tomorrow").
 
 ### Rollback
 
-- **Turn the cloud off, keep the data:** remove `main`, the `[assets] binding`
-  line and `[[d1_databases]]` from flarepress's `wrangler.toml`, delete its
-  `worker` symlink, and deploy. The site is static again; devices keep
+Both are Ben's calls.
+
+- **Turn the cloud off, keep the data:** remove `main`, the `[assets]`
+  `binding` line and the binding tables (`[[d1_databases]]`, `[[r2_buckets]]`,
+  `[[ratelimits]]`) from `site/wrangler.toml`, and push that to `main`: GitHub
+  deploys it like any push. The site is static again; devices keep
   everything on the device and say the cloud isn't reachable. Put the lines
   back to turn it on again.
-- **Delete everything in the cloud:** after the step above,
-  `npx wrangler d1 delete noodle-pads`, and revoke the read-only token. This
+- **Delete everything in the cloud:** after the step above, from the Mac,
+  `just cloud-db delete noodle-pads`, and revoke the read-only token. This
   deletes every profile, sound and report there; devices keep their own copies.
 - The telemetry runner's copies (pdxfixit/telemetry) are untouched by any of
   this.
 
 ## Rollback
 
-- **A bad deploy:** the live site is always a commit on `main`, so revert, in
-  the main checkout: `git revert --no-edit <sha>…`, `just test`,
-  `git push origin main`, `just --yes deploy`. `just rollback` prints exactly
-  these steps for the previous release (it never deploys an old checkout:
-  `rollback=revert` in flarepress's `site.conf`). Never force-push `main`. A
-  revert does not undo a D1 migration: the Worker must work with the newer
-  tables (it skips what it can't use, as `worker/metrics.js` does).
-- **noodlepads.com:** from `~/src/flarepress/noodlepads.com`, `npx wrangler
-  delete` removes the Worker; check the zone's DNS tab afterwards in case the
-  Custom Domain record outlives it. Then remove the folder from flarepress and
-  its line in flarepress `AGENTS.md`. Sounds stay in those browsers at
-  noodlepads.com.
+**A bad deploy is rolled back by a revert pushed to `main`.** The live site
+is always a commit on `main`, and GitHub deploys every push, so the revert is
+the deploy. Nobody deploys an old checkout or runs `just deploy` for it.
+
+1. **Check the IndexedDB version first.** `git diff <good sha> main -- web/store.js`:
+   if a commit since then added a line to `SCHEMA` (which raises `DB_VERSION`),
+   do not revert across it. Devices that loaded the newer copy have upgraded
+   their database, and the older code asks for a lower version, which
+   IndexedDB refuses: their sounds and beats would not open. Fix forward
+   instead.
+2. In a worktree: `git revert --no-commit <sha>…` (newest first), then
+   `just version` when the revert touches `web/` (it puts back an old
+   release, which the deploy's release check refuses), `just test`, and
+   commit with a `fix:` message.
+3. Land it from the main checkout: `just land <sha>`. (A cloud session pushes
+   its branch, then fast-forwards `main`, as AGENTS.md says.) Never
+   force-push `main`.
+4. Read the deploy run (`gh run list --limit 3`), then `just live`.
+
+`just rollback` prints flarepress's revert steps for the previous release
+(`rollback=revert` in `site/site.conf`: never an old checkout); here the push
+in step 3 is the deploy. A revert does not undo a D1 migration: the Worker
+must work with the newer tables (it skips what it can't use, as
+`worker/metrics.js` does).
+
+**Removing noodlepads.com** (Ben's call): first remove the deploy job from
+`.github/workflows/deploy.yml`, or the next push deploys it again; then, from
+the Mac, wrangler's `delete` through flarepress's `tools/wrangler.sh` on
+`site/` (as `just cloud-db` runs `d1`) removes the Worker. Check the zone's DNS tab
+afterwards in case the Custom Domain record outlives it. Sounds stay in those
+browsers at noodlepads.com.

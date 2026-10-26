@@ -43,6 +43,49 @@ test('every recipe is named in the docs', (t) => {
   assert.deepEqual(unnamed, []);
 });
 
+// Every `just <recipe>` the docs tell a reader to run, in backticks or on a
+// line of a code block. Until 2026-10-26 the deploy doc's steps named
+// `just deploy-migrated`, removed on 2026-10-16, and its rollback ended in a
+// deploy agents never run: a reader in a crisis follows the docs as written.
+export function recipesNamed(text) {
+  const named = new Set();
+  text.split(/^\s*```.*$/m).forEach((part, i) => {
+    for (const m of part.matchAll(/`just (?:--yes )?([a-z][a-z0-9-]*)/g)) named.add(m[1]);
+    if (i % 2) for (const m of part.matchAll(/^\s*just (?:--yes )?([a-z][a-z0-9-]*)/gm)) named.add(m[1]);
+  });
+  return named;
+}
+
+// The docs a reader acts on today. ADRs, design docs and the changelog are
+// history: they may name a recipe as it was.
+function liveDocs() {
+  const md = (dir) => readdirSync(join(root, dir)).filter((f) => f.endsWith('.md')).map((f) => join(dir, f));
+  return ['AGENTS.md', 'README.md', 'TODO.md', ...md('docs'), ...md('docs/architecture')];
+}
+
+// Recipes of other repos the docs name, with where they run.
+const ELSEWHERE = new Set([
+  'pull',            // pdxfixit/telemetry: `just pull noodlepads` in ~/src/telemetry
+  'events-vendor',   // pdxfixit/flarepress: vendors worker/events-worker.js and web/events-client.js
+]);
+
+test('recipesNamed finds `just x` in backticks and on code-block lines, not in prose', () => {
+  const text = 'Run `just look --wide`, or `just --yes deploy`; just like that.\n```\njust deploy-check   # first\n  just serve 8781\n```\njust outside a block';
+  assert.deepEqual([...recipesNamed(text)].sort(), ['deploy', 'deploy-check', 'look', 'serve']);
+});
+
+test('every recipe the docs name exists', (t) => {
+  const all = recipes();
+  if (!all) return t.skip('just is not installed');
+  const known = new Set([...Object.keys(all), ...Object.keys(JSON.parse(execFileSync('just', ['--dump', '--dump-format', 'json'],
+    { cwd: root, encoding: 'utf8' })).aliases ?? {}), ...ELSEWHERE]);
+  const gone = [];
+  for (const f of liveDocs()) {
+    for (const name of recipesNamed(readFileSync(join(root, f), 'utf8'))) if (!known.has(name)) gone.push(`${f}: just ${name}`);
+  }
+  assert.deepEqual(gone, [], 'the docs name a recipe the justfile does not have');
+});
+
 test('every tool is named in the docs', () => {
   const tools = readdirSync(join(root, 'tools')).filter((f) => !f.startsWith('test_') && /\.(py|mjs|sh|json)$/.test(f));
   assert.deepEqual(tools.filter((f) => !docs.includes(f)), []);
