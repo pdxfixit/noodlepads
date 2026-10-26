@@ -911,8 +911,12 @@ export function createDJ({ el, deps }) {
   const LINE_MS = 10000;
   // The banner with ↩️ Undo for a change to the beat: `copy` is the beat to
   // put back, or `fn` undoes it (🆕 New's emptied scratch, sequencer.js).
+  // Undo is for the person it was offered to: another one showing by then
+  // has their own open beat, which it must not replace.
   function offerBeatUndo(copy, text, fn = null) {
+    const pid = deps.personId();
     showBeatLine(text, () => {
+      if (deps.personId() !== pid) return;
       if (fn) fn(); else deps.seq.restore(copy);
       renderGrid();
     });

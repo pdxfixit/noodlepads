@@ -150,7 +150,10 @@ function pickWhoNow(id) {
 function showPerson(p, { behind = false } = {}) {
   if (!behind) closeWhoNow();
   delete document.body.dataset.locked;
-  if (state.personId && state.personId !== p.id) leftPerson(state.personId);
+  if (state.personId && state.personId !== p.id) {
+    dj?.leave();   // a take or a recording into the beat ends as the person's own
+    leftPerson(state.personId);
+  }
   state.personId = p.id;
   followPerson();   // their own settings (Advanced, pad size…) take over
   state.selected = null;

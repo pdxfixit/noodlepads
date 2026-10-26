@@ -143,7 +143,7 @@ The footer's how-to (`app.js showHint`, `screenHint`) uses the same `pointer: fi
 
 ### Takes (🎤 Live)
 
-**Record.** ● → `startRec`: `rec = {started: false, events: []}`, a 250 ms timer for the status line and the 180 s cap. The take starts at the first non-`'beat'` event. Each event is `{at, clipId, kind, ring?}` on the audio clock (`deps.now()` = `audio.context().currentTime`, no latency moved). ■ → `stopRec` → `rhythm.js takeFrom(events, now)`. A screen change or 🧸 Kids (`dj.leave`) stops it too, keeping the take, as Esc does.
+**Record.** ● → `startRec`: `rec = {started: false, events: []}`, a 250 ms timer for the status line and the 180 s cap. The take starts at the first non-`'beat'` event. Each event is `{at, clipId, kind, ring?}` on the audio clock (`deps.now()` = `audio.context().currentTime`, no latency moved). ■ → `stopRec` → `rhythm.js takeFrom(events, now)`. A screen change, 🧸 Kids or a change of person (`dj.leave`; `app.js showPerson` calls it before the person changes) stops it too, keeping the take, as Esc does.
 
 **Stored record** (IndexedDB `takes`, `state.takes`; cleaned by `rhythm.js cleanTake`):
 
@@ -186,7 +186,7 @@ Each tap is snapped once, on the clock of its moment (`{t0, step, total, rates}`
 
 **Growing** ("keep playing and the beat gets longer"): `sequencer.js scheduleClicks` asks `growHook()` (= `dj.js growNow`) as the last beat of the beat is booked. A hit in the last bar on this pass (`lastBar`) doubles it, 1 → 2 → 4 bars (`sequencer.js grow`, `multiplyRows`). Hits still landing in the old bars are copied into the new ones (`beatRec.mirror`). A pass with no hit in the last bar stops growing for good.
 
-**Stop** (`dj.js stopBeatRec(why)`): ● again (`'button'`), Esc (`'escape'`), a screen change, ⌨️ Keys off or Kids (`'leave'`), or the beat stopped from outside (`'stopped'`, via `seq` `onStop` → `dj.beatStopped`). It clears the grow hook, hands the click back (`setClick(null)`), stops the beat only if Record started it or a groove was playing, then offers ↩️ Undo (`showBanner`, 10 s) that calls `seq.restore(copy)`.
+**Stop** (`dj.js stopBeatRec(why)`): ● again (`'button'`), Esc (`'escape'`), a screen change, ⌨️ Keys off or Kids (`'leave'`), or the beat stopped from outside (`'stopped'`, via `seq` `onStop` → `dj.beatStopped`). It clears the grow hook, hands the click back (`setClick(null)`), stops the beat only if Record started it or a groove was playing, then offers ↩️ Undo (`showBanner`, 10 s) that calls `seq.restore(copy)`, only while the person it was offered to still shows (`offerBeatUndo`).
 
 While recording: `seq.lockChips(true)`, bars and time signature hide, ▶ Play is disabled, a row's menu waits, `app.js setKeys` and ⇆ refuse.
 
@@ -426,6 +426,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | A key's play counts once for usage, as `'keys'` (`tapPad`'s `kind`) | `play-count-app.test.mjs` |
 | A take ends, kept, when the keys leave the screen or Kids shows (`dj.leave`) | `live-take-leave.test.mjs` |
 | ⏹️ Stop all and 🧸 Kids stop a take playing back, its hits still to come too | `take-stop-all.test.mjs` |
+| A change of person ends a take or a recording into the beat as the first person's; a beat Undo offered before does nothing for the next person | `keys-person-change.test.mjs` |
 | A held key loops only on OS repeat past 350 ms; lifting a modifier forgets all holds | no test found (`shift-holds.test.mjs` covers Shift-click only) |
 | Every remembered key (`dj-input`, `dj-size`, `dj-click`, `beat-keys`, `kids-tab`) starts the app safely | `startup-remembered.test.mjs` |
 | A take's `ring` is stored only when true, only on a hit | `overlap.test.mjs`, `rhythm.test.mjs` |
