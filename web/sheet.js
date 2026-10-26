@@ -22,7 +22,7 @@ import { getSetting, setSetting, onSetting } from './settings.js';
 import { padFor, renderPads } from './pads.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { extensionFor, slug, newId } from './util.js';
-import { soundName, synthName, mixName, funName } from './names.js';
+import { soundName, synthName, mixName, funName, cutName } from './names.js';
 import { MIX, cleanMix, mixSounds } from './mix.js';
 import { showNotice } from './ui.js';
 import { track } from './telemetry.js';
@@ -1822,7 +1822,7 @@ export function initSheet() {
       return;
     }
     setStatus(`Opening ${file.name}…`);
-    if (!el.label.value) el.label.value = file.name.replace(/\.[^.]+$/, '').slice(0, 24);
+    if (!el.label.value) el.label.value = cutName(file.name.replace(/\.[^.]+$/, ''));
     acceptAudio(file, 'file');
   });
   // Picking a voice moves the knobs and plays the sound in it right away.

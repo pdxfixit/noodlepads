@@ -18,6 +18,7 @@
 // changes the one it was given.
 
 import { cleanGrid, settle, dropBand } from './touch-grid.js';
+import { cutName } from './names.js';
 
 export const MINE = 'mine';                       // 🎤 My sounds, the person's own
 export const SIZES = { s: 5, m: 4, l: 2 };        // tiles across on a phone (Ben, 2026-10-16)
@@ -327,7 +328,7 @@ function reindex(g, index) {
 
 // A name typed for a touch layout: trimmed and cut to 24, or null when blank.
 export function touchName(v) {
-  const name = typeof v === 'string' ? [...v.trim().replace(/\s+/g, ' ')].slice(0, MAX_TOUCH_NAME).join('').trim() : '';
+  const name = typeof v === 'string' ? cutName(v.trim().replace(/\s+/g, ' '), MAX_TOUCH_NAME).trim() : '';
   return name || null;
 }
 

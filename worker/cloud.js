@@ -5,7 +5,7 @@
 
 import { PERSON_ID, PERSON_COLORS, OLD_PERSON_COLORS } from '../web/model.js';
 import { isListedEmoji } from '../web/emoji-check.js';
-import { isFunName } from '../web/names.js';
+import { isFunName, cutName } from '../web/names.js';
 import { CLOUD_ID } from '../web/reid.js';
 import { ORIGIN, json, fail, Refuse, readJson, readBytes, randomId, sha256Hex, toBytes, withinDaily, utcDay } from './http.js';
 import { isPin, newSalt, hashSecret, checkSecret, shareCode, isShareCode, plainCode } from './pin.js';
@@ -720,7 +720,7 @@ async function makeShare(request, env, id, now, seen) {
   await needKey(request, env, id, now);
   await slowDown(env, LIMITERS.shares, id);
   if (!SHARE_KINDS.includes(body.kind)) throw new Refuse(400, 'kind');
-  const title = typeof body.title === 'string' ? body.title.trim().slice(0, 24) : '';
+  const title = typeof body.title === 'string' ? cutName(body.title.trim()) : '';
   if (!title) throw new Refuse(400, 'title');
   const b = body.bundle;
   if (!b || typeof b !== 'object' || Array.isArray(b)) throw new Refuse(400, 'bundle');

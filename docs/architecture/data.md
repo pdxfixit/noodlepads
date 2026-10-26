@@ -410,6 +410,7 @@ Nothing found is changed or deleted.
 | 16 | Moving a sound into a group does not make it a new sound on merge (`group` and `from` are left out of the comparison) | `tests/groups.test.mjs` |
 | 17 | A saved order names only pads that were shown; a new preset slots in by `withNewPresets` | `tests/model.test.mjs` (`clipsForPerson`) |
 | 18 | IndexedDB in tests is `tests/fake-idb.mjs` (all-or-nothing commits, `failCommit`). docs/layout.md still says IndexedDB is checked only by hand. | — |
+| 19 | Every name and label is cut by `names.js cutName` (24, a person 20, a lane 16): counted in code points, as `nameLength`, never splitting a character. A plain `.slice(0, 24)` can leave half an emoji. | `tests/name-cut.test.mjs` |
 
 ## To change X, touch …
 

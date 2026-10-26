@@ -7,6 +7,28 @@
 export const MAX_LABEL = 24;
 export const MAX_PERSON = 20;   // "Captain Cranberries" (19), a person's fun name
 
+// A name cut to at most `max` characters, the one way every name and label
+// is cut (sounds, beats, songs, takes, groups, layouts, voices, people,
+// lanes, shares; the Worker's too). Characters are code points, so
+// `[...name].length`, never UTF-16 units, and the cut is never inside one:
+// an emoji in the last place stays whole or goes whole, and one built of
+// several (👍🏽, 👨‍👩‍👧) is never left in pieces. Before, most cuts were
+// `.slice(0, 24)`, which could leave half an emoji.
+const GRAPHEMES = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter() : null;
+export const nameLength = (text) => [...String(text ?? '')].length;
+export function cutName(text, max = MAX_LABEL) {
+  const s = String(text ?? '');
+  if (nameLength(s) <= max) return s;
+  let out = '';
+  let n = 0;
+  for (const part of GRAPHEMES ? Array.from(GRAPHEMES.segment(s), (g) => g.segment) : s) {
+    n += nameLength(part);
+    if (n > max) break;
+    out += part;
+  }
+  return out;
+}
+
 // Short words, so that the longest adjective and the longest noun still fit
 // together in 24 characters (names.test.mjs checks that).
 export const ADJECTIVES = [
@@ -113,7 +135,7 @@ export function partNames(letters, taken = [], random = Math.random) {
 // if taken ("Four on the floor 2").
 export function keptName(groove, taken = [], random = Math.random) {
   const used = new Set([...taken].map(key));
-  const g = String(groove ?? '').trim().slice(0, MAX_LABEL);
+  const g = cutName(String(groove ?? '').trim());
   if (!g) return beatName(taken, random);
   const tiers = [
     BEAT_NAMES.map((n) => `${n} (${g} version)`),
@@ -128,7 +150,7 @@ export function keptName(groove, taken = [], random = Math.random) {
   if (!used.has(key(g))) return g;
   for (let n = 2; ; n++) {
     const tail = ` ${n}`;
-    const name = g.slice(0, MAX_LABEL - tail.length) + tail;
+    const name = cutName(g, MAX_LABEL - tail.length) + tail;
     if (!used.has(key(name))) return name;
   }
 }
@@ -274,7 +296,7 @@ export function nameChoices(taken = [], n = 12, random = Math.random) {
 // A remix of something shared (🎛️ Remix): its title and " remix", cut so the
 // whole still fits a label ("Wobbly Marshmallow remix" is 24).
 export function sharedRemixName(title) {
-  const base = String(title ?? '').trim().slice(0, MAX_LABEL - 6).trim() || 'Shared';
+  const base = cutName(String(title ?? '').trim(), MAX_LABEL - 6).trim() || 'Shared';
   return `${base} remix`;
 }
 

@@ -46,7 +46,7 @@
 | File | Owns | Imports |
 |---|---|---|
 | `index.js` | routing, `EVENTS_OPTS`, `FEEDBACK_OPTS` | `reports.js`, `cloud.js`, `events-worker.js`, `http.js` |
-| `cloud.js` | every cloud route, `LIMITS`, `KINDS`, `CHUNK_BYTES`, `MAX_SOUND_BYTES`, keys, shares | `http.js`, `pin.js`, `metrics.js`, and from `web/`: `model.js` (`PERSON_ID`, `PERSON_COLORS`, `OLD_PERSON_COLORS`), `emoji-check.js`, `names.js isFunName`, `reid.js CLOUD_ID` |
+| `cloud.js` | every cloud route, `LIMITS`, `KINDS`, `CHUNK_BYTES`, `MAX_SOUND_BYTES`, keys, shares | `http.js`, `pin.js`, `metrics.js`, and from `web/`: `model.js` (`PERSON_ID`, `PERSON_COLORS`, `OLD_PERSON_COLORS`), `emoji-check.js`, `names.js isFunName`, `cutName`, `reid.js CLOUD_ID` |
 | `http.js` | `ORIGIN`, `reply`/`json`/`fail`, `Refuse`, `readBytes`/`readCapped`/`readJson`, `randomId`, `sha256Hex`, `toBytes`, `withinDaily` (the `counters` table) | nothing |
 | `pin.js` | PIN hash and wrong-try rule, share codes | `http.js hex` |
 | `metrics.js` | `devices` and `activity` rows, sweeps, `forgetProfile` | `web/device-meta.js WIDTHS`, `web/agent.js parseAgent` |

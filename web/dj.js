@@ -17,7 +17,7 @@ import { encodeWav, SIGNATURES, COMMON_BPMS, tempoStops, stopFor, pillHolds, typ
 import { recall, remember, newId, onePressOneClick } from './util.js';
 import { PICTURES, pictureTakenBy } from './model.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
-import { takeName, soundName } from './names.js';
+import { takeName, soundName, cutName } from './names.js';
 import { openDialog, setupDialog, openerOf } from './dialogs.js';
 import { setSetting, onSetting, deviceChoice } from './settings.js';
 import { createKeysEditor } from './dj-keys.js';
@@ -1566,7 +1566,7 @@ export function createDJ({ el, deps }) {
   // ✕ puts the take card away (the take stays as it is).
   el.doneClose.addEventListener('click', () => { lastTake = null; el.done.hidden = true; });
   el.takeName.addEventListener('change', () => {
-    const name = el.takeName.value.trim().slice(0, 24);
+    const name = cutName(el.takeName.value.trim());
     if (lastTake?.id && name) { lastTake = { ...lastTake, name }; deps.saveTake(lastTake); }
     el.takeName.value = lastTake?.name ?? '';
     fitTakeName();
@@ -1628,7 +1628,7 @@ export function createDJ({ el, deps }) {
     const input = e.target.closest('[data-rename]');
     const t = input && deps.takes(deps.personId()).find((x) => x.id === input.dataset.rename);
     if (!t) return;
-    const name = input.value.trim().slice(0, 24);
+    const name = cutName(input.value.trim());
     if (name) deps.saveTake({ ...t, name });
     else input.value = t.name;
   });

@@ -18,6 +18,7 @@
 // starts.
 
 import { cleanVolume } from './row-volume.js';
+import { cutName } from './names.js';
 
 export const MAX_LANES = 8;
 export const START_LANES = 4;            // a new song's lanes; ➕ Add a lane adds up to MAX_LANES
@@ -68,7 +69,7 @@ export function cleanBlock(raw) {
 // missing), mute, volume, and its blocks in bar order, one per bar.
 export function cleanLane(raw, i = 0) {
   const d = LANE_DEFAULTS[i % LANE_DEFAULTS.length];
-  const name = typeof raw?.name === 'string' && raw.name.trim() ? raw.name.trim().slice(0, MAX_LANE_NAME) : d.name;
+  const name = typeof raw?.name === 'string' && raw.name.trim() ? cutName(raw.name.trim(), MAX_LANE_NAME) : d.name;
   const seen = new Set();
   const blocks = (Array.isArray(raw?.blocks) ? raw.blocks : []).map(cleanBlock).filter(Boolean)
     .sort((a, b) => a.bar - b.bar)

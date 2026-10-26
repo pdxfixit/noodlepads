@@ -10,7 +10,7 @@
 // nothing is lost. Then every record that differs from what the cloud has is
 // pushed, its audio first, and only over a cloud copy this device has seen.
 
-import { sharedRemixName } from './names.js';
+import { sharedRemixName, cutName } from './names.js';
 import { groupName } from './groups.js';
 import { STAMP, resolve } from './merge3.js';
 import { songBeatIds, mapSongBeats } from './playlist.js';
@@ -267,7 +267,7 @@ export function shareBundle(kind, id, lists, personId, kitIds = []) {
     const { blob, personId: _who, group: _group, ...rest } = clips.get(cid);   // a group is the sharer's own too
     return rest;
   });
-  return { kind, title: String(title || 'Shared').slice(0, 24), bundle: out };
+  return { kind, title: cutName(String(title || 'Shared')), bundle: out };
 }
 
 // A share remixed onto someone's own board: its records made theirs (`toId`),

@@ -9,6 +9,7 @@
 // Every function returns a new one and never changes what it was given.
 
 import { KEY_ROWS, KEY_CODES } from './rhythm.js';
+import { cutName } from './names.js';
 
 // All 40 keys, a missing one as null (No sound): a layout or ⭐ My keys
 // saved before the number row (2026-10-12) loads with that row empty.
@@ -190,7 +191,7 @@ export const MAX_LAYOUT_NAME = 24;
 
 // A name typed for a layout: trimmed and cut to 24, or null when blank.
 export function layoutName(v) {
-  const name = typeof v === 'string' ? [...v.trim()].slice(0, MAX_LAYOUT_NAME).join('').trim() : '';
+  const name = typeof v === 'string' ? cutName(v.trim(), MAX_LAYOUT_NAME).trim() : '';
   return name || null;
 }
 

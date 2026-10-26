@@ -34,7 +34,7 @@ import { cleanSong, SONG_ID } from './song.js';
 import { cleanSynth } from './synth.js';
 import { adoptPeople, nextPersonColor, freePicture, PERSON_ID } from './model.js';
 import { isListedEmoji } from './emoji-check.js';
-import { funName, isFunName, MAX_PERSON } from './names.js';
+import { funName, isFunName, MAX_PERSON, cutName } from './names.js';
 import { dropNameSounds } from './starters.js';
 import { count } from './util.js';
 import { cleanGroups, groupIdOf } from './groups.js';
@@ -85,7 +85,7 @@ const MAX_RECORDS = { people: 100, clips: 2000, overrides: 2000, orders: 100, pa
 
 const text = (v, max) => (typeof v === 'string' ? v.slice(0, max) : undefined);
 // A name or label: trimmed, cut to `max`, and undefined when nothing is left.
-const title = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max).trim() || undefined : undefined);
+const title = (v, max) => (typeof v === 'string' ? cutName(v.trim(), max).trim() || undefined : undefined);
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
 const voiceId = (v) => (VOICES.some((x) => x.id === v) ? v : undefined);
 // A sound's note (🎵 Find its note): a whole MIDI number, 0 to 127.

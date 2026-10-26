@@ -12,6 +12,7 @@
 
 import { TWEAKS, NO_TWEAKS, cleanTweaks, fullTweaks, knobSay } from './tweaks.js';
 import { VOICES, amountFor } from './voices.js';
+import { cutName } from './names.js';
 
 const log2 = (x) => Math.log2(x);
 const tenth = (v) => Math.round(v * 10) / 10;
@@ -147,8 +148,8 @@ const MY_VOICE_EMOJI = 16;         // an emoji can be several code units
 export function cleanMyVoice(raw) {
   if (!raw || typeof raw !== 'object') return null;
   if (typeof raw.id !== 'string' || !raw.id || typeof raw.personId !== 'string' || !raw.personId) return null;
-  const name = typeof raw.name === 'string' ? [...raw.name.trim()].slice(0, MY_VOICE_NAME).join('') : '';
-  const emoji = typeof raw.emoji === 'string' ? raw.emoji.trim().slice(0, MY_VOICE_EMOJI) : '';
+  const name = typeof raw.name === 'string' ? cutName(raw.name.trim(), MY_VOICE_NAME) : '';
+  const emoji = typeof raw.emoji === 'string' ? cutName(raw.emoji.trim(), MY_VOICE_EMOJI) : '';
   const { first, muted, ...knobs } = cleanTweaks(raw.knobs) ?? {};
   if ((!name && !emoji) || !Object.keys(knobs).length) return null;
   const time = (t) => (Number.isFinite(t) && t > 0 ? t : 0);

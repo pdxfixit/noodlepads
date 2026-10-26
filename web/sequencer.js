@@ -41,6 +41,7 @@ import { createRoll } from './roll.js';
 import { createPillSelect } from './pill-select.js';
 import { edgeScroller } from './edge-scroll.js';
 import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
+import { cutName, MAX_LABEL } from './names.js';
 
 export const STEPS = 16;         // a bar of 4/4, the simple beat maker
 export const MAX_STEPS = 20;     // the longest bar (5/4)
@@ -201,7 +202,7 @@ export function cleanRow(r) {
 export function cleanPattern(raw, personId) {
   const bpm = Math.round(Math.min(MAX_BPM, Math.max(MIN_BPM, Number(raw?.bpm) || DEFAULT_BPM)));
   const rows = (Array.isArray(raw?.rows) ? raw.rows : []).slice(0, MAX_ROWS).map(cleanRow);
-  const name = typeof raw?.name === 'string' ? raw.name.slice(0, 24) : '';
+  const name = typeof raw?.name === 'string' ? cutName(raw.name) : '';
   const bars = BAR_CHOICES.includes(raw?.bars) ? raw.bars : 1;
   const swing = clampInt(raw?.swing, 0, MAX_SWING, 0);
   const id = BEAT_ID.test(raw?.id) ? raw.id : undefined;   // the saved beat this is (open-document model)
@@ -1043,7 +1044,7 @@ export function createSequencer(deps) {
     if (!taken.has(name.toLowerCase())) return name;
     for (let n = 2; ; n++) {
       const tail = ` ${n}`;
-      const candidate = name.slice(0, 24 - tail.length) + tail;
+      const candidate = cutName(name, MAX_LABEL - tail.length) + tail;
       if (!taken.has(candidate.toLowerCase())) return candidate;
     }
   }
@@ -1058,7 +1059,7 @@ export function createSequencer(deps) {
   for (const bar of el.beatBars ?? []) {
     const name = bar.querySelector('[data-beat-name]');
     name.addEventListener('change', () => {
-      const wanted = name.value.trim().slice(0, 24);
+      const wanted = cutName(name.value.trim());
       if (wanted && pattern && onScratch()) nameScratch(wanted);
       else if (wanted && pattern) { pattern.name = uniqueName(wanted, pattern.id); save(); }
       if (pattern) name.value = titleOf();   // still focused while it changes
@@ -3071,7 +3072,7 @@ export function createSequencer(deps) {
 
   async function saveAsSound() {
     if (!pattern) return;
-    const beat = ((onScratch() ? grooveOf(pattern)?.name : pattern.name) || freshName()).slice(0, 24);
+    const beat = cutName(((onScratch() ? grooveOf(pattern)?.name : pattern.name) || freshName()), MAX_LABEL);
     // The new pad is a remix of the beat: "Wobbly Thunder (🌀 Wonky Remix)".
     const name = deps.remixName ? deps.remixName(beat) : beat;
     el.libSound.disabled = true;

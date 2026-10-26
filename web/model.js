@@ -6,7 +6,7 @@ import { VOICES, amountFor, storedFx, cleanChain } from './voices.js';
 import { cleanTweaks } from './tweaks.js';
 import { isHex, whiteReadsOn } from './contrast.js';
 import { cleanTrim, cleanEdits, cleanFade } from './cuts.js';
-import { funName } from './names.js';
+import { funName, cutName } from './names.js';
 import { songHasBeats } from './playlist.js';
 import { showsFor, instrumentProblem } from './instruments.js';
 
@@ -403,7 +403,7 @@ export function adoptPeople(doc, { known = new Set(), kitIds = [], takenNames = 
     const r = records.get(id);
     if (known.has(id) || r?.added === true) continue;
     if (r?.hidden === true && !owning.has(id)) { drop.push(id); continue; }
-    let name = typeof r?.name === 'string' ? r.name.trim().slice(0, 16) : '';
+    let name = typeof r?.name === 'string' ? cutName(r.name.trim(), 16) : '';
     const fun = !name || names.has(name.toLowerCase());
     if (fun) name = funName([...names], random);
     names.add(name.toLowerCase());

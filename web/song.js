@@ -43,6 +43,7 @@ import {
   timesForEnd, removeBlock, viewBars, playParts, playEvents, playingAt, MAX_SONG_BARS,
   cleanTempos, tempoAt, putTempo, removeTempo, songClock, MAX_TEMPO_MARKS,
 } from './playlist.js';
+import { cutName, MAX_LABEL } from './names.js';
 
 export const MAX_SONG_SECONDS = 180;     // the longest song that can be saved as a sound
 const TEMPO_STOPS = tempoStops(MIN_TEMPO, MAX_TEMPO);   // the slider's stops: Beats' pull toward common tempos
@@ -72,7 +73,7 @@ export function beatSteps(beat) {
 // A song from before the list (one per person) has no id; linkSong gives it one.
 export function cleanSong(raw, nameFor = () => 'Song', beatOf = () => null) {
   if (typeof raw?.personId !== 'string' || !raw.personId) return null;
-  const name = typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim().slice(0, 24) : nameFor();
+  const name = typeof raw.name === 'string' && raw.name.trim() ? cutName(raw.name.trim()) : nameFor();
   let lanes;
   let tempo;
   if (Array.isArray(raw.lanes)) {
@@ -102,7 +103,7 @@ export function uniqueSongName(name, list, exceptId) {
   if (!taken.has(name.toLowerCase())) return name;
   for (let n = 2; ; n++) {
     const tail = ` ${n}`;
-    const candidate = name.slice(0, 24 - tail.length) + tail;
+    const candidate = cutName(name, MAX_LABEL - tail.length) + tail;
     if (!taken.has(candidate.toLowerCase())) return candidate;
   }
 }
@@ -1048,7 +1049,7 @@ export function createSong(deps) {
     el.name.value = titleOf();   // still focused while it changes
   }
   el.name.addEventListener('change', () => {
-    const wanted = el.name.value.trim().slice(0, 24);
+    const wanted = cutName(el.name.value.trim());
     if (!song) return;
     if (onScratch()) {
       if (wanted) nameScratch(wanted);
