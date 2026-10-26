@@ -36,7 +36,10 @@ const hide = () => {
   return page.settle();
 };
 
-test('with reports off, hiding the page sends nothing', async () => {
+test('reports are on by default; switched off, hiding the page sends nothing', async () => {
+  const { getSetting } = await import('../web/settings.js');
+  assert.strictEqual(getSetting('sendLogs'), true, 'Ben, 2026-10-26: on for every device');
+  await setSetting('sendLogs', false);
   await hide();
   assert.equal(posts.length, 0);
 });

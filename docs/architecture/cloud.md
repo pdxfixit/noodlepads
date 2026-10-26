@@ -5,7 +5,7 @@
 - **One Worker, five doors.** `worker/index.js` sends `/api/log` to `reports.js`, `/api/events` and `/api/feedback` to the vendored `events-worker.js`, and every other `/api` path to `cloud.js`. Every path with no static file behind it goes to `env.ASSETS`. Static files never reach the Worker.
 - **One D1 database (`DB`), two R2 buckets (`EVENTS`, `FEEDBACK`), one rate limit (`FEEDBACK_LIMITER`).** No secrets. D1 holds profiles, records, audio, shares, problem reports, daily counters and player metrics.
 - **The device owns the working copy.** `web/cloud.js` binds the sync to storage; `web/cloud-sync.js` holds the sync itself, run on injected storage and API; `web/merge3.js` is the three-way merge of one record; `web/cloud-api.js` is the HTTP client. The Worker only checks, stores and hands back.
-- **Four things leave the device besides cloud profiles:** problem reports (opt-in, `sendLogs`), usage events (on by default, `sendUsage`), device metrics (the `X-Noodle-App` header on cloud calls, also behind `sendUsage`), and feedback (typed by a grown-up). Each has its own sender, its own cap and its own home.
+- **Four things leave the device besides cloud profiles:** problem reports (on by default since 2026-10-26, `sendLogs`), usage events (on by default, `sendUsage`), device metrics (the `X-Noodle-App` header on cloud calls, also behind `sendUsage`), and feedback (typed by a grown-up). Each has its own sender, its own cap and its own home.
 - **One problem-report allowlist, run twice.** `web/log-clean.js` `cleanPayload` cleans the report on the device, and `worker/clean.js` runs the same function again on arrival. The only hand-kept copy is `worker/clean.js` `KIT_IDS` (the kit's ids).
 - **The service worker only routes.** Online, every answer comes from the network; the cache answers only when the network fails. `/api/` is never touched. `version.json` is network-only.
 - **"Offline" means three different things** here: 📴 Offline (a person kept out of the cloud), no network (the sync waits, the PIN is checked on the device), and the service worker's copy (the app opens with no network). See "Concepts".
@@ -175,7 +175,7 @@ A 404 `profile` on sync (deleted or pruned elsewhere) drops the link and sets th
 | Setting | Default | Gates | Read where |
 |---|---|---|---|
 | `sendUsage` (scope device) | `true` | usage events, play counts, the `X-Noodle-App` header and so D1 player metrics | `app.js followUsage` → `usage.js setUsage`; off also calls `telemetry.clear()` and `clearPlay()` |
-| `sendLogs` (scope device) | `false` | problem reports | `log-send.js` (`getSetting` and `onSetting`); off forgets the device code |
+| `sendLogs` (scope device) | `true` (since 2026-10-26; one switched off stays off) | problem reports | `log-send.js` (`getSetting` and `onSetting`); off forgets the device code |
 
 ### The live host
 

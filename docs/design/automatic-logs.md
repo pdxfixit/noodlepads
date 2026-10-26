@@ -10,6 +10,8 @@
 
 Written 2026-10-11 for `TODO.md` "Agents do" → Automatic logs, within the decisions.md row "Automatic logs: an opt-in Settings switch, off by default …". Questions for Ben are in § 11.
 
+Since 2026-10-26 the switch is on by default (decisions.md, ADR 0009); this plan describes it as first built.
+
 **In short.** A new Settings switch, off by default, lets a device send its event log to `https://noodlepads.com/api/log`. The app sends only what an agent needs to find a bug: event kinds, numbers, settings, kit sound ids, the app version and the browser, OS and device-type families (never the User-Agent string). It never sends audio, and it never sends any text a person typed: no people's names, no sound names, no beat or song names. The site's Worker has one small route (`worker/reports.js`) that checks each upload, caps it and stores it in D1's `reports` table for 14 days. Ben (or an agent) reads it with `just logs`. No CSP change is needed. About 5 hours to build, plus about 15 minutes of Ben's time in Cloudflare.
 
 | | Recommendation |
