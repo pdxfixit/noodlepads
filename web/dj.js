@@ -12,7 +12,7 @@
 // click track) and 🥁 Beats with ⌨️ Keys on (mode 'beat': the open beat
 // above the keys, ● Record into it). app.js picks the mode with setMode.
 
-import { countAt, KEY_ROWS, KEY_CODES, keyboardOrder, defaultDeck, fallbackLabel, layoutLabel, detectLayout, LAYOUTS, LAYOUT_NAMES, keyFor, takeFrom, clockText, MAX_TAKE_SECONDS, createSnapper, tapTempo, TAP_GAP_MAX } from './rhythm.js';
+import { countAt, KEY_ROWS, KEY_CODES, keyboardOrder, defaultDeck, fallbackLabel, layoutLabel, detectLayout, LAYOUTS, LAYOUT_NAMES, keyFor, takeFrom, planTake, clockText, MAX_TAKE_SECONDS, createSnapper, tapTempo, TAP_GAP_MAX } from './rhythm.js';
 import { encodeWav, SIGNATURES, COMMON_BPMS, tempoStops, stopFor, pillHolds, typedBpm } from './sequencer.js';
 import { recall, remember, newId } from './util.js';
 import { PICTURES, pictureTakenBy } from './model.js';
@@ -474,12 +474,11 @@ export function createDJ({ el, deps }) {
   let gridSpeakers = null;   // the grid's speakers and their loudness popover (renderGrid draws them)
   let gridMenus = null;      // the rows' menus, each opened by its emoji (overflow.js)
   let replay = [];       // timers of a take being played back
-  let booked = [];       // the hits it booked on the audio clock (audio.start's entries)
+  let booked = [];       // the plays it booked on the audio clock (deps.bookPlay's voices)
   let replaying = null;  // the id of the take playing back, or null
   let replayRun = null;  // that playback, so one stopped while loading never starts
   // How far ahead of now a take's first hit is booked: time to book the rest.
   const REPLAY_LEAD = 0.05;
-  const replayed = new Set();   // the sounds a playback started, to stop them
 
   function record(clipId, kind, at = deps.now(), ring = false) {
     if (!rec || !clipId) return;
@@ -589,10 +588,13 @@ export function createDJ({ el, deps }) {
 
   // ▶ Play on a take turns into ■ Stop while it plays (Ben, 2026-10-11); a
   // second tap, or the take ending, puts it back.
-  // Every sound is loaded first, then every hit is booked on the audio clock
-  // at once (t0 + its time), so the replay keeps the take's timing however
-  // busy the page is; only the keys' lighting, a loop's start and stop, and
-  // the end run on timers, which may come a little late.
+  // Every sound is loaded first, then the take as it was heard
+  // (rhythm.js planTake, as 🔊 Make a sound renders it: each hit, a loop's
+  // passes up to its stop, a hit cut where the next one cut it) is booked on
+  // the audio clock at once, t0 + its time. Each play is a voice of its own,
+  // outside audio.playing, so a pad tapped meanwhile and the take never
+  // take each other's place. Only the keys' lighting and the end run on
+  // timers, which may come a little late.
   async function playTake(take) {
     if (replaying === take.id) { stopReplay(); return; }
     stopReplay();
@@ -607,40 +609,33 @@ export function createDJ({ el, deps }) {
       if (clip) clips.set(clip.id, clip); else gone++;
     }
     if (gone) deps.announce?.(`${gone} ${gone === 1 ? 'sound in this take is' : 'sounds in this take are'} gone.`);
-    await Promise.all([...clips.values()].map((clip) => Promise.resolve(deps.loadSound(clip)).catch(() => null)));
+    const loaded = new Map();
+    await Promise.all([...clips.values()].map((clip) => Promise.resolve(deps.loadSound(clip))
+      .then((got) => { if (got) loaded.set(clip.id, got); }).catch(() => null)));
     if (replayRun !== run) return;   // stopped, or another take started, while loading
     const t0 = deps.now() + REPLAY_LEAD;
+    for (const { clipId, at, end } of planTake(take, new Map([...loaded].map(([id, l]) => [id, l.duration])))) {
+      booked.push(deps.bookPlay(loaded.get(clipId), t0 + at, end == null ? null : t0 + end));
+    }
     const later = (at, fn) => replay.push(setTimeout(fn, Math.max(0, (at - deps.now()) * 1000)));
     for (const e of take.events) {
       const clip = clips.get(e.clipId);
-      if (!clip) continue;
-      replayed.add(clip);
-      if (e.kind === 'loop') later(t0 + e.t, () => deps.loop(clip));
-      else if (e.kind === 'stop') later(t0 + e.t, () => deps.stopClip(clip));
-      else {
-        // A hit rings over the last as it did (🔔 Overlap).
-        Promise.resolve(deps.playOnce(clip, { ring: e.ring === true, when: t0 + e.t }))
-          .then((voice) => { if (voice && replayRun === run) booked.push(voice); else if (voice) deps.cutVoice(voice); });
-      }
-      if (e.kind !== 'beat') {
-        later(t0 + e.t, () => {
-          for (const [code, id] of Object.entries(deck())) if (id === clip.id) light(code, { ripple: e.kind === 'hit' });
-          lightTiles(clip.id);
-        });
-      }
+      if (!clip || e.kind === 'beat') continue;
+      later(t0 + e.t, () => {
+        for (const [code, id] of Object.entries(deck())) if (id === clip.id) light(code, { ripple: e.kind === 'hit' });
+        lightTiles(clip.id);
+      });
     }
     // Done when the take is: a moment after its last event, for the last sound to ring.
-    later(t0 + take.duration + 0.5, () => { replay = []; booked = []; replaying = null; replayRun = null; replayed.clear(); showPlaying(); });
+    later(t0 + take.duration + 0.5, () => { replay = []; booked = []; replaying = null; replayRun = null; showPlaying(); });
   }
-  // Stops a take being played back: its timers, every hit it booked (one
-  // still to come never sounds), and every sound it started.
+  // Stops a take being played back: its timers, and every play it booked
+  // (one still to come never sounds).
   function stopReplay() {
     replay.forEach(clearTimeout);
     replay = [];
     for (const voice of booked) deps.cutVoice(voice);
     booked = [];
-    for (const clip of replayed) deps.stopClip(clip);
-    replayed.clear();
     replaying = null;
     replayRun = null;
     showPlaying();

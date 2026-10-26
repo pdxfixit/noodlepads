@@ -970,7 +970,8 @@ async function start() {
       soundNames: () => clipsFor(state.personId, { includeHidden: true }).map((c) => c.label),
       playOnce: (clip, opts) => audio.play(clip, opts),
       stopClip: (clip) => audio.stop(clip.id),
-      cutVoice: (voice) => fadeStop(voice, audio.context().currentTime),   // a take's hit booked ahead: it never sounds
+      bookPlay: (loaded, at, end) => audio.book(loaded, at, end),   // a take played back, on the audio clock
+      cutVoice: (voice) => fadeStop(voice, audio.context().currentTime),   // a take's play booked ahead: it never sounds
       announce: (text) => announce(text),
       notice: (text) => showNotice(text),   // the banner over the top, which fades by itself
       takes: (pid) => state.takes.filter((t) => t.personId === pid),

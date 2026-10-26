@@ -360,9 +360,7 @@ export const audio = {
   // this one instead of being cut off (rhythm.js ringOver). `rate` plays it
   // faster (higher) or slower, as a tune row's note does: 2 is an octave up
   // (🧸 Kids' high keys). `id` names what plays, when it is not the clip's own.
-  // `when`: the audio-clock time it starts (a take played back books every
-  // hit ahead); now, when that has passed. Gives what start() gives.
-  async play(clip, { loop = false, ring = false, rate = 1, id = clip.id, when = 0 } = {}) {
+  async play(clip, { loop = false, ring = false, rate = 1, id = clip.id } = {}) {
     this.wake();
     let loaded;
     try {
@@ -371,9 +369,9 @@ export const audio = {
       showNotice(`“${clip.label}” didn't load, so it can't play. ${clip.source === 'bundled'
         ? `Check that ${clip.file} exists and is an MP3, M4A or WAV.`
         : 'Delete it in Edit sounds and record it again.'}`);
-      return null;
+      return;
     }
-    return this.start(id, loaded, { loop, clip, ring, rate, when });
+    this.start(id, loaded, { loop, clip, ring, rate });
   },
 
   // Every source is set to loop over the clip, and a scheduled stop decides how
@@ -382,12 +380,9 @@ export const audio = {
   // (the sound sheet's live preview) and returns the last of them.
   // With `ring`, a hit of the same clip still sounding (not looping) rings
   // on under the new one, up to MAX_RINGING at once; else it is cut off.
-  // `when` (audio-clock seconds) starts it later, and the earlier hit is cut
-  // (or rings on) from then. Returns the entry: its `src` and `gain`, which
-  // fadeStop() stops even once a later hit has taken its place.
-  start(id, { buffer, duration }, { loop = false, clip = null, via = null, ring = false, rate = 1, when = 0 } = {}) {
+  start(id, { buffer, duration }, { loop = false, clip = null, via = null, ring = false, rate = 1 } = {}) {
     const ctx = this.wake();
-    const at = Math.max(ctx.currentTime, Number(when) || 0);
+    const at = ctx.currentTime;
     const before = this.playing.get(id);
     if (ring && before && !before.loop) {
       this.playing.delete(id);
@@ -416,7 +411,19 @@ export const audio = {
       this.on.looping(id, false);
     };
     this.on.started();
-    return entry;
+  },
+
+  // One play booked ahead on the audio clock, outside `playing`, so nothing
+  // that reads or replaces a pad's sound touches it (a take played back,
+  // dj.js playTake): from `at`, for the sound's length, or until `end` with
+  // the short fade. Returns the voice, for fadeStop().
+  book({ buffer, duration }, at, end = null) {
+    const ctx = this.wake();
+    const voice = makeVoice(ctx, buffer, this.master);
+    voice.src.start(at, 0, duration);
+    if (end != null && end < at + duration) fadeStop(voice, end);
+    this.on.started();
+    return voice;
   },
 
   // Turns a clip that is playing into one that repeats. Its stop is pushed
