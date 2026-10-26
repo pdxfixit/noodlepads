@@ -326,8 +326,9 @@ saved.
   with `first` render in the head; knobs after the chain join the tail only
   if each is live (`isLive`), else `livePlan` returns null and the sheet
   renders when the slider is let go.
-- `sheet.js startLive` renders the head through `applyChain` (cached in
-  `sheet.previews` under `head:…`; with nothing before the live steps, the
+- `sheet.js startLive` renders the head through `applyChain` (`liveHead`,
+  started already when the sheet opens and when the chain changes, so a first
+  drag waits for nothing; cached in `sheet.previews` under `head:…`; with nothing before the live steps, the
   sound in Normal: peak 0.9 and the preset `level`, as the saved render
   starts), pads it with room for the tail to ring (`padTo`, up to 6 s), and
   calls `audio.start('preview', …, {loop: true, via})`. `via` builds the tail

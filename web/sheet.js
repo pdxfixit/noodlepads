@@ -959,7 +959,7 @@ export function openSheet(mode, clip = null, { returnToPad = null } = {}) {
   clearInterval(playWatch);
   playWatch = setInterval(syncPlay, 150);
   syncPlay();
-  if (mode === 'edit') previewVoice({ play: false });
+  if (mode === 'edit') { previewVoice({ play: false }); primeLive(); }
 }
 
 // ── ▶︎/■ at the top ───────────────────────────────────────────────────
@@ -1234,6 +1234,22 @@ function closePalette() {
   el.layerAdd.setAttribute('aria-expanded', 'false');
 }
 
+// The live loop's head for the chain and knobs as they are now (voices.js
+// livePlan): the steps before the live ones, rendered once and kept in
+// sheet.previews. With nothing before the live steps it is the sound in
+// Normal: evened out and turned down by a preset's level, as the saved
+// render is. Null when nothing would play live. Started when the sheet opens
+// and when the chain changes, so a first drag waits for nothing.
+function liveHead() {
+  const split = livePlan(sheet.chain.map((s) => ({ ...s })), storedTweaks());
+  if (!sheet.original || !split?.tail.length) return null;
+  const { head: steps, headTweaks: knobs } = split;
+  const key = `head:${recipeKey({ fx: steps, tweaks: knobs })}`;
+  if (!sheet.previews.has(key)) sheet.previews.set(key, sheet.original.then((b) => applyChain(b, steps, knobs, sheet.clip?.level)));
+  return { split, head: sheet.previews.get(key) };
+}
+const primeLive = () => liveHead()?.head.catch(() => {});
+
 // Starts the live loop for the chain as it is now, with its knobs (the knob
 // layers, voices.js livePlan): the steps before the live ones rendered once,
 // then the live ones as nodes, repeating with room for their echoes to ring.
@@ -1243,16 +1259,11 @@ function startLive() {
   if (live.starting) return live.starting;
   endPlain();
   live.starting = (async () => {
-    const chain = sheet.chain.map((s) => ({ ...s }));
-    const split = livePlan(chain, storedTweaks());
-    if (!sheet.original || !split?.tail.length) return false;
-    const { head: steps, headTweaks: knobs } = split;
-    // With nothing before the live steps the head is the sound in Normal:
-    // evened out and turned down by a preset's level, as the saved render is.
-    const key = `head:${recipeKey({ fx: steps, tweaks: knobs })}`;
-    if (!sheet.previews.has(key)) sheet.previews.set(key, sheet.original.then((b) => applyChain(b, steps, knobs, sheet.clip?.level)));
+    const plan = liveHead();
+    if (!plan) return false;
+    const { split } = plan;
     const expected = sheet.original;
-    const head = await sheet.previews.get(key);
+    const head = await plan.head;
     if (sheet.original !== expected || !el.sheet.open || sheet.plain) return false;
     const loop = padTo(head.buffer, head.duration + Math.min(6, tailOf(split.tail)), head.duration);
     audio.start('preview', { buffer: loop, duration: loop.duration }, {
@@ -1305,6 +1316,7 @@ function chainChanged() {
   live.on = false;
   showLink();
   previewVoice();
+  primeLive();
 }
 
 // Adds a step at the end of the kid's own steps (it plays last of them;
