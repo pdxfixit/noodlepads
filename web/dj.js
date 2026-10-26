@@ -388,6 +388,9 @@ export function createDJ({ el, deps }) {
   });
   // `sel` finds what was pressed in `box`; `targetOf` says which sound it is.
   function listen(box, sel, targetOf) {
+    // A held Enter repeats, and each repeat would click again (a loop on and
+    // off): one press, one click.
+    box.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.repeat && e.target.closest?.(sel)) e.preventDefault(); });
     box.addEventListener('pointerdown', (e) => {
       const k = e.target.closest(sel);
       if (!k || e.button > 0) return;

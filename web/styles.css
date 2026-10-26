@@ -5216,6 +5216,8 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
 .kids-sum-keys button { min-height: 64px; border: 0; border-radius: 16px; background: var(--chalk); color: var(--ink); box-shadow: 0 5px 0 var(--chalk-edge); font: 900 2rem/1 var(--font-display); }
 .kids-sum-keys button:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--chalk-edge); }
 .kids-sum-zero { grid-column: 2; }
+/* The sum's card is light: its keys' focus ring is dark. */
+.kids-sum-keys :focus-visible { outline: 4px solid var(--ink); outline-offset: 3px; }
 /* Feedback's sum: a wrong answer says so above the keys, and asks another (grown-up.js). */
 .kids-sum-note { margin: -4px 0 14px; text-align: center; font-weight: 800; }
 .kids-sum-note[hidden] { display: none; }

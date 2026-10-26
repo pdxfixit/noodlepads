@@ -121,7 +121,7 @@ part   {size: 1…12, band?: index}            a block (no band: empty)
 | Which key a press is | the character typed, found in the picked layout's picture; else `e.code` | `rhythm.js keyFor` |
 | Which layout | `djLayout` setting, else `navigator.keyboard.getLayoutMap()` (`rhythm.js detectLayout`), else QWERTY | `dj.js layoutNow`, `readLayout` |
 | A finger or a mouse | `finger.js isFinger` (touch or pen): plays on the lift, if it stayed within `TAP_SLOP`; held still `HOLD_TO_LOOP_MS` (350 ms) it plays and loops. A mouse plays on press; held 350 ms it loops | `dj.js listen`, `pointerDown` |
-| Enter or Space on a focused key | a `click` with `detail 0` plays it; Shift loops it | `dj.js listen` |
+| Enter or Space on a focused key | a `click` with `detail 0` plays it; Shift loops it; Enter's repeats are taken, so a held Enter clicks once | `dj.js listen` |
 
 The footer's how-to (`app.js showHint`, `screenHint`) uses the same `pointer: fine` test and `dj.touching()` to say "key" or "pad".
 
@@ -272,7 +272,7 @@ Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, �
 
 ### The grown-up gate (`grown-up.js`)
 
-One dialog `#kids-sum`, wired on first use. `askSum({ right, wrong, stay, owner })` shows a number 12–39 plus one 6–9 (`kids-logic.js makeSum`: the answer always has two digits, 18–48, its first digit no clue); digits go through `typeDigit`. After three wrong answers in a row (`wrongs`, whoever asked, until the page reloads) each next try waits 30 s (`sumWait`, `SUM_WAIT`): the keys dim and ⏳ counts down (`showWait`); a right answer ends it. Kids asks with `owner: 'kids'` and no `stay`: a wrong answer wiggles and closes. `feedback.js` asks with `stay: true` at every level. `closeSum(owner)` closes only the asker's sum. Behind it: `settings-ui.js initSettingsUI({ gate })`, where `app.js` passes `gate: () => kidsShowing() && askGrownUp()`.
+One dialog `#kids-sum`, wired on first use. `askSum({ right, wrong, stay, owner })` shows a number 12–39 plus one 6–9 (`kids-logic.js makeSum`: the answer always has two digits, 18–48, its first digit no clue); digits go through `typeDigit`. After three wrong answers in a row (`wrongs`, whoever asked, until the page reloads) each next try waits 30 s (`sumWait`, `SUM_WAIT`): the keys dim and ⏳ counts down (`showWait`); a right answer ends it. Kids asks with `owner: 'kids'` and no `stay`: a wrong answer wiggles and closes. `feedback.js` asks with `stay: true` at every level. `closeSum(owner)` closes only the asker's sum. A held Enter on its keypad types once (its repeats are taken); its keys' focus ring is dark, on its light card. Behind it: `settings-ui.js initSettingsUI({ gate })`, where `app.js` passes `gate: () => kidsShowing() && askGrownUp()`.
 
 ### Its recorder, beside the sound sheet's
 

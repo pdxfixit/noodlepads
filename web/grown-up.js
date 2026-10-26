@@ -96,6 +96,8 @@ function wire() {
   });
   setupDialog(el.dialog);
   el.dialog.addEventListener('close', () => { ask = null; clearInterval(ticker); });
+  // A held Enter on a key would type its digit again on every repeat.
+  el.keys.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.repeat) e.preventDefault(); });
   el.keys.addEventListener('click', (e) => {
     const k = e.target.closest?.('[data-digit]');
     if (k) tapDigit(k.dataset.digit);
