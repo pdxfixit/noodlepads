@@ -478,6 +478,11 @@ test('a kit sound re-voiced in the same visit is matched by how it sounds now', 
     assert.equal(await kickRow(), kick, 'the Kick as it was: a low thump');
     state.overrides.set(kick, { id: kick, voice: 'chipmunk' });
     assert.equal(await kickRow(), `${pid}-boom`, 'the Kick is high now: the Boom matches');
+    let printed = 0;
+    audio.load = async (clip) => { if (clip.id === kick) printed++; return { buffer: buffer(sound(clip)), duration: 0.5 }; };
+    state.overrides.set(kick, { id: kick, trim: { start: 0, end: 0.2 } });
+    await kickRow();
+    assert.equal(printed, 1, 'a trimmed Kick is printed again too');
   } finally {
     audio.load = realLoad;
     L.listenEnv.printOf = realPrints;
