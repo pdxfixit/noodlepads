@@ -27,6 +27,7 @@ const KIT = manifest.kit[0].id;
 const SHOWN = 'p-shown-1';
 const OTHER = 'p-other-1';
 const SYNCING = 'p-syncing-1';   // in the cloud, mid-sync when deleted
+const REFUSED = 'p-refused-1';   // the browser refuses the first try at deleting them (📴, so no cloud link to drop first)
 const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') } };
 let hold = null;   // set: the next pull of SYNCING waits for it
 let held = null;   // resolves once that pull is waiting
@@ -40,8 +41,10 @@ before(async () => {
     body: JSON.stringify({ id: SYNCING, name: 'Count Cupcake', avatar: '', color: '#B3141C' }),
   }), env)).json();
   idb.seed(DB_NAME, DB_VERSION, SCHEMA, {
-    people: [person(SHOWN, 'Admiral Acorn', 1), person(OTHER, 'Baron Bagel', 2), person(SYNCING, 'Count Cupcake', 3)],
-    overrides: [edit(SHOWN), edit(OTHER)],
+    people: [person(SHOWN, 'Admiral Acorn', 1), person(OTHER, 'Baron Bagel', 2), person(SYNCING, 'Count Cupcake', 3), { ...person(REFUSED, 'Duke Dumpling', 4), offline: true }],
+    overrides: [edit(SHOWN), edit(OTHER), edit(REFUSED)],
+    beats: [{ id: 'beat-refused', personId: REFUSED, name: 'Wobbly Taco', bpm: 100, bars: 1, swing: 0, rows: [], created: 4, saved: 4 }],
+    orders: [{ personId: REFUSED, ids: [] }],
     cloud: [{ id: SYNCING, key: made.key, rev: 0, sent: {}, sounds: {} }],
     settings: [{ key: 'person', value: SHOWN }],
   });
@@ -92,6 +95,35 @@ for (const [what, id] of [['someone not on show', OTHER], ['the person on show',
     $('#people-dialog').close();
   });
 }
+
+// Deleting is one transaction: a browser that refuses it (a full disk, a
+// closing tab) keeps all of them. One removal at a time, a refused one left
+// a kit edit behind, and the next start made a new person of it.
+test('a browser that refuses the delete keeps all of them, and says so; the next try deletes everything', async () => {
+  const tapDelete = async (refuse) => {
+    if (!$('#people-dialog').open) $('#people-open').dispatch('click');
+    $('#people-edit').children.find((r) => r.dataset.person === REFUSED).querySelector('[data-profile]').dispatch('click');
+    $('#profile-delete').dispatch('click');
+    if (refuse) idb.failCommit(1);
+    $('#profile-delete').dispatch('click');
+    await page.settle();
+    await page.settle();
+  };
+  await tapDelete(true);
+  assert.equal(state.peopleEdits.has(REFUSED), true, 'still here');
+  const doc = stored();
+  assert.ok(doc.people.some((p) => p.id === REFUSED), 'stored whole: themselves');
+  assert.ok(doc.overrides.some((o) => o.id === `${REFUSED}-${KIT}`), 'their kit edit');
+  assert.ok(doc.beats.some((b) => b.personId === REFUSED), 'their beat');
+  assert.ok(doc.orders.some((o) => o.personId === REFUSED), 'their pad order');
+  assert.match($('#banner-text').textContent, /^This browser wouldn't delete Duke Dumpling .*nothing of theirs is gone\. Try again\.$/);
+  if ($('#profile-dialog').open) $('#profile-dialog').close();
+
+  await tapDelete(false);
+  assert.equal(state.peopleEdits.has(REFUSED), false);
+  assert.deepEqual(personIdsIn(stored(), manifest.kit.map((k) => k.id)).filter((x) => x === REFUSED), [], 'no store names them');
+  $('#people-dialog').close();
+});
 
 test('deleting someone while a sync of theirs is running: the sync finishes first, and nothing of it is stored after', async () => {
   const cloud = await import('../web/cloud.js');

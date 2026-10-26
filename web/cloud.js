@@ -100,6 +100,11 @@ async function saveLink(link) {
   try { await db.put('cloud', stored); } catch (err) { console.error('Saving a cloud link failed:', err); }
 }
 
+// A link dropped a moment ago, back as it was (people.js deleteHere, when the
+// person could not be deleted after all). A key held for this visit only is
+// not; their PIN opens them again.
+export const restoreLink = (link) => saveLink(link);
+
 // This device stops syncing the person; the profile stays in the cloud.
 export async function dropLink(personId) {
   state.cloud.delete(personId);

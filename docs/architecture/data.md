@@ -105,7 +105,7 @@ The `state.screen` comment in `state.js` says `'dj'`. The values are `app.js` `S
 | `state.js setOverride(next)` | puts when the override changes something, else deletes it so the preset follows boards.json again | as `persist` |
 | `state.js setPersonEdit(id, changes)` | `model.js personEditRecord`: a boards.json person keeps only differences (none: record deleted); an added person stores everything and gets `edited` on a name/color/avatar change | put: as `persist`; delete: console only |
 | `state.js deleteUserClip`, `deleteMyVoice` | memory first, then `db.remove` | banner: "…it may come back after a reload" |
-| `state.js deletePerson(id)` | many separate `db.remove` calls (one per record and store), then memory | each removal's error is swallowed |
+| `state.js deletePerson(id)` | one `db.batch` of every removal (and, for a boards.json person, the hidden record), then memory | refused: nothing changes, a notice says so, returns null; `people.js deleteHere` then puts their cloud link back (`cloud.js restoreLink`) and returns false |
 | app.js `beatLibrary.remove`, `songBook.remove` | `db.remove` | banner, as above |
 | app.js `setOpen(null)`, song `close`, `deleteTake`, `deleteLayout`, `deleteTouchLayout` | `db.remove` | console only |
 | app.js `adoptKidsBeat` | `db.batch` (unstamped) | console only |
@@ -354,7 +354,7 @@ Nothing found is changed or deleted.
 | An own voice | `sheet.js` `deleteVoice` → `state.js deleteMyVoice` | yes | none |
 | A person | `people.js` profile Delete → `deleteHere` → `cloud.js dropLink`, `syncEnded`, `state.js deletePerson`, `audio.forget` | yes; a third tap deletes the cloud copy | boards.json people: Bring back (their own sounds don't come back) |
 
-`state.js deletePerson` removes their clips, preset edits (`<id>-<kitId>`), beats, songbook, takes, layouts, voices, touch layouts, open beat, order, deck, open song, prefs, and the people record. It returns the clip ids so the caller can forget their audio.
+`state.js deletePerson` removes their clips, preset edits (`<id>-<kitId>`), beats, songbook, takes, layouts, voices, touch layouts, open beat, order, deck, open song, prefs, and the people record, all in one transaction (a boards.json person's record is put back hidden in the same one). It returns the clip ids so the caller can forget their audio, or null when the browser refused it (nothing changed).
 
 ### Edit stamps
 
@@ -405,7 +405,7 @@ Nothing found is changed or deleted.
 | 7 | An override holding only its id is deleted, never stored | `tests/model.test.mjs` (`overrideFor`) |
 | 8 | A boards.json person's record holds only differences; added people never lose their record to `personEditRecord` | `tests/model.test.mjs` (`personEditRecord`) |
 | 9 | `readStorage` replaces memory. Anything held only in memory (a change `persist` failed to save, a solo person made while storage waited) is gone after a backup load, a cloud sync or a late open. | `tests/storage-wait.test.mjs` (late open) |
-| 10 | `deletePerson` must remove every record naming the person. One left behind (a preset edit once did) brings them back through `adoptStoredPeople`. Its removals are not one transaction and their errors are swallowed. | `tests/delete-shown.test.mjs`, `tests/delete-cloud.test.mjs` |
+| 10 | `deletePerson` must remove every record naming the person. One left behind (a preset edit once did) brings them back through `adoptStoredPeople`. Its removals are one transaction, so a refused delete keeps all of them. | `tests/delete-shown.test.mjs`, `tests/delete-cloud.test.mjs`, `tests/delete-leftover.test.mjs` |
 | 11 | `persist` mutates the record (`changed`) | none |
 | 12 | `setSetting` with nobody showing writes a person setting to the device | `tests/levels.test.mjs` |
 | 13 | `level` and `advancedBeats` are always written together | `tests/levels.test.mjs` |

@@ -298,28 +298,39 @@ export async function setPersonEdit(id, changes) {
 // gone entirely. One from boards.json can't be removed from that file, so they
 // stay as a hidden record (name and color back to the file's) and can be
 // brought back; their bundled sounds return with them, recorded ones don't.
+// It all goes in one transaction: a browser that refuses part of it keeps
+// all of it, so nothing is left to bring back a person with a new name.
 // Returns the ids of the sounds that went, so the caller can drop their
-// cached audio.
+// cached audio, or null when this browser wouldn't delete them (said in a
+// notice; nothing changed).
 export async function deletePerson(id) {
   const theirs = (list) => list.filter((x) => x.personId === id);
   const goneClips = theirs(state.userClips).map((c) => c.id);
   // Kit edits are stored as `<person>-<kit sound>` and name no personId.
   const kit = new Set((state.manifest.kit ?? []).map((k) => k.id));
   const goneEdits = [...state.overrides.keys()].filter((o) => o.startsWith(`${id}-`) && kit.has(o.slice(id.length + 1)));
-  for (const clipId of goneClips) await db.remove('clips', clipId).catch(() => {});
-  for (const o of goneEdits) await db.remove('overrides', o).catch(() => {});
-  for (const b of theirs(state.savedBeats)) await db.remove('beats', b.id).catch(() => {});
-  await db.remove('patterns', id).catch(() => {});
-  await db.remove('orders', id).catch(() => {});
-  await db.remove('decks', id).catch(() => {});
-  await db.remove('songs', id).catch(() => {});
-  await db.remove('prefs', id).catch(() => {});
-  for (const s of theirs(state.songbook)) await db.remove('songbook', s.id).catch(() => {});
-  for (const t of theirs(state.takes)) await db.remove('takes', t.id).catch(() => {});
-  for (const l of theirs(state.layouts)) await db.remove('layouts', l.id).catch(() => {});
-  for (const v of theirs(state.myVoices)) await db.remove('voices', v.id).catch(() => {});
-  for (const l of theirs(state.touchLayouts)) await db.remove('touchLayouts', l.id).catch(() => {});
-  await db.remove('people', id).catch((err) => console.error('Deleting a person failed:', err));
+  const del = (store, keys) => keys.map((key) => ({ store, del: key }));
+  const ids = (list) => theirs(list).map((x) => x.id);
+  const bundled = state.manifest.people.find((p) => p.id === id);
+  // One from boards.json stays, hidden, with nothing else of theirs.
+  const hidden = bundled ? personEditRecord(bundled, { id }, { hidden: true }) : null;
+  const ops = [
+    ...del('clips', goneClips), ...del('overrides', goneEdits), ...del('beats', ids(state.savedBeats)),
+    ...del('patterns', [id]), ...del('orders', [id]), ...del('decks', [id]), ...del('songs', [id]), ...del('prefs', [id]),
+    ...del('songbook', ids(state.songbook)), ...del('takes', ids(state.takes)), ...del('layouts', ids(state.layouts)),
+    ...del('voices', ids(state.myVoices)), ...del('touchLayouts', ids(state.touchLayouts)),
+    hidden ? { store: 'people', put: hidden } : { store: 'people', del: id },
+  ];
+  // With no storage at all (a browser that gives none), there is nothing
+  // stored to leave behind.
+  try {
+    if (db.handle) await db.batch(ops);
+  } catch (err) {
+    console.error('Deleting a person failed:', err);
+    const name = state.peopleEdits.get(id)?.name ?? bundled?.name ?? 'They';
+    showNotice(`This browser wouldn't delete ${name} (${err.message || err.name}), so nothing of theirs is gone. Try again.`);
+    return null;
+  }
   state.userClips = state.userClips.filter((c) => c.personId !== id);
   for (const o of goneEdits) state.overrides.delete(o);
   state.savedBeats = state.savedBeats.filter((b) => b.personId !== id);
@@ -333,8 +344,7 @@ export async function deletePerson(id) {
   state.layouts = state.layouts.filter((l) => l.personId !== id);
   state.myVoices = state.myVoices.filter((v) => v.personId !== id);
   state.touchLayouts = state.touchLayouts.filter((l) => l.personId !== id);
-  state.peopleEdits.delete(id);
-  if (state.manifest.people.some((p) => p.id === id)) await setPersonEdit(id, { hidden: true });
+  if (hidden) state.peopleEdits.set(id, hidden); else state.peopleEdits.delete(id);
   return goneClips;
 }
 

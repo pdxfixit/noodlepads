@@ -18,7 +18,7 @@ import { people, person } from './board.js';
 import { PERSON_COLORS, PERSON_COLOR_NAMES, nextPersonColor, freePicture, personCounts, countsText, countsWords, KIND_EMOJI } from './model.js';
 import { newId } from './util.js';
 import { funName, nameChoices, isFunName } from './names.js';
-import { inCloud, isOffline, dropLink, linkOf, keyOf, pinGuards, onCloud, syncEnded } from './cloud.js';
+import { inCloud, isOffline, dropLink, restoreLink, linkOf, keyOf, pinGuards, onCloud, syncEnded } from './cloud.js';
 import { avatarBadge, openAvatar, cloudLabel, askEditPin, drawPin, pinClick, disarmCloud, deleteLeftCloud } from './cloud-ui.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { announce, showNotice } from './ui.js';
@@ -189,14 +189,21 @@ export async function addPerson() {
 // profile sheet, and 🤷 I don't know the PIN (cloud-ui.js). It never deletes
 // the cloud's profile: this device just stops syncing it. A sync of theirs
 // still running ends first, or it would store them again (a tester,
-// 2026-10-24: someone deleted was back after a reload).
+// 2026-10-24: someone deleted was back after a reload). Returns false when
+// this browser wouldn't delete them: they stay whole, in the cloud too.
 export async function deleteHere(id) {
   const p = anyone(id);
-  if (inCloud(id)) await dropLink(id);
+  const link = linkOf(id);
+  if (link) await dropLink(id);
   await syncEnded(id);
   const gone = await deletePerson(id);
+  if (!gone) {
+    if (link) await restoreLink(link);
+    return false;
+  }
   for (const clipId of gone) audio.forget(clipId);
   logEvent('person', { deleted: id, bundled: !p?.added, sounds: gone.length });
+  return true;
 }
 
 // ── a person's profile sheet ──
@@ -417,7 +424,10 @@ async function onProfileClick(e) {
     const pin = !!linkOf(id)?.pin;
     left = { id, name: p.name, avatar: p.avatar, color: p.color, pin, key: pin ? null : keyOf(id) };
   }
-  await deleteHere(id);
+  if (!await deleteHere(id)) {
+    left = null;   // nothing went: the notice says so
+    return;
+  }
   if (left?.id === id) {
     // Nobody else shows while the sheet waits for the third tap: a PIN pad
     // for the next person would cover it (Ben, 2026-10-24). The sheet's

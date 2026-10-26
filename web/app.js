@@ -106,7 +106,7 @@ function setPerson(id, { checked = false, again = false } = {}) {
 // over (people.js refreshPeople).
 async function dropLockedPerson(id) {
   const name = person(id)?.name;
-  await deleteHere(id);
+  if (!await deleteHere(id)) return;   // this browser wouldn't: they stay, and a notice says so
   renderPeople();
   if (state.personId === id || whoNowOpen()) startOver(name ? `${name} is deleted from this device. Tap your picture.` : undefined);
   else refreshPeople();

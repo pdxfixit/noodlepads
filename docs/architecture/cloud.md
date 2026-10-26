@@ -79,7 +79,7 @@ Shape (as written by `cloud.js saveLink`):
 
 Readers and writers:
 
-- Written only through `cloud.js saveLink` (and `dropLink`, which deletes). `deps.saveLink` inside a sync re-reads the live link so a key, PIN or drop that happened mid-sync is kept.
+- Written only through `cloud.js saveLink` (and `dropLink`, which deletes; `restoreLink` saves a just-dropped link again when `people.js deleteHere` could not delete the person after all). `deps.saveLink` inside a sync re-reads the live link so a key, PIN or drop that happened mid-sync is kept.
 - `state.js readStorage` loads it; `state.js reIdStoredPeople` deletes links whose id is not a `CLOUD_ID` (logs `cloud {unlinked}`).
 - Read by `cloud.js` (`linkOf`, `inCloud`, `keyOf`, `pinIsNew`, `needsPin`, `pinGuards`), `people.js` (`linkOf`, `keyOf` when deleting), `who-now.js` (`linkOf(...).pin`).
 - Backups never carry it (`backup-ui.js storedLists` has no `cloud`).
