@@ -960,7 +960,7 @@ async function start() {
         ownLine: $('#te-own-line'), rename: $('#te-rename'), remove: $('#te-delete'), bands: $('#te-bands'), bandsTitle: $('#te-bands-title'), grids: $('#te-grids'), note: $('#te-note'), undo: $('#te-undo'), add: $('#te-add'), addHint: $('#te-add-hint') },
       record: $('#dj-record'), status: $('#dj-status'), done: $('#dj-done'), nameFlash: $('#dj-name-flash'),
       donePlay: $('#dj-done-play'), doneUndo: $('#dj-done-undo'), doneSound: $('#dj-done-sound'),
-      trying: $('#dj-trying'), tryingText: $('#dj-trying-text'),
+      trying: $('#dj-trying'), tryingText: $('#dj-trying-text'), tryingStop: $('#dj-trying-stop'),
       takeLine: $('#dj-take-line'), doneRename: $('#dj-done-rename'), doneClose: $('#dj-done-close'), takeName: $('#dj-take-name'), takeLength: $('#dj-take-length'),
       takesOpen: $('#dj-takes-open'), takes: $('#takes'), pictures: $('#pictures'), picturesTitle: $('#pictures-title'), picturesGrid: $('#pictures-grid'), picturesNote: $('#pictures-note'), takesList: $('#takes-list'), takesEmpty: $('#takes-empty'),
       click: $('#dj-click'), overlap: $('#dj-overlap'), beatClick: $('#dj-beat-click'), play: $('#dj-play'), tempo: $('#dj-tempo'), grid: $('#dj-grid'),

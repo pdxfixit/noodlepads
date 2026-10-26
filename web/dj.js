@@ -1477,7 +1477,7 @@ export function createDJ({ el, deps }) {
   }
   // ↩️ My beat on the line under a groove just loaded: Undo of it (the beat
   // open before, and the scratch as it was).
-  el.trying?.querySelector('button')?.addEventListener('click', () => { deps.seq.putTrialAway?.(); renderGrid(); });
+  el.tryingStop?.addEventListener('click', () => { deps.seq.putTrialAway?.(); renderGrid(); });
   // ▶ Play, as on Beats: the keys view's beat round and round, recording
   // nothing; ■ Stop. ⏲️ ticks with it when on. A groove tried stays on screen.
   el.play?.addEventListener('click', () => {

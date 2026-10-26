@@ -1,8 +1,8 @@
 // The keys panel's wiring carries nothing dead: every element app.js hands
 // createDJ is read by the panel or its editors, and every method the panel
 // returns is called by app.js. A dead name looks like a control that works
-// (2026-10-26: `el.tryingStop` was passed and never read; ↩️ My beat is
-// wired through `el.trying`'s button).
+// (2026-10-26: `el.tryingStop` was passed and never read, while ↩️ My beat
+// was wired through `el.trying`'s button; it is wired through it now).
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,12 +17,16 @@ test('every element app.js hands the keys panel is read there', () => {
   const els = app.slice(start, app.indexOf('\n    deps: {', start));
   const names = [...els.matchAll(/\b(\w+): [$[{]/g)].map((m) => m[1]).filter((n) => n !== 'el');
   assert.ok(names.length > 50, 'the el map was found');
-  const unread = names.filter((n) => !new RegExp(`\\.${n}\\b|\\b${n}\\b[^:]*= el\\b|\\{[^}]*\\b${n}\\b[^}]*\\} = el\\b`).test(panel));
+  // Read as `el.name` (or `el.part.name`, an editor's own `el`), or taken
+  // out of `el` by a destructure; a bare `.name` elsewhere does not count.
+  const unread = names.filter((n) => !new RegExp(`\\bel(\\.\\w+)*\\??\\.${n}\\b|\\{[^}]*\\b${n}\\b[^}]*\\} = el\\b`).test(panel));
   assert.deepEqual(unread, []);
 });
 
 test('every method the keys panel returns is called by app.js', () => {
-  const ret = read('dj.js').match(/^  return \{ ([^}]+) \};\n\}\s*$/m)[1];
-  const names = ret.split(',').map((s) => s.trim());
+  const found = read('dj.js').match(/^  return \{ ([^}]+) \};\n\}\s*$/m);
+  assert.ok(found, 'createDJ\'s return line was found');
+  const names = found[1].split(',').map((s) => s.trim());
+  assert.ok(names.length > 10);
   assert.deepEqual(names.filter((n) => !new RegExp(`\\bdj\\??\\.${n}\\b`).test(app)), []);
 });
