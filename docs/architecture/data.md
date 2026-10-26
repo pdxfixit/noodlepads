@@ -102,9 +102,7 @@ The comments on `state` in `state.js` give older shapes for `patterns` (`rows: [
 | `state.js setPersonEdit(id, changes)` | `model.js personEditRecord`: a boards.json person keeps only differences (none: record deleted); an added person stores everything and gets `edited` on a name/color/avatar change | put: as `persist`; delete: as `setOverride` |
 | `state.js deleteUserClip`, `deleteMyVoice`, `removeRecord(store, key, what)` | memory first, then `db.remove` | banner: "…it may come back after a reload"; while another tab holds the database, `persist`'s "Not saved: another soundboard tab…" (`removeRecord`) |
 | `state.js deletePerson(id)` | one `db.batch` of every removal (and, for a boards.json person, the hidden record), then memory | refused, or storage not open (still opening, or closed for another tab's upgrade): nothing changes, a notice says so (while another tab holds the database, the other-tab words), returns null; `people.js deleteHere` then puts their cloud link back (`cloud.js restoreLink`; its bases were kept, `dropLink keepBases`) and returns false. With no storage at all (the open failed), memory only |
-| app.js `beatLibrary.remove`, `songBook.remove` | `db.remove` | banner, as above |
-| app.js `deleteTake`, `deleteLayout`, `deleteTouchLayout` | `state.js removeRecord` | banner, as above (`tests/delete-unsaved.test.mjs`) |
-| app.js `setOpen(null)`, song `close` | `db.remove` | console only (nothing is lost: the beat or song stays in the library) |
+| app.js `beatLibrary.remove`, `songBook.remove`, `deleteTake`, `deleteLayout`, `deleteTouchLayout`, `setOpen(null)`, song `close` | `state.js removeRecord` | banner, as above; a close says it may open again after a reload (`tests/delete-unsaved.test.mjs`) |
 | app.js `adoptKidsBeat` | `db.batch` (unstamped) | console only |
 | `backup-ui.js storeLoaded` | `db.put` per merged record (unstamped; keeps the incoming `changed`) | collected into `failed`; the notice names up to 5 |
 | cloud.js (`deps.put`, `deps.remove`, links, bases) | `db.put` / `db.remove` / `db.batch` | the cloud area's own status |
@@ -372,7 +370,7 @@ Nothing found is changed or deleted.
    - `leftover.js` `STORES`
 
    A new store missed in `deletePerson` outlives its person, and `adoptStoredPeople` then brings the person back. Missed in `PERSON_STORES`, the store keeps old plain ids. Missed in `merge.js STORES`, it never loads from a backup.
-2. **Writes bypass `persist`** (see the table above). A fix to failure reporting in `persist` misses `storeLoaded`, the app.js deletes, `adoptKidsBeat` and cloud.js. A refused delete is told by `removeRecord`, by its own copy of the same words (`deleteUserClip`, `deleteMyVoice`, `beatLibrary.remove`, `songBook.remove`), or not at all (`setOpen(null)`, song `close`, where nothing is lost).
+2. **Writes bypass `persist`** (see the table above). A fix to failure reporting in `persist` misses `storeLoaded`, the app.js deletes, `adoptKidsBeat` and cloud.js. A refused delete is told by `removeRecord` (every app.js delete and close), or by its own copy of the same words (`deleteUserClip`, `deleteMyVoice`).
 3. **Four "stores as lists" builders** (above). A new store added to one is easy to miss in the others: `people.js storedLists` feeds 👥 counts and See all, `backup-ui.js` feeds backups, `cloud.js` feeds sync.
 4. **Three counters of what is here** (above). A new kind a backup carries goes into `holdings` and `holdsWords` too (`tests/holds.test.mjs`), or "A backup now holds…" leaves it out.
 5. **`extensionFor` is defined twice:** `util.js extensionFor` and `old-backup.js extensionFor` (the second says it copies the first). Pluralizers are three: `util.js count`, `old-backup.js plural`, and `model.js`'s private `plural`.

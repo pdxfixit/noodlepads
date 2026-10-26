@@ -305,6 +305,11 @@ export async function setOverride(next) {
 // A browser that refuses is told so, since it may come back after a reload.
 // `what` names it in the notice ("That take"). Resolves to whether it went.
 export async function removeRecord(store, key, what) {
+  // A browser that gives no storage at all has nothing stored to bring
+  // back, and was told at the start that nothing saves: no notice, which
+  // would replace an ↩️ Undo showing (a groove into the scratch closes the
+  // open beat).
+  if (!db.handle && storageFailed) return true;
   try {
     await db.remove(store, key);
     return true;

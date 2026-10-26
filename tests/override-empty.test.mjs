@@ -14,7 +14,7 @@ import { withHidden, overrideWithEmoji } from '../web/model.js';
 const { text: notice } = stubBanner();
 const idb = fakeIndexedDB();
 globalThis.indexedDB = idb;
-const { loadStorage, readStorage, setOverride, deletePerson, state } = await import('../web/state.js');
+const { loadStorage, readStorage, setOverride, setPersonEdit, deletePerson, state } = await import('../web/state.js');
 const { db } = await import('../web/store.js');
 const { mergeLoaded } = await import('../web/merge.js');
 const { cleanBackup } = await import('../web/backup.js');
@@ -75,4 +75,15 @@ test('deleting a person takes their preset edits, never another person\'s that r
   await deletePerson('p-t');
   assert.deepEqual([...state.overrides.keys()].filter((k) => k.startsWith('p-t')), ['p-t-lets-go']);
   assert.deepEqual(stored().map((o) => o.id).filter((k) => k.startsWith('p-t')), ['p-t-lets-go']);
+});
+
+test('a boards.json person\'s edit put back that the browser won\'t save: the words say it may be back after a reload', async () => {
+  const was = state.manifest;
+  state.manifest = { kit: [], people: [{ id: 'pip', name: 'Pip', color: '#2D3FD6', clips: [] }] };
+  await setPersonEdit('pip', { name: 'Captain Pip' });
+  notice.textContent = '';
+  idb.failCommit(1);
+  await setPersonEdit('pip', { name: 'Pip' });
+  assert.match(notice.textContent, /^This browser wouldn't save that change .*After a reload it may be back as it was\.$/);
+  state.manifest = was;
 });

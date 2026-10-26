@@ -3,7 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadStorage, state, removeRecord, deletePerson } from '../web/state.js';
+import { loadStorage, state, removeRecord, deletePerson, setOverride, setPersonEdit } from '../web/state.js';
 import { db, STORE_NAMES } from '../web/store.js';
 import { stubBanner } from './banner.mjs';
 
@@ -58,7 +58,7 @@ test('a database that opens quickly: no note, no late redraw', async () => {
 
 // While another tab holds the database, a delete says so in the words a
 // save uses, never the raw "storage is not available".
-test('a held-up database: a delete, or deleting a person, says another tab is holding the sounds', async () => {
+test('a held-up database: a delete, deleting a person, or an edit put back says another tab is holding the sounds', async () => {
   const fake = slowIndexedDB();
   globalThis.indexedDB = fake;
   await loadStorage({ waitMs: 10 });
@@ -70,6 +70,17 @@ test('a held-up database: a delete, or deleting a person, says another tab is ho
   state.peopleEdits.set('p-pip-1', { id: 'p-pip-1', name: 'Admiral Acorn', added: true, created: 1 });
   assert.equal(await deletePerson('p-pip-1'), null, 'refused');
   assert.match(notice.textContent, /^Admiral Acorn wasn't deleted: another soundboard tab is still holding your saved sounds/);
+  // A preset edit or a boards.json person's edit put back as it was deletes
+  // its record: refused, it says so in the same words.
+  notice.textContent = '';
+  state.overrides.set('p-pip-1-kick', { id: 'p-pip-1-kick', label: 'Boom' });
+  await setOverride({ id: 'p-pip-1-kick' });
+  assert.match(notice.textContent, /^Not saved: another soundboard tab is still holding your saved sounds/, 'a preset put back');
+  notice.textContent = '';
+  state.manifest = { kit: [], people: [{ id: 'pip', name: 'Pip', color: '#2D3FD6', clips: [] }] };
+  state.peopleEdits.set('pip', { id: 'pip', name: 'Captain Pip' });
+  await setPersonEdit('pip', { name: 'Pip' });
+  assert.match(notice.textContent, /^Not saved: another soundboard tab is still holding your saved sounds/, 'a person put back');
   fake.req.result = fake.database;
   fake.req.onsuccess();
   await new Promise((r) => setTimeout(r, 20));

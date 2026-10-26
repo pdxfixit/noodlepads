@@ -593,12 +593,7 @@ const beatLibrary = {
   },
   remove: async (id) => {
     state.savedBeats = state.savedBeats.filter((b) => b.id !== id);
-    try {
-      await db.remove('beats', id);
-    } catch (err) {
-      console.error('Deleting a saved beat failed:', err);
-      showNotice(`That beat is gone for now, but this browser wouldn't delete it (${err.message || err.name}), so it may come back after a reload.`);
-    }
+    await removeRecord('beats', id, 'That beat');
   },
 };
 const songBook = {
@@ -609,12 +604,7 @@ const songBook = {
   },
   remove: async (id) => {
     state.songbook = state.songbook.filter((s) => s.id !== id);
-    try {
-      await db.remove('songbook', id);
-    } catch (err) {
-      console.error('Deleting a song failed:', err);
-      showNotice(`That song is gone for now, but this browser wouldn't delete it (${err.message || err.name}), so it may come back after a reload.`);
-    }
+    await removeRecord('songbook', id, 'That song');
   },
 };
 
@@ -677,7 +667,7 @@ function makeSequencer() {
         state.patterns.set(personId, pattern);
         persist('patterns', structuredClone(pattern));
       } else if (state.patterns.delete(personId)) {
-        db.remove('patterns', personId).catch((err) => console.error('Closing the open beat failed:', err));
+        removeRecord('patterns', personId);   // refused: after a reload the beat that was open may open again
       }
     },
     kitIds: () => state.manifest.kit.map((k) => k.id),   // for beat files: kit sounds travel, recorded ones don't
@@ -735,7 +725,7 @@ function makeSong() {
       persist('songs', record);
     },
     close: (personId) => {
-      if (state.songs.delete(personId)) db.remove('songs', personId).catch((err) => console.error('Closing the open song failed:', err));
+      if (state.songs.delete(personId)) removeRecord('songs', personId);   // refused: the song that was open may open again
     },
     songs: songBook,
     songName: (taken) => songName(taken),
