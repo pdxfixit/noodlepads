@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync, readdirSync } from 'node:fs';
+import { ROW_BYTES } from '../worker/cloud.js';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const MIGRATIONS = readdirSync(new URL('../worker/migrations/', import.meta.url)).filter((f) => /^\d{3}-.*\.sql$/.test(f)).sort();
@@ -59,4 +60,18 @@ test('migration 001 keeps profiles, records and sounds, and drops gifts, familie
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM records').get().n, 1);
   assert.throws(() => db.exec(read(`../worker/migrations/${MIGRATIONS[0]}`)), /gift_id/, 'run again, it refuses at its first line');
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM sounds').get().n, 1, 'and changes nothing');
+});
+
+// 006: each profile's records' bytes, counted as the Worker counts them
+// (worker/cloud.js ROW_BYTES), so the caps hold from the first push after it.
+test('migration 006 counts each profile\'s record bytes as the Worker does', () => {
+  const db = migrated();
+  for (const f of MIGRATIONS.filter((m) => m < '006')) db.exec(read(`../worker/migrations/${f}`));
+  db.exec(`
+    INSERT INTO profiles (id, name, avatar, color, rev, edited, created) VALUES ('p-a', 'Admiral Acorn', '', '#1F3FA8', 2, 1, 1), ('p-b', 'Sir Squid', '', '#1F3FA8', 0, 1, 1);
+    INSERT INTO records (profile_id, kind, id, body, rev, deleted) VALUES ('p-a', 'beats', 'b-1', '{"name":"Ünï"}', 1, 0), ('p-a', 'beats', 'b-2', NULL, 2, 1);
+  `);
+  db.exec(read(`../worker/migrations/${MIGRATIONS.find((m) => m.startsWith('006'))}`));
+  const bytes = Object.fromEntries(db.prepare('SELECT id, record_bytes FROM profiles').all().map((r) => [r.id, r.record_bytes]));
+  assert.deepEqual(bytes, { 'p-a': Buffer.byteLength('{"name":"Ünï"}') + ROW_BYTES + ROW_BYTES, 'p-b': 0 }, 'bytes, not characters; a tombstone costs a row');
 });

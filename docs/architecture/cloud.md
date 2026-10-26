@@ -262,7 +262,7 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 
 | Table | Key | Written by | Read by | Kept |
 |---|---|---|---|---|
-| `profiles` | `id` | `makeProfile`, `changeProfile`, `checkSecret`, `touch`, push (rev) | list, open, pull, every keyed route | until deleted or pruned |
+| `profiles` | `id` | `makeProfile`, `changeProfile`, `checkSecret`, `touch`, push (rev, `record_bytes`) | list, open, pull, every keyed route | until deleted or pruned |
 | `keys` | `hash` (SHA-256 of the key) | `newKey`, `openProfile` (old sessions), `forgetKey`, `changeProfile` (new PIN), `deleteProfile` | `keyProfile` | session keys a week |
 | `records` | `(profile_id, kind, id)` | push (tombstones `deleted = 1`) | pull, push (orphan sounds), unshare | tombstones forever |
 | `sounds` | `id` | `startSound`, `putPiece` (`got`), push (orphans: a deleted clip's, and a changed clip's old audio) and unshare, `dropSounds` (profile_id `''`) | `getSound`, `ownSound`, push | until no record or share uses it |
@@ -272,9 +272,9 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 | `counters` | `(name, day)` | `http.js withinDaily`; `deleteProfile` gives one back the same day | the same | old days stay |
 | `devices` | `hash` (key hash) | `metrics.js noteEvent` | the runner | 90 days since last seen |
 | `activity` | autoincrement `id` | `metrics.js noteEvent` | the runner | 14 days |
-| `migrations` | `name` | each migration; schema.sql lists 001–005 as applied | `just cloud-migrate` | — |
+| `migrations` | `name` | each migration; schema.sql lists 001–006 as applied | `just cloud-migrate` | — |
 
-Migrations: 001 drops gifts and families, adds `active`, `keys.session`, shares; 002 adds `devices`, `activity`, `uses`; 003 adds `visits`, drops `ip_hash`; 004 keeps country only; 005 drops `uses` and `visits`. `tests/migrations.test.mjs` checks the migrations reach `schema.sql`.
+Migrations: 001 drops gifts and families, adds `active`, `keys.session`, shares; 002 adds `devices`, `activity`, `uses`; 003 adds `visits`, drops `ip_hash`; 004 keeps country only; 005 drops `uses` and `visits`; 006 adds `profiles.record_bytes`, counted from the records. `tests/migrations.test.mjs` checks the migrations reach `schema.sql`.
 
 ## Every /api/ route and its limits
 
@@ -290,7 +290,7 @@ All JSON bodies go through `http.js readJson`: `Origin` must be `https://noodlep
 | `PATCH /api/profiles/:id` | Origin, key; current PIN for `newPin` | look kept only if `edited` ≥ stored; a new PIN deletes every key and returns a new one |
 | `DELETE /api/profiles/:id` | Origin, key, PIN | deletes records, keys, unshared sounds, metrics; gives back the day's profile count if made today |
 | `GET /api/profiles/:id/records?since=N` | key | 500 a page, never split inside one push |
-| `POST /api/profiles/:id/records` | Origin, key | body ≤ 4 MB; ≤ 200 records; each ≤ 512 KB; a clip must name whole audio of this profile (409 `sound`); 5,000 pushes a UTC day |
+| `POST /api/profiles/:id/records` | Origin, key | body ≤ 4 MB; ≤ 200 records; each ≤ 512 KB; a clip must name whole audio of this profile (409 `sound`); a push that adds bytes: 507 `records full` over 10 MB of records a profile, 507 `cloud full` over 60 MB in all (each record its JSON + `ROW_BYTES` 100); 5,000 pushes a UTC day |
 | `POST /api/profiles/:id/sounds` | Origin, key | ≤ 25 MB; `audio/*` mime; 507 over 40 MB a profile or 400 MB in all |
 | `PUT /api/sounds/:sid/:n` | Origin, owner's key | `n` 0–99 by the path, < `chunks`; exact piece size |
 | `GET`/`HEAD /api/sounds/:sid` | — | 404 until every piece is in |
@@ -445,6 +445,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 - **Every sync redraws.** `storeLoaded` (always called by `pullOnce`) ends with `readStorage`, `notifyAllSettings`, `renderPeople`, `refreshPeople`, and `syncNow` reads storage again.
 - **Reports expire lazily.** `reports.js` deletes expired rows only when a new report arrives.
 - **`log-clean.js RULES.cloud` lists `forgot`**, which no code logs any more (dead entry; harmless). `remember` is logged again by 🔑 Remember (`true`) and `forgetHere` (`false`).
+- **Record bytes are kept as a running count.** `push` subtracts what the records it is about to write hold and adds what landed, in the same batch (`profiles.record_bytes`); a refusal counts the profile again from its records first, so a drift high never refuses wrongly. Everyone's total is `SUM(record_bytes)` over `profiles`, one row per profile.
 - **Session keys are swept only on open.** A PIN profile nobody opens again keeps its old session keys.
 - **`cloud-sync.js pieces(0)`** is `[[0, 0]]`, but `startSound` refuses 0 bytes; an empty clip would fail its upload.
 - **`track-page.js errorOf`'s comment names a `visits` module**, which no longer exists.

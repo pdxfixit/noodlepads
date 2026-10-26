@@ -1036,6 +1036,16 @@ A song file 🎧 From a song listens to must be under 20 MB (a 20-minute MP3; a 
 only its first 15 minutes are heard: it is decoded whole, in memory
 (`web/listen-input.js`).
 
+The cloud checks everything it is sent, too (`worker/cloud.js` `LIMITS`), so
+one device can't fill the free plan's 500 MB database for every family. A
+sound is at most 25 MB; a profile's sounds at most 40 MB and everyone's 400
+MB. A record (a beat, a take…) is at most 512 KB of JSON, a push at most 4 MB
+and 200 records; a profile's records at most 10 MB and everyone's 60 MB (each
+counts its JSON and 100 bytes, so a deleted one's tombstone counts too). A
+push or sound over a cap is refused (507) and stays on the device; a push
+that adds nothing (an edit that shrinks, a delete) always lands. A day (UTC)
+allows 50 new profiles, 5,000 pushes and 500 shares; a profile, 200 shares.
+
 ## Notices and Undo
 
 Every one-line notice (a backup saved, a save that failed, a full beat) and

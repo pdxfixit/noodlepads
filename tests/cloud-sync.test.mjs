@@ -436,6 +436,14 @@ test('no cloud here (the dev server, a static copy) or no network: a CloudError 
   assert.match(cloudTrouble(r), /resting until tomorrow/);
 });
 
+test('a full cloud says what is full: the profile\'s sounds, its records, or everyone\'s', () => {
+  const full = (error) => cloudTrouble(new CloudError(507, { error }));
+  assert.match(full('profile full'), /full for this profile\. Delete some sounds/);
+  assert.match(full('records full'), /full for this profile\. Delete some takes, beats or songs/);
+  assert.match(full('cloud full'), /full for everyone right now\. Everything still works on this device/);
+  assert.match(full('shares full'), /shared as much as it can/);
+});
+
 test('a wrong PIN says how many tries are left; opening with the right one works', async () => {
   const { api } = server();
   await api.create({ id: 'p-k', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '2468' });

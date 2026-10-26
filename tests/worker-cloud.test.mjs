@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../worker/index.js';
-import { CHUNK_BYTES, MAX_SOUND_BYTES, LIMITS, SESSION_KEY_MS, ACTIVE_STEP_MS, pieceCount, pieceSize } from '../worker/cloud.js';
+import { CHUNK_BYTES, MAX_SOUND_BYTES, LIMITS, SESSION_KEY_MS, ACTIVE_STEP_MS, ROW_BYTES, pieceCount, pieceSize } from '../worker/cloud.js';
 import { ORIGIN } from '../worker/http.js';
 import { WAIT_MS } from '../worker/pin.js';
 import { FakeD1 } from './fake-d1.mjs';
@@ -241,6 +241,64 @@ test('a profile holds at most 40 MB of sound, and the whole cloud 400 MB', async
   c.env.DB.db.prepare("INSERT INTO sounds (id, profile_id, mime, bytes, chunks, sha256, got, created) VALUES ('s-y', 'p-z', 'audio/wav', ?, 1, 'y', 1, 0)").run(LIMITS.totalBytes - LIMITS.profileBytes);
   const all = await c.call('POST', 'profiles/p-b/sounds', { key: key2, body: { sha256: sha(5), bytes: 10, mime: 'audio/wav' } });
   assert.equal(all.data.error, 'cloud full');
+});
+
+// The council's review, 2026-10-26: 5,000 pushes a day of 4 MB each is far
+// past D1's 500 MB, so one device could fill the database and stop every
+// family's sync. Records are capped like sounds: 10 MB a profile, 60 MB in all.
+test('a profile holds at most 10 MB of records, and everyone 60 MB; a push that adds nothing still lands', async () => {
+  const c = cloud();
+  const key = await made(c, 'p-a');
+  const big = (i) => ({ kind: 'takes', id: `take-${i}`, body: { n: i, notes: 'x'.repeat(499_990) } });
+  const push = (body, k = key, id = 'p-a') => c.call('POST', `profiles/${id}/records`, { key: k, body });
+  for (const ids of [[0, 1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12, 13], [14, 15, 16, 17, 18, 19]]) {
+    assert.equal((await push({ put: ids.map(big) })).status, 200);
+  }
+  const bytes = () => c.env.DB.rows("SELECT record_bytes AS b FROM profiles WHERE id = 'p-a'")[0].b;
+  const counted = () => c.env.DB.rows("SELECT SUM(COALESCE(LENGTH(CAST(body AS BLOB)), 0) + 100) AS b FROM records WHERE profile_id = 'p-a'")[0].b;
+  assert.equal(bytes(), counted(), 'the profile keeps its records\' size');
+  assert.ok(bytes() < LIMITS.profileRecordBytes && bytes() + 500_100 > LIMITS.profileRecordBytes);
+  const full = await push({ put: [big(20)] });
+  assert.equal(full.status, 507);
+  assert.equal(full.data.error, 'records full');
+  assert.equal(c.env.DB.rows("SELECT rev FROM profiles WHERE id = 'p-a'")[0].rev, 3, 'nothing landed');
+  assert.equal((await push({ put: [{ kind: 'takes', id: 'take-0', body: { n: 0 } }] })).status, 200, 'an edit that shrinks lands');
+  assert.equal((await push({ del: [{ kind: 'takes', id: 'take-1' }] })).status, 200, 'a delete lands');
+  assert.equal(bytes(), counted());
+  assert.equal((await push({ put: [big(20)] })).status, 200, 'and makes room');
+  // Everyone's: every profile's count, added up (here, p-a and a big p-z).
+  const key2 = await made(c, 'p-b');
+  c.env.DB.db.prepare("INSERT INTO profiles (id, name, color, edited, created, record_bytes) VALUES ('p-z', 'Sir Squid', '#1F3FA8', 0, 0, ?)")
+    .run(LIMITS.totalRecordBytes - bytes() - 1000);
+  const all = await push({ put: [{ kind: 'beats', id: 'beat-1', body: { name: 'x'.repeat(2000) } }] }, key2, 'p-b');
+  assert.equal(all.status, 507);
+  assert.equal(all.data.error, 'cloud full');
+  assert.equal((await push({ put: [{ kind: 'beats', id: 'beat-1', body: {} }] }, key2, 'p-b')).status, 200, 'a small one still fits');
+  // A count that drifted high (a push from an older Worker) is made again before it refuses.
+  c.env.DB.db.prepare("UPDATE profiles SET record_bytes = ? WHERE id = 'p-b'").run(LIMITS.profileRecordBytes);
+  assert.equal((await push({ put: [{ kind: 'beats', id: 'beat-2', body: {} }] }, key2, 'p-b')).status, 200);
+  assert.equal(c.env.DB.rows("SELECT record_bytes AS b FROM profiles WHERE id = 'p-b'")[0].b, 2 * (2 + ROW_BYTES));
+});
+
+test("a profile's record bytes stay exact through edits, deletes, tombstones and stale writes", async () => {
+  const c = cloud();
+  const key = await made(c, 'p-a');
+  const push = (body) => c.call('POST', 'profiles/p-a/records', { key, body });
+  const exact = () => {
+    const [{ kept, counted }] = c.env.DB.rows(`SELECT (SELECT record_bytes FROM profiles WHERE id = 'p-a') AS kept,
+      (SELECT COALESCE(SUM(COALESCE(LENGTH(CAST(body AS BLOB)), 0) + 100), 0) FROM records WHERE profile_id = 'p-a') AS counted`);
+    assert.equal(kept, counted);
+  };
+  await push({ put: [{ kind: 'beats', id: 'beat-1', body: { name: 'Ünïcödé' } }, { kind: 'beats', id: 'beat-1', body: { name: 'twice in one push' } }], since: 0 });
+  exact();
+  await push({ put: [{ kind: 'beats', id: 'beat-2', body: { n: 1 } }], del: [{ kind: 'beats', id: 'beat-1' }, { kind: 'beats', id: 'never-was' }], since: 1 });
+  exact();
+  // A device behind (since 1) writes beat-2, which rev 2 wrote: it stays as it is.
+  const stale = await push({ put: [{ kind: 'beats', id: 'beat-2', body: { n: 'x'.repeat(5000) } }, { kind: 'beats', id: 'beat-3', body: {} }], since: 1 });
+  assert.deepEqual(stale.data.stale, [{ kind: 'beats', id: 'beat-2' }]);
+  exact();
+  await push({ put: [{ kind: 'beats', id: 'beat-1', body: { back: true } }] });
+  exact();
 });
 
 test('changing the PIN needs the current one, and closes the profile on every other device', async () => {

@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   rev          INTEGER NOT NULL DEFAULT 0,-- bumped by every change to its records
   edited       INTEGER NOT NULL,          -- when name, avatar or color last changed
   created      INTEGER NOT NULL,
-  active       INTEGER NOT NULL DEFAULT 0 -- last open, pull or push, to the hour (`just cloud-prune`)
+  active       INTEGER NOT NULL DEFAULT 0,-- last open, pull or push, to the hour (`just cloud-prune`)
+  record_bytes INTEGER NOT NULL DEFAULT 0 -- its records' size: each one's JSON + 100 (worker/cloud.js ROW_BYTES), capped
 );
 
 -- A device that opened a profile (with its PIN, if it has one) keeps a key.
@@ -176,4 +177,4 @@ CREATE TABLE IF NOT EXISTS migrations (
   name    TEXT PRIMARY KEY,   -- the file's name, without .sql
   applied INTEGER NOT NULL
 );
-INSERT OR IGNORE INTO migrations (name, applied) VALUES ('001-shares-not-gifts-or-families', 0), ('002-player-metrics', 0), ('003-visits-no-ip-hash', 0), ('004-country-only', 0), ('005-drop-uses-visits', 0);
+INSERT OR IGNORE INTO migrations (name, applied) VALUES ('001-shares-not-gifts-or-families', 0), ('002-player-metrics', 0), ('003-visits-no-ip-hash', 0), ('004-country-only', 0), ('005-drop-uses-visits', 0), ('006-record-bytes', 0);

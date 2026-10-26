@@ -29,10 +29,23 @@ export const LIMITS = {
   perPush: 200,                      // records in one push
   recordBytes: 512 * 1024,           // one record's JSON (a long take is about 400 KB)
   pushBytes: 4 * 1024 * 1024,        // one push's body
+  profileRecordBytes: 10 * 1024 * 1024, // one profile's records (ROW_BYTES each, plus its JSON)
+  totalRecordBytes: 60 * 1024 * 1024,   // every profile's records: with every sound, under the 500 MB
   pullPage: 500,                     // records in one pull
   sharesPerProfile: 200,
   shareBytes: 1024 * 1024,           // one share's bundle
 };
+
+// What a record costs in the database: its JSON, plus about 100 bytes for its
+// ids, rev and index entries, so a tombstone (no body) costs something too.
+// profiles.record_bytes keeps each profile's total (migration 006 counts it
+// the same way).
+export const ROW_BYTES = 100;
+const SIZE = `COALESCE(LENGTH(CAST(records.body AS BLOB)), 0) + ${ROW_BYTES}`;
+// The records a push names, one bound JSON list of [kind, id] (D1 binds at
+// most 100 values a query), each found by its primary key.
+const TOUCHED = `json_each(?) AS j JOIN records ON records.profile_id = ?
+  AND records.kind = json_extract(j.value, '$[0]') AND records.id = json_extract(j.value, '$[1]')`;
 
 // A device that did not tick "Remember on this device" holds its key in
 // memory only; keys like that are deleted once they are a week old.
@@ -276,6 +289,21 @@ function checkRecordKey(r) {
   if (!r || !KINDS.includes(r.kind) || typeof r.id !== 'string' || !RECORD_ID.test(r.id)) throw new Refuse(400, 'record');
 }
 
+// Room for `growth` more bytes of records, or a 507: the profile's own cap
+// ('records full'), then everyone's ('cloud full'). Before refusing a
+// profile, its count is made again from its records, in case it drifted
+// (pushes from a Worker older than migration 006).
+async function roomForRecords(env, p, growth) {
+  let mine = p.record_bytes;
+  if (mine + growth > LIMITS.profileRecordBytes) {
+    mine = (await env.DB.prepare(`UPDATE profiles SET record_bytes = (SELECT COALESCE(SUM(${SIZE}), 0) FROM records WHERE records.profile_id = ?)
+      WHERE id = ? RETURNING record_bytes`).bind(p.id, p.id).first()).record_bytes;
+    if (mine + growth > LIMITS.profileRecordBytes) throw new Refuse(507, 'records full');
+  }
+  const { b } = await env.DB.prepare('SELECT COALESCE(SUM(record_bytes), 0) AS b FROM profiles').first();
+  if (b + growth > LIMITS.totalRecordBytes) throw new Refuse(507, 'cloud full');
+}
+
 // A push puts and deletes records, all in one rev. With `since` (the rev the
 // device has pulled up to), a record another device wrote after that is left
 // as it is and named in `stale`: the device pulls it, merges, and pushes
@@ -308,7 +336,18 @@ async function push(request, env, id, now, seen) {
     const row = await env.DB.prepare('SELECT got, chunks FROM sounds WHERE id = ? AND profile_id = ?').bind(s, id).first();
     if (!row || row.got < row.chunks) throw new Refuse(409, 'sound', { sound: s });
   }
-  await getProfile(env, id);
+  const p = await getProfile(env, id);
+  // What the push adds to the profile's bytes, if every record lands: the
+  // last word on each record (a put, or a delete's tombstone) less what it
+  // holds now. A push that adds nothing is never refused, so a full profile
+  // can still delete and edit.
+  const after = new Map();
+  put.forEach((r, i) => after.set(`${r.kind}:${r.id}`, { kind: r.kind, id: r.id, size: new TextEncoder().encode(texts[i]).length + ROW_BYTES }));
+  for (const r of del) after.set(`${r.kind}:${r.id}`, { kind: r.kind, id: r.id, size: ROW_BYTES });
+  const touched = JSON.stringify([...after.values()].map((r) => [r.kind, r.id]));
+  const before = (await env.DB.prepare(`SELECT ${SIZE} AS size FROM ${TOUCHED}`).bind(touched, id).all()).results;
+  const growth = [...after.values()].reduce((sum, r) => sum + r.size, 0) - before.reduce((sum, r) => sum + r.size, 0);
+  if (growth > 0) await roomForRecords(env, p, growth);
   if (!await withinDaily(env, 'pushes', LIMITS.pushesPerDay, now)) throw new Refuse(429, 'busy');
   // The sounds deleted clips held, to delete once nothing names them.
   const goneClips = del.filter((r) => r.kind === 'clips').map((r) => r.id);
@@ -332,6 +371,9 @@ async function push(request, env, id, now, seen) {
   const unseen = since === null ? '' : ' WHERE records.rev <= ?';
   const guard = since === null ? [] : [since];
   const statements = [env.DB.prepare('UPDATE profiles SET rev = rev + 1 WHERE id = ?').bind(id), touch(env, id, now)];
+  // The profile's bytes: less what the records about to be written hold now…
+  statements.push(env.DB.prepare(`UPDATE profiles SET record_bytes = record_bytes - (SELECT COALESCE(SUM(${SIZE}), 0) FROM ${TOUCHED}${unseen})
+    WHERE id = ?`).bind(touched, id, ...guard, id));
   put.forEach((r, i) => statements.push(env.DB.prepare(`INSERT INTO records (profile_id, kind, id, body, sound_id, rev, deleted)
     VALUES (?, ?, ?, ?, ?, ${revNow}, 0)
     ON CONFLICT (profile_id, kind, id) DO UPDATE SET body = excluded.body, sound_id = excluded.sound_id, rev = excluded.rev, deleted = 0${unseen}`)
@@ -347,6 +389,9 @@ async function push(request, env, id, now, seen) {
     statements.push(env.DB.prepare(`DELETE FROM sound_chunks WHERE sound_id IN (SELECT id FROM sounds WHERE ${unused})`).bind(s));
     statements.push(env.DB.prepare(`DELETE FROM sounds WHERE ${unused}`).bind(s));
   }
+  // …plus what the ones that landed (this rev) hold now.
+  statements.push(env.DB.prepare(`UPDATE profiles SET record_bytes = record_bytes + (SELECT COALESCE(SUM(${SIZE}), 0) FROM ${TOUCHED}
+    AND records.rev = profiles.rev) WHERE id = ?`).bind(touched, id, id));
   await env.DB.batch(statements);
   const { rev } = await getProfile(env, id);
   if (since === null) return json(200, { rev, was: rev - 1 });

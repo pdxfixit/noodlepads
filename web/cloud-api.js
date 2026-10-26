@@ -133,6 +133,8 @@ export function cloudTrouble(err) {
   if (err.status === 404 && err.error === 'profile') return "That profile isn't in the cloud any more.";
   if (err.status === 404 && err.error === 'share') return 'No share has that code. Check it and try again.';
   if (err.status === 507 && err.error === 'shares full') return 'This profile has shared as much as it can.';
+  if (err.status === 507 && err.error === 'records full') return "The cloud is full for this profile. Delete some takes, beats or songs, then try again.";
+  if (err.status === 507 && err.error === 'cloud full') return 'The cloud is full for everyone right now. Everything still works on this device.';
   if (err.status === 507) return "The cloud is full for this profile. Delete some sounds, then try again.";
   return `The cloud said no (${err.error || err.status}). Everything is still here on this device.`;
 }
