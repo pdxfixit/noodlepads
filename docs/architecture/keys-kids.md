@@ -131,11 +131,10 @@ The footer's how-to (`app.js showHint`, `screenHint`) uses the same `pointer: fi
 2. **A key or tile tapped:** `pointerdown` on `#dj-keys [data-code]` or `#dj-touch [data-clip]` → finger: `fingers.down` (lift plays); mouse: `pointerDown` → `playTarget` → `play(code)` or `playTile(clipId)` → `hit(id)`.
 3. **`dj.js hit(id, { earlier })`:**
    1. `deps.clipById(id)` (`board.js anyClip`).
-   2. `deps.tap(clip, { ring })` = `pads.js tapPad`: a looping sound stops (returns true); else `audio.play(clip, { ring })`. `ring` is 🔔 Let it ring on Live only.
-   3. `countPlay('keys')` when it played.
-   4. `record(...)`: into a take, if one records (kind `'hit'` or `'stop'`).
-   5. `showRow(clip)`: in mode `'beat'`, a sound with no row gets one (`seq.addRowFor`). Not while a groove plays without recording.
-   6. `intoBeat(clip, earlier)`: while recording into the beat, snap the hit (below).
+   2. `deps.tap(clip, { ring, kind: 'keys' })` = `pads.js tapPad`: a looping sound stops (returns true); else `audio.play(clip, { ring })` and `countPlay('keys')`, so a key's play counts once, as a key. `ring` is 🔔 Overlap on Live only.
+   3. `record(...)`: into a take, if one records (kind `'hit'` or `'stop'`).
+   4. `showRow(clip)`: in mode `'beat'`, a sound with no row gets one (`seq.addRowFor`). Not while a groove plays without recording.
+   5. `intoBeat(clip, earlier)`: while recording into the beat, snap the hit (below).
 4. `light(code)` (a ripple over nearby keys) or `lightTiles(clipId)`.
 
 **Holding:** `loopIt(clip)` → `deps.loop` = `audio.loop`, which waits for the next bar (`audio.loopInTime`) when a beat plays (`audio.grid` = `seq.grid`). A take records it as `'loop'`. Shift-click loops at once (`shiftPlay`).
@@ -405,7 +404,6 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | `keyset.js keepAsMine` and `touch.js keepAsMine` | The same idea, two modules. |
 | Loop glow goes through `pads.js` | `audio.on.looping` is owned by `pads.js initPads`, which forwards to `dj.looping` through a hook `app.js` passes in. |
 | Latency in four places (above) | A change to one leaves the others. |
-| A key hit counts twice for usage | `dj.js hit` calls `countPlay('keys')`, and `deps.tap` = `pads.js tapPad` calls `countPlay('pads')` too (likely unintended; untested). |
 | Dead exports kept for tests | `rhythm.js hitTime`, `applySnaps`, `countInBeats`, `snapHits`; `kids-logic.js squareSeconds`; `touch-grid.js emptyBlock`, `swapBlocks`. The app uses none of them. |
 | Dead wiring | `app.js` passes `el.tryingStop` to `createDJ`; `dj.js` never reads it. `dj.js` returns `deck`, `touchNow`, `letGo`, `stopReplay`; `app.js` calls none. |
 | Kids writes the scratch behind the beat maker's back | `sequencer.js` re-reads only in `show()`. Leaving Kids calls no `show()`, so Beats may hold a stale scratch until the next screen change; a pill tapped then would save over the kid's squares (likely; untested). |
@@ -425,6 +423,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | While recording, a new sound takes an empty row first, never one already used this recording | `rec-empty-rows.test.mjs` |
 | `showRec` runs every 40 ms and writes only what changed (`putText`, `putAttr`): rewriting labels re-ran tooltips and held the playhead up | `keys-playhead.test.mjs` |
 | A finger plays on the lift; a scroll or cancel plays nothing | `finger.test.mjs`, `touch-play.test.mjs` |
+| A key's play counts once for usage, as `'keys'` (`tapPad`'s `kind`) | `play-count-app.test.mjs` |
 | A held key loops only on OS repeat past 350 ms; lifting a modifier forgets all holds | no test found (`shift-holds.test.mjs` covers Shift-click only) |
 | Every remembered key (`dj-input`, `dj-size`, `dj-click`, `beat-keys`, `kids-tab`) starts the app safely | `startup-remembered.test.mjs` |
 | A take's `ring` is stored only when true, only on a hit | `overlap.test.mjs`, `rhythm.test.mjs` |

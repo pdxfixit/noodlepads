@@ -569,13 +569,14 @@ async function cornerBadge(kind, clip) {
 // true when it stopped a loop.
 // `ring`: 🎤 Live's 🔔 Let it ring, the sound's earlier hits ring on under this
 // one. A pad always restarts its sound (Ben, 2026-10-12).
-export function tapPad(clip, { ring = false } = {}) {
+// `kind`: what a play counts as for `noodlepads.play` (the keys pass 'keys').
+export function tapPad(clip, { ring = false, kind = 'pads' } = {}) {
   if (audio.isLooping(clip.id)) {
     audio.stop(clip.id);
     return true;
   }
   audio.play(clip, { ring });
-  countPlay('pads');
+  countPlay(kind);
   return false;
 }
 

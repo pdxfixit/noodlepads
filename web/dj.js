@@ -25,7 +25,6 @@ import { fadeAway, showBanner } from './ui.js';
 import { drawSpeaker, speakerControls, percent } from './row-volume.js';
 import { rowParts, rowSpeaker, rowEmoji, twinRows } from './beat-row.js';
 import { logEvent } from './log.js';
-import { countPlay } from './play-count.js';
 import { renderTake } from './share-render.js';
 import { fingerTaps, isFinger } from './finger.js';
 import { soundsOf, defaultTouch, touchOrder, touchSounds } from './touch.js';
@@ -300,8 +299,8 @@ export function createDJ({ el, deps }) {
     if (!clip) return null;
     // 🔔 Let it ring on Live: a key's repeated hits ring over each other.
     const ring = ringing();
-    const stopped = deps.tap(clip, { ring });   // a tap on a looping sound stops it
-    if (!stopped) countPlay('keys');
+    // A tap on a looping sound stops it; a play counts once, as a key.
+    const stopped = deps.tap(clip, { ring, kind: 'keys' });
     record(clip.id, stopped ? 'stop' : 'hit', deps.now(), ring);
     showRow(clip);
     if (!stopped) intoBeat(clip, earlier);

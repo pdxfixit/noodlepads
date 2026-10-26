@@ -33,7 +33,7 @@
 | `telemetry.js` | `EVENTS`, `cleanDetails`, the player id, `track` (page-wide) | `app.js startUsage` (`createTelemetry`, `useTelemetry`), `cloud.js`, `listen-ui.js`, `sheet.js` (direct `track`) | `events-client.js createEvents`, `usage.js` |
 | `events-client.js` | (vendored from flarepress, never edited) the record's columns, the localStorage queue, batches, `sendBeacon` | `telemetry.js` only | `fetch`, `navigator.sendBeacon` |
 | `track-page.js` | where events come from: lifecycle, screens, dialogs, one click listener, content and settings from the log, errors, speed | `app.js startUsage` (`trackPage`, `learnLabels`), `page.screen`, `page.level` | `telemetry` (passed in), `tooltips.js CONTROLS`/`tipFor`, `play-count.js takePlay`, `settings.js LEVELS` |
-| `play-count.js` | per-visit play counts | `pads.js`, `dj.js`, `kids.js`, `song.js`, `sequencer.js` (`countPlay`); `track-page.js` (`takePlay`); `app.js` (`clearPlay`) | `usage.js` |
+| `play-count.js` | per-visit play counts | `pads.js` (`tapPad`, for the keys too), `kids.js`, `song.js`, `sequencer.js` (`countPlay`); `track-page.js` (`takePlay`); `app.js` (`clearPlay`) | `usage.js` |
 | `feedback.js` | the Feedback dialog and its sender | `app.js initFeedback` | `grown-up.js askSum`, `dialogs.js`, `log-send.js LIVE_HOST` |
 | `privacy.js` | the "What's private" lines, `PRIVACY_URL` | no page module imports it; only `tests/privacy.test.mjs` reads it. The page's link is written out again in `index.html` (`.privacy-link`) | nothing |
 | `contact.js` | the PIN-reset address, decoded at load | `cloud-ui.js` (`FORGOT_PIN`), `help.js` | nothing |
