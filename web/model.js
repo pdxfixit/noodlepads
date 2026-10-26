@@ -353,30 +353,45 @@ export const PERSON_ID = /^[a-z0-9][a-z0-9-]{0,48}$/;
 // Every person id that stored data names, in a fixed order: people records
 // first, then whoever owns a sound, beat, song, take, deck, layout, own voice or pad order, and
 // whoever's copy of the kit an override edits (`<person>-<kit id>`). `doc`
-// holds the stores as lists, the way a backup does.
-export function personIdsIn(doc, kitIds = []) {
+// holds the stores as lists, the way a backup does. `known`: person ids
+// that exist (default: `doc.people`'s), which settle whose an edit is.
+export function personIdsIn(doc, kitIds = [], known = null) {
   const ids = [];
   const list = (name) => (Array.isArray(doc?.[name]) ? doc[name] : []);
   for (const p of list('people')) ids.push(p?.id);
+  const here = known ?? new Set(list('people').map((p) => p?.id));
   for (const name of ['clips', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'layouts', 'voices', 'touchLayouts']) {
     for (const r of list(name)) ids.push(r?.personId);
   }
   for (const o of list('overrides')) {
-    const k = kitIdOf(o?.id, kitIds);
+    const k = kitIdOf(o?.id, kitIds, here);
     if (k) ids.push(o.id.slice(0, -k.length - 1));
   }
   return [...new Set(ids.filter((id) => typeof id === 'string' && PERSON_ID.test(id)))];
 }
 
-// The kit id a person's preset copy (`<person>-<kit id>`) ends with, or null.
-// The longest one that leaves a person id wins, whatever the kit's order:
-// with kit ids `go` and `lets-go`, `p-x-lets-go` is p-x's 🗣️ Let's go, never
-// a person `p-x-lets` editing `go` (a phantom adoptStoredPeople would make).
-export function kitIdOf(id, kitIds = []) {
+// The kit id a person's preset copy (`<person>-<kit id>`) ends with, or null,
+// whatever the kit's order. With kit ids `go` and `lets-go`,
+// `p-mv3-x9-lets-go` could be p-mv3-x9's 🗣️ Let's go or a person
+// `p-mv3-x9-lets` editing Go (a phantom adoptStoredPeople would make). The
+// split wins whose person is `known` (people that exist), then whose person
+// has the shape util.js newId gives (`p-<time>-<random>`, no more dashes:
+// an app-made person id), then the longest kit id. Two people that exist
+// and both fit stay ambiguous: the id itself can't tell them apart.
+const NEW_PERSON_ID = /^p-[a-z0-9]+-[a-z0-9]+$/;
+export function kitIdOf(id, kitIds = [], known = new Set()) {
   if (typeof id !== 'string') return null;
   let best = null;
+  let bestRank = null;
   for (const k of kitIds) {
-    if ((best === null || k.length > best.length) && id.endsWith(`-${k}`) && PERSON_ID.test(id.slice(0, -k.length - 1))) best = k;
+    if (!id.endsWith(`-${k}`)) continue;
+    const who = id.slice(0, -k.length - 1);
+    if (!PERSON_ID.test(who)) continue;
+    const rank = [known.has(who) ? 1 : 0, NEW_PERSON_ID.test(who) ? 1 : 0, k.length];
+    if (!bestRank || rank[0] > bestRank[0] || (rank[0] === bestRank[0] && (rank[1] > bestRank[1] || (rank[1] === bestRank[1] && rank[2] > bestRank[2])))) {
+      best = k;
+      bestRank = rank;
+    }
   }
   return best;
 }
@@ -398,7 +413,7 @@ export function kitIdOf(id, kitIds = []) {
 export function adoptPeople(doc, { known = new Set(), kitIds = [], takenNames = [], takenColors = [], takenPictures = [], random = Math.random } = {}) {
   const records = new Map((Array.isArray(doc?.people) ? doc.people : [])
     .filter((p) => typeof p?.id === 'string').map((p) => [p.id, p]));
-  const owning = new Set(personIdsIn({ ...doc, people: [] }, kitIds));
+  const owning = new Set(personIdsIn({ ...doc, people: [] }, kitIds, new Set(records.keys())));
   const names = new Set(takenNames.map((n) => String(n).toLowerCase()));
   const colors = takenColors.filter((c) => typeof c === 'string');
   const pictures = [...takenPictures];

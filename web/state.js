@@ -4,7 +4,7 @@
 // told it will not survive a reload.
 
 import { db, STORE_NAMES, SCHEMA } from './store.js';
-import { personEditRecord, adoptPeople, personIdsIn, personColor, isEmptyOverride } from './model.js';
+import { personEditRecord, adoptPeople, personIdsIn, personColor, isEmptyOverride, kitIdOf } from './model.js';
 import { isCloudId, reIdDoc } from './reid.js';
 import { newId } from './util.js';
 import { showNotice } from './ui.js';
@@ -347,9 +347,14 @@ export async function setPersonEdit(id, changes) {
 export async function deletePerson(id) {
   const theirs = (list) => list.filter((x) => x.personId === id);
   const goneClips = theirs(state.userClips).map((c) => c.id);
-  // Kit edits are stored as `<person>-<kit sound>` and name no personId.
-  const kit = new Set((state.manifest.kit ?? []).map((k) => k.id));
-  const goneEdits = [...state.overrides.keys()].filter((o) => o.startsWith(`${id}-`) && kit.has(o.slice(id.length + 1)));
+  // Kit edits are stored as `<person>-<kit sound>` and name no personId:
+  // whose each one is, among the people here (model.js kitIdOf).
+  const kit = (state.manifest.kit ?? []).map((k) => k.id);
+  const known = new Set([...state.peopleEdits.keys(), ...(state.manifest.people ?? []).map((p) => p.id)]);
+  const goneEdits = [...state.overrides.keys()].filter((o) => {
+    const k = kitIdOf(o, kit, known);
+    return k !== null && o.slice(0, -k.length - 1) === id;
+  });
   const del = (store, keys) => keys.map((key) => ({ store, del: key }));
   const ids = (list) => theirs(list).map((x) => x.id);
   const bundled = state.manifest.people.find((p) => p.id === id);

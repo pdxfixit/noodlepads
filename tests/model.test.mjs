@@ -507,14 +507,24 @@ test('personIdsIn: people first, then owners in a fixed order, and kit edits by 
 });
 
 test('personIdsIn: a kit id that ends another names the right person, whatever the kit order', () => {
-  // `go` listed before `lets-go`: an edit of p-x's Let's go is p-x's, never a person "p-x-lets".
+  // `go` listed before `lets-go`: an edit of p-mv3-x9's Let's go is theirs, never a person "p-mv3-x9-lets".
   for (const kit of [['go', 'lets-go'], ['lets-go', 'go']]) {
-    assert.deepEqual(personIdsIn({ overrides: [{ id: 'p-x-lets-go' }, { id: 'p-y-go' }] }, kit), ['p-x', 'p-y'], kit.join(' '));
-    assert.equal(kitIdOf('p-x-lets-go', kit), 'lets-go');
-    assert.equal(kitIdOf('p-y-go', kit), 'go');
+    assert.deepEqual(personIdsIn({ overrides: [{ id: 'p-mv3-x9-lets-go' }, { id: 'p-mv4-y1-go' }] }, kit), ['p-mv3-x9', 'p-mv4-y1'], kit.join(' '));
+    assert.equal(kitIdOf('p-mv3-x9-lets-go', kit), 'lets-go');
+    assert.equal(kitIdOf('p-mv4-y1-go', kit), 'go');
   }
   assert.equal(kitIdOf('lets-go', ['go', 'lets-go']), 'go', 'an old plain person "lets" editing Go: no person is left by "lets-go"');
-  assert.equal(kitIdOf('p-x-snare', ['go']), null);
+  assert.equal(kitIdOf('p-mv3-x9-snare', ['go']), null);
+});
+
+test('kitIdOf: one id two people could make goes to the one that exists, else to an app-made id', () => {
+  // Person p-t-lets editing Go and person p-t editing Let's go both write `p-t-lets-go`.
+  const kit = ['go', 'lets-go'];
+  assert.equal(kitIdOf('p-t-lets-go', kit, new Set(['p-t'])), 'lets-go', 'p-t is here: theirs');
+  assert.equal(kitIdOf('p-t-lets-go', kit, new Set(['p-t-lets'])), 'go', 'p-t-lets is here: theirs');
+  assert.equal(kitIdOf('p-t-lets-go', kit), 'go', 'nobody known: p-t-lets has the shape util.js newId gives, p-t does not');
+  assert.deepEqual(personIdsIn({ people: [{ id: 'p-t' }], overrides: [{ id: 'p-t-lets-go' }] }, kit), ['p-t'], 'the people in the doc are known');
+  assert.deepEqual(personIdsIn({ people: [], overrides: [{ id: 'p-t-lets-go' }] }, kit, new Set(['p-t'])), ['p-t'], 'or the ones passed in');
 });
 
 // ── kit groups ──

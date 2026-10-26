@@ -181,7 +181,7 @@ A preset clip is the kit entry (`label, emoji, color, file, group, inst?, plays?
 
 ### Preset edits (`overrides`)
 
-An override holds only what differs from boards.json (`model.js overrideFor`; the sheet's and bulk's changes). `state.js setOverride` deletes one that holds only its `id` (and the `changed` stamp of its last save), so a later boards.json change shows through. Hiding a preset is `hidden: true` on its override (`model.js withHidden`): 🗑️ / 👁 in Edit sounds (`pads.js cornerBadge`), Hide/Show in the sheet, and bulk 🗑️. A picture change from the emoji chooser uses `model.js overrideWithEmoji` (`app.js setClipEmoji`). An override's person is found by its id prefix: exactly (`state.js deletePerson`), or by suffix search over kit ids (`model.js kitIdOf`, the longest match, for `personIdsIn`; `backup.js` `isKitCopy`). `app.js setClipEmoji` reads the clip's own `kitId`.
+An override holds only what differs from boards.json (`model.js overrideFor`; the sheet's and bulk's changes). `state.js setOverride` deletes one that holds only its `id` (and the `changed` stamp of its last save), so a later boards.json change shows through. Hiding a preset is `hidden: true` on its override (`model.js withHidden`): 🗑️ / 👁 in Edit sounds (`pads.js cornerBadge`), Hide/Show in the sheet, and bulk 🗑️. A picture change from the emoji chooser uses `model.js overrideWithEmoji` (`app.js setClipEmoji`). An override's person is found by its id: `model.js kitIdOf` (`personIdsIn`, `state.js deletePerson`), or `.some` over kit ids (`backup.js` `isKitCopy`). `app.js setClipEmoji` reads the clip's own `kitId`.
 
 ### People
 
@@ -386,13 +386,13 @@ Nothing found is changed or deleted.
    A new required field on `clips` must be added to all five, and to `backup.js cleanBackup`.
 7. **Editing one sound is done in three ways:** `sheet.js saveSheet`, `bulk.js changeSounds` (through `model.js withBulkChanges`) and `app.js setClipEmoji`. All three branch on own sound or preset, then call `persist('clips')` or `setOverride(overrideFor…)`.
 8. **The open-beat and open-song wiring lives in `app.js`** (`setOpen`, `beatLibrary`, `songBook`, the dj `deps`), not in `state.js`. A change to how a beat or song is stored is made there.
-9. **Finding a preset edit's person.** It is done by exact prefix plus kit lookup (`state.js deletePerson`), by `.some` over kit ids (`backup.js` `isKitCopy`), and by the longest kit id that is a suffix (`model.js kitIdOf` for `personIdsIn`; `sequencer.js beatToFile` sorts its own). None depends on kit order (gotcha 1).
+9. **Finding a preset edit's person.** It is done by `.some` over kit ids (`backup.js` `isKitCopy`), and by `model.js kitIdOf` (`personIdsIn`, `deletePerson`, `beatToFile`). None depends on kit order (gotcha 1).
 
 ## Invariants and gotchas
 
 | # | Rule the code depends on | Guarded by |
 |---|---|---|
-| 1 | **A kit id may end another** (`go`, `lets-go`). A preset copy's kit id is the longest that leaves a person id (`model.js kitIdOf`), in any kit order, so an edit of `p-x-lets-go` never names a phantom person `p-x-lets`. Code that splits `<person>-<kit id>` uses it, or the clip's own `kitId`. | `tests/model.test.mjs` (`kitIdOf`), `tests/sequencer.test.mjs` (beat file) |
+| 1 | **A kit id may end another** (`go`, `lets-go`), so `p-t-lets-go` can read two ways. `model.js kitIdOf` settles it in any kit order: a person who exists (`known`) wins, then a person id shaped as `newId` makes it (`p-<time>-<random>`), then the longest kit id. Two people who exist and both fit stay ambiguous (the id can't tell). `personIdsIn`, `merge.js`, `adoptPeople`, `deletePerson` and `beatToFile` use it; `setClipEmoji` reads the clip's `kitId`. Prefix searches (`personThings` edits, `personBackupLists`, `withoutPeople`, `namesPerson`) still match `<id>-`, safe while person ids come from `newId`. | `tests/model.test.mjs` (`kitIdOf`), `tests/sequencer.test.mjs`, `tests/override-empty.test.mjs`, `tests/emoji-kit-order.test.mjs` |
 | 2 | `SCHEMA` only grows: a new store gets a new `since`, never an edit of an old line | `tests/store.test.mjs` |
 | 3 | `readStorage`'s destructuring matches `STORE_NAMES` minus `bases`, by position | none (check 5 below) |
 | 4 | Every per-person store is in `reid.js PERSON_STORES`, or a renamed person loses it | none (check 2 below) |

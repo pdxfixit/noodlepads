@@ -210,7 +210,7 @@ Grouped by what they guard. Files marked ▶ start the real app. A few call `ins
 | 🎧 From a song | `listen` (on `listen-synth.mjs`), `listen-make`, `listen-input` (stand-in capture, decoder and worklet scope), ▶`listen-ui` (through `listen-ui.js listenEnv`) |
 | 🧸 Kids and levels | ▶`kids` (37), ▶`kids-hints`, `levels` |
 | First steps (ADR 0028) | ▶`welcome`, ▶`welcome-existing`, ▶`welcome-cloud`, ▶`tips`, ▶`nudge`, ▶`who-now` |
-| Storage and backups | `store`, `storage-wait`, `backup` (54), `zip`, `merge`, `merge3`, `holds`, ▶`leftover`, `old-device`, ▶`older-stores`, `adopt-people`, ▶`new-ids`, ▶`load-who`, ▶`delete-leftover`, ▶`delete-unsaved`, `override-empty`, `name-cut`, ▶`fresh-start` (the real `boards.json`) |
+| Storage and backups | `store`, `storage-wait`, `backup` (54), `zip`, `merge`, `merge3`, `holds`, ▶`leftover`, `old-device`, ▶`older-stores`, `adopt-people`, ▶`new-ids`, ▶`load-who`, ▶`delete-leftover`, ▶`delete-unsaved`, `override-empty`, `name-cut`, ▶`emoji-kit-order`, ▶`fresh-start` (the real `boards.json`) |
 | ☁️ Cloud and PINs | `cloud-sync` (two or three devices of plain arrays, through the real Worker), `sync-timing`, ▶`cloud-ui`, ▶`pin-gate`, ▶`pin-new`, `pin-wrong`, ▶`profile-sheet`, ▶`delete-cloud`, ▶`delete-shown`, ▶`delete-third-wait`, ▶`see-all` |
 | The Worker | `worker` (routing, `/api/log`), `worker-cloud`, `metrics`, `events-route` (also: the vendored `events-worker.js` still hashes to its recorded sha256), `feedback-route` |
 | Reports, usage, feedback | `log`, `log-send`, ▶`log-send-app`, `agent`, ▶`telemetry-app`, ▶`feedback` |

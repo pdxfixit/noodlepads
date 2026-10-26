@@ -14,7 +14,7 @@ import { withHidden, overrideWithEmoji } from '../web/model.js';
 const { text: notice } = stubBanner();
 const idb = fakeIndexedDB();
 globalThis.indexedDB = idb;
-const { loadStorage, readStorage, setOverride, state } = await import('../web/state.js');
+const { loadStorage, readStorage, setOverride, deletePerson, state } = await import('../web/state.js');
 const { db } = await import('../web/store.js');
 const { mergeLoaded } = await import('../web/merge.js');
 const { cleanBackup } = await import('../web/backup.js');
@@ -63,4 +63,16 @@ test('an empty edit already stored is left out when read, and a backup\'s real e
     () => null, { peopleIds: new Set(['pip']), clipIds: new Set(['pip-kick', 'pip-snare']), colorOk: () => true });
   assert.deepEqual(out.overrides.map((o) => o.id), ['pip-snare'], 'a backup\'s empty edit is dropped');
   assert.equal(out.skipped, 0, 'and not counted as left out');
+});
+
+// `p-t-lets-go` is p-t-lets's Go, and could read as p-t's Let's go: deleting
+// p-t once took it too (a prefix and a kit id were enough).
+test('deleting a person takes their preset edits, never another person\'s that reads alike', async () => {
+  state.manifest = { kit: [{ id: 'go' }, { id: 'lets-go' }], people: [] };
+  for (const id of ['p-t', 'p-t-lets']) state.peopleEdits.set(id, { id, name: id, added: true, created: 1 });
+  await setOverride({ id: 'p-t-lets-go', label: 'Zoom' });
+  await setOverride({ id: 'p-t-go', label: 'Off' });
+  await deletePerson('p-t');
+  assert.deepEqual([...state.overrides.keys()].filter((k) => k.startsWith('p-t')), ['p-t-lets-go']);
+  assert.deepEqual(stored().map((o) => o.id).filter((k) => k.startsWith('p-t')), ['p-t-lets-go']);
 });

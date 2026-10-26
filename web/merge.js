@@ -72,8 +72,9 @@ export async function mergeLoaded(local, incoming, { kitIds = [], newId = makeId
   };
 
   // ── people ──
-  const ownersLocal = new Set(personIdsIn({ ...local, people: [] }, kitIds));
-  const ownersIn = new Set(personIdsIn({ ...incoming, people: [] }, kitIds));
+  const known = new Set([...list(local, 'people'), ...list(incoming, 'people')].map((p) => p?.id));
+  const ownersLocal = new Set(personIdsIn({ ...local, people: [] }, kitIds, known));
+  const ownersIn = new Set(personIdsIn({ ...incoming, people: [] }, kitIds, known));
   const localPeople = new Map(list(local, 'people').map((p) => [p.id, p]));
   let someoneArrives = false;
   for (const p of list(incoming, 'people')) {
