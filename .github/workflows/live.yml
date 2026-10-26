@@ -2,7 +2,7 @@
 # /api/cloud must answer (and /api/cloud say ok); a miss fails after 3 retries,
 # 20 s apart. Which commit is live is not checked: deploy.yml deploys every push
 # to main, and a failed deploy is a red run there.
-# tools/live_check.py. Read-only GETs, no secrets; GitHub never deploys.
+# tools/live_check.py. Read-only GETs, no secrets; this workflow never deploys.
 name: live
 on:
   schedule:

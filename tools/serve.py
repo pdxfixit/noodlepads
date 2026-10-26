@@ -53,7 +53,7 @@ class NoStore(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self):
-        # `just deploy` writes web/version.json; a dev copy has none, and the
+        # The deploy stamps web/version.json; a dev copy has none, and the
         # app would log a 404 on every load. Answer "dev" instead.
         path = self.path.split("?")[0]
         # The cloud's API lives in the Worker (worker/), not here. The app
