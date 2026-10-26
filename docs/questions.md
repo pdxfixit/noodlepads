@@ -8,12 +8,6 @@ When Ben answers, record the answer in [decisions.md](decisions.md) (and an ADR 
 
 From the council's first round (2026-10-26, `docs/council.md`), asked in the chat one at a time; a card is deleted when its answer is recorded. Cards marked ⛔ are blocks against one of your rules: the seat stopped the work, and only you can uphold or overrule it.
 
-### Q65. Save a beat or song as an audio file (WAV), with no cloud needed?
-
-**Recommend:** yes, as ⬇️ Save as audio file beside 🔊 Save as a sound.
-The amateur and producer seats' biggest gap: "send my sister what I made" today needs a cloud share code. The render and the download already exist. New scope, so it's yours. A MIDI export for real studios could follow later.
-**Answer:**
-
 ### Q66. Swing for everyone, and on the eighths?
 
 **Recommend:** yes: Swing moves to Regular, swings eighth notes (most grooves' hats), and Lo-fi and Boom bap carry it.
