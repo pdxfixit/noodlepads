@@ -52,6 +52,11 @@ test('every kind of entry the app logs has a rule, and so does every field it lo
   assert.deepEqual(missing, [], 'add these to RULES in web/log-clean.js');
 });
 
+test('every field the cloud entry keeps is one the app logs (no dead allowlist entries)', () => {
+  const logged = new Set(logCalls().filter((c) => c.kind === 'cloud').flatMap((c) => c.keys));
+  assert.deepEqual(Object.keys(RULES.cloud).filter((k) => !logged.has(k)), [], 'drop these from RULES.cloud in web/log-clean.js');
+});
+
 test("the report's fixed lists match the app's", () => {
   assert.deepEqual(VOICE_IDS, VOICES.map((v) => v.id));
   assert.deepEqual(STEP_KINDS, KINDS.map((k) => k.id));
