@@ -284,7 +284,7 @@ A song from before lanes (only `slots`) becomes lane 1's blocks, back to back, a
 
 ### The song's clock
 
-- **Time is in song bars:** one bar of 4/4, 16 pills (`BAR_STEPS`), at the tempo of that bar. A beat plays at the **song's** tempo (`planSong` overrides each beat's `bpm` with `song.tempo`), pass after pass. A 2-bar beat takes 2 song bars a pass; a 3/4 beat takes ¾ of one (`beatSteps`).
+- **Time is in song bars:** one bar of 4/4, 16 pills (`BAR_STEPS`), at the tempo of that bar. A beat plays at the **song's** tempo (`planSong` overrides each beat's `bpm` with `song.tempo`), pass after pass. A 2-bar beat takes 2 song bars a pass; a 3/4 beat takes ¾ of one (`beatSteps`). A beat saved with no signature counts as `beatPlan` plays it: the old `timeSignature` with Advanced on, else 4/4.
 - `playlist.js songClock(song)`: `barStart`, `at(pill)`, `barAt(seconds)` and `tempoOf(bar)` with the marks; the plain arithmetic when there are none.
 - `playParts(lanes, stepsOf, clock)`: every pass of every block, cut where the next block on its lane starts.
 - `playEvents(parts, plans, {from, skipLanes, clock})`: every hit of the song in time order. With marks, a hit is placed by its pill on the clock, and a held note's length follows the bars.
@@ -407,7 +407,6 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | **Four beat schedulers.** `sequencer.js schedule` (live), `song.js tick`, `kids.js playBeat`, and `hearBeat` (all at once). Kids' looks 0.12 s ahead; the others 0.1 s | Kids ignores accents, swing, signatures (always 16 pills a bar), rates, row level, mute, solo, the 🎚️ Mixer, and a tune row's `rootShift` (`noteRate(n.p)` only). A timing fix in one reaches none of the others |
 | **`TICK_MS` and `LOOKAHEAD`** are separate constants in `sequencer.js` and `song.js` | change one, the beat and the song drift apart in feel |
 | **Output latency** is summed in `sequencer.js outputDelay` and again in `app.js`'s `deps.latency` for `dj.js` | a change to the cap (0.2 s) or the sum must be made twice; Song and Kids ignore latency |
-| **A beat with no `signature`.** The sequencer plays it as the person's old `timeSignature` with Advanced on (`sigOf`, `barOf`); `song.js beatSteps` always counts it as 4/4 | with Advanced on and an old 3/4 setting, a song gives such a beat 16 pills a pass while its plan fills 12: a gap each pass |
 | **The beat id pattern** `/^beat-[a-z0-9-]{1,48}$/` is written in `sequencer.js BEAT_ID`, `playlist.js BEAT_REF`, `backup.js` (a local `BEAT_ID`) and inline in `rhythm.js` | only `playlist.js` vs `sequencer.js` is tested (`tests/playlist.test.mjs`) |
 | **Listing a person's beats** happens three ways: `sequencer.js library()` (via `beatLibrary.list`, minus hidden), `makeSong`'s `deps.beats` (its own filter and sort), `kids.js`'s `deps.beats` | a new hidden kind of beat must be filtered in each |
 | **Saving a beat record** has two writers in `app.js`: `beatLibrary.put` and Kids' `deps.saveBeat` (the same code) | a change to how beats persist (a stamp, a hook) must be made in both |
@@ -434,6 +433,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | `cleanPattern` sets `personId` from its argument | a beat moved between people must not keep the old owner | `tests/sequencer.test.mjs` (only for a missing `raw`) |
 | Stopping the beat ends a ⌨️ Keys recording (`onStop`) | anything that calls `seq.stop()` (a screen change, a sync, 🆕 New) ends the take | `tests/beat-rec-stop.test.mjs` |
 | `ready` is never emptied: `play` and `prepareBeats` load afresh over it (`refresh`) | a beat or song playing reads it while 🗂️ See all or a share renders another beat | `tests/beat-sounds-kept.test.mjs` |
+| `song.js beatSteps` and `sequencer.js barOf` read a missing `signature` the same way | a pass's length in a song must match its plan, or each pass leaves a gap | `tests/song.test.mjs` |
 | A song plays every beat at the song's tempo | a beat's own `bpm` is ignored in a song | `tests/song.test.mjs` |
 | Pills past `total()` stay stored | going back to more bars loses nothing | none found |
 | The click goes straight to `audio.master` | it is never in a render or a preview | none |

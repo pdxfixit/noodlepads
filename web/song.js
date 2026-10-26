@@ -54,11 +54,15 @@ const UNDO_MS = 8000;                    // how long a tempo change taken out ca
 const MAX_UNDO = 40;                     // ↩️ Undo steps kept for the open song
 export const SONG_ID = /^song-[a-z0-9-]{1,48}$/;
 
-// Pills in one pass of a saved beat: its bar (its own time signature, 4/4
-// when it has none) times its bars. Null when the beat is gone.
-export function beatSteps(beat) {
+// The signature a beat saved with none plays in, as the beat maker plays
+// it (sequencer.js sigOf, barOf): the old Settings one with Advanced on, else 4/4.
+const unmarked = () => (getSetting('advancedBeats') === true ? getSetting('timeSignature') : '4/4');
+// Pills in one pass of a saved beat: its bar (its own time signature, else
+// `fallback`) times its bars, so a pass is as long as its plan. Null when
+// the beat is gone.
+export function beatSteps(beat, fallback = unmarked()) {
   if (!beat) return null;
-  const sig = Object.hasOwn(SIGNATURES, beat.signature) ? beat.signature : '4/4';
+  const sig = Object.hasOwn(SIGNATURES, beat.signature) ? beat.signature : fallback;
   return barSteps(sig) * ([1, 2, 4].includes(beat.bars) ? beat.bars : 1);
 }
 
@@ -1036,6 +1040,8 @@ export function createSong(deps) {
     if (!advanced() && el.tempoSheet.open) el.tempoSheet.close();
     render();
   });
+  // The old signature setting sizes a beat saved with none (beatSteps).
+  onSetting('timeSignature', () => render());
 
   // A name typed into the scratch song's title: kept under it now if it
   // has blocks; an empty scratch holds the name until its first block (save).

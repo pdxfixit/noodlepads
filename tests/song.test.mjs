@@ -53,6 +53,25 @@ test("a beat's pass in pills: its bar times its bars", () => {
   assert.equal(beatSteps(undefined), null);
 });
 
+// A beat saved before beats had their own signature plays on Beats in the
+// person's old Settings signature when Advanced is on (sequencer.js barOf).
+// A song counted it as 4/4, so in 3/4 it left a gap of 4 pills each pass.
+test('a beat with no signature takes, in a song, the bar it plays on Beats', async () => {
+  const { state } = await import('../web/state.js');
+  assert.equal(beatSteps({ bars: 1 }, '3/4'), 12);
+  state.settings.set('advancedBeats', true);
+  state.settings.set('timeSignature', '3/4');
+  try {
+    assert.equal(beatSteps({ bars: 2 }), 24, 'Advanced on: the old 3/4 setting');
+    assert.equal(beatSteps({ bars: 1, signature: '5/4' }), 20, 'a beat with its own keeps it');
+    state.settings.set('advancedBeats', false);
+    assert.equal(beatSteps({ bars: 2 }), 32, 'Advanced off: 4/4, as on Beats');
+  } finally {
+    state.settings.delete('advancedBeats');
+    state.settings.delete('timeSignature');
+  }
+});
+
 test('planned at the song tempo: every beat plays as fast as the song, whatever its own tempo', () => {
   // A at 60 BPM and B at 180 BPM, both one bar with a hit on every beat; the song is at 120.
   const beats = {
