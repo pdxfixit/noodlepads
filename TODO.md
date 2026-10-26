@@ -37,8 +37,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
   an agent adds them to the kit (`web/boards.json` `kit`, `web/clips/kit/`). The site is public, so no names in them. `docs/guide.md` "How sounds are stored"
 - [ ] Listen to the new presets (10 min) 🔼
   open Presets on a phone: 🐵 Animals, 👽 Sci-fi, the new 🤪 Silly ones, and the new drums, notes, chords and bass, plus the sharps and flats (⚙️ Advanced on: Notes, Chords, Bass). Say which to redo or drop (each is a short recipe in `tools/make_placeholders.py`).
-- [ ] Decide: 🧸 Kids' beat drums keep 🎩 Hi-hat, or swap it for a drum whose picture matches its sound (🧂 Shaker, 🔔 Ride) (2 min)
-  the Kids pads now show only sounds whose picture says what they are (2026-10-22), but the beat's four drums are still kick 🦶, snare 🥁, hi-hat 🎩, clap 👏: the hat is a pun a five-year-old won't get. Swapping changes `KIDS_DRUMS` (kids-logic.js); an old beat's hi-hat row would stay in the regular app and leave the Kids grid.
 - [ ] Record three one-liners and try every voice on them (10 min) 🔼
   on https://noodlepads.com/, tap New sound. Say which voices are funny and which to drop. Listen for a stutter at word endings on Slow, and how crunchy Loud gets at 10.
 - [x] Decide: when a row's sound is still playing at its next hit, cut it off or let hits overlap ✅ 2026-10-10
@@ -123,6 +121,7 @@ Other work:
 - **Backups ready for v2** (Ben, 2026-10-26; ADR 0001): backup format 1.2 adds each own sound "as heard" (a rendered WAV beside the original; ADR 0011 rewritten, `docs/how-to.md` stored-format steps); `docs/formats.md` writes the backup format down for v2's importer; fixed golden 1.0, 1.1 and 1.2 backups in `tests/` that must always load with nothing dropped (the architect seat's ask).
 - **Rename 808 and Motown** (Ben, 2026-10-26; decisions.md, Product): the 808 instrument and every "808" in boards.json, grooves.js and instruments.js become Boom bass; the Motown groove becomes Detroit soul. Saved beats keep their sounds (ids stay; only names change). Help, guide and the emoji/labels tests follow.
 - **Per-profile rate limits in the Worker** (Ben, 2026-10-26, with Ben's edge rule): a rate-limit binding keyed on the profile key's hash (no IP) for push, start-sound, share and open, so one profile can't drain the shared daily caps. A wrangler.toml binding, as feedback's `FEEDBACK_LIMITER`. Waits on the Worker-caps fixes landing.
+- **🧸 Kids' drums: shaker for the hat** (Ben, 2026-10-26): `KIDS_DRUMS` becomes kick 🦶, snare 🪘, shaker 🪇, clap 👏 (no 🥁 beside the Beats tab, no 🎩 pun). The kit's Shaker takes 🪇 everywhere and Tambourine a picture of its own; an old Kids beat's hi-hat row stays in the regular app.
 - **Council round 1, next fixes** (approved: each fixes a seat's finding inside the rules). Most urgent first:
   1. Sound designer ⛔: about 20 real-world presets are still synthesized (Quack, Roar, Airhorn, Burp, Heartbeat, Djembe, Dhol…, `tools/make_placeholders.py` KIT) against decisions.md's recordings rule. Source CC0 recordings (Freesound, Kenney, VCSL), animals first; add a loudness floor to `tools/test_preset_loudness.py` (8 presets sit 8–10 dB under the middle).
   2. Mission keeper: show the scratch beat in 🎼 Song's strip so a goofed-on beat goes on a lane without 💾 Keep; drop the groove card's creative prompt ("Can you hum a tune over them?").
