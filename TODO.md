@@ -25,8 +25,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 - **Delete the old address's DNS record** (1 min): in Cloudflare, open the old address's domain → DNS and delete its `soundboard` record if it is still there (the Worker is gone and the name answers 530). The domain's apex stays. Also, if you like, delete the old address's leftover folder in `~/src/flarepress/` (only wrangler's local `.wrangler/` cache is in it).
 
-- **Check the PIN-reset address reaches you** (2 min): noodlepads.com mail is Google Workspace (MX checked 2026-10-11). Add `pin.reset` as an alias or group in the Admin console unless a catch-all already covers it, then send it a test. The app shows it for PIN resets.
-
 
 
 ### v1: prove out the interface
@@ -65,6 +63,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 ## Agents do
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
+
+- **First, when no other session has this repo open: rewrite git history to remove the old PIN-reset address** (Ben, 2026-10-26; the security seat found it in plain text in the first public commit). Rewriting breaks every clone and worktree, so Ben picks the moment: about ten sessions were open when he asked. Then every checkout re-clones. The app already uses a new address.
 
 
 
