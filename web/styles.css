@@ -3164,6 +3164,31 @@ dialog.np-dialog :focus-visible { outline-color: var(--board); }
 }
 .pe-row .pe-badge { width: 44px; height: 44px; box-shadow: 0 0 0 2px rgb(255 255 255 / 0.85); }
 
+/* ☁️ Open from the cloud while someone comes down (cloud-ui.js drawOpen):
+   their picture and name, a spinner until there is something to measure,
+   then a bar that fills by bytes (--got, 0 to 1, set from the code). */
+.co { display: flex; flex-direction: column; gap: 14px; padding: 8px 0 4px; }
+.co-who { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.co-who .cl-badge { width: 96px; height: 96px; font-size: 3.2rem; }
+.co-name { margin: 0; text-align: center; font: 800 1.5rem/1.15 var(--font-display); overflow-wrap: anywhere; }
+.co-name:focus { outline: none; }
+.co-work { display: flex; flex-direction: column; gap: 12px; padding: 12px 0; }
+.co-spin { width: 44px; height: 44px; margin: 0 auto; border-radius: 50%; border: 6px solid var(--chalk); border-top-color: var(--board); animation: co-spin 0.9s linear infinite; }
+@keyframes co-spin { to { transform: rotate(360deg); } }
+.co-track { height: 24px; border-radius: 12px; border: 2px solid var(--muted); background: var(--chalk); overflow: hidden; }
+.co-fill { height: 100%; transform-origin: left; transform: scaleX(var(--got, 0)); background: repeating-linear-gradient(-45deg, var(--board) 0 14px, color-mix(in srgb, var(--board) 80%, white) 14px 28px); }
+.co[data-step="done"] .co-fill { background: #1E7B34; }
+.co[data-step="stopped"] .co-fill { background: var(--muted); }
+.co-line { margin: 0; text-align: center; font-weight: 800; font-size: 1.15rem; }
+.co-size { margin: 0; text-align: center; color: var(--muted); }
+.co-size:empty { display: none; }
+.co-buttons { display: grid; gap: 14px; }
+.co-buttons button { width: 100%; padding: 0 12px; }
+.co-buttons .cl-badge { display: inline-grid; width: 32px; height: 32px; font-size: 1.1rem; margin-right: 8px; vertical-align: middle; box-shadow: 0 0 0 2px #fff; }
+@media (prefers-reduced-motion: reduce) {
+  .co-spin { animation: none; border-color: var(--board); border-style: dotted; }
+}
+
 /* The ☁️ sheet and its lists. */
 .cl-avatar { display: inline-block; vertical-align: middle; }
 .cl-status { min-height: 1.4em; }

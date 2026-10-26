@@ -20,7 +20,10 @@ export class CloudError extends Error {
 // `meta()`: what the device says about itself on every call (device-meta.js appMeta:
 // the app's version, a screen-width bucket, touch), in the X-Noodle-App header.
 export function createCloudApi({ fetch, base = '/api', meta = null }) {
-  async function call(method, path, { body, key, raw, type } = {}) {
+  // A call stopped by its `signal` (☁️ Open from the cloud's stall watch,
+  // cloud.js bringDown) is a CloudError 0 'stalled', like a lost network.
+  const stalled = () => new CloudError(0, { error: 'stalled' });
+  async function call(method, path, { body, key, raw, type, signal } = {}) {
     const headers = {};
     if (key) headers.Authorization = `Bearer ${key}`;
     if (meta) {
@@ -32,12 +35,13 @@ export function createCloudApi({ fetch, base = '/api', meta = null }) {
     else if (body !== undefined) { payload = JSON.stringify(body); headers['Content-Type'] = 'application/json'; }
     let res;
     try {
-      res = await fetch(`${base}/${path}`, { method, headers, body: payload });
+      res = await fetch(`${base}/${path}`, signal ? { method, headers, body: payload, signal } : { method, headers, body: payload });
     } catch {
-      throw new CloudError(0, { error: 'offline' });
+      throw signal?.aborted ? stalled() : new CloudError(0, { error: 'offline' });
     }
     const isJson = (res.headers?.get?.('Content-Type') || '').startsWith('application/json');
     const data = isJson ? await res.json().catch(() => ({})) : {};
+    if (signal?.aborted) throw stalled();
     // A page with no API (the dev server, a static copy) answers 404 in plain text or HTML.
     if (!isJson) throw new CloudError(res.ok ? 0 : res.status === 404 ? 0 : res.status, { error: 'no cloud' });
     if (!res.ok) throw new CloudError(res.status, data);
@@ -66,17 +70,48 @@ export function createCloudApi({ fetch, base = '/api', meta = null }) {
     forget: (id, key) => checked('DELETE', () => `profiles/${pid(id)}/key`, { key }),
     change: (id, key, changes) => checked('PATCH', () => `profiles/${pid(id)}`, { key, body: changes }),
     remove: (id, key, pin) => checked('DELETE', () => `profiles/${pid(id)}`, { key, body: pin ? { pin } : {} }),
-    pull: (id, key, since) => checked('GET', () => `profiles/${pid(id)}/records?since=${since}`, { key }),
+    pull: (id, key, since, signal) => checked('GET', () => `profiles/${pid(id)}/records?since=${since}`, { key, signal }),
     // `since`: the rev this device pulled up to; records written after it come back in `stale`.
-    push: (id, key, put, del, since) => checked('POST', () => `profiles/${pid(id)}/records`, { key, body: since === undefined ? { put, del } : { put, del, since } }),
+    push: (id, key, put, del, since, signal) => checked('POST', () => `profiles/${pid(id)}/records`, { key, body: since === undefined ? { put, del } : { put, del, since }, signal }),
     startSound: (id, key, meta) => checked('POST', () => `profiles/${pid(id)}/sounds`, { key, body: meta }),
     putPiece: (sound, n, key, blob) => call('PUT', `sounds/${enc(sound)}/${n}`, { key, raw: blob }),
     soundUrl: (sound) => `${base}/sounds/${enc(sound)}`,
-    async fetchSound(sound, mime) {
+    // With `onBytes`, the audio is read as it arrives and `onBytes(n)` hears
+    // each piece's size (☁️ Open from the cloud's bar). `max`: more bytes than
+    // that is refused as it arrives, never held whole (the record's own size,
+    // which comes from outside, so the caller caps it too).
+    async fetchSound(sound, mime, { signal, onBytes, max } = {}) {
       let res;
-      try { res = await fetch(`${base}/sounds/${enc(sound)}`); } catch { throw new CloudError(0, { error: 'offline' }); }
+      try {
+        res = await fetch(`${base}/sounds/${enc(sound)}`, signal ? { signal } : undefined);
+      } catch {
+        throw signal?.aborted ? stalled() : new CloudError(0, { error: 'offline' });
+      }
       if (!res.ok) throw new CloudError(res.status, { error: 'sound' });
-      const blob = await res.blob();
+      let blob;
+      const reader = (onBytes || max) && res.body?.getReader ? res.body.getReader() : null;
+      try {
+        if (reader) {
+          const pieces = [];
+          let got = 0;
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            got += value.byteLength;
+            if (max && got > max) { reader.cancel().catch(() => {}); throw new CloudError(0, { error: 'sound size' }); }
+            pieces.push(value);
+            onBytes?.(value.byteLength);
+          }
+          blob = new Blob(pieces, { type: res.headers?.get?.('Content-Type') || '' });
+        } else {
+          blob = await res.blob();
+          if (max && blob.size > max) throw new CloudError(0, { error: 'sound size' });
+          onBytes?.(blob.size);
+        }
+      } catch (err) {
+        if (err instanceof CloudError) throw err;
+        throw signal?.aborted ? stalled() : new CloudError(0, { error: 'offline' });
+      }
       return mime && blob.type !== mime ? new Blob([blob], { type: mime }) : blob;
     },
     share: (id, key, snapshot) => checked('POST', () => `profiles/${pid(id)}/shares`, { key, body: snapshot }),

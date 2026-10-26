@@ -456,6 +456,16 @@ const VIEWS = {
   shared: { screen: 'pads', js: `localStorage.setItem('shared', JSON.stringify([{ code: 'ABCD2345', kind: 'beat', title: 'Wobbly Taco Remix Deluxe', at: 1 }, { code: 'WXYZ6789', kind: 'sound', title: 'Burp', at: 2 }]));
     ${q('#settings-open') + q('#shared-browse')} ${nap}` },
   'cloud-list': { screen: 'pads', js: `${q('#people-open') + q('#cloud-browse')} ${nap}` },
+  // ☁️ Open from the cloud while someone comes down, with made-up progress
+  // (cloud-ui.js lookOpen): finding (the spinner), bringing their sounds
+  // part way, done, and stopped. A long fun name, to see it wrap at 320.
+  ...Object.fromEntries([
+    ['cloud-finding', "'working', {}"],
+    ['cloud-bringing', "'working', { phase: 'sounds', sounds: 12, done: 5, total: 10276045, got: 4299161 }"],
+    ['cloud-done', "'done', { phase: 'done', sounds: 12, done: 12 }"],
+    ['cloud-stopped', `'stopped', { phase: 'sounds', sounds: 12, done: 5, total: 10276045, got: 4299161 }, "The cloud isn't reachable from here. Everything still works on this device."`],
+  ].map(([name, args]) => [name, { screen: 'pads', noButtons: args.startsWith("'working'"), js: `${q('#people-open') + q('#cloud-browse')} ${nap}
+    (await import('/cloud-ui.js')).lookOpen({ id: 'p-look', name: 'Professor Pumpernickel', avatar: '🐙', color: '#0C5E4B' }, ${args}); ${nap}` }])),
   pin: { screen: 'pads', js: `const ui = await import('/cloud-ui.js');
     ui.askPin({ title: '🦊 Admiral Acorn', hint: "They have a new PIN. Type it to open them here. Don't know it? Their things on this device are deleted; the cloud keeps what it has.", note: "That PIN isn't right. 4 tries left before a 10-minute wait.", forgot: true, someoneNew: true, unknown: true });` },
   // ⚙️ Settings → 🎨 Look open (the pad skins to choose from), scrolled to it.
@@ -764,7 +774,8 @@ async function lookOnce(screen, w, bg = '', skin = '') {
     // Zero buttons means the page never drew, not that every button passed.
     for (const d of m.dialogSideways) row.extra.push(`${d} scrolls sideways`);
     for (const o of m.overlaps) row.extra.push(`overlap: ${o}`);
-    if (!m.checked) row.extra.push('no buttons found: the page did not render');
+    // A view of a sheet locked with no button on purpose says so (`noButtons`).
+    if (!m.checked && !VIEWS[screen]?.noButtons) row.extra.push('no buttons found: the page did not render');
     row.ok = !m.sideways && !row.errors.length && !row.csp.length && !m.small.length && !row.extra.length;
     return row;
 }

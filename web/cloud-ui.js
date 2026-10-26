@@ -19,8 +19,9 @@ import {
   api, CloudError, cloudTrouble, cloudThere, inCloud, linkOf, keyOf, isOffline, statusOf, syncNow,
   openProfile, unlock, pinIsNew, checkPin, setPin, setOffline, removeProfile, putUpNow, wantsCloud, shareable, shareItem, showCode,
   sharedHere, openShare, forgetShare, remixShare, fetchShare, checkShared, mySharesOf, unshareItem, listProfiles,
-  rememberHere, declineRemember, offersRemember, forgetHere, rememberedUntil, REMEMBER_DAYS,
+  rememberHere, declineRemember, offersRemember, forgetHere, rememberedUntil, REMEMBER_DAYS, bringDown, leaveInCloud,
 } from './cloud.js';
+import { newProgress, progressShare } from './cloud-sync.js';
 import { mergeSummary } from './merge.js';
 
 // Where a forgotten PIN goes: Ben resets it by hand (`just cloud-reset-pin`). The address is built in web/contact.js.
@@ -31,6 +32,7 @@ let refresh = () => {};    // redraws People and the corner, after a person chan
 let addPerson = () => {};  // 👋 Someone new, from a PIN pad that guards a locked board
 let dropPerson = async () => {};  // 🤷 I don't know the PIN: deletes them from this device (app.js)
 let backup = async () => {};      // ⬇️ Back up: one person's backup file (backup-ui.js savePersonBackup)
+let play = () => {};              // 🎉 Play as them: closes the sheets and shows that person on Pads (app.js)
 
 const $ = (s) => document.querySelector(s);
 function make(tag, className, text) {
@@ -724,7 +726,86 @@ async function onSharedClick(e) {
 
 // ── ☁️ Open from the cloud ──
 
+// The list, or, once someone is picked, them coming down (Ben, 2026-10-26):
+// the sheet locks (no ✕, Esc or backdrop) while they come and after a stop,
+// until 🔄 Try again or Don't bring them; a spinner until there is something
+// to measure, then a bar that fills by bytes and never goes back.
+let listed = new Map();   // profile id -> the public list's entry
+let opening = null;       // {id, p, pin, shown}: the one coming down
+let locked = false;
+let frameAsked = false;
+let latest = null;
+const nextFrame = (fn) => (typeof requestAnimationFrame === 'function' ? requestAnimationFrame(fn) : setTimeout(fn, 16));
+
+function showList(on) {
+  el.listHint.hidden = !on;
+  el.listNote.hidden = !on;
+  el.listItems.hidden = !on;
+  el.open.hidden = on;
+}
+
+function lock(on) {
+  locked = on;
+  el.listClose.hidden = on;
+}
+
+const mb = (n) => (n / 1048576).toFixed(1);
+
+// What the sheet shows for `step` ('working', 'done', 'stopped') at
+// `prog` (cloud-sync.js newProgress); `text`, why it stopped.
+function drawOpen(step, prog, text = '') {
+  if (!opening) return;
+  const { p } = opening;
+  el.open.dataset.step = step;
+  if (!el.openPic.children.length) el.openPic.replaceChildren(avatarBadge(p));
+  el.openName.textContent = p.name;
+  const measured = prog.phase !== 'finding' && prog.sounds > 0;
+  opening.shown = Math.max(opening.shown, step === 'done' ? 1 : progressShare(prog));
+  el.openFill.style.setProperty('--got', String(opening.shown));
+  el.openBar.hidden = !(measured || step === 'done');
+  el.openBar.setAttribute('aria-valuenow', String(Math.round(opening.shown * 100)));
+  el.openBar.setAttribute('aria-valuetext', measured ? `${prog.done} of ${prog.sounds} sounds` : `${Math.round(opening.shown * 100)}%`);
+  el.openSpin.hidden = step !== 'working' || prog.phase === 'sounds';
+  el.openDone.hidden = step !== 'done';
+  el.openStopped.hidden = step !== 'stopped';
+  if (step === 'done') {
+    const has = shareable(opening.id);
+    el.openLine.textContent = '✓ On this device now';
+    el.openPlay.replaceChildren(avatarBadge(p), 'Play as them');
+    el.openPlay.setAttribute('aria-label', `Play as ${p.name}`);
+    el.openSize.textContent = [[KIND_EMOJI.sounds, has.sound.length], [KIND_EMOJI.beats, has.beat.length], [KIND_EMOJI.songs, has.song.length]]
+      .filter(([, n]) => n).map(([e, n]) => `${e} ${n}`).join(' · ');
+  } else if (step === 'stopped') {
+    el.openLine.textContent = `⚠️ ${text}`;
+    el.openSize.textContent = '';
+  } else if (prog.phase === 'finding') {
+    el.openLine.textContent = 'Finding their things…';
+    el.openSize.textContent = '';
+  } else if (prog.phase === 'sounds') {
+    el.openLine.textContent = `${KIND_EMOJI.sounds} ${prog.done} of ${prog.sounds}`;
+    el.openSize.textContent = prog.total ? `${mb(Math.min(prog.got, prog.total))} of ${mb(prog.total)} MB` : `${mb(prog.got)} MB`;
+  } else {
+    el.openLine.textContent = 'Putting it all away…';
+    el.openSize.textContent = '';
+  }
+}
+
+// A sync tells its progress for every piece of audio: the sheet draws the
+// latest once a frame.
+function drawSoon(prog) {
+  latest = prog;
+  if (frameAsked) return;
+  frameAsked = true;
+  nextFrame(() => {
+    frameAsked = false;
+    if (latest && locked) drawOpen('working', latest);
+  });
+}
+
 export async function openCloudList() {
+  // Someone still coming down (the sheet closed by a back gesture): their progress.
+  if (opening) { openDialog(el.list); return; }
+  showList(true);
   el.listNote.textContent = 'Looking…';
   el.listItems.replaceChildren();
   openDialog(el.list);
@@ -736,6 +817,7 @@ export async function openCloudList() {
     return;
   }
   const here = list.filter((p) => !inCloud(p.id));
+  listed = new Map(here.map((p) => [p.id, p]));
   el.listNote.textContent = here.length ? '' : list.length ? 'Everyone in the list is already on this device.' : 'Nobody is in the cloud yet.';
   el.listItems.replaceChildren(...here.map((p) => {
     const li = make('li', 'cl-item');
@@ -750,27 +832,77 @@ export async function openCloudList() {
 
 async function onListClick(e) {
   const b = e.target.closest('[data-open]');
-  if (!b) return;
+  if (!b || locked || opening) return;
   const id = b.dataset.open;
-  el.listNote.textContent = 'Opening…';
+  const pinned = b.dataset.pin === 'true';
+  const p = listed.get(id) ?? { id, name: b.textContent, avatar: '', color: '' };
+  opening = { id, p, pin: null, shown: 0 };
+  el.listNote.textContent = '';
   try {
-    const opened = b.dataset.pin === 'true'
+    if (!pinned) start();
+    const opened = pinned
       ? await withPin(async (pin) => { await openProfile(id, pin); return pin; }, { title: 'Their PIN', hint: 'Type the PIN to open this profile on this device.' })
       : { result: await openProfile(id) };
-    if (!opened) { el.listNote.textContent = ''; return; }
-    if (b.dataset.pin === 'true') offerRemember(id, opened.result);
-    el.listNote.textContent = statusOf(id)?.state === 'trouble' ? statusOf(id).text : '☁️ On this device now ✓';
-    b.closest('li')?.remove();
-    refresh();
+    if (!opened) { finish(); el.listNote.textContent = ''; return; }
+    if (pinned) { opening.pin = opened.result; start(); }
   } catch (err) {
+    finish();
     el.listNote.textContent = cloudTrouble(err);
+    return;
   }
+  b.closest('li')?.remove();
+  await bring();
+}
+
+// The sheet turns to them, locked, with the spinner.
+function start() {
+  showList(false);
+  lock(true);
+  el.openPic.replaceChildren();
+  drawOpen('working', newProgress());
+  el.openName.focus();
+}
+
+async function bring() {
+  lock(true);
+  drawOpen('working', newProgress());
+  const done = await bringDown(opening.id, drawSoon);
+  refresh();
+  if (done.stored) {
+    lock(false);
+    drawOpen('done', latest ?? newProgress());
+    el.openPlay.focus();
+    if (opening.pin) offerRemember(opening.id, opening.pin);
+  } else {
+    drawOpen('stopped', latest ?? newProgress(), done.text);
+    el.openAgain.focus();
+  }
+  latest = null;
+}
+
+// The sheet in one state with made-up progress, for `just look`'s cloud-*
+// views (tools/look.mjs), which have no cloud to bring anyone from.
+export function lookOpen(p, step, prog = {}, text = '') {
+  opening = { id: p.id, p, pin: null, shown: 0 };
+  showList(false);
+  lock(step !== 'done');
+  el.openPic.replaceChildren();
+  drawOpen(step, { ...newProgress(), ...prog }, text);
+}
+
+// Back to the list.
+function finish() {
+  opening = null;
+  latest = null;
+  lock(false);
+  showList(true);
 }
 
 // ── start ──
 
 export function initCloudUI(hooks) {
   refresh = hooks.refresh;
+  if (hooks.play) play = hooks.play;
   if (hooks.addPerson) addPerson = hooks.addPerson;
   if (hooks.dropPerson) dropPerson = hooks.dropPerson;
   if (hooks.backup) backup = hooks.backup;
@@ -784,7 +916,11 @@ export function initCloudUI(hooks) {
     pinState: $('#profile-pin-state'), pinPartHint: $('#profile-pin-hint'), pinPartNote: $('#profile-pin-note'),
     pinBtn: $('#cloud-pin'), pinTools: $('#profile-pin-tools'), pinChange: $('#cloud-pin-change'), pinOff: $('#cloud-pin-off'),
     pinRemember: $('#cloud-pin-remember'),
-    list: $('#cloud-list'), listNote: $('#cloud-list-note'), listItems: $('#cloud-list-items'),
+    list: $('#cloud-list'), listNote: $('#cloud-list-note'), listItems: $('#cloud-list-items'), listHint: $('#cloud-list-hint'),
+    open: $('#cloud-open'), openPic: $('#cloud-open-pic'), openName: $('#cloud-open-name'),
+    openSpin: $('#cloud-open-spin'), openBar: $('#cloud-open-bar'), openFill: $('#cloud-open-fill'), openLine: $('#cloud-open-line'),
+    openSize: $('#cloud-open-size'), openDone: $('#cloud-open-done'), openPlay: $('#cloud-open-play'), openMore: $('#cloud-open-more'),
+    openStopped: $('#cloud-open-stopped'), openAgain: $('#cloud-open-again'), openLeave: $('#cloud-open-leave'),
     shareDialog: $('#share-dialog'), shareNote: $('#share-note'), shareWhat: $('#share-what'), shareItems: $('#share-items'),
     shareMine: $('#share-mine'), shareMineNote: $('#share-mine-note'),
     shareMade: $('#share-made'), shareCode: $('#share-code'), shareTitle: $('#share-title-made'), shareCopy: $('#share-copy'),
@@ -792,7 +928,22 @@ export function initCloudUI(hooks) {
     sharedItems: $('#shared-items'), sharedNone: $('#shared-none'),
     browse: $('#cloud-browse'), sharedBtn: $('#shared-browse'),
   });
-  for (const d of [el.pin, el.remember, el.avatar, el.list, el.shareDialog, el.sharedDialog]) setupDialog(d);
+  el.listClose = el.list.querySelector('[data-close]');
+  for (const d of [el.pin, el.remember, el.avatar, el.shareDialog, el.sharedDialog]) setupDialog(d);
+  // Locked while someone comes down: no ✕, Esc or backdrop.
+  setupDialog(el.list, { beforeClose: () => !locked });
+  // Closed when they're done (✕, or the backdrop): the list next time.
+  el.list.addEventListener('close', () => { if (opening && !locked) finish(); });
+  el.openPlay.addEventListener('click', () => { const id = opening?.id; finish(); el.list.close(); if (id) play(id); });
+  el.openMore.addEventListener('click', () => { finish(); openCloudList().catch((err) => console.error('Opening the cloud list failed:', err)); });
+  el.openAgain.addEventListener('click', () => { if (opening) bring(); });
+  el.openLeave.addEventListener('click', async () => {
+    if (!opening) return;
+    await leaveInCloud(opening.id);
+    finish();
+    refresh();
+    openCloudList().catch((err) => console.error('Opening the cloud list failed:', err));
+  });
 
   // PIN pad: 1–9, then 0 under 8 and ⌫ beside it, big keys.
   el.pinKeys.replaceChildren(...['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '⌫'].map((k) => {

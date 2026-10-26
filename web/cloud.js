@@ -106,6 +106,7 @@ export async function dropLink(personId) {
   sessionKeys.delete(personId);
   unlocked.delete(personId);
   status.delete(personId);
+  fetchedFor.delete(personId);
   try { await db.remove('cloud', personId); } catch { /* not stored */ }
   await dropBases(personId);
   tell();
@@ -301,6 +302,11 @@ async function dropBases(personId) {
 }
 
 const running = new Map();   // person id -> promise
+const hearing = new Map();   // person id -> Set of onProgress, for the sync running now
+const stops = new Map();     // person id -> AbortController of the sync running now
+// person id -> Map sound id -> Blob: what an open cut short had fetched, so
+// 🔄 Try again picks up there (this visit only; cleared once it's done).
+const fetchedFor = new Map();
 let applying = 0;            // while a sync stores what it pulled, those writes are not "changes"
 // Shown and focused: the 5-minute sync runs only then.
 const pageActive = () => {
@@ -354,20 +360,34 @@ function deps() {
 
 // Syncs one person now (one sync at a time each). Never throws: trouble is
 // kept as the person's status and said where the cloud is shown.
-export function syncNow(personId) {
+// `onProgress` hears how far it has got (cloud-sync.js newProgress), joining
+// the sync already running for them if there is one.
+export function syncNow(personId, { onProgress } = {}) {
   if (!inCloud(personId) || !db.handle) return Promise.resolve(null);
   if (!keyOf(personId)) {
     setStatus(personId, { state: 'waiting', text: '🔒 Syncs once they are opened with their PIN.' });
     return Promise.resolve(null);
   }
+  if (onProgress) {
+    if (!hearing.has(personId)) hearing.set(personId, new Set());
+    hearing.get(personId).add(onProgress);
+  }
   if (running.has(personId)) return running.get(personId);
+  const stop = new AbortController();
+  stops.set(personId, stop);
   const run = (async () => {
     setStatus(personId, { state: 'syncing', text: 'Syncing…' });
     applying++;
     const id = personId;
     try {
       const link = linkOf(id);
-      const report = await syncProfile({ ...link, key: keyOf(id), sent: { ...link.sent }, sounds: { ...link.sounds } }, deps());
+      const report = await syncProfile({ ...link, key: keyOf(id), sent: { ...link.sent }, sounds: { ...link.sounds } }, {
+        ...deps(),
+        signal: stop.signal,
+        fetched: fetchedFor.get(id),
+        onProgress: (p) => { for (const fn of hearing.get(id) ?? []) fn(p); },
+      });
+      fetchedFor.delete(id);
       await readStorage();
       followPerson();
       logEvent('cloud', { sync: true, pulled: report.pulled, pushed: report.pushed, deleted: report.deleted, sounds: report.sounds, merged: report.merged, clashes: report.clashes, kept: report.kept });
@@ -385,6 +405,8 @@ export function syncNow(personId) {
         setStatus(id, { state: 'trouble', text: 'Taken out of the cloud on another device. It stays here, offline. Switch Offline off to put it back.' });
       } else if (err instanceof CloudError && err.status === 401) {
         await keyRefused(id);
+      } else if (err?.name === 'QuotaExceededError') {
+        setStatus(id, { state: 'trouble', text: 'This device is full. Make some room on it, then try again.' });
       } else {
         setStatus(id, { state: 'trouble', text: cloudTrouble(err) });
       }
@@ -392,10 +414,53 @@ export function syncNow(personId) {
     } finally {
       applying--;
       running.delete(personId);
+      hearing.delete(personId);
+      stops.delete(personId);
     }
   })();
   running.set(personId, run);
   return run;
+}
+
+// ☁️ Open from the cloud (cloud-ui.js): syncs someone just opened here,
+// telling `onProgress` how far it has got. Nothing heard for STALL_MS stops
+// it: a stalled fetch never ends by itself, and the sheet waits on it, locked
+// (Ben, 2026-10-26). Sounds fetched before a stop are kept for this visit,
+// so trying again picks up there. Resolves {ok, stored, text}: `stored`, the
+// person is on this device even if the rest went wrong.
+export const STALL_MS = 20_000;
+export async function bringDown(personId, onProgress, { stallMs = STALL_MS } = {}) {
+  if (!fetchedFor.has(personId)) fetchedFor.set(personId, new Map());
+  let stored = false;
+  let timer;
+  const watch = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => stops.get(personId)?.abort(), stallMs);
+  };
+  watch();
+  try {
+    const report = await syncNow(personId, {
+      onProgress: (p) => {
+        stored ||= p.stored;
+        watch();
+        try { onProgress(p); } catch (err) { console.error('The progress bar failed:', err); }
+      },
+    });
+    return { ok: !!report, stored: stored || !!report, text: report ? '' : statusOf(personId)?.text ?? cloudTrouble(null) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Don't bring them (☁️ Open from the cloud, after a stop): the link made by
+// opening them goes, and its key in the cloud too, so nothing brings them
+// here later by itself. Their profile in the cloud is untouched.
+export async function leaveInCloud(personId) {
+  const key = keyOf(personId);
+  await syncEnded(personId);
+  await dropLink(personId);
+  if (key) api.forget(personId, key).catch(() => {});
+  logEvent('cloud', { opened: 'left' });
 }
 
 // The sync running for a person, once it ends (null when none runs). Deleting
@@ -491,8 +556,8 @@ export async function putUpNow(personId) {
   return syncNow(personId);
 }
 
-// Opens a profile from the list on this device (with its PIN, if it has one).
-// Its person arrives with the first sync.
+// Opens a profile from the list on this device (with its PIN, if it has one):
+// the link and its key. Its person arrives with the first sync (bringDown).
 export async function openProfile(profileId, pin) {
   const opened = await api.open(profileId, pin, !pin);
   const before = linkOf(profileId);
@@ -503,7 +568,6 @@ export async function openProfile(profileId, pin) {
   if (pin) { unlocked.add(profileId); pinTyped.add(profileId); }
   if (isOffline(profileId)) await setPersonEdit(profileId, { offline: false });
   logEvent('cloud', { opened: true });
-  return syncNow(profileId);
 }
 
 export async function setPin(personId, current, next) {

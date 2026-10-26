@@ -310,13 +310,19 @@ async function e2e({ url }) {
         };
         const pick = await until('the profile in the list', () => document.querySelector('#cloud-list-items [data-open="' + id + '"]'));
         pick.click();
-        await until('the open', () => document.querySelector('#cloud-list-note').textContent !== 'Opening…' && cloud.statusOf(id)?.state !== 'syncing');
+        // The sheet turns to them and locks, then ends on ✓ or a stop.
+        await until('the open', () => ['done', 'stopped'].includes(document.querySelector('#cloud-open').dataset.step) && !document.querySelector('#cloud-open').hidden && cloud.statusOf(id)?.state !== 'syncing');
         const clip = state.userClips.find((c) => c.personId === id);
         const hex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
-        return { note: document.querySelector('#cloud-list-note').textContent, status: cloud.statusOf(id),
+        const bar = document.querySelector('#cloud-open-bar');
+        const note = document.querySelector('#cloud-open-line').textContent;
+        const filled = bar.getAttribute('aria-valuenow');
+        document.querySelector('#cloud-open-more').click();
+        return { note, filled, status: cloud.statusOf(id),
           name: state.peopleEdits.get(id)?.name, beats: state.savedBeats.filter((x) => x.personId === id).map((x) => ({ id: x.id, name: x.name })),
           clip: clip && { id: clip.id, bytes: clip.blob?.size, sha: clip.blob && hex(await crypto.subtle.digest('SHA-256', await clip.blob.arrayBuffer())) } };`);
       must(r.status?.state === 'ok', `B's open says “${r.note}” ${JSON.stringify(r.status)}`);
+      must(r.note === '✓ On this device now' && r.filled === '100', `B's sheet ends on “${r.note}”, its bar at ${r.filled}`);
       must(r.name === made.name, `B has the name ${r.name}, not ${made.name}`);
       must(r.beats.length === 1 && r.beats[0].id === made.beat.id && r.beats[0].name === made.beat.name, `B's beats: ${JSON.stringify(r.beats)}`);
       must(r.clip?.id === made.clip.id && r.clip.sha === made.clip.sha, `B's sound: ${JSON.stringify(r.clip)}`);

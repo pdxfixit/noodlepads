@@ -61,7 +61,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **☁️ Open from the cloud shows its progress** (Ben, 2026-10-26): today a tap shows only "Opening…" and the list stays live, so a kid taps again. While a person comes down, the list goes modal (nothing else to tap) and a real progress bar says how far it has got, never one that jumps 0 to 100; where nothing can be measured, a spinner. Mockup: https://claude.ai/artifact/BYxQxnwjXQY1PAoDmL7pZF; the council passed it with changes (no blocks). Ben's answers (2026-10-26): locked with no way out, but 20 s with nothing arriving stops it (Stopped); the bar fills by bytes with "🔊 5 of 12" and "4.1 of 9.8 MB" always; done offers <their avatar> Play as them (closes, switches, lands on Pads, ends the welcome) and ☁️ Open someone else; Stopped offers 🔄 Try again (picks up where it stopped, fetched sounds kept for the visit) and Don't bring them (forgets the link). Council asks: a stall abort on the fetches, a byte cap, totals from the records' `bytes`, the bar throttled to a frame, no motion under reduced motion, `aria-valuetext`, focus moved, the e2e (`tools/look-cloud.mjs`) and `just look` views updated.
 
 
 

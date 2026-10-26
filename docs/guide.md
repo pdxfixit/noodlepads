@@ -829,6 +829,23 @@ ADR 0002.
   person who has made nothing (a new device's empty first board) stays here
   until their ☁️ In the cloud is switched on.
   👥 People → ☁️ Open from the cloud puts someone from the list on this device.
+  A tap (after their PIN, if any) turns the sheet to them and locks it (no ✕,
+  Esc or backdrop; Ben, 2026-10-26): "Finding their things…" with a spinner
+  while the records come, then a bar that fills by bytes as each sound
+  arrives, "🔊 5 of 12" and "4.1 of 9.8 MB" under it (the measure is each
+  clip record's `bytes`, known before the first sound comes; it never goes
+  back), then "Putting it all away…". Done: a full green bar, "✓ On this
+  device now", what came by picture (🔊 12 · 🥁 4 · 🎼 1), <their avatar>
+  Play as them (closes the sheets, shows them on Pads, ends the welcome) and
+  ☁️ Open someone else. Nothing arriving for 20 s (`cloud.js STALL_MS`), or
+  the network failing, stops it with the kid's sentence: 🔄 Try again carries
+  on, the sounds already fetched kept for the visit; ✕ Don't bring them
+  drops the link (and its key in the cloud), so they never arrive later by
+  themselves. Nothing is stored until every sound has come; once it is, a
+  failure in the push still ends on ✓. Closed by a back gesture meanwhile,
+  the sync carries on and the sheet opens on its progress. `just look
+  cloud-finding`, `cloud-bringing`, `cloud-done`, `cloud-stopped` draw each
+  state.
 - **📴 Offline (this device only)**: ☁️ In the cloud switched off in a
   person's profile deletes their cloud copy (tap twice; the PIN if it has
   one) and keeps them out of the cloud; switched on, they go back. A person

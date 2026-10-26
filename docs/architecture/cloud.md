@@ -21,7 +21,7 @@
 | `merge3.js` | the three-way merge, the `changed` stamp (`STAMP`, `stampEdit`, `STAMPED`, `KEEP_BOTH`) | `cloud-sync.js`, `state.js` (`stampEdit` in `persist`), `backup.js` and `merge.js` (stamps) | `playlist.js legacySlots`, `firsts.js unionSeen` |
 | `cloud-api.js` | every cloud route as a function, `CloudError`, `cloudTrouble` (the kid's sentence) | `cloud.js` (one instance, `api`), `cloud-ui.js` (`api.fetchSound` for previews) | `fetch`, `reid.js isCloudId` |
 | `sync-timing.js` | when a sync runs (pure: clock and timers injected) | `cloud.js` (`timing`) | `run` = `cloud.js syncAll` |
-| `cloud-ui.js` | the PIN pad, avatar picker, profile sheet's ☁️ and 🔒 parts, 🔗 Share, 🔗 Shared with me, ☁️ Open from the cloud | `app.js` (`initCloudUI`, `askToOpen`, `shareSounds`), `people.js` (the profile sheet), `backup-ui.js` (`askEditPin`, `avatarBadge`), `welcome.js` (`openCloudList`), `bulk.js` (via `app.js` `share: shareSounds`) | `cloud.js`, `contact.js`, `merge.js mergeSummary`, `audio` |
+| `cloud-ui.js` | the PIN pad, avatar picker, profile sheet's ☁️ and 🔒 parts, 🔗 Share, 🔗 Shared with me, ☁️ Open from the cloud and its progress (`drawOpen`, locked while `locked`) | `app.js` (`initCloudUI`, `askToOpen`, `shareSounds`), `people.js` (the profile sheet), `backup-ui.js` (`askEditPin`, `avatarBadge`), `welcome.js` (`openCloudList`), `bulk.js` (via `app.js` `share: shareSounds`) | `cloud.js`, `contact.js`, `merge.js mergeSummary`, `audio` |
 | `share-render.js` | a share's preview as a WAV (`renderPreview`), and `renderAudio`/`renderTake` | `app.js` (hands `renderPreview` to `initCloud` as `renderShare`), `things.js`, `dj.js` | `audio.load`, `makeVoice`, `fadeStop`, `sequencer.js encodeWav`/`normalize`, `seq.beatPlan`/`prepareBeats`/`soundHit`, `song.js planSong`/`soundSong` |
 | `device-meta.js` | the `X-Noodle-App` value (`appMeta`), `WIDTHS` | `cloud.js` (`deviceMeta`), `worker/metrics.js` (`WIDTHS`) | `usage.js usageOn` |
 | `usage.js` | the usage switch in memory (`usageOn`, `setUsage`) | `app.js followUsage` (writes), `telemetry.js`, `play-count.js`, `device-meta.js` (read) | nothing |
@@ -129,6 +129,15 @@ The 13 per-person stores that sync: `clips, overrides, orders, patterns, beats, 
 | `worker/schema.sql` `records.kind` comment | documentation | none |
 
 `cloud-sync.js ONE_EACH` (`orders, patterns, decks, songs, prefs`) are keyed by person id. `merge3.js KEEP_BOTH` (`clips, beats, takes, songbook, layouts, touchLayouts`) may keep two copies on a clash.
+
+### Progress while someone comes down
+
+- `cloud-ui.js onListClick` → `cloud.js openProfile` (the link and key only, no sync) → `cloud.js bringDown(id, onProgress)` → `syncNow(id, { onProgress })` → `cloud-sync.js syncProfile` with `deps.onProgress`, `deps.signal` and `deps.fetched`.
+- `syncProfile` tells a whole snapshot each time (`newProgress`: `phase` finding → sounds → storing → done, `sounds`, `done`, `total`, `got`, `now`, `stored`). `pullOnce` lists every sound to fetch before fetching any, so `total` (the clip records' `bytes`, checked by `soundBytes`; null when one is missing) is known up front; a later round adds to it. `progressShare` turns a snapshot into 0–1: by bytes, or by sounds when a size is missing. A throw from `onProgress` is ignored.
+- `cloud-api.js fetchSound(sound, mime, { signal, onBytes, max })` reads the body as it arrives (`res.body.getReader`, else `res.blob()`), refuses more than `max` (`CLOUD_MAX_SOUND`, never the record's own size, which would stop every sync on a mismatch), and turns a stop into `CloudError(0, 'stalled')`. `pull` and `push` take the signal too.
+- `syncNow` keeps `hearing` (listeners, so a caller can join a sync already running) and `stops` (its AbortController) per person. `bringDown` aborts it when nothing is heard for `STALL_MS` (20 s). `fetchedFor` keeps a cut-short open's sounds for 🔄 Try again; cleared on success and in `dropLink`.
+- `leaveInCloud` (✕ Don't bring them) drops the link and forgets the key in the cloud. Logged as `cloud {opened: 'left'}`.
+- `cloud-ui.js drawSoon` draws the latest snapshot once a frame; the bar is `.co-fill`'s `transform: scaleX(var(--got))`, set through `style.setProperty` (CSP: no style attributes).
 
 ### Bases and `sent` hashes
 

@@ -738,9 +738,26 @@
         <h2 id="cloud-list-title">☁️ Open from the cloud</h2>
         <button type="button" class="close" data-close aria-label="Close">✕</button>
       </div>
-      <p class="field-hint">Tap someone to put them on this device. Their sounds and beats come with them.</p>
+      <p class="field-hint" id="cloud-list-hint">Tap someone to put them on this device. Their sounds and beats come with them.</p>
       <p class="set-note" id="cloud-list-note" role="status"></p>
       <ul class="cl-list" id="cloud-list-items"></ul>
+      <div class="co" id="cloud-open" hidden>
+        <div class="co-who"><span id="cloud-open-pic"></span><h3 class="co-name" id="cloud-open-name" tabindex="-1"></h3></div>
+        <div class="co-work">
+          <div class="co-spin" id="cloud-open-spin" aria-hidden="true"></div>
+          <div class="co-track" id="cloud-open-bar" role="progressbar" aria-label="Bringing them here" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div class="co-fill" id="cloud-open-fill"></div></div>
+          <p class="co-line" id="cloud-open-line" role="status"></p>
+          <p class="co-size" id="cloud-open-size"></p>
+        </div>
+        <div class="co-buttons" id="cloud-open-done" hidden>
+          <button type="button" class="primary" id="cloud-open-play"></button>
+          <button type="button" class="secondary" id="cloud-open-more">☁️ Open someone else</button>
+        </div>
+        <div class="co-buttons" id="cloud-open-stopped" hidden>
+          <button type="button" class="primary" id="cloud-open-again">🔄 Try again</button>
+          <button type="button" class="secondary" id="cloud-open-leave">✕ Don't bring them</button>
+        </div>
+      </div>
     </div>
   </dialog>
 

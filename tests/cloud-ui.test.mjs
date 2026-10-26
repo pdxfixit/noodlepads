@@ -222,6 +222,14 @@ test('☁️ Open from the cloud: a PIN pad with no Remember on this device, and
   assert.ok(cloud.inCloud('p-far'), 'on this device now');
   assert.equal(cloud.linkOf('p-far').key, null, 'the key is not stored');
   assert.ok(cloud.keyOf('p-far'), 'it is held for this visit');
+  assert.equal($('#cloud-open-name').textContent, 'Sir Squid', 'the sheet turns to them');
+  // This stand-in page has no IndexedDB, so nothing can be stored: the open
+  // stops, locked on 🔄 Try again and ✕ Don't bring them (tests/cloud-open.test.mjs
+  // has the whole flow). ☁️ Open someone else, hidden there, puts the list
+  // back for the tests below, the link kept.
+  assert.equal($('#cloud-open').dataset.step, 'stopped');
+  $('#cloud-open-more').dispatch('click');
+  await settle();
   $('#cloud-list').close();
 });
 
