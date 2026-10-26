@@ -1,7 +1,9 @@
 // Delete in a profile sheet, for someone in the cloud (Ben, 2026-10-24): two
-// taps delete them from this device, and the sheet stays with only Delete,
-// whose third tap deletes their cloud copy too (asking for the PIN if they
-// have one); ✕ keeps it. Someone not in the cloud goes in two taps, as before.
+// taps delete them from this device, and the sheet stays with only the Delete
+// box: ☁️ Delete their cloud copy too, moved to its top, deletes the cloud
+// copy (asking for the PIN if they have one); ☁️ Keep their cloud copy, in the
+// spot the first two taps hit (Ben, 2026-10-26: "so an accidental third click
+// can't"), and ✕ keep it. Someone not in the cloud goes in two taps, as before.
 // The real app with a stand-in IndexedDB, against the real Worker and a fake D1.
 
 import { test, before } from 'node:test';
@@ -67,7 +69,8 @@ const tap = async () => { del().dispatch('click'); await settle(); };
 
 test('in the cloud with no PIN: the second tap deletes them here and keeps the sheet; the third deletes the cloud copy', async () => {
   sheetOf(OPEN);
-  assert.match($('#profile-delete-hint').textContent, /A third tap then deletes their cloud copy too/);
+  assert.match($('#profile-delete-hint').textContent, /Then they can delete their cloud copy too/);
+  assert.equal($('#profile-keep').hidden, true, 'no Keep before the second tap');
   await tap();
   assert.equal(del().textContent, 'Tap again to delete');
   await tap();
@@ -76,8 +79,12 @@ test('in the cloud with no PIN: the second tap deletes them here and keeps the s
   assert.equal($('#profile-dialog').open, true, 'the sheet stays for the third tap');
   assert.equal($('#profile-parts').hidden, true, 'only Delete shows');
   assert.equal($('#profile-name').textContent, 'Admiral Acorn');
-  assert.equal(del().textContent, '☁️ Tap again to delete their cloud copy');
-  assert.match($('#profile-delete-hint').textContent, /is deleted from this device.*or ✕ to keep it/);
+  assert.equal(del().textContent, '☁️ Delete their cloud copy too');
+  assert.match($('#profile-delete-hint').textContent, /is deleted from this device\. Their cloud copy is still there/);
+  assert.ok($('.pf-zone').classList.contains('left'), 'the red button moves to the top of the box');
+  assert.equal($('#profile-keep').hidden, false, '☁️ Keep takes the spot the taps hit');
+  assert.equal($('#profile-keep').getAttribute('aria-describedby'), 'profile-delete-hint', 'and reads why when it gets the focus');
+  assert.ok(document.activeElement === $('#profile-keep'), 'and has the focus, so a third Enter keeps it');
   await tap();
   assert.equal(inD1(OPEN), false, 'the cloud copy is gone');
   assert.equal($('#profile-dialog').open, false);
@@ -108,13 +115,14 @@ test('in the cloud with a PIN: the third tap asks for it; a wrong one asks again
   closeSheets();
 });
 
-test('✕ after the second tap keeps the cloud copy', async () => {
+test('☁️ Keep after the second tap keeps the cloud copy, and the next sheet starts plain', async () => {
   sheetOf(KEPT);
   await tap();
   await tap();
   assert.equal(state.peopleEdits.has(KEPT), false);
-  $('#profile-dialog').close();
+  $('#profile-keep').dispatch('click');
   await settle();
+  assert.equal($('#profile-dialog').open, false, 'it closes the sheet, as ✕ does');
   assert.ok(inD1(KEPT), 'still in the cloud, for another device');
   assert.equal($('#people-edit').children.some((r) => r.dataset.person === KEPT), false);
   closeSheets();
@@ -122,6 +130,8 @@ test('✕ after the second tap keeps the cloud copy', async () => {
 
 test('on this device only: two taps delete them and close the sheet', async () => {
   sheetOf(HERE);
+  assert.ok(!$('.pf-zone').classList.contains('left'), 'Delete is back in its place');
+  assert.equal($('#profile-keep').hidden, true);
   assert.doesNotMatch($('#profile-delete-hint').textContent, /cloud/);
   await tap();
   await tap();

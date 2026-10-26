@@ -685,10 +685,12 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   that file, so deleting one keeps only a hidden record; the People dialog
   lists hidden people under "Deleted — bring back". The only person here
   can't be deleted: Delete is greyed and the box says why. For someone in the cloud the second tap deletes them here
-  and the sheet stays, showing only Delete ("☁️ Tap again to delete their
-  cloud copy"): a third tap deletes their cloud profile too (asking for the
-  PIN if they have one; `cloud-ui.js` `deleteLeftCloud`), and ✕ keeps it for
-  their other devices. When they were the one on show, nobody else comes on
+  and the sheet stays, showing only the Delete box: its red button moves to
+  the top as ☁️ Delete their cloud copy too, which deletes their cloud
+  profile too (asking for the PIN if they have one; `cloud-ui.js`
+  `deleteLeftCloud`), and ☁️ Keep their cloud copy takes the spot the first
+  two taps hit (focus moves there), so a stray third tap keeps it, as ✕
+  does, for their other devices. When they were the one on show, nobody else comes on
   while the sheet waits (the next one's PIN pad would cover it); closing it
   brings the next person on. **👋 Who's playing now?** (`who-now.js`): when
   the person on show is deleted (Delete, or 🤷 I don't know the PIN), and at
@@ -948,7 +950,7 @@ ADR 0002.
   `just cloud-reset-pin "<fun name>" --to 1234`, or clears it with no `--to`;
   each device then asks for the new PIN once (or opens with none).
 - **To delete a profile and everything in it:** 👥 People → tap them → tap
-  Delete three times (the third deletes the cloud copy), or switch ☁️ In the
+  Delete twice, then ☁️ Delete their cloud copy too, or switch ☁️ In the
   cloud off (tap twice) to keep it on this device. Either asks for the PIN
   if it has one. Its share codes stop working too (remixes others made
   stay theirs).

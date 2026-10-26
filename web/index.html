@@ -668,6 +668,10 @@
       <div class="pf-part pf-zone">
         <p class="field-hint" id="profile-delete-hint">Delete takes them, their recordings and their beats off this device.</p>
         <button type="button" class="secondary pf-danger pf-wide" id="profile-delete" data-remove aria-describedby="profile-delete-hint">🗑️ Delete</button>
+        <!-- After the second tap, with a cloud copy left: Keep takes the spot
+             the first two taps hit, and the cloud's Delete moves to the top,
+             so a stray third tap keeps it (Ben, 2026-10-26). -->
+        <button type="button" class="secondary pf-wide pf-keep" id="profile-keep" aria-describedby="profile-delete-hint" hidden>☁️ Keep their cloud copy</button>
       </div>
     </div>
   </dialog>

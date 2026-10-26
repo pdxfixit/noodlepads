@@ -271,15 +271,18 @@ function renderProfile(fresh = false) {
   }
   del.disabled = people().length === 1;
   el.profileParts.hidden = false;
+  el.profileZone.classList.remove('left');
+  el.profileKeep.hidden = true;
   el.profileDeleteHint.textContent = del.disabled
     ? `${p.name} is the only one here, so they can't be deleted. Close this and ➕ Add a person first.`
     : inCloud(p.id)
-      ? 'Delete takes them, their recordings and their beats off this device. A third tap then deletes their cloud copy too.'
+      ? 'Delete takes them, their recordings and their beats off this device. Then they can delete their cloud copy too.'
       : 'Delete takes them, their recordings and their beats off this device.';
 }
 
-// The sheet of someone just deleted here, cloud copy left: only Delete shows,
-// ready for the third tap. ✕ keeps the cloud copy.
+// The sheet of someone just deleted here, cloud copy left: only the Delete box
+// shows, its red button moved to the top for the third tap and ☁️ Keep where
+// the first two landed. Keep and ✕ keep the cloud copy.
 function drawLeft() {
   el.profile.style.setProperty('--c', left.color);
   el.profileAvatar.replaceChildren(avatarBadge(left));
@@ -288,9 +291,11 @@ function drawLeft() {
   const del = el.profileDelete;
   del.classList.add('armed');
   del.disabled = false;
-  del.textContent = '☁️ Tap again to delete their cloud copy';
-  del.setAttribute('aria-label', `Tap again to delete the cloud copy of ${left.name}`);
-  el.profileDeleteHint.textContent = `${left.name} is deleted from this device. Their cloud copy is still there, for any other phone or tablet: tap again to delete it too${left.pin ? ' (it asks for their PIN)' : ''}, or ✕ to keep it.`;
+  del.textContent = '☁️ Delete their cloud copy too';
+  del.setAttribute('aria-label', `Delete the cloud copy of ${left.name} too`);
+  el.profileZone.classList.add('left');
+  el.profileKeep.hidden = false;
+  el.profileDeleteHint.textContent = `${left.name} is deleted from this device. Their cloud copy is still there, for any other phone or tablet.${left.pin ? ' Deleting it asks for their PIN.' : ''}`;
 }
 
 // Any other tap takes back a half-done Delete. The third tap waits until the
@@ -379,6 +384,7 @@ async function onProfileClick(e) {
   const id = profileFor;
   const t = e.target.closest('button');
   if (!id || !t) return;
+  if (t === el.profileKeep) { el.profile.close(); return; }   // ✕ does the same
   if (t !== el.profileDelete) disarmDelete();
   if (t.id !== 'profile-cloud') disarmCloud(id);
   if (t === el.profileCounts) { openThings(id, { opener: t }); return; }
@@ -434,8 +440,9 @@ async function onProfileClick(e) {
     // for the next person would cover it (Ben, 2026-10-24). The sheet's
     // closing brings them on.
     renderPeopleEditor();
-    t.focus({ preventScroll: true });
-    announce(`${p.name} is deleted from this device. Tap again to delete their cloud copy too.`);
+    // Focus goes to Keep, where the taps were: a third Enter keeps it too.
+    el.profileKeep.focus({ preventScroll: true });
+    announce(`${p.name} is deleted from this device. Keep their cloud copy, or delete it too.`);
     return;
   }
   el.profile.close();
@@ -480,6 +487,8 @@ export function initPeople(hooks) {
     profileColors: document.querySelector('#profile-colors'),
     profileDelete: document.querySelector('#profile-delete'),
     profileDeleteHint: document.querySelector('#profile-delete-hint'),
+    profileZone: document.querySelector('.pf-zone'),
+    profileKeep: document.querySelector('#profile-keep'),
     profileParts: document.querySelector('#profile-parts'),
     namesDialog: document.querySelector('#names-dialog'),
     namesList: document.querySelector('#names-list'),

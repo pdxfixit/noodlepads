@@ -352,7 +352,7 @@ Nothing found is changed or deleted.
 | A sound from its sheet | `sheet.js removeFromSheet` → `state.js deleteUserClip` | yes for own; hide is one tap | none (hide: Show sound) |
 | A group | `bulk.js editGroup` | yes | none; its sounds stay, in no group |
 | An own voice | `sheet.js` `deleteVoice` → `state.js deleteMyVoice` | yes | none |
-| A person | `people.js` profile Delete → `deleteHere` → `cloud.js dropLink` (bases kept), `syncEnded`, `state.js deletePerson`, then `cloud.js forgetBases`, `audio.forget` | yes; a third tap deletes the cloud copy | boards.json people: Bring back (their own sounds don't come back) |
+| A person | `people.js` profile Delete → `deleteHere` → `cloud.js dropLink` (bases kept), `syncEnded`, `state.js deletePerson`, then `cloud.js forgetBases`, `audio.forget` | yes; then ☁️ Delete their cloud copy too (moved to the top of the box, ☁️ Keep in its place) deletes the cloud copy | boards.json people: Bring back (their own sounds don't come back) |
 
 `state.js deletePerson` removes their clips, preset edits (`<id>-<kitId>`), beats, songbook, takes, layouts, voices, touch layouts, open beat, order, deck, open song, prefs, and the people record, all in one transaction (a boards.json person's record is put back hidden in the same one). It returns the clip ids so the caller can forget their audio, or null when the browser refused it (nothing changed).
 

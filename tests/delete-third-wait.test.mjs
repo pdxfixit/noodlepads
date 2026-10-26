@@ -58,7 +58,7 @@ test('the sheet waiting for the third tap is never covered by the next person\'s
   await page.settle();
   assert.equal(state.peopleEdits.has(SHOWN), false, 'deleted here');
   assert.equal($('#profile-dialog').open, true);
-  assert.equal($('#profile-delete').textContent, '☁️ Tap again to delete their cloud copy');
+  assert.equal($('#profile-delete').textContent, '☁️ Delete their cloud copy too');
   assert.equal($('#pin-dialog').open, false, 'no PIN pad over the third tap');
   assert.equal($('#people-edit').children.some((r) => r.dataset.person === SHOWN), false, 'gone from 👥 People');
 
