@@ -86,25 +86,27 @@ https://noodlepads.com, both even if one fails, in about 8 s together:
 
 | Check | What it proves |
 |---|---|
-| `just cloud-smoke` | The API, from Node through `web/cloud-api.js`: make a profile with a fun name, picture, color and PIN; a wrong PIN is 401; open with the PIN; push a record and pull it back; a sound over 1.9 MB goes up in two pieces, is never sent twice, and reads back byte for byte; a share code reads back with no key, PIN or Origin; the public list has the profile; delete it; it is gone from the list, opens 404, its sound and its share code 404. |
-| `just cloud-e2e` | Two devices: two browser contexts (separate IndexedDB) in headless Chrome on the live site. A makes a person, a beat and a small WAV sound and syncs; B opens the profile from ⚙️ → People → ☁️ list and gets the person, the beat and the sound (byte for byte); B rerolls the name (🎲) and renames the beat, and syncs; A syncs and has both, the beat edited in place (Q7). |
+| `just cloud-smoke` | The API, from Node through `web/cloud-api.js`: make a profile with a fun name, picture, color and PIN; a wrong PIN is 401; open with the PIN; push a record and pull it back; a sound over 1.9 MB goes up in two pieces, is never sent twice, and reads back byte for byte; a share code reads back with no key, PIN or Origin; the public list answers and leaves the profile out; delete it; it opens 404, its sound and its share code 404. |
+| `just cloud-e2e` | Two devices: two browser contexts (separate IndexedDB) in headless Chrome on the live site. A makes a person, a beat and a small WAV sound and syncs; B opens ⚙️ → People → ☁️ list, which leaves the check's profile out, so the check adds its line there and taps it, and gets the person, the beat and the sound (byte for byte); B rerolls the name (🎲) and renames the beat, and syncs; A syncs and has both, the beat edited in place (Q7). |
 
 - Every request carries `Origin: https://noodlepads.com`: the Worker refuses
   writes from anywhere else.
 - Each check makes one throwaway profile (`p-smoke-<time>-<random>`,
-  `p-e2e-…`) and deletes it in a `finally`, whatever failed. For about 4 s it
-  shows in the public list under a fun name. Their ids (`worker/cloud.js
-  TEST_PROFILE`) count on a daily cap of their own, 100 a UTC day, so the
-  checks never use up kids' 10 new profiles a day. Deleting the profile
-  deletes its share code too.
+  `p-e2e-…`) and deletes it in a `finally`, whatever failed. Their ids (`worker/cloud.js
+  TEST_PROFILE`) are an id anyone could type, so they get only what a check
+  needs (`CHECK_LIMITS`): a cap of their own, 100 a UTC day, so the checks
+  never use up kids' 10 new profiles a day; 64 KB of records, one sound of
+  at most 4 MB, one share. They never show in the public list. Deleting the
+  profile deletes its share code too, and the Worker deletes any check
+  profile over 10 minutes old the next time anyone makes a profile.
 - On GitHub the checks' cleanup (`cloud-prune --smoke --yes`, a D1 write)
   warns instead: the deploy token reads D1 only. Share codes from checks
   before 2026-10-26 (when a share outlived its profile) stay until Ben runs
   `just cloud-prune --smoke --yes` from the Mac.
-- A run killed mid-way (Ctrl-C, a crash) can leave its profile. `just
-  cloud-prune --smoke` lists those (over 10 minutes old, so a running check is
-  safe) and the checks' share codes; `--yes` deletes them. `just
-  cloud-profiles` shows any left.
+- A run killed mid-way (Ctrl-C, a crash) can leave its profile, until the
+  next profile made sweeps it. `just cloud-prune --smoke` lists those (over
+  10 minutes old, so a running check is safe) and the checks' share codes;
+  `--yes` deletes them. `just cloud-profiles` shows any left.
 - A failure prints ❌ with the step, and the run ends with "Deployed,
   but the live check failed". The new version is live by then: fix forward,
   or roll back below. e2e also prints each device's `/api/` calls and cloud log.

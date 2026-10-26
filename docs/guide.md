@@ -1052,6 +1052,9 @@ everyone else only as far as it has uploaded. A push
 that adds nothing (an edit that shrinks, a delete) always lands. A day (UTC)
 allows 10 new profiles across the site (one deleted again still counts; the deploy checks'
 throwaway ones have 100 of their own), 5,000 pushes and 500 shares.
+The deploy checks' throwaway profiles (`p-smoke-…`, `p-e2e-…`) hold only
+what a check needs (64 KB of records, one sound of 4 MB, one share), never
+show in the list, and are deleted 10 minutes after they were made.
 A profile keeps the keys of its 20 most recently used devices, and a device
 that hasn't used its key for 180 days opens the profile again (by itself
 with no PIN; else it asks the PIN).

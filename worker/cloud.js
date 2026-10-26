@@ -176,12 +176,38 @@ export { CLOUD_ID };
 
 // The deploy checks' throwaway profiles (tools/look-cloud.mjs testId; as
 // tools/cloud_admin.py TEST_PREFIXES). Anyone could pick such an id, so it
-// earns nothing but a cap of its own.
+// earns nothing but caps of its own, just big enough for the checks: 100 a
+// day, 64 KB of records, one sound of at most 4 MB (cloud-smoke's is 1.9 MB
+// and a little, in two pieces), one share. It never shows in the list, and
+// is deleted 10 minutes after it was made (a check takes seconds).
 export const TEST_PROFILE = /^p-(smoke|e2e)-/;
+export const CHECK_LIMITS = { recordBytes: 64 * 1024, soundBytes: 4 * 1024 * 1024, sounds: 1, shares: 1 };
+export const CHECK_MS = 10 * 60 * 1000;
+const isCheck = (id) => TEST_PROFILE.test(id);
 
 async function listProfiles(env) {
   const rows = await env.DB.prepare('SELECT * FROM profiles ORDER BY created DESC LIMIT ?').bind(LIMITS.listed).all();
-  return json(200, { profiles: rows.results.filter((r) => CLOUD_ID.test(r.id)).map(looks) });
+  return json(200, { profiles: rows.results.filter((r) => CLOUD_ID.test(r.id) && !isCheck(r.id)).map(looks) });
+}
+
+// Everything of a profile, gone: its shares and sounds, records, keys, the
+// profile and its metrics.
+async function wipeProfile(env, id) {
+  await env.DB.batch([
+    ...dropProfileData(env, id),
+    env.DB.prepare('DELETE FROM records WHERE profile_id = ?').bind(id),
+    env.DB.prepare('DELETE FROM keys WHERE profile_id = ?').bind(id),
+    env.DB.prepare('DELETE FROM profiles WHERE id = ?').bind(id),
+  ]);
+  await forgetProfile(env, id);
+}
+
+// Deletes every check profile older than CHECK_MS (a check killed midway,
+// or someone using such an id to keep a profile).
+async function dropOldChecks(env, now) {
+  const old = (await env.DB.prepare("SELECT id FROM profiles WHERE (id LIKE 'p-smoke-%' OR id LIKE 'p-e2e-%') AND created < ?")
+    .bind(now - CHECK_MS).all()).results;
+  for (const { id } of old) await wipeProfile(env, id);
 }
 
 async function makeProfile(request, env, now, seen) {
@@ -189,13 +215,14 @@ async function makeProfile(request, env, now, seen) {
   if (typeof body.id !== 'string' || !CLOUD_ID.test(body.id)) throw new Refuse(400, 'id');
   const look = checkLooks(body);
   if (body.pin !== undefined && body.pin !== null && !isPin(body.pin)) throw new Refuse(400, 'pin');
+  await dropOldChecks(env, now);
   if (await env.DB.prepare('SELECT 1 AS x FROM profiles WHERE id = ?').bind(body.id).first()) throw new Refuse(409, 'exists');
   const { n } = await env.DB.prepare('SELECT COUNT(*) AS n FROM profiles').first();
   if (n >= LIMITS.profiles) throw new Refuse(507, 'full');
   // The deploy checks' throwaway profiles have a daily cap of their own, so
   // they never use up kids' new profiles. A deleted profile gives no place
   // back: making and deleting can't get round either cap.
-  const checks = TEST_PROFILE.test(body.id);
+  const checks = isCheck(body.id);
   if (!await withinDaily(env, checks ? 'check-profiles' : 'profiles', checks ? LIMITS.checkProfilesPerDay : LIMITS.newProfilesPerDay, now)) {
     throw new Refuse(429, 'busy');
   }
@@ -283,13 +310,7 @@ async function deleteProfile(request, env, id, now) {
   await needKey(request, env, id, now);
   const p = await getProfile(env, id);
   await needPin(env, p, body.pin, now);
-  await env.DB.batch([
-    ...dropProfileData(env, id),
-    env.DB.prepare('DELETE FROM records WHERE profile_id = ?').bind(id),
-    env.DB.prepare('DELETE FROM keys WHERE profile_id = ?').bind(id),
-    env.DB.prepare('DELETE FROM profiles WHERE id = ?').bind(id),
-  ]);
-  await forgetProfile(env, id);
+  await wipeProfile(env, id);
   return json(200, { ok: true });
 }
 
@@ -349,14 +370,15 @@ const countUncounted = (env, id) => env.DB.prepare(`UPDATE profiles SET record_b
 // rare, and only ever generous.)
 async function reserve(env, id, growth) {
   if (growth <= 0) return 0;
+  const cap = isCheck(id) ? CHECK_LIMITS.recordBytes : LIMITS.profileRecordBytes;
   await countUncounted(env, id);
   const take = () => env.DB.prepare(`UPDATE profiles SET record_bytes = record_bytes + ?
     WHERE id = ? AND record_bytes + ? <= ? AND (SELECT SUM(record_bytes) FROM profiles) + ? <= ? RETURNING record_bytes`)
-    .bind(growth, id, growth, LIMITS.profileRecordBytes, growth, LIMITS.totalRecordBytes).first();
+    .bind(growth, id, growth, cap, growth, LIMITS.totalRecordBytes).first();
   if (await take()) return growth;
   const mine = (await recount(env, id))?.record_bytes ?? 0;
   if (await take()) return growth;
-  throw new Refuse(507, mine + growth > LIMITS.profileRecordBytes ? 'records full' : 'cloud full');
+  throw new Refuse(507, mine + growth > cap ? 'records full' : 'cloud full');
 }
 
 // Gives back a reservation whose write failed (best effort: a count left
@@ -482,11 +504,11 @@ const WHOLE = 'sounds.got >= sounds.chunks';
 // uploads can't make the cloud full for everyone.
 async function storedBytes(env, profileId, now) {
   const fresh = now - PENDING_MS;
-  const mine = await env.DB.prepare(`SELECT COALESCE(SUM(bytes), 0) AS b FROM sounds WHERE profile_id = ? AND (${WHOLE} OR created >= ?)`)
+  const mine = await env.DB.prepare(`SELECT COALESCE(SUM(bytes), 0) AS b, COUNT(*) AS n FROM sounds WHERE profile_id = ? AND (${WHOLE} OR created >= ?)`)
     .bind(profileId, fresh).first();
   const all = await env.DB.prepare(`SELECT COALESCE(SUM(CASE WHEN ${WHOLE} THEN bytes WHEN created >= ? THEN MIN(bytes, got * ?) ELSE 0 END), 0) AS b FROM sounds`)
     .bind(fresh, CHUNK_BYTES).first();
-  return { mine: mine.b, all: all.b };
+  return { mine: mine.b, count: mine.n, all: all.b };
 }
 
 // Deletes every unfinished sound older than PENDING_MS, and its pieces.
@@ -512,7 +534,8 @@ async function startSound(request, env, id, now) {
     .bind(id, sha256, bytes).first();
   if (have) return json(200, { id: have.id, need: await need(env, have.id, have.chunks) });
   const used = await storedBytes(env, id, now);
-  if (used.mine + bytes > LIMITS.profileBytes) throw new Refuse(507, 'profile full');
+  if (used.mine + bytes > (isCheck(id) ? CHECK_LIMITS.soundBytes : LIMITS.profileBytes)) throw new Refuse(507, 'profile full');
+  if (isCheck(id) && used.count >= CHECK_LIMITS.sounds) throw new Refuse(507, 'profile full');
   if (used.all + bytes > LIMITS.totalBytes) throw new Refuse(507, 'cloud full');
   const soundId = newSoundId();
   const chunks = pieceCount(bytes);
@@ -605,7 +628,7 @@ async function makeShare(request, env, id, now, seen) {
   Object.assign(seen, { kind: 'share', profile: id });
   if (same) return json(200, { code: same.code });
   const { n } = await env.DB.prepare('SELECT COUNT(*) AS n FROM shares WHERE profile_id = ?').bind(id).first();
-  if (n >= LIMITS.sharesPerProfile) throw new Refuse(507, 'shares full');
+  if (n >= (isCheck(id) ? CHECK_LIMITS.shares : LIMITS.sharesPerProfile)) throw new Refuse(507, 'shares full');
   if (!await withinDaily(env, 'shares', LIMITS.sharesPerDay, now)) throw new Refuse(429, 'busy');
   let code = null;
   for (let i = 0; i < 5 && !code; i++) {

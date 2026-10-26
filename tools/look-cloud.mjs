@@ -7,10 +7,12 @@
 //   cloud-smoke  the API round trip from Node, through web/cloud-api.js:
 //                make, wrong PIN, open, push, pull, a sound in two pieces
 //                read back byte for byte, a share read with no key, the
-//                list, delete, and everything gone, its share code too.
+//                list (which leaves it out), delete, and everything gone,
+//                its share code too.
 //   cloud-e2e    two devices (two browser contexts: separate IndexedDB) in
 //                headless Chrome on the live site: A makes a person, a beat
 //                and a sound and syncs; B opens the profile from the ☁️ list
+//                (a check's profile isn't listed, so its line is added there)
 //                and gets them; B rerolls the name and renames the beat; A
 //                syncs and has both, the beat edited in place (Q7).
 //
@@ -156,10 +158,12 @@ async function smoke({ url }) {
       must(share.kind === 'beat' && share.title === 'Smoke test' && share.bundle?.beats?.[0]?.id === 'beat-smoke', JSON.stringify(share).slice(0, 200));
     };
     await s.step('read the share anonymously', async () => { await readShare(); return 'read the share with no key, PIN or Origin'; });
-    await s.step('the list has it', async () => {
-      const p = (await api.list()).profiles.find((x) => x.id === id);
-      must(p && p.name === look.name && p.pin === true, `listed as ${JSON.stringify(p)}`);
-      return 'the public list has it, with its PIN';
+    // A check's profile never shows (worker/cloud.js TEST_PROFILE); the list itself answers.
+    await s.step('the list leaves it out', async () => {
+      const { profiles } = await api.list();
+      must(Array.isArray(profiles), 'no list');
+      must(!profiles.some((x) => x.id === id), 'a check profile is in the public list');
+      return `the public list answers (${profiles.length}) and leaves the check's profile out`;
     });
     await s.step('delete the profile', async () => {
       await refused(api.remove(id, key, wrong), 401, 'pin');
@@ -309,7 +313,17 @@ async function e2e({ url }) {
           const end = Date.now() + ms;
           for (;;) { const v = await fn(); if (v) return v; if (Date.now() > end) throw new Error('timed out: ' + what); await new Promise((r) => setTimeout(r, 100)); }
         };
-        const pick = await until('the profile in the list', () => document.querySelector('#cloud-list-items [data-open="' + id + '"]'));
+        await until('the list', () => document.querySelector('#cloud-list-note').textContent !== 'Looking…');
+        // A check's profile is never listed (worker/cloud.js TEST_PROFILE): its line goes in
+        // as the list draws one, and the list's own tap opens it.
+        if (document.querySelector('#cloud-list-items [data-open="' + id + '"]')) throw new Error('a check profile is in the public list');
+        const li = document.createElement('li');
+        const pick = document.createElement('button');
+        pick.type = 'button';
+        pick.dataset.open = id;
+        pick.dataset.pin = 'false';
+        li.append(pick);
+        document.querySelector('#cloud-list-items').append(li);
         pick.click();
         // The sheet turns to them and locks, then ends on ✓ or a stop.
         await until('the open', () => ['done', 'stopped'].includes(document.querySelector('#cloud-open').dataset.step) && !document.querySelector('#cloud-open').hidden && cloud.statusOf(id)?.state !== 'syncing');
@@ -382,9 +396,11 @@ async function e2e({ url }) {
         for (const [id, key] of got) if (key && !links.has(id)) links.set(id, key);
       } catch { /* that device is gone; the key from A is enough for the test profile */ }
     }
-    // A device made a profile but never said its key (a crash mid-step): the list says so.
-    let listed = [];
-    try { listed = (await api.list()).profiles.map((p) => p.id); } catch { /* said below if it matters */ }
+    // A device made the profile but never said its key (a crash mid-step):
+    // it has no PIN, so opening it gives one to delete it with.
+    if (!links.has(pid)) {
+      try { links.set(pid, (await api.open(pid)).key); } catch { /* not there: nothing to delete */ }
+    }
     for (const [id, key] of links) {
       try {
         await api.remove(id, key);
@@ -394,10 +410,12 @@ async function e2e({ url }) {
         s.fail(`could not delete ${id} (${err?.message}). Remove it: just cloud-prune --smoke --yes`);
       }
     }
-    if (listed.includes(pid) && !links.has(pid)) s.fail(`${pid} is in the cloud with no key here. Remove it: just cloud-prune --smoke --yes`);
     try {
-      if ((await api.list()).profiles.some((p) => p.id === pid)) s.fail(`${pid} is still listed after the delete`);
-    } catch { /* the list is down: said by a step already */ }
+      await api.open(pid);
+      s.fail(`${pid} is still in the cloud after the delete. It goes by itself 10 minutes after it was made`);
+    } catch (err) {
+      if (!(err instanceof CloudError && err.status === 404)) console.log(`⚠️  could not check ${pid} is gone (${err?.message})`);
+    }
     for (const d of devices) {
       for (const e of [...new Set(d.errors)].slice(0, 5)) console.log(`⚠️  device ${d.name} console: ${e}`);
       if (s.failed) {

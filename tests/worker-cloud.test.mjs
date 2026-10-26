@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../worker/index.js';
-import { CHUNK_BYTES, MAX_SOUND_BYTES, LIMITS, SESSION_KEY_MS, ACTIVE_STEP_MS, ROW_BYTES, KEY_IDLE_MS, KEYS_PER_PROFILE, PENDING_MS, pieceCount, pieceSize } from '../worker/cloud.js';
+import { CHUNK_BYTES, MAX_SOUND_BYTES, LIMITS, SESSION_KEY_MS, ACTIVE_STEP_MS, ROW_BYTES, KEY_IDLE_MS, KEYS_PER_PROFILE, PENDING_MS, CHECK_MS, pieceCount, pieceSize } from '../worker/cloud.js';
 import { ORIGIN } from '../worker/http.js';
 import { WAIT_MS } from '../worker/pin.js';
 import { FakeD1 } from './fake-d1.mjs';
@@ -662,6 +662,35 @@ test("daily caps: a deleted profile gives no place back; the deploy checks' have
   assert.equal((await c.call('POST', 'profiles', { body: look('p-smoke-mv4cyiqj-d0dv') })).status, 201, 'a check still runs');
   c.env.DB.db.prepare("UPDATE counters SET n = ? WHERE name = 'check-profiles'").run(LIMITS.checkProfilesPerDay);
   assert.equal((await c.call('POST', 'profiles', { body: look('p-e2e-mv4cyiqj-e1ew') })).status, 429, "and the checks' cap holds too");
+});
+
+// The security seat, 2026-10-26: p-smoke-/p-e2e- is an id anyone can type, so
+// a check profile holds only what a check needs, never shows, and goes soon.
+test("a deploy check's profile holds 64 KB of records, one sound of 4 MB and one share, never shows in the list, and goes after 10 minutes", async () => {
+  const c = cloud();
+  const id = 'p-smoke-mv4cyiqj-b8bt';
+  const key = await made(c, id);
+  await made(c, 'p-kid');
+  assert.deepEqual((await c.call('GET', 'profiles', { origin: null })).data.profiles.map((p) => p.id), ['p-kid'], 'not in the list');
+  const push = (n) => c.call('POST', `profiles/${id}/records`, { key, body: { put: [{ kind: 'beats', id: `beat-${n}`, body: { name: 'x'.repeat(30_000) } }] } });
+  assert.equal((await push(1)).status, 200);
+  assert.equal((await push(2)).status, 200);
+  assert.equal((await push(3)).data.error, 'records full', '64 KB');
+  const start = (n, bytes) => c.call('POST', `profiles/${id}/sounds`, { key, body: { sha256: sha(n), bytes, mime: 'audio/wav' } });
+  assert.equal((await start(1, 4 * 1024 * 1024 + 1)).data.error, 'profile full', '4 MB at most');
+  const one = await start(2, CHUNK_BYTES + 54321);
+  assert.equal(one.status, 201, "cloud-smoke's sound fits");
+  assert.equal((await start(3, 10)).data.error, 'profile full', 'one sound');
+  assert.equal((await c.call('POST', `profiles/${id}/shares`, { key, body: { kind: 'beat', title: 'Smoke test', bundle: { beats: [{ id: 'beat-1' }] } } })).status, 201);
+  assert.equal((await c.call('POST', `profiles/${id}/shares`, { key, body: { kind: 'beat', title: 'Two', bundle: { beats: [{ id: 'beat-1' }] } } })).data.error, 'shares full', 'one share');
+  // A kid's profile made 10 minutes on sweeps it away, with everything in it.
+  c.later(CHECK_MS + 1);
+  await made(c, 'p-kid-2');
+  assert.equal((await c.call('GET', `profiles/${id}/records`, { key })).status, 401);
+  for (const table of ['records', 'sounds', 'shares', 'keys']) {
+    assert.equal(c.env.DB.rows(`SELECT COUNT(*) AS n FROM ${table} WHERE profile_id = ?`, id)[0].n, 0, table);
+  }
+  assert.deepEqual(c.env.DB.rows('SELECT id FROM profiles ORDER BY id').map((r) => r.id), ['p-kid', 'p-kid-2']);
 });
 
 test('writes come only from the site’s own page', async () => {
