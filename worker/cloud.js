@@ -390,9 +390,16 @@ async function reserve(env, id, growth, now) {
   if (await take()) return growth;
   await recount(env, id);
   if (await take()) return growth;
-  const mine = await env.DB.prepare(`SELECT record_bytes + ${RESERVED('?')} AS b FROM profiles WHERE id = ?`).bind(old, id).first();
-  throw new Refuse(507, (mine?.b ?? 0) + growth > cap ? 'records full' : 'cloud full');
+  throw await overWhich(env, id, growth, cap, now);
 }
+
+// Which cap `growth` more bytes would pass: the profile's or everyone's.
+async function overWhich(env, id, growth, cap, now) {
+  const mine = await env.DB.prepare(`SELECT record_bytes + ${RESERVED('?')} AS b FROM profiles WHERE id = ?`).bind(now - RESERVE_MS, id).first();
+  return new Refuse(507, (mine?.b ?? 0) + Math.max(growth, 1) > cap ? 'records full' : 'cloud full');
+}
+// The text the in-batch cap check hands json() to stop a batch.
+const OVER = 'over a cap';
 
 // The statement that ends a reservation, in the write's own batch.
 const settle = (env, id, bytes) => env.DB.prepare('UPDATE profiles SET reserved_bytes = MAX(0, reserved_bytes - ?) WHERE id = ?').bind(bytes, id);
@@ -434,6 +441,7 @@ async function push(request, env, id, now, seen) {
     if (!row || row.got < row.chunks) throw new Refuse(409, 'sound', { sound: s });
   }
   await getProfile(env, id);
+  const cap = isCheck(id) ? CHECK_LIMITS.recordBytes : LIMITS.profileRecordBytes;
   // What the push adds to the profile's bytes, if every record lands: the
   // last word on each record (a put, or a delete's tombstone) less what it
   // holds now. A push that adds nothing is never refused, so a full profile
@@ -441,7 +449,7 @@ async function push(request, env, id, now, seen) {
   const after = new Map();
   put.forEach((r, i) => after.set(`${r.kind}:${r.id}`, { kind: r.kind, id: r.id, size: byteLength(texts[i]) + ROW_BYTES }));
   for (const r of del) after.set(`${r.kind}:${r.id}`, { kind: r.kind, id: r.id, size: ROW_BYTES });
-  const touched = JSON.stringify([...after.values()].map((r) => [r.kind, r.id]));
+  const touched = JSON.stringify([...after.values()].map((r) => [r.kind, r.id, r.size]));
   const before = (await env.DB.prepare(`SELECT ${SIZE} AS size FROM ${TOUCHED}`).bind(touched, id).all()).results;
   const growth = [...after.values()].reduce((sum, r) => sum + r.size, 0) - before.reduce((sum, r) => sum + r.size, 0);
   if (!await withinDaily(env, 'pushes', LIMITS.pushesPerDay, now)) throw new Refuse(429, 'busy');
@@ -468,6 +476,20 @@ async function push(request, env, id, now, seen) {
   const guard = since === null ? [] : [since];
   const reserved = await reserve(env, id, growth, now);
   const statements = [env.DB.prepare('UPDATE profiles SET rev = rev + 1 WHERE id = ?').bind(id), touch(env, id, now), settle(env, id, reserved)];
+  // The last word on the caps, inside the write itself: what the push adds,
+  // from what its records hold at this moment (another push may have
+  // deleted or filled them since `growth` was read). Over a cap it stops the
+  // whole batch (json() of a bad text is SQLite's way to throw), and nothing lands.
+  const old = now - RESERVE_MS;
+  statements.push(env.DB.prepare(`SELECT CASE WHEN d.delta > 0 AND (p.record_bytes + ${RESERVED('?')} + d.delta > ?
+      OR (SELECT SUM(q.record_bytes + CASE WHEN q.reserved_at < ? THEN 0 ELSE q.reserved_bytes END) FROM profiles AS q) + d.delta > ?)
+    THEN json('${OVER}') END AS over
+    FROM profiles AS p, (SELECT COALESCE(SUM(json_extract(j.value, '$[2]') - CASE WHEN r.profile_id IS NULL THEN 0 ELSE ${SIZE.replaceAll('records.', 'r.')} END), 0) AS delta
+      FROM json_each(?) AS j LEFT JOIN records AS r ON r.profile_id = ?
+        AND r.kind = json_extract(j.value, '$[0]') AND r.id = json_extract(j.value, '$[1]')
+      ${since === null ? '' : 'WHERE r.profile_id IS NULL OR r.rev <= ?'}) AS d
+    WHERE p.id = ?`)
+    .bind(old, cap, old, LIMITS.totalRecordBytes, touched, id, ...guard, id));
   // The profile's bytes: less what the records about to be written hold now…
   statements.push(env.DB.prepare(`UPDATE profiles SET record_bytes = record_bytes - (SELECT COALESCE(SUM(${SIZE}), 0) FROM ${TOUCHED}${unseen})
     WHERE id = ?`).bind(touched, id, ...guard, id));
@@ -493,6 +515,8 @@ async function push(request, env, id, now, seen) {
     await env.DB.batch(statements);
   } catch (err) {
     await release(env, id, reserved);
+    // Stopped by the in-batch check: its records may be gone, so it may add all it puts.
+    if (/malformed JSON/i.test(String(err?.message))) throw await overWhich(env, id, [...after.values()].reduce((sum, r) => sum + r.size, 0), cap, now);
     throw err;
   }
   const { rev } = await getProfile(env, id);

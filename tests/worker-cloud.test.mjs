@@ -354,6 +354,43 @@ test('pushes whose writes are slower than their takes still never overshoot; a r
   assert.equal((await c.call('POST', 'profiles/p-a/records', { key, body: small })).status, 200, 'lapsed');
 });
 
+// The security seat, 2026-10-26: a push's growth was read before its write,
+// so a rewrite (growth 0) held at its batch while another push deleted those
+// records and filled the room landed uncounted: 10,502,142 bytes on the cap.
+test('a push whose records were deleted and their room filled meanwhile is checked again in its own write', async () => {
+  const c = cloud();
+  const key = await made(c, 'p-a');
+  const push = (body) => c.call('POST', 'profiles/p-a/records', { key, body });
+  const put = (p) => ({ put: Array.from({ length: 7 }, (_, i) => ({ kind: 'takes', id: `take-${p}-${i}`, body: { notes: 'x'.repeat(499_990) } })) });
+  assert.equal((await push(put('r'))).status, 200);
+  const realBatch = c.env.DB.batch.bind(c.env.DB);
+  let letGo;
+  const held = new Promise((resolve) => { letGo = resolve; });
+  let first = true;
+  c.env.DB.batch = async (statements) => {
+    if (first) { first = false; await held; }
+    return realBatch(statements);
+  };
+  const rewrite = push(put('r'));   // the same records again: growth 0, held at its write
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal((await push({ del: Array.from({ length: 7 }, (_, i) => ({ kind: 'takes', id: `take-r-${i}` })) })).status, 200);
+  const fills = [];
+  for (const p of ['s', 't', 'u']) fills.push((await push(put(p))).status);
+  assert.deepEqual(fills, [200, 200, 507]);
+  letGo();
+  const late = await rewrite;
+  c.env.DB.batch = realBatch;
+  assert.deepEqual([late.status, late.data.error], [507, 'records full'], 'its records are gone, so it would add 3.5 MB to a full profile');
+  const [{ kept, counted, reserved }] = c.env.DB.rows(`SELECT (SELECT record_bytes FROM profiles WHERE id = 'p-a') AS kept,
+    (SELECT reserved_bytes FROM profiles WHERE id = 'p-a') AS reserved,
+    (SELECT SUM(COALESCE(LENGTH(CAST(body AS BLOB)), 0) + 100) FROM records) AS counted`);
+  assert.deepEqual([kept, reserved], [counted, 0]);
+  assert.ok(kept <= LIMITS.profileRecordBytes, `${kept} on the cap`);
+  // A full profile can still shrink a record and delete one, in the same check.
+  assert.equal((await push({ put: [{ kind: 'takes', id: 'take-s-0', body: { n: 0 } }] })).status, 200);
+  assert.equal((await push({ del: [{ kind: 'takes', id: 'take-s-1' }] })).status, 200);
+});
+
 // The security seat, 2026-10-26: a push the older Worker takes between
 // migration 006 and the deploy leaves a count low, which no refusal would
 // ever correct. The newer Worker counts every such profile again itself.
