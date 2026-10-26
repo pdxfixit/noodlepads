@@ -239,7 +239,7 @@ And back the other way, `app.js makeSequencer` wires `onHit` → `dj.flashClip`,
 | `keysShow()` | the keys are on screen: Live, or Beats with `keysOn` |
 | `beatView()` | the sequencer's slot: `'live'`, `'dj'` or `'beats'` |
 | `setScreen(name)` | `dj.leave()` when the keys were showing; stops the beat leaving Beats; `showView` |
-| `showView()` | `seq.show(beatView())`, `dj.setMode`, hides `#seq` or `#dj`, `dj.render` + `dj.renderGrid`, `dj.shown(keys)` |
+| `showView()` | `seq.show(beatView())`, `dj.setMode`, hides `#seq` or `#dj`, `dj.render` + `dj.renderGrid`, `dj.shown(keys && !kidsShowing())` |
 | `setKeys(on)` | refuses while `dj.recording()`; `dj.leave()`; `beat-keys`; `showView` |
 | `startScreen` | an old `'dj'` screen becomes Live, or Beats with Keys when `dj-mode` was `'beat'` |
 | `keydown` | stands down for modifiers and an open dialog; Kids first (`kidsKeydown`); not in a text field; then `dj.keydown` while `keysShow()`; Esc → `dj.escape()` before stopping everything |
@@ -252,7 +252,7 @@ And back the other way, `app.js makeSequencer` wires `onHit` → `dj.flashClip`,
 
 ### Screens
 
-Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, 🎹 Keys. Plus ⏹️ (`stopAll`: sounds, the beat, ●, held keys, and a mic recording, kept without playing: `stopRecording({ quiet: true })`), and ⚙️ (the regular `#settings-open`, gated). The tab is remembered on the device (`kids-tab`).
+Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, 🎹 Keys. Plus ⏹️ (`stopAll`: sounds, the beat, ●, held keys, and a mic recording, kept without playing: `stopRecording({ quiet: true })`; then `deps.stopAll` = `app.js stopEverything`, the whole app's Stop all), and ⚙️ (the regular `#settings-open`, gated). The tab is remembered on the device (`kids-tab`).
 
 | Tab | Draws | Plays by |
 |---|---|---|
@@ -433,6 +433,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | A take's `ring` is stored only when true, only on a hit | `overlap.test.mjs`, `rhythm.test.mjs` |
 | Leaving Kids shows the beat maker again, so it holds the kid's squares, never an older copy to save over them | `kids-scratch-back.test.mjs` |
 | A Kids recording is kept as the kid's who was recording, named, pictured and colored among their sounds, even if the person changes before it is kept (`listen` → `keep(…, { pid })`); a tune recording lands in their beat (`tuneRec.pid`); nothing of theirs shows for the next kid | `kids-mic-person.test.mjs`, `kids-person-change.test.mjs` |
+| Nothing of the grown-up app sounds in Kids (the keys' ⏲️, a take playing back, the beat, the song, a loop), on the way in and at start-up; Kids' ⏹️ is the app's Stop all | `kids-quiet.test.mjs`, `kids-quiet-start.test.mjs` |
 | Kids' square *i* is pill 2*i* of a 16-pill bar, in every bar | `kids.test.mjs` |
 | Kids' keys mean `instNotes` changes for the whole person | `kids.test.mjs` (🎹 instrument button) |
 | `kids-logic.js` stays importable in Node; it imports `sequencer.js`, so that module must stay importable too | every Kids unit test |

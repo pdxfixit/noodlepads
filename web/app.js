@@ -218,7 +218,7 @@ function applyKids() {
     seq.stop();
     song.stop();
     audio.stopAll();
-    dj.stopReplay();   // a 🎬 take playing back: its hits still to come
+    dj?.stopReplay();   // a 🎬 take playing back: its hits still to come
     for (const d of document.querySelectorAll('dialog[open]')) d.close();
   }
   document.body.classList.toggle('kids', on);
@@ -362,7 +362,7 @@ function showView() {
   el.dj.setAttribute('aria-label', name === 'live' ? 'Live' : 'Beat maker with keys');
   if (keys) { dj.render(); dj.renderGrid(); }
   showHint();
-  dj?.shown(keys);
+  dj?.shown(keys && !kidsShowing());   // behind 🧸 Kids the keys are not on screen: their ⏲️ waits
 }
 
 // ⌨️ Keys on Beats: on or off. Not while recording into the beat (● Record's
@@ -1053,6 +1053,7 @@ async function start() {
   });
   initKids({
     personId: () => state.personId,
+    stopAll: () => stopEverything(),   // Kids' ⏹️ is the whole app's Stop all
     clips: (opts, pid = state.personId) => clipsFor(pid, opts),
     colorOf: (clip) => padColor(clip.color),
     nextColor: (pid = state.personId) => nextClipColor(pid),

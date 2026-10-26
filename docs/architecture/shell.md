@@ -187,7 +187,7 @@ held for the visit). `groupsForChooser` uses `pinGuards`.
 `seq.show(beatView())` on Beats or Live, `dj.setMode('free' | 'beat')` when
 the keys show, `body.keys-on` on Beats with Keys, `aria-pressed` on every
 `[data-beat-keys]`, `#seq` and `#dj` hidden or shown, `#dj`'s `aria-label`,
-`dj.render()` and `dj.renderGrid()`, the footer hint, `dj.shown(keys)`.
+`dj.render()` and `dj.renderGrid()`, the footer hint, `dj.shown(keys && !kidsShowing())`.
 
 `app.js setKeys(on)` flips `keysOn` (not while `dj.recording()`), remembers
 it and re-runs `showView` on Beats. `[data-move-open]` (⇆) calls

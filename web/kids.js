@@ -1008,13 +1008,15 @@ export function kidsKeyup(e) {
 
 // ⏹️ (and Esc, or Space): every sound, the beat, a tune recording, held
 // keys, and a mic recording, which is kept as its pad, quietly; a 3, 2, 1
-// is called off.
+// is called off; then the whole app's Stop all (app.js stopEverything: the
+// beat, the song, a take playing back, every ⏲️ off).
 function stopAll() {
   stopTune();
   stopBeat();
   stopRecording({ quiet: true });
   releaseKeys();
   audio.stopAll();
+  deps.stopAll?.();
   boing(el.stop);
 }
 
