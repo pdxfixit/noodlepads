@@ -55,6 +55,7 @@ const LONG_NAME = (bar) => `${q(`${bar} [data-beat-new]`)} { const n = document.
 // ⇆ Move on, unless a wider shot of the same page already turned it on.
 const MOVE_OPEN = 'if (document.querySelector("#seq-deck [data-move-open]").getAttribute("aria-pressed") !== "true") document.querySelector("#seq-deck [data-move-open]").click(); await new Promise((r) => setTimeout(r, 100));';
 const nap = 'await new Promise((r) => setTimeout(r, 150));';
+const SLOW = 'await new Promise((r) => setTimeout(r, 600));';   // past a double tap (people.js SLIP_MS)
 // Opens a kit group on Pads only if it is shut: the widths share localStorage.
 const OPEN_KIT = (id) => `{ const h = document.querySelector('.pad-group[data-group="${id}"]'); if (h.getAttribute('aria-expanded') !== 'true') h.click(); } ${nap}`;
 // Opens 💃 Grooves' style groups by id, each only if shut (a click toggles).
@@ -441,13 +442,15 @@ const VIEWS = {
     for (const id of ids.slice(0, 2)) state.cloud.set(id, { id, key: null, rev: 0, sent: {}, sounds: {}, pin: true });
     document.body.dataset.locked = '';
     (await import('/who-now.js')).openWhoNow('Admiral Acorn is deleted from this device. Tap your picture.'); ${nap}` },
-  // profile-left: a new person in the cloud (a faked link, with a PIN), after
+  // profile-left: a new person in the cloud (a faked link, with a PIN this
+  // device remembers, so their profile opens without the PIN pad), after
   // Delete's second tap: gone here, the sheet showing only Delete's third tap.
+  // The taps are 600 ms apart: one within 500 ms is a double tap, ignored.
   'profile-left': { screen: 'pads', js: `${q('#people-open') + q('#person-add')} ${nap}
     const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()].at(-1);
-    state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true });
+    state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true, rememberUntil: Date.now() + 864e5 });
     document.querySelector('#people-edit [data-person="' + id + '"] [data-profile]').click(); ${nap}
-    ${q('#profile-delete')} ${nap} ${q('#profile-delete')} ${nap} ${nap}` },
+    ${q('#profile-delete')} ${SLOW} ${q('#profile-delete')} ${nap} ${nap}` },
   share: { screen: 'pads', js: `const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()][0];
     state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {} });
     ${q('#people-open') + q('#people-edit [data-profile]')} ${nap} ${q('#cloud-share')} ${nap}
