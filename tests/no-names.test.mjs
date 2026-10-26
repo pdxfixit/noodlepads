@@ -16,20 +16,14 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const sha = (s) => createHash('sha256').update(s).digest('hex');
 
-// Names, any case: two first names, and the old address's domain word.
-const ANY_CASE = new Set([
-  'c157a0b0d40f9d9506c72fae584069d1692b816da16cd76c648d5761c588057a',
-  'b9138194ffe9e7c8bb6d79d1ed56259553d18d9cb60b66e3ba5aa2e5b078055a',
-  '6889d19fc64db4f488a2d343344d01cee39bebeb3d5d9963aae03f44e51347ea',
-]);
-// A name that is also an everyday word in code (a maximum): caught when
-// written as a name (capitalized) or as an id ('…', "…", #…, …-kick).
-const AS_NAME = new Set(['9baf3a40312f39849f46dad1040f2f039f1cffa1238c41e9db675315cfad39b6']);
-
-// The same hashes kept outside the repo (Ben, 2026-10-26): the GitHub secret
-// NOODLE_NAME_HASHES in CI, ~/.config/noodlepads/names.json on Ben's Mac, as
-// {"anyCase": ["…"], "asName": "…"} (or a list). Once CI has shown they match
-// the ones above, the ones above go, and a checkout without them skips.
+// The names' hashes are kept outside this public repo (Ben, 2026-10-26): an
+// unsalted SHA-256 of a first name falls to a list of first names in seconds.
+// CI has them as the GitHub secret NOODLE_NAME_HASHES, Ben's Mac as
+// ~/.config/noodlepads/names.json: {"anyCase": ["…"], "asName": "…"} (or a
+// list). anyCase: names in any case; asName: a name that is also an everyday
+// word in code, caught only when written as a name (capitalized) or as an id
+// ('…', "…", #…, …-kick). A checkout without them (a cloud session) skips the
+// scan and says so; a push to this repo always has them.
 export function outsideHashes(env = process.env, file = join(homedir(), '.config/noodlepads/names.json')) {
   const raw = env.NOODLE_NAME_HASHES || (existsSync(file) ? readFileSync(file, 'utf8') : '');
   if (!raw.trim()) return null;
@@ -37,11 +31,14 @@ export function outsideHashes(env = process.env, file = join(homedir(), '.config
   return { anyCase: new Set(j.anyCase), asName: new Set([j.asName].flat()) };
 }
 
+const HASHES = outsideHashes() ?? { anyCase: new Set(), asName: new Set() };
+const HAVE = HASHES.anyCase.size + HASHES.asName.size > 0;
+
 // Every place in `text` a name is written, as "word" strings. The hash sets
 // are parameters so the self-test below runs on made-up names: a test that
 // spelled out a real name, even built from parts, would show it in a public
 // file.
-export function namesIn(text, { anyCase = ANY_CASE, asName = AS_NAME } = {}) {
+export function namesIn(text, { anyCase = HASHES.anyCase, asName = HASHES.asName } = {}) {
   const found = [];
   for (const m of text.matchAll(/[A-Za-z]+/g)) {
     const word = m[0];
@@ -61,13 +58,9 @@ export function namesIn(text, { anyCase = ANY_CASE, asName = AS_NAME } = {}) {
   return found;
 }
 
-test('the hashes kept outside the repo are the same ones, wherever CI has them', () => {
-  const outside = outsideHashes();
-  // A push to this repo always has the secret; a fork's pull request never does.
-  if (process.env.GITHUB_EVENT_NAME === 'push') assert.ok(outside, 'NOODLE_NAME_HASHES is set for this workflow');
-  if (!outside) return;
-  assert.deepEqual([...outside.anyCase].sort(), [...ANY_CASE].sort(), 'the same names, any case');
-  assert.deepEqual([...outside.asName].sort(), [...AS_NAME].sort(), 'the same name that is also a word');
+test('a push to this repo has the names\' hashes', () => {
+  // A fork's pull request never has the secret; a push always does.
+  if (process.env.GITHUB_EVENT_NAME === 'push') assert.ok(HAVE, 'NOODLE_NAME_HASHES is set for this workflow');
 });
 
 test('outsideHashes reads the secret first, then the Mac file, and takes asName as one or a list', () => {
@@ -90,10 +83,10 @@ test('namesIn finds a name however it is written, and leaves everyday words alon
   assert.deepEqual(names('~/src/pip-soundboard'), ['pip'], 'an old folder name is caught too');
   assert.deepEqual(names('pip-kick'), ['pip']);
   assert.deepEqual(names('Toby and Pippa'), [], 'only whole words with those hashes');
-  assert.deepEqual(namesIn('Pip, Juno, Toby and Wren'), [], 'the real hashes are not the made-up names');
 });
 
-test('no tracked file, and no file name, holds a kid\'s name', () => {
+test('no tracked file, and no file name, holds a kid\'s name', (t) => {
+  if (!HAVE) { t.skip('no NOODLE_NAME_HASHES or ~/.config/noodlepads/names.json here: the names check runs in CI and on Ben\'s Mac'); return; }
   const files = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean);
   const hits = [];
   for (const f of files) {
