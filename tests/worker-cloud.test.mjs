@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../worker/index.js';
-import { CHUNK_BYTES, MAX_SOUND_BYTES, LIMITS, SESSION_KEY_MS, ACTIVE_STEP_MS, ROW_BYTES, pieceCount, pieceSize } from '../worker/cloud.js';
+import { CHUNK_BYTES, MAX_SOUND_BYTES, LIMITS, SESSION_KEY_MS, ACTIVE_STEP_MS, ROW_BYTES, KEY_IDLE_MS, KEYS_PER_PROFILE, pieceCount, pieceSize } from '../worker/cloud.js';
 import { ORIGIN } from '../worker/http.js';
 import { WAIT_MS } from '../worker/pin.js';
 import { FakeD1 } from './fake-d1.mjs';
@@ -457,6 +457,43 @@ test('a key not remembered is a session key, deleted after a week; Forget on thi
   assert.equal((await c.call('DELETE', 'profiles/p-a/key', { key: kept, origin: null })).status, 403);
   assert.equal((await c.call('DELETE', 'profiles/p-a/key', { key: kept })).status, 200);
   assert.equal((await c.call('GET', 'profiles/p-a/records', { key: kept })).status, 401, 'forgotten');
+});
+
+// The council's review, 2026-10-26: every open made a key that lasted
+// forever, as many as anyone asked for.
+test('a profile keeps the keys of its 20 most recently used devices; opening on one more drops the one unused longest', async () => {
+  const c = cloud();
+  const first = await made(c, 'p-a');
+  const open = async () => { c.later(1000); return (await c.call('POST', 'profiles/p-a/open', { body: {} })).data.key; };
+  const early = [];
+  for (let i = 0; i < 5; i++) early.push(await open());
+  c.later(ACTIVE_STEP_MS + 1);
+  assert.equal((await c.call('GET', 'profiles/p-a/records', { key: first })).status, 200, 'the first device is used again');
+  const late = [];
+  for (let i = 0; i < 16; i++) late.push(await open());
+  assert.equal(c.env.DB.rows("SELECT COUNT(*) AS n FROM keys WHERE profile_id = 'p-a'")[0].n, KEYS_PER_PROFILE);
+  const works = async (key) => (await c.call('GET', 'profiles/p-a/records', { key })).status === 200;
+  assert.ok(await works(first), 'used lately: kept, though made first');
+  assert.deepEqual([await works(early[0]), await works(early[1]), await works(early[2])], [false, false, true], 'the two unused longest went');
+  assert.ok(await works(late.at(-1)));
+});
+
+test('a key unused for 180 days stops working; one used every month never does', async () => {
+  const c = cloud();
+  const idle = await made(c, 'p-a');
+  const monthly = (await c.call('POST', 'profiles/p-a/open', { body: {} })).data.key;
+  for (let month = 0; month < 12; month++) {
+    c.later(30 * 24 * ACTIVE_STEP_MS);
+    assert.equal((await c.call('GET', 'profiles/p-a/records', { key: monthly })).status, 200, `month ${month + 1}`);
+  }
+  assert.ok(12 * 30 * 24 * ACTIVE_STEP_MS > KEY_IDLE_MS);
+  assert.equal((await c.call('GET', 'profiles/p-a/records', { key: idle })).status, 401, 'half a year unused');
+  assert.deepEqual(c.env.DB.rows('SELECT COUNT(*) AS n FROM keys')[0].n, 1, 'and deleted');
+  // An older Worker's key has no `used`: its `created` counts.
+  c.env.DB.db.prepare("INSERT INTO keys (hash, profile_id, created) VALUES ('old', 'p-a', ?)").run(T0);
+  c.env.DB.db.prepare("INSERT INTO keys (hash, profile_id, created) VALUES ('new', 'p-a', ?)").run(T0 + 360 * 24 * ACTIVE_STEP_MS);
+  await c.call('POST', 'profiles/p-a/open', { body: {} });
+  assert.deepEqual(c.env.DB.rows("SELECT hash FROM keys WHERE hash IN ('old', 'new')").map((r) => r.hash), ['new'], 'an open sweeps the idle ones');
 });
 
 test('last activity: opening, pulling and pushing mark it, at most once an hour', async () => {

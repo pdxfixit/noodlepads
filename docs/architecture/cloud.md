@@ -92,6 +92,7 @@ Readers and writers:
 - 🔑 Remember on this device (Ben, 2026-10-26): after a PIN opens someone, `cloud-ui.js offerRemember` asks once (`cloud.js offersRemember`); their profile's PIN part offers it too. `rememberHere(personId, pin)` opens again with `remember: true`, keeps that lasting key in the link, drops the visit's key (`api.forget` on the old one) and sets `rememberUntil`. While it holds, `needsPin` and `pinGuards` are false. `rememberedUntil` forgets a remembering whose day has come; so does `initCloud` at start. `forgetHere` (Forget this device, or the day) deletes the key here and in the cloud.
 - `unlock` deletes the device's previous key in the cloud (`api.forget`), so a device holds one key per profile.
 - The Worker deletes session keys older than `SESSION_KEY_MS` (7 days) only when that profile is next opened (`openProfile`). That is why a remembered PIN asks for a lasting key.
+- Any key unused for `KEY_IDLE_MS` (180 days) stops working: `keyProfile` deletes it when it is next sent, and `openProfile` sweeps the profile's. `keys.used` is marked at most once an hour (0 on a key an older Worker made: its `created` counts). A profile keeps its `KEYS_PER_PROFILE` (20) most recently used keys: `newKey` drops the one unused longest. A device whose key went gets 401 like any other refused key (`keyRefused`).
 - A new PIN, or a PIN reset by Ben, deletes every key of the profile (`changeProfile`). The next sync gets 401 → `cloud.js keyRefused` asks the public list: no PIN now → opens again by itself; a PIN → `newPin: true`, `rememberUntil` cleared, status `locked`. A PIN changed on this device keeps its `rememberUntil`.
 - `initCloud` moves a stored key of a PIN profile with no `rememberUntil` (from the retired Remember, before 2026-10-19) into `sessionKeys` for this visit.
 
@@ -263,7 +264,7 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 | Table | Key | Written by | Read by | Kept |
 |---|---|---|---|---|
 | `profiles` | `id` | `makeProfile`, `changeProfile`, `checkSecret`, `touch`, push (rev, `record_bytes`) | list, open, pull, every keyed route | until deleted or pruned |
-| `keys` | `hash` (SHA-256 of the key) | `newKey`, `openProfile` (old sessions), `forgetKey`, `changeProfile` (new PIN), `deleteProfile` | `keyProfile` | session keys a week |
+| `keys` | `hash` (SHA-256 of the key) | `newKey`, `openProfile` (old sessions), `forgetKey`, `changeProfile` (new PIN), `deleteProfile` | `keyProfile` (marks `used`) | session keys a week; any key 180 days unused; 20 a profile |
 | `records` | `(profile_id, kind, id)` | push (tombstones `deleted = 1`) | pull, push (orphan sounds), unshare | tombstones forever |
 | `sounds` | `id` | `startSound`, `putPiece` (`got`), push (orphans: a deleted clip's, and a changed clip's old audio) and unshare, `dropSounds` (profile_id `''`) | `getSound`, `ownSound`, push | until no record or share uses it |
 | `sound_chunks` | `(sound_id, n)` | `putPiece` | `getSound`, `need` | with its sound |
@@ -272,9 +273,9 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 | `counters` | `(name, day)` | `http.js withinDaily`; `deleteProfile` gives one back the same day | the same | old days stay |
 | `devices` | `hash` (key hash) | `metrics.js noteEvent` | the runner | 90 days since last seen |
 | `activity` | autoincrement `id` | `metrics.js noteEvent` | the runner | 14 days |
-| `migrations` | `name` | each migration; schema.sql lists 001–006 as applied | `just cloud-migrate` | — |
+| `migrations` | `name` | each migration; schema.sql lists 001–007 as applied | `just cloud-migrate` | — |
 
-Migrations: 001 drops gifts and families, adds `active`, `keys.session`, shares; 002 adds `devices`, `activity`, `uses`; 003 adds `visits`, drops `ip_hash`; 004 keeps country only; 005 drops `uses` and `visits`; 006 adds `profiles.record_bytes`, counted from the records. `tests/migrations.test.mjs` checks the migrations reach `schema.sql`.
+Migrations: 001 drops gifts and families, adds `active`, `keys.session`, shares; 002 adds `devices`, `activity`, `uses`; 003 adds `visits`, drops `ip_hash`; 004 keeps country only; 005 drops `uses` and `visits`; 006 adds `profiles.record_bytes`, counted from the records; 007 adds `keys.used`. `tests/migrations.test.mjs` checks the migrations reach `schema.sql`.
 
 ## Every /api/ route and its limits
 
@@ -285,7 +286,7 @@ All JSON bodies go through `http.js readJson`: `Origin` must be `https://noodlep
 | `GET /api/cloud` | — | — |
 | `GET /api/profiles` | — | 300 newest, `CLOUD_ID` only |
 | `POST /api/profiles` | Origin | fun name, listed emoji, person color; 409 if it exists; 507 at 1,000 profiles; 429 at 50 new a UTC day |
-| `POST /api/profiles/:id/open` | Origin; PIN if set | 5 wrong → 10-minute wait (401 `tries`, 429 `wait`) |
+| `POST /api/profiles/:id/open` | Origin; PIN if set | 5 wrong → 10-minute wait (401 `tries`, 429 `wait`); a new key: the profile keeps its 20 most recently used, and sweeps session keys over a week old and any unused 180 days |
 | `DELETE /api/profiles/:id/key` | Origin, key | deletes the key sent |
 | `PATCH /api/profiles/:id` | Origin, key; current PIN for `newPin` | look kept only if `edited` ≥ stored; a new PIN deletes every key and returns a new one |
 | `DELETE /api/profiles/:id` | Origin, key, PIN | deletes records, keys, unshared sounds, metrics; gives back the day's profile count if made today |
@@ -446,7 +447,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 - **Reports expire lazily.** `reports.js` deletes expired rows only when a new report arrives.
 - **`log-clean.js RULES.cloud` lists `forgot`**, which no code logs any more (dead entry; harmless). `remember` is logged again by 🔑 Remember (`true`) and `forgetHere` (`false`).
 - **Record bytes are kept as a running count.** `push` subtracts what the records it is about to write hold and adds what landed, in the same batch (`profiles.record_bytes`); a refusal counts the profile again from its records first, so a drift high never refuses wrongly. Everyone's total is `SUM(record_bytes)` over `profiles`, one row per profile.
-- **Session keys are swept only on open.** A PIN profile nobody opens again keeps its old session keys.
+- **Old keys are swept only on open.** A PIN profile nobody opens again keeps its old session keys (at most 20); an idle key is also deleted when it is next sent.
 - **`cloud-sync.js pieces(0)`** is `[[0, 0]]`, but `startSound` refuses 0 bytes; an empty clip would fail its upload.
 - **`track-page.js errorOf`'s comment names a `visits` module**, which no longer exists.
 - **A sync triggered on hide is not `keepalive`.** `cloud-api.js` fetches have no `keepalive`; a closing page can cut the sync off. `sent`, bases and `rev` are saved after each step, so the next sync carries on.

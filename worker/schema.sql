@@ -32,12 +32,15 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- profile deletes every key, so every device must open it again. A session
 -- key belongs to a device that did not tick "Remember on this device": it
 -- lives in that page's memory only, and keys like it older than a week are
--- deleted the next time the profile is opened.
+-- deleted the next time the profile is opened. Any key unused for 180 days
+-- stops working, and a profile keeps its 20 most recently used
+-- (worker/cloud.js KEY_IDLE_MS, KEYS_PER_PROFILE).
 CREATE TABLE IF NOT EXISTS keys (
   hash       TEXT PRIMARY KEY,
   profile_id TEXT NOT NULL,
   created    INTEGER NOT NULL,
-  session    INTEGER NOT NULL DEFAULT 0  -- 1: not remembered on its device
+  session    INTEGER NOT NULL DEFAULT 0, -- 1: not remembered on its device
+  used       INTEGER NOT NULL DEFAULT 0  -- last request with it, to the hour; 0: none since migration 007 (created counts)
 );
 CREATE INDEX IF NOT EXISTS keys_profile ON keys (profile_id);
 
@@ -177,4 +180,4 @@ CREATE TABLE IF NOT EXISTS migrations (
   name    TEXT PRIMARY KEY,   -- the file's name, without .sql
   applied INTEGER NOT NULL
 );
-INSERT OR IGNORE INTO migrations (name, applied) VALUES ('001-shares-not-gifts-or-families', 0), ('002-player-metrics', 0), ('003-visits-no-ip-hash', 0), ('004-country-only', 0), ('005-drop-uses-visits', 0), ('006-record-bytes', 0);
+INSERT OR IGNORE INTO migrations (name, applied) VALUES ('001-shares-not-gifts-or-families', 0), ('002-player-metrics', 0), ('003-visits-no-ip-hash', 0), ('004-country-only', 0), ('005-drop-uses-visits', 0), ('006-record-bytes', 0), ('007-key-used', 0);

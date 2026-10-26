@@ -50,6 +50,14 @@ const TOUCHED = `json_each(?) AS j JOIN records ON records.profile_id = ?
 // A device that did not tick "Remember on this device" holds its key in
 // memory only; keys like that are deleted once they are a week old.
 export const SESSION_KEY_MS = 7 * 24 * 60 * 60 * 1000;
+// Any key unused for half a year stops working and is deleted: a family that
+// opens the app even every few months keeps its devices; a phone given away
+// or a browser cleared doesn't keep a key forever. (A device whose key went
+// opens the profile again: by itself with no PIN, else it asks the PIN.)
+export const KEY_IDLE_MS = 180 * 24 * 60 * 60 * 1000;
+// A profile keeps the keys of its 20 most recently used devices; opening it
+// on one more drops the one unused longest.
+export const KEYS_PER_PROFILE = 20;
 // Last activity is written at most once an hour per profile (one row write).
 export const ACTIVE_STEP_MS = 60 * 60 * 1000;
 
@@ -71,8 +79,13 @@ export const pieceSize = (bytes, n) => Math.min(CHUNK_BYTES, bytes - n * CHUNK_B
 async function newKey(env, profileId, now, session = false, seen = {}) {
   const key = randomId(20);
   const hash = await sha256Hex(key);
-  await env.DB.prepare('INSERT INTO keys (hash, profile_id, created, session) VALUES (?, ?, ?, ?)')
-    .bind(hash, profileId, now, session ? 1 : 0).run();
+  await env.DB.batch([
+    env.DB.prepare('INSERT INTO keys (hash, profile_id, created, session, used) VALUES (?, ?, ?, ?, ?)')
+      .bind(hash, profileId, now, session ? 1 : 0, now),
+    env.DB.prepare(`DELETE FROM keys WHERE profile_id = ? AND hash NOT IN
+      (SELECT hash FROM keys WHERE profile_id = ? ORDER BY hash = ? DESC, MAX(used, created) DESC, created DESC LIMIT ?)`)
+      .bind(profileId, profileId, hash, KEYS_PER_PROFILE),
+  ]);
   seen.device = hash;
   return key;
 }
@@ -84,16 +97,26 @@ const bearer = (request) => /^Bearer ([a-z2-7]{32})$/.exec(request.headers.get('
 const touch = (env, id, now) => env.DB.prepare('UPDATE profiles SET active = ? WHERE id = ? AND active < ?')
   .bind(now, id, now - ACTIVE_STEP_MS);
 
-// The profile the request's key opens, or null.
-async function keyProfile(request, env) {
+// The profile the request's key opens, or null. A key unused for
+// KEY_IDLE_MS is deleted instead; a used one is marked, at most once an hour
+// (one row write). `used` is 0 on a key an older Worker made: its `created` counts.
+async function keyProfile(request, env, now) {
   const key = bearer(request);
   if (!key) return null;
-  const row = await env.DB.prepare('SELECT profile_id FROM keys WHERE hash = ?').bind(await sha256Hex(key)).first();
-  return row?.profile_id ?? null;
+  const hash = await sha256Hex(key);
+  const row = await env.DB.prepare('SELECT profile_id, created, used FROM keys WHERE hash = ?').bind(hash).first();
+  if (!row) return null;
+  const last = Math.max(row.used, row.created);
+  if (last < now - KEY_IDLE_MS) {
+    await env.DB.prepare('DELETE FROM keys WHERE hash = ?').bind(hash).run();
+    return null;
+  }
+  if (last < now - ACTIVE_STEP_MS) await env.DB.prepare('UPDATE keys SET used = ? WHERE hash = ?').bind(now, hash).run();
+  return row.profile_id;
 }
 
-async function needKey(request, env, profileId) {
-  const who = await keyProfile(request, env);
+async function needKey(request, env, profileId, now) {
+  const who = await keyProfile(request, env, now);
   if (!who || (profileId && who !== profileId)) throw new Refuse(401, 'key');
   return who;
 }
@@ -178,23 +201,24 @@ async function openProfile(request, env, id, now, seen) {
   Object.assign(seen, { kind: 'open', profile: id });
   await needPin(env, p, body.pin, now);
   await env.DB.batch([
-    env.DB.prepare('DELETE FROM keys WHERE profile_id = ? AND session = 1 AND created < ?').bind(id, now - SESSION_KEY_MS),
+    env.DB.prepare('DELETE FROM keys WHERE profile_id = ? AND ((session = 1 AND created < ?) OR MAX(used, created) < ?)')
+      .bind(id, now - SESSION_KEY_MS, now - KEY_IDLE_MS),
     touch(env, id, now),
   ]);
   return json(200, { key: await newKey(env, id, now, body.remember === false, seen), rev: p.rev, ...looks(p) });
 }
 
 // "Forget on this device": the key the request carries is deleted.
-async function forgetKey(request, env, id) {
+async function forgetKey(request, env, id, now) {
   if (request.headers.get('Origin') !== ORIGIN) throw new Refuse(403, 'origin');
-  await needKey(request, env, id);
+  await needKey(request, env, id, now);
   await env.DB.prepare('DELETE FROM keys WHERE hash = ?').bind(await sha256Hex(bearer(request))).run();
   return json(200, { ok: true });
 }
 
 async function changeProfile(request, env, id, now, seen) {
   const body = await readJson(request);
-  await needKey(request, env, id);
+  await needKey(request, env, id, now);
   const p = await getProfile(env, id);
   const out = { ok: true };
   const look = checkLooks(body, { partial: true });
@@ -235,7 +259,7 @@ const dropSounds = (env, id) => [
 
 async function deleteProfile(request, env, id, now) {
   const body = await readJson(request);
-  await needKey(request, env, id);
+  await needKey(request, env, id, now);
   const p = await getProfile(env, id);
   await needPin(env, p, body.pin, now);
   // A profile made and deleted on the same UTC day gives its place in that
@@ -256,7 +280,7 @@ async function deleteProfile(request, env, id, now) {
 // ── records ──
 
 async function pull(request, url, env, id, now, seen) {
-  await needKey(request, env, id);
+  await needKey(request, env, id, now);
   Object.assign(seen, { kind: 'pull', profile: id });
   await touch(env, id, now).run();
   const since = Math.max(0, Number.parseInt(url.searchParams.get('since') || '0', 10) || 0);
@@ -309,7 +333,7 @@ async function roomForRecords(env, p, growth) {
 // edit. Without `since` (an older copy of the app), every record is written.
 async function push(request, env, id, now, seen) {
   const body = await readJson(request, LIMITS.pushBytes);
-  await needKey(request, env, id);
+  await needKey(request, env, id, now);
   Object.assign(seen, { kind: 'push', profile: id });
   const put = Array.isArray(body.put) ? body.put : [];
   const del = Array.isArray(body.del) ? body.del : [];
@@ -415,7 +439,7 @@ async function need(env, soundId, chunks) {
 
 async function startSound(request, env, id, now) {
   const body = await readJson(request);
-  await needKey(request, env, id);
+  await needKey(request, env, id, now);
   const { sha256, bytes, mime } = body;
   if (!SHA.test(sha256 ?? '')) throw new Refuse(400, 'sha256');
   if (!Number.isInteger(bytes) || bytes < 1 || bytes > MAX_SOUND_BYTES) throw new Refuse(413, 'size');
@@ -433,9 +457,9 @@ async function startSound(request, env, id, now) {
   return json(201, { id: soundId, need: Array.from({ length: chunks }, (_, n) => n) });
 }
 
-async function putPiece(request, env, soundId, n) {
+async function putPiece(request, env, soundId, n, now) {
   if (request.headers.get('Origin') !== ORIGIN) throw new Refuse(403, 'origin');
-  const who = await needKey(request, env, null);
+  const who = await needKey(request, env, null, now);
   const s = await env.DB.prepare('SELECT profile_id, bytes, chunks FROM sounds WHERE id = ?').bind(soundId).first();
   if (!s || s.profile_id !== who) throw new Refuse(404, 'sound');
   if (!Number.isInteger(n) || n < 0 || n >= s.chunks) throw new Refuse(400, 'piece');
@@ -488,7 +512,7 @@ async function ownSound(env, profileId, soundId) {
 // shared again gets its code back. -> {code}
 async function makeShare(request, env, id, now, seen) {
   const body = await readJson(request, LIMITS.shareBytes + 4096);
-  await needKey(request, env, id);
+  await needKey(request, env, id, now);
   if (!SHARE_KINDS.includes(body.kind)) throw new Refuse(400, 'kind');
   const title = typeof body.title === 'string' ? body.title.trim().slice(0, 24) : '';
   if (!title) throw new Refuse(400, 'title');
@@ -547,8 +571,8 @@ async function getShare(env, raw) {
 
 // The profile's own shares, newest first, so its owner can unshare one.
 // -> {shares: [{code, kind, title, created}]}
-async function myShares(request, env, id) {
-  await needKey(request, env, id);
+async function myShares(request, env, id, now) {
+  await needKey(request, env, id, now);
   const rows = (await env.DB.prepare('SELECT code, kind, title, created FROM shares WHERE profile_id = ? ORDER BY created DESC, code')
     .bind(id).all()).results;
   return json(200, { shares: rows.map((r) => ({ code: r.code, kind: r.kind, title: r.title, created: r.created })) });
@@ -557,9 +581,9 @@ async function myShares(request, env, id) {
 // 🚫 Unshare (Ben, Q18): the code stops working for everyone. Its audio goes
 // too, unless a record or another share still uses it; a remix someone made
 // holds its own copy of the audio, so it stays. -> {ok}
-async function unshare(request, env, id, raw) {
+async function unshare(request, env, id, raw, now) {
   if (request.headers.get('Origin') !== ORIGIN) throw new Refuse(403, 'origin');
-  await needKey(request, env, id);
+  await needKey(request, env, id, now);
   const code = plainCode(raw);
   const s = isShareCode(code) ? await env.DB.prepare('SELECT code FROM shares WHERE code = ? AND profile_id = ?').bind(code, id).first() : null;
   if (!s) throw new Refuse(404, 'share');
@@ -583,9 +607,9 @@ async function unshare(request, env, id, raw) {
 // nothing, and says yes, so those devices drop what they hold instead of
 // retrying for as long as the page stays open. Remove this route (and its
 // test) about 2026-11-16, when no copy is left.
-async function takeUses(request, env, id) {
+async function takeUses(request, env, id, now) {
   await readJson(request, 32_768);
-  await needKey(request, env, id);
+  await needKey(request, env, id, now);
   return json(200, { ok: true });
 }
 
@@ -630,19 +654,19 @@ async function route(request, env, now, seen) {
         if (parts.length === 2 && m === 'PATCH') return await changeProfile(request, env, b, now, seen);
         if (parts.length === 2 && m === 'DELETE') return await deleteProfile(request, env, b, now);
         if (parts.length === 3 && c === 'open' && m === 'POST') return await openProfile(request, env, b, now, seen);
-        if (parts.length === 3 && c === 'key' && m === 'DELETE') return await forgetKey(request, env, b);
+        if (parts.length === 3 && c === 'key' && m === 'DELETE') return await forgetKey(request, env, b, now);
         if (parts.length === 3 && c === 'records' && m === 'GET') return await pull(request, url, env, b, now, seen);
         if (parts.length === 3 && c === 'records' && m === 'POST') return await push(request, env, b, now, seen);
         if (parts.length === 3 && c === 'sounds' && m === 'POST') return await startSound(request, env, b, now);
         if (parts.length === 3 && c === 'shares' && m === 'POST') return await makeShare(request, env, b, now, seen);
-        if (parts.length === 3 && c === 'uses' && m === 'POST') return await takeUses(request, env, b);
-        if (parts.length === 3 && c === 'shares' && m === 'GET') return await myShares(request, env, b);
-        if (parts.length === 4 && c === 'shares' && m === 'DELETE') return await unshare(request, env, b, parts[3]);
+        if (parts.length === 3 && c === 'uses' && m === 'POST') return await takeUses(request, env, b, now);
+        if (parts.length === 3 && c === 'shares' && m === 'GET') return await myShares(request, env, b, now);
+        if (parts.length === 4 && c === 'shares' && m === 'DELETE') return await unshare(request, env, b, parts[3], now);
       }
     }
     if (a === 'sounds' && SOUND_ID.test(b ?? '')) {
       if (parts.length === 2 && (m === 'GET' || m === 'HEAD')) return await getSound(env, b);
-      if (parts.length === 3 && m === 'PUT' && /^\d{1,2}$/.test(c)) return await putPiece(request, env, b, Number(c));
+      if (parts.length === 3 && m === 'PUT' && /^\d{1,2}$/.test(c)) return await putPiece(request, env, b, Number(c), now);
     }
     if (a === 'shares' && parts.length === 2 && m === 'GET') return await getShare(env, b);
     return fail(404, 'not found');

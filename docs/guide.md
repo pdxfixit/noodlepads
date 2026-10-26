@@ -1045,6 +1045,9 @@ counts its JSON and 100 bytes, so a deleted one's tombstone counts too). A
 push or sound over a cap is refused (507) and stays on the device; a push
 that adds nothing (an edit that shrinks, a delete) always lands. A day (UTC)
 allows 50 new profiles, 5,000 pushes and 500 shares; a profile, 200 shares.
+A profile keeps the keys of its 20 most recently used devices, and a device
+that hasn't used its key for 180 days opens the profile again (by itself
+with no PIN; else it asks the PIN).
 
 ## Notices and Undo
 

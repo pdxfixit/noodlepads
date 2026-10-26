@@ -75,3 +75,16 @@ test('migration 006 counts each profile\'s record bytes as the Worker does', () 
   const bytes = Object.fromEntries(db.prepare('SELECT id, record_bytes FROM profiles').all().map((r) => [r.id, r.record_bytes]));
   assert.deepEqual(bytes, { 'p-a': Buffer.byteLength('{"name":"Ünï"}') + ROW_BYTES + ROW_BYTES, 'p-b': 0 }, 'bytes, not characters; a tombstone costs a row');
 });
+
+// 007: every key there counts as used now, so none expires before 180 days of its own.
+test('migration 007 marks every key as used now', () => {
+  const db = migrated();
+  for (const f of MIGRATIONS.filter((m) => m < '007')) db.exec(read(`../worker/migrations/${f}`));
+  db.exec("INSERT INTO keys (hash, profile_id, created, session) VALUES ('k', 'p-a', 1, 0)");
+  const before = Date.now() - 1000;
+  const file = MIGRATIONS.find((m) => m.startsWith('007'));
+  assert.ok(file, 'migration 007 is there');
+  db.exec(read(`../worker/migrations/${file}`));
+  const { used } = db.prepare("SELECT used FROM keys WHERE hash = 'k'").get();
+  assert.ok(used >= before && used <= Date.now() + 1000, `used ${used}`);
+});
