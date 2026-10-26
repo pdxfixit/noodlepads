@@ -405,7 +405,6 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | Loop glow goes through `pads.js` | `audio.on.looping` is owned by `pads.js initPads`, which forwards to `dj.looping` through a hook `app.js` passes in. |
 | Latency in four places (above) | A change to one leaves the others. |
 | Dead exports kept for tests | `rhythm.js hitTime`, `applySnaps`, `countInBeats`, `snapHits`; `kids-logic.js squareSeconds`; `touch-grid.js emptyBlock`, `swapBlocks`. The app uses none of them. |
-| Dead wiring | `app.js` passes `el.tryingStop` to `createDJ`; `dj.js` never reads it. `dj.js` returns `deck`, `touchNow`, `letGo`, `stopReplay`; `app.js` calls none. |
 | Kids writes the scratch behind the beat maker's back | `sequencer.js` re-reads only in `show()`, so every way out of Kids must end in `showView` (`applyKids` does). |
 | Deletes skip `persist` | `app.js` `deleteTake`, `deleteLayout`, `deleteTouchLayout` call `db.remove` and only log a failure; `beatLibrary.remove` shows a notice. `adoptKidsBeat` writes with `db.batch`. |
 
@@ -423,6 +422,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | While recording, a new sound takes an empty row first, never one already used this recording | `rec-empty-rows.test.mjs` |
 | `showRec` runs every 40 ms and writes only what changed (`putText`, `putAttr`): rewriting labels re-ran tooltips and held the playhead up | `keys-playhead.test.mjs` |
 | A finger plays on the lift; a scroll or cancel plays nothing | `finger.test.mjs`, `touch-play.test.mjs` |
+| Every element `app.js` hands `createDJ` is read, and every method `dj.js` returns is called | `dj-wiring.test.mjs` |
 | A key's play counts once for usage, as `'keys'` (`tapPad`'s `kind`) | `play-count-app.test.mjs` |
 | A held key loops only on OS repeat past 350 ms; lifting a modifier forgets all holds | no test found (`shift-holds.test.mjs` covers Shift-click only) |
 | Every remembered key (`dj-input`, `dj-size`, `dj-click`, `beat-keys`, `kids-tab`) starts the app safely | `startup-remembered.test.mjs` |
