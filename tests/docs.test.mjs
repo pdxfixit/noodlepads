@@ -12,7 +12,8 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const docs = ['AGENTS.md', 'CLAUDE.md', 'README.md', 'TODO.md',
   ...readdirSync(join(root, 'docs')).filter((f) => f.endsWith('.md')).map((f) => `docs/${f}`),
   ...readdirSync(join(root, 'docs/adr')).filter((f) => f.endsWith('.md')).map((f) => `docs/adr/${f}`),
-  ...readdirSync(join(root, 'docs/design')).filter((f) => f.endsWith('.md')).map((f) => `docs/design/${f}`)];
+  ...readdirSync(join(root, 'docs/design')).filter((f) => f.endsWith('.md')).map((f) => `docs/design/${f}`),
+  ...readdirSync(join(root, 'docs/architecture')).filter((f) => f.endsWith('.md')).map((f) => `docs/architecture/${f}`)];
 
 // [text](target) links, skipping web addresses, mail and in-page anchors, and
 // anything inside a fenced code block (the ADR template has placeholders).

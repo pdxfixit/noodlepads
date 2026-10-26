@@ -22,6 +22,7 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 4. [docs/questions.md](docs/questions.md): open questions. Look first for answers Ben typed in.
 5. [TODO.md](TODO.md): the one to-do list. "Agents do" is approved agent work, in order; "Ben does" is what only Ben can do.
 6. [docs/how-to.md](docs/how-to.md): step by step for your kind of task (a fix, a stored-format change, docs, landing, deploy and rollback, the cloud), then the doc it needs from the table below.
+7. [docs/architecture/](docs/architecture/README.md): how the code is wired. Read the area your task touches before you search the code for "is there one shared X", "where does Y happen" or "what must I touch to change Z".
 
 **Leave the next session a warm start.** A session may be a cloud session with only this repo: no chat history, no memory folder. Whatever the next agent needs must be in a file here. Update [docs/state.md](docs/state.md) in the same commit whenever what is live or in flight changes. If the chat taught you a standing rule, add it here, not only to a local memory.
 
@@ -32,6 +33,7 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 | [README.md](README.md) | The public front page: what it is, the live link, screenshots, run and test it, every `just` recipe ("Running it yourself"), the privacy statement. |
 | [docs/guide.md](docs/guide.md) | How the app works: every screen, how things are stored, cloud profiles, keyboard use, limits on what comes in. |
 | [docs/layout.md](docs/layout.md) | The file map: one line per file in `web/`, `worker/` and `tools/`. |
+| [docs/architecture/](docs/architecture/README.md) | How the code is wired: the shared engines, who calls whom, the record shapes that cross modules, the known seams, and "to change X, touch …". One file per area. |
 | [docs/state.md](docs/state.md) | Where things stand now. Present tense only. |
 | [docs/decisions.md](docs/decisions.md) | Current rules, by topic: Rule · Why · Since. |
 | [docs/adr/](docs/adr/README.md) | Why the biggest decisions were made. |
@@ -126,6 +128,7 @@ Ben: *"Optimizing the user interface for a variety of screens is very important.
 - **A replaced rule is deleted,** and the new rule takes its row. Do not add prose saying a rule changed.
 - **A significant decision also gets an ADR** in [docs/adr/](docs/adr/README.md): anything that changes what the app is, a stored or backup format, the hosting, or is costly to undo.
 - Never change a decision on your own. Recording Ben's answer, or fixing a row that does not match the code, is fine.
+- **Keep [docs/architecture/](docs/architecture/README.md) true in the same commit** when you add, remove, merge or split an engine, a store, a scheduler, a record shape that crosses modules, a path off the device, or a module's job, or when you fix a seam it lists. `tests/architecture.test.mjs` checks its ✅ claims against the code. When that test fails, fix the doc as well as the test. Found something the doc lacks while you searched? Add it.
 - Keep [docs/guide.md](docs/guide.md) true when behavior changes, [docs/layout.md](docs/layout.md) when a file is added, moved or removed, and README.md's short list when a whole part changes.
 
 ### Writing
