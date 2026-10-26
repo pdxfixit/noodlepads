@@ -83,7 +83,6 @@ Readers and writers:
 - `state.js readStorage` loads it; `state.js reIdStoredPeople` deletes links whose id is not a `CLOUD_ID` (logs `cloud {unlinked}`).
 - Read by `cloud.js` (`linkOf`, `inCloud`, `keyOf`, `pinIsNew`, `needsPin`, `pinGuards`), `people.js` (`linkOf`, `keyOf` when deleting), `who-now.js` (`linkOf(...).pin`).
 - Backups never carry it (`backup-ui.js storedLists` has no `cloud`).
-- `state.js` `state.cloud` comment still lists the old `remember` field (no day it ends, from before 2026-10-19) and not `rememberUntil` or `noOffer`.
 
 ### Keys: remembered and session
 
@@ -450,7 +449,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 - **Record bytes are kept as a running count.** `push` and `makeShare` first reserve their growth in one `UPDATE … SET reserved_bytes = reserved_bytes + ? WHERE record_bytes + reserved_bytes + ? <= cap AND (SELECT SUM(record_bytes + reserved_bytes) FROM profiles) + ? <= total RETURNING` (`reserve`), so writes sent at once can't all pass on the same count. Reservations live in `profiles.reserved_bytes`, apart from what is written, so a recount never wipes them; one older than `RESERVE_MS` (a minute: a write that died between taking and settling) counts for nothing. The write's batch ends its reservation (`settle`), subtracts what the records it writes held and adds what landed; a failed batch gives the room back (`release`). A refusal counts the profile's written bytes again first, so a drift high never refuses wrongly. A push's growth is read before its write, so its batch checks the caps once more, from what its records hold at that moment (another push may have deleted them and filled the room): over a cap, a `SELECT … json('over a cap')` stops the batch, and the push answers 507. Everyone's total is `SUM(record_bytes)` over `profiles`, one row per profile. `profiles.bytes_counted` is 0 until this Worker has counted the profile itself (migration 006 leaves every one at 0, as a push the older Worker took after it left the count low): each reservation counts the writer and up to 5 more such profiles (`countUncounted`), so every count is exact soon after the deploy. `tests/fake-d1.mjs` `slow` makes each query wait a turn, so such races show in a test.
 - **Old keys are swept only on open.** A PIN profile nobody opens again keeps its old session keys (at most 20); an idle key is also deleted when it is next sent.
 - **`track-page.js errorOf`'s comment names a `visits` module**, which no longer exists.
-- **A sync triggered on hide is not `keepalive`.** `cloud-api.js` fetches have no `keepalive`; a closing page can cut the sync off. `sent`, bases and `rev` are saved after each step, so the next sync carries on.
+- **A sync triggered on hide is not `keepalive`, on purpose.** A closing page can cut it off, and nothing is lost or wedged: a pull stores nothing in the link until its merge is done, a push is one D1 batch whose `sent`, bases and `rev` are saved after it lands (a lost answer only means the next pull finds this device's own records, `same`), and audio pieces resume from `need`. `keepalive` could not carry it anyway: browsers cap a page's keepalive bodies at 64 KB in all, and a push may be 4 MB and a piece 1.9 MB.
 
 ## To change X, touch …
 
