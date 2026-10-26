@@ -34,24 +34,40 @@ function same(a, b) {
   return diff === 0;
 }
 
-// Checks `given` against a profile's PIN (`row`: {id, hash, salt, fails,
-// locked_until}), and records the try. Returns {ok: true}, {ok: false, wait}
-// (seconds to wait) or {ok: false, tries} (tries left before a wait).
+const wait = (until, now) => ({ ok: false, wait: Math.ceil((until - now) / 1000) });
+
+// Checks `given` against a profile's PIN (`row`: {id, hash, salt}), and
+// records the try. Returns {ok: true}, {ok: false, wait} (seconds to wait) or
+// {ok: false, tries} (tries left before a wait).
+//
+// The try is counted first, in one UPDATE that hands back the new count, and
+// only then is the PIN compared: requests sent all at once each get their own
+// number, so no more than TRIES of them are ever compared in a window. (Read
+// first and written after, every one of them read the same count.)
 export async function checkSecret(db, row, given, now) {
-  if (row.locked_until > now) return { ok: false, wait: Math.ceil((row.locked_until - now) / 1000) };
+  const counted = await db.prepare(`UPDATE profiles SET fails = fails + 1
+    WHERE id = ? AND locked_until <= ? RETURNING fails`).bind(row.id, now).first();
+  if (!counted) {
+    const locked = await db.prepare('SELECT locked_until FROM profiles WHERE id = ?').bind(row.id).first();
+    return wait(locked?.locked_until ?? now + WAIT_MS, now);
+  }
+  const lock = () => db.prepare('UPDATE profiles SET fails = 0, locked_until = ? WHERE id = ? AND locked_until <= ?')
+    .bind(now + WAIT_MS, row.id, now).run();
+  // Past the last try of this window: the wait starts, with no compare.
+  if (counted.fails > TRIES) {
+    await lock();
+    return wait(now + WAIT_MS, now);
+  }
   const right = typeof given === 'string' && given.length <= 64 && same(await hashSecret(given, row.salt), row.hash);
   if (right) {
-    if (row.fails) await db.prepare(`UPDATE profiles SET fails = 0 WHERE id = ?`).bind(row.id).run();
+    await db.prepare('UPDATE profiles SET fails = 0 WHERE id = ?').bind(row.id).run();
     return { ok: true };
   }
-  const fails = row.fails + 1;
-  if (fails >= TRIES) {
-    await db.prepare(`UPDATE profiles SET fails = 0, locked_until = ? WHERE id = ? AND pin_hash IS NOT NULL`)
-      .bind(now + WAIT_MS, row.id).run();
-    return { ok: false, wait: Math.ceil(WAIT_MS / 1000) };
+  if (counted.fails >= TRIES) {
+    await lock();
+    return wait(now + WAIT_MS, now);
   }
-  await db.prepare(`UPDATE profiles SET fails = ? WHERE id = ?`).bind(fails, row.id).run();
-  return { ok: false, tries: TRIES - fails };
+  return { ok: false, tries: TRIES - counted.fails };
 }
 
 // Codes people read off a screen: no 0/O or 1/I.

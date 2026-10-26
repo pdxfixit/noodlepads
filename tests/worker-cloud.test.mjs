@@ -139,6 +139,24 @@ test('opening: no PIN opens; a PIN is checked; 5 wrong tries, then a 10-minute w
   assert.equal(open.data.pin, true);
 });
 
+// The council's review, 2026-10-26: the count was read before the compare and
+// written after, so tries sent all at once each saw 0 and got a guess.
+test('PIN tries sent all at once still get 5 guesses in all, then the wait', async () => {
+  const c = cloud();
+  await made(c, 'p-pin', { pin: '0019' });
+  const pins = Array.from({ length: 20 }, (_, i) => String(i).padStart(4, '0'));   // the right one last
+  const tries = await Promise.all(pins.map((pin) => c.call('POST', 'profiles/p-pin/open', { body: { pin } })));
+  assert.ok(!tries.some((r) => r.status === 200), 'the twentieth guess never opened it');
+  const guessed = tries.filter((r) => r.status === 401);
+  assert.equal(guessed.length, 4, 'four wrong guesses say how many are left');
+  assert.deepEqual(guessed.map((r) => r.data.tries).sort(), [1, 2, 3, 4]);
+  assert.equal(tries.filter((r) => r.status === 429).length, 16, 'the fifth starts the wait; the rest were never compared');
+  assert.equal((await c.call('POST', 'profiles/p-pin/open', { body: { pin: '0019' } })).status, 429, 'the right PIN waits too');
+  c.later(WAIT_MS);
+  assert.equal((await c.call('POST', 'profiles/p-pin/open', { body: { pin: '0019' } })).status, 200);
+  assert.equal(c.env.DB.rows("SELECT fails FROM profiles WHERE id = 'p-pin'")[0].fails, 0, 'a right PIN starts the count again');
+});
+
 test('records need the profile\'s own key; a push is one rev; a pull brings what changed since', async () => {
   const c = cloud();
   const key = await made(c, 'p-a');

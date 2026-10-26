@@ -105,7 +105,7 @@ Readers and writers:
 
 The PIN flow on opening a person: `app.js setPerson` → `needsPin` → `cloud-ui.js askToOpen` (one ask per person at a time) → `withPin` → `cloud.js unlock` → `api.open`. Offline (`CloudError` status 0) the device checks `link.check` itself; a PIN new to the device (`newPin`) has no `check`, so only the cloud can check it. `app.js` `onCloud` re-asks when a sync finds a new PIN for the person showing.
 
-The PIN hash is done twice, the same way: `web/cloud.js pinHash` (`PIN_ROUNDS` 20,000) for the device's offline check, and `worker/pin.js hashSecret` (`ROUNDS` 20,000) for the real one. Wrong tries: `worker/pin.js checkSecret`, 5 in a row then `WAIT_MS` (10 minutes), kept in `profiles.fails`/`locked_until`. Wrong PINs answer 401 `{error:'pin', tries}`; a wait answers 429 `{error:'wait', wait}`.
+The PIN hash is done twice, the same way: `web/cloud.js pinHash` (`PIN_ROUNDS` 20,000) for the device's offline check, and `worker/pin.js hashSecret` (`ROUNDS` 20,000) for the real one. Wrong tries: `worker/pin.js checkSecret`, 5 in a row then `WAIT_MS` (10 minutes), kept in `profiles.fails`/`locked_until`. Each try is counted before the compare, by one `UPDATE … SET fails = fails + 1 … RETURNING fails`, so tries sent at once get 5 compares in all; a try past the fifth starts the wait without one. Wrong PINs answer 401 `{error:'pin', tries}`; a wait answers 429 `{error:'wait', wait}`.
 
 ### Who goes to the cloud
 

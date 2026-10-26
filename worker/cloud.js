@@ -107,9 +107,7 @@ async function getProfile(env, id) {
 // The PIN rule for a profile that has one: right, or 401 {tries} / 429 {wait}.
 async function needPin(env, profile, pin, now) {
   if (!profile.pin_hash) return;
-  const r = await checkSecret(env.DB, {
-    id: profile.id, hash: profile.pin_hash, salt: profile.pin_salt, fails: profile.fails, locked_until: profile.locked_until,
-  }, pin, now);
+  const r = await checkSecret(env.DB, { id: profile.id, hash: profile.pin_hash, salt: profile.pin_salt }, pin, now);
   if (r.ok) return;
   if (r.wait) throw new Refuse(429, 'wait', { wait: r.wait });
   throw new Refuse(401, 'pin', { tries: r.tries });
