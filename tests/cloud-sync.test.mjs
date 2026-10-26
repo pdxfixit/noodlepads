@@ -225,7 +225,7 @@ async function twoDevicesWith(before) {
   await syncProfile(link, a.deps(api));
   const { d: b, link: bl } = await openOn(api, 'p-a');
   await syncProfile(bl, b.deps(api));
-  return { api, env, a, b, syncA: () => syncProfile(link, a.deps(api)), syncB: () => syncProfile(bl, b.deps(api)) };
+  return { api, env, a, b, bl, syncA: () => syncProfile(link, a.deps(api)), syncB: () => syncProfile(bl, b.deps(api)) };
 }
 const clipOf = async (d) => {
   const mine = d.stores.clips.filter((c) => c.personId === 'p-a');
@@ -247,6 +247,74 @@ test('sliders moved on one device, the same sound renamed on the other: every de
     assert.deepEqual(await clipOf(c), want, `${order}: a device opened later`);
     assert.deepEqual(env.DB.rows('SELECT bytes FROM sounds').map((r) => r.bytes), [4], `${order}: only the new audio is kept`);
   }
+});
+
+test("a push naming audio another device just replaced pulls first: it never sends its old audio back", async () => {
+  const { api, env, a, b, bl, syncA, BOOM } = await madeSoundOnTwo();
+  // B's first pull brings a beat A changed, so a second pull from the old rev would count it again.
+  await a.put('beats', { ...a.stores.beats[0], bpm: 123 });
+  await syncA();
+  await a.put('clips', { ...a.stores.clips[0], blob: blob(9, 8, 7, 6, 5), synth: { ...BOOM, from: 400 }, changed: Date.now() - 2000 });
+  await b.put('clips', { ...b.stores.clips[0], label: 'Big Boom', changed: Date.now() - 1000 });
+  // A syncs just after B's pull and before B's push: B's push names audio the cloud has let go.
+  let raced = false;
+  const asked = [];   // [since asked, rev answered] for each page B pulls
+  const racing = { ...api, pull: async (...args) => {
+    const page = await api.pull(...args);
+    asked.push([args[2], page.rev]);
+    if (!raced) { raced = true; await syncA(); }
+    return page;
+  } };
+  const phases = [];
+  const r = await syncProfile(bl, { ...b.deps(racing), onProgress: (p) => phases.push(p.phase) });
+  assert.ok(raced);
+  assert.equal(r.sounds, 0, 'B sent no audio');
+  assert.equal(asked.length, 2, 'the 409 pulled once more');
+  assert.equal(asked[1][0], asked[0][1], 'the second pull starts from the rev the first reached');
+  assert.deepEqual([r.pulled, r.merged], [2, 1], 'the beat and the sound, each counted once');
+  assert.equal(phases.at(-2), 'storing', `the bar is back at storing after the second pull's sounds (${phases.join(' ')})`);
+  await syncA();
+  const want = [{ label: 'Big Boom', from: 400, audio: [9, 8, 7, 6, 5] }];
+  assert.deepEqual(await clipOf(a), want);
+  assert.deepEqual(await clipOf(b), want);
+  assert.deepEqual(env.DB.rows('SELECT bytes FROM sounds').map((x) => x.bytes), [5], 'only the new audio is in the cloud');
+});
+
+test('a 409 for missing audio, then another: one pull, one resend; a third stops the sync', async () => {
+  const { api, env } = server();
+  const { a, link } = await startA(api);
+  await syncProfile(link, a.deps(api));
+  await a.put('clips', { ...a.stores.clips[0], label: 'Big Burp' });
+  const lost = env.DB.rows('SELECT id FROM sounds')[0].id;
+  let refusals = 2;
+  let pulls = 0;
+  let starts = 0;
+  const losing = { ...api,
+    pull: (...args) => { pulls++; return api.pull(...args); },
+    startSound: (...args) => { starts++; return api.startSound(...args); },
+    push: async (...args) => {
+      if (refusals > 0) { refusals--; throw new CloudError(409, { error: 'sound', sound: lost }); }
+      return api.push(...args);
+    } };
+  const r = await syncProfile(link, a.deps(losing));
+  assert.deepEqual([pulls, starts, r.pushed], [2, 1, 1], 'pulled once more, sent the audio once, then pushed');
+  refusals = 3;
+  await a.put('clips', { ...a.stores.clips[0], label: 'Bigger Burp' });
+  await assert.rejects(syncProfile(link, a.deps(losing)), { status: 409 }, 'never round and round');
+});
+
+test('audio the cloud lost is sent again, once, after a pull finds nothing newer', async () => {
+  const { api, env } = server();
+  const { a, link } = await startA(api);
+  await syncProfile(link, a.deps(api));
+  env.DB.db.exec('DELETE FROM sound_chunks; DELETE FROM sounds;');
+  await a.put('clips', { ...a.stores.clips[0], label: 'Big Burp' });
+  const r = await syncProfile(link, a.deps(api));
+  assert.equal(r.sounds, 1, 'sent again');
+  const { d: b, link: bl } = await openOn(api, 'p-a');
+  await syncProfile(bl, b.deps(api));
+  assert.deepEqual(await bytesOf(b.stores.clips[0].blob), [1, 2, 3]);
+  assert.equal(b.stores.clips[0].label, 'Big Burp');
 });
 
 test('sliders moved differently on two devices: both sounds are kept, each with its own audio', async () => {

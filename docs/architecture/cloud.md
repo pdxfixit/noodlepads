@@ -236,7 +236,7 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 4. A record whose JSON is over `RECORD_BYTES` (512 KB, the Worker's `recordBytes`) stays home as the cloud has it (`report.heavy`). The rest go in slices (`pushSlices`) of at most `PER_PUSH` (200) items and `PUSH_BYTES` (4 MB, less 1 KB for the envelope): `api.push(id, key, put, del, link.rev)`. A clip body is the record minus `blob`, plus `sound`, `sha256`, `bytes`. Each body is a snapshot taken with its hash before the pushes start, so an edit made meanwhile is pushed next time, never taken for sent.
 5. The Worker writes only records with `rev <= since`; the rest come back in `stale`. Landed records update `sent` and the base. `link.rev` moves to the new rev only when `res.was === link.rev` (nobody else pushed in between). Bases and link are saved after each slice.
 
-`syncProfile` repeats pull + push while `stale` is non-zero, at most `SYNC_ROUNDS` (3). A 409 `sound` (the cloud lost audio this device thought it had) drops that sound from `link.sounds` and pushes once more. Then `pushLook` sends name, avatar and color by `api.change` when this device's `edited` is newer.
+`syncProfile` repeats pull + push while `stale` is non-zero, at most `SYNC_ROUNDS` (3). A 409 `sound` (the push names audio the cloud no longer has: most often another device gave the clip new audio since this pull) pulls again and pushes; only a second 409 (the cloud lost it) drops that sound from `link.sounds` and sends the audio again, once. Then `pushLook` sends name, avatar and color by `api.change` when this device's `edited` is newer.
 
 ### After (`cloud.js syncNow`)
 
@@ -416,6 +416,9 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 | storing pulled records | `deps.put`/`deps.remove` write IndexedDB directly; only `fresh`/`keepBoth` go through `storeLoaded` (merge.js) | a rule added to `merge.js` or `persist` does not reach `take`, `merged` or `delete` |
 | `noodlepads.cloud` events | built from log entries in `track-page.js appEventOf`, except `pin-wrong`, tracked directly in `cloud.js unlock` | a new cloud action needs both a `logEvent` field in `RULES` and a branch in `appEventOf` |
 | retired route | `worker/cloud.js takeUses` (`/uses`) | to delete about 2026-11-16 with its test |
+| a clip's audio checked, then written | `worker/cloud.js push`: the 409 `sound` check reads before the write batch, not inside it | not atomic: another device's push can free that audio in between, and the record lands naming audio that is gone; the next pull's `fetchSound` 404s that sync, and the one after takes the newer record |
+| the second 409 resend | `cloud-sync.js syncProfile`: after a 409, one pull, then a second 409 drops the sound from `link.sounds` and sends this device's audio again | an edit made during that re-pull can send audio that the push then leaves unnamed (a stale record): it stays in D1, counting toward the profile's bytes, until a sound that names it is deleted |
+| audio freed while a pull fetches it | `worker/cloud.js push` frees a clip's old audio at once; `cloud-sync.js pullOnce` fetches audio named by the records it pulled | a pull that read a record just before another device replaced its audio gets 404 from `fetchSound`, and that whole sync fails (`trouble`); the next sync pulls the newer record and goes through |
 | the privacy policy link | `privacy.js PRIVACY_URL` and the literal URL in `index.html` `.privacy-link` | a new URL in one place leaves the other; `privacy.js` is in `sw.js MODULES` and cached, though the page never loads it |
 
 ## Invariants and gotchas

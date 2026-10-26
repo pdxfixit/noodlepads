@@ -437,11 +437,24 @@ export async function syncProfile(link, deps) {
     try {
       stale = await pushAll(link, deps, sha, report, bases_);
     } catch (err) {
-      // The cloud no longer has a sound this device thought it had: send it
-      // again, once.
-      if (err?.status !== 409 || err.error !== 'sound') throw err;
-      for (const [clipId, s] of Object.entries(link.sounds)) if (s.sound === err.sound) delete link.sounds[clipId];
-      stale = await pushAll(link, deps, sha, report, bases_);
+      // The cloud no longer has a sound this device thought it had. Most
+      // often another device gave it new audio since this pull (its old
+      // audio went): pull that first, so this device's old audio never goes
+      // back over it. Still missing: the cloud lost it, so send it again, once.
+      const missing = (e) => e?.status === 409 && e.error === 'sound';
+      if (!missing(err)) throw err;
+      await hashAudio(link, deps, here);
+      const again = await pullOnce(link, deps, sha, report, bases, bases_, tell, progress);
+      profile = again.profile ?? profile;
+      if (again.held) pull.held = again.held;
+      tell({ phase: 'storing', now: null, stored: true });   // the bar leaves 'sounds' again
+      try {
+        stale = await pushAll(link, deps, sha, report, bases_);
+      } catch (still) {
+        if (!missing(still)) throw still;
+        for (const [clipId, s] of Object.entries(link.sounds)) if (s.sound === still.sound) delete link.sounds[clipId];
+        stale = await pushAll(link, deps, sha, report, bases_);
+      }
     }
     // A record edited here while this pull ran is merged next round.
     if ((!stale && !pull.held) || round >= SYNC_ROUNDS) break;
