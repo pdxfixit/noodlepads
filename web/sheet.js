@@ -1239,10 +1239,10 @@ function startLive() {
     const split = livePlan(chain, storedTweaks());
     if (!sheet.original || !split?.tail.length) return false;
     const { head: steps, headTweaks: knobs } = split;
-    const key = `head:${steps.length || knobs ? recipeKey({ fx: steps, tweaks: knobs }) : ''}`;
-    if (!sheet.previews.has(key)) {
-      sheet.previews.set(key, sheet.original.then((b) => (steps.length || knobs ? applyChain(b, steps, knobs, sheet.clip?.level) : { buffer: b, duration: b.duration })));
-    }
+    // With nothing before the live steps the head is the sound in Normal:
+    // evened out and turned down by a preset's level, as the saved render is.
+    const key = `head:${recipeKey({ fx: steps, tweaks: knobs })}`;
+    if (!sheet.previews.has(key)) sheet.previews.set(key, sheet.original.then((b) => applyChain(b, steps, knobs, sheet.clip?.level)));
     const expected = sheet.original;
     const head = await sheet.previews.get(key);
     if (sheet.original !== expected || !el.sheet.open || sheet.plain) return false;

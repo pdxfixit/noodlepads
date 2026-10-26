@@ -1174,6 +1174,37 @@ test('a sound saved with old voices and knobs plays its knobs after its steps, s
   await advanced(false);
 });
 
+// Dragging a live step's slider plays a loop; letting go plays the saved
+// render. Both start from the sound evened out to the house peak (0.9) and
+// turned down by a preset's `level`, so the loudness holds when the slider is let go.
+test('the live loop with nothing before its live steps starts from the sound as the render does: peak 0.9, then the preset level', async () => {
+  await advanced(true);
+  const { currentPerson } = await import('../web/board.js');
+  const presets = currentPerson().clips;
+  for (const c of presets) c.level = -6;
+  await openPlain();
+  const realStart = audio.start;
+  audio.start = (id, sound) => { calls.push(['start', id, sound.buffer]); };
+  audio.unloop = () => {};
+  try {
+    addStep('echo');
+    await page.settle();
+    calls.length = 0;
+    const slider = $('#layer-rows').querySelector('input[data-key="repeats"]');
+    slider.dispatch('pointerdown', { button: 0 });
+    await page.settle();
+    const head = calls.filter(([w]) => w === 'start').at(-1)[2];
+    const peak = Math.max(...head.getChannelData(0).map(Math.abs));
+    assert.ok(Math.abs(peak - 0.9 * 10 ** (-6 / 20)) < 1e-6, `${peak}: evened out and turned down, as the saved render is`);
+    slider.dispatch('change');
+  } finally {
+    for (const c of presets) delete c.level;
+    audio.start = realStart;
+    $('#sheet').close();
+    await advanced(false);
+  }
+});
+
 test('the live loop plays the knobs too: knobs that play first are in its head', async () => {
   await advanced(true);
   await openPlain();

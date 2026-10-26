@@ -326,8 +326,10 @@ saved.
   with `first` render in the head; knobs after the chain join the tail only
   if each is live (`isLive`), else `livePlan` returns null and the sheet
   renders when the slider is let go.
-- `sheet.js startLive` renders the head (cached in `sheet.previews` under
-  `head:…`), pads it with room for the tail to ring (`padTo`, up to 6 s), and
+- `sheet.js startLive` renders the head through `applyChain` (cached in
+  `sheet.previews` under `head:…`; with nothing before the live steps, the
+  sound in Normal: peak 0.9 and the preset `level`, as the saved render
+  starts), pads it with room for the tail to ring (`padTo`, up to 6 s), and
   calls `audio.start('preview', …, {loop: true, via})`. `via` builds the tail
   with `steps.js buildLive` between the source and its fader, plus a gain for
   Quiet/Quietest.
@@ -606,7 +608,6 @@ Nothing removes an id from `broken` but a reload.
 | Instrument id naming | `instruments.js instrumentKitId` and `tools/kit_instruments.py` | must name presets the same way |
 | The semitone rate in six places | see Concepts | — |
 | Kids voices are classic | `kids-logic.js KIDS_VOICES` stores `voice`/`fx` steps; the sheet now stores knobs | a change to how knobs sound never reaches 🧸 Kids' voices |
-| A preset's live loop skips the level | `sheet.js startLive`: with no head steps or knobs, the head is `sheet.original` as is (no `finish` peak 0.9, no preset `level`); the saved render has both | (likely) a loudness jump between dragging and letting go on such a preset; unverified by ear |
 | 👂 Plain skips the level | `sheet.js playPlain` plays `sheet.original` | by design "plain", but louder than the pad for a preset with `level` |
 | `listen.js` and `listen-make.js` import `sequencer.js` | for `SIGNATURES`, `barSteps`, `tempoStops`, `MAX_PILLS`, `cleanPattern` | the "pure" listener loads the beat maker's whole import graph (it works in Node today) |
 | `ROWS` twice | `listen-dsp.js ROWS` and `listen-make.js ROWS` | kept equal by hand |
