@@ -24,7 +24,8 @@ pad, hear the sound; hold it (or Shift-click it) and it keeps repeating (tap it 
 silly with a voice: Loud, Chipmunk, Fast, Slow, Monster, Robot, Stadium, Walkie-talkie,
 Underwater, Alien, Clones, Stutter or Backwards. The sound sheet draws the
 sound as a wave that lights up as it plays; tap 👂 **Plain** under it (beside
-✂️ and 🧩 with Advanced) to hear it with no voice (tap again, or ▶︎, to stop; it
+✂️ and 🧩 with Advanced) to hear it with no voice, as it is stored (not evened out to the
+other sounds' loudness, and a preset not turned down to its level, so it can sound louder or softer than its pad; tap again, or ▶︎, to stop; it
 is faded while every knob is normal, when plain sounds the same); ▶︎ at the left of the
 sheet's title plays it as it sounds now (■ stops it, Space too). **A voice is knob
 settings**: tapping one (the chips are just pictures; hold one, or Shift-click it, for its name)

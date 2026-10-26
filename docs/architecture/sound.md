@@ -614,7 +614,7 @@ sound that failed to load is tried again next time").
 | Instrument id naming | `instruments.js instrumentKitId` and `tools/kit_instruments.py` | must name presets the same way |
 | The semitone rate in six places | see Concepts | — |
 | Kids voices are classic | `kids-logic.js KIDS_VOICES` stores `voice`/`fx` steps; the sheet now stores knobs | a change to how knobs sound never reaches 🧸 Kids' voices |
-| 👂 Plain skips the level | `sheet.js playPlain` plays `sheet.original` | by design "plain", but louder than the pad for a preset with `level` |
+| 👂 Plain skips the level | `sheet.js playPlain` plays `sheet.original` | by design "plain" (docs/guide.md says so), but louder than the pad for a preset with `level`, and not at peak 0.9 |
 | `listen.js` and `listen-make.js` import `sequencer.js` | for `SIGNATURES`, `barSteps`, `tempoStops`, `MAX_PILLS`, `cleanPattern` | the "pure" listener loads the beat maker's whole import graph (it works in Node today) |
 | `ROWS` twice | `listen-dsp.js ROWS` and `listen-make.js ROWS` | kept equal by hand |
 | Name clashes | `KINDS` (`steps.js` vs `listen-input.js`), `FAMILIES` (`instruments.js` vs `voice-knobs.js`), `levelOf` (`meter.js`, `listen-input.js`, the sequencer's) | a wrong import still runs |
