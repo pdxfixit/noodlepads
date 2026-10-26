@@ -13,7 +13,7 @@
 // settings-ui.js, help.js, sequencer.js (screens).
 
 import { state, loadStorage, persist, setOverride, adoptStoredPeople, reIdStoredPeople, renamedId } from './state.js';
-import { audio, voicesMade } from './audio.js';
+import { audio, voicesMade, fadeStop } from './audio.js';
 import { meter, buildGrille } from './meter.js';
 import { createSequencer } from './sequencer.js';
 import { people, person, currentPerson, clipsFor, anyClip, padColor, nextClipColor } from './board.js';
@@ -965,6 +965,7 @@ async function start() {
       soundNames: () => clipsFor(state.personId, { includeHidden: true }).map((c) => c.label),
       playOnce: (clip, opts) => audio.play(clip, opts),
       stopClip: (clip) => audio.stop(clip.id),
+      cutVoice: (voice) => fadeStop(voice, audio.context().currentTime),   // a take's hit booked ahead: it never sounds
       announce: (text) => announce(text),
       notice: (text) => showNotice(text),   // the banner over the top, which fades by itself
       takes: (pid) => state.takes.filter((t) => t.personId === pid),

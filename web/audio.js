@@ -330,7 +330,9 @@ export const audio = {
   // this one instead of being cut off (rhythm.js ringOver). `rate` plays it
   // faster (higher) or slower, as a tune row's note does: 2 is an octave up
   // (🧸 Kids' high keys). `id` names what plays, when it is not the clip's own.
-  async play(clip, { loop = false, ring = false, rate = 1, id = clip.id } = {}) {
+  // `when`: the audio-clock time it starts (a take played back books every
+  // hit ahead); now, when that has passed. Gives what start() gives.
+  async play(clip, { loop = false, ring = false, rate = 1, id = clip.id, when = 0 } = {}) {
     this.wake();
     let loaded;
     try {
@@ -339,9 +341,9 @@ export const audio = {
       showNotice(`“${clip.label}” didn't load, so it can't play. ${clip.source === 'bundled'
         ? `Check that ${clip.file} exists and is an MP3, M4A or WAV.`
         : 'Delete it in Edit sounds and record it again.'}`);
-      return;
+      return null;
     }
-    this.start(id, loaded, { loop, clip, ring, rate });
+    return this.start(id, loaded, { loop, clip, ring, rate, when });
   },
 
   // Every source is set to loop over the clip, and a scheduled stop decides how
@@ -350,15 +352,19 @@ export const audio = {
   // (the sound sheet's live preview) and returns the last of them.
   // With `ring`, a hit of the same clip still sounding (not looping) rings
   // on under the new one, up to MAX_RINGING at once; else it is cut off.
-  start(id, { buffer, duration }, { loop = false, clip = null, via = null, ring = false, rate = 1 } = {}) {
+  // `when` (audio-clock seconds) starts it later, and the earlier hit is cut
+  // (or rings on) from then. Returns the entry: its `src` and `gain`, which
+  // fadeStop() stops even once a later hit has taken its place.
+  start(id, { buffer, duration }, { loop = false, clip = null, via = null, ring = false, rate = 1, when = 0 } = {}) {
     const ctx = this.wake();
+    const at = Math.max(ctx.currentTime, Number(when) || 0);
     const before = this.playing.get(id);
     if (ring && before && !before.loop) {
       this.playing.delete(id);
-      const { keep, cut } = ringOver([...(this.ringing.get(id) ?? []), { ...before, end: before.t0 + before.duration }], ctx.currentTime, true);
-      for (const v of cut) fadeStop(v, ctx.currentTime);
+      const { keep, cut } = ringOver([...(this.ringing.get(id) ?? []), { ...before, end: before.t0 + before.duration }], at, true);
+      for (const v of cut) fadeStop(v, at);
       this.ringing.set(id, keep);
-    } else this.stop(id);
+    } else this.stop(id, at);
     const { src, gain } = makeVoice(ctx, buffer, this.master);
     if (via) {
       src.disconnect();
@@ -368,7 +374,7 @@ export const audio = {
     src.loopEnd = duration;
     if (rate !== 1) src.playbackRate.value = rate;
     const heard = duration / rate;   // how long one pass lasts at that rate
-    const entry = { src, gain, t0: ctx.currentTime, duration: heard, loop, clip };  // clip: so syncLoops can restart it
+    const entry = { src, gain, t0: at, duration: heard, loop, clip };  // clip: so syncLoops can restart it
     src.start(entry.t0);
     src.stop(entry.t0 + (loop ? MAX_LOOP_SECONDS : heard));
     this.playing.set(id, entry);
@@ -380,6 +386,7 @@ export const audio = {
       this.on.looping(id, false);
     };
     this.on.started();
+    return entry;
   },
 
   // Turns a clip that is playing into one that repeats. Its stop is pushed
@@ -449,13 +456,15 @@ export const audio = {
     return !!this.playing.get(id)?.loop;
   },
 
-  stop(id) {
-    for (const v of this.ringing.get(id) ?? []) fadeStop(v, this.ctx.currentTime);   // and its hits ringing under it
+  // `at`: when it fades, on the audio clock (now, unless a hit booked
+  // ahead takes its place then).
+  stop(id, at = this.ctx?.currentTime ?? 0) {
+    for (const v of this.ringing.get(id) ?? []) fadeStop(v, at);   // and its hits ringing under it
     this.ringing.delete(id);
     const entry = this.playing.get(id);
     if (!entry) return;
     this.playing.delete(id);
-    fadeStop(entry, this.ctx.currentTime);
+    fadeStop(entry, at);
     this.on.progress(id, 0);
     this.on.looping(id, false);
   },

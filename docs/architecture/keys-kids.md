@@ -54,7 +54,7 @@
 | `keyboardSeen` | a key was pressed (or Q / D picked) this visit | memory |
 | `row` | the row shown on a phone's row tabs | memory |
 | `holds`, `held`, `fingers` | pointers and keys held, for hold-to-loop | memory |
-| `rec`, `lastTake`, `replay`, `replaying` | a take being recorded, the last one, playback timers | memory; takes in `state.takes` |
+| `rec`, `lastTake`, `replay`, `booked`, `replaying`, `replayRun` | a take being recorded, the last one, playback timers, the hits it booked | memory; takes in `state.takes` |
 | `beatRec` | the recording into the beat | memory |
 | `clickWanted` | the keys' ⏲️ | localStorage `dj-click` |
 | `overlap` | 🔔 Overlap on Live | memory only (off after a reload) |
@@ -157,7 +157,7 @@ The footer's how-to (`app.js showHint`, `screenHint`) uses the same `pointer: fi
 | `duration` | seconds, ≤ `MAX_TAKE_SECONDS` (180) |
 | `events` | ≤ `MAX_TAKE_EVENTS` (10 000), each `{t, clipId, kind: 'hit'\|'loop'\|'stop'\|'beat', ring?}`, `t` seconds from the first hit, to 1 ms; `ring: true` only on a hit played with 🔔 Overlap |
 
-**Play back.** `dj.js playTake` books one `setTimeout` per event (the JS timer, not the audio clock): `'loop'` → `deps.loop`, `'stop'` → `deps.stopClip`, else `deps.playOnce(clip, { ring })`. `stopReplay` stops every sound it started. A take's ▶ shows ■ Stop while it plays (`showPlaying`).
+**Play back.** `dj.js playTake` loads every sound of the take (`deps.loadSound`), then books every hit on the audio clock at once, `t0 + e.t` (`t0` is `REPLAY_LEAD`, 50 ms, from now), through `deps.playOnce(clip, { ring, when })` = `audio.play`, which gives back each booked entry (`booked`). Only the keys' lighting, a `'loop'` (→ `deps.loop`), a `'stop'` (→ `deps.stopClip`) and the end run on `setTimeout`. `stopReplay` clears the timers, cuts every booked entry (`deps.cutVoice`, so a hit still to come never sounds) and stops every sound it started; a take stopped while loading books nothing (`replayRun`). A take's ▶ shows ■ Stop while it plays (`showPlaying`). Test: `tests/take-replay.test.mjs`.
 
 **Make a sound.** `dj.js makeSound` → `share-render.js renderTake` (offline, `rhythm.js planTake`: hits cut their sound's earlier hits unless `ring`; loops repeat until stopped) → `sequencer.js encodeWav` → `deps.addSound` = `app.js addMadeSound` (🎛️). A second press on the same take asks "Make another?" (`askThenMake`, `ARM_MS`).
 
@@ -406,7 +406,6 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | Loop glow goes through `pads.js` | `audio.on.looping` is owned by `pads.js initPads`, which forwards to `dj.looping` through a hook `app.js` passes in. |
 | Latency in four places (above) | A change to one leaves the others. |
 | A key hit counts twice for usage | `dj.js hit` calls `countPlay('keys')`, and `deps.tap` = `pads.js tapPad` calls `countPlay('pads')` too (likely unintended; untested). |
-| Take playback on `setTimeout` | `dj.js playTake` is not on the audio clock; its comment ("Plays a take back on the audio clock's timing") sits above `fitTakeName` and says otherwise. Renders (`planTake`) are exact. |
 | Dead exports kept for tests | `rhythm.js hitTime`, `applySnaps`, `countInBeats`, `snapHits`; `kids-logic.js squareSeconds`; `touch-grid.js emptyBlock`, `swapBlocks`. The app uses none of them. |
 | Dead wiring | `app.js` passes `el.tryingStop` to `createDJ`; `dj.js` never reads it. `dj.js` returns `deck`, `touchNow`, `letGo`, `stopReplay`; `app.js` calls none. |
 | Kids writes the scratch behind the beat maker's back | `sequencer.js` re-reads only in `show()`. Leaving Kids calls no `show()`, so Beats may hold a stale scratch until the next screen change; a pill tapped then would save over the kid's squares (likely; untested). |

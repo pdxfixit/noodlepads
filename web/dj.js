@@ -474,7 +474,11 @@ export function createDJ({ el, deps }) {
   let gridSpeakers = null;   // the grid's speakers and their loudness popover (renderGrid draws them)
   let gridMenus = null;      // the rows' menus, each opened by its emoji (overflow.js)
   let replay = [];       // timers of a take being played back
+  let booked = [];       // the hits it booked on the audio clock (audio.start's entries)
   let replaying = null;  // the id of the take playing back, or null
+  let replayRun = null;  // that playback, so one stopped while loading never starts
+  // How far ahead of now a take's first hit is booked: time to book the rest.
+  const REPLAY_LEAD = 0.05;
   const replayed = new Set();   // the sounds a playback started, to stop them
 
   function record(clipId, kind, at = deps.now(), ring = false) {
@@ -579,41 +583,66 @@ export function createDJ({ el, deps }) {
       : `● ${clockText(deps.now() - rec.from)}`);
   }
 
-  // Plays a take back on the audio clock's timing, lighting its keys.
   // The take's name field is as wide as its name, so its length "(0:03)"
   // sits right after it rather than out in the middle of the bar.
   function fitTakeName() { el.takeName.size = Math.max(4, [...el.takeName.value].length + 1); }
 
   // ▶ Play on a take turns into ■ Stop while it plays (Ben, 2026-10-11); a
   // second tap, or the take ending, puts it back.
-  function playTake(take) {
+  // Every sound is loaded first, then every hit is booked on the audio clock
+  // at once (t0 + its time), so the replay keeps the take's timing however
+  // busy the page is; only the keys' lighting, a loop's start and stop, and
+  // the end run on timers, which may come a little late.
+  async function playTake(take) {
     if (replaying === take.id) { stopReplay(); return; }
     stopReplay();
+    const run = {};
     replaying = take.id;
+    replayRun = run;
+    showPlaying();
+    const clips = new Map();
     let gone = 0;
     for (const e of take.events) {
       const clip = deps.clipById(e.clipId);
-      if (!clip) { gone++; continue; }
-      replay.push(setTimeout(() => {
-        if (e.kind === 'loop') deps.loop(clip);
-        else if (e.kind === 'stop') deps.stopClip(clip);
-        else deps.playOnce(clip, { ring: e.ring === true });   // a hit rings over the last as it did (🔔 Overlap)
-        replayed.add(clip);
-        if (e.kind !== 'beat') { for (const [code, id] of Object.entries(deck())) if (id === clip.id) light(code, { ripple: e.kind === 'hit' }); lightTiles(clip.id); }
-      }, e.t * 1000));
+      if (clip) clips.set(clip.id, clip); else gone++;
+    }
+    if (gone) deps.announce?.(`${gone} ${gone === 1 ? 'sound in this take is' : 'sounds in this take are'} gone.`);
+    await Promise.all([...clips.values()].map((clip) => Promise.resolve(deps.loadSound(clip)).catch(() => null)));
+    if (replayRun !== run) return;   // stopped, or another take started, while loading
+    const t0 = deps.now() + REPLAY_LEAD;
+    const later = (at, fn) => replay.push(setTimeout(fn, Math.max(0, (at - deps.now()) * 1000)));
+    for (const e of take.events) {
+      const clip = clips.get(e.clipId);
+      if (!clip) continue;
+      replayed.add(clip);
+      if (e.kind === 'loop') later(t0 + e.t, () => deps.loop(clip));
+      else if (e.kind === 'stop') later(t0 + e.t, () => deps.stopClip(clip));
+      else {
+        // A hit rings over the last as it did (🔔 Overlap).
+        Promise.resolve(deps.playOnce(clip, { ring: e.ring === true, when: t0 + e.t }))
+          .then((voice) => { if (voice && replayRun === run) booked.push(voice); else if (voice) deps.cutVoice(voice); });
+      }
+      if (e.kind !== 'beat') {
+        later(t0 + e.t, () => {
+          for (const [code, id] of Object.entries(deck())) if (id === clip.id) light(code, { ripple: e.kind === 'hit' });
+          lightTiles(clip.id);
+        });
+      }
     }
     // Done when the take is: a moment after its last event, for the last sound to ring.
-    replay.push(setTimeout(() => { replay = []; replaying = null; replayed.clear(); showPlaying(); }, (take.duration + 0.5) * 1000));
-    showPlaying();
-    if (gone) deps.announce?.(`${gone} ${gone === 1 ? 'sound in this take is' : 'sounds in this take are'} gone.`);
+    later(t0 + take.duration + 0.5, () => { replay = []; booked = []; replaying = null; replayRun = null; replayed.clear(); showPlaying(); });
   }
-  // Stops a take being played back: its timers, and every sound it started.
+  // Stops a take being played back: its timers, every hit it booked (one
+  // still to come never sounds), and every sound it started.
   function stopReplay() {
     replay.forEach(clearTimeout);
     replay = [];
+    for (const voice of booked) deps.cutVoice(voice);
+    booked = [];
     for (const clip of replayed) deps.stopClip(clip);
     replayed.clear();
     replaying = null;
+    replayRun = null;
     showPlaying();
   }
   // The done bar's and the Takes list's Play keys say ■ Stop for the take that is playing.

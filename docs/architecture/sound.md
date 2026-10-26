@@ -167,8 +167,8 @@ calls `audio.dropRendered(last.id)` (all of them) after a voice change.
 
 | Call | What | Callers |
 |---|---|---|
-| `audio.play(clip, {loop, ring, rate, id})` | load, then `start` | pads, DJ (via `tapPad`, `deps.playOnce` for previews and take replays), Kids, sequencer chooser preview, `app.js` |
-| `audio.start(id, loaded, {loop, clip, via, ring, rate})` | play an already-loaded `{buffer, duration}` | `play`; the sheet, chop, bulk, things with their own buffers |
+| `audio.play(clip, {loop, ring, rate, id, when})` | load, then `start`; gives `start`'s entry | pads, DJ (via `tapPad`, `deps.playOnce` for previews and take replays), Kids, sequencer chooser preview, `app.js` |
+| `audio.start(id, loaded, {loop, clip, via, ring, rate, when})` | play an already-loaded `{buffer, duration}`, at `when` on the audio clock (now if passed; the hit it replaces is cut, or rings, from then); returns its `playing` entry | `play`; the sheet, chop, bulk, things with their own buffers |
 | `audio.loop(clip)` | turn a playing sound into a loop (push its stop to 600 s), or start one; while a beat plays, `loopInTime` instead | pads hold, DJ `deps.loop` |
 | `audio.unloop(id)` | finish the current pass, then stop | `sheet.js endLive` |
 | `audio.stop(id)` | `fadeStop` it and its ringing hits now | pads, sheet, chop, bulk, Kids keys, things |
