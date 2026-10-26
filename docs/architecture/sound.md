@@ -620,6 +620,7 @@ by a load of its current version").
 | Instrument id naming | `instruments.js instrumentKitId` and `tools/kit_instruments.py` | must name presets the same way |
 | The semitone rate in six places | see Concepts | — |
 | Kids voices are classic | `kids-logic.js KIDS_VOICES` stores `voice`/`fx` steps; the sheet now stores knobs | a change to how knobs sound never reaches 🧸 Kids' voices |
+| A live tail changes the peak | `sheet.js startLive`: the head is evened out (peak 0.9, the preset `level`), then the live tail (Echo, Room, Tone, Muffled…) plays through nodes with nothing evening out what it adds; the saved render re-evens after every step (`applyChain` → `finish`) | a sound whose echoes pile on it plays louder while dragging than once let go: a held 220 Hz note with Echo 3 × 0.25 s peaks at 1.81 live against the render's 0.9 (+6 dB). The output limiter (threshold −2 dB, ratio 20) holds that under full scale, so it is heard louder, never clipped; a sound shorter than the echo's gap peaks the same both ways (`tests/live-peak.test.mjs`) |
 | 👂 Plain skips the level | `sheet.js playPlain` plays `sheet.original` | by design "plain" (docs/guide.md says so), but louder than the pad for a preset with `level`, and not at peak 0.9 |
 | `listen.js` and `listen-make.js` import `sequencer.js` | for `SIGNATURES`, `barSteps`, `tempoStops`, `MAX_PILLS`, `cleanPattern` | the "pure" listener loads the beat maker's whole import graph (it works in Node today) |
 | `ROWS` twice | `listen-dsp.js ROWS` and `listen-make.js ROWS` | kept equal by hand |
