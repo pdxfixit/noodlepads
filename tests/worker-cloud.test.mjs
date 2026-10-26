@@ -646,6 +646,26 @@ test('a share code: anyone who has it sees the snapshot, read-only, with no key,
   assert.equal(theirs.status, 409, "a share names only the profile's own sounds");
 });
 
+// A share's title is cut like every name (names.js cutName): 24 characters,
+// never half an emoji, and a title of a megabyte costs no more than a short one.
+test('a share title is cut to 24 characters, keeping an emoji whole; a huge one is cut quickly or refused', async () => {
+  const c = cloud();
+  const a = await made(c, 'p-a');
+  const s = await sound(c, a, 'p-a', 7);
+  const bundle = { clips: [{ id: 'user-1', label: 'Burp', sound: s }] };
+  const unicorn = await c.call('POST', 'profiles/p-a/shares', { key: a, body: { kind: 'sound', title: `${'a'.repeat(23)}🦄zz`, bundle } });
+  assert.equal(unicorn.status, 201);
+  assert.equal((await c.call('GET', `shares/${unicorn.data.code}`)).data.title, `${'a'.repeat(23)}🦄`);
+  const start = performance.now();
+  const huge = await c.call('POST', 'profiles/p-a/shares', { key: a, body: { kind: 'sound', title: `${'b'.repeat(1000000)}`, bundle } });
+  assert.ok(performance.now() - start < 1000, 'quick');
+  if (huge.status === 400) assert.equal(huge.data.error, 'title');
+  else {
+    assert.equal(huge.status, 201, `${huge.status} ${JSON.stringify(huge.data)}`);
+    assert.equal((await c.call('GET', `shares/${huge.data.code}`)).data.title, 'b'.repeat(24));
+  }
+});
+
 // The council's review, 2026-10-26: deleting a profile kept its shares, and
 // 🚫 Unshare needs the profile's key, so a deleted kid's shared voice could
 // never be unshared. A share now lasts until it is unshared or its profile goes.
