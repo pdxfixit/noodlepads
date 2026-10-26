@@ -81,4 +81,5 @@ opens with a comment saying what it owns. How the app behaves is in
   - `tools/chrome.mjs` starts each run's private headless Chrome (the Mac's, or a cloud session's Chromium, unsandboxed as root); `tools/look-cloud.mjs` holds the live checks `just cloud-smoke` and `just cloud-e2e`. With `look.mjs`, these are the only Node tools
 - `skills/noodlepads-logs/`: the recurrent routine's `noodlepads-logs` leg (weekly `just logs --digest`; it copies nothing), kept here until it moves to `~/src/skills` (TODO.md); `just test` runs its tests
 - `docs/deploy-cloudflare.md`: hosting at noodlepads.com; `docs/how-to.md`: step by step for the common jobs
+- `docs/architecture/`: how the code is wired, one file per area (README.md is the index and the "one or several?" table); `tests/architecture.test.mjs` checks it against the code
 - `web/_headers`, `web/.assetsignore`: response headers and upload exclusions for Cloudflare

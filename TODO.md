@@ -88,6 +88,18 @@ Other work:
 
 - [ ] Move `skills/noodlepads-logs` to `~/src/skills/noodlepads-logs` and link it (the skills workspace convention); the recurrent routine's leg is now named `noodlepads-logs`, and its state file `~/.local/state/skills/noodlepads-logs.state.json`
 
+- [ ] **Bugs found while mapping docs/architecture/ (2026-10-26).** Each: write the failing test first, then fix, then update the area file's Seams or gotchas. ✔ = confirmed in the code; the rest are likely.
+  - ✔ `web/feedback.js appVersion` refuses the `-` in a live label (`v1.0.277-b328291`), so feedback from noodlepads.com is tagged `dev` (the Worker's rule likely too).
+  - ✔ `tools/look.mjs`: `VIEWS.beat = VIEWS.beats` replaces the `beat` view defined above it, so its 🆕 New script never runs.
+  - ✔ Esc runs only `audio.stopAll()` (`app.js bindEvents`), so a playing beat or song keeps going; Help says Esc stops everything.
+  - `tools/doctor.sh` compares the live label with a bare sha, so it always warns that main is not live.
+  - A `prefs` clash in a sync always takes the cloud's copy: `settings.js cleanPrefs` drops the `changed` stamp (cloud.md).
+  - 🗂️ See all's ▶, or making a share, while a beat plays clears the beat maker's loaded sounds (`prepareBeats` → `ready.clear()`), so its rows go quiet until the next ▶ (beats-song.md).
+  - Warble and Robot effects (live oscillators) keep running after a song or a groove sample ends (beats-song.md).
+  - After 🧸 Kids, the beat maker may hold an old copy of the scratch beat; a pill tapped on Beats before the next screen change could save over the kid's squares (keys-kids.md).
+  - A key hit counts as both `pads` and `keys` in `noodlepads.play` (keys-kids.md).
+  - 🧸 Kids' tune row ignores 🎵 Find its note's root, accents and row speed (keys-kids.md).
+  - Stale docs and comments: AGENTS.md cites a missing `tests/pill-height.test.mjs` and says `just look` flags only short buttons; docs/deploy-cloudflare.md lists the removed `just deploy-migrated`; docs/layout.md's `follow.js`, `overflow.js`, `worker/clean.js` and `tests/` lines; `dialogs.js` says four dialogs (there are 33); `state.js` lists the old `'dj'` screen; `track-page.js errorOf` names a retired `visits` module.
 
 ### Offered, not approved
 
