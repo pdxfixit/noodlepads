@@ -20,12 +20,14 @@ export const MAX_PERSON = 20;   // "Captain Cranberries" (19), a person's fun na
 // the cut, so a name of megabytes costs no more than a short one.
 const GRAPHEMES = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter() : null;
 const LOOK = 8;   // times `max`: code units looked at, far past any real name's
-const LONE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+// Half a surrogate pair on its own: a string spread by code points gives it
+// as one unit. (No lookbehind regex: Safari before 16.4 can't parse one.)
+const lone = (ch) => ch.length === 1 && ch >= '\uD800' && ch <= '\uDFFF';
 export const nameLength = (text) => [...String(text ?? '')].length;
 export function cutName(text, max = MAX_LABEL) {
   let s = String(text ?? '');
   if (s.length > max * LOOK) s = s.slice(0, max * LOOK);
-  s = s.replace(LONE, '');
+  if (/[\uD800-\uDFFF]/.test(s)) s = [...s].filter((ch) => !lone(ch)).join('');
   if (s.length <= max) return s;   // no more units than `max`: no more characters either
   let out = '';
   let n = 0;

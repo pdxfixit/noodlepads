@@ -183,6 +183,7 @@ what it forces an agent to do.
 | `colors.test.mjs`, `contrast.test.mjs` | 4.5:1 for the pairs they list, with colors read from `styles.css` tokens, `boards.json` and `model.js` | a new pair needs a new line: a new color nobody lists is not checked |
 | `css-braces.test.mjs` | every `{` in `styles.css` has its `}` | fix the brace |
 | `privacy.test.mjs` | README carries `privacy.js`'s lines word for word, and each claim against the Worker and the code | change `privacy.js` with any change to what the cloud keeps |
+| `no-lookbehind.test.mjs` | no regex lookbehind in `web/` (Safari before 16.4 can't parse one) | write the check another way |
 | `tools/test_preset_loudness.py` | `boards.json` `level`s equal what `preset_loudness.py` works out | `just preset-loudness --fix` |
 | `tools/test_kit_instruments.py` | `boards.json` holds exactly the instrument presets `kit_instruments.py` writes | rerun the tool |
 | `tools/test_make_emoji.py` | `web/emoji-all.js` and `web/emoji-check.js` equal what `make_emoji.py` makes | `just emoji`, never a hand edit |
