@@ -17,8 +17,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 ## Ben does
 
-- **Set a PIN on Major Meatball** (1 min): 👥 People → Major Meatball → 🔒 Set PIN. It is the one cloud profile with no PIN (checked 2026-10-26), and the cloud is about to list and open only profiles with one. Never write the PIN in a file or a chat log that gets committed.
-
 - **Put the no-names hashes in a secret** (3 min), before an agent removes them from the repo: copy the hash lines from `tests/no-names.test.mjs` (`ANY_CASE` and `AS_NAME`) into a JSON file `~/.config/noodlepads/names.json` (`{"anyCase": ["…"], "asName": "…"}`), and paste the same JSON into GitHub → pdxfixit/noodlepads → Settings → Secrets → Actions as `NOODLE_NAME_HASHES`. Then tell an agent it's done.
 
 - **Record the spoken callouts** (15 min, when you like): the 14 callouts ("Let's go!", "Game over" …) and the evil laugh and cackle are macOS `say` voices, which may not be ours to share (Ben, 2026-10-26: replace them). Record your own (no names in them) and attach them in a chat, or say "use a CC0 voice set".
