@@ -8,12 +8,6 @@ When Ben answers, record the answer in [decisions.md](decisions.md) (and an ADR 
 
 From the council's first round (2026-10-26, `docs/council.md`), asked in the chat one at a time; a card is deleted when its answer is recorded. Cards marked ⛔ are blocks against one of your rules: the seat stopped the work, and only you can uphold or overrule it.
 
-### Q62. Pin the flarepress action to a commit instead of the rolling `v1` tag?
-
-**Recommend:** pin it, and add `just flarepress-bump` to move it on purpose.
-Your rule: flarepress consumers use rolling tags. Four seats (reliability, devex, architect, security) asked to pin: the action runs with the deploy token, so a bad flarepress release deploys noodlepads by itself. Keeping `v1` is cheaper to maintain.
-**Answer:**
-
 ### Q63. Which phones and tablets does the family use, and how old is the oldest?
 
 **Recommend:** tell me the oldest iPhone, iPad and Android, so I set a browser floor and a plain "too old" notice.
