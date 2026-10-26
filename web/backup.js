@@ -83,8 +83,13 @@ const MAX_JSON_BYTES = 8 * 1024 * 1024;
 export const MAX_SOUND_BYTES = 80 * 1024 * 1024;
 const MAX_RECORDS = { people: 100, clips: 2000, overrides: 2000, orders: 100, patterns: 100, beats: 1000, settings: 50, decks: 100, takes: 500, songs: 100, songbook: 1000, prefs: 100, layouts: 500, voices: 500, touchLayouts: MAX_TOUCH_LAYOUTS };
 
-// Cut by characters, never inside one (an emoji of several stays whole: names.js cutName).
-const text = (v, max) => (typeof v === 'string' ? cutName(v, max) : undefined);
+// A date or a version: plain text, cut.
+const text = (v, max) => (typeof v === 'string' ? v.slice(0, max) : undefined);
+// An id or a palette color: as it is, or refused. Never cut or mended,
+// which could turn a broken id into one already here.
+const exact = (v, max) => (typeof v === 'string' && v.length <= max && cutName(v, max) === v ? v : undefined);
+// A picture: cut by characters, never inside one (an emoji of several stays whole: names.js cutName).
+const picture = (v, max) => (typeof v === 'string' ? cutName(v, max) : undefined);
 // A name or label: trimmed, cut to `max`, and undefined when nothing is left.
 const title = (v, max) => (typeof v === 'string' ? cutName(v.trim(), max).trim() || undefined : undefined);
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
@@ -317,7 +322,7 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
     ? listed.filter((p) => isAdded(p) || fromFile(p) || typeof p?.id !== 'string' || !PERSON_ID.test(p.id))
     : listed;
   const people = clean('people', (p) => {
-    const id = text(p?.id, 64);
+    const id = exact(p?.id, 64);
     const added = p?.added === true;
     if (!id || (added ? !PERSON_ID.test(id) || bundled.peopleIds.has(id) : !bundled.peopleIds.has(id))) return null;
     // A person added in the app with no name left (blank) still owns their
@@ -349,7 +354,7 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
   const knownPerson = (id) => personIds.has(id) || (bundled.addedPeopleIds?.has(id) ?? false);
   // Pad colors are palette names. Without a palette to check against, keep the name.
   const colorName = (v) => {
-    const c = text(v, 24);
+    const c = exact(v, 24);
     return c && (bundled.colorOk ? bundled.colorOk(c) : true) ? c : undefined;
   };
 
@@ -365,7 +370,7 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
       id: c.id,
       personId: c.personId,
       label: title(c.label, 24) || 'Sound',
-      emoji: text(c.emoji, 8),
+      emoji: picture(c.emoji, 8),
       color: colorName(c.color),
       voice: voiceId(c.voice) ?? 'normal',
       amount: num(c.amount),
@@ -392,7 +397,7 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
   const overrides = clean('overrides', (o) => (bundled.clipIds.has(o?.id) || isKitCopy(o?.id) ? dropUndefined({
     id: o.id,
     label: title(o.label, 24),
-    emoji: text(o.emoji, 8),
+    emoji: picture(o.emoji, 8),
     color: colorName(o.color),
     voice: voiceId(o.voice),
     amount: num(o.amount),

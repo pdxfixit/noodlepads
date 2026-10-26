@@ -79,13 +79,26 @@ test('every name and label is cut the same way', () => {
   }
 });
 
-test('a backup\'s emoji and a take\'s sound ids are cut the same way: never inside a character', () => {
+test('a backup\'s emoji is never cut inside a character; a take\'s sound id is never cut at all', () => {
   const family = '👨‍👩‍👧‍👦';   // 7 characters, 11 UTF-16 units
   const out = cleanBackup({ app: 'noodlepads', format: '1.1', overrides: [{ id: 'pip-kick', emoji: family }, { id: 'pip-snare', emoji: 'a😀😀😀😀' }] },
     () => null, { peopleIds: new Set(['pip']), clipIds: new Set(['pip-kick', 'pip-snare']), colorOk: () => true });
   assert.equal(out.overrides[0].emoji, family, 'whole, never 👨‍👩‍👧');
   assert.equal(out.overrides[1].emoji, 'a😀😀😀😀');
-  const take = cleanTake({ id: 'take-a', personId: 'p', name: 'Jam', duration: 1, events: [{ t: 0, clipId: `${'a'.repeat(63)}🦄z`, kind: 'hit' }] });
-  assert.equal(broken(take.events[0].clipId), false);
-  assert.equal(take.events[0].clipId, `${'a'.repeat(63)}🦄`);
+  const take = cleanTake({ id: 'take-a', personId: 'p', name: 'Jam', duration: 1, events: [
+    { t: 0, clipId: `${'a'.repeat(63)}🦄z`, kind: 'hit' }, { t: 0, clipId: 'user-a\uD83E', kind: 'hit' }, { t: 0, clipId: 'user-b', kind: 'hit' }] });
+  assert.deepEqual(take.events.map((e) => e.clipId), ['user-b'], 'a sound id too long, or broken, is refused: never cut into another one');
+});
+
+// Only names and pictures are cut that way: an id or a color is taken as it
+// is or refused, so a broken one is never mended into one already here.
+test('a backup\'s broken person id or color is refused, never mended into another', () => {
+  const out = cleanBackup({
+    app: 'noodlepads', format: '1.1',
+    people: [{ id: 'p-pip-1\uD83E', name: 'Pip', color: '#2D3FD6', avatar: '🦉', added: true, created: 1 }, { id: `p-${'a'.repeat(70)}`, name: 'Juno', color: '#2D3FD6', avatar: '🦉', added: true, created: 2 }],
+    overrides: [{ id: 'pip-kick', label: 'Kick it', color: 'red\uD800' }],
+  }, () => null, { peopleIds: new Set(['pip']), clipIds: new Set(['pip-kick']), colorOk: (c) => c === 'red' });
+  assert.deepEqual(out.people.map((p) => p.id), [], 'neither becomes p-pip-1, nor a cut id');
+  assert.equal(out.overrides[0].label, 'Kick it');
+  assert.equal(out.overrides[0].color, undefined, 'not mended into red');
 });

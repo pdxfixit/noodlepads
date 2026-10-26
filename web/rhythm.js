@@ -212,7 +212,8 @@ export const TAKE_ID = /^take-[a-z0-9-]{1,48}$/;
 export const TAKE_KINDS = ['hit', 'loop', 'stop', 'beat'];
 export const MAX_TAKE_SECONDS = 180;
 export const MAX_TAKE_EVENTS = 10000;
-const shortText = (v, max) => (typeof v === 'string' ? cutName(v, max) : null);   // never inside a character
+// An id: as it is, or refused (null). Never cut or mended into another one.
+const shortText = (v, max) => (typeof v === 'string' && v.length <= max && cutName(v, max) === v ? v : null);
 
 // A deck: only the 40 key codes, each a sound id or null (No sound). The
 // number row (Digit1…Digit0) came 2026-10-12: an older copy drops those keys
