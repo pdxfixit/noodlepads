@@ -82,7 +82,7 @@ Every change serves this. Why, and the north star it steers: [ADR 0022](docs/adr
 - **A block against one of Ben's rules goes to Ben**: asked at once while he is in the chat, else a question card batched up front. Blocked work waits on its branch; move to the next TODO item.
 - **Never a rollback:** a seat's finding on what is live is fixed forward, at once when the seat says it is urgent.
 - **Results go into the work** (code, tests, docs, decisions, ADRs). No council log. Each commit carries a `Council:` trailer naming the seats and their verdicts.
-- **A finding that would become a TODO line goes to Ben first**; only his yes adds it. Fixing it inside the change at hand needs no ask.
+- **A confident finding is built now, not listed.** Medium- or high-confidence findings are done straight away; low-confidence ones, a clash with `docs/decisions.md`, or a new screen or control go to Ben, and only his yes puts them in TODO.md.
 
 ## Ship
 
