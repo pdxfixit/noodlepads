@@ -338,9 +338,8 @@ before that leaves it for `just cloud-prune --smoke --yes`.
   cloud, error and warn entries.
 
 `just deploy-checks` runs smoke, then e2e with one retry after 15 s, then
-`cloud_admin.py prune --smoke --yes` with its output thrown away (on CI the
-token is D1 read only by docs/deploy-cloudflare.md, so that prune likely
-cannot delete there: unverified).
+taps. Nothing prunes afterwards: each check deletes its own profile, and
+its share and sounds go with it (2026-10-26).
 
 ## Version stamping
 

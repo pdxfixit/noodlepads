@@ -99,10 +99,10 @@ https://noodlepads.com, both even if one fails, in about 8 s together:
   at most 4 MB, one share. They never show in the public list. Deleting the
   profile deletes its share code too, and the Worker deletes any check
   profile over 10 minutes old the next time anyone makes a profile.
-- On GitHub the checks' cleanup (`cloud-prune --smoke --yes`, a D1 write)
-  warns instead: the deploy token reads D1 only. Share codes from checks
-  before 2026-10-26 (when a share outlived its profile) stay until Ben runs
-  `just cloud-prune --smoke --yes` from the Mac.
+- The checks clean up after themselves: each deletes its profile, and its
+  share and sounds go with it. Migration 008 (applied by the deploy) cleared
+  the checks' share codes from before 2026-10-26, when a share outlived its
+  profile.
 - A run killed mid-way (Ctrl-C, a crash) can leave its profile, until the
   next profile made sweeps it. `just cloud-prune --smoke` lists those (over
   10 minutes old, so a running check is safe) and the checks' share codes;

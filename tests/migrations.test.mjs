@@ -94,3 +94,28 @@ test('migration 007 marks every key as used now', () => {
   const { used } = db.prepare("SELECT used FROM keys WHERE hash = 'k'").get();
   assert.ok(used >= before && used <= Date.now() + 1000, `used ${used}`);
 });
+
+// 008 clears what the deploy checks left before a share went with its profile
+// (Ben, 2026-10-26: "have the tests clean up after themselves"): only check
+// profiles' shares whose profile is gone, and sounds nothing uses that belong
+// to no one. A family's share, a family's sound, and a live check's share stay.
+test('008 clears the deploy checks\' old shares and the audio nothing uses, and nothing of a family\'s', () => {
+  const db = migrated();
+  for (const f of MIGRATIONS.filter((m) => m < '008')) db.exec(read(`../worker/migrations/${f}`));
+  const run = (sql, ...args) => db.prepare(sql).run(...args);
+  run("INSERT INTO profiles (id, name, color, edited, created) VALUES ('p-family', 'Funky Moose', 'teal', 0, 0), ('p-smoke-live', 'Chef Cactus', 'teal', 0, 0)");
+  const share = (code, owner, preview = null) => run('INSERT INTO shares (code, profile_id, kind, title, bundle, preview, hash, created) VALUES (?, ?, ?, ?, ?, ?, ?, 0)', code, owner, 'sound', 't', '{}', preview, 'h');
+  const sound = (id, owner) => run('INSERT INTO sounds (id, profile_id, mime, bytes, chunks, sha256, got, created) VALUES (?, ?, ?, 1, 1, ?, 1, 0)', id, owner, 'audio/wav', id);
+  share('OLDSMOKE', 'p-smoke-gone'); share('OLDE2EXX', 'p-e2e-gone'); share('LIVESMOK', 'p-smoke-live'); share('FAMILYSH', 'p-family');
+  share('GONEFAMI', 'p-family-deleted');   // a family's share whose profile went before 2026-10-26: not the checks'
+  sound('s-checkold', ''); run("INSERT INTO share_sounds (code, sound_id) VALUES ('OLDSMOKE', 's-checkold')");
+  sound('s-preview', ''); share('PREVIEWS', 'p-family-deleted', 's-preview');
+  sound('s-family', 'p-family'); sound('s-familyshared', ''); run("INSERT INTO share_sounds (code, sound_id) VALUES ('GONEFAMI', 's-familyshared')");
+  sound('s-loose', '');
+  db.exec(read('../worker/migrations/008-clear-check-shares.sql'));
+  const codes = db.prepare('SELECT code FROM shares ORDER BY code').all().map((r) => r.code);
+  assert.deepEqual(codes, ['FAMILYSH', 'GONEFAMI', 'LIVESMOK', 'PREVIEWS']);
+  const sounds = db.prepare('SELECT id FROM sounds ORDER BY id').all().map((r) => r.id);
+  assert.deepEqual(sounds, ['s-family', 's-familyshared', 's-preview'], 'the check share\'s audio and the loose one go; a family\'s and a preview stay');
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM share_sounds WHERE code = 'OLDSMOKE'").get().n, 0);
+});

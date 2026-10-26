@@ -32,5 +32,5 @@
 ## Consequences
 
 - Agents never see a Cloudflare credential. An agent can still push `main`, and a push deploys, so a reviewer for `.github/workflows/` is the next step if that ever matters.
-- The deploy checks' cleanup (`cloud_admin.py prune --smoke --yes`) writes to D1, which the read-only token cannot: on GitHub it warns, and the checks' test shares are cleared from the Mac (`just cloud-prune --smoke --yes`).
+- The deploy checks clean up after themselves through the API: deleting a check profile ends its share and sounds (2026-10-26), and the Worker sweeps a killed run's profile after 10 minutes. The live-checks step holds no Cloudflare token.
 - A commit from before `site/` existed cannot be redeployed by flarepress's rollback; this site rolls back by reverting anyway.

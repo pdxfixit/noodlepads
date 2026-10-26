@@ -183,4 +183,4 @@ CREATE TABLE IF NOT EXISTS migrations (
   name    TEXT PRIMARY KEY,   -- the file's name, without .sql
   applied INTEGER NOT NULL
 );
-INSERT OR IGNORE INTO migrations (name, applied) VALUES ('001-shares-not-gifts-or-families', 0), ('002-player-metrics', 0), ('003-visits-no-ip-hash', 0), ('004-country-only', 0), ('005-drop-uses-visits', 0), ('006-record-bytes', 0), ('007-key-used', 0);
+INSERT OR IGNORE INTO migrations (name, applied) VALUES ('001-shares-not-gifts-or-families', 0), ('002-player-metrics', 0), ('003-visits-no-ip-hash', 0), ('004-country-only', 0), ('005-drop-uses-visits', 0), ('006-record-bytes', 0), ('007-key-used', 0), ('008-clear-check-shares', 0);

@@ -417,9 +417,9 @@ deploy-checks:
       echo "🛑 Deployed, but the live check failed:$failed. The new version is live; read the ❌ lines above (docs/deploy-cloudflare.md, \"Checks after a deploy\")." >&2
       exit 1
     fi
-    # Each smoke run leaves a test share (shares are forever); clear them so
-    # they don't pile up (24 had by 2026-10-11). Only p-smoke-/p-e2e- data.
-    python3 tools/cloud_admin.py prune --smoke --yes > /dev/null 2>&1 || echo "⚠️ couldn't clear the checks' test shares; run: just cloud-prune --smoke --yes"
+    # The checks clean up after themselves (2026-10-26): deleting a profile
+    # ends its shares and sounds, and a killed run's profile is swept by the
+    # next run's Worker after 10 minutes. Migration 008 cleared what came before.
     echo "✅ live: cloud-smoke, cloud-e2e and taps passed"
 
 [doc("Wait until the live site serves the stamped web/version.json (Cloudflare's edge can lag an upload; 90 s), then check / answers. just deploy runs it")]
