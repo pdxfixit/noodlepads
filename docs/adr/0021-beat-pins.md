@@ -1,6 +1,6 @@
 # 0021. A 📌 pin is a time on the beat record, left out when not pinned
 
-- **Status:** Proposed (the field is an agent's; pins and the chip order are Ben's)
+- **Status:** Accepted, built (the field is an agent's; pins and the chip order are Ben's)
 - **Date:** 2026-10-12
 - **Decided by:** Ben, 2026-10-12: "1 and 3. 8 spots, minus the number of pinned items" (pattern chips: pins from 📂 Open first, then the most recent beats in a stable order).
 

@@ -1,6 +1,6 @@
 # 0018. The 🎚️ Mixer's solo, effects and master are stored on the beat, left out at normal
 
-- **Status:** Proposed (the field shapes are an agent's; the rule that mute and solo save with the beat is Ben's)
+- **Status:** Accepted, built (the field shapes are an agent's; the rule that mute and solo save with the beat is Ben's)
 - **Date:** 2026-10-12
 - **Decided by:** Ben, 2026-10-12: "yes" to a mixer with per-row fader, mute, solo and one effect plus a master column; mute and solo save with the beat.
 

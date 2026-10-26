@@ -1,8 +1,8 @@
 # Noodle Pads 🔊
 
-A soundboard for kids: tap a pad to play a sound, record your own, make it
-silly with a voice, and build beats and songs. Everyone in the family gets a
-board of their own.
+A music studio anyone can pick up, starting as a soundboard: tap a pad to
+play a sound, record your own, make it silly with a voice, and build beats and
+songs. Everyone in the family gets a board of their own.
 
 **Play it at https://noodlepads.com**, on a phone, a tablet or a computer.
 Nothing to install, no accounts.

@@ -1,6 +1,6 @@
 # 0029. 👆 Touch layouts: bands of sounds on the deck, named saves as their own records
 
-- **Status:** Proposed
+- **Status:** Accepted, built
 - **Date:** 2026-10-16
 - **Decided by:** Ben, 2026-10-16: "On the phone, live should have the ability for programming the key layout, but it should not be tied to a kbd. It should offer preset groups (chords, drums etc), but be far simpler in how to construct the layout and size of the tiles/buttons." He picked stacked groups, a ⌨️ / 👆 switch everywhere, one layout shared with Beats, and named saves. Row in [decisions.md](../decisions.md) (Live).
 

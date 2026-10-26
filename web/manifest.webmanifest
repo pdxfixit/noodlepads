@@ -1,7 +1,7 @@
 {
   "name": "Noodle Pads",
   "short_name": "Noodle Pads",
-  "description": "Tap a pad to play a sound, hold it to loop, record your own sounds and make beats.",
+  "description": "A music studio anyone can pick up, starting as a soundboard: tap a pad, record your own sounds, make beats and songs.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
