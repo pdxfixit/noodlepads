@@ -26,7 +26,7 @@
 
 import { openDialog, setupDialog } from './dialogs.js';
 import { tempoKey } from './tempo-key.js';
-import { encodeWav, normalize, barSteps, SIGNATURES, COMMON_BPMS, tempoStops, stopFor } from './sequencer.js';
+import { encodeWav, normalize, barSteps, SIGNATURES, COMMON_BPMS, tempoStops, stopFor, outputDelay } from './sequencer.js';
 import { fadeStop, tooLate } from './audio.js';
 import { logEvent } from './log.js';
 import { showBanner } from './ui.js';
@@ -551,13 +551,19 @@ export function createSong(deps) {
   }
 
   // The playhead, over every lane, and the blocks playing lit.
+  // Where the song is, in seconds, as heard: the audio clock less the
+  // output's delay, so the line and lit blocks keep with the sound (as Beats' playhead).
+  function heardAt() {
+    const ctx = audio.context();
+    return ctx.currentTime - outputDelay(ctx) - t0 + from;
+  }
   function showPlayhead() {
     const line = el.lanes.querySelector('.song-playhead');
     if (!line) return;
     const on = playing() && !!planned;
     line.hidden = !on;
     if (!on) return;
-    const t = audio.context().currentTime - t0 + from;
+    const t = heardAt();
     line.style.setProperty('--at', String(planned.clock.barAt(Math.max(0, t))));
   }
 
@@ -1253,7 +1259,7 @@ export function createSong(deps) {
   // screen at a time, until the kid scrolls them (Ben, 2026-10-25, as Beats'
   // rows): then they stay put until the next ▶ Play song.
   function follow() {
-    const t = audio.context().currentTime - t0 + from;
+    const t = heardAt();
     const now = playingAt(planned.parts, t);
     const key = [...now].join(',');
     if (key !== [...shown].join(',')) {

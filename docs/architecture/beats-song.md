@@ -170,7 +170,7 @@ A row with no clock (added while playing, or put back by Undo) gets one from `jo
 
 `follow()` runs every frame: `stepsHeard(queue, shown, currentTime, outputDelay(ctx))` moves each row's playhead only once its pill has **come out of the speaker** (`outputDelay` = `outputLatency + baseLatency`, at most 0.2 s). Then `showSteps` (only the pills that change), `drawPlayhead` (one bar when rows line up, else a short bar per row), `keepInSight` (follow.js), `roll.step(shown)`, and `deps.onSteps(shown)` (⌨️ Keys' grid).
 
-Latency is worked out in two places with the same sum: `sequencer.js outputDelay` and `app.js`'s `deps.latency` for `dj.js`. 🎼 Song's playhead and 🧸 Kids' squares do not take it off at all.
+Latency is worked out in two places with the same sum: `sequencer.js outputDelay` (Beats, and 🎼 Song's line and lit blocks through `song.js heardAt`) and `app.js`'s `deps.latency` for `dj.js`. 🧸 Kids' squares do not take it off at all.
 
 ### Switching beats on the bar line (pattern chips)
 
@@ -294,7 +294,7 @@ A song from before lanes (only `slots`) becomes lane 1's blocks, back to back, a
 
 ### Playing
 
-`song.js play`: `seq.stop()`, plan from `startBar` (a bar tapped in the ruler), `seq.prepareBeats`, one `GainNode` a lane (`laneGainsFor`: its volume, 0 when muted) into `audio.master`, `t0 = currentTime + 0.1`, then `tick` every 25 ms books events before `currentTime + 0.1` with `seq.soundHit`, keyed `lane:beatId:row` for cutting. A lane's speaker changes its gain live (`liveLevel`). It stops itself 0.2 s after the end. `follow` lights blocks (`playingAt`) and moves the line; `deps.onHit` is wired but only acts while ⌨️ Keys shows, which it never does on the Song screen.
+`song.js play`: `seq.stop()`, plan from `startBar` (a bar tapped in the ruler), `seq.prepareBeats`, one `GainNode` a lane (`laneGainsFor`: its volume, 0 when muted) into `audio.master`, `t0 = currentTime + 0.1`, then `tick` every 25 ms books events before `currentTime + 0.1` with `seq.soundHit`, keyed `lane:beatId:row` for cutting. A lane's speaker changes its gain live (`liveLevel`). It stops itself 0.2 s after the end. `follow` lights blocks (`playingAt`) and moves the line, both at the time heard (`heardAt`: the clock less `outputDelay`, `tests/song-playhead.test.mjs`); `deps.onHit` is wired but only acts while ⌨️ Keys shows, which it never does on the Song screen.
 
 ### Editing and undo
 
@@ -408,7 +408,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 |---|---|
 | **Four beat schedulers.** `sequencer.js schedule` (live), `song.js tick`, `kids.js playBeat`, and `hearBeat` (all at once). Kids' looks 0.12 s ahead; the others 0.1 s | Kids ignores accents, swing, signatures (always 16 pills a bar), rates, row level, mute, solo, the 🎚️ Mixer, and a tune row's `rootShift` (`noteRate(n.p)` only). A timing fix in one reaches none of the others |
 | **`TICK_MS` and `LOOKAHEAD`** are separate constants in `sequencer.js` and `song.js` | change one, the beat and the song drift apart in feel |
-| **Output latency** is summed in `sequencer.js outputDelay` and again in `app.js`'s `deps.latency` for `dj.js` | a change to the cap (0.2 s) or the sum must be made twice; Song and Kids ignore latency |
+| **Output latency** is summed in `sequencer.js outputDelay` and again in `app.js`'s `deps.latency` for `dj.js` | a change to the cap (0.2 s) or the sum must be made twice; Kids ignores latency |
 | **The beat id pattern** `/^beat-[a-z0-9-]{1,48}$/` is written in `sequencer.js BEAT_ID`, `playlist.js BEAT_REF`, `backup.js` (a local `BEAT_ID`) and inline in `rhythm.js` | only `playlist.js` vs `sequencer.js` is tested (`tests/playlist.test.mjs`) |
 | **Listing a person's beats** happens three ways: `sequencer.js library()` (via `beatLibrary.list`, minus hidden), `makeSong`'s `deps.beats` (its own filter and sort), `kids.js`'s `deps.beats` | a new hidden kind of beat must be filtered in each |
 | **Saving a beat record** has two writers in `app.js`: `beatLibrary.put` and Kids' `deps.saveBeat` (the same code) | a change to how beats persist (a stamp, a hook) must be made in both |
