@@ -26,6 +26,10 @@ test('no tracked file holds a plain email address', () => {
 
 test('the PIN-reset address is built from the encoded constant, and Help and the PIN pad show it', () => {
   assert.match(PIN_RESET_EMAIL, /^[a-z.]+@[a-z.]+$/, 'PIN_RESET_EMAIL decodes to an address');
+  // The simpler one (Ben, 2026-10-26), checked in two halves so no address is written out here.
+  const [local, domain] = PIN_RESET_EMAIL.split('@');
+  assert.equal(local, 'forgot');
+  assert.equal(domain, 'noodlepads.com');
   for (const f of ['web/help.js', 'web/cloud-ui.js']) {
     assert.match(readFileSync(root + f, 'utf8'), /import \{ PIN_RESET_EMAIL \} from '\.\/contact\.js'/, `${f} takes it from contact.js`);
   }

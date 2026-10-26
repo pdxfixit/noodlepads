@@ -211,7 +211,7 @@ test('☁️ Open from the cloud: a PIN pad with no Remember on this device, and
   assert.equal($('#pin-remember'), null, 'no device remembers a PIN (Ben, 2026-10-19)');
   assert.equal($('#pin-unknown').hidden, true, 'nothing of theirs is here to delete');
   assert.equal($('#pin-forgot').hidden, false);
-  assert.match($('#pin-forgot').textContent, /pin\.reset@noodlepads\.com/);
+  assert.match($('#pin-forgot').textContent, /forgot@noodlepads\.com/);
   typePin('1111');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'asked again');
@@ -225,7 +225,7 @@ test('☁️ Open from the cloud: a PIN pad with no Remember on this device, and
   $('#cloud-list').close();
 });
 
-test('a PIN is asked each time the person is opened, every time, and never remembered', async () => {
+test('a PIN is asked each time the person is opened, every time, unless 🔑 Remember is tapped (tests/pin-remember.test.mjs)', async () => {
   // Joined up as a person on this device (the first sync would do this).
   await setPersonEdit('p-far', { id: 'p-far', name: 'Sir Squid', avatar: '🐙', color: '#0C5E4B', added: true, fun: true, created: 2 });
   renderPeople();
@@ -466,7 +466,7 @@ test('Settings has no 🔓 What\'s private; the PIN pad still says where a forgo
   assert.equal($('#set-privacy'), null);
   assert.equal($('#privacy-list'), null);
   const { FORGOT_PIN } = await import('../web/cloud-ui.js');
-  assert.match(FORGOT_PIN, /pin\.reset@noodlepads\.com/);
+  assert.match(FORGOT_PIN, /forgot@noodlepads\.com/);
 });
 
 // Found by `just cloud-e2e` (2026-10-11): the start-up sync and one right

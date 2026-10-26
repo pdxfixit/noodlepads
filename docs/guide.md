@@ -856,7 +856,7 @@ ADR 0002.
   with a PIN syncs only once it is typed. **🔑 Remember them here?** opens
   once a PIN opens someone (on switching to them, or ☁️ Open from the cloud;
   Ben, 2026-10-26): 🔑 Remember asks the cloud for a key that lasts, keeps it
-  on the device and skips their PIN and its guard here for 30 days
+  on the device and skips their PIN and its guard here for 90 days
   (`REMEMBER_DAYS`; the link's `rememberUntil`). Not now, ✕ or Esc stops the
   offer on this device (`noOffer`). Their profile's PIN part has 🔑 Remember
   on this device (asks the PIN) or Forget this device, with the day it ends
