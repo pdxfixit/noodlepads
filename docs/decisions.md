@@ -176,7 +176,7 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | Rows of pills, a pill a quarter of a beat; rows can be added, removed and dragged to reorder by a grip. | A sample sequencer for the board's own sounds. | 2026-10-10 |
 | Pills sound only while the beat plays. | Tapping a pill to set it should be silent. | 2026-10-10 |
 | Beats are 1, 2 or 4 bars. | Longer patterns without complexity. | 2026-10-10 |
-| One beat engine: 🧸 Kids' beat plays through the beat maker's, and honors the tune's root (🎵 Find its note) and accents; it leaves out the mixer, swing and row speed (`docs/design/one-beat-engine.md`). | Ben, 2026-10-26: one engine with hooks for Kids; "fix wrong notes only". | 2026-10-26 |
+| One beat engine (to build): 🧸 Kids' beat plays through the beat maker's, and sounds as the same beat does on 🥁 Beats: the tune's root (🎵 Find its note), accents and swing included; it leaves out the mixer and row speed (`docs/design/one-beat-engine.md`). | Ben, 2026-10-26: one engine with hooks for Kids; "fix wrong notes only"; on swing, "I definitely want things consistent". | 2026-10-26 |
 | Simple by default. "Advanced" (Settings) adds per-row Speed (½×, 1×, 2×) and the time signatures. | Ben: simplify even the advanced beats where we can. | 2026-10-10 |
 | Swing is for Regular and Advanced, swings the eighth notes, and a beat plays with its swing at every level; Swing is the triplet feel, Shuffle the harder one; Lo-fi, Boom bap and Dusty carry swing. (to build) | Ben, 2026-10-26: the producer and amateur seats found Swing silent on most grooves and hidden. | 2026-10-26 |
 | All five time signatures stay (4/4, 3/4, 5/4, 6/8, 7/8). | Ben: "keep it so others can use it as well". | 2026-10-10 |
