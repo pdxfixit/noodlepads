@@ -48,6 +48,14 @@ test('trimBounds: with two channels, keeps whichever channel is audible', () => 
   approx(r.duration, 0.459);
 });
 
+test('trimBounds: a channel with nothing in it does not keep the quiet tail of the other', () => {
+  const left = new Array(1000).fill(0);
+  for (let i = 200; i < 300; i++) left[i] = 0.7;
+  const r = trimBounds(fakeBuffer([left, new Array(1000).fill(0)], RATE));
+  approx(r.start, 0.17);
+  approx(r.duration, 0.159);   // the sound, plus 30 ms either side
+});
+
 test('a looping pad repeats over a whole number of beats that holds it: 1, 2, 4, 8, 16, then whole bars', async () => {
   const { loopBeats } = await import('../web/audio.js');
   const beat = 0.6;  // 100 BPM

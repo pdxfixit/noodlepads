@@ -70,6 +70,7 @@ export function trimBounds(buffer) {
   for (let c = 0; c < buffer.numberOfChannels; c++) {
     const d = buffer.getChannelData(c);
     let i = 0; while (i < n && Math.abs(d[i]) < threshold) i++;
+    if (i === n) continue;   // nothing in this channel: the others say where the sound is
     let j = n - 1; while (j > i && Math.abs(d[j]) < threshold) j--;
     first = Math.min(first, i);
     last = Math.max(last, j);
