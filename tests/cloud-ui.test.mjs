@@ -513,7 +513,10 @@ test('▶ Play on a share plays as the app\'s sounds do: the grille wakes, and s
   cloud.api.shared = async () => ({ kind: 'sound', title: 'Wobbly Taco', preview: 'sound-1' });
   cloud.api.fetchSound = async () => ({ arrayBuffer: async () => new ArrayBuffer(8) });
   audio.decode = async () => ({ duration: 2, length: 2000, numberOfChannels: 1, sampleRate: 1000 });
-  audio.on.started = () => { started++; };
+  // Counted, and passed on to the app's own hook: the grille's meter starts.
+  const { meter } = await import('../web/meter.js');
+  meter.raf = 0;
+  audio.on.started = () => { started++; real.started(); };
   try {
     $('#shared-browse').dispatch('click');
     $('#shared-code').value = 'WXYZ-2345';
@@ -524,7 +527,8 @@ test('▶ Play on a share plays as the app\'s sounds do: the grille wakes, and s
     await settle();
     assert.equal(play().textContent, '■ Stop');
     assert.ok(audio.playing.has('share-preview'), 'it plays through audio.start');
-    assert.equal(started, 1, 'the grille is told a sound began');
+    assert.equal(started, 1, 'the grille is told a sound began, once');
+    assert.ok(meter.raf, 'and the meter runs');
     audio.stopAll();
     assert.equal(audio.playing.has('share-preview'), false, 'stopping everything stops it');
     assert.equal(sources[0].stops.length, 2, 'its scheduled end, then the stop');
@@ -540,7 +544,7 @@ test('▶ Play on a share plays as the app\'s sounds do: the grille wakes, and s
     Object.assign(cloud.api, { shared: real.shared, fetchSound: real.sound });
     audio.decode = real.decode;
     audio.on.started = real.started;
-    audio.playing.clear();
+    audio.stop('share-preview');
     cloud.forgetShare('WXYZ2345');
     $('#shared-dialog').close();
   }
