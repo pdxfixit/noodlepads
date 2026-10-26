@@ -258,14 +258,16 @@ function renderProfile(fresh = false) {
   const del = el.profileDelete;
   if (fresh) del.classList.remove('armed');
   if (!del.classList.contains('armed')) {
-    del.textContent = n ? `Delete (and ${KIND_EMOJI.sounds} ${n} ${n === 1 ? 'sound' : 'sounds'})` : 'Delete';
+    del.textContent = n ? `🗑️ Delete (and ${KIND_EMOJI.sounds} ${n} ${n === 1 ? 'sound' : 'sounds'})` : '🗑️ Delete';
     del.setAttribute('aria-label', `Delete ${p.name}${sounds}`);
   }
   del.disabled = people().length === 1;
   el.profileParts.hidden = false;
-  el.profileDeleteHint.textContent = inCloud(p.id)
-    ? 'Delete takes them, their recordings and their beats off this device. A third tap then deletes their cloud copy too.'
-    : 'Delete takes them, their recordings and their beats off this device.';
+  el.profileDeleteHint.textContent = del.disabled
+    ? `${p.name} is the only one here, so they can't be deleted. Close this and ➕ Add a person first.`
+    : inCloud(p.id)
+      ? 'Delete takes them, their recordings and their beats off this device. A third tap then deletes their cloud copy too.'
+      : 'Delete takes them, their recordings and their beats off this device.';
 }
 
 // The sheet of someone just deleted here, cloud copy left: only Delete shows,
@@ -286,6 +288,8 @@ function drawLeft() {
 // Any other tap takes back a half-done Delete. The third tap waits until the
 // sheet closes.
 function disarmDelete() {
+  clearTimeout(armTimer);
+  armTimer = null;
   if (left?.id === profileFor || !el.profileDelete.classList.contains('armed')) return;
   el.profileDelete.classList.remove('armed');
   renderProfile();
@@ -323,6 +327,10 @@ const HOLD_MS = 500;
 let namesFor = null;   // the person the list is for
 let holdTimer = null;
 let held = false;      // a hold opened the list, so the tap that ends it opens nothing more
+const SLIP_MS = 500;   // a Delete tap this soon after the last is a double tap
+const ARM_MS = 4000;   // how long Delete's "Tap again" waits before it takes itself back
+let armedAt = -Infinity;   // when Delete last asked (the click's timeStamp)
+let armTimer = null;
 
 function drawNames() {
   const p = anyone(namesFor);
@@ -385,6 +393,13 @@ async function onProfileClick(e) {
   }
   if (t !== el.profileDelete) { await pinClick(id, t); return; }
   if (t.disabled) return;
+  // A double tap is one slip, not a yes: the tap that deletes must come on
+  // its own, a moment after the one that asked.
+  if (t.classList.contains('armed') && e.timeStamp - armedAt < SLIP_MS) {
+    announce('Tap once more to delete.');
+    return;
+  }
+  armedAt = e.timeStamp;
   if (left?.id === id) { await deleteCloudToo(); return; }
   const p = anyone(id);
   if (!t.classList.contains('armed')) {
@@ -392,6 +407,8 @@ async function onProfileClick(e) {
     t.textContent = 'Tap again to delete';
     t.setAttribute('aria-label', `Tap again to delete ${p.name}`);
     announce(`Tap again to delete ${p.name}.`);
+    // Left red, it would wait for any stray tap later: it takes itself back.
+    armTimer = setTimeout(disarmDelete, ARM_MS);
     return;
   }
   // In the cloud: the sheet stays for a third tap, so keep what deleting
@@ -474,6 +491,7 @@ export function initPeople(hooks) {
     profileFor = null;
     left = null;
     stopHold();
+    disarmDelete();
     // Deleted while on show, the sheet open for the third tap: someone else
     // comes on now.
     if (waited && !person(state.personId)) refreshPeople(goneNote(waited.name));

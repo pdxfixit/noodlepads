@@ -677,14 +677,14 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   counts), checked like an open (`cloud.js` `pinGuards`, `checkPin`); without
   one, anyone can. It gates the sheet only: syncs apply as before.
   Nobody types a name: a tap on 🎲 opens Pick a name, a dozen fun names and the
-  special names to choose from (🎲 More names deals another dozen); closing it keeps the name. Anyone can be deleted from this device (two taps), with their recorded sounds,
+  special names to choose from (🎲 More names deals another dozen); closing it keeps the name. Anyone can be deleted from this device with 🗑️ Delete, a full-width red button in a red-edged box of its own at the end of their profile: two taps, and a second tap within 500 ms of the first (a double tap) only asks and, left red, it takes itself back after 4 s (`people.js` `SLIP_MS`, `ARM_MS`). It deletes their recorded sounds,
   saved beats, beat on screen, pad order and edits to preset pads (left
   behind, any of these made them a person again on the next start,
   `state.js` `adoptStoredPeople`); a sync of theirs still running ends first,
   or it would store them again (`cloud.js` `syncEnded`). A boards.json person can't leave
   that file, so deleting one keeps only a hidden record; the People dialog
-  lists hidden people under "Deleted — bring back". The last person on show
-  can't be deleted. For someone in the cloud the second tap deletes them here
+  lists hidden people under "Deleted — bring back". The only person here
+  can't be deleted: Delete is greyed and the box says why. For someone in the cloud the second tap deletes them here
   and the sheet stays, showing only Delete ("☁️ Tap again to delete their
   cloud copy"): a third tap deletes their cloud profile too (asking for the
   PIN if they have one; `cloud-ui.js` `deleteLeftCloud`), and ✕ keeps it for
