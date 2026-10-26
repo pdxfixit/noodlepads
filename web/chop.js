@@ -199,12 +199,13 @@ export function createCut(sheet) {
   // ── Trim, fades and edits ──
 
   // The stored recording and the sheet's trim, edits and fade, as the trim
-  // editor works on them; false if the recording would not open.
+  // editor works on them; false if the recording would not open. A sound
+  // made or recorded in this sheet (a ✨ sound remade, too) is not stored yet.
   async function loadTrim() {
     const { mode, clip, trim, edits, fade } = sheet.now();
     let full;
     try {
-      full = mode === 'edit' ? await audio.decoded(clip) : cut.recorded;
+      full = cut.recorded ?? (mode === 'edit' ? await audio.decoded(clip) : null);
     } catch (err) {
       console.error('Trim could not open the recording:', err);
       return false;

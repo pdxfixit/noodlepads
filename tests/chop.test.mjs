@@ -375,3 +375,35 @@ test('🔊 Even it out: presets never show it; a quiet recording of a kid\'s own
     renderPads();
   }
 });
+
+// A made sound remade in its sheet (another ✨ starter, or its sliders) is
+// new audio before it is saved: 🔊 Even it out, and Trim and edit, work on
+// that, never on the sound as it was stored.
+test('🔊 Even it out on a ✨ sound just remade works on the new sound, not the stored one', async () => {
+  const { currentPerson } = await import('../web/board.js');
+  const { renderPads } = await import('../web/pads.js');
+  const { RATE: SYNTH_RATE } = await import('../web/synth.js');
+  await setSetting('advancedBeats', false);
+  const clip = { id: 'user-remade-1', personId: currentPerson().id, label: 'Zap', emoji: '🔫', color: 'red', created: 1, blob: new Blob(['x']), mime: 'audio/wav', voice: 'normal', synth: { tone: 'buzzy', from: 1600, to: 120, length: 0.35, shape: 'drop', pulses: 1 } };
+  state.userClips.push(clip);
+  renderPads();
+  try {
+    if (!document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+    audio.forget(clip.id);
+    pads().find((p) => p.dataset.id === clip.id).parent.querySelector('[data-edit]').dispatch('click');
+    await page.settle();
+    $('#make-starters').children.find((b) => b.dataset.make === 'wind').dispatch('click');   // remade: not saved yet
+    await page.settle();
+    started.length = 0;
+    $('#cut-even').dispatch('click');
+    await page.settle();
+    const played = started.find(([id]) => id === 'preview')?.[1];
+    assert.ok(played, 'it evens out and plays');
+    assert.equal(played.sampleRate, SYNTH_RATE, 'the Wind just made, not the stored recording');
+    assert.ok(played.duration > 2, `the Wind is 2.4 s long: ${played.duration}`);
+  } finally {
+    if ($('#sheet').open) $('#sheet').close();
+    state.userClips = state.userClips.filter((c) => c.id !== clip.id);
+    renderPads();
+  }
+});
