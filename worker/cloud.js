@@ -10,6 +10,7 @@ import { CLOUD_ID } from '../web/reid.js';
 import { ORIGIN, json, fail, Refuse, readJson, readBytes, randomId, sha256Hex, toBytes, withinDaily } from './http.js';
 import { isPin, newSalt, hashSecret, checkSecret, shareCode, isShareCode, plainCode } from './pin.js';
 import { noteEvent, forgetProfile } from './metrics.js';
+import { allowed } from './events-worker.js';
 
 // A D1 row holds at most 2,000,000 bytes; audio goes in pieces a little smaller.
 export const CHUNK_BYTES = 1_900_000;
@@ -175,12 +176,23 @@ function checkLooks(body, { partial = false } = {}) {
 export { CLOUD_ID };
 
 // The deploy checks' throwaway profiles (tools/look-cloud.mjs testId; as
-// tools/cloud_admin.py TEST_PREFIXES). Anyone could pick such an id, so it
-// earns nothing but caps of its own, just big enough for the checks: 100 a
-// day, 64 KB of records, one sound of at most 4 MB (cloud-smoke's is 1.9 MB
-// and a little, in two pieces), one share. It never shows in the list, and
-// is deleted 10 minutes after it was made (a check takes seconds).
+// tools/cloud_admin.py TEST_PREFIXES). Such an id gets caps of its own, just
+// big enough for the checks: 100 a day, 64 KB of records, one sound of at
+// most 4 MB (cloud-smoke's is 1.9 MB and a little, in two pieces), one share.
+// It never shows in the list, and is deleted 10 minutes after it was made (a
+// check takes seconds). Only the checks may use one: a request naming such an
+// id must carry the Worker secret CHECKS_KEY in CHECKS_HEADER (provenCheck),
+// else it is refused as a bad id (400 'id'). The app never makes one (its ids
+// are "p-" and the time in base 36).
 export const TEST_PROFILE = /^p-(smoke|e2e)-/;
+export const CHECKS_HEADER = 'X-Checks-Key';
+// The secret, compared in time that does not depend on where it differs
+// (events-worker.js allowed). Until the deploy has put CHECKS_KEY in the
+// Worker (it does once the GitHub secret is set), the id alone passes, as
+// before, so the checks keep working while it is unset.
+export const provenCheck = (request, env) => !env.CHECKS_KEY
+  || allowed(request, env, { key: { header: CHECKS_HEADER, secret: 'CHECKS_KEY' } });
+const needProvenCheck = (request, env, id) => { if (isCheck(id) && !provenCheck(request, env)) throw new Refuse(400, 'id'); };
 export const CHECK_LIMITS = { recordBytes: 64 * 1024, soundBytes: 4 * 1024 * 1024, sounds: 1, shares: 1 };
 export const CHECK_MS = 10 * 60 * 1000;
 const isCheck = (id) => TEST_PROFILE.test(id);
@@ -217,6 +229,7 @@ async function dropOldChecks(env, now) {
 async function makeProfile(request, env, now, seen) {
   const body = await readJson(request);
   if (typeof body.id !== 'string' || !CLOUD_ID.test(body.id)) throw new Refuse(400, 'id');
+  needProvenCheck(request, env, body.id);
   const look = checkLooks(body);
   if (body.pin !== undefined && body.pin !== null && !isPin(body.pin)) throw new Refuse(400, 'pin');
   await dropOldChecks(env, now);
@@ -831,6 +844,7 @@ async function route(request, env, now, seen) {
         if (m === 'GET') return await listProfiles(env);
         if (m === 'POST') return await makeProfile(request, env, now, seen);
       } else if (typeof b === 'string' && PERSON_ID.test(b)) {
+        needProvenCheck(request, env, b);
         if (parts.length === 3 && m === 'POST' && Object.hasOwn(LIMITERS, c)) await slowDown(request, env, LIMITERS[c], b);
         if (parts.length === 2 && m === 'PATCH') return await changeProfile(request, env, b, now, seen);
         if (parts.length === 2 && m === 'DELETE') return await deleteProfile(request, env, b, now);

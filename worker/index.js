@@ -18,7 +18,8 @@
 //   PUSH_LIMITER, SOUND_LIMITER, SHARE_LIMITER, OPEN_LIMITER
 //                     rate limits on a push, a sound's start, a share and an open, per profile key
 //                     (an open: per profile), never per address (worker/cloud.js LIMITERS)
-// No secrets.
+// One secret: CHECKS_KEY, which the deploy checks send to prove who they are (worker/cloud.js provenCheck);
+// the deploy puts it in from the GitHub secret of the same name.
 
 import { handleLog } from './reports.js';
 import { handleCloud } from './cloud.js';

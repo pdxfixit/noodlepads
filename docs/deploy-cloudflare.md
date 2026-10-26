@@ -42,7 +42,12 @@ any `worker/migrations/*.sql` D1 lacks is applied, so a new Worker never
 meets the old tables. Up to date, it only reads. A migration that drops a
 table D1 holds rows of stops the deploy (CI has no telemetry mirror to
 prove they were copied); Ben runs that one from the Mac after `just pull`.
-Only this step and the upload hold the token, which has D1 edit.
+Only this step, the checks' secret and the upload hold the token, which has D1 edit.
+
+Then, still before step 3, the deploy puts the GitHub secret `CHECKS_KEY` into
+the Worker (`wrangler secret put CHECKS_KEY` through flarepress's
+`tools/wrangler.sh`, the value from stdin), every deploy, so a new value takes
+at once. While the GitHub secret is empty the step prints a notice and goes on.
 
 The pieces:
 
@@ -58,7 +63,8 @@ The pieces:
 - Secrets in GitHub (Settings → Secrets and variables → Actions):
   `CLOUDFLARE_API_TOKEN` (this repo's own token: Account → Workers Scripts:
   Edit, D1: Read; noodlepads.com → Workers Routes: Edit, DNS: Edit, Zone:
-  Read), `D1_DATABASE_ID`, `CLOUDFLARE_ACCOUNT_ID`.
+  Read), `D1_DATABASE_ID`, `CLOUDFLARE_ACCOUNT_ID`, and `CHECKS_KEY` (the deploy
+  checks' proof, below; Ben makes it with `openssl rand -hex 24`).
 - `web/_headers`: `Cache-Control: no-cache` so devices pick up a new deploy on
   their next load, the microphone allowed for this site only, two hardening
   headers, and a Content-Security-Policy (own scripts, styles and fonts,
@@ -96,9 +102,14 @@ https://noodlepads.com, both even if one fails, in about 8 s together:
 - Every request carries `Origin: https://noodlepads.com`: the Worker refuses
   writes from anywhere else.
 - Each check makes one throwaway profile (`p-smoke-<time>-<random>`,
-  `p-e2e-…`) and deletes it in a `finally`, whatever failed. Their ids (`worker/cloud.js
-  TEST_PROFILE`) are an id anyone could type, so they get only what a check
-  needs (`CHECK_LIMITS`): a cap of their own, 100 a UTC day, so the checks
+  `p-e2e-…`) and deletes it in a `finally`, whatever failed. Such an id
+  (`worker/cloud.js TEST_PROFILE`) works only with the proof: every `/api/`
+  request carries `X-Checks-Key`, the Worker secret `CHECKS_KEY`, which
+  `tools/look-cloud.mjs` reads from the environment (deploy.yml passes the
+  GitHub secret; on the Mac, export it before `just deploy`). Without it the
+  Worker refuses the id (400 `id`); while the Worker has no `CHECKS_KEY` yet,
+  the id alone passes. A check's profile gets only what a check needs
+  (`CHECK_LIMITS`): a cap of their own, 100 a UTC day, so the checks
   never use up kids' 10 new profiles a day; 64 KB of records, one sound of
   at most 4 MB, one share. They never show in the public list. Deleting the
   profile deletes its share code too, and the Worker deletes any check
@@ -144,7 +155,8 @@ The site folder is `site/` in this repo since 2026-10-15 (ADR 0025).
   below); everyone else stays on their device.
 - **Before real voice recordings go into `web/clips/`**, remember they become
   public on the next deploy.
-- **The Worker has no secrets.** The player metrics keep nothing of the IP
+- **The Worker has one secret, `CHECKS_KEY`** (the deploy checks' proof, put
+  in by the deploy from the GitHub secret). The player metrics keep nothing of the IP
   ([ADR 0016](adr/0016-player-metrics.md)). If an `IP_KEY` secret was ever
   set, nothing reads it: `npx wrangler secret delete IP_KEY` from
   `~/src/flarepress/noodlepads.com` removes it.

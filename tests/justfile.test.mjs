@@ -147,5 +147,23 @@ test('GitHub applies missing migrations before the upload, and only those steps 
   assert.ok(at('run: just cloud-migrate --yes') < at('uses: pdxfixit/flarepress@'));
   const job = wf.slice(at('jobs:'), at('steps:'));
   assert.doesNotMatch(job, /CLOUDFLARE_API_TOKEN/, 'not in the whole job: the tests and the live checks run without it');
-  assert.equal(wf.match(/CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/g)?.length, 2, 'the migrate step and the upload');
+  assert.equal(wf.match(/CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/g)?.length, 3, "the migrate step, the checks' secret and the upload");
+});
+
+// The deploy checks prove who they are (Ben, 2026-10-26): the deploy puts the
+// GitHub secret CHECKS_KEY into the Worker with wrangler before the upload
+// (skipped, saying so, while it is empty), and the live checks send it.
+test("GitHub puts the checks' secret into the Worker before the upload, and the live checks send it", () => {
+  const wf = readFileSync(join(root, '.github/workflows/deploy.yml'), 'utf8');
+  const at = (s) => { const i = wf.indexOf(s); assert.ok(i >= 0, `deploy.yml has ${s}`); return i; };
+  const put = at('secret put CHECKS_KEY');
+  assert.ok(at('run: just cloud-migrate --yes') < put && put < at('uses: pdxfixit/flarepress@'));
+  const step = wf.slice(wf.lastIndexOf('- name:', put), put + 40);
+  assert.match(step, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
+  assert.match(step, /CHECKS_KEY: \$\{\{ secrets\.CHECKS_KEY \}\}/);
+  assert.match(step, /if \[ -z "\$CHECKS_KEY" \]; then\n\s+echo "::notice[^\n]*CHECKS_KEY[^\n]*"\n\s+exit 0/, 'empty: says so and goes on');
+  assert.match(step, /printf '%s' "\$CHECKS_KEY" \| "\$FLAREPRESS\/tools\/wrangler\.sh" "\$GITHUB_WORKSPACE\/site" secret put CHECKS_KEY/, 'the value from stdin, never on the command line');
+  const checks = wf.slice(wf.lastIndexOf('- name:', at('run: just deploy-checks')), at('run: just deploy-checks'));
+  assert.match(checks, /CHECKS_KEY: \$\{\{ secrets\.CHECKS_KEY \}\}/);
+  assert.doesNotMatch(checks, /CLOUDFLARE_API_TOKEN/);
 });

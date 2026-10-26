@@ -3,11 +3,12 @@
 # stamp, wrangler deploy, verify), then the live checks. Before the upload it
 # applies any migration D1 lacks (Ben, 2026-10-26), so a new Worker never meets
 # an older database. GitHub holds this repo's own Cloudflare token (Workers,
-# its zone, D1 edit); no agent holds one, and only the migrate and upload steps
-# see it. Ben's `just deploy` on the Mac is the fallback.
+# its zone, D1 edit); no agent holds one, and only the migrate, checks' secret
+# and upload steps see it. Ben's `just deploy` on the Mac is the fallback.
 #
 # Secrets: CLOUDFLARE_API_TOKEN, D1_DATABASE_ID (site/wrangler.toml names it
-# as ${D1_DATABASE_ID}), CLOUDFLARE_ACCOUNT_ID.
+# as ${D1_DATABASE_ID}), CLOUDFLARE_ACCOUNT_ID, CHECKS_KEY (the deploy checks'
+# proof: put into the Worker below, sent by the live checks; skipped while unset).
 name: deploy
 on:
   push:
@@ -62,6 +63,21 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: just cloud-migrate --yes
+      # The deploy checks prove who they are (worker/cloud.js provenCheck): the
+      # GitHub secret goes into the Worker as its secret of the same name, by
+      # wrangler (wrangler first), each deploy, so a new value takes at once.
+      # Unset, this says so and goes on: the Worker then lets the checks' ids
+      # pass on the id alone, as before.
+      - name: Put the checks' secret into the Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CHECKS_KEY: ${{ secrets.CHECKS_KEY }}
+        run: |
+          if [ -z "$CHECKS_KEY" ]; then
+            echo "::notice title=CHECKS_KEY not set::The GitHub secret CHECKS_KEY is empty, so the Worker's is left as it is. Until the Worker holds one, the deploy checks' ids pass on the id alone (TODO.md, Ben does: Give the deploy checks a secret)."
+            exit 0
+          fi
+          printf '%s' "$CHECKS_KEY" | "$FLAREPRESS/tools/wrangler.sh" "$GITHUB_WORKSPACE/site" secret put CHECKS_KEY
       - uses: pdxfixit/flarepress@v1  # rolling: the owner moves v1 to release
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -70,4 +86,5 @@ jobs:
       - name: Live checks (cloud-smoke, cloud-e2e, taps)
         env:
           CHROME: /usr/bin/google-chrome
+          CHECKS_KEY: ${{ secrets.CHECKS_KEY }}   # their proof (tools/look-cloud.mjs); empty until Ben adds it
         run: just deploy-checks

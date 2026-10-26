@@ -17,6 +17,11 @@
 //                syncs and has both, the beat edited in place (Q7).
 //
 // Each step prints ✅ or ❌ with its time; the exit code is 1 on any ❌.
+//
+// The checks prove who they are: every /api/ request carries the Worker
+// secret CHECKS_KEY, read from the environment (deploy.yml passes the GitHub
+// secret), in the X-Checks-Key header. Once the Worker holds the secret it
+// refuses a p-smoke-/p-e2e- id without it (worker/cloud.js provenCheck).
 
 import crypto from 'node:crypto';
 import { createCloudApi, CloudError } from '../web/cloud-api.js';
@@ -24,6 +29,7 @@ import { uploadAudio, CHUNK_BYTES } from '../web/cloud-sync.js';
 import { funName } from '../web/names.js';
 import { PICTURES, PERSON_COLORS } from '../web/model.js';
 import { launchChrome, connect, evaluate, waitFor } from './chrome.mjs';
+import { CHECKS_HEADER } from '../worker/cloud.js';
 
 // The Worker takes writes only from its own page (worker/http.js ORIGIN).
 const ORIGIN = 'https://noodlepads.com';
@@ -42,12 +48,38 @@ const testId = (kind) => `p-${kind}-${Date.now().toString(36)}-${crypto.randomBy
 const secs = (ms) => `${(ms / 1000).toFixed(1)} s`;
 const must = (ok, why) => { if (!ok) throw new Error(why); };
 
-// The API from Node: every request carries the site's Origin.
+// The checks' proof, as headers: none while CHECKS_KEY is unset.
+export const checksHeaders = (key = process.env.CHECKS_KEY ?? '') => (key ? { [CHECKS_HEADER]: key } : {});
+
+function sayProof() {
+  if (!process.env.CHECKS_KEY) {
+    console.log('ℹ️  CHECKS_KEY is not set: the check sends no proof. A Worker that holds the secret refuses its profile (400 id); set CHECKS_KEY to the GitHub secret\'s value.');
+  }
+}
+
+// The API from Node: every request carries the site's Origin, and the checks' proof.
 function apiFor(base) {
   return createCloudApi({
     base: `${base}/api`,
-    fetch: (url, init = {}) => fetch(url, { ...init, headers: { ...init.headers, Origin: ORIGIN } }),
+    fetch: (url, init = {}) => fetch(url, { ...init, headers: { ...init.headers, Origin: ORIGIN, ...checksHeaders() } }),
   });
+}
+
+// The app's own /api/ requests in a page carry the proof too: each is paused
+// on its way out and sent on with the header added. Only /api/ on the site
+// checked, so the secret goes nowhere else.
+async function proveFrom(page, url) {
+  const proof = Object.entries(checksHeaders());
+  if (!proof.length) return;
+  page.on((m) => {
+    if (m.method !== 'Fetch.requestPaused') return;
+    const headers = Object.entries(m.params.request.headers).filter(([name]) => name.toLowerCase() !== CHECKS_HEADER.toLowerCase());
+    page.send('Fetch.continueRequest', {
+      requestId: m.params.requestId,
+      headers: [...headers, ...proof].map(([name, value]) => ({ name, value })),
+    }).catch(() => {});
+  });
+  await page.send('Fetch.enable', { patterns: [{ urlPattern: `${url}/api/*`, requestStage: 'Request' }] });
 }
 
 // Steps, each timed and said. The first ❌ stops the run (then `finally`).
@@ -222,6 +254,7 @@ async function device(cdp, name, url) {
   await page.send('Page.enable');
   await page.send('Runtime.enable');
   await page.send('Network.enable');
+  await proveFrom(page, url);
   const loaded = new Promise((r) => page.on((m) => { if (m.method === 'Page.loadEventFired') r(); }));
   await page.send('Page.navigate', { url: `${url}/` });
   await loaded;
@@ -436,5 +469,6 @@ async function e2e({ url }) {
 export async function main(mode, argv) {
   let opts;
   try { opts = options(argv); } catch (err) { console.error(`🛑 ${err.message}`); return 2; }
+  sayProof();
   return mode === 'cloud-smoke' ? smoke(opts) : e2e(opts);
 }
