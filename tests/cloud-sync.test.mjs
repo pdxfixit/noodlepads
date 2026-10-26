@@ -10,9 +10,10 @@ import { ORIGIN } from '../worker/http.js';
 import { FakeD1 } from './fake-d1.mjs';
 import { createCloudApi, CloudError, cloudTrouble } from '../web/cloud-api.js';
 import {
-  syncProfile, recordsOf, planPush, decideRecord, hashOf, pieces, shareBundle, shareDoc, hasMade, CHUNK_BYTES, CLOUD_MAX_SOUND, keyOf,
+  syncProfile, recordsOf, planPush, decideRecord, hashOf, pieces, shareBundle, shareDoc, hasMade, syncNote, CHUNK_BYTES, CLOUD_MAX_SOUND, keyOf,
   progressShare, soundBytes, newProgress,
 } from '../web/cloud-sync.js';
+import { LIMITS } from '../worker/cloud.js';
 import { cleanBackup } from '../web/backup.js';
 import { mergeLoaded } from '../web/merge.js';
 import { newId } from '../web/util.js';
@@ -288,6 +289,34 @@ test('new audio on one device and a new name on the other: one sound with both; 
     const got = await Promise.all(d.stores.clips.map((c) => bytesOf(c.blob)));
     assert.deepEqual(got.map(String).sort(), ['5,5,5', '9,8,7'], 'both new sounds are kept');
   }
+});
+
+test('a full profile keeps a new sound home and says so; its beats and edits still go, and the sound follows once there is room', async () => {
+  const { api, env } = server();
+  const { a, link } = await startA(api);
+  await syncProfile(link, a.deps(api));
+  const { d: b, link: bl } = await openOn(api, 'p-a');
+  await syncProfile(bl, b.deps(api));
+  // Someone's other sounds fill the profile (worker/cloud.js LIMITS.profileBytes).
+  env.DB.db.prepare("INSERT INTO sounds (id, profile_id, mime, bytes, chunks, sha256, got, created) VALUES ('s-filler', 'p-a', 'audio/wav', ?, 1, 'x', 1, 0)").run(LIMITS.profileBytes - 5);
+  a.stores.clips.push({ id: 'user-2', personId: 'p-a', label: 'Roar', mime: 'audio/wav', blob: blob(1, 2, 3, 4, 5, 6, 7, 8), created: 7 });
+  await a.put('beats', { ...a.stores.beats[0], name: 'Turbo Taco' });
+  const r = await syncProfile(link, a.deps(api));
+  assert.equal(r.full, 1, 'the sound with no room is counted');
+  assert.equal(r.pushed, 1, 'the beat went');
+  assert.equal(syncNote(r), 'In the cloud ✓ (one sound the cloud has no room for stays on this device)');
+  assert.ok(a.stores.clips.some((c) => c.id === 'user-2'), 'still here');
+  assert.equal((await syncProfile(link, a.deps(api))).deleted, 0, 'and never sent as a delete');
+  await syncProfile(bl, b.deps(api));
+  assert.deepEqual([b.stores.beats[0].name, b.stores.clips.map((c) => c.id)], ['Turbo Taco', ['user-1']]);
+
+  env.DB.db.prepare("DELETE FROM sounds WHERE id = 's-filler'").run();
+  const later = await syncProfile(link, a.deps(api));
+  assert.deepEqual([later.full, later.sounds, later.pushed], [undefined, 1, 1]);
+  assert.equal(syncNote(later), 'In the cloud ✓');
+  await syncProfile(bl, b.deps(api));
+  assert.deepEqual(await bytesOf(b.stores.clips.find((c) => c.id === 'user-2').blob), [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.equal(syncNote({ tooBig: 1, full: 2 }), 'In the cloud ✓ (one sound too long for the cloud, and 2 sounds the cloud has no room for stay on this device)');
 });
 
 test("a person's settings travel with their profile", async () => {

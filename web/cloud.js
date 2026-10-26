@@ -12,7 +12,7 @@ import { audio } from './audio.js';
 import { cleanBackup } from './backup.js';
 import { followPerson, cleanPrefs } from './settings.js';
 import { createCloudApi, CloudError, cloudTrouble } from './cloud-api.js';
-import { syncProfile, shareBundle, shareDoc, uploadAudio, hasMade, CLOUD_KINDS } from './cloud-sync.js';
+import { syncProfile, shareBundle, shareDoc, uploadAudio, hasMade, syncNote, CLOUD_KINDS } from './cloud-sync.js';
 import { funName, isFunName } from './names.js';
 import { isHiddenBeat, isScratchSong } from './scratch.js';
 import { people } from './board.js';
@@ -391,9 +391,7 @@ export function syncNow(personId, { onProgress } = {}) {
       await readStorage();
       followPerson();
       logEvent('cloud', { sync: true, pulled: report.pulled, pushed: report.pushed, deleted: report.deleted, sounds: report.sounds, merged: report.merged, clashes: report.clashes, kept: report.kept });
-      setStatus(id, { state: 'ok', text: report.tooBig
-        ? `In the cloud ✓ (${report.tooBig === 1 ? 'one sound is' : `${report.tooBig} sounds are`} too long for the cloud and stay on this device)`
-        : 'In the cloud ✓' });
+      setStatus(id, { state: 'ok', text: syncNote(report) });
       return report;
     } catch (err) {
       logEvent('cloud', { sync: false, status: err?.status ?? 0, error: String(err?.error ?? err?.message ?? err) });

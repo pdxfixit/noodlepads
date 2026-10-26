@@ -228,7 +228,7 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 ### Push (`cloud-sync.js pushAll`)
 
 1. Clips over `CLOUD_MAX_SOUND` (25 MB) whose audio the cloud lacks stay home (`report.tooBig`).
-2. Audio first, for each clip with no cloud sound or with audio changed here (`hashAudio`): `uploadAudio` → `api.startSound({sha256, bytes, mime})` → `{id, need}` → `api.putPiece` for each needed piece (`pieces`). `link.sounds[clip] = {sha256, sound, print}`. The Worker lets the clip's old audio go when the push names the new one.
+2. Audio first, for each clip with no cloud sound or with audio changed here (`hashAudio`): `uploadAudio` → `api.startSound({sha256, bytes, mime})` → `{id, need}` → `api.putPiece` for each needed piece (`pieces`). `link.sounds[clip] = {sha256, sound, print}`. The Worker lets the clip's old audio go when the push names the new one. A 507 (the profile or the cloud is full) keeps that sound home (`report.full`) and the push carries on with everything else.
 3. `planPush(local, sent)`: put what hashes differently, delete what is in `sent` but gone. A clip still on the device is never a delete.
 4. Slices of `PER_PUSH` (200): `api.push(id, key, put, del, link.rev)`. A clip body is the record minus `blob`, plus `sound`, `sha256`, `bytes`.
 5. The Worker writes only records with `rev <= since`; the rest come back in `stale`. Landed records update `sent` and the base. `link.rev` moves to the new rev only when `res.was === link.rev` (nobody else pushed in between). Bases and link are saved after each slice.
@@ -237,7 +237,7 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 
 ### After (`cloud.js syncNow`)
 
-`readStorage()`, `followPerson()` (settings listeners hear a pulled `prefs`), `logEvent('cloud', {sync: true, …report})`, status `ok`. Errors: 404 `profile` → drop link, set 📴 Offline; 401 → `keyRefused`; anything else → status `trouble` with `cloudTrouble(err)`.
+`readStorage()`, `followPerson()` (settings listeners hear a pulled `prefs`), `logEvent('cloud', {sync: true, …report})`, status `ok` with `syncNote(report)` (what stayed home, if anything). Errors: 404 `profile` → drop link, set 📴 Offline; 401 → `keyRefused`; anything else → status `trouble` with `cloudTrouble(err)`.
 
 ## Cloud record shapes
 
@@ -254,7 +254,7 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 | `POST …/shares` | `{kind, title, bundle: {clips, beats, songs}, preview}` → `{code}` |
 | `GET /api/shares/:code` → | `{code, kind, title, bundle, preview, created}` (any `personId` stripped) |
 | any error → | `{error, …}` with `wait`, `tries`, `over`, `sound` or `id` (`http.js fail`); `cloud-api.js` turns it into `CloudError` |
-| `syncProfile` → | `{pulled, pushed, deleted, sounds, merged, clashes, kept, tooBig?}` |
+| `syncProfile` → | `{pulled, pushed, deleted, sounds, merged, clashes, kept, tooBig?, full?}`; `cloud-sync.js syncNote` turns it into the status line |
 
 ## D1 tables (`worker/schema.sql`)
 

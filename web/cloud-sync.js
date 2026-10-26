@@ -586,12 +586,22 @@ async function pushAll(link, deps, { of: shaOf, map: hereSha }, report, bases_) 
       report.tooBig = (report.tooBig ?? 0) + 1;
     }
   }
-  // Every clip's audio is in the cloud before its record.
-  for (const r of now.values()) {
+  // Every clip's audio is in the cloud before its record. A sound the cloud
+  // has no room for (507: the profile or the cloud is full) stays on this
+  // device, and everything else still goes: its beats, songs and edits.
+  for (const [k, r] of now) {
     if (!needsAudio(r)) continue;
     const { blob } = r.record;
     const print = printOf(r.record);
-    const up = await uploadAudio(api, id, link.key, blob, r.record.mime, deps.sha256);
+    let up;
+    try {
+      up = await uploadAudio(api, id, link.key, blob, r.record.mime, deps.sha256);
+    } catch (err) {
+      if (err?.status !== 507) throw err;
+      now.delete(k);
+      report.full = (report.full ?? 0) + 1;
+      continue;
+    }
     link.sounds[r.id] = { sha256: up.sha256, sound: up.sound, print };
     hereSha.set(r.id, up.sha256);
     if (up.sent) report.sounds++;
@@ -633,6 +643,17 @@ async function pushAll(link, deps, { of: shaOf, map: hereSha }, report, bases_) 
     await deps.saveLink(link);
   }
   return stale;
+}
+
+// What a sync's status says: in the cloud, and what stayed on this device.
+export function syncNote(report) {
+  const sounds = (n) => (n === 1 ? 'one sound' : `${n} sounds`);
+  const left = [];
+  if (report?.tooBig) left.push(`${sounds(report.tooBig)} too long for the cloud`);
+  if (report?.full) left.push(`${sounds(report.full)} the cloud has no room for`);
+  if (!left.length) return 'In the cloud ✓';
+  const n = (report.tooBig ?? 0) + (report.full ?? 0);
+  return `In the cloud ✓ (${left.join(', and ')} ${n === 1 ? 'stays' : 'stay'} on this device)`;
 }
 
 // Puts audio in the cloud for profile `id`, in pieces, unless it is there
