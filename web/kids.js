@@ -468,8 +468,9 @@ function listen() {
 }
 
 // The recorder stops (its onstop keeps the sound, unless `discard`; it
-// plays, unless `quiet`), the meter goes, and the mic sits still again; the
-// stream stays.
+// plays, unless `quiet`), the meter goes, and the mic sits still again. The
+// stream is left to the caller: a tap's count keeps it (startCount),
+// stopRecording lets it go.
 function endRecorder(discard = false, quiet = false) {
   clearTimeout(rec.timer);
   cancelAnimationFrame(rec.raf);

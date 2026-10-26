@@ -189,9 +189,9 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   no Undo, and a kid can't read a "Kept as …" line. A grown-up finds the tune row on 🥁 Beats and in 🎹
   the piano roll, and keeps the beat with 💾 Keep.
 
-⏹️ (or Esc, or Space) stops everything: every sound, the beat, a ● tune
-and a mic recording, which is kept as its pad without playing (a 3, 2, 1
-is called off). The ⚙️ gear asks a grown-up sum (a number from 12 to 39
+⏹️ (or Esc, or Space) stops everything, the whole app's Stop all too: every
+sound, the beat, a ● tune and a mic recording, which is kept as its pad
+without playing (a 3, 2, 1 is called off). The ⚙️ gear asks a grown-up sum (a number from 12 to 39
 plus one from 6 to 9, so the answer always has two digits and its first
 digit gives nothing away; big number keys; `grown-up.js`, which ⚙️ Settings →
 About → Feedback asks too). After three wrong answers in a row each next try
