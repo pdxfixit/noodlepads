@@ -1580,13 +1580,14 @@ export function createDJ({ el, deps }) {
     deps.deleteTake(take.id);
     lastTake = null;
     el.done.hidden = true;
-    showBanner(`Took out “${take.name}”.`, {
+    takeLine = showBanner(`Took out “${take.name}”.`, {
       action: { label: '↩️ Undo', fn: () => bringBack(take) },
       ms: LINE_MS,
       focusBack: () => el.record,
     });
     deps.announce?.(`Took out ${take.name}. Undo is available.`);
   });
+  let takeLine = null;   // the banner with ↩️ Undo for a take taken out
   function bringBack(take) {
     if (deps.takes(take.personId).some((t) => t.id === take.id)) return;
     deps.saveTake(take);
@@ -1640,6 +1641,7 @@ export function createDJ({ el, deps }) {
     lastTake = null;
     el.done.hidden = true;
     beatLine?.close();
+    if (takeLine?.open) takeLine.close();
   }
   // The beat stopped (sequencer onStop): a recording into it ends too, so
   // ● Record never says recording with nothing playing.
