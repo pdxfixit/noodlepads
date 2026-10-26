@@ -4,8 +4,9 @@
 // Each agent gets its own Chrome (throwaway profile) and its own dev server on
 // a free port, so agents never fight over the shared Browser pane. For each
 // width it loads the page, opens the screen asked for, runs any extra JS,
-// then reports sideways scroll, console errors, CSP blocks and controls under
-// 44 px tall or wide, and saves a full-page screenshot. Exits 1 when a check fails.
+// then reports sideways scroll, console errors, CSP blocks, controls under
+// 44 px tall or wide, controls overlapping in a fixed or sticky bar, and a
+// page with no controls, and saves a full-page screenshot. Exits 1 when a check fails.
 //
 //   node tools/look.mjs [pads|beats|keys-on|song|live|VIEW ...] [--advanced] [--top PX] [--scroll PX | --scroll-to SELECTOR] [--js CODE | --js-file PATH] [--url URL] [--out DIR] [--widths 320,375] [--wide]
 //   console.log() in --js prints under the table (📝), to measure as well as look.
