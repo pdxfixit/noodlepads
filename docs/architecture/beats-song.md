@@ -208,7 +208,7 @@ Three methods at the end of `createSequencer`:
 | Method | Does | Notes |
 |---|---|---|
 | `beatPlan(raw)` | `cleanPattern`, then `planHits` for one pass: `{pattern, seconds, hits: [{row, step, time, loud, note, len}]}` | uses **this device's** Advanced: `playMode()`, swing, and `oldSignature` for a beat with no signature (`barOf`) |
-| `prepareBeats(patterns)` | loads every row's sound into `ready`, afresh (a voice may have changed) | never empties `ready` (`refresh`), so a beat or song playing keeps its sounds; a sound gone or failing to load is taken out |
+| `prepareBeats(patterns)` | loads every row's sound into `ready`, afresh (a voice may have changed) | never empties `ready` (`refresh`), so a beat or song playing keeps its sounds; a sound that is gone (`deps.clipById` finds none) is taken out, and one that fails to load this time keeps the copy it had |
 | `soundHit(ctx, dest, list, p, i, time, loud, note, len)` | `sound()` through `busFor(ctx, dest, p).input(i)` | false when the sound is not in `ready` |
 
 Who uses what:

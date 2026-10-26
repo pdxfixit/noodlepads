@@ -713,12 +713,13 @@ export function createSequencer(deps) {
   }
   // These rows' sounds, loaded afresh (a voice may have changed since the
   // last play) without emptying `ready`: a beat or a song still playing
-  // reads it. A sound that is gone, or will not load, is taken out.
+  // reads it. A sound that is gone is taken out, so its row stays quiet; one
+  // that fails to load this time keeps the copy it had.
   function refresh(rows) {
     return Promise.all(rows.map((r) => {
       const clip = deps.clipById(r.clipId);
       if (!clip) { ready.delete(r.clipId); return undefined; }
-      return audio.load(clip).then((loaded) => { ready.set(clip.id, loaded); }, () => { ready.delete(clip.id); });
+      return audio.load(clip).then((loaded) => { ready.set(clip.id, loaded); }, () => {});
     }));
   }
 
