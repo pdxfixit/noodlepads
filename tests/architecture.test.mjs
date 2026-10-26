@@ -159,7 +159,9 @@ test('✅ three Node tools: look.mjs and the two it loads', () => {
 // misleads (state.beats and state.selected were written and never read).
 test('✅ every field of state.js state is read somewhere in web/', async () => {
   const { state } = await web('state.js');
-  const reads = (f) => WEB.some((file) => new RegExp(`\\bstate\\??\\.${f}\\b(?!\\s*=[^=])`).test(src[file]));
+  // Only where `state` is this one (backup.js has a parameter of that name).
+  const users = WEB.filter((file) => /import\s*\{[^}]*\bstate\b[^}]*\}\s*from\s*'\.\/state\.js'/.test(src[file]) || file === 'state.js');
+  const reads = (f) => users.some((file) => new RegExp(`\\bstate\\??\\.${f}\\b(?!\\s*=[^=])`).test(src[file]));
   assert.deepEqual(Object.keys(state).filter((f) => !reads(f)), [], FIX);
 });
 
