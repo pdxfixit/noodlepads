@@ -57,7 +57,8 @@ just test
 ```
 
 A syntax check, then Node's built-in test runner; nothing to install. Judge
-it by the exit code. The tests have no browser: `just look` checks every
+it by the exit code. A test file whose report the runner cut short runs again
+alone, and counts. The tests have no browser: `just look` checks every
 screen width in a headless Chrome and saves screenshots.
 
 ## Running it yourself

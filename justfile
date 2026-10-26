@@ -19,13 +19,10 @@ doctor:
 # (one file per `node --check`: given several, it checks only the first)
 [doc("Check syntax, then run the tests (Node's built-in runner, then the tools' and the noodlepads-logs skill's unittest; no install step). Judge by the exit code")]
 test:
-    @for f in web/*.js worker/*.js; do node --check "$f" || exit 1; done
-    @# The spec reporter, as on GitHub. --test-force-exit (the app's test files
-    @# never end by themselves) can cut a parallel run's last reports, on Node 22
-    @# and 26 alike: no test here has subtests, so a "▶" line is a test whose end
-    @# was never reported. Said loudly, not failed: it is the runner, not the test
-    @# (TODO "Agents do": test files that end by themselves; 2026-10-19).
-    @bash -c 'set -o pipefail; log=$(mktemp); node --test --test-force-exit --test-reporter=spec 2>&1 | tee "$log"; rc=$?; if grep -q "^▶ " "$log"; then echo "⚠️ started, but its end was never reported (--test-force-exit cut the run short; compare ℹ tests with a full run):" >&2; grep "^▶ " "$log" >&2; fi; rm -f "$log"; exit $rc'
+    @for f in web/*.js worker/*.js tools/*.mjs; do node --check "$f" || exit 1; done
+    @# The spec reporter, as on GitHub; a file whose test --test-force-exit cut
+    @# short ("▶") runs again alone, and its exit code counts (tools/node_tests.sh).
+    @sh tools/node_tests.sh
     python3 -m unittest discover -s tools -p 'test_*.py'
     python3 -m unittest discover -s skills/noodlepads-logs -p 'test_*.py'
 

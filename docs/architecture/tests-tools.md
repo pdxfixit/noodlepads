@@ -5,7 +5,7 @@ which tests guard the whole repo, how `just look` and the live checks drive a
 real Chrome, and how a commit becomes a labelled deploy. AGENTS.md "Verify"
 and "Ship" give the rules; this is the wiring under them.
 
-**In one paragraph.** `just test` runs `node --check` on `web/` and `worker/`,
+**In one paragraph.** `just test` runs `node --check` on `web/`, `worker/` and `tools/*.mjs`,
 then `node --test` (every `*.test.mjs`, one process per file), then the
 Python tools' unittest. 71 test files start the real `app.js` on a stand-in
 page built from `index.html` (`fake-dom.mjs installPage`), with no browser,
@@ -177,6 +177,7 @@ what it forces an agent to do.
 | `question-cards.test.mjs` | every card in docs/questions.md has its own number | renumber |
 | `justfile.test.mjs` | every public recipe has a `just --list` line that does not start mid-sentence; every recipe is named in AGENTS.md, README.md, how-to, deploy-cloudflare or layout; every tool in `tools/` is named there; deploy runs flarepress's check, stamp and verify; `site.conf committed=` holds web, worker and site; `wrangler.toml` holds no ids; deploy.yml runs the tests and the release checks before the action and the live checks after | document the recipe or tool |
 | `tools/test_justfile.py` | every recipe has a doc; README "Running it yourself" names exactly the recipes; `test-quiet` prints only the failures and keeps the log | add the recipe to README |
+| `tools/test_node_tests.py`, `unended-reporter.test.mjs` | a file a cut run left a test unreported in runs again alone, and fails the run when it fails there; a "▶" with no file named fails | — |
 | `headers.test.mjs` | `web/_headers`: the CSP closed by default, no inline or eval, no outside origin but Cloudflare's beacon, fonts only from `web/fonts/`, microphone and screen share for this site | change the CSP line on purpose |
 | `colors.test.mjs`, `contrast.test.mjs` | 4.5:1 for the pairs they list, with colors read from `styles.css` tokens, `boards.json` and `model.js` | a new pair needs a new line: a new color nobody lists is not checked |
 | `css-braces.test.mjs` | every `{` in `styles.css` has its `}` | fix the brace |
@@ -224,10 +225,16 @@ yourself" lists them all.
 | Landing | `ship`, `land`, `land-continue`, `archive-agent` | git; `land` execs flarepress's land.sh, found at `$FLAREPRESS`, the checkout beside this one, or a clone in `~/.cache/flarepress` |
 | Cloud and deploy (Ben's) | `cloud-db` (any wrangler d1 command), `cloud-sql`, `cloud-schema`, `cloud-migrate`, `cloud-profiles`, `cloud-stats`, `cloud-prune`, `cloud-reset-pin`, `cloud-backup`, `logs`, `runner-export`, `deploy-check`, `deploy-plan`, `stamp`, `deploy`, `deploy-verify`, `live`, `rollback`; plus `cloud-smoke`, `cloud-e2e`, `deploy-checks`, `live-check`, which need no token | `flarepress := $FLAREPRESS or ~/src/flarepress`; the `ids` line fills `D1_DATABASE_ID` from `cloud_config.py --exports` when it is not set |
 
-`just test` checks syntax only for `web/*.js` and `worker/*.js`. Nothing
-checks `tools/*.mjs`: no test imports `look.mjs`, `chrome.mjs` or
-`look-cloud.mjs` (`overflow.test.mjs` only reads `look.mjs` as text), so a
-broken `look.mjs` shows first when someone runs it.
+`just test` checks the syntax of `web/*.js`, `worker/*.js` and `tools/*.mjs`.
+No test imports `look.mjs`, `chrome.mjs` or `look-cloud.mjs`
+(`overflow.test.mjs` only reads `look.mjs` as text), so a `look.mjs` that
+parses but breaks shows first when someone runs it.
+
+The Node tests run through `node_tests.sh`: the spec reporter to the screen,
+and `tests/unended-reporter.mjs` to a file, listing the test files with a
+started test whose end never came (`--test-force-exit` cut it). Each such
+file runs again alone, and its exit code counts; a "▶" with no file named
+fails the run.
 
 ## `just look`
 
@@ -482,7 +489,7 @@ them, once older than `TEST_GRACE_MS`, for `cloud-prune --smoke`.
 | A stand-in that sets long timers lives in `tests/fake-*.mjs`, or `settle()` will not wait for it | none |
 | `web/version.js` holds exactly one quoted `X.Y.Z`; the deploy reads the first | site.sh stops on none |
 | A shallow clone cannot bump, check or restamp: `git fetch --unshallow` first (a cloud session's clone is shallow) | `bump_version.py refuse_shallow`, `version_bumped.sh` |
-| `--test-force-exit` is needed for app files (their intervals never end); it can cut the last reports of a parallel run | `just test` prints ⚠️ for a started test with no end |
+| `--test-force-exit` is needed for app files (their intervals never end); it can cut the last reports of a parallel run | `just test` prints ⚠️ for a started test with no end and reruns its file alone (`node_tests.sh`) |
 | Every `web/` file is in `sw.js SHELL` or `NOT_LOADED` | `offline.test.mjs` |
 | `just look --js` sets state, never toggles it: widths share storage | none |
 | A view named `beat` is defined in `VIEWS` and then replaced by `VIEWS.beat = VIEWS.beats`, so its 🆕 New script never runs | none |
