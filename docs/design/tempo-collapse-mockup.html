@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One-line control bars</title>
+<!-- Mockup for docs/design/tempo-collapse.md: the control bars on phones, now and proposed.
+     Drawn by hand with the app's colors, fonts and sizes (44 px targets, 52 px tall keys). -->
+<style>
+@font-face { font-family: "Anybody"; src: url("../../web/fonts/anybody-latin.woff2") format("woff2"); font-weight: 100 900; font-stretch: 50% 150%; }
+@font-face { font-family: "Atkinson Hyperlegible Next"; src: url("../../web/fonts/atkinson-next-latin.woff2") format("woff2"); font-weight: 200 800; }
+:root {
+  --board: #1F3FA8; --bed: color-mix(in srgb, var(--board) 24%, #141318); --deck: color-mix(in srgb, var(--bed) 62%, black);
+  --ink: #1C1740; --chalk: #ECEAF2; --chalk-edge: #A9A5BA; --led: #FFE58A;
+  --ui: "Atkinson Hyperlegible Next", system-ui, sans-serif; --display: "Anybody", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px; background: var(--board); color: #fff; font: 600 15px/1.4 var(--ui); }
+h1 { font: 900 2rem/1 var(--display); margin: 0 0 6px; }
+h2 { font: 800 1.25rem/1.2 var(--ui); margin: 36px 0 4px; }
+p.note { max-width: 70ch; margin: 4px 0 12px; color: rgb(255 255 255 / 0.85); }
+.row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+figure { margin: 0; }
+figcaption { font-weight: 800; margin-bottom: 6px; }
+figcaption small { display: block; font-weight: 600; opacity: 0.8; }
+/* A phone screen's width: 16 px page gutter, then the panel and its 12 px padding. */
+.phone { padding: 0 16px; background: color-mix(in srgb, var(--board) 85%, black); border-radius: 18px; padding-block: 16px; }
+.panel { position: relative; background: var(--bed); border-radius: 22px; overflow: visible; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 12px; background: var(--deck); border-radius: 22px 22px 0 0; border-bottom: 3px solid rgb(255 255 255 / 0.25); }
+.line { display: flex; align-items: center; gap: 8px; flex: 1 1 100%; min-width: 0; }
+.below { height: 150px; padding: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; align-content: start; }
+.below i { height: 64px; border-radius: 12px; background: #6D28D9; }
+.below i:nth-child(n+5) { background: #C2410C; height: 80px; }
+button { font: inherit; color: inherit; }
+.rec, .play { flex: 0 0 auto; min-width: 52px; height: 52px; padding: 0 14px; border: 0; border-radius: 12px; font: 800 1.05rem/1 var(--ui); white-space: nowrap; }
+.rec { background: var(--chalk); color: var(--ink); box-shadow: 0 5px 0 var(--chalk-edge); }
+.play { background: var(--led); color: var(--ink); box-shadow: 0 5px 0 color-mix(in srgb, var(--led) 50%, black); }
+.sq { flex: none; width: 44px; height: 52px; padding: 0; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; font-size: 1.25rem; }
+.sq.on { background: var(--led); border-color: var(--led); }
+.word { flex: none; height: 52px; padding: 0 12px; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; font: 800 1rem/1 var(--ui); white-space: nowrap; }
+.push { margin-left: auto; }
+.grow { flex: 1 1 auto; }
+/* The proposed tempo key: the number, BPM under it; a tap opens the tempo. */
+.chip { flex: none; width: 56px; height: 52px; padding: 0; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; font: 800 1.1rem/1 var(--display); display: grid; place-content: center; gap: 2px; }
+.chip small { font: 800 0.6rem/1 var(--ui); opacity: 0.8; letter-spacing: 0.05em; }
+.chip.open { background: var(--led); color: var(--ink); border-color: var(--led); }
+.chev { flex: none; width: 44px; height: 44px; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 10px; background: transparent; font-size: 1.1rem; }
+.num { flex: none; font: 800 1rem/1.05 var(--display); text-align: center; text-decoration: underline dotted rgb(255 255 255 / 0.6) 2px; text-underline-offset: 4px; }
+.slider { flex: 1 1 auto; min-width: 40px; height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--led) 0 35%, rgb(255 255 255 / 0.3) 35%); position: relative; }
+.slider::after { content: ""; position: absolute; left: 35%; top: 50%; width: 22px; height: 22px; margin: -11px; border-radius: 50%; background: var(--led); }
+.barsel { display: flex; flex: 1 1 auto; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; overflow: hidden; height: 52px; }
+.barsel span { flex: 1; display: grid; place-items: center; font-weight: 800; white-space: nowrap; padding: 0 6px; }
+.barsel span:first-child { background: var(--led); color: var(--ink); }
+.nudge { flex: none; width: 52px; height: 52px; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; font-size: 1.2rem; }
+.field { flex: none; width: 74px; height: 52px; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; display: grid; place-items: center; font: 800 1.1rem/1 var(--display); }
+/* Option A: the tempo drops down over the top of what is under the bar. */
+.pop { position: absolute; z-index: 2; left: 8px; right: 8px; top: 74px; padding: 14px 12px; border-radius: 16px; background: #26244A; box-shadow: 0 12px 30px rgb(0 0 0 / 0.55), 0 0 0 2px var(--led); }
+.pop::before { content: ""; position: absolute; top: -9px; left: var(--tip, 50%); width: 16px; height: 16px; background: #26244A; border-left: 2px solid var(--led); border-top: 2px solid var(--led); transform: rotate(45deg); }
+.pop .line { gap: 10px; }
+.pop .hint { margin: 10px 0 0; font-size: 0.85rem; opacity: 0.85; }
+/* Option B: the bar's line turns into the tempo while it is open; nothing below moves or is covered. */
+.strip .line { gap: 10px; }
+.done { flex: none; width: 52px; height: 52px; border: 0; border-radius: 12px; background: var(--led); color: var(--ink); font: 800 1.2rem/1 var(--ui); }
+.tag { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--led); color: var(--ink); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<h1>One-line control bars</h1>
+<p class="note">Phones only. Each bar keeps its controls on one line by giving up words first (🎬 Takes → 🎬, ● Record → ●), and the tempo becomes one key, the number, that opens the tempo when tapped. On a wider screen nothing changes: the tempo slider stays in the bar. Every key stays at least 44 px wide and 52 px tall.</p>
+
+<h2>🎤 Live</h2>
+<p class="note">Now: two lines. Proposed: one line from 360 px. ● Record keeps its word where it fits. At 320 px six 44 px keys need about 284 px and the bar has 264, so the narrowest phones (an old iPhone SE) keep two lines.</p>
+<div class="row">
+  <figure><figcaption>Now <small>375 px</small></figcaption>
+    <div class="phone" style="width:375px"><div class="panel"><div class="bar">
+      <div class="line"><button class="rec">● Record</button><button class="word push">🎬 Takes</button></div>
+      <div class="line"><button class="chev">⌄</button><span class="num">100<br>BPM</span><button class="chev">⌃</button><button class="sq push">⏲️</button><button class="sq">🔔</button><button class="sq">✏️</button></div>
+    </div><div class="below"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></figure>
+  <figure><figcaption>Proposed <small>430 px (big iPhone)</small></figcaption>
+    <div class="phone" style="width:430px"><div class="panel"><div class="bar">
+      <div class="line"><button class="rec grow">● Record</button><button class="chip">100<small>BPM</small></button><button class="sq">⏲️</button><button class="sq">🔔</button><button class="sq">✏️</button><button class="sq">🎬</button></div>
+    </div><div class="below"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></figure>
+  <figure><figcaption>Proposed <small>375 px</small></figcaption>
+    <div class="phone" style="width:375px"><div class="panel"><div class="bar">
+      <div class="line"><button class="rec grow">●</button><button class="chip">100<small>BPM</small></button><button class="sq">⏲️</button><button class="sq">🔔</button><button class="sq">✏️</button><button class="sq">🎬</button></div>
+    </div><div class="below"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></figure>
+  <figure><figcaption>Proposed <small>320 px: two lines still</small></figcaption>
+    <div class="phone" style="width:320px"><div class="panel"><div class="bar">
+      <div class="line"><button class="rec grow">● Record</button><button class="sq">🎬</button></div>
+      <div class="line"><button class="chip">100<small>BPM</small></button><button class="sq push">⏲️</button><button class="sq">🔔</button><button class="sq">✏️</button></div>
+    </div><div class="below"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></figure>
+</div>
+
+<h2>Tapping the tempo: two ways it could open</h2>
+<p class="note">Either way: drag the slider, or ⌄ ⌃ for the next common tempo, or tap the number to type one. The tempo changes as you go (the click and a playing beat follow at once). Tapping outside, the tempo key again or Esc closes it.</p>
+<div class="row">
+  <figure><figcaption>A. It drops down <small>over the top of the pads, under the bar; the bar stays</small></figcaption>
+    <div class="phone" style="width:375px"><div class="panel"><div class="bar">
+      <div class="line"><button class="rec grow">●</button><button class="chip open">100<small>BPM</small></button><button class="sq">⏲️</button><button class="sq">🔔</button><button class="sq">✏️</button><button class="sq">🎬</button></div>
+    </div>
+    <div class="pop" style="--tip: 96px"><div class="line"><button class="chev">⌄</button><span class="slider"></span><button class="chev">⌃</button><span class="num">100<br>BPM</span></div><p class="hint">Tap ⏲️ three times in time to set it by tapping.</p></div>
+    <div class="below"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></figure>
+  <figure><figcaption>B. The bar becomes the tempo <small>nothing under it moves or is covered; ✓ goes back</small></figcaption>
+    <div class="phone" style="width:375px"><div class="panel"><div class="bar strip">
+      <div class="line"><button class="chev">⌄</button><span class="slider"></span><button class="chev">⌃</button><span class="num">100<br>BPM</span><button class="done">✓</button></div>
+    </div><div class="below"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></figure>
+</div>
+
+<h2>🥁 Beats with ⌨️ Keys</h2>
+<p class="note">Now: three lines. Proposed: two. ▶ Play and ● Record, the tempo key, ⏲️ and ✏️ on the first; the bars, 🎚️ and ⇆ on the second, as now.</p>
+<div class="row">
+  <figure><figcaption>Now <small>375 px</small></figcaption>
+    <div class="phone" style="width:375px"><div class="panel"><div class="bar">
+      <div class="line"><button class="play grow">▶ Play</button><button class="rec grow">● Record</button></div>
+      <div class="line"><button class="chev">⌄</button><span class="num">100<br>BPM</span><button class="chev">⌃</button><button class="sq push">⏲️</button><button class="sq">✏️</button></div>
+      <div class="line"><span class="barsel"><span>1 bar</span><span>2 bars</span><span>4 bars</span></span><button class="sq">🎚️</button><button class="sq">⇆</button></div>
+    </div><div class="below"><i></i><i></i><i></i><i></i></div></div></div></figure>
+  <figure><figcaption>Proposed <small>375 px</small></figcaption>
+    <div class="phone" style="width:375px"><div class="panel"><div class="bar">
+      <div class="line"><button class="play grow">▶ Play</button><button class="rec grow">●</button><button class="chip">100<small>BPM</small></button><button class="sq">⏲️</button><button class="sq">✏️</button></div>
+      <div class="line"><span class="barsel"><span>1 bar</span><span>2 bars</span><span>4 bars</span></span><button class="sq">🎚️</button><button class="sq">⇆</button></div>
+    </div><div class="below"><i></i><i></i><i></i><i></i></div></div></div></figure>
+</div>
+
+<h2>🥁 Beats (⌨️ Keys off)</h2>
+<p class="note">Already two lines. Proposed: the tempo key gives ▶ Play its full word and room.</p>
+<div class="row">
+  <figure><figcaption>Now <small>375 px</small></figcaption>
+    <div class="phone" style="width:375px"><div class="panel"><div class="bar">
+      <div class="line"><button class="play">▶ Play</button><button class="chev">⌄</button><span class="num">100<br>BPM</span><button class="chev">⌃</button><button class="sq push">⏲️</button></div>
+      <div class="line"><span class="barsel"><span>1 bar</span><span>2 bars</span><span>4 bars</span></span><button class="sq">🎚️</button><button class="sq">⇆</button></div>
+    </div><div class="below"><i></i><i></i><i></i><i></i></div></div></div></figure>
+  <figure><figcaption>Proposed <small>375 px</small></figcaption>
+    <div class="phone" style="width:375px"><div class="panel"><div class="bar">
+      <div class="line"><button class="play grow">▶ Play</button><button class="chip">100<small>BPM</small></button><button class="sq">⏲️</button></div>
+      <div class="line"><span class="barsel"><span>1 bar</span><span>2 bars</span><span>4 bars</span></span><button class="sq">🎚️</button><button class="sq">⇆</button></div>
+    </div><div class="below"><i></i><i></i><i></i><i></i></div></div></div></figure>
+</div>
+
+<h2>🎼 Song</h2>
+<p class="note">Now: ▶ Play song, then ➖ 100 BPM ➕ on its own line. Proposed: the same tempo key beside ▶ Play song (its tempo marks stay where they are).</p>
+<div class="row">
+  <figure><figcaption>Now <small>375 px</small></figcaption>
+    <div class="phone" style="width:375px"><div class="panel"><div class="bar">
+      <div class="line"><button class="play grow">▶ Play song</button></div>
+      <div class="line"><button class="nudge">➖</button><span class="field push">100</span><span>BPM</span><button class="nudge push">➕</button></div>
+      <div class="line"><button class="word grow">🔊 Save as a sound</button></div>
+    </div><div class="below"><i></i><i></i><i></i><i></i></div></div></div></figure>
+  <figure><figcaption>Proposed <small>375 px</small></figcaption>
+    <div class="phone" style="width:375px"><div class="panel"><div class="bar">
+      <div class="line"><button class="play grow">▶ Play song</button><button class="chip">100<small>BPM</small></button></div>
+      <div class="line"><button class="word grow">🔊 Save as a sound</button></div>
+    </div><div class="below"><i></i><i></i><i></i><i></i></div></div></div></figure>
+</div>
+</body>
+</html>

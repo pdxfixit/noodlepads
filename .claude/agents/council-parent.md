@@ -1,6 +1,6 @@
 ---
 name: council-parent
-description: "Council seat: Skeptical parent. Setup cost, grown-up gates, screen time, trust, and "what did my kid just do, and can I undo it". Convene it as docs/council.md says, briefed with the change only."
+description: "Council seat: Skeptical parent. Setup cost, grown-up gates, screen time, trust, and “what did my kid just do, and can I undo it”. Convene it as docs/council.md says, briefed with the change only."
 model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
