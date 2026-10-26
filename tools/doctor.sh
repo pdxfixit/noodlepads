@@ -70,12 +70,24 @@ for old in "$HOME/.local/state/noodlepads/logs.sqlite3" "$HOME/.local/state/nood
   if [ -f "$old" ]; then warn "$old is retired: move it into the runner (docs/how-to.md, Retire the old Mac archives)"; fi
 done
 
-# What is live, against main.
-live=$(curl -fsS --max-time 5 https://noodlepads.com/version.json 2>/dev/null | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
-want=$(git describe --tags --always --exclude 'archive/*' --exclude 'backup/*' main 2>/dev/null)
-if [ -z "$live" ]; then warn "couldn't read https://noodlepads.com/version.json"
-elif [ "$live" = "$want" ]; then ok "live: $live, which is main"
-else warn "live: $live; main is $want (an undeployed commit, or a deploy in progress)"; fi
+# What is live, against main. The deploy stamps version.json as
+# {"version":"v<release>-<short sha>[-dirty]","commit":"<short sha>",…};
+# its commit is compared with main (NOODLE_LIVE_VERSION_URL: tools/test_doctor.py).
+url=${NOODLE_LIVE_VERSION_URL:-https://noodlepads.com/version.json}
+json=$(curl -fsS --max-time 5 "$url" 2>/dev/null)
+live=$(printf '%s' "$json" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
+sha=$(printf '%s' "$json" | sed -n 's/.*"commit":"\([0-9a-f]*\)".*/\1/p')
+# A cloud container's clone often has only origin/main: compare with that then.
+ref=main
+main=$(git rev-parse -q --verify refs/heads/main 2>/dev/null) || { ref=origin/main; main=$(git rev-parse -q --verify refs/remotes/origin/main 2>/dev/null); }
+at=$( [ -n "$sha" ] && git rev-parse -q --verify "$sha^{commit}" 2>/dev/null)
+if [ -z "$live" ]; then warn "couldn't read $url"
+elif [ -z "$main" ]; then warn "live: $live; this checkout has no main or origin/main to compare it with"
+elif [ "$at" = "$main" ] && [ "${live%-dirty}" = "$live" ]; then ok "live: $live, which is $ref"
+elif [ "$at" = "$main" ]; then warn "live: $live: $ref, deployed with uncommitted edits (a dev deploy from the Mac)"
+elif [ -n "$at" ] && git merge-base --is-ancestor "$at" "$main"; then
+  warn "live: $live; $ref is $(git rev-list --count "$at..$main") commit(s) ahead (undeployed, or a deploy in progress)"
+else warn "live: $live; $ref ($(git rev-parse --short "$main")) does not hold that commit: git fetch, or it was deployed from another branch"; fi
 
 echo
 echo "Cold start, in order: AGENTS.md, docs/state.md, docs/decisions.md (your sections), docs/questions.md, TODO.md, then docs/how-to.md for your task."

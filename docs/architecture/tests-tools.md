@@ -187,6 +187,7 @@ what it forces an agent to do.
 | `tools/test_make_emoji.py` | `web/emoji-all.js` and `web/emoji-check.js` equal what `make_emoji.py` makes | `just emoji`, never a hand edit |
 | `tools/test_make_placeholders.py` | the tool knows every preset in `boards.json` | add the sound to the tool |
 | `tools/test_bump_version.py` | the release rules, and the scripts on a throwaway repo | — |
+| `tools/test_doctor.py` | `doctor.sh`'s live line, on a throwaway repo against a local version.json | — |
 
 Three guards read `git ls-files` (`no-names`, `no-plain-email`,
 `conflict-markers`), so an untracked new file passes them until it is
@@ -367,7 +368,7 @@ Who reads the label after that:
 | `device-meta.js appMeta` | keeps `[A-Za-z0-9._-]`, 40 characters | `X-Noodle-App` on cloud calls |
 | `feedback.js appVersion` | `^[0-9A-Za-z.+_]{1,32}$`, else `dev` | the deployed label holds `-`, so live feedback is filed as `dev` (likely unintended; the Worker's `events-worker.js` rule allows no `-` either) |
 | `backup.js makeBackup` | stored as given | in every backup |
-| `doctor.sh` | compares live with `git describe --tags --always main` | never equal since the `v<release>-` label: always warns (below) |
+| `doctor.sh` | compares version.json's `commit` with `main` | ✅ only for main's commit with no `-dirty`; otherwise says how far main is ahead (`tools/test_doctor.py`) |
 | `serve.py` | answers `{"version":"dev"}` when web/version.json is absent, and `/api/cloud` with `ok:false` | a dev copy under `just serve` and `just look` |
 
 ## CI and deploy
@@ -469,7 +470,7 @@ them, once older than `TEST_GRACE_MS`, for `cloud-prune --smoke`.
 | `help.test.mjs MUST_MENTION` is a hand list of labels | by hand | a new control without a line there is not required in Help |
 | `startup-remembered.test.mjs` `remembered` map | by hand | a new `localStorage` key is not started with unless added |
 | `colors.test.mjs` pairs | by hand | a new text/background pair is not checked |
-| The version label's shape (`v<release>-<sha>`) and its readers' rules | none | `feedback.js appVersion` and the Worker refuse `-`; `doctor.sh` compares with `git describe` |
+| The version label's shape (`v<release>-<sha>`) and its readers' rules | none | `feedback.js appVersion` and the Worker refuse `-` |
 | `test.yml` and `deploy.yml` each list `just test` and the two release checks | `justfile.test.mjs` (deploy.yml's order) | a new check added to one workflow only runs there |
 | `test.yml` and `deploy.yml` both pin Node 26.11.1 and just 1.58.0 | by hand | a bump in one runs the tests on another Node |
 | `serve.py` and the stand-in page both fake version.json and `/api/cloud`, differently (`dev` vs 404; `ok:false` vs whatever a test routes) | none | — |
