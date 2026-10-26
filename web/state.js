@@ -9,7 +9,7 @@ import { isCloudId, reIdDoc } from './reid.js';
 import { newId } from './util.js';
 import { showNotice } from './ui.js';
 import { logEvent } from './log.js';
-import { stampEdit } from './merge3.js';
+import { stampEdit, STAMP } from './merge3.js';
 
 export const state = {
   manifest: null,
@@ -270,9 +270,11 @@ export async function persist(store, value) {
 }
 
 // An override that changes nothing is deleted rather than stored, so the
-// clip goes back to following boards.json. Resolves as persist() does.
+// clip goes back to following boards.json. Its edit stamp (`changed`, from
+// the last save) is no change: hidden then shown again is nothing.
+// Resolves as persist() does.
 export async function setOverride(next) {
-  if (Object.keys(next).length > 1) {
+  if (Object.keys(next).some((k) => k !== 'id' && k !== STAMP)) {
     state.overrides.set(next.id, next);
     return persist('overrides', next);
   }
