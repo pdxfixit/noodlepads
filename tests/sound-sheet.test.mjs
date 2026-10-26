@@ -745,6 +745,28 @@ test('✨ Make one: a starter makes a sound to try voices on, named for what it 
   assert.equal(clip.label, $('#clip-label').placeholder || clip.label);
 });
 
+// The Wind swells in from quiet. Until a reload, the pad played the whole
+// render; after it, the kept audio (its quiet ends off). Now both are the same.
+test('✨ a made sound plays the same before a reload as after: its quiet ends off, as any recording', async () => {
+  const { state } = await import('../web/state.js');
+  const { renderSynth, RATE } = await import('../web/synth.js');
+  const { keptAudio } = await import('../web/audio.js');
+  if (document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+  $('#pads').children.find((p) => p.classList.contains('pad-add')).dispatch('click');
+  $('#make-btn').dispatch('click');
+  $('#make-starters').children.find((b) => b.dataset.make === 'wind').dispatch('click');
+  await page.settle();
+  $('#sheet-form').dispatch('submit');
+  await page.settle();
+  const clip = state.userClips.at(-1);
+  const samples = renderSynth(clip.synth, RATE);
+  const whole = new AudioBuffer({ length: samples.length, numberOfChannels: 1, sampleRate: RATE });
+  whole.copyToChannel(samples, 0);
+  const reloaded = keptAudio(whole, clip);
+  assert.ok(reloaded.length < whole.length, 'the Wind has quiet ends to take off');
+  assert.equal((await audio.original(clip)).length, reloaded.length);
+});
+
 test('✨ Make one in Advanced: the sliders remake the sound when let go; editing a made sound shows them again', async () => {
   const { state } = await import('../web/state.js');
   await advanced(true);
@@ -821,8 +843,8 @@ test('➕ Mix with another sound makes a new pad named as a blend, made from thi
   assert.ok($('#mix-with').children.length > 0, 'every other sound on the board');
   assert.ok(!$('#mix-with').children.some((o) => o.value === here.dataset.id), 'not itself');
   const otherId = $('#mix-with').children[1].value;
-  audio.forget(otherId);   // its file isn't served here: it sounds like the test sound
-  audio.originals.set(otherId, Promise.resolve(plain));
+  audio.forget(otherId);   // its file isn't served here: it sounds like the test sound, then a quiet tail
+  audio.originals.set(otherId, Promise.resolve(fakeBuffer([[...plain.getChannelData(0), ...new Array(2000).fill(0)]], 8000)));
   $('#mix-with').value = otherId;
   $('#mix-with').dispatch('change');
   $('#mix-offset').value = '0.5';
@@ -843,6 +865,9 @@ test('➕ Mix with another sound makes a new pad named as a blend, made from thi
   assert.equal(made.mime, 'audio/wav');
   assert.ok(made.label.length >= 3 && made.label !== hereLabel, made.label);
   assert.equal($('#sheet').open, false, 'back to the board, where the new pad is');
+  // The pad plays now what it plays after a reload: the mix with its quiet ends off, as kept audio is.
+  const { keptAudio } = await import('../web/audio.js');
+  assert.equal((await audio.original(made)).length, keptAudio(heard[2], made).length);
   await advanced(false);
 });
 

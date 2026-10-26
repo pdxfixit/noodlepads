@@ -89,7 +89,7 @@ Other contexts:
 | `playing` | Map id → `{src, gain, t0, duration, loop, clip}`: what plays through `start`/`loopInTime` | `start`, `loopInTime`, `stop`, the `onended` handlers | `meter.js run` (progress of each), `wave.js follow`, `sheet.js sheetPlaying`, `things.js`, `app.js` (any loop?) |
 | `ringing` | Map id → earlier hits still ringing under 🔔 Let it ring | `start` with `ring` | `stop`, `stopAll` |
 | `pending` | Map id → a loop asked for while its sound loads (`loadForLoop`) | `loop`, `loopInTime` | `stop` and `stopAll` take it back, so it never starts; `isLooping` counts it, so a tap on the pad stops it (`tests/audio.test.mjs`) |
-| `originals` | Map clip id → Promise<AudioBuffer>: the kept audio (cuts applied) | `original`, `keepOriginal`, `forget`; `sheet.js saveSheet` sets it directly for a re-made ✨ sound | `load`, `bulk.js`, `things.js` (`audio.original`) |
+| `originals` | Map clip id → Promise<AudioBuffer>: the kept audio (cuts applied) | `original`, `keepOriginal` (`sheet.js saveSheet`, `makeMix`), `forget` | `load`, `bulk.js`, `things.js` (`audio.original`) |
 | `originalTrims` | Map clip id → the `cutKey` the original was made with | `original`, `keepOriginal`, `forget` | `original` |
 | `recordings` | Map file → Promise<AudioBuffer>: one decode of a bundled file shared by an instrument's presets | `recording` | `decoded` |
 | `rendered` | Map `audio.key(clip)` → Promise<{buffer, duration}> | `load`, `dropRendered`, `forget` | `load` |
@@ -417,8 +417,8 @@ the group's presets when a pick changes.
 | Sound sheet 🎤 Record (`sheet.js startRecording`) | `getUserMedia({audio: true})` → `MediaRecorder` (webm/opus, mp4, webm, ogg); count-in 3-2-1 | `acceptAudio`: `audio.decode`, cap `MAX_CLIP_SECONDS` (120), `trimBounds` silent check, `sheet.original` = the trimmed slice, `chop.js recorded(buffer)` | `clips` with `blob` (the whole recording) |
 | Sound sheet file chooser | the file | `acceptAudio` | same |
 | 🧸 Kids' mic (`kids.js`) | its own `getUserMedia` + `MediaRecorder`, count-in `beep`s | `keep`: decode, silent check, `kidsVoiceFields(voice)` (classic voice steps from `kids-logic.js KIDS_VOICES`) | `deps.saveClip` → `persist('clips')` |
-| ✨ Make one (`sheet.js`) | `synth.js renderSynth` (mono, 44.1 kHz, peak 0.9) | `encodeWav` | `blob` + `synth` |
-| ➕ Mix (`sheet.js`) | both sounds rendered as they play now, `mix.js mixSounds` | `encodeWav` | `blob` + `from: {how: 'mix'}` |
+| ✨ Make one (`sheet.js`) | `synth.js renderSynth` (mono, 44.1 kHz, peak 0.9) | `encodeWav`; `sheet.original` = `keptAudio` of it (quiet ends off) | `blob` + `synth` |
+| ➕ Mix (`sheet.js`) | both sounds rendered as they play now, `mix.js mixSounds` | `encodeWav`; `keepOriginal` of its `keptAudio` | `blob` + `from: {how: 'mix'}` |
 | 🧩 Chop (`chop.js makePads`) | the voiced sound, cut at marks | `encodeWav` per piece | new `clips` with `from: {how: 'chop'}` |
 | 💾 Save as a sound (`sequencer.js bounce`), a song, a take (`dj.js` via `share-render.js renderTake`) | offline renders | `encodeWav` | `app.js addMadeSound`: `exact: true` |
 | 🎧 From a song | see below | beats and a song, never audio | `beats`, `songbook` |
@@ -613,7 +613,6 @@ Nothing removes an id from `broken` but a reload.
 | `ROWS` twice | `listen-dsp.js ROWS` and `listen-make.js ROWS` | kept equal by hand |
 | Name clashes | `KINDS` (`steps.js` vs `listen-input.js`), `FAMILIES` (`instruments.js` vs `voice-knobs.js`), `levelOf` (`meter.js`, `listen-input.js`, the sequencer's) | a wrong import still runs |
 | Bare players outside `audio.playing` | `kids.js` beat and beeps, sequencer click | `audio.stopAll` does not stop them |
-| `sheet.js` writes `audio.originals` directly | the ✨ re-made sound, after `forget` | skips `keepOriginal`, so `originalTrims` is unset; `original()` keeps it only while the clip's `cutKey` is `''` |
 | `encodeWav` and `normalize` live in `sequencer.js` | used by `sheet.js`, `chop.js`, `dj.js`, `song.js`, `share-render.js` | a sound module depends on the beat maker for its WAV |
 
 ## Invariants and gotchas

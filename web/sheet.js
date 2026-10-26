@@ -11,7 +11,7 @@
 // tune, and a slider on a live step changes the sound while it loops.
 
 import { state, persist, setOverride, deleteUserClip, saveMyVoice, deleteMyVoice } from './state.js';
-import { audio, trimBounds, slice, levelsOf, levelVerdict, TOO_LOUD, padTo } from './audio.js';
+import { audio, trimBounds, slice, keptAudio, levelsOf, levelVerdict, TOO_LOUD, padTo } from './audio.js';
 import { meter, drawGrille, levelOf } from './meter.js';
 import { currentPerson, clipsFor, colorName, nextClipColor } from './board.js';
 import { overrideFor, withHidden } from './model.js';
@@ -831,7 +831,8 @@ async function makeMix() {
     from: { id: here.id, how: 'mix' },
     created: Date.now(),
   };
-  audio.originals.set(clip.id, Promise.resolve(made.buffer));
+  // What it plays now is what it plays after a reload: its quiet ends off (keptAudio).
+  audio.keepOriginal(clip, Promise.resolve(keptAudio(made.buffer, clip)));
   state.userClips.push(clip);
   await persist('clips', clip);
   closeSheet();
@@ -1076,11 +1077,14 @@ function makeSound() {
   const samples = renderSynth(recipe, RATE);
   const buffer = new AudioBuffer({ length: samples.length, numberOfChannels: 1, sampleRate: RATE });
   buffer.copyToChannel(samples, 0);
-  sheet.pending = { blob: encodeWav(buffer), mime: 'audio/wav', original: buffer, synth: recipe };
+  // Voices start from it as from a recording: its quiet ends off (keptAudio),
+  // as the saved sound is after a reload.
+  const original = keptAudio(buffer, null);
+  sheet.pending = { blob: encodeWav(buffer), mime: 'audio/wav', original, synth: recipe };
   // New audio: an old trim no longer fits it, and trim and chop work on all of it.
   sheet.trim = sheet.edits = sheet.fade = null;
   cut.recorded(buffer);
-  sheet.original = Promise.resolve(buffer);
+  sheet.original = Promise.resolve(original);
   sheet.previews = new Map();
   live.on = false;
   el.sheetPlay.disabled = false;
@@ -1565,11 +1569,11 @@ async function saveSheet() {
     delete clip.fade;
     delete clip.root;
     Object.assign(clip, { label: label || clip.label, emoji: sheet.emoji, color: sheet.color, amount: undefined, ...fields });
-    // A made sound whose sliders moved: its new audio and recipe replace the old.
+    // A made sound whose sliders moved: its new audio and recipe replace the
+    // old (keepOriginal, below, keeps the sheet's audio of it).
     if (sheet.pending?.synth) {
       Object.assign(clip, { blob: sheet.pending.blob, mime: sheet.pending.mime, synth: sheet.pending.synth });
       audio.forget(clip.id);
-      audio.originals.set(clip.id, Promise.resolve(sheet.pending.original));
     }
     await persist('clips', clip);
     saved = { ...clip, source: 'user' };
