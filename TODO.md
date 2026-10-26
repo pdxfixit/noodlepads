@@ -19,6 +19,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 - **Set a PIN on Major Meatball** (1 min): 👥 People → Major Meatball → 🔒 Set PIN. It is the one cloud profile with no PIN (checked 2026-10-26), and the cloud is about to list and open only profiles with one. Never write the PIN in a file or a chat log that gets committed.
 
+- **Put the no-names hashes in a secret** (3 min), before an agent removes them from the repo: copy the hash lines from `tests/no-names.test.mjs` (`ANY_CASE` and `AS_NAME`) into a JSON file `~/.config/noodlepads/names.json` (`{"anyCase": ["…"], "asName": "…"}`), and paste the same JSON into GitHub → pdxfixit/noodlepads → Settings → Secrets → Actions as `NOODLE_NAME_HASHES`. Then tell an agent it's done.
+
 - **Read the mission and make it yours** (2 min): `AGENTS.md` → Mission, drafted from your interview answers (2026-10-26). Reword anything that isn't how you'd say it; the council checks every change against it.
 
 - **Delete the old address's DNS record** (1 min): in Cloudflare, open the old address's domain → DNS and delete its `soundboard` record if it is still there (the Worker is gone and the name answers 530). The domain's apex stays. Also, if you like, delete the old address's leftover folder in `~/src/flarepress/` (only wrangler's local `.wrangler/` cache is in it).
@@ -107,6 +109,7 @@ Other work:
 
 - **The cloud needs a PIN** (Ben, 2026-10-26; decisions.md, Hosting and data). New people stay on the device; ☁️ on goes through the grown-up sum and sets a PIN, with one line on what becomes public. The Worker creates, lists and opens only profiles with a PIN; removing the PIN takes the profile out of the cloud; the deploy checks' throwaway profiles get one. Rewrite ADR 0002 and web/privacy.js in the same change. Convene architect, storage-sync, privacy-safety, security, parent and kids-ux on the plan first. Waits on the Worker-caps fixes landing (same files).
 - **Council round 1, fixes in flight** (2026-10-26): Kids keyboard/tune/mic/sum; Live take Undo and audio clock, iOS silent switch, context resume, late pills; sync re-uploads edited audio and splits pushes by bytes; Worker caps, the PIN race, keys, shares deleted with a profile; `just test` fails on cut tests, deploy.yml version checks, the no-names self-test, stale deploy docs. Delete this line when they land.
+- **The no-names hashes leave the repo** (Ben, 2026-10-26), once Ben has added `NOODLE_NAME_HASHES` ("Ben does"): `tests/no-names.test.mjs` reads them from that env var or `~/.config/noodlepads/names.json`, says plainly when it has none and skips, and test.yml and deploy.yml pass the secret. Then delete the hashes from the file.
 - **Council round 1, next fixes** (approved: each fixes a seat's finding inside the rules). Most urgent first:
   1. Sound designer ⛔: about 20 real-world presets are still synthesized (Quack, Roar, Airhorn, Burp, Heartbeat, Djembe, Dhol…, `tools/make_placeholders.py` KIT) against decisions.md's recordings rule. Source CC0 recordings (Freesound, Kenney, VCSL), animals first; add a loudness floor to `tools/test_preset_loudness.py` (8 presets sit 8–10 dB under the middle).
   2. Mission keeper: show the scratch beat in 🎼 Song's strip so a goofed-on beat goes on a lane without 💾 Keep; drop the groove card's creative prompt ("Can you hum a tune over them?").
