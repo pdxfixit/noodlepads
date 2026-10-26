@@ -32,6 +32,23 @@ test('every relative link in the docs points at a file that exists', () => {
   assert.deepEqual(broken, []);
 });
 
+// AGENTS.md and how-to point at files in backticks too (`tests/lines.test.mjs`):
+// a cold start opens them. Until 2026-10-26 AGENTS.md cited a test file that
+// never existed.
+test('every file AGENTS.md and how-to.md name in backticks exists', () => {
+  // Made by the deploy, or flarepress's own (run from its checkout).
+  const elsewhere = new Set(['web/version.json', 'tools/land.sh', 'tools/resolve_todo.py', 'tools/resolve_questions.py',
+    'tools/resolve_words.py', 'tools/harvest.py', 'tools/site.sh', 'tools/wrangler.sh']);
+  const missing = [];
+  for (const doc of ['AGENTS.md', 'docs/how-to.md']) {
+    const text = readFileSync(join(root, doc), 'utf8');
+    for (const [, path] of text.matchAll(/`((?:tests|tools|web|worker|site|docs|skills|\.github)\/[\w./-]+\.\w+)`/g)) {
+      if (!elsewhere.has(path) && !existsSync(join(root, path))) missing.push(`${doc} → ${path}`);
+    }
+  }
+  assert.deepEqual(missing, []);
+});
+
 test('every ADR is listed in the ADR index', () => {
   const index = readFileSync(join(root, 'docs/adr/README.md'), 'utf8');
   const adrs = readdirSync(join(root, 'docs/adr')).filter((f) => /^\d{4}-.*\.md$/.test(f));

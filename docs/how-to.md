@@ -22,7 +22,8 @@ Step by step for the common jobs, so a fresh session never has to guess. [AGENTS
 6. **Look at it** if a kid would see it: `just look <screen or view>` (and `--wide` for layout), then read the screenshots. `just look --help` lists the views; the `VIEWS` table in `tools/look.mjs` says what each opens.
 7. **`just version`**, and commit `web/version.js` with the change: every change to `web/` bumps the release (PATCH is the commit count). `just ship`, `just land` and CI refuse one without it.
 8. **Docs in the same commit:** [guide.md](guide.md) if behavior changed ([layout.md](layout.md) for a new file); docs/state.md if what is live changed; the ❓ Help line (`web/help.js`) if a control's label changed.
-9. **Ship it** from the main checkout: `just ship "$msg" <files…>`, with the message in a `mktemp` file. From a worktree: commit on your branch and report the commits.
+9. **Convene the council:** the seats [council.md](council.md) "When it convenes" names for the change (a fix: the one or two seats it touches), briefed blind with the change itself. Fold what they find into the work, and add the `Council:` trailer above `Co-Authored-By` (`Council: none (fix)` when no seat reviewed it).
+10. **Ship it** from the main checkout: `just ship "$msg" <files…>`, with the message in a `mktemp` file. From a worktree: commit on your branch and report the commits.
 
 ## Flaky tests
 
@@ -35,6 +36,8 @@ A test that fails under a full `just test` and passes alone is usually a fixed w
 3. Fixed waits that are safe: waiting for one of the app's own timers (the sequencer's 25 ms tick, a hold) with a longer one set after it. Node fires timers in order of when they are due, however late.
 
 ## A new feature that touches what is stored
+
+**Convene the council** first, the seats [council.md](council.md) "When it convenes" names: for a stored format or the cloud, architect, storage and sync, privacy and safety, security and parent, on the plan and again on the finished change; for anything a kid sees, all of them, at the mockup. The commit carries the `Council:` trailer above `Co-Authored-By`.
 
 Work down this list; each line names the place and the test that catches a miss.
 
@@ -66,7 +69,7 @@ A stored-format change is significant: it gets an ADR ([adr/README.md](adr/READM
 | A request from Ben | A line in [TODO.md](../TODO.md) "Agents do" at once; delete it when the work lands. |
 | A standing rule for agents | AGENTS.md if it is short and every session needs it; else the doc for that area, linked from AGENTS.md. |
 
-`tests/docs.test.mjs` checks every relative link and that every ADR is in the index. `tests/no-names.test.mjs` checks no kid's name is anywhere. Commit with `docs:`; a docs-only commit still deploys (the site is unchanged, so `deploy-verify` just sees the new commit).
+`tests/docs.test.mjs` checks every relative link and that every ADR is in the index. `tests/no-names.test.mjs` checks no kid's name is anywhere. Commit with `docs:` and a `Council:` trailer (developer experience and docs steward review tooling and docs, or `Council: none (docs)`); a docs-only commit still deploys (the site is unchanged, so `deploy-verify` just sees the new commit).
 
 ## Landing other agents' work
 
