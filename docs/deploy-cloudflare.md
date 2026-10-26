@@ -93,9 +93,9 @@ https://noodlepads.com, both even if one fails, in about 8 s together:
   writes from anywhere else.
 - Each check makes one throwaway profile (`p-smoke-<time>-<random>`,
   `p-e2e-…`) and deletes it in a `finally`, whatever failed. For about 4 s it
-  shows in the public list under a fun name. A profile made and deleted the
-  same UTC day gives its place in the 50-a-day cap back (provisional, Q24), so
-  the checks never use up kids' new profiles. Each smoke run leaves one share
+  shows in the public list under a fun name. Their ids (`worker/cloud.js
+  TEST_PROFILE`) count on a daily cap of their own, 100 a UTC day, so the
+  checks never use up kids' 50 new profiles a day. Each smoke run leaves one share
   code (a beat with no sound: a few hundred bytes) because shares are forever.
 - On GitHub the checks' cleanup (`cloud-prune --smoke --yes`, a D1 write)
   warns instead: the deploy token reads D1 only. Their share codes pile up until

@@ -7,7 +7,7 @@ import { PERSON_ID, PERSON_COLORS, OLD_PERSON_COLORS } from '../web/model.js';
 import { isListedEmoji } from '../web/emoji-check.js';
 import { isFunName } from '../web/names.js';
 import { CLOUD_ID } from '../web/reid.js';
-import { ORIGIN, json, fail, Refuse, readJson, readBytes, randomId, sha256Hex, toBytes, withinDaily, utcDay } from './http.js';
+import { ORIGIN, json, fail, Refuse, readJson, readBytes, randomId, sha256Hex, toBytes, withinDaily } from './http.js';
 import { isPin, newSalt, hashSecret, checkSecret, shareCode, isShareCode, plainCode } from './pin.js';
 import { noteEvent, forgetProfile } from './metrics.js';
 
@@ -24,6 +24,7 @@ export const LIMITS = {
   profileBytes: 40 * 1024 * 1024,    // one profile's sounds
   totalBytes: 400 * 1024 * 1024,     // every sound
   newProfilesPerDay: 50,
+  checkProfilesPerDay: 100,          // the deploy checks' (TEST_PROFILE): two a deploy
   pushesPerDay: 5000,
   sharesPerDay: 500,
   perPush: 200,                      // records in one push
@@ -169,6 +170,11 @@ function checkLooks(body, { partial = false } = {}) {
 // the person up as new (web/state.js reIdStoredPeople).
 export { CLOUD_ID };
 
+// The deploy checks' throwaway profiles (tools/look-cloud.mjs testId; as
+// tools/cloud_admin.py TEST_PREFIXES). Anyone could pick such an id, so it
+// earns nothing but a cap of its own.
+export const TEST_PROFILE = /^p-(smoke|e2e)-/;
+
 async function listProfiles(env) {
   const rows = await env.DB.prepare('SELECT * FROM profiles ORDER BY created DESC LIMIT ?').bind(LIMITS.listed).all();
   return json(200, { profiles: rows.results.filter((r) => CLOUD_ID.test(r.id)).map(looks) });
@@ -182,7 +188,13 @@ async function makeProfile(request, env, now, seen) {
   if (await env.DB.prepare('SELECT 1 AS x FROM profiles WHERE id = ?').bind(body.id).first()) throw new Refuse(409, 'exists');
   const { n } = await env.DB.prepare('SELECT COUNT(*) AS n FROM profiles').first();
   if (n >= LIMITS.profiles) throw new Refuse(507, 'full');
-  if (!await withinDaily(env, 'profiles', LIMITS.newProfilesPerDay, now)) throw new Refuse(429, 'busy');
+  // The deploy checks' throwaway profiles have a daily cap of their own, so
+  // they never use up kids' new profiles. A deleted profile gives no place
+  // back: making and deleting can't get round either cap.
+  const checks = TEST_PROFILE.test(body.id);
+  if (!await withinDaily(env, checks ? 'check-profiles' : 'profiles', checks ? LIMITS.checkProfilesPerDay : LIMITS.newProfilesPerDay, now)) {
+    throw new Refuse(429, 'busy');
+  }
   const salt = body.pin ? newSalt() : null;
   const hash = body.pin ? await hashSecret(body.pin, salt) : null;
   const edited = Number.isFinite(body.edited) ? Math.min(body.edited, now) : now;
@@ -262,16 +274,11 @@ async function deleteProfile(request, env, id, now) {
   await needKey(request, env, id, now);
   const p = await getProfile(env, id);
   await needPin(env, p, body.pin, now);
-  // A profile made and deleted on the same UTC day gives its place in that
-  // day's cap back, so the checks `just deploy` runs (just cloud-smoke and
-  // cloud-e2e, a throwaway profile each) never use up kids' new profiles.
-  const sameDay = utcDay(p.created) === utcDay(now);
   await env.DB.batch([
     ...dropSounds(env, id),
     env.DB.prepare('DELETE FROM records WHERE profile_id = ?').bind(id),
     env.DB.prepare('DELETE FROM keys WHERE profile_id = ?').bind(id),
     env.DB.prepare('DELETE FROM profiles WHERE id = ?').bind(id),
-    ...(sameDay ? [env.DB.prepare("UPDATE counters SET n = n - 1 WHERE name = 'profiles' AND day = ? AND n > 0").bind(utcDay(now))] : []),
   ]);
   await forgetProfile(env, id);
   return json(200, { ok: true });

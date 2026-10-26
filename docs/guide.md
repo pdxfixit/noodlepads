@@ -1047,7 +1047,9 @@ not whole an hour after its upload started is given up, and its device
 starts it again; until then it counts in full for its own profile, and for
 everyone else only as far as it has uploaded. A push
 that adds nothing (an edit that shrinks, a delete) always lands. A day (UTC)
-allows 50 new profiles, 5,000 pushes and 500 shares; a profile, 200 shares.
+allows 50 new profiles (one deleted again still counts; the deploy checks'
+throwaway ones have 100 of their own), 5,000 pushes and 500 shares; a
+profile, 200 shares.
 A profile keeps the keys of its 20 most recently used devices, and a device
 that hasn't used its key for 180 days opens the profile again (by itself
 with no PIN; else it asks the PIN).

@@ -441,7 +441,7 @@ Ben: "login sprawl is a concern."
   (no record and no share uses them), and deletes them with `--yes`. Shared
   sounds stay. A device whose profile was pruned keeps everything and goes
   Offline (Q20).
-- **Already there:** 50 new profiles a UTC day (one deleted the day it was made gives its place back, so the deploy checks' throwaway profiles never count: provisional, Q24), 1,000 in all, 300 listed. The deploy checks' profiles are `p-smoke-…` and `p-e2e-…`; `just cloud-prune --smoke` removes any a killed check left, with their share codes.
+- **Already there:** 50 new profiles a UTC day (deleted or not; the deploy checks' throwaway profiles count on a cap of their own, 100 a day), 1,000 in all, 300 listed. The deploy checks' profiles are `p-smoke-…` and `p-e2e-…`; `just cloud-prune --smoke` removes any a killed check left, with their share codes.
 - **Proposed, not built:** (1) the list shows only profiles active in the
   last 180 days (one `WHERE`, about 5 minutes, but a returning kid would look
   missing until their device syncs); (2) a cap of new profiles per device a

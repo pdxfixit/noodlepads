@@ -549,20 +549,24 @@ test('daily caps: 50 new profiles a UTC day', async () => {
   assert.equal((await c.call('POST', 'profiles', { body: look('p-late') })).status, 201);
 });
 
-test('daily caps: a profile made and deleted the same UTC day gives its place back (the deploy checks make one each)', async () => {
+// The council's review, 2026-10-26: any profile made and deleted the same
+// day gave its place back, so making and deleting never used the cap up.
+test("daily caps: a deleted profile gives no place back; the deploy checks' have a cap of their own", async () => {
   const c = cloud();
-  const day = () => c.env.DB.rows("SELECT n FROM counters WHERE name = 'profiles' AND day = '2026-10-11'")[0]?.n;
-  const key = await made(c, 'p-smoke-a');
-  await made(c, 'p-stays');
-  assert.equal(day(), 2);
-  assert.equal((await c.call('DELETE', 'profiles/p-smoke-a', { key, body: {} })).status, 200);
-  assert.equal(day(), 1, 'the deleted one is given back');
-  // One made yesterday and deleted today gives nothing back: today's count is today's.
-  c.at(T0 - 86400000);
-  const old = await made(c, 'p-old');
-  c.at(T0);
-  assert.equal((await c.call('DELETE', 'profiles/p-old', { key: old, body: {} })).status, 200);
-  assert.equal(day(), 1);
+  const day = (name) => c.env.DB.rows("SELECT n FROM counters WHERE name = ? AND day = '2026-10-11'", name)[0]?.n ?? 0;
+  const churn = await made(c, 'p-churn');
+  assert.equal((await c.call('DELETE', 'profiles/p-churn', { key: churn, body: {} })).status, 200);
+  assert.equal(day('profiles'), 1, 'made and deleted today still counts');
+  for (const id of ['p-smoke-mv4cyiqj-b8bt', 'p-e2e-mv4cyiqj-c9cu']) {
+    const key = await made(c, id);
+    assert.equal((await c.call('DELETE', `profiles/${id}`, { key, body: {} })).status, 200);
+  }
+  assert.deepEqual([day('profiles'), day('check-profiles')], [1, 2], "the checks' count apart from kids'");
+  c.env.DB.db.prepare("UPDATE counters SET n = ? WHERE name = 'profiles'").run(LIMITS.newProfilesPerDay);
+  assert.equal((await c.call('POST', 'profiles', { body: look('p-one-more') })).status, 429, 'fifty a day, however many went again');
+  assert.equal((await c.call('POST', 'profiles', { body: look('p-smoke-mv4cyiqj-d0dv') })).status, 201, 'a check still runs');
+  c.env.DB.db.prepare("UPDATE counters SET n = ? WHERE name = 'check-profiles'").run(LIMITS.checkProfilesPerDay);
+  assert.equal((await c.call('POST', 'profiles', { body: look('p-e2e-mv4cyiqj-e1ew') })).status, 429, "and the checks' cap holds too");
 });
 
 test('writes come only from the site’s own page', async () => {

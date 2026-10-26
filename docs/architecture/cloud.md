@@ -270,7 +270,7 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 | `sound_chunks` | `(sound_id, n)` | `putPiece` | `getSound`, `need` | with its sound |
 | `shares`, `share_sounds` | `code`; `(code, sound_id)` | `makeShare`, `unshare` | `getShare`, `myShares` | until unshared |
 | `reports` | `key` = `<ISO>_<device>_<random>` | `reports.js handleLog` | the telemetry runner | `TTL_MS` 14 days, deleted when the next report arrives |
-| `counters` | `(name, day)` | `http.js withinDaily`; `deleteProfile` gives one back the same day | the same | old days stay |
+| `counters` | `(name, day)` | `http.js withinDaily` (`check-profiles`: the deploy checks' own) | the same | old days stay |
 | `devices` | `hash` (key hash) | `metrics.js noteEvent` | the runner | 90 days since last seen |
 | `activity` | autoincrement `id` | `metrics.js noteEvent` | the runner | 14 days |
 | `migrations` | `name` | each migration; schema.sql lists 001–007 as applied | `just cloud-migrate` | — |
@@ -285,11 +285,11 @@ All JSON bodies go through `http.js readJson`: `Origin` must be `https://noodlep
 |---|---|---|
 | `GET /api/cloud` | — | — |
 | `GET /api/profiles` | — | 300 newest, `CLOUD_ID` only |
-| `POST /api/profiles` | Origin | fun name, listed emoji, person color; 409 if it exists; 507 at 1,000 profiles; 429 at 50 new a UTC day |
+| `POST /api/profiles` | Origin | fun name, listed emoji, person color; 409 if it exists; 507 at 1,000 profiles; 429 at 50 new a UTC day (a deleted one still counts); the deploy checks' ids (`TEST_PROFILE`: `p-smoke-…`, `p-e2e-…`) 100 a day on their own counter |
 | `POST /api/profiles/:id/open` | Origin; PIN if set | 5 wrong → 10-minute wait (401 `tries`, 429 `wait`); a new key: the profile keeps its 20 most recently used, and sweeps session keys over a week old and any unused 180 days |
 | `DELETE /api/profiles/:id/key` | Origin, key | deletes the key sent |
 | `PATCH /api/profiles/:id` | Origin, key; current PIN for `newPin` | look kept only if `edited` ≥ stored; a new PIN deletes every key and returns a new one |
-| `DELETE /api/profiles/:id` | Origin, key, PIN | deletes records, keys, unshared sounds, metrics; gives back the day's profile count if made today |
+| `DELETE /api/profiles/:id` | Origin, key, PIN | deletes records, keys, unshared sounds, metrics |
 | `GET /api/profiles/:id/records?since=N` | key | 500 a page, never split inside one push |
 | `POST /api/profiles/:id/records` | Origin, key | body ≤ 4 MB; ≤ 200 records; each ≤ 512 KB; a clip must name whole audio of this profile (409 `sound`); a push that adds bytes: 507 `records full` over 10 MB of records a profile, 507 `cloud full` over 60 MB in all (each record its JSON + `ROW_BYTES` 100); 5,000 pushes a UTC day |
 | `POST /api/profiles/:id/sounds` | Origin, key | ≤ 25 MB; `audio/*` mime; 507 over 40 MB a profile (its unfinished sounds counted whole) or 400 MB in all (others' unfinished ones only as far as they uploaded); first deletes every sound left unfinished over `PENDING_MS` (an hour) |
