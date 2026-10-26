@@ -46,7 +46,7 @@ jobs:
       - uses: pdxfixit/flarepress@v1  # rolling: the owner moves v1 to release
         with:
           site: site
-      - name: Live checks (cloud-smoke, cloud-e2e)
+      - name: Live checks (cloud-smoke, cloud-e2e, taps)
         env:
           CHROME: /usr/bin/google-chrome
         run: just deploy-checks

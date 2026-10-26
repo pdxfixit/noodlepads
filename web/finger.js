@@ -13,6 +13,16 @@ export const isFinger = (e) => e?.pointerType === 'touch' || e?.pointerType === 
 
 export const stayedPut = (x0, y0, x, y, slop = TAP_SLOP) => Math.hypot(x - x0, y - y0) <= slop;
 
+// What became of each finger lately, by pointer id, for the silent-tap
+// report (tap-watch.js): 'down' once a pad or key took it, then 'tap' once
+// its lift played or 'hold' once it held. The newest 32 are kept.
+export const lately = new Map();
+const note = (id, what) => {
+  lately.delete(id);
+  lately.set(id, what);
+  if (lately.size > 32) lately.delete(lately.keys().next().value);
+};
+
 // Follows fingers from down to up. `onTap(data)` runs when a finger lifts
 // in place; `onHold(data)` (with `holdMs`) when it stays still that long, and
 // then the lift does nothing. A move past the slop, or a pointercancel (the
@@ -34,9 +44,10 @@ export function fingerTaps({ onTap, onHold = null, holdMs = 0 }) {
       drop(e.pointerId);
       const f = { x: e.clientX ?? 0, y: e.clientY ?? 0, data, timer: 0 };
       if (onHold && hold) {
-        f.timer = setTimeout(() => { down.delete(e.pointerId); onHold(data); }, holdMs);
+        f.timer = setTimeout(() => { down.delete(e.pointerId); note(e.pointerId, 'hold'); onHold(data); }, holdMs);
       }
       down.set(e.pointerId, f);
+      note(e.pointerId, 'down');
     },
     move(e) {
       const f = down.get(e.pointerId);
@@ -47,7 +58,9 @@ export function fingerTaps({ onTap, onHold = null, holdMs = 0 }) {
       if (!f) return;
       const still = stayedPut(f.x, f.y, e.clientX ?? f.x, e.clientY ?? f.y);
       drop(e.pointerId);
-      if (still) onTap(f.data);
+      if (!still) return;
+      note(e.pointerId, 'tap');
+      onTap(f.data);
     },
     cancel(e) { drop(e.pointerId); },
     // Every finger let go of, as when a second finger turns it into a pinch.

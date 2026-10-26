@@ -173,12 +173,16 @@ def run_sql(conn, query, out=sys.stdout):
             print("\t".join("" if v is None else str(v) for v in row), file=out)
 
 
-# Errors and notices: the text that names a problem.
+# Errors, notices and silent taps (web/tap-watch.js): the text that names a
+# problem. A silent tap has no text: its screen, target and how far it got
+# name it ("pad on pads: unheard").
 PROBLEM_SQL = """
 SELECT u.key, u.received, u.device, u.app, e.kind,
-       COALESCE(json_extract(e.data, '$.message'), json_extract(e.data, '$.text'), '(no message)')
+       CASE WHEN e.kind = 'tap'
+         THEN json_extract(e.data, '$.on') || ' on ' || json_extract(e.data, '$.screen') || ': ' || json_extract(e.data, '$.why')
+         ELSE COALESCE(json_extract(e.data, '$.message'), json_extract(e.data, '$.text'), '(no message)') END
 FROM events e JOIN uploads u ON u.key = e.upload
-WHERE e.kind IN ('error', 'notice')
+WHERE e.kind IN ('error', 'notice', 'tap')
 """
 
 
@@ -225,8 +229,9 @@ def digest(conn, since, now):
 
     frm = "the start" if since == EPOCH else since
     errors = sum(1 for r in rows if r[4] == "error")
+    taps = sum(1 for r in rows if r[4] == "tap")
     md = [f"# Noodle Pads problem reports: {frm} → {iso(now)}", "",
-          f"{uploads} upload(s) from {devices} device(s). {errors} error(s), {len(rows) - errors} notice(s).", ""]
+          f"{uploads} upload(s) from {devices} device(s). {errors} error(s), {len(rows) - errors - taps} notice(s), {taps} silent tap(s).", ""]
     if groups:
         md += ["| New | Kind | Message | App | Count | Devices |", "|---|---|---|---|---|---|"]
         order = sorted(groups.items(), key=lambda kv: (-kv[1]["count"], kv[0]))
@@ -235,7 +240,7 @@ def digest(conn, since, now):
             md.append(f"| {'🆕' if (kind, norm) in new else ''} | {kind} | {cell} | {app} | {g['count']} | {len(g['devices'])} |")
         md.append("")
     else:
-        md += ["No errors or notices.", ""]
+        md += ["No errors, notices or silent taps.", ""]
     out = []
     for n in sorted(new.values(), key=lambda n: (-n["count"], n["kind"], n["message"])):
         n["devices"] = len(n["devices"])

@@ -23,6 +23,8 @@ export const LIVE_HOST = 'noodlepads.com';
 export const SEND_URL = '/api/log';
 export const MIN_GAP_MS = 60_000;      // at most one upload a minute
 export const ERROR_DELAY_MS = 10_000;  // after an error, wait to gather what happened next
+// Entries that send a report soon instead of when the page is hidden.
+export const SEND_SOON = ['error', 'tap'];
 // keepalive requests may carry 64 KiB in all; the Worker refuses more than 64 KB.
 export const MAX_BODY_BYTES = 60_000;
 
@@ -115,10 +117,10 @@ export function createLogSender(deps) {
     send,
     // The page was hidden: send now, if the minute allows.
     hidden: () => send(),
-    // A new log entry: an error sends 10 s later (later still if the last
-    // upload was under a minute ago).
+    // A new log entry: an error, or a tap that played nothing, sends 10 s
+    // later (later still if the last upload was under a minute ago).
     entry(e) {
-      if (e?.kind !== 'error' || timer !== null || !deps.enabled() || !deps.live()) return;
+      if (!SEND_SOON.includes(e?.kind) || timer !== null || !deps.enabled() || !deps.live()) return;
       const wait = Math.max(ERROR_DELAY_MS, lastTry + MIN_GAP_MS - now());
       timer = setTimer(() => { timer = null; send(); }, wait);
     },

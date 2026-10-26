@@ -158,6 +158,12 @@ export const RULES = {
   setting: { key: oneOf(Object.keys(SETTING_VALUES)), value: settingValue, was: settingValue },
   person: { added: flag, restored: flag, deleted: flag, bundled: bool, sounds: num, soloStart: bool, adopted: num, newIds: num },
   move: { sounds: num, beats: num, people: num, already: num, skipped: num },   // older sounds brought in (leftover.js)
+  // A finger tap that played nothing (tap-watch.js): how far it got, and the page around it.
+  tap: {
+    screen: oneOf(['pads', 'live', 'kids']), on: oneOf(['pad', 'tile', 'key']), why: oneOf(['unheard', 'no-tap', 'no-sound', 'audio-off']),
+    covered: bool, over: text, audio: oneOf(AUDIO_STATES), audioDown: oneOf(AUDIO_STATES), dialogs: num, dialog: text,
+    loops: num, fingers: num, upMin: num, shownMin: num, hides: num, n: num,
+  },
   cloud: {
     sync: bool, pulled: num, pushed: num, deleted: num, sounds: num, merged: num, clashes: num, kept: num, status: num, error: text,
     put: bool, opened: oneOf([true, 'share']), removed: bool, pin: oneOf(['set', 'removed']),

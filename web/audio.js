@@ -18,9 +18,15 @@ const MAX_LOOP_SECONDS = 600;
 // mid-wave, which clicks. Short enough to still sound like a cut-off.
 export const FADE_SECONDS = 0.008;
 
+// How many voices have been made since the page loaded: the silent-tap
+// report (tap-watch.js) asks whether a tap made one.
+let voices = 0;
+export const voicesMade = () => voices;
+
 // One playing sound: a buffer source through its own gain, so it can be faded
 // out on its own. `dest` is where it goes (the master, or an offline render).
 export function makeVoice(ctx, buffer, dest) {
+  voices += 1;
   const src = ctx.createBufferSource();
   src.buffer = buffer;
   const gain = ctx.createGain();

@@ -28,6 +28,7 @@
 | `log.js` | the in-memory event log (400 entries), `onLog`, `installErrorLog` | every module that logs; `track-page.js` and `log-send.js` listen | nothing |
 | `log-clean.js` | the report allowlist (`RULES`, `SETTING_VALUES`, `cleanPayload`, `redact`, `soundKind`) | `log-send.js`, `worker/clean.js`, `sequencer.js` (`soundKind`) | `agent.js` |
 | `log-send.js` | sending reports (`createLogSender`, `initLogSend`), the device code, `LIVE_HOST` | `app.js` (`initLogSend`), `feedback.js` and `settings-ui.js` (`LIVE_HOST`) | `log-clean.js`, `agent.js`, `state`, `board.js`, `settings.js` |
+| `tap-watch.js` | the silent-tap report: a finger tap on a pad, key or tile that made no voice in 3 s is logged as `tap` (`watchTaps`, `silence`, `screenOf`) | `app.js` (`watchTaps`, with `finger.js lately` and `audio.js voicesMade`) | `finger.js` |
 | `agent.js` | User-Agent → browser, OS, device-type families | `log-send.js`, `log-clean.js`, `worker/metrics.js` | nothing |
 | `telemetry.js` | `EVENTS`, `cleanDetails`, the player id, `track` (page-wide) | `app.js startUsage` (`createTelemetry`, `useTelemetry`), `cloud.js`, `listen-ui.js`, `sheet.js` (direct `track`) | `events-client.js createEvents`, `usage.js` |
 | `events-client.js` | (vendored from flarepress, never edited) the record's columns, the localStorage queue, batches, `sendBeacon` | `telemetry.js` only | `fetch`, `navigator.sendBeacon` |
@@ -298,7 +299,7 @@ Any D1 error inside a cloud route answers 503 `{error: 'cloud', over}` (`over` w
 ## The problem-report path
 
 1. **Written:** any module calls `log.js logEvent(kind, data)` (strings cut to 300, depth 3, 30 keys, 50 items). `installErrorLog` adds `error` entries for uncaught errors and rejections. 400 entries kept, in memory only.
-2. **Triggered:** `log-send.js initLogSend` listens with `onLog`. An `error` entry arms a send after `ERROR_DELAY_MS` (10 s), later if the last try was under `MIN_GAP_MS` (60 s) ago. `visibilitychange` to hidden sends at once (if the minute allows).
+2. **Triggered:** `log-send.js initLogSend` listens with `onLog`. An `error` or `tap` entry (`SEND_SOON`) arms a send after `ERROR_DELAY_MS` (10 s), later if the last try was under `MIN_GAP_MS` (60 s) ago. `visibilitychange` to hidden sends at once (if the minute allows).
 3. **Gated:** `sendLogs` on, and `location.hostname === LIVE_HOST`. Switching on sends only what happens from then (`start`).
 4. **Built:** `buildPayload` → `log-clean.js cleanPayload` with `{names: namesOnDevice(), kitIds, origin}`. `namesOnDevice` lists every person, sound, beat, song, take, layout and voice name (and person ids). Over `MAX_BODY_BYTES` (60,000), the oldest quarter is cut until it fits, and counted in `dropped`.
 5. **Sent:** one `fetch('/api/log', {keepalive, credentials: 'omit'})`. Entries up to the newest sent (`sentUpTo`) are never sent again; a failed send keeps them.

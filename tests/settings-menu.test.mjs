@@ -302,6 +302,39 @@ test('Send problem reports is a checkbox under Share play data, off by default, 
   $('#settings-dialog').close();
 });
 
+// Ben, 2026-10-26: "Put a copy icon next to that ... a one tap way to put it in the clipboard".
+test('📋 beside the device code copies it to the clipboard in one tap, and says so', async () => {
+  const copy = $('#send-logs-copy');
+  assert.ok(copy.parentElement === $('#send-logs-code'), 'beside the code, shown and hidden with it');
+  assert.equal(copy.getAttribute('aria-label'), "Copy this device's code");
+  const nav = globalThis.navigator;
+  const copied = [];
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { ...nav, clipboard: { writeText: async (t) => { copied.push(t); } } } });
+  const sw = $('#send-logs');
+  try {
+    $('#settings-open').dispatch('click');
+    sw.checked = true;
+    sw.dispatch('change');
+    await page.settle();
+    copy.dispatch('click');
+    await page.settle();
+    assert.deepEqual(copied, [$('#send-logs-device').textContent]);
+    assert.match(copied[0], /^[0-9A-Z]{4}-[0-9A-Z]{4}$/);
+    const { getLog } = await import('../web/log.js');
+    assert.equal(getLog().filter((e) => e.kind === 'notice').at(-1).data.text, "📋 Copied this device's code.");
+    globalThis.navigator.clipboard.writeText = async () => { throw new Error('not allowed'); };
+    copy.dispatch('click');
+    await page.settle();
+    assert.equal(getLog().filter((e) => e.kind === 'notice').at(-1).data.text, "Copying isn't allowed here: write the code down instead.");
+  } finally {
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: nav });
+    sw.checked = false;
+    sw.dispatch('change');
+    await page.settle();
+    $('#settings-dialog').close();
+  }
+});
+
 // Ben, 2026-10-16: "use B and 'Share play data' everywhere"; then "put the
 // choices in a collapsing pane": 📊 Data sharing, the last fold before
 // About, holds both checkboxes; then "drop privacy policy link from the

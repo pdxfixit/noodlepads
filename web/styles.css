@@ -1986,7 +1986,9 @@ button.sa-row { cursor: pointer; }
 .set-group legend { margin: 0 0 6px; padding: 0; font-weight: 800; }
 .set-switch input { border-radius: 6px; }
 /* The device code is read aloud or typed, so it is spaced and fixed-width. */
-.set-code { margin: 0 0 10px; }
+.set-code { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0 0 10px; }
+/* 📋 copies the code (Ben, 2026-10-26): one tap, to paste into a message. */
+.set-code-copy { min-width: 44px; padding: 0 10px; font-size: 1.1rem; }
 .set-code b { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0.08em; }
 
 /* Saved beats: a name field, then the library, newest first. */

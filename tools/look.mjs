@@ -17,6 +17,7 @@
 //   A new person's first steps (the welcome, tips, hint dots, the nudge; ADR 0028) stay off,
 //   as a fresh device always looked, except in the views that show them (welcome, …).
 //   node tools/look.mjs cloud-smoke|cloud-e2e [--url URL]   the live cloud checks (look-cloud.mjs)
+//   node tools/look.mjs taps [--url URL]   a finger on a phone: every tap must sound (taps(), at the end)
 //
 // Node with no dependencies: the DevTools protocol over Node's own WebSocket
 // and fetch (chrome.mjs). This is the one Node tool in tools/ (Ben's call,
@@ -37,6 +38,7 @@ if (['cloud-smoke', 'cloud-e2e'].includes(process.argv[2])) {
 }
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+if (process.argv[2] === 'taps') process.exit(await taps(process.argv.slice(3)));
 // The four tabs (ADR 0017). A view on Beats says whether ⌨️ Keys is on
 // (`keys: true`) or off; the run sets it first, as the widths share
 // localStorage, which remembers it.
@@ -810,3 +812,171 @@ for (const r of rows.filter((x) => x.logs?.length)) for (const l of r.logs) cons
 if (skipped.length) console.log(`⏭️  not on a phone (only from 700 px), skipped: ${skipped.join(', ')}`);
 console.log(`\n📸 screenshots: ${out}`);
 process.exit(rows.every((r) => r.ok) ? 0 : 1);
+
+// `just taps`: a finger on a phone, in headless Chrome. A tap on a pad on
+// 🔊 Pads, a tile on 🎤 Live and a pad on 🧸 Kids must each sound (a voice
+// started and the audio running): on a fresh device, whose first tap is the
+// page's first gesture; after 🛠️ Make and back to 🎉 Play; and after the page
+// is frozen and thawed with its audio suspended, as Android does to an app
+// left in the background. Then a pad under something else must be logged as
+// a silent tap (web/tap-watch.js), and no tap that sounded may be. Ben,
+// 2026-10-26: his installed app went silent, and nothing tested a finger in a
+// real browser. Exits 1 on any ❌. CI runs it on every push (test.yml), and
+// `just deploy-checks` against the live site.
+async function taps(argv) {
+  let base = '';
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--url' && argv[i + 1]) base = argv[++i];
+    else { console.error('usage: just taps [--url URL]'); return 2; }
+  }
+  if (!fs.existsSync(CHROME)) { console.error(`no Chrome at ${CHROME}; set CHROME=/path/to/chrome`); return 2; }
+  const children = [];
+  process.on('exit', () => { for (const c of children) { try { c.kill('SIGKILL'); } catch { /* already gone */ } } });
+  if (!base) {
+    const port = await freePort();
+    children.push(spawn('python3', [path.join(ROOT, 'tools/serve.py'), String(port)], { stdio: 'ignore' }));
+    base = `http://localhost:${port}/`;
+    await waitFor('the dev server', async () => (await fetch(base)).ok);
+  }
+  const chrome = await launchChrome();
+  const { send, listeners } = await connect(await chrome.page());
+  const errors = [];
+  listeners.push((m) => {
+    if (m.method === 'Runtime.exceptionThrown') errors.push(m.params.exceptionDetails.exception?.description?.split('\n')[0] || m.params.exceptionDetails.text);
+  });
+  // Reads the page with no user gesture: evaluate() lends one, which would
+  // start the audio for the page and hide a tap that cannot.
+  const read = async (expression) => {
+    const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
+    if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description?.split('\n')[0] || r.exceptionDetails.text);
+    return r.result.value;
+  };
+  await send('Page.enable');
+  await send('Runtime.enable');
+  // A phone: 412 px wide and touch only, so the page sees fingers.
+  await send('Emulation.setDeviceMetricsOverride', { width: 412, height: 915, deviceScaleFactor: 2, mobile: true });
+  await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  await send('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' });
+  // No first steps (as in `just look`), and a count of every voice the page starts.
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: `globalThis.noodleFirstSteps = false; globalThis.__voices = 0;
+    { const start = AudioBufferSourceNode.prototype.start; AudioBufferSourceNode.prototype.start = function (...a) { globalThis.__voices++; return start.apply(this, a); }; }` });
+  const loaded = new Promise((r) => listeners.push((m) => { if (m.method === 'Page.loadEventFired') r(); }));
+  await send('Page.navigate', { url: base });
+  await loaded;
+  await waitFor('the pads', () => read('!!document.querySelector("#pads .pad[data-id]")'));
+  // 📮 Problem reports and 📊 play data off: on the live site its made-up taps
+  // must not reach the real reports or play counts (a dev copy never sends).
+  await read('import("/settings.js").then(async (s) => { await s.setSetting("sendLogs", false); await s.setSetting("sendUsage", false); })');
+  await sleep(500);
+
+  // One finger, down and up where it landed.
+  const finger = async ({ x, y }) => {
+    await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    await sleep(60);
+    await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  };
+  // The middle of the first `sel` showing, scrolled into the window first.
+  const spot = (sel) => read(`(() => {
+    const e = [...document.querySelectorAll(${JSON.stringify(sel)})].find((e) => e.getClientRects().length);
+    if (!e) return null;
+    let r = e.getBoundingClientRect();
+    if (r.top < 0 || r.bottom > innerHeight) { e.scrollIntoView({ block: 'center' }); r = e.getBoundingClientRect(); }
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  })()`);
+  const press = async (sel) => {
+    const at = await spot(sel);
+    if (!at) throw new Error(`nothing showing for ${sel}`);
+    await finger(at);
+    await sleep(250);
+  };
+  const voices = () => read('globalThis.__voices');
+  const audioState = () => read('import("/audio.js").then((m) => m.audio.ctx?.state ?? "none")');
+  // A finger on `sel` must start a voice, with the audio running, within 3 s.
+  const sounds = async (sel) => {
+    const at = await spot(sel);
+    if (!at) throw new Error(`nothing showing for ${sel}`);
+    const before = await voices();
+    await finger(at);
+    const end = Date.now() + 3000;
+    let state = '';
+    while (Date.now() < end) {
+      state = await audioState();
+      if ((await voices()) > before && state === 'running') return;
+      await sleep(100);
+    }
+    throw new Error((await voices()) > before ? `a voice started, but the audio is ${state}` : `no sound (audio ${state})`);
+  };
+  const screen = () => read('document.body.className.match(/screen-(\\w+)/)?.[1] ?? ""');
+  const silentTaps = () => read('import("/log.js").then((m) => m.getLog().filter((e) => e.kind === "tap").map((e) => e.data))');
+
+  const PAD = '#pads .pad[data-id]';
+  const TILE = '#dj-touch [data-clip]';
+  const steps = [
+    ['🔊 Pads: a fresh device\'s first tap sounds', () => sounds(PAD)],
+    ['🎤 Live: a tile sounds', async () => { await press('#live-tab'); await sounds(TILE); }],
+    ['🛠️ Make, then 🎉 Play: back on 🎤 Live, a tile sounds', async () => {
+      await press('[data-mode-open="make"]');
+      if ((await screen()) !== 'beats') throw new Error(`🛠️ Make opened ${await screen()}`);
+      await press('[data-mode-open="play"]');
+      if ((await screen()) !== 'live') throw new Error(`🎉 Play opened ${await screen()}, not the screen it last had`);
+      await sounds(TILE);
+    }],
+    ['🔊 Pads after that: a pad sounds', async () => { await press('#pads-tab'); await sounds(PAD); }],
+    ['frozen and thawed, the audio suspended (Android, in the background): a pad sounds', async () => {
+      await send('Page.setWebLifecycleState', { state: 'frozen' });
+      await sleep(1500);
+      // Back in front, as a phone shows the app again: thawed alone, headless
+      // Chrome leaves the page hidden, and a hidden page's audio never resumes.
+      await send('Page.setWebLifecycleState', { state: 'active' });
+      await send('Page.bringToFront');
+      await send('Emulation.setFocusEmulationEnabled', { enabled: true });
+      await waitFor('the page shown again', () => read('document.visibilityState === "visible"'), 5000);
+      await read('import("/audio.js").then((m) => m.audio.ctx.suspend())');
+      await sounds(PAD);
+    }],
+    ['…and on 🎤 Live a tile sounds', async () => {
+      await read('import("/audio.js").then((m) => m.audio.ctx.suspend())');
+      await press('#live-tab');
+      await sounds(TILE);
+    }],
+    ['🧸 Kids: a pad sounds', async () => {
+      await read('import("/settings.js").then((s) => s.setSetting("level", "kids"))');
+      await waitFor('🧸 Kids', () => read('document.body.classList.contains("kids")'), 5000);
+      await sleep(300);
+      await sounds('#kids-pages .kids-pad');
+      await read('import("/settings.js").then((s) => s.setSetting("level", "regular"))');
+      await waitFor('Kids gone', () => read('!document.body.classList.contains("kids")'), 5000);
+    }],
+    ['no tap that sounded was logged as silent', async () => {
+      await sleep(3200);   // the watcher's wait after the last tap (tap-watch.js SILENT_AFTER_MS)
+      const logged = await silentTaps();
+      if (logged.length) throw new Error(`logged: ${JSON.stringify(logged)}`);
+    }],
+    ['a pad under something else is logged as a silent tap, unheard and covered', async () => {
+      if (await spot('[data-mode-open="play"]')) await press('[data-mode-open="play"]');
+      await press('#pads-tab');
+      await read(`(() => { const v = document.createElement('div'); v.className = 'tap-check-veil'; v.style.cssText = 'position:fixed;inset:0;z-index:2147483647'; document.body.append(v); })()`);
+      await finger(await spot(PAD));
+      await sleep(3600);
+      await read('document.querySelector(".tap-check-veil").remove()');
+      const logged = await silentTaps();
+      const t = logged.at(-1);
+      if (!t || t.why !== 'unheard' || !t.covered || t.over !== 'div.tap-check-veil' || t.screen !== 'pads' || typeof t.loops !== 'number' || typeof t.upMin !== 'number') throw new Error(`logged: ${JSON.stringify(logged)}`);
+    }],
+  ];
+  let failed = 0;
+  for (const [name, run] of steps) {
+    const t0 = Date.now();
+    try {
+      // A step that hangs fails instead of holding the run (and CI) for ever.
+      await Promise.race([run(), sleep(20_000).then(() => { throw new Error('no answer in 20 s'); })]);
+      console.log(`✅ ${name} (${Date.now() - t0} ms)`);
+    } catch (err) {
+      failed += 1;
+      console.log(`❌ ${name}: ${err.message.split('\n')[0]}`);
+    }
+  }
+  for (const e of [...new Set(errors)]) { failed += 1; console.log(`💥 ${e}`); }
+  console.log(failed ? `❌ taps: ${failed} failed (${base})` : `✅ taps: every finger tap sounded (${base})`);
+  return failed ? 1 : 0;
+}

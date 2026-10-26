@@ -174,7 +174,7 @@ class Digest(Archive):
             "2026-10-10T10:00:00.000Z_CCCC-DDDD_03": upload(device="CCCC-DDDD", app="newer", entries=[err("Bad line 1"), notice("Slow")]),
         })
         md, new = logs.digest(self.conn, logs.EPOCH, self.T0)
-        self.assertIn("3 upload(s) from 2 device(s). 4 error(s), 1 notice(s).", md)
+        self.assertIn("3 upload(s) from 2 device(s). 4 error(s), 1 notice(s), 0 silent tap(s).", md)
         self.assertIn("| 🆕 | error | Bad line 7 | 3e7f681 2026-10-11 | 3 | 2 |", md)
         self.assertIn("| 🆕 | error | Bad line 1 | newer | 1 | 1 |", md)
         self.assertEqual([(n["kind"], n["message"], n["count"], n["devices"]) for n in new],
@@ -189,9 +189,17 @@ class Digest(Archive):
         self.assertIn("|  | error | Old problem |", md)
         self.assertIn("1 upload(s) from 1 device(s).", md)
 
+    def test_a_silent_tap_is_a_problem_named_by_where_and_why(self):
+        tap = {"n": 3, "t": 9, "kind": "tap", "data": {"screen": "live", "on": "tile", "why": "unheard", "covered": True}}
+        self.sync({"2026-10-10T00:00:00.000Z_AAAA-BBBB_01": upload(entries=[tap])})
+        md, new = logs.digest(self.conn, logs.EPOCH, self.T0)
+        self.assertIn("0 error(s), 0 notice(s), 1 silent tap(s).", md)
+        self.assertIn("| 🆕 | tap | tile on live: unheard |", md)
+        self.assertEqual([n["message"] for n in new], ["tile on live: unheard"])
+
     def test_a_quiet_week_says_so(self):
         md, new = logs.digest(self.conn, logs.EPOCH, self.T0)
-        self.assertIn("No errors or notices.", md)
+        self.assertIn("No errors, notices or silent taps.", md)
         self.assertEqual(new, [])
 
     def test_mark_records_the_digest_so_the_next_one_starts_there(self):
@@ -207,7 +215,7 @@ class Digest(Archive):
         finally:
             del os.environ["TELEMETRY_DB"], os.environ["NOODLE_LOGS_DIGEST"]
         self.assertIn("| 🆕 | error | X |", first.getvalue())
-        self.assertIn("No errors or notices.", second.getvalue())
+        self.assertIn("No errors, notices or silent taps.", second.getvalue())
         self.assertRegex(json.loads(state.read_text())["last_digest"], r"^\d{4}-\d\d-\d\dT.*Z$")
         self.assertEqual(self.db.read_bytes(), before, "the mirror is never written")
 

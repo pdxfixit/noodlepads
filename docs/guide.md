@@ -385,10 +385,17 @@ The ⚙️ button in the top corner (small, and away from the pads and toolbar s
 it isn't pressed by accident) opens Settings: 🔗 Sharing (🔗 Shared with me), 💾 Backups, 🎚️ Level (🧸 Kids · Regular · Advanced, each person's own, ADR 0019; stored as `level` with `advancedBeats` beside it, true only for Advanced, so an older copy still reads Advanced right; Advanced shows the extra beat and sound tools: each beat row's sound picker gets Speed, beats get Swing, and each beat can have its own time signature), 🎨 Look (the person's pad skin: a sample pad in each of the seven, the chosen one shown playing; arrow keys move the choice), 📊 Data sharing (📊 Share play data and 📮 Send problem reports) and About. Every section but About folds under its heading (all closed at first; the device remembers which are open, in `localStorage` `settings-open`), with a chip saying its state where there is one (how many people, the level, the look, which of play data and reports are on). About is always open: a line on what the app is, then the version, the Privacy policy and Feedback, centered.
 
 **Feedback** (Ben, 2026-10-19; `web/feedback.js`): Send feedback, in About's row of links, asks the grown-up sum first, at every level, since kids use the app (`web/grown-up.js`, the same sum 🧸 Kids' ⚙️ asks; here a wrong answer says "That's not it. Here's another one." and asks a new sum). The right answer opens Send feedback, a small dialog centered on every width, phones too: one line (no names or contact details, nobody writes back, kept 90 days), a box of up to 2000 characters, Cancel and Send (✕ and Esc close it too, and focus goes back to Feedback). Send waits for something typed. It posts the text as typed to `POST /api/feedback` (text/plain, no cookies, an `X-Feedback` id kept for retries of the same text, `X-App-Version` the deployed commit or `dev`); 204 says "Thanks! Sent. 💌" and empties the box, anything else "Couldn't send. Please try again." and keeps it. Only noodlepads.com sends; a dev copy says so. A draft stays in the box until the page reloads (never stored). The Worker (flarepress's shared `handleFeedback`) stores it in the shared R2 bucket `app-suggestions` under `v1/noodlepads/<day>/<version>-<id>.txt`, with nothing of the sender, at most 10 messages a minute for the whole app; the telemetry runner's daily pull moves each to Ben's notes and drops it after 90 days. The text never goes into the event log, so problem reports and usage events never carry it. The pad size (`padSize`, `auto` or 0 to 1; an older percent, 50 to 220, or S M L reads as the nearest place) is a setting too, though its slider sits on the Pads screen.
-**📮 Send problem reports** (a checkbox in 📊 Data sharing, off by default, per device) sends the event log,
+**📮 Send problem reports** (a checkbox in 📊 Data sharing, off by default, per
+device; 📋 beside this device's code copies it) sends the event log,
 cleaned by `log-clean.js` so it holds no names and no audio, to the site's own
-`/api/log` when the page is hidden and 10 s after an error (`log-send.js`; plan
-in `docs/design/automatic-logs.md`). Settings are stored in IndexedDB `settings`
+`/api/log` when the page is hidden and 10 s after an error or a silent tap
+(`log-send.js`; plan in `docs/design/automatic-logs.md`). A silent tap
+(`web/tap-watch.js`) is a finger tap on a pad on Pads or 🧸 Kids, or a key or
+tile on 🎤 Live, that made no sound within 3 s; its `tap` entry says how far it
+got (`unheard`: the app's finger code never took it; `no-tap`: it took it but
+the lift played nothing; `no-sound`: no voice was made; `audio-off`: the audio
+wasn't running), what lay on top of the pad, the audio's state, open dialogs,
+and how long the page had run and been shown. At most 5 a page load. Settings are stored in IndexedDB `settings`
 and included in backups, `sendLogs` too; the device code is in localStorage
 `log-device` and never goes in a backup.
 
