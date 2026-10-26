@@ -749,6 +749,45 @@ test("daily caps: a deleted profile gives no place back; the deploy checks' have
   assert.equal((await c.call('POST', 'profiles', { body: look('p-e2e-mv4cyiqj-e1ew') })).status, 429, "and the checks' cap holds too");
 });
 
+// Ben, 2026-10-26: one profile must not drain the site's daily caps (5,000
+// pushes, 500 shares) for every family; a minute's rate limit can't guard a
+// day. Each profile has its own allowance a UTC day, on a counter of its own.
+test("daily caps: each profile has its own allowance of pushes, new sounds and shares a day, refused as this profile's busy", async () => {
+  const c = cloud();
+  const key = await made(c, 'p-one');
+  const other = await made(c, 'p-two');
+  const day = (name) => c.env.DB.rows("SELECT n FROM counters WHERE name = ? AND day = '2026-10-11'", name)[0]?.n ?? 0;
+  const setDay = (name, n) => c.env.DB.db.prepare("INSERT INTO counters (name, day, n) VALUES (?, '2026-10-11', ?) ON CONFLICT (name, day) DO UPDATE SET n = excluded.n").run(name, n);
+  const push = (k, id, n) => c.call('POST', `profiles/${id}/records`, { key: k, body: { put: [{ kind: 'beats', id: `beat-${n}`, body: { name: 'x' } }] } });
+  setDay('profile:p-one:pushes', LIMITS.profilePushesPerDay - 1);
+  assert.equal((await push(key, 'p-one', 1)).status, 200, 'the last of its allowance');
+  const sitePushes = day('pushes');
+  const over = await push(key, 'p-one', 2);
+  assert.deepEqual([over.status, over.data.error, over.data.mine], [429, 'busy', true], "over: busy, and it says it is this profile's");
+  assert.equal(day('pushes'), sitePushes, "a refused push spends none of the site's");
+  assert.equal((await push(other, 'p-two', 1)).status, 200, 'another family pushes on');
+
+  const start = (n) => c.call('POST', 'profiles/p-one/sounds', { key, body: { sha256: sha(n), bytes: 10, mime: 'audio/wav' } });
+  assert.equal((await start(1)).status, 201);
+  setDay('profile:p-one:sounds', LIMITS.profileSoundsPerDay);
+  assert.deepEqual([(await start(2)).status, (await start(2)).data.mine], [429, true], 'a new sound waits for tomorrow');
+  assert.equal((await start(1)).status, 200, 'asking again about one it has is never refused');
+
+  const share = (n) => c.call('POST', 'profiles/p-one/shares', { key, body: { kind: 'beat', title: `Beat ${n}`, bundle: { beats: [{ id: 'beat-1' }] } } });
+  assert.equal((await share(1)).status, 201);
+  setDay('profile:p-one:shares', LIMITS.profileSharesPerDay);
+  assert.deepEqual([(await share(2)).status, (await share(2)).data.mine], [429, true]);
+  assert.equal((await share(1)).status, 200, 'the same snapshot gets its code back');
+
+  // A new UTC day: the allowance is whole again, and a profile made sweeps
+  // the days before (one row a day per profile, never piling up).
+  c.later(86400000);
+  assert.equal((await push(key, 'p-one', 3)).status, 200);
+  await made(c, 'p-three');
+  assert.deepEqual(c.env.DB.rows("SELECT name, day FROM counters WHERE name LIKE 'profile:%'"), [{ name: 'profile:p-one:pushes', day: '2026-10-12' }]);
+  assert.ok(c.env.DB.rows("SELECT 1 FROM counters WHERE name = 'pushes' AND day = '2026-10-11'").length, "the site's own counters are kept");
+});
+
 // The security seat, 2026-10-26: p-smoke-/p-e2e- is an id anyone can type, so
 // a check profile holds only what a check needs, never shows, and goes soon.
 test("a deploy check's profile holds 64 KB of records, one sound of 4 MB and one share, never shows in the list, and goes after 10 minutes", async () => {

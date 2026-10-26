@@ -440,6 +440,8 @@ test('no cloud here (the dev server, a static copy) or no network: a CloudError 
 test('a rate limit says busy right now, a daily cap says busy today', () => {
   assert.equal(cloudTrouble(new CloudError(429, { error: 'slow' })), 'The cloud is busy right now. Try again in a minute.');
   assert.equal(cloudTrouble(new CloudError(429, { error: 'busy' })), 'The cloud is busy today. Try again tomorrow.');
+  // One profile's own daily allowance (worker/cloud.js withinProfileDaily) says it is this profile's.
+  assert.match(cloudTrouble(new CloudError(429, { error: 'busy', mine: true })), /^This profile has done a lot in the cloud today\. It catches up tomorrow/);
   assert.match(cloudTrouble(new CloudError(429, { error: 'wait', wait: 600 })), /Too many wrong tries\. Wait 10 minutes/);
 });
 

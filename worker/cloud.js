@@ -7,7 +7,7 @@ import { PERSON_ID, PERSON_COLORS, OLD_PERSON_COLORS } from '../web/model.js';
 import { isListedEmoji } from '../web/emoji-check.js';
 import { isFunName } from '../web/names.js';
 import { CLOUD_ID } from '../web/reid.js';
-import { ORIGIN, json, fail, Refuse, readJson, readBytes, randomId, sha256Hex, toBytes, withinDaily } from './http.js';
+import { ORIGIN, json, fail, Refuse, readJson, readBytes, randomId, sha256Hex, toBytes, withinDaily, utcDay } from './http.js';
 import { isPin, newSalt, hashSecret, checkSecret, shareCode, isShareCode, plainCode } from './pin.js';
 import { noteEvent, forgetProfile } from './metrics.js';
 import { allowed } from './events-worker.js';
@@ -28,6 +28,12 @@ export const LIMITS = {
   checkProfilesPerDay: 100,          // the deploy checks' (TEST_PROFILE): two a deploy
   pushesPerDay: 5000,
   sharesPerDay: 500,
+  // One profile's own share of a day (UTC), so it can't use up the site's
+  // caps above for every family: a fifth of the pushes, a tenth of the
+  // shares, and new sounds (each one D1 rows written).
+  profilePushesPerDay: 1000,
+  profileSoundsPerDay: 2000,
+  profileSharesPerDay: 50,
   perPush: 200,                      // records in one push
   recordBytes: 512 * 1024,           // one record's JSON (a long take is about 400 KB)
   pushBytes: 4 * 1024 * 1024,        // one push's body
@@ -175,6 +181,18 @@ function checkLooks(body, { partial = false } = {}) {
 // the person up as new (web/state.js reIdStoredPeople).
 export { CLOUD_ID };
 
+// One profile's daily allowance (LIMITS.profile…PerDay), counted in
+// `counters` under a name of its own, "profile:<id>:<what>" (one row a day
+// each; makeProfile sweeps the days before today). Over it: 429 'busy' with
+// `mine`, which the app says is this profile's limit for today.
+const PROFILE_COUNTER = 'profile:';
+async function withinProfileDaily(env, id, what, limit, now) {
+  if (!await withinDaily(env, `${PROFILE_COUNTER}${id}:${what}`, limit, now)) throw new Refuse(429, 'busy', { mine: true });
+}
+// The rows of days before today, by the primary key's range (no table scan).
+const sweepProfileCounters = (env, now) => env.DB.prepare("DELETE FROM counters WHERE name >= ? AND name < ? AND day < ?")
+  .bind(PROFILE_COUNTER, 'profile;', utcDay(now)).run();
+
 // The deploy checks' throwaway profiles (tools/look-cloud.mjs testId; as
 // tools/cloud_admin.py TEST_PREFIXES). Such an id gets caps of its own, just
 // big enough for the checks: 100 a day, 64 KB of records, one sound of at
@@ -233,6 +251,7 @@ async function makeProfile(request, env, now, seen) {
   const look = checkLooks(body);
   if (body.pin !== undefined && body.pin !== null && !isPin(body.pin)) throw new Refuse(400, 'pin');
   await dropOldChecks(env, now);
+  await sweepProfileCounters(env, now);
   if (await env.DB.prepare('SELECT 1 AS x FROM profiles WHERE id = ?').bind(body.id).first()) throw new Refuse(409, 'exists');
   const { n } = await env.DB.prepare('SELECT COUNT(*) AS n FROM profiles').first();
   if (n >= LIMITS.profiles) throw new Refuse(507, 'full');
@@ -466,6 +485,7 @@ async function push(request, env, id, now, seen) {
   const touched = JSON.stringify([...after.values()].map((r) => [r.kind, r.id, r.size]));
   const before = (await env.DB.prepare(`SELECT ${SIZE} AS size FROM ${TOUCHED}`).bind(touched, id).all()).results;
   const growth = [...after.values()].reduce((sum, r) => sum + r.size, 0) - before.reduce((sum, r) => sum + r.size, 0);
+  await withinProfileDaily(env, id, 'pushes', LIMITS.profilePushesPerDay, now);
   if (!await withinDaily(env, 'pushes', LIMITS.pushesPerDay, now)) throw new Refuse(429, 'busy');
   // The sounds deleted clips held, to delete once nothing names them.
   const goneClips = del.filter((r) => r.kind === 'clips').map((r) => r.id);
@@ -590,6 +610,8 @@ async function startSound(request, env, id, now) {
   const have = await env.DB.prepare('SELECT id, chunks FROM sounds WHERE profile_id = ? AND sha256 = ? AND bytes = ?')
     .bind(id, sha256, bytes).first();
   if (have) return json(200, { id: have.id, need: await need(env, have.id, have.chunks) });
+  // Only a new sound counts: asking again about one it has writes nothing.
+  await withinProfileDaily(env, id, 'sounds', LIMITS.profileSoundsPerDay, now);
   const cap = isCheck(id) ? CHECK_LIMITS.soundBytes : LIMITS.profileBytes;
   const most = isCheck(id) ? CHECK_LIMITS.sounds : Number.MAX_SAFE_INTEGER;
   const soundId = newSoundId();
@@ -696,6 +718,7 @@ async function makeShare(request, env, id, now, seen) {
   if (same) return json(200, { code: same.code });
   const { n } = await env.DB.prepare('SELECT COUNT(*) AS n FROM shares WHERE profile_id = ?').bind(id).first();
   if (n >= (isCheck(id) ? CHECK_LIMITS.shares : LIMITS.sharesPerProfile)) throw new Refuse(507, 'shares full');
+  await withinProfileDaily(env, id, 'shares', LIMITS.profileSharesPerDay, now);
   if (!await withinDaily(env, 'shares', LIMITS.sharesPerDay, now)) throw new Refuse(429, 'busy');
   let code = null;
   for (let i = 0; i < 5 && !code; i++) {

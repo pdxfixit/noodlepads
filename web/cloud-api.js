@@ -1,7 +1,7 @@
 // The cloud's routes (worker/cloud.js) as functions, with `fetch` passed in so
 // the tests can point them straight at the Worker. Every failure is a
 // CloudError: `status` 0 when the network or the API isn't there, else the
-// HTTP status, with what the Worker said (`error`, `wait`, `tries`, `over`).
+// HTTP status, with what the Worker said (`error`, `wait`, `tries`, `over`, `mine`).
 //
 // A person id goes to the cloud only when it is a random one (reid.js
 // CLOUD_ID): any other is refused here, before anything is sent, as a
@@ -129,6 +129,8 @@ export function cloudTrouble(err) {
   if (err.status === 429 && err.wait) return `Too many wrong tries. Wait ${Math.ceil(err.wait / 60)} minutes, then try again.`;
   // A minute's rate limit (worker/cloud.js slowDown), apart from the daily caps.
   if (err.status === 429 && err.error === 'slow') return 'The cloud is busy right now. Try again in a minute.';
+  // One profile's daily allowance (worker/cloud.js withinProfileDaily), apart from the site's.
+  if (err.status === 429 && err.mine) return 'This profile has done a lot in the cloud today. It catches up tomorrow, and everything still works here.';
   if (err.status === 429) return 'The cloud is busy today. Try again tomorrow.';
   if (err.status === 401 && err.error === 'pin') return `That PIN isn't right. ${err.tries} ${err.tries === 1 ? 'try' : 'tries'} left before a 10-minute wait.`;
   if (err.status === 401) return 'This device needs to open this profile again (its PIN changed).';
