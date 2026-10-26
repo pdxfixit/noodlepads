@@ -308,7 +308,7 @@ const VIEWS = {
   keep: { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('latin') + q('[data-groove="ska"]') + 'await new Promise((r) => setTimeout(r, 300));' },
   // A fresh device has the empty scratch beat open (ADR 0020). 🆕 New opens it blank (Ben, 2026-10-12);
   // KEEP_NEW is New, + Add a row and 💾 Keep: a named beat in 🗂️ My beats.
-  beat: { screen: 'beats', js: q('.beat-bar [data-beat-new]') },
+  'beat-new': { screen: 'beats', js: q('.beat-bar [data-beat-new]') },
   // The beat bar with the longest name (24 characters) typed into the scratch's title: one
   // line on a wide screen, 💃 ⌨️ 🗂️ on their own row above it on a phone; keys-long-name with ⌨️ Keys on.
   'beat-long-name': { screen: 'beats', js: LONG_NAME('.beat-bar') },
@@ -486,23 +486,29 @@ const VIEWS = {
     for (const d of String(a)) document.querySelector('#kids-sum-keys [data-digit="' + d + '"]').click(); ${nap}
     const t = document.querySelector('#feedback-text'); t.value = 'The burp pad is the best. Could Beats have a cowbell? 🐄'; t.dispatchEvent(new Event('input')); ${nap}` },
 };
+// The views built after the table. A name is taken once: a second view of
+// the same name would replace the first unseen (`beat` once replaced 🆕 New's).
+const more = (name, view) => {
+  if (Object.hasOwn(VIEWS, name)) throw new Error(`look.mjs: two views called ${name}`);
+  VIEWS[name] = view;
+};
 // 🧸 Kids (ADR 0019): the person on the Kids level, on each of its tabs;
 // kids-mine adds six made-up sounds of the kid's own (they come first);
 // kids-sum is the grown-up sum behind ⚙️. Every other view puts the level
 // back to Regular first (the views share one browser).
 const KIDS = (tab) => `(await import('/settings.js')).setSetting('level', 'kids'); ${nap} ${q(`[data-kids-tab="${tab}"]`)} ${nap}`;
-for (const tab of ['pads', 'record', 'beats', 'keys']) VIEWS[`kids-${tab}`] = { screen: 'pads', kids: true, js: KIDS(tab) };
-VIEWS['kids-mine'] = { screen: 'pads', kids: true, js: `${MINE} ${KIDS('pads')} ${q('[data-kids-tab="record"]')} ${q('[data-kids-tab="pads"]')}` };
-VIEWS['kids-sum'] = { screen: 'pads', kids: true, js: `${KIDS('pads')} ${q('#settings-open')}` };
+for (const tab of ['pads', 'record', 'beats', 'keys']) more(`kids-${tab}`, { screen: 'pads', kids: true, js: KIDS(tab) });
+more('kids-mine', { screen: 'pads', kids: true, js: `${MINE} ${KIDS('pads')} ${q('[data-kids-tab="record"]')} ${q('[data-kids-tab="pads"]')}` });
+more('kids-sum', { screen: 'pads', kids: true, js: `${KIDS('pads')} ${q('#settings-open')}` });
 // A new kid's first steps (ADR 0028): the 👆 hand over the first pad (add --reduced-motion to see it still).
-VIEWS['kids-hand'] = { screen: 'pads', kids: true, firstSteps: true, js: `${FRESH} ${KIDS('pads')}` };
-for (const s of Object.keys(SCREENS)) VIEWS[s] = { screen: s, js: '' };
-VIEWS.beat = VIEWS.beats;   // the singular too: "just look beat" was a usage error (2026-10-12)
-VIEWS['keys-on'] = { screen: 'beats', keys: true, js: '' };   // Beats with ⌨️ Keys on, the empty scratch open
-VIEWS.dj = VIEWS.live;   // the old name of 🎤 Live
+more('kids-hand', { screen: 'pads', kids: true, firstSteps: true, js: `${FRESH} ${KIDS('pads')}` });
+for (const s of Object.keys(SCREENS)) more(s, { screen: s, js: '' });
+more('beat', VIEWS.beats);   // the singular too: "just look beat" was a usage error (2026-10-12)
+more('keys-on', { screen: 'beats', keys: true, js: '' });   // Beats with ⌨️ Keys on, the empty scratch open
+more('dj', VIEWS.live);   // the old name of 🎤 Live
 // Each ❓ Help tab on its own: help-pads, help-sounds, help-beats, help-song, help-live, help-settings.
 for (const tab of ['pads', 'sounds', 'beats', 'song', 'live', 'settings']) {
-  VIEWS[`help-${tab}`] = { screen: 'pads', js: q('#help-open') + q(`#help-tabs [data-help="${tab}"]`) };
+  more(`help-${tab}`, { screen: 'pads', js: q('#help-open') + q(`#help-tabs [data-help="${tab}"]`) });
 }
 const MIN_TAP = 44;
 
@@ -512,6 +518,13 @@ function usage(msg) {
   console.error('usage: just look [pads|beats|keys-on|song|live|VIEW ...] [--advanced] [--top PX] [--scroll PX | --scroll-to SELECTOR] [--js CODE | --js-file PATH] [--url URL] [--out DIR] [--widths 320,375,...] [--wide] [--bg NAME,...|all|none] [--skin ID,...|all] [--reduced-motion] [--cpu RATE] [--height PX]');
   console.error(`skins: ${SKIN_IDS.join(' ')}`);
   process.exit(2);
+}
+
+// --views PATH writes the table as JSON and stops: tests/look-views.test.mjs
+// checks every view's names, and what its scripts reach into in web/.
+if (process.argv[2] === '--views') {
+  fs.writeFileSync(process.argv[3], JSON.stringify(VIEWS));
+  process.exit(0);
 }
 
 const opts = { screens: [], js: '', url: '', out: '', advanced: false, reduced: false, cpu: 1, height: 800, top: 0, scroll: null, scrollTo: '', widths: [320, 375, 700, 900, 1100], bgs: [''], skins: [''] };

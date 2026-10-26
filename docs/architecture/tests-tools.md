@@ -176,6 +176,7 @@ what it forces an agent to do.
 | `architecture.test.mjs` | (since `22b41aa`; the first test is TODO until the area files land) every `web/` and `worker/` module is named in `docs/architecture/`; every backticked file and every backticked "file.js name" pair it cites exists; the ✅ claims (one AudioContext, the offline renders, the recorders, the schedulers) | update `docs/architecture/` in the same commit |
 | `question-cards.test.mjs` | every card in docs/questions.md has its own number | renumber |
 | `justfile.test.mjs` | every public recipe has a `just --list` line that does not start mid-sentence; every recipe is named in AGENTS.md, README.md, how-to, deploy-cloudflare or layout; every `just <recipe>` that AGENTS.md, README.md, TODO.md, `docs/*.md` and `docs/architecture/` name exists (`ELSEWHERE` lists other repos' recipes); every tool in `tools/` is named there; deploy runs flarepress's check, stamp and verify; `site.conf committed=` holds web, worker and site; `wrangler.toml` holds no ids; deploy.yml runs the tests and the release checks before the action and the live checks after | document the recipe or tool; fix a doc that names a gone recipe |
+| `look-views.test.mjs` | `tools/look.mjs VIEWS` (through `--views PATH`): each view name taken once; `beat` is Beats, `dj` is Live | rename the new view |
 | `tools/test_justfile.py` | every recipe has a doc; README "Running it yourself" names exactly the recipes; `test-quiet` prints only the failures and keeps the log | add the recipe to README |
 | `tools/test_node_tests.py`, `unended-reporter.test.mjs` | a file a cut run left a test unreported in runs again alone, and fails the run when it fails there; a "▶" with no file named fails | — |
 | `headers.test.mjs` | `web/_headers`: the CSP closed by default, no inline or eval, no outside origin but Cloudflare's beacon, fonts only from `web/fonts/`, microphone and screen share for this site | change the CSP line on purpose |
@@ -290,18 +291,21 @@ with the decision it rests on.
 | `still` | screenshot the 800 px window as the script left it (a popover a scroll would close) |
 | `page` | open that page of the site instead of the app (no view uses it today) |
 
-Built after the table: `kids-pads`, `kids-record`, `kids-beats`,
+Built after the table, through `more(name, view)`, which throws on a name
+already taken: `kids-pads`, `kids-record`, `kids-beats`,
 `kids-keys`, `kids-mine`, `kids-sum`, `kids-hand`; one view per screen
 (`pads`, `beats`, `song`, `live`); `keys-on`; `help-pads` … `help-settings`;
-the aliases `dj` (Live) and `beat`.
+the aliases `dj` (Live) and `beat` (Beats; 🆕 New's view is `beat-new`).
 
 **To add a view:** add the entry with a comment above it saying what it
 shows; write `js` to set a state, never to toggle one (each width reloads
 the page but keeps storage: open a group only if `aria-expanded` is not
 `"true"`); use the shared snippets (`q`, `nap`, `OPEN_KIT`,
 `GROOVE_GROUPS_OPEN`, `MINE`, `OWN_SOUND`, `PLAYLIST`, `LISTEN_FAKE`,
-`PIN_LINK`); run `just look <view> --wide`. Nothing tests the views, and no
-test checks that the view names the docs cite still exist.
+`PIN_LINK`); run `just look <view> --wide`. No test runs a view in Chrome;
+`tests/look-views.test.mjs` reads the table through `node tools/look.mjs
+--views PATH` (it writes `VIEWS` as JSON and stops) and fails on a name used
+twice, in the table or after it.
 
 **What a view reaches into.** Views and `look-cloud.mjs` call app internals
 by string: module exports (`pads.js renderPads`, `pads.js ownClosed`,
@@ -492,7 +496,7 @@ them, once older than `TEST_GRACE_MS`, for `cloud-prune --smoke`.
 | `--test-force-exit` is needed for app files (their intervals never end); it can cut the last reports of a parallel run | `just test` prints ⚠️ for a started test with no end and reruns its file alone (`node_tests.sh`) |
 | Every `web/` file is in `sw.js SHELL` or `NOT_LOADED` | `offline.test.mjs` |
 | `just look --js` sets state, never toggles it: widths share storage | none |
-| A view named `beat` is defined in `VIEWS` and then replaced by `VIEWS.beat = VIEWS.beats`, so its 🆕 New script never runs | none |
+| A `just look` view name is taken once | `look.mjs more`, `look-views.test.mjs` |
 | `tests/telemetry.test.mjs` checks `events.toml` only beside the telemetry repo: a worktree and CI skip it | none |
 
 ## To change X, touch …
