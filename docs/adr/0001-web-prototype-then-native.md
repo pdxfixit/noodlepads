@@ -1,7 +1,7 @@
 # 0001. v1 is a web prototype; v2 is a native Android app
 
 - **Status:** Accepted
-- **Date:** 2026-09-27
+- **Date:** 2026-09-27; imports added 2026-10-26
 - **Decided by:** Ben, 2026-09-27
 
 **In short.** Build the soundboard first as a plain web page, to learn what the kids actually use. Then build the lasting app natively in Kotlin + Compose. Only `boards.json` and the sound files carry over; the web code is thrown away.
@@ -16,7 +16,8 @@
 
 - **v1** is `web/`: plain HTML, CSS and ES modules, with no build step and no dependencies. It is deployed on one Worker with one D1 database ([ADR 0002](0002-cloud-profiles-on-one-worker.md)).
 - **v2** is a native Kotlin + Compose Android app, the same stack as Arrow-Rama and Orbit, not a wrapped web page.
-- What carries over: the `boards.json` format and the clip files. The voices are reimplemented, or rendered ahead of time (still open, `TODO.md`).
+- What carries over: the `boards.json` format and the clip files. v2 has its own stored formats and starts fresh.
+- **v2 imports v1 backups** (format 1.x), so the players already on v1 bring their sounds, beats and songs across (Ben, 2026-10-26). From format 1.2, a v1 backup also carries each own sound **as heard** (rendered with its voice and edits), so v2 imports sounds without a voice engine of its own. Whether v2 has voices for new sounds is still open (`TODO.md`).
 
 ## Options turned down
 

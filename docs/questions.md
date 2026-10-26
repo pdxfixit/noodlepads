@@ -8,12 +8,6 @@ When Ben answers, record the answer in [decisions.md](decisions.md) (and an ADR 
 
 From the council's first round (2026-10-26, `docs/council.md`), asked in the chat one at a time; a card is deleted when its answer is recorded. Cards marked ⛔ are blocks against one of your rules: the seat stopped the work, and only you can uphold or overrule it.
 
-### Q68. Do a kid's own sounds, beats and songs carry over to v2?
-
-**Recommend:** yes, so I write the formats down now (a format spec, plus fixed sample files every version must load).
-ADR 0001 carries only `boards.json` and the clips. The Android and architect seats: everything a family made lives only in JS's meaning of it, with no spec. Also: does v2 use the same cloud, and what is its lowest Android version?
-**Answer:**
-
 ### Q69. Names of real products: 808, Motown, Chrome and Edge.
 
 **Recommend:** rename "808" to "Boom bass" and "Motown" to "Detroit soul"; keep "Chrome or Edge", which says where 🎧 From a song works.
