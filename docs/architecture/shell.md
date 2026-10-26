@@ -532,7 +532,7 @@ scrolled and wires ⬆️ (`#to-top`, smooth unless reduced motion, focus to
 |---|---|---|
 | Any first key or pointer | page | `audio.wake()` (capture, once) |
 | Number row, letters | 🎤 Live, Beats with ⌨️ Keys | `dj.keydown` / `dj.keyup` (first in `bindEvents`' keydown) |
-| Esc | page | `dj.escape()` when the keys show; else clear chosen sounds (`pads.js clearChosen`); else `audio.stopAll()` |
+| Esc | page | `dj.escape()` when the keys show; else clear chosen sounds (`pads.js clearChosen`); else `stopEverything`, as Space (`tests/stop-clicks.test.mjs`) |
 | Space | page, not on a control, not in a field, not repeated, not Shift | `stopEverything` (`app.js spaceStops`; `tests/space-stops.test.mjs`) |
 | ← → | page | `stepPerson` |
 | 1–9 | 🔊 Pads, not editing | `tapPad` on that pad, with `flash` |
@@ -592,7 +592,6 @@ blocks beside each animation. Pads size by container queries (`@container`,
 
 | Seam | Where | What a fix in one place misses |
 |---|---|---|
-| Esc and Space stop different things | `app.js bindEvents`: Esc → `audio.stopAll()` (pads and loops only); Space → `stopEverything` (also the beat, the song, both ⏲️ clicks) | Help's Pads line and the comment in `bindEvents` say "Space (or Esc) stops everything"; a beat keeps playing after Esc (by reading the code; no test) |
 | Two "a quiet moment" checks, two 2 s polls | `app.js` `busy` for `initUpdate`; `nudge.js quiet` | a new busy state (a new recorder, a new player) must go into `busy`; the nudge only checks dialogs and the update bar |
 | Kids showing vs the Kids level | `app.js applyKids` uses `kidsVisit`/`grownUp`; `tips.js guided`, `kidsHint` and `nudge.js` read only `level` | on a 🧸 visit by a Regular person, tips count as "guided" and no 👆 hand shows; a fix to "is Kids on" must touch all of them |
 | Saving a beat, three copies | `beatLibrary.put`, `initKids` `saveBeat`, `adoptKidsBeat` (`db.batch`) | a change to how a beat is stored (cloning, a new index) |

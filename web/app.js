@@ -506,7 +506,7 @@ for (const b of document.querySelectorAll('[data-move-open]')) b.addEventListene
     if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
     if (keysShow() && dj.keydown(e)) return;
     if (e.key === 'Escape' && keysShow() && dj.escape()) return;
-    if (e.key === 'Escape') { if (hasChosen()) clearChosen(); else audio.stopAll(); return; }
+    if (e.key === 'Escape') { if (hasChosen()) clearChosen(); else stopEverything(); return; }
     if (spaceStops(e)) { e.preventDefault(); stopEverything(); return; }
     if (e.key === 'ArrowRight') { stepPerson(1); return; }
     if (e.key === 'ArrowLeft') { stepPerson(-1); return; }

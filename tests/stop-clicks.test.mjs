@@ -44,6 +44,23 @@ test('Space, which is Stop all, turns them off too', async () => {
   assert.equal(on('#dj-click'), false);
 });
 
+// Help and the guide: "Space (or Esc) stops everything". Esc stopped only
+// the pads and loops (audio.stopAll); a playing beat kept going.
+test('Esc on the page is Stop all too: a playing beat stops, and the click tracks go off', async () => {
+  $('#beats-toggle').dispatch('click');
+  const playing = () => $('#seq-play').getAttribute('aria-pressed') === 'true';
+  $('#seq-play').dispatch('click');
+  await page.settle();
+  assert.equal(playing(), true, 'the beat plays');
+  turnOn();
+  page.key('Escape');
+  await page.settle();
+  assert.equal(playing(), false, 'Esc stops it');
+  assert.equal(on('#seq-click'), false);
+  assert.equal(on('#dj-click'), false);
+  $('#pads-tab').dispatch('click');
+});
+
 test('each stays off until its own ⏲️ is tapped: one turned back on leaves the other off', async () => {
   turnOn();
   $('#stop-all').dispatch('click');
