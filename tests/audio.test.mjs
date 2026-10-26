@@ -186,3 +186,39 @@ test('a sound at a rate: twice as fast is an octave up and lasts half as long, u
   audio.playing.clear();
   audio.ctx = null;
 });
+
+// A context that makes no sound, for audio.context() to build; `listeners`
+// keeps what the page listens to on it.
+class SilentContext {
+  state = 'running'; currentTime = 0; destination = {}; listeners = {}; resumes = 0;
+  createGain() { return { connect() {}, gain: { value: 1 } }; }
+  createDynamicsCompressor() { const p = () => ({ value: 0 }); return { connect() {}, threshold: p(), knee: p(), ratio: p(), attack: p(), release: p() }; }
+  createAnalyser() { return { connect() {}, fftSize: 0 }; }
+  addEventListener(type, fn) { this.listeners[type] = fn; }
+  resume() { this.resumes++; return Promise.resolve(); }
+}
+// Runs `fn` with a page of this navigator and document around audio.js.
+function withPage({ navigator = {}, document = { visibilityState: 'visible' } }, fn) {
+  const was = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const before = { window: globalThis.window, document: globalThis.document };
+  Object.defineProperty(globalThis, 'navigator', { value: navigator, configurable: true, writable: true });
+  Object.assign(globalThis, { window: { AudioContext: SilentContext }, document });
+  try { return fn(); } finally {
+    if (was) Object.defineProperty(globalThis, 'navigator', was); else delete globalThis.navigator;
+    Object.assign(globalThis, before);
+  }
+}
+
+test('iOS: the page asks for a playback audio session before its first sound, so the ringer switch does not silence it', async () => {
+  const { audio } = await import('../web/audio.js');
+  const session = { type: 'auto' };
+  withPage({ navigator: { audioSession: session } }, () => {
+    audio.ctx = null;
+    audio.context();
+    assert.equal(session.type, 'playback');
+  });
+  // A browser without the Audio Session API, or one that refuses it, still plays.
+  withPage({}, () => { audio.ctx = null; assert.ok(audio.context()); });
+  withPage({ navigator: { audioSession: { set type(v) { throw new Error(`no ${v}`); } } } }, () => { audio.ctx = null; assert.ok(audio.context()); });
+  audio.ctx = null;
+});

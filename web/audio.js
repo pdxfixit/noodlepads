@@ -198,6 +198,11 @@ export const audio = {
 
   context() {
     if (!this.ctx) {
+      // iOS Safari plays Web Audio silently while the ringer switch is off,
+      // unless the page says it plays sound on purpose (Audio Session API,
+      // Safari 16.4+). Set before the context exists, so its first sound
+      // already plays; browsers without it skip it.
+      try { if (globalThis.navigator?.audioSession) globalThis.navigator.audioSession.type = 'playback'; } catch { /* not settable here */ }
       const Ctx = window.AudioContext || window.webkitAudioContext;
       this.ctx = new Ctx({ latencyHint: 'interactive' });
       this.master = this.ctx.createGain();

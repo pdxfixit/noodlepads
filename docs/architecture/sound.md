@@ -30,7 +30,9 @@ beats and a song) that only ends in the app's normal beat and song saving.
 ## The AudioContext and the output graph
 
 `audio.js audio.context()` makes the context on first call (`latencyHint:
-'interactive'`) and wires the output once:
+'interactive'`), first setting `navigator.audioSession.type = 'playback'`
+where the browser has it (iOS Safari would otherwise play nothing with the
+ringer switch off), and wires the output once:
 
 ```
 every live sound ─► audio.master (Gain 1) ─► audio.limiter (DynamicsCompressor:
