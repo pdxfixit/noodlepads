@@ -21,7 +21,7 @@
 | `touch.js` | `dj.js`, `dj-touch.js`, `rhythm.js`, `backup.js` | `touch-grid.js` | nothing (pure) |
 | `touch-grid.js` | `touch.js`, `dj-touch.js` | none | nothing (pure) |
 | `finger.js` | `dj.js`, `kids.js`, `pads.js` | none | one follower per caller |
-| `kids.js` | `app.js` (`initKids`, `showKids`, `refreshKids`, `kidsShowing`, `kidsBusy`, `askGrownUp`, `kidsKeydown`, `kidsKeyup`) | `audio.js`, `kids-logic.js`, `grown-up.js`, `scratch.js`, `settings.js`, `skins.js`, `tips.js`, `finger.js`, `meter.js levelOf`, `notes.js startsIn`, `sequencer.js` (`STEPS`, `noteRate`), `instruments.js` | the tab, the page, the recorder, the beat player, held toy keys, the tune recording |
+| `kids.js` | `app.js` (`initKids`, `showKids`, `refreshKids`, `kidsPersonLeaving`, `kidsShowing`, `kidsBusy`, `askGrownUp`, `kidsKeydown`, `kidsKeyup`) | `audio.js`, `kids-logic.js`, `grown-up.js`, `scratch.js`, `settings.js`, `skins.js`, `tips.js`, `finger.js`, `meter.js levelOf`, `notes.js startsIn`, `sequencer.js` (`STEPS`, `noteRate`), `instruments.js` | the tab, the page, the recorder, the beat player, held toy keys, the tune recording |
 | `kids-logic.js` | `kids.js`, `grown-up.js` (`makeSum`, `typeDigit`) | `sequencer.js` (`cleanRow`, `STEPS`, `multiplyRows`), `notes.js addNote`, `voices.js` (`chainFields`, `voiceStep`), `scratch.js SCRATCH_NAME`, `instruments.js versionFor` | nothing (pure) |
 | `grown-up.js` | `kids.js askGrownUp`, `feedback.js` | `kids-logic.js`, `dialogs.js` | the one `#kids-sum` dialog and who asked it (`ask`) |
 
@@ -268,7 +268,7 @@ Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, �
 - **In:** ends Edit sounds, `dj.leave()` and `dj.shown(false)` (the keys' ⏲️ stops ticking), `seq.stop()`, `song.stop()`, `audio.stopAll()`, `dj.stopReplay()`, closes every open dialog, `body.kids`, `kids.js showKids(true)`, usage screen `'kids'`.
 - **Out:** `showKids(false)` stops the tune, the beat, the recorder and held keys, and closes its sum (`closeSum('kids')`); then `showView` (the beat maker reads the kid's squares again) and `refitLines`.
 - `grownUp` (a grown-up let out a Kids-level person) and `kidsVisit` (a Regular or Advanced person visiting) last until reload. The level never changes by the sum (questions.md Q63).
-- A person change calls `refreshKids` (stops tune and beat, redraws).
+- A person change calls `kidsPersonLeaving` first (`showPerson`, `startOver`): the mic stops and keeps the recording as the first kid's pad, a tune recording lands its held keys in their beat, and `lastId` is forgotten (a deleted kid's are dropped). Then `refreshKids` (stops the beat, redraws).
 
 ### The grown-up gate (`grown-up.js`)
 
@@ -432,7 +432,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | Every remembered key (`dj-input`, `dj-size`, `dj-click`, `beat-keys`, `kids-tab`) starts the app safely | `startup-remembered.test.mjs` |
 | A take's `ring` is stored only when true, only on a hit | `overlap.test.mjs`, `rhythm.test.mjs` |
 | Leaving Kids shows the beat maker again, so it holds the kid's squares, never an older copy to save over them | `kids-scratch-back.test.mjs` |
-| A Kids recording is kept as the kid's who was recording, even if the person changes before it is kept (`listen` → `keep(…, { pid })`) | `kids-mic-person.test.mjs` |
+| A Kids recording is kept as the kid's who was recording, named, pictured and colored among their sounds, even if the person changes before it is kept (`listen` → `keep(…, { pid })`); a tune recording lands in their beat (`tuneRec.pid`); nothing of theirs shows for the next kid | `kids-mic-person.test.mjs`, `kids-person-change.test.mjs` |
 | Kids' square *i* is pill 2*i* of a 16-pill bar, in every bar | `kids.test.mjs` |
 | Kids' keys mean `instNotes` changes for the whole person | `kids.test.mjs` (🎹 instrument button) |
 | `kids-logic.js` stays importable in Node; it imports `sequencer.js`, so that module must stay importable too | every Kids unit test |

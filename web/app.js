@@ -43,7 +43,7 @@ import { initCloudUI, askToOpen, shareSounds } from './cloud-ui.js';
 import { renderPreview, renderAudio } from './share-render.js';
 import { initBackups, storeLoaded, whatIsHere, savePersonBackup } from './backup-ui.js';
 import { initSettingsUI, showSettings } from './settings-ui.js';
-import { initKids, showKids, refreshKids, kidsShowing, kidsBusy, askGrownUp, kidsKeydown, kidsKeyup } from './kids.js';
+import { initKids, showKids, refreshKids, kidsPersonLeaving, kidsShowing, kidsBusy, askGrownUp, kidsKeydown, kidsKeyup } from './kids.js';
 import { initHelp } from './help.js';
 import { initFeedback } from './feedback.js';
 import { initListen, showCard } from './listen-ui.js';
@@ -132,7 +132,11 @@ function startOver(note) {
   const left = people();
   // Before nobody is on show, so the keys let go of the one who was (gone:
   // their take in progress goes with them).
-  if (state.personId) dj?.personLeft({ keep: !!person(state.personId) });
+  if (state.personId) {
+    const keep = !!person(state.personId);
+    dj?.personLeft({ keep });
+    kidsPersonLeaving({ keep });
+  }
   state.personId = null;
   if (!left.length) { closeWhoNow(); addPerson(); return; }
   if (left.length === 1 && !needsPin(left[0].id)) { setPerson(left[0].id); return; }
@@ -155,6 +159,7 @@ function showPerson(p, { behind = false } = {}) {
   delete document.body.dataset.locked;
   if (state.personId && state.personId !== p.id) {
     dj?.personLeft();   // a take or a recording into the beat ends as the person's own
+    kidsPersonLeaving();   // and 🧸 Kids' mic or tune
     leftPerson(state.personId);
   }
   state.personId = p.id;
@@ -1048,9 +1053,9 @@ async function start() {
   });
   initKids({
     personId: () => state.personId,
-    clips: (opts) => clipsFor(state.personId, opts),
+    clips: (opts, pid = state.personId) => clipsFor(pid, opts),
     colorOf: (clip) => padColor(clip.color),
-    nextColor: () => nextClipColor(state.personId),
+    nextColor: (pid = state.personId) => nextClipColor(pid),
     // A recording, saved as the sound sheet saves one; `changed`: its voice changed.
     saveClip: async (clip, { changed = false } = {}) => {
       if (!changed) state.userClips.push(clip);

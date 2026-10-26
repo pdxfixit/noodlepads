@@ -503,8 +503,8 @@ function stopRecording({ discard = false, quiet = false } = {}) {
 }
 
 // A recording made into a pad of the kid's own (`pid`, who was recording),
-// as the sound sheet saves one, in the lit voice; then it plays (not after
-// ⏹️: `play` false).
+// as the sound sheet saves one, in the lit voice, named and pictured among
+// their sounds; then it plays (not after ⏹️: `play` false), if they still show.
 async function keep(blob, seconds, how, { play = true, pid } = {}) {
   if (seconds < MIN_RECORD_SECONDS) { wiggle(el.mic); return; }
   try {
@@ -514,22 +514,23 @@ async function keep(blob, seconds, how, { play = true, pid } = {}) {
     wiggle(el.mic);
     return;
   }
-  const mine = deps.clips({ includeHidden: true });
+  const mine = deps.clips({ includeHidden: true }, pid);
   const clip = {
     id: newId('user'),
     personId: pid,
     label: soundName(mine.map((c) => c.label)),
     emoji: pictureFor(new Set(mine.map((c) => c.emoji))),
-    color: deps.nextColor(),
+    color: deps.nextColor(pid),
     ...kidsVoiceFields(voice),
     blob,
     mime: blob.type,
     created: Date.now(),
   };
   await deps.saveClip(clip);
+  logEvent('kids', { recorded: Math.round(seconds * 10) / 10, voice: voice ?? 'normal', how });
+  if (deps.personId() !== pid) return;   // another kid shows now: nothing of this one's on their screen
   lastId = clip.id;
   if (kidsHint('mic')) markSeen('kids-mic');
-  logEvent('kids', { recorded: Math.round(seconds * 10) / 10, voice: voice ?? 'normal', how });
   page = 0;   // the new pad is the first one on Pads
   renderRecord();
   if (play) playLast();
@@ -590,8 +591,7 @@ const drumClips = () => {
 
 // The kid's beat: their scratch beat (ADR 0020), as stored, or a new empty
 // one with the four drums, saved once a square is tapped.
-function kidsBeat() {
-  const pid = deps.personId();
+function kidsBeat(pid = deps.personId()) {
   const found = scratchOf(deps.beats(pid), pid);
   if (found) return found;
   return newKidsBeat(pid, drumClips().map((c) => c?.id ?? null), scratchId(pid));
@@ -869,7 +869,7 @@ async function startTune() {
   if (!c) return;
   const beat = withBars(kidsBeat(), TUNE_BARS);
   if (beat !== kidsBeat()) deps.saveBeat(beat);
-  tuneRec = { mode: 'count', t0: 0, clipId: c.id, fresh: true, held: new Map(), timers: [], beeps: [], raf: 0, notes: 0 };
+  tuneRec = { pid: deps.personId(), mode: 'count', t0: 0, clipId: c.id, fresh: true, held: new Map(), timers: [], beeps: [], raf: 0, notes: 0 };
   const run = tuneRec;
   audio.load(c).catch(() => {});
   const step = 60 / beat.bpm;
@@ -907,7 +907,7 @@ function landNote(id) {
   const got = tuneRec?.held.get(id);
   if (!got) return;
   tuneRec.held.delete(id);
-  const beat = kidsBeat();
+  const beat = kidsBeat(tuneRec.pid);
   const dt = pillSeconds(beat.bpm);
   const total = STEPS * (beat.bars || 1);
   if (got.at < tuneRec.t0 - 2 * dt) return;   // long before the beat started: not meant for it
@@ -1046,6 +1046,19 @@ export function showKids(on) {
   }
   if (!was) { lastId = null; page = 0; }
   setTab(tab);
+}
+
+// Another person is about to show (app.js showPerson, startOver): what this
+// kid was making ends as theirs, before the next kid shows. The mic stops and
+// keeps the recording as their pad (keep files it under its `pid`), a tune
+// recording lands its held keys in their beat, and the voice buttons forget
+// their last sound. `keep: false` (the kid was deleted): nothing is kept.
+export function kidsPersonLeaving({ keep = true } = {}) {
+  if (!keep) tuneRec?.held.clear();
+  stopTune();
+  stopRecording({ discard: !keep });
+  releaseKeys();
+  lastId = null;
 }
 
 // Draws the current tab again: the person changed, or their sounds did.
