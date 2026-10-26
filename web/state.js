@@ -4,7 +4,7 @@
 // told it will not survive a reload.
 
 import { db, STORE_NAMES, SCHEMA } from './store.js';
-import { personEditRecord, adoptPeople, personIdsIn, personColor, isEmptyOverride, kitIdOf } from './model.js';
+import { personEditRecord, adoptPeople, personIdsIn, personColor, isEmptyOverride, presetOwners } from './model.js';
 import { isCloudId, reIdDoc } from './reid.js';
 import { newId } from './util.js';
 import { showNotice } from './ui.js';
@@ -353,12 +353,14 @@ export async function deletePerson(id) {
   const theirs = (list) => list.filter((x) => x.personId === id);
   const goneClips = theirs(state.userClips).map((c) => c.id);
   // Kit edits are stored as `<person>-<kit sound>` and name no personId:
-  // whose each one is, among the people here (model.js kitIdOf).
+  // theirs is one only they, of the people here, could have written. One
+  // another person here also fits (`p-t-lets-go`: p-t's Let's go, or
+  // p-t-lets's Go) stays: a kept edit is safer than someone else's lost.
   const kit = (state.manifest.kit ?? []).map((k) => k.id);
-  const known = new Set([...state.peopleEdits.keys(), ...(state.manifest.people ?? []).map((p) => p.id)]);
+  const known = new Set([id, ...state.peopleEdits.keys(), ...(state.manifest.people ?? []).map((p) => p.id)]);
   const goneEdits = [...state.overrides.keys()].filter((o) => {
-    const k = kitIdOf(o, kit, known);
-    return k !== null && o.slice(0, -k.length - 1) === id;
+    const owners = presetOwners(o, kit, known);
+    return owners.length === 1 && owners[0] === id;
   });
   const del = (store, keys) => keys.map((key) => ({ store, del: key }));
   const ids = (list) => theirs(list).map((x) => x.id);

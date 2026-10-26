@@ -14,7 +14,7 @@
 |---|---|---|---|
 | `store.js` | `DB_NAME`, `SCHEMA`, `DB_VERSION`, `STORE_NAMES`, `upgradeStores`, the `db` handle (`open`, `run`, `all`, `put`, `remove`, `batch`, `onChange`) | no (IndexedDB) | state.js; direct writes in app.js, backup-ui.js, cloud.js; leftover.js reads `DB_NAME` |
 | `state.js` | `state`; `readStorage`, `loadStorage`, `persist`, `setOverride`, `removeRecord`, `setPersonEdit`, `deletePerson`, `deleteUserClip`, `saveMyVoice`, `deleteMyVoice`, `adoptStoredPeople`, `reIdStoredPeople`, `reIdIncoming`, `rememberRenames`, `renamedId` | no | nearly every screen |
-| `model.js` | person colors, `kitFor`, `mergePeople`, `clipsForPerson`, `orderClips`, `withNewPresets`, `overrideFor`, `withBulkChanges`, `withHidden`, `overrideWithEmoji`, `personEditRecord`, `validateManifest`, `soloPerson`, `isDefaultPerson`, `personIdsIn`, `kitIdOf`, `adoptPeople`, `groupKit`, `PICTURES`, `KIND_EMOJI`, `PERSON_KINDS`, `personThings`, `personCounts` | yes | state.js, board.js, backup.js, merge.js, screens |
+| `model.js` | person colors, `kitFor`, `mergePeople`, `clipsForPerson`, `orderClips`, `withNewPresets`, `overrideFor`, `withBulkChanges`, `withHidden`, `overrideWithEmoji`, `personEditRecord`, `validateManifest`, `soloPerson`, `isDefaultPerson`, `personIdsIn`, `kitIdOf`, `presetOwners`, `adoptPeople`, `groupKit`, `PICTURES`, `KIND_EMOJI`, `PERSON_KINDS`, `personThings`, `personCounts` | yes | state.js, board.js, backup.js, merge.js, screens |
 | `board.js` | `people`, `person`, `currentPerson`, `clipsFor`, `anyClip`, `findClip`, `instrumentPicks`, `colorName`, `padColor`, `nextClipColor` | reads `state` | every screen |
 | `settings.js` | `SETTINGS`, `LEVELS`, `levelOf`, `getSetting`, `setSetting`, `onSetting`, `followPerson`, `notifyAllSettings`, `cleanPrefs`, `allowedValue`, `inBackups`, `storedPair` | reads/writes `state.prefs`, `state.settings` | ~20 modules |
 | `groups.js` | a kid's own groups: `cleanGroups`, `groupOwn`, `pruneGroups`, `moveGroup`, `joinGroups`, `newGroupId` | yes | pads.js, bulk.js, backup.js, merge.js, app.js |
@@ -179,7 +179,7 @@ A preset clip is the kit entry (`label, emoji, color, file, group, inst?, plays?
 
 ### Preset edits (`overrides`)
 
-An override holds only what differs from boards.json (`model.js overrideFor`; the sheet's and bulk's changes). `state.js setOverride` deletes one that holds only its `id` (and the `changed` stamp of its last save), so a later boards.json change shows through. Hiding a preset is `hidden: true` on its override (`model.js withHidden`): 🗑️ / 👁 in Edit sounds (`pads.js cornerBadge`), Hide/Show in the sheet, and bulk 🗑️. A picture change from the emoji chooser uses `model.js overrideWithEmoji` (`app.js setClipEmoji`). An override's person is found by its id: `model.js kitIdOf` (`personIdsIn`, `state.js deletePerson`), or `.some` over kit ids (`backup.js` `isKitCopy`). `app.js setClipEmoji` reads the clip's own `kitId`.
+An override holds only what differs from boards.json (`model.js overrideFor`; the sheet's and bulk's changes). `state.js setOverride` deletes one that holds only its `id` (and the `changed` stamp of its last save), so a later boards.json change shows through. Hiding a preset is `hidden: true` on its override (`model.js withHidden`): 🗑️ / 👁 in Edit sounds (`pads.js cornerBadge`), Hide/Show in the sheet, and bulk 🗑️. A picture change from the emoji chooser uses `model.js overrideWithEmoji` (`app.js setClipEmoji`). An override's person is found by its id: `model.js kitIdOf` (`personIdsIn`), `model.js presetOwners` (`state.js deletePerson`), or `.some` over kit ids (`backup.js` `isKitCopy`). `app.js setClipEmoji` reads the clip's own `kitId`.
 
 ### People
 
@@ -384,13 +384,13 @@ Nothing found is changed or deleted.
    A new required field on `clips` must be added to all five, and to `backup.js cleanBackup`.
 7. **Editing one sound is done in three ways:** `sheet.js saveSheet`, `bulk.js changeSounds` (through `model.js withBulkChanges`) and `app.js setClipEmoji`. All three branch on own sound or preset, then call `persist('clips')` or `setOverride(overrideFor…)`.
 8. **The open-beat and open-song wiring lives in `app.js`** (`setOpen`, `beatLibrary`, `songBook`, the dj `deps`), not in `state.js`. A change to how a beat or song is stored is made there.
-9. **Finding a preset edit's person.** It is done by `.some` over kit ids (`backup.js` `isKitCopy`), and by `model.js kitIdOf` (`personIdsIn`, `deletePerson`, `beatToFile`). None depends on kit order (gotcha 1).
+9. **Finding a preset edit's person.** It is done by `.some` over kit ids (`backup.js` `isKitCopy`), and by `model.js kitIdOf` (`personIdsIn`, `beatToFile`) and `presetOwners` (`deletePerson`). None depends on kit order (gotcha 1).
 
 ## Invariants and gotchas
 
 | # | Rule the code depends on | Guarded by |
 |---|---|---|
-| 1 | **A kit id may end another** (`go`, `lets-go`), so `p-t-lets-go` can read two ways. `model.js kitIdOf` settles it in any kit order: a person who exists (`known`) wins, then a person id shaped as `newId` makes it (`p-<time>-<random>`), then the longest kit id. Two people who exist and both fit stay ambiguous (the id can't tell). `personIdsIn`, `merge.js`, `adoptPeople`, `deletePerson` and `beatToFile` use it; `setClipEmoji` reads the clip's `kitId`. Prefix searches (`personThings` edits, `personBackupLists`, `withoutPeople`, `namesPerson`) still match `<id>-`, safe while person ids come from `newId`. | `tests/model.test.mjs` (`kitIdOf`), `tests/sequencer.test.mjs`, `tests/override-empty.test.mjs`, `tests/emoji-kit-order.test.mjs` |
+| 1 | **A kit id may end another** (`go`, `lets-go`), so `p-t-lets-go` can read two ways. `model.js kitIdOf` settles it in any kit order: a person who exists (`known`) wins, then a person id shaped as `newId` makes it (`p-<time>-<random>`), then the longest kit id. Two people who exist and both fit stay ambiguous (the id can't tell): `state.js deletePerson` keeps such an edit (`model.js presetOwners` names everyone who fits). `personIdsIn`, `merge.js`, `adoptPeople` and `beatToFile` use `kitIdOf`; `setClipEmoji` reads the clip's `kitId`. Prefix searches (`personThings` edits, `personBackupLists`, `withoutPeople`, `namesPerson`) still match `<id>-`, safe while person ids come from `newId`. | `tests/model.test.mjs` (`kitIdOf`), `tests/sequencer.test.mjs`, `tests/override-empty.test.mjs`, `tests/emoji-kit-order.test.mjs` |
 | 2 | `SCHEMA` only grows: a new store gets a new `since`, never an edit of an old line | `tests/store.test.mjs` |
 | 3 | `readStorage`'s destructuring matches `STORE_NAMES` minus `bases`, by position | none (check 5 below) |
 | 4 | Every per-person store is in `reid.js PERSON_STORES`, or a renamed person loses it | none (check 2 below) |

@@ -379,6 +379,12 @@ export function personIdsIn(doc, kitIds = [], known = null) {
 // an app-made person id), then the longest kit id. Two people that exist
 // and both fit stay ambiguous: the id itself can't tell them apart.
 const NEW_PERSON_ID = /^p-[a-z0-9]+-[a-z0-9]+$/;
+// Every one of `known` an edit id could be: `<person>-<kit id>` for some
+// kit id. More than one is the case kitIdOf can't settle.
+export function presetOwners(id, kitIds = [], known = new Set()) {
+  if (typeof id !== 'string') return [];
+  return [...kitIds].filter((k) => id.endsWith(`-${k}`)).map((k) => id.slice(0, -k.length - 1)).filter((who) => known.has(who));
+}
 export function kitIdOf(id, kitIds = [], known = new Set()) {
   if (typeof id !== 'string') return null;
   let best = null;

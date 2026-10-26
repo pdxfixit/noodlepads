@@ -87,3 +87,14 @@ test('a boards.json person\'s edit put back that the browser won\'t save: the wo
   assert.match(notice.textContent, /^This browser wouldn't save that change .*After a reload it may be back as it was\.$/);
   state.manifest = was;
 });
+
+test('an edit two people here both fit is kept, whichever of them is deleted', async () => {
+  state.manifest = { kit: [{ id: 'go' }, { id: 'lets-go' }], people: [] };
+  for (const id of ['p-t', 'p-t-lets']) state.peopleEdits.set(id, { id, name: id, added: true, created: 1 });
+  await setOverride({ id: 'p-t-lets-go', label: 'Zoom' });
+  await setOverride({ id: 'p-t-lets-lets-go', label: 'Off' });   // p-t-lets's Let's go: theirs alone
+  await deletePerson('p-t-lets');
+  assert.ok(state.overrides.has('p-t-lets-go'), 'p-t\'s Let\'s go (or p-t-lets\'s Go) survives');
+  assert.equal(state.overrides.has('p-t-lets-lets-go'), false, 'theirs alone goes');
+  assert.ok(stored().some((o) => o.id === 'p-t-lets-go'));
+});
