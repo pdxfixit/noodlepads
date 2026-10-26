@@ -4,9 +4,9 @@
 // a person's ☁️ Cloud switch with 🔄 Sync now and 🔗 Share (🚫 Unshare), ☁️ Open from the cloud, 🔗 Shared
 // with me (▶ Play, 🎛️ Remix, ✕ Remove). The work is in cloud.js.
 
-import { state, setPersonEdit } from './state.js';
+import { state, setPersonEdit, storedLists } from './state.js';
 import { person, people } from './board.js';
-import { PICTURES, KIND_EMOJI } from './model.js';
+import { PICTURES, KIND_EMOJI, personCounts, countsText, countsWords } from './model.js';
 
 // A share's kind ("sound", "beat", "song") as its emoji (model.js KIND_EMOJI).
 const shareEmoji = (kind) => KIND_EMOJI[`${kind}s`] ?? KIND_EMOJI.shares;
@@ -22,6 +22,7 @@ import {
   rememberHere, declineRemember, offersRemember, forgetHere, rememberedUntil, REMEMBER_DAYS, bringDown, leaveInCloud,
 } from './cloud.js';
 import { newProgress, progressShare } from './cloud-sync.js';
+import { SETTINGS } from './settings.js';
 import { mergeSummary } from './merge.js';
 
 // Where a forgotten PIN goes: Ben resets it by hand (`just cloud-reset-pin`). The address is built in web/contact.js.
@@ -769,12 +770,15 @@ function drawOpen(step, prog, text = '') {
   el.openDone.hidden = step !== 'done';
   el.openStopped.hidden = step !== 'stopped';
   if (step === 'done') {
-    const has = shareable(opening.id);
     el.openLine.textContent = '✓ On this device now';
     el.openPlay.replaceChildren(avatarBadge(p), 'Play as them');
     el.openPlay.setAttribute('aria-label', `Play as ${p.name}`);
-    el.openSize.textContent = [[KIND_EMOJI.sounds, has.sound.length], [KIND_EMOJI.beats, has.beat.length], [KIND_EMOJI.songs, has.song.length]]
-      .filter(([, n]) => n).map(([e, n]) => `${e} ${n}`).join(' · ');
+    // Everything that came, as 👥 People counts it (all nine kinds), and the
+    // settings they changed from the defaults (Ben, 2026-10-26: a short line
+    // made it look as if things were missing).
+    const { text, words } = cameText(opening.id);
+    el.openSize.textContent = text;
+    el.openSize.setAttribute('aria-label', words);
   } else if (step === 'stopped') {
     el.openLine.textContent = `⚠️ ${text}`;
     el.openSize.textContent = '';
@@ -788,6 +792,20 @@ function drawOpen(step, prog, text = '') {
     el.openLine.textContent = 'Putting it all away…';
     el.openSize.textContent = '';
   }
+}
+
+// What a person has on this device: "🔊 27 · 🥁 4 · 🎬 2 · ⚙️ 3", the last
+// the settings they picked that differ from the defaults (IndexedDB `prefs`;
+// not the tips they've seen, `quiet`, nor `advancedBeats`, which their level
+// says), and the same in words.
+export function cameText(personId) {
+  const counts = personCounts(storedLists(), personId);
+  const picked = ([k, v]) => SETTINGS[k]?.scope === 'person' && !SETTINGS[k].quiet && k !== 'advancedBeats' && v !== SETTINGS[k].default;
+  const settings = Object.entries(state.prefs.get(personId)?.values ?? {}).filter(picked).length;
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const text = [countsText(counts), settings ? `⚙️\u00a0${settings}` : ''].filter((t) => t && t !== 'nothing yet');
+  const words = [countsWords(counts), settings ? plural(settings, 'setting', 'settings') : ''].filter((t) => t && t !== 'nothing yet');
+  return { text: text.join('\u00a0· ') || 'Nothing made yet', words: words.join(', ') || 'Nothing made yet' };
 }
 
 // A sync tells its progress for every piece of audio: the sheet draws the

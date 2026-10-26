@@ -53,7 +53,9 @@ before(async () => {
 const tap = async (el) => { el.dispatch('click'); await page.settle(); };
 const sha = async (blob) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()))].map((b) => b.toString(16).padStart(2, '0')).join('');
 
-// Another device's profile with one recorded sound and one beat.
+// Another device's profile with one recorded sound, one beat, a preset edit
+// and two settings changed (beside one at its default, the level's old
+// twin, and a tip seen, none of which count).
 async function elsewhere(id, name) {
   const { key } = await cloud.api.create({ id, name, avatar: '🐙', color: '#0C5E4B' });
   const blob = new Blob([new Uint8Array([1, 2, 3, 4, 5, 6])], { type: 'audio/wav' });
@@ -61,6 +63,8 @@ async function elsewhere(id, name) {
   await cloud.api.push(id, key, [
     { kind: 'clips', id: `user-${id}`, body: { id: `user-${id}`, personId: id, label: 'Burp', emoji: '😂', voice: 'normal', mime: 'audio/wav', created: 5, sound: up.sound, sha256: up.sha256, bytes: blob.size } },
     { kind: 'beats', id: `beat-${id}`, body: { id: `beat-${id}`, personId: id, name: 'Wobbly Taco', bpm: 100, bars: 1, swing: 0, rows: [{ clipId: `user-${id}`, steps: [1, 0, 0, 0] }], created: 6, saved: 6 } },
+    { kind: 'overrides', id: `${id}-kick`, body: { id: `${id}-kick`, label: 'Boom' } },
+    { kind: 'prefs', id, body: { personId: id, values: { timeSignature: '3/4', level: 'advanced', advancedBeats: true, padSize: 'auto', seen: 'tip-beats' } } },
   ], []);
 }
 
@@ -89,7 +93,9 @@ test('a stop locks the sheet on 🔄 Try again and ✕ Don\'t bring them; trying
   await tap($('#cloud-open-again'));
   assert.equal($('#cloud-open').dataset.step, 'done');
   assert.equal($('#cloud-open-line').textContent, '✓ On this device now');
-  assert.equal($('#cloud-open-size').textContent, '🔊 1 · 🥁 1', 'what came, by picture');
+  const nbsp = (t) => t.replace(/\u00a0/g, ' ');
+  assert.equal(nbsp($('#cloud-open-size').textContent), '🔊 1 · 🥁 1 · ✏️ 1 · ⚙️ 2', 'everything that came, as 👥 People counts it, and their settings');
+  assert.equal($('#cloud-open-size').getAttribute('aria-label'), '1 sound, 1 beat, 1 preset edit, 2 settings');
   assert.equal($('#cloud-open-bar').getAttribute('aria-valuenow'), '100');
   assert.equal(closeButton().hidden, false, 'the ✕ is back');
   assert.equal($('#cloud-open-play').getAttribute('aria-label'), 'Play as Sir Squid');

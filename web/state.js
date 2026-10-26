@@ -81,8 +81,9 @@ export async function readStorage() {
   state.touchLayouts = touchLayouts;
 }
 
-// The stores as lists, the way a backup holds them (ids only matter here).
-function storedLists() {
+// The stores as lists, the way a backup holds them (ids only matter here;
+// cloud-ui.js counts what came down from them).
+export function storedLists() {
   return {
     people: [...state.peopleEdits.values()], clips: state.userClips, overrides: [...state.overrides.values()],
     orders: [...state.orders.values()], patterns: [...state.patterns.values()], beats: state.savedBeats,

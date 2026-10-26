@@ -847,7 +847,9 @@ ADR 0002.
   arrives, "🔊 5 of 12" and "4.1 of 9.8 MB" under it (the measure is each
   clip record's `bytes`, known before the first sound comes; it never goes
   back), then "Putting it all away…". Done: a full green bar, "✓ On this
-  device now", what came by picture (🔊 12 · 🥁 4 · 🎼 1), <their avatar>
+  device now", everything that came, as 👥 People counts it (all nine kinds:
+  🔊 12 · 🥁 4 · 🎬 2 · ⭐ 1…), and ⚙️ the settings they changed from the
+  defaults (`cloud-ui.js cameText`), <their avatar>
   Play as them (closes the sheets, shows them on Pads, ends the welcome) and
   ☁️ Open someone else. Nothing arriving for 20 s (`cloud.js STALL_MS`), or
   the network failing, stops it with the kid's sentence: 🔄 Try again carries
