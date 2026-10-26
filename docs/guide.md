@@ -15,6 +15,7 @@ things in one line per control.
 - [Keyboard and screen readers](#keyboard-and-screen-readers)
 - [Limits on what comes in](#limits-on-what-comes-in)
 - [Versions and updates](#versions-and-updates)
+- [Which browsers](#which-browsers): the floor
 - [Installing it](#installing-it), and opening it with no network
 ## Pads and the sound sheet
 
@@ -1103,6 +1104,20 @@ a pad loops, or any sheet or dialog is open (the sound sheet keeps its edits
 until Save), and catches up after. Everything else is already saved in
 IndexedDB, and cloud sync runs again on start, so Reload loses nothing. A dev
 copy never asks (`web/update.js`).
+
+## Which browsers
+
+Noodle Pads needs about Chrome 117, Firefox 115 or Safari 16.4 (Edge and
+Samsung Internet follow Chrome). An older browser would half-draw the page,
+so it shows one plain notice instead: "This browser is too old for Noodle
+Pads. Update it, or open noodlepads.com in a newer Chrome, Firefox or
+Safari." `web/too-old.js`, a small classic script that runs before the app,
+checks a few of the newest things the app leans on (CSS subgrid,
+`color-mix()`, container queries and `dvh`; `findLast`, `.at()`,
+`structuredClone` and `inert`); when one is missing it shows the notice and
+marks the page, and `app.js` does not start. `:has()` and `@scope` are newer
+than the floor in some browsers and the app gets by without them (pads show
+Tiles), so they are not checked.
 
 ## Installing it
 

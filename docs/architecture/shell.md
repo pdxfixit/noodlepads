@@ -16,7 +16,7 @@ handful of classes and `data-*` attributes that JS sets on `<body>` and
 
 | File | Owns (state) | Called by | Calls / hears |
 |---|---|---|---|
-| `app.js` | `el` (page elements), `seq`, `song`, `dj`, `telemetry`, `page`; `keysOn`, `sides`, `grownUp`, `kidsVisit`, `closedSections`; writes `state.personId`, `state.screen`, `state.editing`, `state.selected` | `index.html` (the only `<script>`); tests import `ready`, `SCREENS`, `MODES`, `modeOf`, `sideOf`, `startScreen`, `screenHint`, `spaceStops`, `groupsForChooser` | every `create*`/`init*` (see [the composition root](#the-composition-root)); `onSetting` for `level`, `padSkin`, `advancedBeats`, the instrument picks, `sendUsage`; `onCloud` |
+| `app.js` | `el` (page elements), `seq`, `song`, `dj`, `telemetry`, `page`; `keysOn`, `sides`, `grownUp`, `kidsVisit`, `closedSections`; writes `state.personId`, `state.screen`, `state.editing`, `state.selected` | `index.html` (the only module `<script>`); tests import `ready`, `SCREENS`, `MODES`, `modeOf`, `sideOf`, `startScreen`, `screenHint`, `spaceStops`, `groupsForChooser` | every `create*`/`init*` (see [the composition root](#the-composition-root)); `onSetting` for `level`, `padSkin`, `advancedBeats`, the instrument picks, `sendUsage`; `onCloud` |
 | `ui.js` | `showing` (the one banner), `lastNotice`, `home` (the banner's place in `index.html`), the `fading` WeakMap | almost every screen (`showNotice`, `announce`, `showBanner`, `fadeAway`) | `log.js logEvent` (every notice is logged) |
 | `dialogs.js` | `openers`, `returns` (focus to hand back), `openWatchers` | every module with a `<dialog>` (`setupDialog`, `openDialog`) | the watchers: `tips.js`, `nudge.js`, `track-page.js` (via `onDialogOpen`) |
 | `tooltips.js` | nothing but a queued set | `app.js watchTips`; `track-page.js` imports `CONTROLS` and `tipFor` | a `MutationObserver` on `<body>` |
@@ -27,6 +27,7 @@ handful of classes and `data-*` attributes that JS sets on `<body>` and
 | `welcome.js` | `fresh` (Map of people made this visit, not yet welcomed), `now` (the open welcome) | `app.js` (`initWelcome`, `markNew`, `offerWelcome`), `people.js addPerson` | `deps.play`, `deps.edit` (= `people.js editLook`), `deps.pictures` (= `people.js openPictures`); `cloud-ui.js openCloudList`, `avatarBadge`; `pads.js makePad`; `setSetting('level')` |
 | `who-now.js` | `el`, `hooks` | `app.js` (`initWhoNow`, `openWhoNow`, `closeWhoNow`, `whoNowOpen`), `people.js refreshPeople` | `hooks.pick` (= `app.js pickWhoNow`), `hooks.someoneNew` (= `people.js addPerson`); `cloud.js linkOf`; `pads.js makePad` |
 | `skins.js` | nothing (imports nothing) | `app.js` (`showSkin`), `settings.js` (`SKIN_IDS`), `settings-ui.js`, `kids.js` (`nextSkin`, `SKINS`) | sets `data-skin` on `<html>` |
+| `too-old.js` | nothing (a classic script; `TOO_OLD_NEEDS`, `tooOldMissing`, `tooOldCheck`) | `index.html` (deferred, before `app.js`); `tests/too-old.test.mjs` runs it on stand-ins | `CSS.supports` and a few globals; when one is missing, sets `data-too-old` on `<html>` and adds the notice to `<body>` |
 | `backdrop.js` | nothing | `app.js start` | sets `data-bg` and `--backdrop` on `<html>` |
 | `emoji-more.js` | per chooser: its panel, `groups`, folds; module-wide `loading` (the one import of `emoji-all.js`) | `sheet.js`, `bulk.js`, `cloud-ui.js`, `dj.js`, `song.js` | `emoji-all.js` (dynamic `import()`, first tap of …) |
 | `emoji-check.js` | nothing | `backup.js` (a backup's avatars), `worker/cloud.js` | nothing (generated) |
@@ -37,8 +38,10 @@ handful of classes and `data-*` attributes that JS sets on `<body>` and
 
 ## Startup: from module load to first paint
 
-`index.html` loads `web/fonts/fonts.css`, `styles.css` and one module script,
-`app.js`. `app.js` ends with `export const ready = start()`. Tests await
+`index.html` loads `web/fonts/fonts.css`, `styles.css`, the browser floor
+check `too-old.js` (a deferred classic script, so it runs first) and one
+module script, `app.js`. When `<html>` has `data-too-old`, `start()` returns
+at once and draws nothing. `app.js` ends with `export const ready = start()`. Tests await
 `ready` before their first tap (`tests/app-ready.test.mjs` checks every test
 that starts the app does).
 
@@ -509,6 +512,7 @@ scrolled and wires ⬆️ (`#to-top`, smooth unless reduced motion, focus to
 |---|---|---|---|
 | `html` `--board` | `app.js showPerson` | the person's color (the casing) | every color token in styles.css `:root` |
 | `html[data-bg]`, `--backdrop` | `backdrop.js showBackdrop` | the page's pattern | styles.css (7 rules) |
+| `html[data-too-old]` | `too-old.js tooOldCheck` (the features missing) | too old a browser; app.js does not start | styles.css: every `<body>` child but the notice hidden |
 | `html[data-skin]` | `skins.js showSkin` (from app.js) | the pad skin; absent = Tiles | styles.css "Pad skins" |
 | `body.screen-pads/-beats/-song/-live` | `app.js setScreen` | the screen showing | CSS uses `screen-pads`, `screen-live`; `mini-deck.js` reads `screen-beats`; nothing reads `screen-song` but tests |
 | `body.keys-on` | `app.js showView` | Beats with ⌨️ Keys | CSS, `mini-deck.js` |

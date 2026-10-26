@@ -72,6 +72,7 @@ const MODULES = [
 const SHELL = [
   './',
   'styles.css',
+  'too-old.js',
   'boards.json',
   'manifest.webmanifest',
   'fonts/fonts.css',

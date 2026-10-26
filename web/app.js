@@ -814,6 +814,8 @@ function followUsage() {
 }
 
 async function start() {
+  // Too old a browser: too-old.js has shown its notice instead (the browser floor).
+  if (document.documentElement.hasAttribute('data-too-old')) return;
   installErrorLog();
   Object.assign(el, {
     root: document.documentElement,

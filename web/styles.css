@@ -255,6 +255,19 @@ main {
   background: var(--bed);
   max-width: 60ch;
 }
+/* The browser floor (too-old.js): too old a browser shows only this notice.
+   Plain colors and old selectors, since such a browser drops the newer ones. */
+:root[data-too-old] body { padding: 0 16px; }
+:root[data-too-old] body > :not(.too-old) { display: none !important; }
+.notice.too-old {
+  margin: 15vh auto 0;
+  padding: 20px 22px;
+  max-width: 32em;
+  background: #141318;
+  color: #fff;
+  font-size: 1.25rem;
+  line-height: 1.4;
+}
 /* The banner (ui.js showBanner): every one-line notice, and Undo after a
    change, floats over the top of the screen, over the sticky header, and
    fades away; the page under it never moves (Ben, 2026-10-16). It is a
