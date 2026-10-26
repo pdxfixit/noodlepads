@@ -170,7 +170,8 @@
       <!-- Pattern chips: the last beats used, a tap opens one (at the next bar line while playing). -->
       <div class="beat-chips" data-beat-chips role="group" aria-label="Your beats: tap one to open it" hidden></div>
       <!-- The same control bar as Beats': ▶ Play, ● Record, the tempo, ⏲️, the
-           bars. Freestyle shows only ● Record, what is happening and 🎬 Takes. -->
+           bars. 🎤 Live shows ● Record, the click's tempo and ⏲️, what is
+           happening, 🔔 Overlap, ✏️ Layout and 🎬 Takes. -->
       <div class="beat-deck deck deck-end dj-bar">
         <!-- .beat-run and .beat-more lay out as if they were not there, except
              on a phone with ⌨️ Keys on, where ▶ Play · ● Record (.beat-run) is
@@ -191,7 +192,19 @@
             <button type="button" class="seq-click" id="dj-beat-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never recorded. Tap it three times in time to set the tempo." title="Click track: a tick on every beat to keep time" hidden>⏲️</button>
             <!-- On a phone ✏️ Layout sits here, after ⏲️, as just ✏️: the bars' line has no room for it (Ben, 2026-10-19). -->
             <button type="button" class="seq-click edit-keys-open" id="dj-change-tempo" aria-label="✏️ Layout: how the pads are laid out" title="✏️ Layout">✏️</button>
+            <!-- 🎤 Live's own, in the place Beats has its tempo and ⏲️ (Ben, 2026-10-26: the controls at the
+                 top, so every view agrees): the click's tempo, kept in room while the click is off, and ⏲️. -->
+            <div class="dj-click-tempo tempo-box" id="dj-click-tempo" role="group" aria-label="Click track tempo">
+              <button type="button" class="tempo-step down" data-click-step="-1" aria-label="Click track slower"></button>
+              <input type="range" id="dj-click-bpm" step="1" aria-label="Click track tempo">
+              <output id="dj-click-bpm-out" for="dj-click-bpm">100 BPM</output>
+              <button type="button" class="tempo-step up" data-click-step="1" aria-label="Click track faster"></button>
+            </div>
+            <button type="button" class="seq-click" id="dj-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never recorded. Tap it three times in time to set the tempo." title="Click track: a tick on every beat to keep time">⏲️</button>
             <span class="dj-status" id="dj-status" role="status"></span>
+            <!-- At the right, as Beats' 🎚️ ✏️ Layout ⇆: 🔔 Overlap and ✏️ Layout (just 🔔 and ✏️ on a phone), then 🎬 Takes. -->
+            <button type="button" class="seq-click dj-word" id="dj-overlap" data-word="Overlap" aria-pressed="false" title="Overlap: each hit rings over the last (this visit only)" aria-label="Overlap: each key's hits ring over each other instead of starting the sound again. For this visit only.">🔔</button>
+            <button type="button" class="seq-click dj-word" id="dj-change" data-word="Layout" aria-label="✏️ Layout: how the keys or pads are laid out" title="✏️ Layout: how the keys or pads are laid out">✏️</button>
             <button type="button" class="seq-tool" id="dj-takes-open">🎬 Takes</button>
           </div>
         </div>
@@ -211,7 +224,7 @@
           </div>
           <button type="button" class="seq-click mixer-open" data-mixer aria-label="🎚️ Mixer: each row's loudness, mute, solo and effect" title="Mixer">🎚️</button>
           <!-- ✏️ Layout, after 🎚️ on Beats' bar: opens the editor at once, whose top line picks ⌨️ Keys or 👆 Pads
-               (Ben, 2026-10-19); on a phone it sits after ⏲️ instead (#dj-change-tempo). 🎤 Live has its own by the keys. -->
+               (Ben, 2026-10-19); on a phone it sits after ⏲️ instead (#dj-change-tempo). 🎤 Live has its own (#dj-change). -->
           <button type="button" class="seq-click edit-keys-open" id="dj-change-bar" aria-label="✏️ Layout: how the keys or pads are laid out" title="✏️ Layout: how the keys or pads are laid out">✏️ Layout</button>
           <button type="button" class="seq-click move-open" data-move-open aria-pressed="false" aria-label="⇆ Lock the pills: tap and drag pick and slide them, and none turns on or off" title="⇆ Lock the pills, to pick and slide them">⇆</button>
         </div>
@@ -244,23 +257,9 @@
         <button type="button" data-row="3" aria-pressed="false"></button>
       </div>
       <div class="dj-keys" id="dj-keys" role="application" aria-label="Keys"></div>
+      <!-- Under the keys, only their colors: ⏲️, 🔔 and ✏️ Layout are on the control bar. -->
       <div class="dj-tail">
-        <div class="dj-end">
-          <ul class="dj-legend" id="dj-legend" aria-label="Key colors"></ul>
-          <div class="dj-clicktrack">
-            <button type="button" class="seq-tool" id="dj-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never recorded. Tap it three times in time to set the tempo.">⏲️ Click track</button>
-            <div class="dj-click-tempo tempo-box" id="dj-click-tempo" role="group" aria-label="Click track tempo">
-              <button type="button" class="tempo-step down" data-click-step="-1" aria-label="Click track slower"></button>
-              <input type="range" id="dj-click-bpm" step="1" aria-label="Click track tempo">
-              <output id="dj-click-bpm-out" for="dj-click-bpm">100 BPM</output>
-              <button type="button" class="tempo-step up" data-click-step="1" aria-label="Click track faster"></button>
-            </div>
-          </div>
-          <button type="button" class="seq-tool" id="dj-overlap" aria-pressed="false" title="Overlap: each hit rings over the last (this visit only)" aria-label="Overlap: each key's hits ring over each other instead of starting the sound again. For this visit only.">🔔 Overlap</button>
-          <span class="dj-change-row">
-            <button type="button" class="seq-tool" id="dj-change">✏️ Layout</button>
-          </span>
-        </div>
+        <ul class="dj-legend" id="dj-legend" aria-label="Key colors"></ul>
       </div>
     </section>
     <!-- ⇆ The pills locked (sequencer.js setLock): what is picked, All · None · Invert, at the foot of

@@ -1759,19 +1759,19 @@ test('Beats with ⌨️ Keys: tempo, bars and (with Advanced) time signature are
   audio.context().currentTime = 0;
 });
 
-test('⏲️ Click track: emoji-only by Play on Beats; on 🎤 Live, at the bottom with its own tempo slider, and it ticks there', async () => {
+test('⏲️ Click track: emoji-only by Play on Beats; on 🎤 Live, on its control bar after its own tempo slider, and it ticks there', async () => {
   const { audio } = await import('../web/audio.js');
   assert.ok($('#seq-deck').contains($('#seq-click')), 'on the sticky bar with Play and the tempo');
   assert.equal($('#seq-click').textContent, '⏲️');
   assert.match($('#seq-click').getAttribute('aria-label'), /^Click track/);
-  assert.equal($('#dj-click').textContent, '⏲️ Click track');
-  assert.ok($('.dj-end').contains($('#dj-click')), 'DJ: the bottom line, opposite the key colors');
+  assert.equal($('#dj-click').textContent, '⏲️', 'emoji only, as on Beats');
+  assert.ok($('.dj-bar').contains($('#dj-click')) && $('.dj-bar').contains($('#dj-click-tempo')), 'Live: on the control bar at the top, as Beats\' (2026-10-26)');
   $('#live-tab').dispatch('click');
   assert.equal($('#dj-setup').hidden, true);
-  const shown = () => !$('#dj-click-tempo').classList.contains('off');
-  assert.equal(shown(), false, 'no tempo while the click track is off (its room is kept)');
+  const shown = () => !$('#dj-click-tempo').hidden && !$('#dj-click-tempo').classList.contains('off');
+  assert.equal(shown(), true, 'its tempo shows with the click off, as Beats\' does');
   $('#dj-click').dispatch('click');
-  assert.equal(shown(), true, 'Freestyle: the click track tempo, left of the button');
+  assert.equal(shown(), true, 'and on');
   $('#dj-click').dispatch('click');
   const slider = $('#dj-click-bpm');
   const beatBpm = state.patterns.get(state.personId)?.bpm;
@@ -1820,11 +1820,11 @@ test('⏲️ Click track: emoji-only by Play on Beats; on 🎤 Live, at the bott
   assert.deepEqual(order($('#seq-deck')), ['seq-play', 'beat-tempo', 'seq-click']);
   assert.ok($('.dj-bar').querySelector('.beat-shape').contains($('#dj-bars')) && $('#seq-deck').querySelector('.beat-shape').contains($('#seq-bars')));
   $('#live-tab').dispatch('click');
-  assert.equal($('#dj-click').hidden, false, 'Live keeps ⏲️ in the footer');
+  assert.equal($('#dj-click').hidden, false, 'Live has its own ⏲️ on its bar');
   assert.equal($('#dj-beat-click').hidden, true);
   assert.equal($('#dj-play').hidden, true, 'Live has no ▶ Play');
   assert.equal($('#dj-click-tempo').hidden, false, 'Live keeps it');
-  assert.equal(shown(), false);
+  assert.equal(shown(), true);
   ctx.createOscillator = real;
   ctx.currentTime = 0;
   keysOff(page);
@@ -1893,7 +1893,7 @@ test('⏲️ tap tempo (Beats with ⌨️ Keys): two taps toggle and say keep ta
   ctx.currentTime = 1010;
   click.dispatch('click');
   assert.equal(pressed(), 'true', 'one tap: on, as always');
-  assert.equal(click.textContent, '⏲️ Click track');
+  assert.equal(click.textContent, '⏲️');
   ctx.currentTime = 1010.625;
   click.dispatch('click');
   assert.equal(pressed(), 'false', 'two taps: off again');
@@ -1921,7 +1921,7 @@ test('⏲️ tap tempo (Beats with ⌨️ Keys): two taps toggle and say keep ta
   ctx.currentTime = 1020;
   click.dispatch('click');
   assert.equal(pressed(), 'false');
-  assert.equal(click.textContent, '⏲️ Click track');
+  assert.equal(click.textContent, '⏲️');
   assert.equal($('#dj-bpm').textContent, '100 BPM');
   keysOff(page);
   $('#pads-tab').dispatch('click');
@@ -2537,8 +2537,9 @@ test('🎤 Live: 🔔 Overlap right of ⏲️ Click track makes every key ring o
   const { audio } = await import('../web/audio.js');
   $('#live-tab').dispatch('click');
   const b = $('#dj-overlap');
-  assert.equal(b.textContent, '🔔 Overlap');
-  assert.ok($('.dj-end').contains(b));
+  assert.equal(b.textContent, '🔔');
+  assert.equal(b.dataset.word, 'Overlap', 'its word where there is room (styles.css)');
+  assert.ok($('.dj-bar').contains(b), 'on the control bar at the top');
   assert.equal(b.hidden, false);
   assert.equal(b.getAttribute('aria-pressed'), 'false', 'off at the start of a visit');
   const calls = [];
