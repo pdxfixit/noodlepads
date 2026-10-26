@@ -160,8 +160,12 @@ test('✅ three Node tools: look.mjs and the two it loads', () => {
 test('✅ every field of state.js state is read somewhere in web/', async () => {
   const { state } = await web('state.js');
   // Only where `state` is this one (backup.js has a parameter of that name).
+  // A heuristic, not a parser: comments are dropped first (a comment that
+  // names `state.beats` reads nothing), then a read is `state.x` not
+  // followed by `=`. A string holding `state.x` would still count.
+  const code = (file) => src[file].replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`\\])\/\/.*$/gm, '$1');
   const users = WEB.filter((file) => /import\s*\{[^}]*\bstate\b[^}]*\}\s*from\s*'\.\/state\.js'/.test(src[file]) || file === 'state.js');
-  const reads = (f) => users.some((file) => new RegExp(`\\bstate\\??\\.${f}\\b(?!\\s*=[^=])`).test(src[file]));
+  const reads = (f) => users.some((file) => new RegExp(`\\bstate\\??\\.${f}\\b(?!\\s*=[^=])`).test(code(file)));
   assert.deepEqual(Object.keys(state).filter((f) => !reads(f)), [], FIX);
 });
 
