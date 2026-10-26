@@ -68,7 +68,9 @@ test('👂 Plain: a tap plays the plain recording, a second tap stops it and put
   await page.settle();
   const started = calls.filter(([what]) => what === 'start');
   assert.deepEqual(started.map(([, id]) => id), ['preview-original']);
-  assert.equal(started[0][2], plain, 'the recording itself, with no voice');
+  const heard = started[0][2].getChannelData(0);
+  assert.equal(heard.length, plain.length, 'the recording, with no voice');
+  assert.ok(Math.abs(Math.max(...heard.map(Math.abs)) - 0.9) < 1e-6, 'levelled as its pad plays it: peak 0.9');
   assert.ok(calls.some(([what, id]) => what === 'stop' && id === 'preview'), 'the voiced sound stops first');
   assert.equal($('#plain-btn').getAttribute('aria-pressed'), 'true');
   await new Promise((r) => setTimeout(r, 200));   // past a tick of the play watch
@@ -81,6 +83,29 @@ test('👂 Plain: a tap plays the plain recording, a second tap stops it and put
   assert.ok(!calls.some(([what]) => what === 'start'), 'stopping plays nothing');
   assert.equal($('#plain-btn').getAttribute('aria-pressed'), 'false');
   $('#sheet').close();
+});
+
+// 👂 Plain compares the voice, not the volume: it plays as loud as the pad
+// (peak 0.9, then a preset's level), so ▶︎ after it sounds only the voice.
+test('👂 Plain plays a preset turned down by its level, as its pad plays it', async () => {
+  const { currentPerson } = await import('../web/board.js');
+  const presets = currentPerson().clips;
+  for (const c of presets) c.level = -6;
+  try {
+    await openEditor();
+    chip('chipmunk').dispatch('click');
+    await page.settle();
+    calls.length = 0;
+    $('#plain-btn').dispatch('click');
+    await page.settle();
+    const heard = calls.find(([what, id]) => what === 'start' && id === 'preview-original')[2];
+    const peak = Math.max(...heard.getChannelData(0).map(Math.abs));
+    assert.ok(Math.abs(peak - 0.9 * 10 ** (-6 / 20)) < 1e-6, `${peak}`);
+    $('#plain-btn').dispatch('click');
+  } finally {
+    for (const c of presets) delete c.level;
+    $('#sheet').close();
+  }
 });
 
 test('👂 Plain then a voice: the plain sound stops and the voiced one plays', async () => {

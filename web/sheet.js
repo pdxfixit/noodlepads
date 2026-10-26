@@ -1363,12 +1363,20 @@ async function playPlain() {
   syncPlay();
   const expected = sheet.original;
   let original;
-  try { original = await expected; } catch { sheet.plain = false; syncPlay(); return; }
+  try { original = (await plainSound()).buffer; } catch { sheet.plain = false; syncPlay(); return; }
   if (sheet.plain !== 'waiting' || sheet.original !== expected || !el.sheet.open) return;
   wave.show(original, Math.max(sheet.voiced, original.duration));
   audio.start('preview-original', { buffer: original, duration: original.duration });
   wave.follow('preview-original');
   sheet.plain = 'playing';
+}
+
+// The sound with no voice, as loud as its pad plays it: levelled to peak 0.9
+// and turned down by a preset's level (applyChain in Normal), so 👂 Plain
+// against ▶︎ compares the voice, not the volume. Its trim, edits and fade stay.
+function plainSound() {
+  if (!sheet.previews.has('plain')) sheet.previews.set('plain', sheet.original.then((b) => applyChain(b, [], null, sheet.clip?.level)));
+  return sheet.previews.get('plain');
 }
 
 // Stops the plain sound. `redraw` puts the voiced wave back, without playing it.

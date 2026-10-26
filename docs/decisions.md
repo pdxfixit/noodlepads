@@ -153,6 +153,7 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | Rule | Why | Since |
 |---|---|---|
 | On a touch screen a pad (Pads and 🧸 Kids) and a key (🎤 Live, Beats with ⌨️ Keys) sounds when the finger lifts after staying put (under about 10 px); a drag or scroll never sounds it. Holding still still loops. Mouse and keyboard stay instant. 🧸 Kids' toy keys still play as a finger slides. | Ben: "dragging a finger should not trigger a sound (like when one is scrolling)"; Live "should also wait for touch-up" (2026-10-16). | 2026-10-16 |
+| 👂 Plain plays the sound with no voice at its pad's loudness: levelled to peak 0.9 and a preset turned down to its level; its trim, edits and fade apply. | Plain compares the voice, not the volume (the lead, under Ben's rule on confident council findings). | 2026-10-26 |
 | Holding a pad toggles looping, so several pads can loop at once. | Layering sounds is the fun part. | 2026-10-10 |
 | While a beat plays, a pad set looping starts on the next bar's "1" and repeats every 1, 2, 4, 8 or 16 beats (then whole bars); loops re-sync when the beat starts or its tempo changes. | Loops lock to the groove ([ADR 0004](adr/0004-learn-music-by-doing.md)). | 2026-10-10 |
 | Slow and Fast keep pitch and have a speed slider: Slow up to 20×, Fast up to 8×. | Kids wanted "super duper" slow. | 2026-10-10 |
