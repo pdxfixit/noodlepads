@@ -26,7 +26,7 @@
 
 import { openDialog, setupDialog } from './dialogs.js';
 import { encodeWav, normalize, barSteps, SIGNATURES } from './sequencer.js';
-import { fadeStop } from './audio.js';
+import { fadeStop, tooLate } from './audio.js';
 import { logEvent } from './log.js';
 import { showBanner } from './ui.js';
 import { countPlay } from './play-count.js';
@@ -1203,6 +1203,7 @@ export function createSong(deps) {
     const events = planned.events;
     while (next < events.length && t0 + events[next].time < ctx.currentTime + LOOKAHEAD) {
       const e = events[next++];
+      if (tooLate(t0 + e.time, ctx.currentTime)) continue;   // missed in a stall: the song goes on in time
       const key = `${e.lane}:${e.beatId}:${e.row}`;
       if (!voices.has(key)) voices.set(key, []);
       const pattern = planned.plans.get(e.beatId).pattern;

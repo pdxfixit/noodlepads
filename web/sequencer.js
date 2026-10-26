@@ -17,7 +17,7 @@
 
 import { openDialog, setupDialog } from './dialogs.js';
 import { newId, recall, remember } from './util.js';
-import { makeVoice, fadeStop } from './audio.js';
+import { makeVoice, fadeStop, tooLate } from './audio.js';
 import { getSetting, onSetting } from './settings.js';
 import { logEvent } from './log.js';
 import { showBanner } from './ui.js';
@@ -1254,7 +1254,12 @@ export function createSequencer(deps) {
         if (skip >= 0) skips.splice(skip, 1);
         else if (audible(row, pattern)) {
           // A tune row's notes start on the pill or half a pill after it (notes.js).
-          for (const h of pillHits(row, clock.step)) hit(i, h.at ? clock.next + h.at * dt : at, h.loud, h.note, h.len * dt);
+          // One whose moment passed in a stall is dropped (tooLate), so the
+          // beat goes on in time instead of playing what it missed at once.
+          for (const h of pillHits(row, clock.step)) {
+            const when = h.at ? clock.next + h.at * dt : at;
+            if (!tooLate(when, ctx.currentTime)) hit(i, when, h.loud, h.note, h.len * dt);
+          }
         }
         queue.push({ row: i, step: clock.step, time: at });
         clock.next += stepSeconds(pattern, row, playMode());  // read every step, so a tempo change lands right away

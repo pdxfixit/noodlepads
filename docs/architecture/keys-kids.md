@@ -304,7 +304,7 @@ Kids writes it with `deps.saveBeat` (`state.savedBeats` + `persist('beats')`). I
 
 ### Its own scheduler, beside `sequencer.js`
 
-`kids.js playBeat` is a 25 ms `setInterval` booking 0.12 s ahead, straight into `audio.master` with `audio.js makeVoice`. It reads `kidsBeat()` from `state` on every tick, so a square or a note lands while it plays.
+`kids.js playBeat` is a 25 ms `setInterval` booking 0.12 s ahead, straight into `audio.master` with `audio.js makeVoice`; a hit already past (`audio.js tooLate`, after a stall) is dropped, as Beats' are. It reads `kidsBeat()` from `state` on every tick, so a square or a note lands while it plays.
 
 | | `sequencer.js schedule` | `kids.js playBeat` |
 |---|---|---|

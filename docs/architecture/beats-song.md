@@ -112,7 +112,7 @@ The library is the truth. `patterns` only says which named beat is open; no reco
 
 | Timer | Owner | Period | What it books |
 |---|---|---|---|
-| `timer` | `sequencer.js play` → `schedule` | 25 ms (`TICK_MS`) | every hit due before `currentTime + 0.1` (`LOOKAHEAD`), and the click |
+| `timer` | `sequencer.js play` → `schedule` | 25 ms (`TICK_MS`) | every hit due before `currentTime + 0.1` (`LOOKAHEAD`), and the click; a hit already more than 20 ms past (`audio.js tooLate`, after a stall) is dropped, its pill still counted |
 | `aloneTimer` | `seq.metronome(on)` | 25 ms | the click alone while the beat is stopped (⌨️ Keys / 🎤 Live's ⏲️) |
 | `raf` | `sequencer.js follow` | every frame | the playhead: pills heard so far |
 | `askTimer` | `arm` | 3 s (`ARM_MS`) | a Clear? or Remove? forgets its first tap |
@@ -448,7 +448,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | A new field on the beat | `cleanPattern`, `samePattern`, `beatToFile` (the list is by hand), `mixKey` if it changes the sound graph, `listen-make.js` if 🎧 should set it, `grooveBeat` if grooves have it; `backup.js` gets it through `cleanPattern` |
 | A new 🎚️ effect | `mixer.js MIX_FX` (only `steps.js` kinds that run live); stored ids are checked by `cleanFx`; `tests/mixer.test.mjs` |
 | A new time signature | `sequencer.js SIGNATURES`; `settings.js timeSignature` values; the `[data-sig]` buttons in `index.html` (Beats and ⌨️ Keys); `song.js beatSteps` follows by itself; check `listen.js` and grooves |
-| Scheduler timing (lookahead, tick) | `sequencer.js` `TICK_MS`/`LOOKAHEAD`, `song.js` the same, `kids.js playBeat` (inline 25 ms and 0.12 s), and `hearBeat` (books at once) |
+| Scheduler timing (lookahead, tick) | `sequencer.js` `TICK_MS`/`LOOKAHEAD`, `song.js` the same, `kids.js playBeat` (inline 25 ms and 0.12 s), and `hearBeat` (books at once); how late a hit may be booked is `audio.js LATE_SECONDS`, shared by all three (`tests/late-hits.test.mjs`) |
 | How a hit sounds everywhere | `sequencer.js sound`, `hitGain`, `noteRate`, `rhythm.js ringOver`, `busFor`, `mixer.js buildMix`; then `kids.js playBeat`, which has its own |
 | A new place that plays a saved beat | `seq.beatPlan` + `seq.prepareBeats` + `seq.soundHit`; stop the live beat first; call `deps.onPlay`-style stops so one thing plays |
 | A new groove | `grooves.js GROOVES` (a kit id that exists in `boards.json`; bass rows of one instrument); `tests/grooves.test.mjs` |

@@ -19,7 +19,7 @@
 // the top bar and a pinch both move it, smoothly. An older copy kept a
 // device size in localStorage `kids-size`; it is ignored.
 
-import { audio, makeVoice, fadeStop, trimBounds } from './audio.js';
+import { audio, makeVoice, fadeStop, trimBounds, tooLate } from './audio.js';
 import { levelOf } from './meter.js';
 import { logEvent } from './log.js';
 import { countPlay } from './play-count.js';
@@ -687,6 +687,7 @@ async function playBeat({ from = null, onPass = null } = {}) {
   run.t0 = from ?? ctx.currentTime + 0.06;
   run.next = run.t0;
   const hit = (got, at, rate, len) => {
+    if (tooLate(at, ctx.currentTime)) return;   // missed in a stall: the beat goes on in time
     const v = makeVoice(ctx, got.buffer, audio.master);
     if (rate !== 1) v.src.playbackRate.value = rate;
     v.src.start(at);

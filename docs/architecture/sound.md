@@ -48,8 +48,9 @@ threshold -2 dB, knee 0, ratio 20, attack 2 ms, release 150 ms) ─► audio.ana
   nor closed; it never makes one. It runs on the context's `statechange`
   (while the page shows: a call, a locked screen, iOS `'interrupted'`), and
   on `visibilitychange` to visible and `pageshow` (`app.js bindEvents`). A
-  suspended context's clock stands still, so a beat picks up where it was
-  (Tests: `tests/audio.test.mjs`, `tests/audio-wake.test.mjs`).
+  suspended context's clock stands still, so a beat picks up where it was;
+  should the clock have run on, the schedulers drop the hits they missed
+  (`tooLate`, below) and carry on in time (Tests: `tests/audio.test.mjs`, `tests/audio-wake.test.mjs`).
 - `audio.decode(arrayBuffer)` is `decodeAudioData` on this context. So every
   decoded clip is at the context's sample rate, whatever the file's.
 - Who connects to `audio.master` directly, outside `audio.playing`:
@@ -489,7 +490,10 @@ What I heard: ▶ deps.seq.hearBeat · 🎼 deps.song.openSaved · 🥁 deps.seq
 
 `audio.context().currentTime` is the clock every scheduler books on
 (`sequencer.js`, `song.js`, `kids.js`; each a 25 ms `setInterval` with
-lookahead). Pads read it for `t0`; `meter.js` and `wave.js` turn it into
+lookahead). Each drops a hit whose moment passed more than `LATE_SECONDS`
+(20 ms) ago (`audio.js tooLate`): after a stall, or a clock that ran on
+while the timers slept, the beat goes on in time with no burst of missed
+hits (`tests/late-hits.test.mjs`). Pads read it for `t0`; `meter.js` and `wave.js` turn it into
 progress each frame; `dj.js` stamps takes with it (`deps.now`) less the
 output latency (`deps.latency`, capped at 0.2 s). 🎧 shares the context, so
 the capture's sample rate is the app's.

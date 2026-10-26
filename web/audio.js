@@ -23,6 +23,14 @@ export const FADE_SECONDS = 0.008;
 let voices = 0;
 export const voicesMade = () => voices;
 
+// The beat, 🎼 Song and 🧸 Kids book their hits a little ahead on the audio
+// clock. After a stall (a busy page, a tab in the background, the clock
+// running on while the timers slept) a hit whose moment passed more than
+// this long ago is dropped instead of played: the beat carries on in time
+// rather than playing every missed hit at once. A hit just late still plays.
+export const LATE_SECONDS = 0.02;
+export const tooLate = (at, now) => at < now - LATE_SECONDS;
+
 // One playing sound: a buffer source through its own gain, so it can be faded
 // out on its own. `dest` is where it goes (the master, or an offline render).
 export function makeVoice(ctx, buffer, dest) {
