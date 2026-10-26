@@ -85,7 +85,8 @@ export function createWave(canvas) {
       const frame = () => {
         const entry = audio.playing.get(id);
         if (!entry || !audio.ctx) { draw(0); return; }
-        const p = Math.min(1, Math.max(0, (audio.ctx.currentTime - entry.t0) / entry.duration));
+        const t = Math.max(0, (audio.ctx.currentTime - entry.t0) / entry.duration);
+        const p = entry.loop ? t % 1 : Math.min(1, t);   // a loop sweeps again on each pass, as the pads' fill does
         draw(from + p * (to - from));
         raf = requestAnimationFrame(frame);
       };
