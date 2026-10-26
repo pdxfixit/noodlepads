@@ -53,7 +53,10 @@ test('"Anyone who opens noodlepads.com sees the list": the list needs no key, no
   const res = await call('GET', 'profiles', { origin: null });
   assert.equal(res.status, 200);
   const [p] = (await res.json()).profiles;
-  assert.deepEqual([p.name, p.avatar], ['Sir Squid', '🐙'], 'fun names and avatars only');
+  assert.deepEqual([p.name, p.avatar, p.color, p.pin], ['Sir Squid', '🐙', '#1F3FA8', true]);
+  // Besides its random id and when its look changed, the list holds what the line names, and no more.
+  assert.deepEqual(Object.keys(p).sort(), ['avatar', 'color', 'edited', 'id', 'name', 'pin']);
+  for (const words of ['fun names', 'avatars', 'colors', 'has a PIN']) assert.ok(claim('sees the list of profiles').includes(words), `the list line names: ${words}`);
 });
 
 test('"Anyone who has a sound\'s link can play it": even a profile with a PIN', async () => {
@@ -223,7 +226,7 @@ test('usage events go to the site only, from every device while Share play data 
 test('"Problem reports … send": the statement names everything a report holds, and no User-Agent string', () => {
   const line = claim('Problem reports');
   for (const words of ['event log', 'no sounds and no names', 'its settings', 'how many sounds, beats and songs',
-    'browser, system and device type', 'never the full browser string', 'screen size', 'time zone', 'sound timing', 'random code']) {
+    'browser, system and device type', 'never the full browser string', 'screen size', 'time zone', 'sound timing', "the app's version", 'random code']) {
     assert.ok(line.includes(words), `the report line names: ${words}`);
   }
   const report = cleanPayload({

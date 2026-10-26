@@ -388,13 +388,13 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 |---|---|---|
 | everyone goes up once they make something, unless ☁️ is off | `wantsCloud`: added, not hidden, not Offline, `hasMade` (`MADE` kinds only) | true |
 | Cloudflare stores fun name, avatar, color, sounds, beats, songs, settings, the names given | records also hold takes, kit edits, pad order and groups, DJ keys, layouts, own voices; and `activity`/`devices` rows per profile (country, browser, OS, device type, width, app version) while `sendUsage` is on | incomplete; the metrics are left to the shared policy on purpose (`tests/privacy.test.mjs`: no usage words in the lines) |
-| the list shows fun names and avatars only; everyone in the cloud is in it | the list also carries id, color, `edited` and whether a PIN is set; only the newest 300, `CLOUD_ID` ids only | slightly understated; "everyone" stops at 300 |
+| the list shows fun names, avatars, colors and whether each has a PIN; everyone in the cloud is in it | the list also carries the id and `edited`; only the newest 300, `CLOUD_ID` ids only | true; "everyone" stops at 300 (overstated, the safe way) |
 | a sound's link plays for anyone | `getSound` needs no key | true |
 | a share code works until 🚫 Unshare or its profile is deleted | `deleteProfile` deletes its shares and sounds (`dropProfileData`); a remix's audio is its maker's own | true |
 | a PIN is not security | 4 digits, PBKDF2, waits; audio needs no PIN | true |
 | nobody types a profile name | `funNamed` before upload; Worker `isFunName` | true |
 | ☁️ off stays on this device | `isOffline` keeps them out; usage events are still sent from the device (not per person) | true for their things |
-| problem reports: cleaned log, settings, counts, browser/system/type, screen size, time zone, sound timing, a random code; deleted after 14 days | the payload also holds the app version, a per-page session id, the send time and the device pixel ratio. Expired reports are deleted only when the next report arrives | deletion is lazy: with no new report, an expired one stays in D1 |
+| problem reports: cleaned log, settings, counts, browser/system/type, screen size, time zone, sound timing, the app's version, a random code; deleted after 14 days | the payload also holds a per-page session id, the send time and the device pixel ratio (part of the screen size). Expired reports are deleted only when the next report arrives | deletion is lazy: with no new report, an expired one stays in D1 |
 | feedback: only what was typed and the app's version; no name or IP | as typed; `X-App-Version` is the live label with its dash sent as `+` (`v1.0.277+b328291`), since the Worker allows `[0-9A-Za-z.+_]` only; 90 days is the runner's job (unverified here) | true |
 | deleting a profile: gone from the cloud at once, with every share code it made | `deleteProfile` deletes records, keys, shares, audio, profile, and `forgetProfile` its metrics | true |
 
