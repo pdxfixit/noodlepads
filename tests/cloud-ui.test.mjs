@@ -491,6 +491,61 @@ test('two syncs at once make a new person\'s profile once, and neither says trou
   assert.ok(cloud.keyOf(id), 'linked, with its key');
 });
 
+// ▶ Play in 🔗 Shared with me plays through the app's player (audio.start):
+// stopping everything (Esc, entering 🧸 Kids) stops it, and the grille lights.
+test('▶ Play on a share plays as the app\'s sounds do: the grille wakes, and stopping everything stops it', async () => {
+  const { audio } = await import('../web/audio.js');
+  const ctx = audio.context();
+  const sources = [];
+  let started = 0;
+  const real = { source: ctx.createBufferSource, shared: cloud.api.shared, sound: cloud.api.fetchSound, decode: audio.decode, started: audio.on.started };
+  ctx.createBufferSource = () => {
+    const ended = [];
+    const s = {
+      connect() {}, disconnect() {}, start() {}, playbackRate: { value: 1 }, stops: [],
+      stop(t) { s.stops.push(t); },
+      addEventListener(type, fn) { if (type === 'ended') ended.push(fn); },
+      end() { s.onended?.(); for (const fn of ended) fn(); },   // what the browser does once it stops
+    };
+    sources.push(s);
+    return s;
+  };
+  cloud.api.shared = async () => ({ kind: 'sound', title: 'Wobbly Taco', preview: 'sound-1' });
+  cloud.api.fetchSound = async () => ({ arrayBuffer: async () => new ArrayBuffer(8) });
+  audio.decode = async () => ({ duration: 2, length: 2000, numberOfChannels: 1, sampleRate: 1000 });
+  audio.on.started = () => { started++; };
+  try {
+    $('#shared-browse').dispatch('click');
+    $('#shared-code').value = 'WXYZ-2345';
+    $('#shared-open').dispatch('click');
+    await settle();
+    const play = () => $('#shared-items').children.find((x) => x.dataset.code === 'WXYZ2345').querySelector('[data-play]');
+    play().dispatch('click');
+    await settle();
+    assert.equal(play().textContent, '■ Stop');
+    assert.ok(audio.playing.has('share-preview'), 'it plays through audio.start');
+    assert.equal(started, 1, 'the grille is told a sound began');
+    audio.stopAll();
+    assert.equal(audio.playing.has('share-preview'), false, 'stopping everything stops it');
+    assert.equal(sources[0].stops.length, 2, 'its scheduled end, then the stop');
+    sources[0].end();
+    assert.equal(play().textContent, '▶ Play', 'the button follows');
+    play().dispatch('click');
+    await settle();
+    play().dispatch('click');
+    assert.equal(audio.playing.has('share-preview'), false, '■ Stop stops it');
+    assert.equal(play().textContent, '▶ Play');
+  } finally {
+    Object.assign(ctx, { createBufferSource: real.source });
+    Object.assign(cloud.api, { shared: real.shared, fetchSound: real.sound });
+    audio.decode = real.decode;
+    audio.on.started = real.started;
+    audio.playing.clear();
+    cloud.forgetShare('WXYZ2345');
+    $('#shared-dialog').close();
+  }
+});
+
 test('with no /api (the dev server, a static copy) the app says so and carries on', async () => {
   apiDown = true;
   cloud.resetCloudCheck();

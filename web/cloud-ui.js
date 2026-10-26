@@ -620,10 +620,13 @@ export async function shareSounds(personId, ids) {
 
 let playing = null;   // {code, src}
 const previews = new Map();   // code -> Promise<AudioBuffer>
+// The preview plays through the app's player, so stopping everything (Esc,
+// entering 🧸 Kids) stops it too, and the grille lights while it plays.
+const PREVIEW_ID = 'share-preview';
 
 function stopPreview() {
   if (!playing) return;
-  try { playing.src.stop(); } catch { /* already stopped */ }
+  if (audio.playing.get(PREVIEW_ID)?.src === playing.src) audio.stop(PREVIEW_ID);
   playing = null;
   drawShared();
 }
@@ -631,7 +634,7 @@ function stopPreview() {
 async function playPreview(code) {
   if (playing?.code === code) { stopPreview(); return; }
   stopPreview();
-  const ctx = audio.wake();
+  audio.wake();
   try {
     if (!previews.has(code)) {
       previews.set(code, fetchShare(code).then(async (s) => {
@@ -641,11 +644,9 @@ async function playPreview(code) {
       previews.get(code).catch(() => previews.delete(code));
     }
     const buffer = await previews.get(code);
-    const src = ctx.createBufferSource();
-    src.buffer = buffer;
-    src.connect(audio.master);
-    src.onended = () => { if (playing?.src === src) { playing = null; drawShared(); } };
-    src.start();
+    audio.start(PREVIEW_ID, { buffer, duration: buffer.duration });
+    const { src } = audio.playing.get(PREVIEW_ID);
+    src.addEventListener('ended', () => { if (playing?.src === src) { playing = null; drawShared(); } });
     playing = { code, src };
   } catch (err) {
     el.sharedNote.textContent = trouble(err);

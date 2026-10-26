@@ -56,8 +56,7 @@ threshold -2 dB, knee 0, ratio 20, attack 2 ms, release 150 ms) ─► audio.ana
 - Who connects to `audio.master` directly, outside `audio.playing`:
   `sequencer.js` (each beat's mix bus, built by `busFor`; and `blip`, the
   click), `song.js` (`laneGainsFor(ctx, audio.master, …)`), `kids.js`
-  (`playBeat`'s voices and the count-in `beep`), `cloud-ui.js playPreview`
-  (a share's preview, a bare `BufferSource`). `audio.stopAll()` does not reach
+  (`playBeat`'s voices and the count-in `beep`). `audio.stopAll()` does not reach
   any of these; each screen stops its own (`app.js stopEverything` calls
   `audio.stopAll`, `seq.stop`, `song.stop`, the clicks off).
 - The 🎧 worklet node connects straight to `ctx.destination`
@@ -107,6 +106,7 @@ The ids in `audio.playing` are a shared namespace:
 | `'preview'` | the sound sheet's voiced preview and live loop (`sheet.js`), ✂️ parts (`chop.js playPart`), 🪄 Voice for many (`bulk.js`). One slot: each stops the other |
 | `'preview-original'` | the sheet's 👂 Plain (`sheet.js playPlain`) |
 | `'see-all'` | 🗂️ See all's row ▶ (`things.js PLAY_ID`) |
+| `'share-preview'` | 🔗 Shared with me's ▶ Play (`cloud-ui.js playPreview`) |
 
 `meter.js run` calls `setProgress(id, …)` for every entry; `pads.js
 setProgress` ignores ids that are not a pad.
@@ -611,7 +611,7 @@ Nothing removes an id from `broken` but a reload.
 | `listen.js` and `listen-make.js` import `sequencer.js` | for `SIGNATURES`, `barSteps`, `tempoStops`, `MAX_PILLS`, `cleanPattern` | the "pure" listener loads the beat maker's whole import graph (it works in Node today) |
 | `ROWS` twice | `listen-dsp.js ROWS` and `listen-make.js ROWS` | kept equal by hand |
 | Name clashes | `KINDS` (`steps.js` vs `listen-input.js`), `FAMILIES` (`instruments.js` vs `voice-knobs.js`), `levelOf` (`meter.js`, `listen-input.js`, the sequencer's) | a wrong import still runs |
-| Bare players outside `audio.playing` | `cloud-ui.js playPreview`, `kids.js` beat and beeps, sequencer click | `audio.stopAll` does not stop them; `cloud-ui.js` never calls `audio.on.started`, so the grille may stay dark |
+| Bare players outside `audio.playing` | `kids.js` beat and beeps, sequencer click | `audio.stopAll` does not stop them |
 | `sheet.js` writes `audio.originals` directly | the ✨ re-made sound, after `forget` | skips `keepOriginal`, so `originalTrims` is unset; `original()` keeps it only while the clip's `cutKey` is `''` |
 | `encodeWav` and `normalize` live in `sequencer.js` | used by `sheet.js`, `chop.js`, `dj.js`, `song.js`, `share-render.js` | a sound module depends on the beat maker for its WAV |
 

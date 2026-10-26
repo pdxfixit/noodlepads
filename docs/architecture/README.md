@@ -94,7 +94,7 @@ The biggest ones. Each area file lists its own in full.
   voices and step kinds in `log-clean.js`, limits written on both sides of
   the cloud ✅.
 - **Players outside `audio.playing`:** the beat, the song, Kids' beat, the
-  click, `cloud-ui.js` share previews. `audio.stopAll` misses them.
+  click. `audio.stopAll` misses them.
 - **The look tools call into the page by name:** `tools/look.mjs` and
   `look-cloud.mjs` use web exports, `state` fields and ids as strings, and no
   test checks them (tests-tools.md).
