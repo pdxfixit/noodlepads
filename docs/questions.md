@@ -8,12 +8,6 @@ When Ben answers, record the answer in [decisions.md](decisions.md) (and an ADR 
 
 From the council's first round (2026-10-26, `docs/council.md`), asked in the chat one at a time; a card is deleted when its answer is recorded. Cards marked ⛔ are blocks against one of your rules: the seat stopped the work, and only you can uphold or overrule it.
 
-### Q67. 🧸 Kids' first impressions: startle sounds, and an empty first beat?
-
-**Recommend:** move 💥 siren, alarm, airhorn, 😈 and buzzer to the last Kids page; start the first Kids beat with a simple kick and snare lit.
-The child psychologist: startle sounds frighten some 3-year-olds. The music educator: the first ▶️ plays silence; a lit groove teaches pattern first. The second changes "the scratch starts empty" for Kids only.
-**Answer:**
-
 ### Q68. Do a kid's own sounds, beats and songs carry over to v2?
 
 **Recommend:** yes, so I write the formats down now (a format spec, plus fixed sample files every version must load).
