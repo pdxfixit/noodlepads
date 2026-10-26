@@ -244,6 +244,54 @@ test('a sound uploads in pieces of the right size, plays back whole, and is neve
   assert.equal((await c.call('POST', 'profiles/p-a/sounds', { key, body: { sha256: sha(2), bytes: 10, mime: 'text/html' } })).status, 400);
 });
 
+test('a sound given new audio under its id (a made sound changed) lets its old audio go, unless something else uses it', async () => {
+  const c = cloud();
+  const key = await made(c, 'p-a');
+  const sound = async (n) => {
+    const { data: { id } } = await c.call('POST', 'profiles/p-a/sounds', { key, body: { sha256: sha(n), bytes: 4, mime: 'audio/wav' } });
+    await c.call('PUT', `sounds/${id}/0`, { key, raw: new Uint8Array([n, n, n, n]) });
+    return id;
+  };
+  const clip = (id, s, n) => ({ kind: 'clips', id, body: { id, personId: 'p-a', label: 'Boom', mime: 'audio/wav', sound: s, sha256: sha(n) } });
+  const [s1, s2, s3] = [await sound(1), await sound(2), await sound(3)];
+  assert.equal((await c.call('POST', 'profiles/p-a/records', { key, body: { put: [clip('user-1', s1, 1), clip('user-2', s3, 3)] } })).status, 200);
+  assert.equal((await c.call('POST', 'profiles/p-a/records', { key, body: { put: [clip('user-1', s2, 2)] } })).status, 200);
+  assert.deepEqual(c.env.DB.rows('SELECT id FROM sounds ORDER BY id').map((r) => r.id), [s2, s3].sort(), 'the old audio went');
+  assert.equal(c.env.DB.rows('SELECT COUNT(*) AS n FROM sound_chunks WHERE sound_id = ?', s1)[0].n, 0);
+  // Another sound that uses the same audio keeps it.
+  assert.equal((await c.call('POST', 'profiles/p-a/records', { key, body: { put: [clip('user-3', s3, 3)] } })).status, 200);
+  assert.equal((await c.call('POST', 'profiles/p-a/records', { key, body: { put: [clip('user-2', s2, 2)] } })).status, 200);
+  assert.deepEqual(c.env.DB.rows('SELECT id FROM sounds ORDER BY id').map((r) => r.id), [s2, s3].sort(), 'still named by user-3');
+});
+
+test('a push of 200 sounds asks D1 a fixed few times, whatever its size', async () => {
+  const c = cloud();
+  const key = await made(c, 'p-a');
+  const sounds = [];
+  for (let n = 1; n <= 200; n++) {
+    const { data: { id } } = await c.call('POST', 'profiles/p-a/sounds', { key, body: { sha256: sha(n), bytes: 1, mime: 'audio/wav' } });
+    await c.call('PUT', `sounds/${id}/0`, { key, raw: new Uint8Array([n]) });
+    sounds.push(id);
+  }
+  const put = sounds.map((s, i) => ({ kind: 'clips', id: `user-${i}`, body: { id: `user-${i}`, personId: 'p-a', label: 'Boom', mime: 'audio/wav', sound: s, sha256: sha(i + 1) } }));
+  // Calls to D1: each query outside a batch, and each batch, count one.
+  const db = c.env.DB;
+  const batch = db.batch.bind(db);
+  let inBatches = 0;
+  let batches = 0;
+  db.batch = async (statements) => { batches++; const at = db.queries.length; try { return await batch(statements); } finally { inBatches += db.queries.length - at; } };
+  const before = db.queries.length;
+  const calls = () => db.queries.length - before - inBatches + batches;
+  assert.equal((await c.call('POST', 'profiles/p-a/records', { key, body: { put } })).status, 200);
+  assert.ok(calls() <= 15, `the first push: ${calls()} calls`);
+  const first = calls();
+  // Every one of them again, with new audio: the old 200 go in the same batch.
+  const again = put.map((r) => ({ ...r, body: { ...r.body, sound: sounds[(sounds.indexOf(r.body.sound) + 1) % 200] } }));
+  assert.equal((await c.call('POST', 'profiles/p-a/records', { key, body: { put: again } })).status, 200);
+  assert.ok(calls() - first <= 15, `the second push: ${calls() - first} calls`);
+  db.batch = batch;
+});
+
 test('a sound record must name audio the profile has, whole; deleting the last record that names it deletes the audio', async () => {
   const c = cloud();
   const key = await made(c, 'p-a');

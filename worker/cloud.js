@@ -469,11 +469,16 @@ async function push(request, env, id, now, seen) {
   for (const r of del) checkRecordKey(r);
   // A sound's record names audio this profile has, all of it.
   const sounds = [...new Set(put.filter((r) => r.kind === 'clips').map((r) => r.body.sound))];
-  for (const s of sounds) {
-    if (typeof s !== 'string' || !SOUND_ID.test(s)) throw new Refuse(400, 'sound');
-    const row = await env.DB.prepare('SELECT got, chunks FROM sounds WHERE id = ? AND profile_id = ?').bind(s, id).first();
-    if (!row || row.got < row.chunks) throw new Refuse(409, 'sound', { sound: s });
-  }
+  for (const s of sounds) if (typeof s !== 'string' || !SOUND_ID.test(s)) throw new Refuse(400, 'sound');
+  // Two reads for the whole push, whatever its size (D1 caps the queries in
+  // one call): the sounds it names, and the sound each of its clips held.
+  const clips = [...del, ...put].filter((r) => r.kind === 'clips');
+  const [have, held] = await env.DB.batch([
+    env.DB.prepare('SELECT id, got, chunks FROM sounds WHERE profile_id = ? AND id IN (SELECT value FROM json_each(?))').bind(id, JSON.stringify(sounds)),
+    env.DB.prepare("SELECT id, sound_id FROM records WHERE profile_id = ? AND kind = 'clips' AND id IN (SELECT value FROM json_each(?))").bind(id, JSON.stringify(clips.map((r) => r.id))),
+  ]);
+  const whole = new Map(have.results.map((row) => [row.id, row.got >= row.chunks]));
+  for (const s of sounds) if (!whole.get(s)) throw new Refuse(409, 'sound', { sound: s });
   await getProfile(env, id);
   const cap = isCheck(id) ? CHECK_LIMITS.recordBytes : LIMITS.profileRecordBytes;
   // What the push adds to the profile's bytes, if every record lands: the
@@ -488,22 +493,13 @@ async function push(request, env, id, now, seen) {
   const growth = [...after.values()].reduce((sum, r) => sum + r.size, 0) - before.reduce((sum, r) => sum + r.size, 0);
   await withinProfileDaily(env, id, 'pushes', LIMITS.profilePushesPerDay, now);
   if (!await withinDaily(env, 'pushes', LIMITS.pushesPerDay, now)) throw new Refuse(429, 'busy');
-  // The sounds deleted clips held, to delete once nothing names them.
-  const goneClips = del.filter((r) => r.kind === 'clips').map((r) => r.id);
+  // The sounds deleted clips held, to delete once nothing names them. So do
+  // the sounds a clip held before new audio (a made sound changed).
+  const heldBy = new Map(held.results.map((row) => [row.id, row.sound_id]));
   const orphans = [];
-  for (const clipId of goneClips) {
-    const row = await env.DB.prepare("SELECT sound_id FROM records WHERE profile_id = ? AND kind = 'clips' AND id = ?").bind(id, clipId).first();
-    if (row?.sound_id) orphans.push(row.sound_id);
-  }
-  // And the audio a sound held before its new audio (a made sound changed).
-  // D1 binds at most 100 values to one query.
-  const putClips = put.filter((r) => r.kind === 'clips');
-  for (let i = 0; i < putClips.length; i += 90) {
-    const part = putClips.slice(i, i + 90);
-    const soundNow = new Map(part.map((r) => [r.id, r.body.sound]));
-    const rows = (await env.DB.prepare(`SELECT id, sound_id FROM records WHERE profile_id = ? AND kind = 'clips' AND id IN (${part.map(() => '?').join(', ')})`)
-      .bind(id, ...part.map((r) => r.id)).all()).results;
-    for (const row of rows) if (row.sound_id && row.sound_id !== soundNow.get(row.id)) orphans.push(row.sound_id);
+  for (const r of clips) {
+    const was = heldBy.get(r.id);
+    if (was && was !== r.body?.sound) orphans.push(was);
   }
   const revNow = '(SELECT rev FROM profiles WHERE id = ?)';
   // Only a record nobody wrote since the device's pull, when it says which.
@@ -538,10 +534,14 @@ async function push(request, env, id, now, seen) {
       ON CONFLICT (profile_id, kind, id) DO UPDATE SET body = NULL, sound_id = NULL, rev = excluded.rev, deleted = 1${unseen}`)
       .bind(id, r.kind, r.id, id, ...guard));
   }
-  for (const s of new Set(orphans)) {
-    const unused = `id = ? AND NOT EXISTS (SELECT 1 FROM records WHERE sound_id = sounds.id AND deleted = 0) AND ${UNSHARED}`;
-    statements.push(env.DB.prepare(`DELETE FROM sound_chunks WHERE sound_id IN (SELECT id FROM sounds WHERE ${unused})`).bind(s));
-    statements.push(env.DB.prepare(`DELETE FROM sounds WHERE ${unused}`).bind(s));
+  // Those orphans go once no record and no share names them: one pair of
+  // statements for all of them.
+  if (orphans.length) {
+    const unused = `profile_id = ? AND id IN (SELECT value FROM json_each(?))
+      AND NOT EXISTS (SELECT 1 FROM records WHERE sound_id = sounds.id AND deleted = 0) AND ${UNSHARED}`;
+    const unusedArgs = [id, JSON.stringify([...new Set(orphans)])];
+    statements.push(env.DB.prepare(`DELETE FROM sound_chunks WHERE sound_id IN (SELECT id FROM sounds WHERE ${unused})`).bind(...unusedArgs));
+    statements.push(env.DB.prepare(`DELETE FROM sounds WHERE ${unused}`).bind(...unusedArgs));
   }
   // …plus what the ones that landed (this rev) hold now.
   statements.push(env.DB.prepare(`UPDATE profiles SET record_bytes = record_bytes + (SELECT COALESCE(SUM(${SIZE}), 0) FROM ${TOUCHED}
