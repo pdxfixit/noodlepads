@@ -432,6 +432,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | Every remembered key (`dj-input`, `dj-size`, `dj-click`, `beat-keys`, `kids-tab`) starts the app safely | `startup-remembered.test.mjs` |
 | A take's `ring` is stored only when true, only on a hit | `overlap.test.mjs`, `rhythm.test.mjs` |
 | Leaving Kids shows the beat maker again, so it holds the kid's squares, never an older copy to save over them | `kids-scratch-back.test.mjs` |
+| A Kids recording is kept as the kid's who was recording, even if the person changes before it is kept (`listen` → `keep(…, { pid })`) | `kids-mic-person.test.mjs` |
 | Kids' square *i* is pill 2*i* of a 16-pill bar, in every bar | `kids.test.mjs` |
 | Kids' keys mean `instNotes` changes for the whole person | `kids.test.mjs` (🎹 instrument button) |
 | `kids-logic.js` stays importable in Node; it imports `sequencer.js`, so that module must stay importable too | every Kids unit test |

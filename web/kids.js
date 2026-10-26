@@ -436,11 +436,12 @@ function listen() {
   Object.assign(rec, { recorder, chunks: [], started: performance.now(), level: 0 });
   const how = rec.mode === 'tap' ? 'tap' : 'hold';
   const started = rec.started;
+  const pid = deps.personId();   // whose voice it is, should the person change before it is kept
   recorder.ondataavailable = (e) => { if (e.data.size) rec.chunks.push(e.data); };
   // `discard` is set on the recorder itself as it is stopped, so a late
   // onstop of a thrown-away hold can never keep anything; `quiet` (⏹️)
   // keeps it without playing it.
-  recorder.onstop = () => { if (!recorder.discard) keep(new Blob(rec.chunks, { type: recorder.mimeType || mime || 'audio/webm' }), (performance.now() - started) / 1000, how, { play: !recorder.quiet }); };
+  recorder.onstop = () => { if (!recorder.discard) keep(new Blob(rec.chunks, { type: recorder.mimeType || mime || 'audio/webm' }), (performance.now() - started) / 1000, how, { play: !recorder.quiet, pid }); };
   recorder.start();
   try {
     const ctx = audio.wake();
@@ -501,9 +502,10 @@ function stopRecording({ discard = false, quiet = false } = {}) {
   rec.stream = null;
 }
 
-// A recording made into a pad of the kid's own, as the sound sheet saves one,
-// in the lit voice; then it plays (not after ⏹️: `play` false).
-async function keep(blob, seconds, how, { play = true } = {}) {
+// A recording made into a pad of the kid's own (`pid`, who was recording),
+// as the sound sheet saves one, in the lit voice; then it plays (not after
+// ⏹️: `play` false).
+async function keep(blob, seconds, how, { play = true, pid } = {}) {
   if (seconds < MIN_RECORD_SECONDS) { wiggle(el.mic); return; }
   try {
     const buffer = await audio.decode(await blob.arrayBuffer());
@@ -512,7 +514,6 @@ async function keep(blob, seconds, how, { play = true } = {}) {
     wiggle(el.mic);
     return;
   }
-  const pid = deps.personId();
   const mine = deps.clips({ includeHidden: true });
   const clip = {
     id: newId('user'),
