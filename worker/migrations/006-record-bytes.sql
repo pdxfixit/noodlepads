@@ -6,9 +6,9 @@
 -- each share's bundle and title plus 100 for it and for each sound it names.
 --
 -- Safe to apply before the Worker that reads it is live: the older Worker
--- names its columns and never touches this one. Apply with
--- `just cloud-migrate --yes` BEFORE that Worker deploys: it reads the column
--- on every push.
+-- names its columns and never touches these. The deploy applies it
+-- (deploy.yml runs `just cloud-migrate --yes` before the upload), and the
+-- Worker that reads the columns needs it: it reads them on every push.
 
 ALTER TABLE profiles ADD COLUMN record_bytes INTEGER NOT NULL DEFAULT 0;
 -- 0 until the newer Worker counts the profile itself: a push the older one

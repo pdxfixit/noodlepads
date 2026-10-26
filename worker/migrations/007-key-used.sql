@@ -7,9 +7,9 @@
 --
 -- Safe to apply before the Worker that reads it is live: the older Worker
 -- names its columns and never touches this one (a key it makes has used 0,
--- and the newer Worker counts its `created` then). Apply with
--- `just cloud-migrate --yes` BEFORE that Worker deploys: it reads the column
--- on every request with a key.
+-- and the newer Worker counts its `created` then). The deploy applies it
+-- (deploy.yml runs `just cloud-migrate --yes` before the upload), and the
+-- Worker that reads the column needs it: on every request with a key.
 
 ALTER TABLE keys ADD COLUMN used INTEGER NOT NULL DEFAULT 0;
 UPDATE keys SET used = CAST(strftime('%s', 'now') AS INTEGER) * 1000;
