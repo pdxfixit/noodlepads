@@ -28,7 +28,9 @@ test('Space on the page stops everything, and keeps the page from scrolling', ()
 
 test('Space on a focused button, in a text box, held down, or with Shift does not', () => {
   const before = stops;
-  page.key(' ', { target: page.$('#stop-all') ?? document.querySelector('button') });
+  const button = page.$('#stop-all');
+  assert.ok(button, 'a real button to focus');
+  page.key(' ', { target: button });
   page.key(' ', { target: document.querySelector('input') });
   page.key(' ', { repeat: true });
   page.key(' ', { shiftKey: true });
@@ -38,6 +40,25 @@ test('Space on a focused button, in a text box, held down, or with Shift does no
 // Help: on a focused button Space presses it, so Esc is the stop that works there.
 test('Esc on a focused button stops everything, where Space would press the button', () => {
   const before = stops;
-  page.key('Escape', { target: page.$('#stop-all') ?? document.querySelector('button') });
+  const button = page.$('#stop-all');
+  assert.ok(button, 'a real button to focus');
+  page.key('Escape', { target: button });
   assert.equal(stops, before + 1);
+});
+
+// ✏️ Edit sounds with sounds picked: Esc lets go of them first, and stops
+// nothing (app.js clearChosen before stopEverything).
+test('Esc with sounds picked in ✏️ Edit sounds lets go of them, and stops nothing', () => {
+  const $ = page.$;
+  $('#edit-toggle').dispatch('click');
+  const kick = $('#pads').querySelectorAll('.pad').find((p) => p.dataset.id?.endsWith('-kick'));
+  kick.dispatch('click');
+  assert.equal($('#pads-chosen').hidden, false, 'one picked');
+  const before = stops;
+  page.key('Escape');
+  assert.equal($('#pads-chosen').hidden, true, 'let go');
+  assert.equal(stops, before, 'nothing stopped');
+  page.key('Escape');
+  assert.equal(stops, before + 1, 'the next Esc stops everything');
+  $('#edit-toggle').dispatch('click');
 });
