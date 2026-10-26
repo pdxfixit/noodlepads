@@ -333,9 +333,11 @@ before that leaves it for `just cloud-prune --smoke --yes`.
   a wrong PIN refused (401), open, push a beat record, pull it, upload a
   sound over one piece (`cloud-sync.js uploadAudio`, `CHUNK_BYTES` + 54321
   bytes, so two pieces) and ask again (nothing needed), read it back byte for
-  byte, share, read the share with no key or Origin, the list shows it,
-  delete (wrong PIN refused first), then gone: not listed, 404 on open and on
-  its sound, the share still there.
+  byte, delete the sound's record and see its audio answer 404 at once, upload a small sound to keep and a record naming it, share,
+  read the share with no key or Origin, the list leaves the check's profile
+  out, delete (wrong PIN refused first), then gone: not listed, 404 on open, on
+  its sound and on its share code. `tests/cloud-smoke.test.mjs` runs it here
+  against the Worker on a fake D1.
 - **`cloud-e2e`**: two browser contexts (separate IndexedDB) in one headless
   Chrome on the live site. Each waits for `state.manifest`, `store.js db`
   handle and a drawn pad, then runs the start-up `syncAll`. A makes a person,

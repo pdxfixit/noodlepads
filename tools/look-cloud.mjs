@@ -182,6 +182,25 @@ async function smoke({ url }) {
       must(back.equals(bytes), `read back ${back.length} bytes, not the ${bytes.length} sent`);
       return 'read the sound back byte for byte';
     });
+    // The audio a sound held goes with it, at once (the Worker's orphans):
+    // its old link plays for no one. A check profile holds one sound, so this
+    // deletes the record rather than give it new audio.
+    await s.step('a deleted sound lets its audio go', async () => {
+      await api.push(id, key, [], [{ kind: 'clips', id: 'user-smoke' }]);
+      const res = await fetch(`${url}/api/sounds/${sound}`);
+      must(res.status === 404, `its old audio answers ${res.status}`);
+      return "deleted the sound's record: its audio answers 404 at once";
+    });
+    // A second, small sound kept to the end, so deleting the profile is
+    // still seen to take its sounds with it.
+    await s.step('a sound to keep', async () => {
+      const small = new Blob([crypto.randomBytes(4321)], { type: 'audio/wav' });
+      const up = await uploadAudio(api, id, key, small, 'audio/wav', sha256Of);
+      sound = up.sound;
+      await api.push(id, key, [{ kind: 'clips', id: 'user-smoke-2', body: { label: 'Smoke 2', mime: 'audio/wav', sound, sha256: up.sha256, bytes: small.size } }], []);
+      must((await fetch(`${url}/api/sounds/${sound}`)).ok, 'the kept sound does not play');
+      return 'uploaded a small sound to keep, and a record naming it';
+    });
     let code = null;
     await s.step('make a share code', async () => {
       code = (await api.share(id, key, { kind: 'beat', title: 'Smoke test', bundle: { beats: [{ id: 'beat-smoke', ...beat }] }, preview: null })).code;
