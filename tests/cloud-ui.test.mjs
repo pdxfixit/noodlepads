@@ -16,6 +16,7 @@ import { FakeD1 } from './fake-d1.mjs';
 import { readFileSync } from 'node:fs';
 import { isFunName, funName } from '../web/names.js';
 import { PIN_RESET_EMAIL } from '../web/contact.js';
+import { FakeAudioBuffer, fakeBuffer } from './helpers.mjs';
 
 let page;
 let $;
@@ -512,7 +513,9 @@ test('▶ Play on a share plays as the app\'s sounds do: the grille wakes, and s
   };
   cloud.api.shared = async () => ({ kind: 'sound', title: 'Wobbly Taco', preview: 'sound-1' });
   cloud.api.fetchSound = async () => ({ arrayBuffer: async () => new ArrayBuffer(8) });
-  audio.decode = async () => ({ duration: 2, length: 2000, numberOfChannels: 1, sampleRate: 1000 });
+  globalThis.AudioBuffer ??= FakeAudioBuffer;
+  // A quiet preview (peak 0.3): it plays levelled as a pad is, at peak 0.9.
+  audio.decode = async () => fakeBuffer([Array.from({ length: 2000 }, (_, i) => 0.3 * Math.sin(i / 5))], 1000);
   // Counted, and passed on to the app's own hook: the grille's meter starts.
   const { meter } = await import('../web/meter.js');
   meter.raf = 0;
@@ -527,6 +530,8 @@ test('▶ Play on a share plays as the app\'s sounds do: the grille wakes, and s
     await settle();
     assert.equal(play().textContent, '■ Stop');
     assert.ok(audio.playing.has('share-preview'), 'it plays through audio.start');
+    const heard = sources[0].buffer.getChannelData(0);
+    assert.ok(Math.abs(Math.max(...heard.map(Math.abs)) - 0.9) < 1e-6, 'levelled to peak 0.9, as loud as a pad');
     assert.equal(started, 1, 'the grille is told a sound began, once');
     assert.ok(meter.raf, 'and the meter runs');
     audio.stopAll();

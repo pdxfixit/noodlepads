@@ -14,6 +14,7 @@ import { emojiMore, withCurrent } from './emoji-more.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { announce } from './ui.js';
 import { audio } from './audio.js';
+import { applyChain } from './voices.js';
 import { PIN_RESET_EMAIL } from './contact.js';
 import {
   api, CloudError, cloudTrouble, cloudThere, inCloud, linkOf, keyOf, isOffline, statusOf, syncNow,
@@ -639,7 +640,9 @@ async function playPreview(code) {
     if (!previews.has(code)) {
       previews.set(code, fetchShare(code).then(async (s) => {
         if (!s.preview) throw new Error('This one has nothing to play. 🎛️ Remix it to hear it in the app.');
-        return audio.decode(await (await api.fetchSound(s.preview)).arrayBuffer());
+        // Levelled as a pad is (peak 0.9), so a preview made anywhere is as loud as the app's sounds.
+        const decoded = await audio.decode(await (await api.fetchSound(s.preview)).arrayBuffer());
+        return (await applyChain(decoded, [], null)).buffer;
       }));
       previews.get(code).catch(() => previews.delete(code));
     }

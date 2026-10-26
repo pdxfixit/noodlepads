@@ -106,7 +106,7 @@ The ids in `audio.playing` are a shared namespace:
 | `'preview'` | the sound sheet's voiced preview and live loop (`sheet.js`), ✂️ parts (`chop.js playPart`), 🪄 Voice for many (`bulk.js`). One slot: each stops the other |
 | `'preview-original'` | the sheet's 👂 Plain (`sheet.js playPlain`) |
 | `'see-all'` | 🗂️ See all's row ▶ (`things.js PLAY_ID`) |
-| `'share-preview'` | 🔗 Shared with me's ▶ Play (`cloud-ui.js playPreview`) |
+| `'share-preview'` | 🔗 Shared with me's ▶ Play (`cloud-ui.js playPreview`, levelled to peak 0.9) |
 
 `meter.js run` calls `setProgress(id, …)` for every entry; `pads.js
 setProgress` ignores ids that are not a pad.
