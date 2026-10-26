@@ -639,6 +639,34 @@ test('two devices pushing the same beat at the same moment: the cloud keeps the 
   for (const d of [a, b]) assert.deepEqual(beatOf(d).map((x) => [x.name, x.bpm]), [['From A', 77]]);
 });
 
+// The pull reads this device's records, then waits for a new sound's audio.
+// A kid editing the beat in that wait (sheet.js and others change records in
+// place) must not have the cloud's copy written over the edit.
+test('an edit made while a sync waits is never written over: it merges with the cloud\'s next round', async () => {
+  for (const how of ['replaced', 'changed in place']) {
+    const { api, a, b, syncA, syncB, bl } = await twoDevices();
+    await a.put('beats', { ...beatOf(a)[0], name: 'Turbo Taco' });
+    a.stores.clips.push({ id: 'user-2', personId: 'p-a', label: 'Roar', mime: 'audio/wav', blob: blob(4, 5, 6), created: 7 });
+    await syncA();
+    let edited = false;
+    const editing = { ...api, fetchSound: async (...args) => {
+      const got = await api.fetchSound(...args);
+      if (!edited) {
+        edited = true;
+        const mine = beatOf(b)[0];
+        if (how === 'replaced') await b.put('beats', { ...mine, bpm: 77, changed: Date.now() });
+        else Object.assign(mine, { bpm: 77, changed: Date.now() });
+      }
+      return got;
+    } };
+    await syncProfile(bl, { ...b.deps(api), api: editing });
+    assert.ok(edited, how);
+    await syncA();
+    for (const d of [a, b]) assert.deepEqual(beatOf(d).map((x) => [x.name, x.bpm]), [['Turbo Taco', 77]], `${how}: both edits, on both`);
+    assert.deepEqual(moved(await syncB()), { pulled: 0, pushed: 0, deleted: 0, sounds: 0 }, `${how}: settled`);
+  }
+});
+
 test('idempotent: the same pull applied twice changes nothing and sends nothing', async () => {
   const { a, b, bl, syncA, syncB } = await twoDevices();
   await a.put('beats', { ...beatOf(a)[0], name: 'Here' });

@@ -430,7 +430,8 @@ export async function syncProfile(link, deps) {
   // record is merged too, never overwritten.
   for (let round = 1; ; round++) {
     await hashAudio(link, deps, here);
-    profile = await pullOnce(link, deps, sha, report, bases, bases_, tell, progress) ?? profile;
+    const pull = await pullOnce(link, deps, sha, report, bases, bases_, tell, progress);
+    profile = pull.profile ?? profile;
     tell({ phase: 'storing', now: null, stored: true });
     let stale;
     try {
@@ -442,13 +443,30 @@ export async function syncProfile(link, deps) {
       for (const [clipId, s] of Object.entries(link.sounds)) if (s.sound === err.sound) delete link.sounds[clipId];
       stale = await pushAll(link, deps, sha, report, bases_);
     }
-    if (!stale || round >= SYNC_ROUNDS) break;
+    // A record edited here while this pull ran is merged next round.
+    if ((!stale && !pull.held) || round >= SYNC_ROUNDS) break;
   }
   await pushLook(link, deps, profile);
   tell({ phase: 'done' });
   return report;
 }
 
+// One record of `personId` as the device holds it now, or null (recordsOf's
+// rules, for one record).
+function recordHere(lists, personId, kind, recordId) {
+  if (ONE_EACH.has(kind)) return list(lists, kind).find((r) => r?.personId === personId) ?? null;
+  if (kind === 'overrides') return list(lists, kind).find((r) => r?.id === recordId) ?? null;
+  return list(lists, kind).find((r) => r?.personId === personId && r.id === recordId) ?? null;
+}
+
+// A record as it is at one moment: its content, edit stamp and audio size.
+// Records are changed in place (sheet.js), so this is kept, not the record.
+const printRecord = (r) => (r ? `${hashOf(r)}|${r[STAMP] ?? ''}|${r.blob?.size ?? ''}` : '');
+
+// Pulls what the cloud has new and stores what this device should take.
+// Returns {profile, held}: `held` counts records edited here while the pull
+// waited (for audio, the network); those are left alone, and the rev is not
+// moved on, so the next round pulls them again and merges them.
 async function pullOnce(link, deps, { of: shaOf, here: shaHere, map: hereSha }, report, bases, bases_, tell, progress) {
   const { api } = deps;
   const id = link.id;
@@ -466,6 +484,8 @@ async function pullOnce(link, deps, { of: shaOf, here: shaHere, map: hereSha }, 
   // The last word on each record wins, in pull order.
   const latest = new Map();
   for (const p of pulled) latest.set(keyOf(p.kind, p.id), p);
+  // Each one as this device has it now, before anything waits.
+  const seen = new Map([...latest.keys()].map((k) => [k, printRecord(local.get(k)?.record)]));
   const remoteSha = (p) => p.body?.sha256 ?? '';
 
   // Records that need nothing fetched: deleted here and unchanged there, or
@@ -528,8 +548,8 @@ async function pullOnce(link, deps, { of: shaOf, here: shaHere, map: hereSha }, 
   const fate = new Map();   // k -> {p, action, record}
   for (const [k, p] of latest) {
     const here = local.get(k)?.record ?? null;
-    if (p.skip) { fate.set(k, { p, action: 'keep' }); continue; }
-    if (p.same) { fate.set(k, { p, action: 'same' }); continue; }
+    if (p.skip) { fate.set(k, { k, p, action: 'keep' }); continue; }
+    if (p.same) { fate.set(k, { k, p, action: 'same' }); continue; }
     const there = p.deleted ? null : remote.get(k);
     if (there === undefined) continue;   // dropped by the checks, like a bad backup record
     const sha = p.kind === 'clips' ? (remoteSha(p) || shaOf(k)) : '';
@@ -538,21 +558,32 @@ async function pullOnce(link, deps, { of: shaOf, here: shaHere, map: hereSha }, 
       hash: (r) => hashOf(r, r === there ? sha : r === here ? shaHere(k) : shaOf(k)),
     });
     if (p.kind === 'clips' && here) d = audioDecides(d, { was: shaOf(k), mine: shaHere(k), theirs: there ? sha : null, here, there });
-    fate.set(k, { p, ...d, there });
+    fate.set(k, { k, p, ...d, there });
   }
-  const by = (action) => [...fate.values()].filter((f) => f.action === action);
+  const by = (action) => [...fate.values()].filter((f) => f.action === action && !f.held);
   const keyed = (kind, r) => (ONE_EACH.has(kind) ? id : r.id);
+  // Checked right before each write, with nothing awaited in between: a
+  // record a kid changed since the pull read it is held, never overwritten.
+  let held = 0;
+  const asRead = (f) => {
+    if (printRecord(recordHere(deps.lists(), id, f.p.kind, f.p.id)) === seen.get(f.k)) return true;
+    f.held = true;
+    held++;
+    return false;
+  };
 
-  for (const f of by('take')) await deps.put(f.p.kind, f.there);
+  for (const f of by('take')) if (asRead(f)) await deps.put(f.p.kind, f.there);
   for (const f of by('merged')) {
     if (f.p.kind === 'clips' && f.audio !== 'remote') audio.set(f.p.id, local.get(keyOf('clips', f.p.id))?.record?.blob ?? audio.get(f.p.id));
     const one = deps.clean(pulledDoc(id, person, [{ kind: f.p.kind, body: f.record }]), audioOf)[f.p.kind]?.[0];
+    if (!asRead(f)) continue;
     if (one) await deps.put(f.p.kind, one);
     report.merged++;
     report.clashes += f.clashes ?? 0;
   }
-  for (const f of by('delete')) await deps.remove(f.p.kind, keyed(f.p.kind, f.p));
+  for (const f of by('delete')) if (asRead(f)) await deps.remove(f.p.kind, keyed(f.p.kind, f.p));
   // New here, a clash kept as two, and the person's look: the backup merge.
+  for (const f of by('fresh')) asRead(f);
   const viaMerge = [...by('fresh'), ...by('keepBoth')];
   report.kept += by('keepBoth').length;
   const doc = deps.clean(pulledDoc(id, person, viaMerge.map((f) => ({ kind: f.p.kind, body: f.there }))), audioOf);
@@ -563,6 +594,7 @@ async function pullOnce(link, deps, { of: shaOf, here: shaHere, map: hereSha }, 
   const after = recordsOf(deps.lists(), id, deps.kitIds);
   for (const [k, f] of fate) {
     const { p, action } = f;
+    if (f.held) continue;   // as it was: the next round pulls it again
     if (p.kind === 'clips' && p.body?.sound && action !== 'delete' && !p.deleted) {
       const was = link.sounds[p.id];
       const wrote = action === 'take' || action === 'merged' || action === 'fresh';
@@ -579,7 +611,13 @@ async function pullOnce(link, deps, { of: shaOf, here: shaHere, map: hereSha }, 
       if (k.startsWith('clips:') && action !== 'delete') delete link.sounds[k.slice(6)];
       continue;
     }
-    if (action === 'take' || action === 'same' || action === 'fresh') {
+    // What the cloud holds, not what is here now: an edit made since the
+    // write is this device's, for the push to send.
+    if (action === 'take') {
+      cloudIs(f.there);
+    } else if (action === 'same') {
+      cloudIs(p.body);
+    } else if (action === 'fresh') {
       if (after.has(k)) cloudIs(after.get(k).record);
     } else if (action === 'merged') {
       cloudIs(f.there);   // the push sends the merge
@@ -589,10 +627,10 @@ async function pullOnce(link, deps, { of: shaOf, here: shaHere, map: hereSha }, 
     // keepBoth: this device's stays under the id, and the push sends it over
     // the cloud's, which is kept here under a new id (pushed too).
   }
-  link.rev = since;
+  if (!held) link.rev = since;
   await bases_.save();
   await deps.saveLink(link);
-  return profile;
+  return { profile, held };
 }
 
 // Pushes what differs from the cloud. Returns how many records the cloud

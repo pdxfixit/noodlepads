@@ -223,7 +223,9 @@ Before each pull and each push, `hashAudio` hashes the audio of every clip whose
 
 `KIND_RULES` (merge3.js): beats and patterns `rows` (row by row, else by sound; pills by `pillByPill`; tune notes by `mergeTune`), songs and songbook `slots`, `lanes` (blocks keyed by bar), `tempos`; orders `ids`, `groups`; decks `keys`, `mine`; layouts `keys`; prefs `values` (`seen` by `unionSeen`); voices `used` (max), `knobs`. Any other field is a setting (the newer edit wins) or a list with no safe merge.
 
-After the stores: `deps.merge` always runs (even with nothing in it), and `storeLoaded` ends with `readStorage()`. Only then `pullOnce` reads `after` from `state`, sets `sent` and the base for each record, sets `link.rev`, and saves bases and link.
+Right before each `take`, `merged`, `delete` or `fresh` write, with nothing awaited in between, the record here is checked against how the pull first read it (`printRecord`: content, `changed` stamp, audio size, kept as text since records are changed in place). One a kid edited meanwhile is held: not written, its `sent` and base left as they were, and `link.rev` not moved on, so the next round (`syncProfile` runs another while `held`) pulls it again and merges it.
+
+After the stores: `deps.merge` always runs (even with nothing in it), and `storeLoaded` ends with `readStorage()`. Only then `pullOnce` sets `sent` and the base for each record (`take` and `same` from the cloud's copy, `fresh` from `after`, read from `state`), sets `link.rev` unless a record was held, and saves bases and link.
 
 ### Push (`cloud-sync.js pushAll`)
 
@@ -415,7 +417,8 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 
 | Rule | Why | Guard |
 |---|---|---|
-| `pullOnce` reads `after` from `state` after `deps.merge`; it relies on `storeLoaded` ending with `readStorage()` | `deps.put` writes IndexedDB only; without the reload, `sent` and bases would hash the old local copy | `tests/cloud-sync.test.mjs` (fake devices) |
+| `pullOnce` reads `after` from `state` after `deps.merge` for `fresh` records; it relies on `storeLoaded` ending with `readStorage()` | `deps.merge` may store them changed (a new id); without the reload, `sent` and bases would hash the old local copy | `tests/cloud-sync.test.mjs` (fake devices) |
+| a pull never writes over a record changed since it read it | the audio downloads and network waits leave time for a kid's edit | `tests/cloud-sync.test.mjs` ("an edit made while a sync waits") |
 | every `/api` POST, PUT, PATCH and DELETE checks the Origin (`readJson`, or by hand in `forgetKey`, `putPiece`, `unshare`) | only the site's own page may write | `tests/worker-cloud.test.mjs` ("writes come only from the site's own page") |
 | a clip record names whole audio of the same profile before the push | the Worker refuses 409 `sound`; the app uploads audio first | `tests/worker-cloud.test.mjs` |
 | a push is one D1 batch; `rev` bumps once | a pull never sees half a push; pages end between pushes | "a push is all or nothing", "a pull pages by 500" |
