@@ -422,6 +422,18 @@ function openVoice() {
     palette.hidden = !palette.hidden;
     add.setAttribute('aria-expanded', String(!palette.hidden));
   });
+  // Esc closes the open palette, back on + Add a layer, and only that: not
+  // the sheet, and never ⏹️ Stop all (app.js stands down on preventDefault).
+  const closePalette = (e) => {
+    if (e.key !== 'Escape' || palette.hidden) return;
+    e.preventDefault();
+    e.stopPropagation();
+    palette.hidden = true;
+    add.setAttribute('aria-expanded', 'false');
+    add.focus();
+  };
+  palette.addEventListener('keydown', closePalette);
+  add.addEventListener('keydown', closePalette);
   palette.addEventListener('click', (e) => {
     const b = e.target.closest('[data-add-knob]');
     if (!b) return;

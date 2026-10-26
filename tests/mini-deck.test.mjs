@@ -111,6 +111,17 @@ test('tucked on Beats: ▶ plays and stops the beat, ▾ drops the whole bar dow
   assert.ok(document.body.classList.contains('deck-open'));
   assert.equal($('#mini-more').getAttribute('aria-expanded'), 'true');
   assert.equal($('#mini-more').textContent, '▴');
+  // Esc puts the dropped bar away, and a playing beat plays on.
+  $('#mini-play').dispatch('click');
+  await page.settle();
+  assert.equal($('#seq-play').getAttribute('aria-pressed'), 'true');
+  page.key('Escape');
+  assert.equal(document.body.classList.contains('deck-open'), false, 'Esc puts it away');
+  assert.equal($('#mini-more').textContent, '▾');
+  assert.equal($('#seq-play').getAttribute('aria-pressed'), 'true', 'the beat plays on');
+  $('#seq-play').dispatch('click');
+  $('#mini-more').dispatch('click');
+  assert.ok(document.body.classList.contains('deck-open'));
   $('#seq-deck').getBoundingClientRect = () => ({ left: 0, top: 300, right: 375, bottom: 420, width: 375, height: 120 });
   page.winEvent('scroll');
   assert.equal(document.body.classList.contains('deck-tucked'), false, 'back in its place');

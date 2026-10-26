@@ -85,6 +85,15 @@ export function initMiniDeck({ doc = globalThis.document, win = globalThis.windo
 
   mini.play.addEventListener('click', () => { play()?.click(); sync(); });
   mini.more.addEventListener('click', () => { body.classList.toggle('deck-open'); sync(); });
+  // Esc puts the dropped bar away, back on ▾, and only that: a playing beat
+  // plays on (app.js's Esc, ⏹️ Stop all, stands down on preventDefault).
+  doc.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || e.defaultPrevented || !body.classList.contains('deck-open') || doc.querySelector('dialog[open]')) return;
+    e.preventDefault();
+    body.classList.toggle('deck-open', false);
+    sync();
+    mini.more.focus?.();
+  });
 
   win.addEventListener('scroll', update, { passive: true });
   win.addEventListener('resize', () => { update(); fit(); });

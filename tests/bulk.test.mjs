@@ -106,6 +106,23 @@ test('🎨 Color · picture and 🪄 Voice change every chosen sound; presets ch
   assert.equal($('#pads-chosen').hidden, true);
 });
 
+// Esc in 🪄 Voice's + Add a layer palette closes the palette alone: before,
+// it had no Esc of its own.
+test('🪄 Voice: Esc closes the open + Add a layer palette, and only that', async () => {
+  pad('user-t-2').dispatch('click');
+  bar('voice').dispatch('click');
+  const add = $('#bulk-body').querySelectorAll('button').find((b) => b.textContent === '+ Add a layer');
+  const palette = $('#bulk-body').querySelector('.layer-palette');
+  add.dispatch('click');
+  assert.equal(palette.hidden, false);
+  const e = palette.dispatch('keydown', { key: 'Escape' });
+  assert.equal(palette.hidden, true, 'closed');
+  assert.equal(e.defaultPrevented, true, 'so the sheet stays open and nothing stops');
+  assert.equal($('#bulk-dialog').open, true);
+  $('#bulk-dialog').close();
+  $('#chosen-clear').dispatch('click');
+});
+
 test('🗑️ Delete asks first, deletes sounds and hides a preset, and ↩️ Undo brings it all back', async () => {
   pad('user-t-2').dispatch('click');
   kickPad().dispatch('click');
