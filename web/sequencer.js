@@ -2193,6 +2193,15 @@ export function createSequencer(deps) {
   // A note heard as it is placed, while the beat is stopped: the row's
   // sound at that pitch, for that long, through the row's mix.
   const previews = [];
+  // The mix a preview builds while the beat is stopped (〰️ Warble and 🤖
+  // Robot run oscillators in it) goes once the roll closes, or once no note
+  // has been heard for RING_MS.
+  let previewTimer = 0;
+  function endPreviews() {
+    clearTimeout(previewTimer);
+    previewTimer = 0;
+    if (!playing()) letGo((m) => m.dest === audio.master && m.p !== sample?.pattern);
+  }
   async function previewNote(i, p, l) {
     const row = pattern?.rows[i];
     const clip = deps.clipById(row?.clipId);
@@ -2202,8 +2211,11 @@ export function createSequencer(deps) {
     if (!loaded || playing()) return;
     const ctx = audio.wake();
     sound(ctx, busFor(ctx, audio.master, pattern).input(i), previews, row, loaded, ctx.currentTime + 0.01, false, p, l * baseStep());
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(endPreviews, RING_MS);
   }
   if (el.roll) {
+    el.roll.addEventListener('close', endPreviews);
     roll = createRoll(el.roll, {
       beat: () => pattern, row: (i) => pattern?.rows[i], total: () => total(), groups: () => groups(), advanced: () => advanced,
       commit: (i, tune) => {

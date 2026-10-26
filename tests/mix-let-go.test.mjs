@@ -88,3 +88,24 @@ test('a song of that beat: its oscillators stop once the song stops and rings ou
   assert.equal(running(), 0, 'none left running');
   ctx.currentTime = 0;
 });
+
+// 🎹 A note placed in the roll while the beat is stopped is heard through
+// the beat's mix (previewNote). That mix was let go only by a later stop.
+test('a 🎹 note heard while the beat is stopped: its Robot stops once the roll closes', async () => {
+  $('#beats-toggle').dispatch('click');
+  document.querySelectorAll('[data-mixer]')[0].dispatch('click');
+  const master = $('#mixer-strips').children.find((c) => c.dataset.strip === 'master').querySelector('[data-fx]');
+  master.value = 'robot';
+  master.dispatch('change');
+  $('#mixer').close();
+  await stopAndRingOut(() => {});   // what the beat left is gone
+  assert.equal(running(), 0);
+  $('#seq-add-tune').dispatch('click');
+  $('#tune-who-list').querySelectorAll('[data-inst]').find((b) => b.dataset.inst === 'pluck').dispatch('click');
+  assert.equal($('#roll').open, true);
+  $('#roll').querySelector('.note-cell').dispatch('click');
+  await page.settle();
+  assert.ok(running() > 0, 'the note plays through the Master Robot');
+  await stopAndRingOut(() => $('#roll').close());
+  assert.equal(running(), 0, 'none left running');
+});
