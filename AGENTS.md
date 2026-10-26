@@ -85,7 +85,7 @@ Every change serves this. Why, and the north star it steers: [ADR 0022](docs/adr
 
 ## Ship
 
-**A change to `web/` runs `just version` first and ships `web/version.js` with it:** the release (`1.0.<commit count>`) labels the deploy's `version.json` (`v1.0.215-4d5ef56`) and shows in About. `just ship`, `just land` (which restamps PATCH on a newer main) and CI refuse a `web/` change without it.
+**A change to `web/` runs `just version` first and ships `web/version.js` with it:** the release (`1.0.<commit count>`) labels the deploy's `version.json` (`v1.0.215-4d5ef56`) and shows in About. `just ship`, `just land` (which restamps PATCH on a newer main) and CI refuse a `web/` change without it. It counts the commit about to be made, so run it before `git commit`, never with your commit already in `HEAD` (after a rebase, `git reset --soft HEAD~1`, then restamp and commit): run after, it counts your commit twice, and every push after it fails the version check (2026-10-26, `a83f8e9`).
 
 **`just ship <message-file> <files…>`** does all of this in one go: tests, a throwaway worktree, commit and push, stopping at the first failure. GitHub deploys the push. Use it. What it does, for reference:
 
