@@ -8,12 +8,6 @@ When Ben answers, record the answer in [decisions.md](decisions.md) (and an ADR 
 
 From the council's first round (2026-10-26, `docs/council.md`), asked in the chat one at a time; a card is deleted when its answer is recorded. Cards marked ⛔ are blocks against one of your rules: the seat stopped the work, and only you can uphold or overrule it.
 
-### Q69. Names of real products: 808, Motown, Chrome and Edge.
-
-**Recommend:** rename "808" to "Boom bass" and "Motown" to "Detroit soul"; keep "Chrome or Edge", which says where 🎧 From a song works.
-The mission keeper blocked "Spotify, YouTube" in 🎧 From a song's text; I reword that now either way. 808 is a drum machine, Motown a record label. Naming a browser is a technical requirement.
-**Answer:**
-
 ### Q70. Add one Cloudflare rate-limit rule on `/api/*`, per IP at the edge?
 
 **Recommend:** yes. The app still never sees or stores an IP.
