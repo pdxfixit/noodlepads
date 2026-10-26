@@ -3388,8 +3388,9 @@ export function createSequencer(deps) {
   // Loads every sound the beats use (fresh: a voice may have changed),
   // keeping the ones a beat or song playing now still needs.
   const prepareBeats = (patterns) => refresh(patterns.flatMap((p) => p.rows));
-  // A song stopped: its graphs (into its lanes' gains, `dests`) go once they ring out.
-  const endMix = (dests) => letGo((m) => dests.includes(m.dest));
+  // 🎼 Song is done with these graphs: those into its lanes' gains `dests`
+  // (only beat `p`'s, when given). They go once they ring out.
+  const endMix = (dests, p) => letGo((m) => dests.includes(m.dest) && (!p || m.p === p));
   // Sounds row i of beat `p` at `time` into `dest`, cutting off or
   // overlapping the row's earlier hits in `list`. False if its sound is gone.
   function soundHit(ctx, dest, list, p, i, time, loud, note, len = 0) {

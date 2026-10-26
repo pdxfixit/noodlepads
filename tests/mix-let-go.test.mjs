@@ -109,3 +109,36 @@ test('a 🎹 note heard while the beat is stopped: its Robot stops once the roll
   await stopAndRingOut(() => $('#roll').close());
   assert.equal(running(), 0, 'none left running');
 });
+
+// 🎼 Song: a lane done with a beat lets that beat's mix go there while the
+// song plays on, so a busy song holds no more Robots than it is playing.
+test("a song's Robot beat stops running once its lane's last block of it ends, while the song plays on", async () => {
+  // A beat with no effect, on lane 2 for four bars; the Robot beat (from
+  // above) is on lane 1 for two.
+  $('#beats-toggle').dispatch('click');
+  newBeatWithRow(page);
+  $('#seq-rows').querySelectorAll('.pill')[0].dispatch('click');
+  const plain = document.querySelectorAll('.beat-bar')[0].querySelector('[data-beat-name]').value;
+  $('#song-tab').dispatch('click');
+  for (let bar = 0; bar < 4; bar++) dropBeat($, { lane: 1, bar, name: plain });
+  ctx.currentTime = 40;
+  $('#song-play').dispatch('click');
+  await page.settle();
+  ctx.currentTime = 40.5;
+  await wait();
+  assert.ok(running() > 0, 'the Robot beat plays');
+  // The song started at 40.1; two bars at 100 BPM are 4.8 s. At 45.2 lane
+  // 1 is done with the Robot beat; lane 2 plays on to 49.7.
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    ctx.currentTime = 45.2;
+    await new Promise((r) => { const t = setInterval(() => { clearInterval(t); r(); }, 60); });   // a real tick
+    mock.timers.tick(7000);
+  } finally {
+    mock.timers.reset();
+  }
+  assert.equal($('#song-play').getAttribute('aria-pressed'), 'true', 'the song still plays');
+  assert.equal(running(), 0, 'the Robot is gone with its last block');
+  $('#song-play').dispatch('click');
+  ctx.currentTime = 0;
+});

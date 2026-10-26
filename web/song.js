@@ -169,6 +169,7 @@ export function createSong(deps) {
   let next = 0;
   let voices = new Map();    // `${lane}:${beatId}:${row}` -> its sounding voices
   let laneGains = [];
+  let mixEnds = [];          // {lane, beatId, end}: when each lane is done with a beat, to let its mix go
   let shown = new Set();     // the blocks lit as playing
   let startBar = 0;          // ▶ Play song starts here (a bar number tapped in the ruler)
 
@@ -1229,6 +1230,12 @@ export function createSong(deps) {
     voices = new Map();
     shown = new Set();
     laneGains = laneGainsFor(ctx, audio.master, { live: true });
+    mixEnds = [];
+    for (const part of plan.parts) {
+      const was = mixEnds.find((m) => m.lane === part.lane && m.beatId === part.beatId);
+      if (was) was.end = Math.max(was.end, part.end);
+      else mixEnds.push({ lane: part.lane, beatId: part.beatId, end: part.end });
+    }
     t0 = ctx.currentTime + 0.1;
     logEvent('song', { action: 'play', lanes: song.lanes.length, blocks: blockCount(song), marks: tempoMarks().length, seconds: Math.round((plan.seconds - from) * 10) / 10 });
     timer = setInterval(tick, TICK_MS);
@@ -1253,6 +1260,13 @@ export function createSong(deps) {
         const lane = song.lanes[e.lane];
         if (!lane?.muted && cleanVolume(lane?.volume) > 0) deps.onHit?.(pattern.rows[e.row].clipId, (t0 + e.time - ctx.currentTime) * 1000);
       }
+    }
+    // A lane's last block of a beat is over: that beat's mix there goes
+    // (a 〰️ Warble or 🤖 Robot in it stops), not only at the song's end.
+    const at = ctx.currentTime - t0 + from;
+    for (const m of mixEnds.filter((x) => at > x.end)) {
+      seq.endMix?.([laneGains[m.lane]], planned.plans.get(m.beatId)?.pattern);
+      mixEnds = mixEnds.filter((x) => x !== m);
     }
     meter.run();
     if (ctx.currentTime > t0 + (planned.seconds - from) + 0.2) stop();
@@ -1293,6 +1307,7 @@ export function createSong(deps) {
     for (const g of laneGains) setTimeout(() => { try { g.disconnect?.(); } catch { /* gone */ } }, 1000);
     seq.endMix?.(laneGains);   // its mix graphs, and their 〰️ 🤖 oscillators, go too
     laneGains = [];
+    mixEnds = [];
     shown = new Set();
     planned = null;
     for (const b of el.lanes.querySelectorAll('[data-block]')) b.classList.remove('now');
