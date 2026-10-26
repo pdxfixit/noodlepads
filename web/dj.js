@@ -622,7 +622,10 @@ export function createDJ({ el, deps }) {
     if (replayRun !== run) return;   // stopped, or another take started, while loading
     const t0 = deps.now() + REPLAY_LEAD;
     for (const { clipId, at, end } of planTake(take, new Map([...loaded].map(([id, l]) => [id, l.duration])))) {
-      booked.push(deps.bookPlay(loaded.get(clipId), t0 + at, end == null ? null : t0 + end));
+      const voice = deps.bookPlay(loaded.get(clipId), t0 + at, end == null ? null : t0 + end);
+      booked.push(voice);
+      // Sounded and done: nothing left of it to cut.
+      if (voice?.src) voice.src.onended = () => { booked = booked.filter((v) => v !== voice); };
     }
     const later = (at, fn) => replay.push(setTimeout(fn, Math.max(0, (at - deps.now()) * 1000)));
     for (const e of take.events) {
@@ -1668,10 +1671,17 @@ export function createDJ({ el, deps }) {
   }
 
   // Leaving the window or the tab drops every hold. A page hidden (the phone
-  // locked, another app) also ends a take, kept, as Esc does: out of sight it
-  // would run on, silent, for up to 3 minutes.
+  // locked, another app, another tab) also ends a take and a recording into
+  // the beat, kept, as Esc does: out of sight they would run on, silent; and
+  // a take playing back stops.
   globalThis.addEventListener?.('blur', letGo);
-  globalThis.document?.addEventListener?.('visibilitychange', () => { if (document.hidden) { letGo(); if (rec) stopRec(); } });
+  globalThis.document?.addEventListener?.('visibilitychange', () => {
+    if (!document.hidden) return;
+    letGo();
+    if (beatRec) stopBeatRec('leave');
+    if (rec) stopRec();
+    stopReplay();
+  });
 
   // ⌨️ Keys | 👆 Pads at the top of ✏️ Layout: the keys or the touch layout,
   // remembered on this device. The beat's rows follow the one showing, so
