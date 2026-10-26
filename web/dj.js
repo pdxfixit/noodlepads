@@ -516,16 +516,22 @@ export function createDJ({ el, deps }) {
       ...made,
     };
     deps.saveTake(lastTake);
+    showTake(lastTake);
+    deps.announce?.(`Saved ${lastTake.name}, ${Math.round(lastTake.duration)} seconds.`);
+  }
+  // The take card (#dj-done) for the take just made, or brought back by Undo.
+  function showTake(take) {
+    lastTake = take;
     // The take's name is a field, so it can be renamed right here.
     el.takeLine.hidden = false;
-    el.takeName.value = lastTake.name;
+    el.takeName.value = take.name;
     fitTakeName();
-    el.takeLength.textContent = `(${clockText(lastTake.duration)})`;
+    el.takeLength.textContent = `(${clockText(take.duration)})`;
     el.donePlay.hidden = false;
     el.doneSound.hidden = false;
     el.doneRename.hidden = false;
     el.done.hidden = false;
-    deps.announce?.(`Saved ${lastTake.name}, ${Math.round(lastTake.duration)} seconds.`);
+    showPlaying();
   }
   // The big count-in over the keys: 1, 2, 3, 4 (as many as the time
   // signature has beats), each in its own color, popping in on its beat.
@@ -1515,13 +1521,31 @@ export function createDJ({ el, deps }) {
   el.takeName.addEventListener('input', fitTakeName);
   el.doneSound.dataset.idle = el.doneSound.textContent;
   el.doneSound.addEventListener('click', () => lastTake?.id && askThenMake(lastTake, el.doneSound, el.takeLine));
-  // The take card's ↩️ Undo deletes the take.
+  // The take card's ↩️ Undo takes the take out at once, and the banner's
+  // ↩️ Undo puts it back, as a deleted sound comes back on Pads: a take is
+  // work a slip should not lose. Back, it gets its card again unless another
+  // take (or a recording) has the card by then.
   el.doneUndo.addEventListener('click', () => {
     if (!lastTake) return;
-    deps.deleteTake(lastTake.id);
+    const take = lastTake;
+    if (replaying === take.id) stopReplay();
+    deps.deleteTake(take.id);
     lastTake = null;
     el.done.hidden = true;
+    showBanner(`Took out “${take.name}”.`, {
+      action: { label: '↩️ Undo', fn: () => bringBack(take) },
+      ms: LINE_MS,
+      focusBack: () => el.record,
+    });
+    deps.announce?.(`Took out ${take.name}. Undo is available.`);
   });
+  function bringBack(take) {
+    if (deps.takes(take.personId).some((t) => t.id === take.id)) return;
+    deps.saveTake(take);
+    if (!lastTake && !rec && take.personId === deps.personId()) showTake(take);
+    if (el.takes.open) renderTakes();
+    deps.announce?.(`${take.name} is back.`);
+  }
   el.takesOpen.addEventListener('click', () => {
     deleteAsked = null;
     renderTakes();

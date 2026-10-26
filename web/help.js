@@ -129,7 +129,7 @@ export const HELP = [
       { pic: [lit('🔔 Overlap')], text: 'On the bar at the top, right of ⏲️ Click track (just 🔔 on a phone). On, every key’s hits ring over each other instead of starting its sound again, and a take keeps them that way. Holding a key still loops it. Just for this visit: it is off again next time.' },
       { pic: [tool('⏲️ Click track'), word('👆 96')], text: 'Tap ⏲️ three times or more in time to set the speed: it says “keep tapping…”, then 👆 and the tempo. One or two taps just turn the click on or off.' },
       { pic: [rec('● Record')], text: 'Records what you play, exactly when you play it. It starts at your first hit.' },
-      { pic: [tool('▶ Play'), tool('🔊 Make a sound'), tool('✏️ Rename'), tool('↩️ Undo')], text: 'After a take: play it, make it a pad, rename it, or undo it. Making a second pad asks “Make another?” first.' },
+      { pic: [tool('▶ Play'), tool('🔊 Make a sound'), tool('✏️ Rename'), tool('↩️ Undo')], text: 'After a take: play it, make it a pad, rename it, or undo it (↩️ Undo in the banner brings it back). Making a second pad asks “Make another?” first.' },
       { pic: [tool('🎬 Takes')], text: 'Everything you recorded. Play, rename or delete one, or make it a sound.' },
     ],
   },
