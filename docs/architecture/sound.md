@@ -337,7 +337,10 @@ saved.
   param` glides the AudioParam over about 20 ms. `endLive` calls
   `audio.unloop('preview')` and renders the whole sound again.
 - Everything else the sheet plays is a full render: `sheet.js rendered()`
-  (`applyChain` on `sheet.original`, cached by `recipeKey`).
+  (`applyChain` on `sheet.original`, cached by `recipeKey`). `previewVoice`
+  plays a render only while it is still the sound as it is now
+  (`nowRendered`), so a slow render of an earlier tap never plays over a
+  later one.
 - 👂 Plain plays `sheet.original` as `'preview-original'`: the kept audio with
   no chain, no knobs and no preset `level`.
 - The 🎚️ Mixer runs `steps.js` live kinds too: `mixer.js fxSteps` →

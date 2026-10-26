@@ -1134,6 +1134,7 @@ async function previewVoice({ play = true } = {}) {
     const rendered = await job;
     const original = await expected;
     if (sheet.original !== expected || !el.sheet.open) return;  // sheet moved on
+    if (job !== nowRendered()) return;   // changed again since (a slow voice tapped off): the newer render plays
     if (sheet.plain) return;  // 👂 Plain was tapped since: the wave shows the plain sound
     el.waveBox.hidden = false;
     sheet.voiced = rendered.buffer.duration;
@@ -1150,6 +1151,9 @@ async function previewVoice({ play = true } = {}) {
 // The knobs as they are stored: with `first` when they play before a chain,
 // and `muted` for the knob layers muted.
 const storedTweaks = () => cleanTweaks({ ...sheet.tweaks, muted: [...sheet.muted], first: sheet.knobsFirst && !plainChain() });
+
+// The render of the sound as it is now, if one was started.
+const nowRendered = () => sheet.previews.get(recipeKey({ fx: sheet.chain, tweaks: storedTweaks() }));
 
 // The sound through its chain and its knobs as they are now, cached for this sheet.
 function rendered() {

@@ -1259,3 +1259,16 @@ test('the live loop plays the knobs too: knobs that play first are in its head',
     await advanced(false);
   }
 });
+
+// Two taps close together start two renders; the slower one (Monster) may
+// finish after the quicker one. What plays last is the sound as it is now.
+test('a voice tapped on and off quickly: the slower render of the first tap does not play over the second', async () => {
+  await openEditor();
+  chip('monster').dispatch('click');
+  chip('monster').dispatch('click');   // off again: plain
+  assert.deepEqual(lit(), [], 'nothing lit');
+  await page.settle();
+  const starts = calls.filter(([what, id]) => what === 'start' && id === 'preview');
+  assert.equal(starts.length, 1, 'the sound as it is now plays; the Monster render, done later, is dropped');
+  $('#sheet').close();
+});
