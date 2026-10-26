@@ -17,15 +17,9 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 ## Ben does
 
-- **Put the no-names hashes in a secret** (3 min), before an agent removes them from the repo: copy the hash lines from `tests/no-names.test.mjs` (`ANY_CASE` and `AS_NAME`) into a JSON file `~/.config/noodlepads/names.json` (`{"anyCase": ["…"], "asName": "…"}`), and paste the same JSON into GitHub → pdxfixit/noodlepads → Settings → Secrets → Actions as `NOODLE_NAME_HASHES`. Then tell an agent it's done.
-
 - **Record the spoken callouts** (15 min, when you like): the 14 callouts ("Let's go!", "Game over" …) and the evil laugh and cackle are macOS `say` voices, which may not be ours to share (Ben, 2026-10-26: replace them). Record your own (no names in them) and attach them in a chat, or say "use a CC0 voice set".
 
-- **Add the edge rate limit on `/api/`** (3 min; Ben, 2026-10-26): Cloudflare dashboard → the noodlepads.com zone → Security → WAF → Rate limiting rules → Create rule. Name `api per IP`; when the URI Path starts with `/api/`; counted by IP; 100 requests per 10 seconds; action Block for 10 seconds (the free plan's period and timeout). The app answers a 429 as "busy" and tries again later. Menu names may have moved since this was written.
-
 - **Give the deploy checks a secret** (3 min; Ben, 2026-10-26), once an agent has built the Worker side: make a value with `openssl rand -hex 24`; put it in the Worker with `~/src/flarepress/tools/wrangler.sh site secret put CHECKS_KEY` (run in this repo), and in GitHub → Settings → Secrets → Actions as `CHECKS_KEY`. Never paste it in a chat or a file.
-
-- **Let the deploy migrate** (2 min; Ben, 2026-10-26): Cloudflare → your profile → My Profile → API Tokens → the noodlepads deploy token → Edit → D1: Read becomes **Edit** → Save. The GitHub secret stays as it is. Then tell an agent: the Worker-caps fixes (migrations 006 and 007) land after it.
 
 - **Read the mission and make it yours** (2 min): `AGENTS.md` → Mission, drafted from your interview answers (2026-10-26). Reword anything that isn't how you'd say it; the council checks every change against it.
 
