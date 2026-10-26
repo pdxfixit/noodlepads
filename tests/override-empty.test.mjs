@@ -11,7 +11,7 @@ import { stubBanner } from './banner.mjs';
 import { DB_NAME } from '../web/store.js';
 import { withHidden, overrideWithEmoji } from '../web/model.js';
 
-stubBanner();
+const { text: notice } = stubBanner();
 const idb = fakeIndexedDB();
 globalThis.indexedDB = idb;
 const { loadStorage, setOverride, state } = await import('../web/state.js');
@@ -34,4 +34,13 @@ test('a picture put back to the preset\'s own: no preset edit is left', async ()
   await setOverride(overrideWithEmoji({ id, emoji: '🥁' }, state.overrides.get(id), '🥁'));
   assert.equal(state.overrides.has(id), false);
   assert.deepEqual(stored(), []);
+});
+
+test('putting a preset back that the browser won\'t save: the words say the edit may be back after a reload', async () => {
+  const id = 'p-x-hihat';
+  await setOverride(withHidden(state.overrides.get(id), id, true));
+  idb.failCommit(1);
+  await setOverride(withHidden(state.overrides.get(id), id, false));
+  assert.match(notice.textContent, /^This browser wouldn't save that change .*After a reload it may be back as it was\.$/);
+  assert.doesNotMatch(notice.textContent, /then it's gone/);
 });

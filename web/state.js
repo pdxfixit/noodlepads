@@ -40,9 +40,20 @@ export const state = {
 // be saved yet, and when the saved data arrives it replaces what is on screen.
 let storageWaiting = false;
 
+const OTHER_TAB = 'Not saved: another soundboard tab is still holding your saved sounds. Close or reload that tab, then make the change again.';
 const wouldNotSave = (err) => (storageWaiting
-  ? 'Not saved: another soundboard tab is still holding your saved sounds. Close or reload that tab, then make the change again.'
+  ? OTHER_TAB
   : `This browser wouldn't save that change (${err.message || err.name}). It works until you reload the page, then it's gone.`);
+// A delete the browser refused, or a change that deletes a record (an edit
+// put back to the preset's own): after a reload the old record is back.
+// `what` names a thing deleted ("That take"); none: a change undone.
+const wouldNotRemove = (err, what) => {
+  if (storageWaiting) return OTHER_TAB;
+  const why = err.message || err.name;
+  return what
+    ? `${what} is gone for now, but this browser wouldn't delete it (${why}), so it may come back after a reload.`
+    : `This browser wouldn't save that change (${why}). After a reload it may be back as it was.`;
+};
 
 // Reads every store into state; also used after loading a backup.
 // A person stored with one of the person colors before 2026-10-19 takes the
@@ -283,7 +294,7 @@ export async function setOverride(next) {
     await db.remove('overrides', next.id);
   } catch (err) {
     console.error('Removing an override failed:', err);
-    showNotice(wouldNotSave(err));
+    showNotice(wouldNotRemove(err));
     return storageFailed;
   }
   return true;
@@ -298,7 +309,7 @@ export async function removeRecord(store, key, what) {
     return true;
   } catch (err) {
     console.error(`Deleting from ${store} failed:`, err);
-    showNotice(`${what} is gone for now, but this browser wouldn't delete it (${err.message || err.name}), so it may come back after a reload.`);
+    showNotice(wouldNotRemove(err, what));
     return false;
   }
 }
@@ -312,7 +323,7 @@ export async function setPersonEdit(id, changes) {
     state.peopleEdits.delete(id);
     try { await db.remove('people', id); } catch (err) {
       console.error('Removing a person edit failed:', err);
-      showNotice(wouldNotSave(err));
+      showNotice(wouldNotRemove(err));
     }
     return;
   }
@@ -358,7 +369,9 @@ export async function deletePerson(id) {
   } catch (err) {
     console.error('Deleting a person failed:', err);
     const name = state.peopleEdits.get(id)?.name ?? bundled?.name ?? 'They';
-    showNotice(`This browser wouldn't delete ${name} (${err.message || err.name}), so nothing of theirs is gone. Try again.`);
+    showNotice(storageWaiting
+      ? `${name} wasn't deleted: another soundboard tab is still holding your saved sounds. Close or reload that tab, then try again.`
+      : `This browser wouldn't delete ${name} (${err.message || err.name}), so nothing of theirs is gone. Try again.`);
     return null;
   }
   state.userClips = state.userClips.filter((c) => c.personId !== id);

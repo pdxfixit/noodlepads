@@ -47,5 +47,22 @@ test('a take the browser won\'t delete: the banner says it may come back', async
   assert.match($('#banner-text').textContent, /^That take is gone for now, but this browser wouldn't delete it .*may come back after a reload\.$/);
   assert.equal(stored('takes').length, 1, 'still stored');
   $('#takes').close();
+});
+
+test('a key layout the browser won\'t delete: the banner says it may come back', async () => {
+  $('#dj-change').dispatch('click');
+  $('#ke-save').dispatch('click');
+  $('#ke-save-name').value = 'Party keys';
+  $('#ke-save-ok').dispatch('click');
+  await page.settle();
+  assert.equal(stored('layouts').length, 1);
+  $('#ke-delete').dispatch('click');
+  idb.failCommit(1);
+  $('#ke-delete').dispatch('click');
+  await page.settle();
+  assert.equal(state.layouts.length, 0, 'gone from the list');
+  assert.match($('#banner-text').textContent, /^That key layout is gone for now, but this browser wouldn't delete it .*may come back after a reload\.$/);
+  assert.equal(stored('layouts').length, 1, 'still stored');
+  $('#keys-edit').close();
   $('#pads-tab').dispatch('click');
 });
