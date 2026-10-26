@@ -33,10 +33,12 @@ in `.github/workflows/deploy.yml`, one run at a time in push order:
    verify: wait until the live site serves that version.
 4. `just deploy-checks` (below).
 
-Nothing in the deploy checks the database. A push whose Worker needs a new
-`worker/migrations/*.sql` waits for Ben to run `just cloud-migrate --yes`
-first (a line in TODO.md "Ben does"); pushed before that, the new Worker
-meets the old tables.
+Before step 3 the deploy runs `just cloud-migrate --yes` (Ben, 2026-10-26):
+any `worker/migrations/*.sql` D1 lacks is applied, so a new Worker never
+meets the old tables. Up to date, it only reads. A migration that drops a
+table D1 holds rows of stops the deploy (CI has no telemetry mirror to
+prove they were copied); Ben runs that one from the Mac after `just pull`.
+Only this step and the upload hold the token, which has D1 edit.
 
 The pieces:
 

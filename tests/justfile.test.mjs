@@ -136,3 +136,16 @@ test('GitHub deploys only after the tests', () => {
   assert.match(wf, /ref: v1\b/);
   assert.match(wf, /branches: \[main\]/);
 });
+
+// The deploy applies the migrations D1 lacks before it uploads (Ben,
+// 2026-10-26), so a new Worker never meets an older database; only the
+// migrate and upload steps get the token that can write D1.
+test('GitHub applies missing migrations before the upload, and only those steps hold the token', () => {
+  const wf = readFileSync(join(root, '.github/workflows/deploy.yml'), 'utf8');
+  const at = (s) => { const i = wf.indexOf(s); assert.ok(i >= 0, `deploy.yml runs ${s}`); return i; };
+  assert.ok(at('run: just test') < at('run: just cloud-migrate --yes'));
+  assert.ok(at('run: just cloud-migrate --yes') < at('uses: pdxfixit/flarepress@'));
+  const job = wf.slice(at('jobs:'), at('steps:'));
+  assert.doesNotMatch(job, /CLOUDFLARE_API_TOKEN/, 'not in the whole job: the tests and the live checks run without it');
+  assert.equal(wf.match(/CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/g)?.length, 2, 'the migrate step and the upload');
+});

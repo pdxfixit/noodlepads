@@ -1,8 +1,10 @@
 # Every push to main is deployed to https://noodlepads.com (Ben, 2026-10-15):
 # the tests and the release checks, then the flarepress action (check, gate,
-# stamp, wrangler deploy, verify), then the live checks. GitHub holds this
-# repo's own Cloudflare token (Workers, its zone, D1 read only); no agent
-# holds one. Ben's `just deploy` on the Mac is the fallback.
+# stamp, wrangler deploy, verify), then the live checks. Before the upload it
+# applies any migration D1 lacks (Ben, 2026-10-26), so a new Worker never meets
+# an older database. GitHub holds this repo's own Cloudflare token (Workers,
+# its zone, D1 edit); no agent holds one, and only the migrate and upload steps
+# see it. Ben's `just deploy` on the Mac is the fallback.
 #
 # Secrets: CLOUDFLARE_API_TOKEN, D1_DATABASE_ID (site/wrangler.toml names it
 # as ${D1_DATABASE_ID}), CLOUDFLARE_ACCOUNT_ID.
@@ -22,7 +24,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
       FLAREPRESS: ${{ github.workspace }}/.flarepress
@@ -50,7 +51,16 @@ jobs:
         run: tools/version_bumped.sh
       - name: web/version.js PATCH is the commit count of its commit
         run: python3 tools/bump_version.py --check
+      # The same tool as Ben's `just cloud-migrate --yes`. Up to date, it only
+      # reads. A migration that drops a table D1 holds rows of stops here: CI
+      # has no telemetry mirror to prove they were copied, so drops stay Ben's.
+      - name: Apply the migrations D1 lacks
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: just cloud-migrate --yes
       - uses: pdxfixit/flarepress@v1  # rolling: the owner moves v1 to release
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         with:
           site: site
       - name: Live checks (cloud-smoke, cloud-e2e, taps)
