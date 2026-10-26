@@ -18,6 +18,7 @@ import { SETTINGS, getSetting, setSetting, onSetting } from './settings.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { deviceCode, LIVE_HOST } from './log-send.js';
 import { remember, recall } from './util.js';
+import { showNotice } from './ui.js';
 import { SKINS, skinLabel } from './skins.js';
 
 const el = {};
@@ -177,6 +178,7 @@ export function initSettingsUI({ gate = () => false, onKids = () => {} } = {}) {
     code: document.querySelector('#send-logs-code'),
     device: document.querySelector('#send-logs-device'),
     where: document.querySelector('#send-logs-where'),
+    copy: document.querySelector('#send-logs-copy'),
   });
   setupDialog(el.dialog);
 
@@ -228,6 +230,16 @@ export function initSettingsUI({ gate = () => false, onKids = () => {} } = {}) {
       console.error('Changing a setting failed:', err);
     }
     syncSettingsControls();
+  });
+  // 📋 beside the device code (Ben, 2026-10-26): one tap puts it on the
+  // clipboard, to paste into a message about a problem.
+  el.copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(el.device.textContent);
+      showNotice("📋 Copied this device's code.");
+    } catch {
+      showNotice("Copying isn't allowed here: write the code down instead.");
+    }
   });
   // A loaded backup replaces the settings behind the dialog's back.
   for (const key of Object.keys(SETTINGS)) onSetting(key, syncSettingsControls);

@@ -450,6 +450,61 @@ class ResetPin(unittest.TestCase):
         with self.assertRaises(ca.Trouble):
             ca.reset_pin(Local(ROOT / 'worker' / 'schema.sql'), 'p-none', out=quiet()[1])
 
+    # Ben, 2026-10-26: "reset Captain Cranberries' PIN to 1234" from a cold session.
+    def kid(self, db, pid='p-cc', name='Captain Cranberries', active=1):
+        db.execute(f"INSERT INTO profiles (id, name, avatar, color, pin_hash, pin_salt, fails, locked_until, rev, edited, created, active) VALUES ('{pid}', '{name}', '', '#1F3FA8', 'h', 's', 4, 99, 0, 1, 1, {active});"
+                   f"INSERT INTO keys (hash, profile_id, created) VALUES ('k-{pid}', '{pid}', 1);")
+
+    def test_sets_a_new_pin_by_fun_name_in_any_case(self):
+        db = Local(ROOT / 'worker' / 'schema.sql')
+        self.kid(db)
+        self.assertTrue(ca.reset_pin(db, 'captain cranberries', to='1234', yes=True, out=quiet()[1]))
+        row = db.query("SELECT pin_hash, pin_salt, fails, locked_until FROM profiles")[0]
+        self.assertEqual(row['pin_hash'], ca.pin_hash('1234', row['pin_salt']))
+        self.assertEqual(len(row['pin_salt']), 32, '16 random bytes, as the Worker makes')
+        self.assertEqual((row['fails'], row['locked_until']), (0, 0), 'no wait left from wrong tries')
+        self.assertEqual(db.query('SELECT COUNT(*) AS n FROM keys')[0]['n'], 0, 'every device opens it again')
+
+    def test_from_a_script_it_shows_who_and_stops_without_yes(self):
+        db = Local(ROOT / 'worker' / 'schema.sql')
+        self.kid(db)
+        lines, out = quiet()
+        self.assertFalse(ca.reset_pin(db, 'Captain Cranberries', to='1234', ask=None, out=out))
+        self.assertEqual(db.query("SELECT pin_hash FROM profiles")[0]['pin_hash'], 'h')
+        self.assertIn('p-cc: Captain Cranberries, has a PIN', lines)
+        self.assertIn('run it again with --yes', lines[-1])
+
+    def test_a_near_name_lists_the_close_ones_and_changes_nothing(self):
+        db = Local(ROOT / 'worker' / 'schema.sql')
+        self.kid(db)
+        lines, out = quiet()
+        with self.assertRaises(ca.Trouble):
+            ca.reset_pin(db, "Captain Cranberry's", to='1234', yes=True, out=out)
+        self.assertTrue(any('p-cc' in line and 'Captain Cranberries' in line for line in lines))
+        self.assertEqual(db.query("SELECT pin_hash FROM profiles")[0]['pin_hash'], 'h')
+
+    def test_two_with_one_name_ask_for_the_id(self):
+        db = Local(ROOT / 'worker' / 'schema.sql')
+        self.kid(db, 'p-cc1')
+        self.kid(db, 'p-cc2', active=5)
+        lines, out = quiet()
+        with self.assertRaises(ca.Trouble):
+            ca.reset_pin(db, 'Captain Cranberries', to='1234', yes=True, out=out)
+        self.assertEqual([line.split()[0] for line in lines], ['p-cc2', 'p-cc1'], 'the last active first')
+        self.assertTrue(ca.reset_pin(db, 'p-cc1', to='1234', yes=True, out=quiet()[1]))
+        self.assertEqual(db.query("SELECT pin_hash FROM profiles WHERE id = 'p-cc2'")[0]['pin_hash'], 'h')
+
+    def test_a_pin_is_four_digits(self):
+        db = Local(ROOT / 'worker' / 'schema.sql')
+        self.kid(db)
+        for bad in ('123', '12345', 'abcd'):
+            with self.assertRaises(ca.Trouble):
+                ca.reset_pin(db, 'p-cc', to=bad, yes=True, out=quiet()[1])
+
+    def test_a_name_with_sql_in_it_is_refused(self):
+        with self.assertRaises(ca.Trouble):
+            ca.reset_pin(Local(ROOT / 'worker' / 'schema.sql'), "x'; DROP TABLE profiles; --", yes=True, out=quiet()[1])
+
 
 class Wrangler(unittest.TestCase):
     def test_a_failure_shows_wranglers_own_error_not_only_justs_line(self):

@@ -121,10 +121,15 @@ cloud-smoke *args:
 cloud-e2e *args:
     @node tools/look.mjs cloud-e2e "$@"
 
-# Clear a profile's forgotten PIN (from an email to the PIN-reset address): shows the profile, asks, then runs it and checks
+# A finger on a phone in headless Chrome: a tap on 🔊 Pads, 🎤 Live and 🧸 Kids must sound, fresh, after 🛠️ Make and back, and after a freeze and thaw; a covered pad is logged as a silent tap. CI runs it on every push; --url checks another copy
 [positional-arguments]
-cloud-reset-pin id:
-    @python3 tools/cloud_admin.py reset-pin "$1"
+taps *args:
+    @node tools/look.mjs taps "$@"
+
+# A forgotten PIN: just cloud-reset-pin "Captain Cranberries" --to 1234 (or the id; no --to clears it). Shows who, then --yes does it
+[positional-arguments]
+cloud-reset-pin who *args:
+    @python3 tools/cloud_admin.py reset-pin "$@"
 
 #   just cloud-backup                       ~/.local/state/noodlepads/backups/d1-<date>-<time>.sql
 #   just cloud-backup ~/Desktop/cloud.sql   anywhere else (a relative path is from where you run it)
@@ -388,7 +393,7 @@ ship msgfile +files:
     echo "🚀 pushed: GitHub deploys it (.github/workflows/deploy.yml); read that run, then just live"
 
 # (The new version is live by then, so a failure says that plainly.)
-[doc("After a deploy: just cloud-smoke and just cloud-e2e against the live site; both run, even if one fails. just deploy runs it")]
+[doc("After a deploy: just cloud-smoke, just cloud-e2e and just taps against the live site; all run, even if one fails. just deploy runs it")]
 deploy-checks:
     #!/usr/bin/env bash
     set -uo pipefail
@@ -402,6 +407,12 @@ deploy-checks:
       sleep 15
       node tools/look.mjs cloud-e2e || failed="$failed cloud-e2e"
     fi
+    # One retry after a pause, as cloud-e2e has: a page right after a deploy can load slowly.
+    if ! node tools/look.mjs taps --url https://noodlepads.com/; then
+      echo "↻ taps failed once; trying again in 15 s"
+      sleep 15
+      node tools/look.mjs taps --url https://noodlepads.com/ || failed="$failed taps"
+    fi
     if [ -n "$failed" ]; then
       echo "🛑 Deployed, but the live check failed:$failed. The new version is live; read the ❌ lines above (docs/deploy-cloudflare.md, \"Checks after a deploy\")." >&2
       exit 1
@@ -409,7 +420,7 @@ deploy-checks:
     # Each smoke run leaves a test share (shares are forever); clear them so
     # they don't pile up (24 had by 2026-10-11). Only p-smoke-/p-e2e- data.
     python3 tools/cloud_admin.py prune --smoke --yes > /dev/null 2>&1 || echo "⚠️ couldn't clear the checks' test shares; run: just cloud-prune --smoke --yes"
-    echo "✅ live: cloud-smoke and cloud-e2e passed"
+    echo "✅ live: cloud-smoke, cloud-e2e and taps passed"
 
 [doc("Wait until the live site serves the stamped web/version.json (Cloudflare's edge can lag an upload; 90 s), then check / answers. just deploy runs it")]
 deploy-verify *flags:

@@ -44,6 +44,22 @@ test('the corner button shows the current person\'s letter in their color; the h
   assert.equal(row().querySelector('.person-list').hidden, true);
 });
 
+test('🧸 Kids mode and 👥 People share one line at the foot, apart from the people; Left and Right move between them', () => {
+  const kids = $('#kids-open-menu');
+  const people = $('#people-open');
+  assert.ok(kids.parentElement === people.parentElement, 'one line');
+  assert.ok(kids.parentElement.classList.contains('person-tools'));
+  const list = row().querySelector('.person-list');
+  assert.ok(list.children.at(-1) === kids.parentElement, 'the last line');
+  row().querySelector('.person-menu-btn').dispatch('click');
+  kids.focus();
+  assert.equal(kids.dispatch('keydown', { key: 'ArrowRight' }).defaultPrevented, true);
+  assert.ok(document.activeElement === people);
+  people.dispatch('keydown', { key: 'ArrowLeft' });
+  assert.ok(document.activeElement === kids);
+  kids.dispatch('keydown', { key: 'Escape' });
+});
+
 test('the button opens the list with focus on the current person; Esc closes it and returns focus', () => {
   const button = row().querySelector('.person-menu-btn');
   button.dispatch('click');

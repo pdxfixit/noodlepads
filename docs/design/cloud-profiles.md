@@ -207,7 +207,7 @@ A device key goes in `Authorization: Bearer <key>`.
   the device's own `check` lets them in and the sync waits. The key is a
   session key, held for the visit only, unless the device remembers them:
   🔑 Remember, offered after the PIN (Ben, 2026-10-26), opens again with
-  `remember: true` for a key that lasts, kept on the device for 30 days;
+  `remember: true` for a key that lasts, kept on the device for 90 days;
   then, or on Forget this device, it is deleted with `DELETE …/key`. Each open deletes the key this device held before, so a device
   holds one key per profile; session keys a week old are deleted on the next
   open. A new PIN or a reset deletes every key. A device that finds its key
@@ -412,10 +412,12 @@ makes the profile again). Families are gone (Q11).
 ## 10. A forgotten PIN
 
 Ben (Q12): a grown-up emails **the PIN-reset address** with the profile's
-fun name. Ben finds it (`just cloud-profiles`) and runs `just cloud-reset-pin
-<profile id>`: it shows the profile, asks, clears the PIN and every key
-through `just cloud-db`, and checks. Each device then opens it once with no
-PIN. The PIN pad, Help, ⚙️ Settings → 🔓 What's private and README say how.
+fun name. Ben, or an agent on his Mac when he asks (docs/how-to.md "Reset a
+forgotten PIN"), runs `just cloud-reset-pin "<fun name>" --to 1234` (or the
+profile id; no `--to` clears it): it finds the profile, shows it, and with
+`--yes` sets the PIN (hashed in Python as the Worker hashes it, `pin_hash`)
+or clears it, deletes every key through `just cloud-db`, and checks. Each
+device then asks for the new PIN once, or opens with none. The PIN pad, Help, ⚙️ Settings → 🔓 What's private and README say how.
 
 ## 11. What's private (the disclosure)
 
@@ -460,7 +462,7 @@ Ben: "login sprawl is a concern."
 | Profile deleted elsewhere (Offline there, or pruned) | 404 on sync: the person stays on the device, goes 📴 Offline here, and says so |
 | A sound over 25 MB | it stays on the device; the rest syncs, and the ☁️ sheet says how many stayed |
 | A PIN not remembered, after a reload | the PIN is asked when the person is opened; their sync waits for it |
-| A remembered PIN's 30 days are up | at start (or the next open) the device deletes its key here and in the cloud, and asks the PIN again |
+| A remembered PIN's 90 days are up | at start (or the next open) the device deletes its key here and in the cloud, and asks the PIN again |
 | A pull with a bad record | dropped and counted by `cleanBackup`, like a backup |
 | A push cut off halfway | `sent` holds what got through; the next sync sends the rest |
 | Two devices push the same record at once | the second push leaves it (`stale`), pulls the first, merges and pushes again |

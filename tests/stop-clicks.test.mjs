@@ -67,6 +67,6 @@ test('a ⏲️ tapped after Stop all turns the click on, not into tap tempo', as
   $('#dj-click').dispatch('click');                // one tap: on again
   await page.settle();
   assert.equal(on('#dj-click'), true);
-  assert.equal($('#dj-click').textContent, '⏲️ Click track', 'no "keep tapping…"');
+  assert.equal($('#dj-click').textContent, '⏲️', 'no "keep tapping…"');
   $('#stop-all').dispatch('click');
 });

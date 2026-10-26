@@ -43,10 +43,11 @@ const names = () => $('#te-bands').querySelectorAll('.te-band-name').map((n) => 
 const chips = () => $('#te-layouts').querySelectorAll('.ke-layout').map((b) => b.textContent);
 const q = (sel) => $('#touch-edit').querySelector(sel);
 
-test('✏️ Layout in the corner opens, with 👆 Pads, its own view of the bands', () => {
+test('✏️ Layout on the bar opens, with 👆 Pads, its own view of the bands', () => {
   $('#live-tab').dispatch('click');
   $('#ke-input').querySelector('[data-input="touch"]').dispatch('click');
-  assert.equal($('#dj-change').textContent, '✏️ Layout');
+  assert.equal($('#dj-change').textContent, '✏️');
+  assert.equal($('#dj-change').getAttribute('aria-label'), '✏️ Layout: how the keys or pads are laid out');
   $('#dj-change').dispatch('click');
   assert.equal($('#touch-edit').open, true);
   assert.equal($('#keys-edit').open, false, 'not the keys\' editor');

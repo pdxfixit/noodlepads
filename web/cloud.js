@@ -35,7 +35,7 @@ export { cloudTrouble, CloudError };
 
 export { SYNC_DELAY_MS, ACTIVE_MS };    // when it syncs: sync-timing.js
 export const PIN_ROUNDS = 20_000;      // the device's own check of a PIN (link.check)
-export const REMEMBER_DAYS = 30;       // how long 🔑 Remember on this device skips the PIN
+export const REMEMBER_DAYS = 90;       // how long 🔑 Remember on this device skips the PIN
 const REMEMBER_MS = REMEMBER_DAYS * 24 * 60 * 60 * 1000;
 const SHARED_KEY = 'shared';           // localStorage: the codes this device opened (Shared with me)
 export const MAX_SHARED = 100;

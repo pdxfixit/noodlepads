@@ -31,6 +31,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 
 
+
 ### v1: prove out the interface
 
 - [ ] Attach any real sound clips in chat (5 min) 🔼
@@ -67,6 +68,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
 - **First, when no other session has this repo open: rewrite git history to remove the old PIN-reset address** (Ben, 2026-10-26; the security seat found it in plain text in the first public commit). Rewriting breaks every clone and worktree, so Ben picks the moment: about ten sessions were open when he asked. Then every checkout re-clones. The app already uses a new address.
+- **☁️ Open from the cloud shows its progress** (Ben, 2026-10-26): today a tap shows only "Opening…" and the list stays live, so a kid taps again. While a person comes down, the list goes modal (nothing else to tap) and a real progress bar says how far it has got, never one that jumps 0 to 100; where nothing can be measured, a spinner. Mockup: https://claude.ai/artifact/BYxQxnwjXQY1PAoDmL7pZF; the council passed it with changes (no blocks). Ben's answers (2026-10-26): locked with no way out, but 20 s with nothing arriving stops it (Stopped); the bar fills by bytes with "🔊 5 of 12" and "4.1 of 9.8 MB" always; done offers <their avatar> Play as them (closes, switches, lands on Pads, ends the welcome) and ☁️ Open someone else; Stopped offers 🔄 Try again (picks up where it stopped, fetched sounds kept for the visit) and Don't bring them (forgets the link). Council asks: a stall abort on the fetches, a byte cap, totals from the records' `bytes`, the bar throttled to a frame, no motion under reduced motion, `aria-valuetext`, focus moved, the e2e (`tools/look-cloud.mjs`) and `just look` views updated.
 
 
 
@@ -96,6 +98,8 @@ Other work:
 
 - [ ] Move `skills/noodlepads-logs` to `~/src/skills/noodlepads-logs` and link it (the skills workspace convention); the recurrent routine's leg is now named `noodlepads-logs`, and its state file `~/.local/state/skills/noodlepads-logs.state.json`
 
+- [ ] **One beat engine** (Ben, 2026-10-26: "I would prefer to have one beat engine and just… optional hooks for the kids' side"): 🧸 Kids' `playBeat` plays through `sequencer.js`, with hooks for what Kids leaves out. Design and plan first (`docs/design/one-beat-engine.md`), council on the plan, then Ben's OK before building.
+- [ ] **Deduplicate and simplify** (Ben, 2026-10-26; `docs/design/simplify.md`). Approved, after the bug sweep lands, one commit each: S1 one list of a person's stores, S2 dead code out, S3 exact copies made one (after the name-length fix), S4 one semitone rate and one latency sum, S6 one writer for saved lists (and a refused delete of a take or layout shows the notice, as beats and songs do: decisions.md), S8 test and tool tidy (the `.node-version` file included). S5 and S7 are steps of the one beat engine's build. The needs-care items (C1–C15) wait on Ben, one at a time.
 - [ ] **Bugs found while mapping docs/architecture/ (2026-10-26).** Each: write the failing test first, then fix, then update the area file's Seams or gotchas. ✔ = confirmed in the code; the rest are likely.
   - ✔ `web/feedback.js appVersion` refuses the `-` in a live label (`v1.0.277-b328291`), so feedback from noodlepads.com is tagged `dev` (the Worker's rule likely too).
   - ✔ `tools/look.mjs`: `VIEWS.beat = VIEWS.beats` replaces the `beat` view defined above it, so its 🆕 New script never runs.

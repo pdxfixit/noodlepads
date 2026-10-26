@@ -759,14 +759,13 @@ export function createDJ({ el, deps }) {
     el.takesOpen.hidden = mode === 'beat';
     el.beatbar.hidden = mode !== 'beat';
     showBeat();
-    // ⏲️ sits in the footer on Live (left of ✏️ Layout (⌨️ Keys)), with its
-    // tempo beside it while it is on; its room is kept while off, so nothing
-    // around it moves when it appears. The keys view has its ⏲️ on the
-    // control bar, as Beats does, and one tempo (Ben, 2026-10-11 and -12).
+    // On Live, ⏲️ and its tempo sit on the control bar where Beats has its
+    // own, the tempo always shown, as Beats' is. The keys view has the beat's
+    // ⏲️ and one tempo (Ben, 2026-10-11, -12 and -26). ✏️ Layout and
+    // 🔔 Overlap are Live's too: the keys view has its ✏️ after 🎚️.
     el.click.hidden = mode === 'beat';
     el.clickTempo.hidden = mode === 'beat';
-    el.clickTempo.classList.toggle('off', !clickWanted);
-    el.clickTempo.inert = !clickWanted;
+    if (el.change) el.change.hidden = mode === 'beat';
     showOverlap();
     if (mode === 'beat') renderGrid();
     showSetup();
@@ -1444,7 +1443,7 @@ export function createDJ({ el, deps }) {
   // (rhythm.js tapTempo) and leaves the click on. The button says
   // "keep tapping…" after two quick taps, then "👆 96" while the taps set it.
   // Not during the count-in, whose clicks are already booked.
-  const clicks = [el.click, el.beatClick].filter(Boolean);   // the footer's (Live) and the control bar's (the keys view)
+  const clicks = [el.click, el.beatClick].filter(Boolean);   // Live's and the keys view's, both on the control bar
   for (const b of clicks) b.dataset.idle = b.textContent;
   let taps = [];
   let tapTimer = 0;

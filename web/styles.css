@@ -189,11 +189,12 @@ h1 { min-width: 0; overflow-wrap: anywhere; }
   gap: 6px;
   width: max-content;
   min-width: 200px;
-  max-width: min(80vw, 320px);
+  max-width: min(86vw, 320px);   /* room on a 320 px phone for 🧸 Kids mode and 👥 People on one line */
   max-height: min(60dvh, 420px);
   margin: 0;
   padding: 8px;
   overflow-y: auto;
+  scroll-padding-bottom: 72px;   /* a person reached by arrow key is never under the foot line */
   border-radius: 14px;
   background: var(--bed);
   box-shadow: 0 10px 24px rgb(0 0 0 / 0.45);
@@ -215,8 +216,29 @@ h1 { min-width: 0; overflow-wrap: anywhere; }
 }
 .person-item[aria-current="true"] { outline: 3px solid #fff; outline-offset: -3px; }
 .person-item[aria-current="true"]::after { content: " ✓"; }
-.person-item.person-edit { margin-top: 4px; border: 2px solid rgb(255 255 255 / 0.5); background: transparent; font-family: var(--font-ui); }
-li:has(> .person-edit) + li > .person-edit { margin-top: 0; }   /* 🧸 Kids mode and 👥 People sit together */
+/* 🧸 Kids mode and 👥 People: one line under a rule, held at the foot of a
+   long list, in the plain type of a tool rather than a person's name. */
+.person-tools {
+  position: sticky;
+  bottom: -8px;   /* over the list's own padding, so no person shows below */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 2px -8px -8px;
+  padding: 8px;
+  border-top: 2px solid rgb(255 255 255 / 0.25);
+  background: var(--bed);
+}
+.person-item.person-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  border: 2px solid rgb(255 255 255 / 0.5);
+  background: transparent;
+  font: 700 0.95rem/1.15 var(--font-ui);
+  text-align: center;
+}
 
 /* ── Pad bed ────────────────────────────────────────────────────────── */
 
@@ -637,9 +659,9 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
   .beat-go:has(.seq-play:not([hidden]) + .dj-rec) .beat-tempo { flex: 1 1 calc(100% - 60px); }
 }
 /* Beats with ⌨️ Keys has ● Record too, so its bar runs out of room before a
-   phone's does: up to 760 px its bars take a line of their own, as on a phone
-   (at 610–700 px ⏲️ ran over the bars, and ⇆ Move stuck out). */
-@media (min-width: 601px) and (max-width: 760px) {
+   phone's does: up to 879 px its bars take a line of their own, as on a phone
+   (at 610–850 px ⏲️ ran under the bars, and ⇆ Move stuck out). */
+@media (min-width: 601px) and (max-width: 879px) {
   .dj-bar.beat-deck { flex-wrap: wrap; }
   .dj-bar > .beat-go { flex: 1 1 100%; }
   .dj-bar > .beat-shape { flex: 1 1 100%; margin-left: 0; }
@@ -673,6 +695,51 @@ body.keys-on .dj-bar { position: sticky; top: calc(var(--head-h, 0px) - var(--de
   body.keys-on .dj-bar { row-gap: 10px; }
   body.keys-on .dj-bar > .beat-go { display: contents; }
   body.keys-on .dj-bar :is(.beat-run, .beat-more) { display: flex; flex: 1 1 100%; align-items: center; gap: 8px; min-width: 0; }
+}
+/* 🎤 Live on a phone, laid out as Beats with ⌨️ Keys: ● Record and 🎬 Takes
+   on the first line; the click's tempo, then ⏲️ 🔔 ✏️ as 48 px squares at the
+   right, on the next (Ben, 2026-10-26). */
+@media (max-width: 600px) {
+  body.screen-live .dj-bar > .beat-go { flex-wrap: wrap; row-gap: 10px; }
+  body.screen-live .dj-bar .dj-status { flex: 1 1 0; }
+  body.screen-live .dj-bar #dj-takes-open { margin-left: auto; }
+  body.screen-live .dj-bar :is(#dj-click-tempo, #dj-click, #dj-overlap, #dj-change) { order: 1; }
+  body.screen-live .dj-bar #dj-click-tempo { flex: 1 1 calc(100% - 168px); min-width: 0; }
+  body.screen-live .dj-bar #dj-overlap { margin-left: 0; }
+  body.screen-live .dj-bar #dj-click { width: 48px; }
+}
+/* Narrow phones (it overlapped ⏲️ at 360): ⌄ 100 ⌃ needs more room than ⏲️ 🔔 ✏️ leave it, so the
+   tempo fills the second line, and ⏲️ 🔔 ✏️ sit at the right of the third. */
+@media (max-width: 369px) {
+  body.screen-live .dj-bar #dj-click-tempo { flex-basis: 100%; }
+  body.screen-live .dj-bar #dj-click { margin-left: auto; }
+}
+/* Tap tempo's "keep tapping…" and "👆 96" (dj.js) never fit a 48 px ⏲️ (on a
+   phone it ran over ✏️ on Beats with ⌨️ Keys): for that moment ⏲️ widens over
+   the tempo's room, the tempo out of sight, so the buttons after it stay put
+   (on Beats with ⌨️ Keys it ran over the bars from 761 px). Below 370 px
+   Live's tempo has a line of its own, so it stays. */
+body.screen-live .dj-bar #dj-click.tapping { flex: 0 1 calc(16rem + 60px); font-size: 0.95rem; }   /* the tempo, a gap and ⏲️ */
+body.screen-live .dj-bar .beat-more:has(#dj-click.tapping) > #dj-click-tempo { display: none; }
+body.keys-on .dj-bar .beat-more:has(#dj-beat-click.tapping) > #dj-tempo { display: none; }
+@media (max-width: 600px) {
+  body.keys-on .dj-bar #dj-beat-click.tapping { flex: 1 1 auto; width: auto; padding: 0 10px; font-size: 0.95rem; }
+  body.screen-live .dj-bar #dj-click.tapping { flex: 1 1 calc(100% - 112px); width: auto; padding: 0 10px; }   /* the tempo's slot: before 🔔 ✏️ */
+}
+@media (max-width: 369px) {
+  body.screen-live .dj-bar .beat-more:has(#dj-click.tapping) > #dj-click-tempo { display: flex; }
+  body.screen-live .dj-bar #dj-click.tapping { flex: 0 1 auto; }
+}
+/* Up to 760 px the line has no room for words: just 🔔 and ✏️, 48 px squares, as Beats' ✏️ on a phone. */
+@media (max-width: 760px) {
+  body.screen-live .dj-bar .dj-word { width: 48px; padding: 0; font-size: 1.2rem; }
+  body.screen-live .dj-bar .dj-word::after { content: none; }
+}
+/* 601–760 px, one line: 8 px apart and the tempo's ⌄ ⌃ squeezed to their least, so a
+   tap tempo's wide ⏲️ still leaves 🎬 Takes inside the bar (it ran 11 px over at 700). */
+@media (min-width: 601px) and (max-width: 760px) {
+  body.screen-live .dj-bar > .beat-go { gap: 8px; }
+  body.screen-live .dj-bar #dj-click-tempo { min-width: 8.75rem; }
 }
 .seq-play {
   min-height: 52px;
@@ -1919,7 +1986,9 @@ button.sa-row { cursor: pointer; }
 .set-group legend { margin: 0 0 6px; padding: 0; font-weight: 800; }
 .set-switch input { border-radius: 6px; }
 /* The device code is read aloud or typed, so it is spaced and fixed-width. */
-.set-code { margin: 0 0 10px; }
+.set-code { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0 0 10px; }
+/* 📋 copies the code (Ben, 2026-10-26): one tap, to paste into a message. */
+.set-code-copy { min-width: 44px; padding: 0 10px; font-size: 1.1rem; }
 .set-code b { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0.08em; }
 
 /* Saved beats: a name field, then the library, newest first. */
@@ -2558,10 +2627,17 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 .dj[hidden] { display: none; }
 /* Beat Builder's beat bar: the open beat's name, ✏️, New and Open. */
 .dj-beatbar[hidden] { display: none; }
-/* Beat Builder's control bar is .beat-deck (above), with what is happening
-   (recording, a take) and 🎬 Takes after ⏲️ in Freestyle. */
+/* Beat Builder's control bar is .beat-deck (above). On 🎤 Live it is
+   ● Record, the click's tempo and ⏲️, what is happening (recording, a take),
+   then at the right 🔔 Overlap, ✏️ Layout and 🎬 Takes, as Beats has its
+   🎚️ ✏️ Layout ⇆ at the right (Ben, 2026-10-26: every view's controls at the top). */
 .dj-bar .dj-status:empty { display: none; }   /* takes no room until there is something to say */
-.dj-bar #dj-takes-open { flex: none; margin-left: auto; }
+.dj-bar #dj-takes-open { flex: none; }
+.dj-bar #dj-overlap { margin-left: auto; }
+/* 🔔 Overlap and ✏️ Layout: the word (data-word) after the emoji where there is room, as Beats' ✏️ Layout. */
+.seq-click.dj-word { width: auto; padding: 0 12px; font: 800 1rem/1 var(--font-ui); white-space: nowrap; }
+.seq-click.dj-word::after { content: " " attr(data-word); }
+.dj-bar .dj-click-tempo { flex: 0 1 16rem; min-width: 9.5rem; min-height: 52px; font-weight: 800; }
 /* ⌨️ Keys on: the same rows as Beats (Ben, 2026-10-26: "scrolling rows for
    consistent views as much as possible no matter the size"): each row's head
    stuck at the left (emoji · 🔊, and the name with room), its pills on one
@@ -2822,18 +2898,14 @@ body.keys-on .touch-grid { height: max(320px, calc(100dvh - var(--head-h, 64px) 
 .touch-band.touch-cell .touch-name { font-size: 0.85rem; }
 .touch-block-empty { border: 2px dashed rgb(255 255 255 / 0.3); border-radius: 12px; }
 
-/* A legend for the key colors, like the periodic table's. */
-.dj-change-row { grid-area: change; display: flex; justify-content: flex-end; }
 /* On Beats with ⌨️ Keys, ✏️ Layout sits on the control bar after 🎚️ (and
-   in the slim bar once scrolled), so the keys' foot has none (Ben, 2026-10-19:
-   "if it's in the sticky bar, the footer one isn't needed"). 🎤 Live keeps it. */
-body.keys-on .dj-change-row { display: none; }
+   in the slim bar once scrolled); 🎤 Live's own is on its bar too (#dj-change, dj.js showMode). */
 .edit-keys-open { width: auto; padding: 0 10px; font: 800 1rem/1 var(--font-ui); white-space: nowrap; }
 /* After 🎚️ from 601 px; on a phone the bars' line is full, so after ⏲️. */
 #dj-change-tempo { display: none; }
 @media (max-width: 600px) {
   #dj-change-bar { display: none; }
-  body.keys-on #dj-change-tempo { display: block; }   /* 🎤 Live keeps its own under the keys */
+  body.keys-on #dj-change-tempo { display: block; }   /* 🎤 Live has its own (#dj-change) */
   /* A grid (Ben, 2026-10-19: "a bit more of a grid"): ⏲️ over 🎚️ and ✏️ over
      ⇆, each 48 px, 8 px apart, both lines ending at the right edge. */
   body.keys-on .dj-bar :is(#dj-beat-click, #dj-change-tempo) { width: 48px; padding: 0; }
@@ -2845,22 +2917,14 @@ body.keys-on .dj-change-row { display: none; }
 @media (max-width: 359px) {
   body.keys-on .dj-bar .beat-more, body.keys-on .dj-bar > .beat-shape { gap: 6px; }
 }
-/* Under the keys, one line: the key colors at the
-   left; ⏲️ Click track, 🔔 Overlap and ✏️ Layout in the corner, ✏️ Layout
-   last (Ben, 2026-10-12). The click's tempo opens to the left of Click track,
-   in room kept for it, so no button moves when the click turns on. */
-.dj-tail { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "legend click overlap change"; align-items: center; gap: 16px 12px; margin-top: 16px; }
-.dj-tail #dj-overlap { grid-area: overlap; }
-#dj-overlap[hidden] { display: none; }
-.dj-end { display: contents; }
+/* Under the keys, only their colors (a legend, like the periodic table's):
+   ⏲️, 🔔 Overlap and ✏️ Layout are on the control bar (Ben, 2026-10-26). */
+.dj-tail { margin-top: 16px; }
 /* S M L and Q / D: in ✏️ Layout (⌨️ Keys), over the keys (Ben, 2026-10-19). */
 .ke-look { display: flex; flex-wrap: wrap; gap: 12px; }
 .ke-look:has(> :not([hidden])) { margin-bottom: 10px; }
-.dj-legend { grid-area: legend; }
-.dj-clicktrack { grid-area: click; display: flex; flex-direction: row-reverse; align-items: center; gap: 12px; width: min(20rem, 45cqi); min-width: 0; }
-.dj-clicktrack #dj-click { flex: none; }
+/* The click's tempo, before ⏲️, as Beats' tempo. */
 .dj-click-tempo { display: flex; flex: 1 1 12rem; align-items: center; gap: 10px; min-width: 0; }
-.dj-click-tempo.off { visibility: hidden; }
 .dj-click-tempo input { flex: 1 1 auto; min-width: 0; min-height: 44px; accent-color: var(--led); }
 .dj-click-tempo output { flex: none; min-width: 4.6em; text-align: right; color: #fff; font-weight: 800; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }
 /* A tempo slider with its number (Beat Builder, the click track). Where its
@@ -2882,18 +2946,6 @@ body.keys-on .dj-change-row { display: none; }
   .tempo-box .tempo-step.down { margin-left: auto; margin-right: -4px; }
   .tempo-box .tempo-step.up { margin-right: auto; margin-left: -4px; }
   .tempo-box output, .tempo-box .seq-bpm-num { flex: none; min-width: 44px; max-width: 3em; margin: 0; white-space: normal; line-height: 1.1; text-align: center; }
-}
-@container panel (max-width: 30rem) {
-  /* A phone: the colors, then Click track, Overlap and Edit keys sharing a
-     line (Edit keys at the right), then the click's tempo under them while on.
-     A label too long for its third wraps onto two lines. */
-  .dj-tail { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "legend legend legend" "click overlap change" "tempo tempo tempo"; gap: 12px 8px; }
-  .dj-tail > .dj-end > .seq-tool, .dj-change-row > .seq-tool, .dj-clicktrack #dj-click { padding: 6px; white-space: normal; line-height: 1.15; }
-  .dj-clicktrack { display: contents; }
-  .dj-clicktrack #dj-click { grid-area: click; }
-  .dj-click-tempo { grid-area: tempo; }
-  .dj-click-tempo.off { display: none; }
-  .dj-change-row > .seq-tool, .dj-clicktrack #dj-click, .dj-tail #dj-overlap { flex: 1 1 auto; width: 100%; }
 }
 /* Too narrow for the four colors on one line: two and two, never three and one. */
 @container panel (max-width: 21rem) {

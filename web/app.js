@@ -13,7 +13,7 @@
 // settings-ui.js, help.js, sequencer.js (screens).
 
 import { state, loadStorage, persist, setOverride, adoptStoredPeople, reIdStoredPeople, renamedId } from './state.js';
-import { audio } from './audio.js';
+import { audio, voicesMade } from './audio.js';
 import { meter, buildGrille } from './meter.js';
 import { createSequencer } from './sequencer.js';
 import { people, person, currentPerson, clipsFor, anyClip, padColor, nextClipColor } from './board.js';
@@ -48,6 +48,8 @@ import { initHelp } from './help.js';
 import { initFeedback } from './feedback.js';
 import { initListen, showCard } from './listen-ui.js';
 import { initLogSend } from './log-send.js';
+import { watchTaps } from './tap-watch.js';
+import { lately } from './finger.js';
 import { initLeftover } from './leftover.js';
 import { installErrorLog, logEvent, onLog } from './log.js';
 import { onDialogOpen } from './dialogs.js';
@@ -905,6 +907,13 @@ async function start() {
   initMiniDeck();   // 🥁 Beats' play bar tucks into the slim bar at the top
   initHelp();
   initLogSend();
+  // A finger tap that plays nothing goes in the log, for a problem report.
+  watchTaps({
+    doc: document, win: window, lately, voices: voicesMade, log: logEvent,
+    audioState: () => audio.ctx?.state ?? null,
+    isLooping: (id) => audio.isLooping(id),
+    loops: () => [...audio.playing.values()].filter((v) => v.loop).length,
+  });
   seq = makeSequencer();
   setBeatTempo(() => seq.beat()?.bpm);   // Echo's 🥁 On the beat follows the open beat
   song = makeSong();

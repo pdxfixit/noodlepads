@@ -7,13 +7,14 @@
     cloud_admin.py profiles                      every profile: id, name, made, last active, records, sound bytes
     cloud_admin.py prune    [--days N] [--empty] [--smoke] [--yes]   profiles idle N days (default 180) or empty, and loose sounds;
                                                  --smoke: what the deploy checks left (p-smoke-…, p-e2e-…, and their shares)
-    cloud_admin.py reset-pin ID [--yes]          clear a profile's PIN (Ben, from a PIN-reset email)
+    cloud_admin.py reset-pin WHO [--to 1234] [--yes]   a forgotten PIN: WHO is the fun name or the id; clears the PIN,
+                                                 or sets it to --to (docs/how-to.md "Reset a forgotten PIN")
     cloud_admin.py stats    [--days N]           the players: what each made; then reports the metrics
                                                  (ADR 0016) from the telemetry runner's pulled store
                                                  (read only): devices, places, activity by day and hour
 
 Everything that changes the database shows what it would do and stops,
-unless --yes is given (reset-pin asks instead). Every statement runs through
+unless --yes is given (reset-pin asks instead, when typed at a terminal). Every statement runs through
 `just cloud-db execute noodle-pads --remote` (flarepress's tools/wrangler.sh:
 the Keychain on Ben's Mac, the repo's read-only token on GitHub); nothing
 here holds a credential. A read that fails stops the tool: an empty answer is
@@ -34,6 +35,7 @@ a local SQLite database with the same schema.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -628,24 +630,77 @@ def prune(db, days=None, empty=False, yes=False, now=None, out=print, smoke=Fals
 
 # ── a forgotten PIN ──
 
-def reset_pin(db, pid, yes=False, ask=input, out=print):
-    q = quoted(pid, PROFILE_ID)
-    rows = db.query(f'SELECT id, name, avatar, pin_hash IS NOT NULL AS pin FROM profiles WHERE id = {q}')
+PIN = re.compile(r'^\d{4}$')
+PIN_ROUNDS = 20_000   # worker/pin.js ROUNDS
+FUN_NAME = re.compile(r"^[A-Za-z][A-Za-z' -]{0,39}$")
+
+
+def pin_hash(pin, salt_hex, rounds=PIN_ROUNDS):
+    """The Worker's PIN hash (worker/pin.js hashSecret): PBKDF2-SHA-256 over the PIN's
+    UTF-8, the salt's bytes, 32 bytes out, as hex. tests/pin-hash-python.test.mjs checks the two agree."""
+    return hashlib.pbkdf2_hmac('sha256', pin.encode(), bytes.fromhex(salt_hex), rounds).hex()
+
+
+def find_profile(db, who, out=print):
+    """The one profile `who` names: its id, or its fun name in any case ("captain cranberries").
+    No exact match lists near ones (each word without its possessive or plural) and stops; two
+    profiles with that name are listed with their ids, to pick one."""
+    cols = 'id, name, avatar, active, pin_hash IS NOT NULL AS pin'
+    if PROFILE_ID.match(who):
+        rows = db.query(f'SELECT {cols} FROM profiles WHERE id = {quoted(who, PROFILE_ID)}')
+        if rows:
+            return rows[0]
+    if not FUN_NAME.match(who):
+        raise Trouble(f'no profile {who!r}. `just cloud-profiles` lists them.')
+    name = who.strip().lower().replace("'", "''")
+    rows = db.query(f"SELECT {cols} FROM profiles WHERE lower(name) = '{name}' ORDER BY active DESC")
+    if len(rows) == 1:
+        return rows[0]
     if not rows:
-        raise Trouble(f'no profile {pid}. `just cloud-profiles` lists them.')
-    p = rows[0]
+        # "Cranberry's" finds "Cranberries": a possessive, then a plural or a y, come off each word.
+        words = [re.sub(r'(ies|es|s|y)$', '', re.sub(r"'s?$", '', w)) for w in name.replace("''", "'").split()]
+        like = ' AND '.join(f"lower(name) LIKE '%{w.replace(chr(39), chr(39) * 2)}%'" for w in words if w)
+        rows = db.query(f'SELECT {cols} FROM profiles WHERE {like} ORDER BY active DESC LIMIT 10') if like else []
+        if not rows:
+            raise Trouble(f'no profile is called {who!r}. `just cloud-profiles` lists them.')
+        msg = f'no profile is called exactly {who!r}. Close ones:'
+    else:
+        msg = f'{len(rows)} profiles are called {who!r}: give the id of the one you mean.'
+    for r in rows:
+        out(f"  {r['id']}  {r['name']}  (last active {when(r['active'])}{', has a PIN' if r['pin'] else ''})")
+    raise Trouble(msg)
+
+
+def reset_pin(db, who, to=None, yes=False, ask=input, out=print):
+    """Clears a profile's PIN, or sets it to `to` (4 digits), from Ben's ask after a forgotten-PIN email.
+    Every key goes, so each device opens the profile again: with no PIN at once, or asking the new one."""
+    if to is not None and not PIN.match(to):
+        raise Trouble('a PIN is 4 digits, like 1234.')
+    p = find_profile(db, who, out)
+    q = quoted(p['id'], PROFILE_ID)
     out(f"{p['id']}: {(p.get('avatar') or '') + ' ' if p.get('avatar') else ''}{p['name']}, {'has a PIN' if p['pin'] else 'has no PIN'}")
-    if not p['pin']:
+    if to is None and not p['pin']:
         out('Nothing to do.')
         return False
-    if not yes and ask(f"Clear the PIN of {p['name']}? Every device must open it again. Type yes: ").strip().lower() != 'yes':
-        out('Nothing changed.')
-        return False
-    db.execute(f'UPDATE profiles SET pin_hash = NULL, pin_salt = NULL, fails = 0, locked_until = 0 WHERE id = {q}; DELETE FROM keys WHERE profile_id = {q};')
-    after = db.query(f'SELECT pin_hash IS NOT NULL AS pin FROM profiles WHERE id = {q}')
-    if not after or after[0]['pin']:
-        raise Trouble('the PIN is still there after the reset.')
-    out(f"✅ {p['name']} has no PIN now. Each device opens it again once (no PIN asked).")
+    doing = f"Set the PIN of {p['name']} to {to}" if to else f"Clear the PIN of {p['name']}"
+    if not yes:
+        if ask is None:
+            out(f'{doing}? Nothing changed: run it again with --yes.')
+            return False
+        if ask(f'{doing}? Every device must open it again. Type yes: ').strip().lower() != 'yes':
+            out('Nothing changed.')
+            return False
+    if to:
+        salt = os.urandom(16).hex()
+        h = pin_hash(to, salt)
+        db.execute(f"UPDATE profiles SET pin_hash = '{h}', pin_salt = '{salt}', fails = 0, locked_until = 0 WHERE id = {q}; DELETE FROM keys WHERE profile_id = {q};")
+    else:
+        db.execute(f'UPDATE profiles SET pin_hash = NULL, pin_salt = NULL, fails = 0, locked_until = 0 WHERE id = {q}; DELETE FROM keys WHERE profile_id = {q};')
+    after = db.query(f'SELECT pin_hash FROM profiles WHERE id = {q}')
+    if not after or after[0]['pin_hash'] != (h if to else None):
+        raise Trouble('the PIN did not change: check with `just cloud-profiles`.')
+    out(f"✅ {p['name']}'s PIN is {to} now. Each device asks for it once." if to
+        else f"✅ {p['name']} has no PIN now. Each device opens it again once (no PIN asked).")
     return True
 
 
@@ -666,7 +721,8 @@ def main(argv=None, db=None):
     pr.add_argument('--smoke', action='store_true', help='the deploy checks\' leftovers: p-smoke-…, p-e2e-… and their share codes')
     pr.add_argument('--yes', action='store_true')
     rp = sub.add_parser('reset-pin')
-    rp.add_argument('id')
+    rp.add_argument('who', help='the fun name ("Captain Cranberries") or the profile id')
+    rp.add_argument('--to', help='a new 4-digit PIN; without it the PIN is cleared')
     rp.add_argument('--yes', action='store_true')
     args = ap.parse_args(argv)
     db = db or Wrangler()
@@ -684,7 +740,8 @@ def main(argv=None, db=None):
                 raise Trouble('--days must be 1 or more')
             prune(db, args.days, args.empty, args.yes, smoke=args.smoke)
         elif args.cmd == 'reset-pin':
-            reset_pin(db, args.id, args.yes)
+            # Typed at a terminal it asks; from a script or an agent it shows who and stops until --yes.
+            reset_pin(db, args.who, args.to, args.yes, ask=input if sys.stdin.isatty() else None)
     except Trouble as err:
         print(f'🛑 {err}', file=sys.stderr)
         return 1

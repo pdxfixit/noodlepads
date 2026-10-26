@@ -101,21 +101,25 @@ test('a remembering whose day has come is forgotten when the app starts: the PIN
   assert.equal(keyRows(LAPSED).length, 0, 'the key that lasted is gone from the cloud');
 });
 
-test('after a PIN opens someone, 🔑 Remember them here? is offered; Remember keeps them for 30 days', async () => {
-  assert.equal(cloud.REMEMBER_DAYS, 30);
+test('after a PIN opens someone, 🔑 Remember them here? is offered; Remember keeps them for 90 days', async () => {
   await choose(OFFER);
   assert.equal($('#pin-dialog').open, true);
   typePin(PIN);
   await settle();
   assert.equal(state.personId, OFFER, 'they show at once');
-  assert.equal($('#remember-dialog').open, true, 'the offer opens over them');
-  assert.match($('#remember-title').textContent, /Remember Friendly Sloth here\?/);
-  assert.match($('#remember-sub').textContent, /30 days\. Anyone using it can open them/);
+  const offered = $('#remember-dialog').open;
+  const title = $('#remember-title').textContent;
+  const sub = $('#remember-sub').textContent;
   $('#remember-yes').dispatch('click');
   await settle();
+  // Checked once it is answered, so a wrong word fails here and leaves no dialog open for the tests after.
+  assert.equal(offered, true, 'the offer opens over them');
   assert.equal($('#remember-dialog').open, false);
+  assert.match(title, /Remember Friendly Sloth here\?/);
+  assert.match(sub, /90 days\. Anyone using it can open them/);
+  assert.equal(cloud.REMEMBER_DAYS, 90);
   const until = cloud.rememberedUntil(OFFER);
-  assert.ok(Math.abs(until - (Date.now() + 30 * DAY)) < 60_000, '30 days from now');
+  assert.ok(Math.abs(until - (Date.now() + 90 * DAY)) < 60_000, '90 days from now');
   assert.ok(cloud.linkOf(OFFER).key, 'its key is stored');
   assert.deepEqual(keyRows(OFFER).map((r) => r.session), [0], 'one key, one that lasts: the visit\'s own was dropped');
   await choose(KEPT);
@@ -169,7 +173,7 @@ test('the profile\'s PIN part: Forget this device asks the PIN next time; 🔑 R
   assert.equal(cloud.rememberedUntil(OFFER), 0);
   typePin(PIN);
   await settle();
-  assert.ok(cloud.rememberedUntil(OFFER) > Date.now() + 29 * DAY);
+  assert.ok(cloud.rememberedUntil(OFFER) > Date.now() + 89 * DAY);
   assert.equal($('#profile-pin-state').textContent, '🔑 Remembered here');
   assert.equal(btn.textContent, 'Forget this device');
   assert.equal($('#remember-dialog').open, false, 'no offer on top: it is on');

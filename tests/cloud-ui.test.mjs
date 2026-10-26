@@ -226,7 +226,7 @@ test('☁️ Open from the cloud: a PIN pad with no Remember on this device, and
   $('#cloud-list').close();
 });
 
-test('a PIN is asked each time the person is opened, every time, and never remembered', async () => {
+test('a PIN is asked each time the person is opened, every time, unless 🔑 Remember is tapped (tests/pin-remember.test.mjs)', async () => {
   // Joined up as a person on this device (the first sync would do this).
   await setPersonEdit('p-far', { id: 'p-far', name: 'Sir Squid', avatar: '🐙', color: '#0C5E4B', added: true, fun: true, created: 2 });
   renderPeople();

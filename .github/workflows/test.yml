@@ -28,3 +28,9 @@ jobs:
         run: tools/version_bumped.sh
       - name: web/version.js PATCH is the commit count of its commit
         run: python3 tools/bump_version.py --check
+      # Last, so a red run never hides the release checks above.
+      - name: just taps (a finger on a phone in headless Chrome; every tap must sound)
+        env:
+          CHROME: /usr/bin/google-chrome
+        # One retry, said out loud: headless audio on a shared runner can stall. A real fault fails both.
+        run: just taps || { echo "↻ just taps failed once; trying again"; just taps; }
