@@ -223,6 +223,66 @@ test('iOS: the page asks for a playback audio session before its first sound, so
   audio.ctx = null;
 });
 
+// A held pad loops once its sound has loaded. Taken back while it loads (a
+// tap on the pad, a finger let go of a looping pad, ⏹️ Stop all), it never
+// starts; left alone, it starts on the beat as before.
+test('a loop asked for while its sound loads starts only if nothing took it back meanwhile', async () => {
+  const { audio } = await import('../web/audio.js');
+  const { FakeAudioBuffer } = await import('./helpers.mjs');
+  globalThis.AudioBuffer ??= FakeAudioBuffer;
+  const starts = [];
+  const node = () => ({ connect(n) { return n; }, disconnect() {} });
+  const ctx = {
+    state: 'running', currentTime: 10,
+    createBufferSource: () => Object.assign(node(), { start(t) { starts.push(t); }, stop() {}, playbackRate: { value: 1 } }),
+    createGain: () => Object.assign(node(), { gain: { value: 1, cancelScheduledValues() {}, setValueAtTime() {}, linearRampToValueAtTime() {} } }),
+  };
+  Object.assign(audio, { ctx, master: node() });
+  const plainLoad = audio.load;
+  const plainGrid = audio.grid;
+  let release;
+  audio.load = () => new Promise((r) => { release = () => r({ buffer: fakeBuffer([new Array(500).fill(0.5)], RATE), duration: 0.5 }); });
+  const clip = { id: 'user-loop' };
+  const loaded = () => new Promise((r) => setImmediate(r));
+  try {
+    for (const grid of [{ next: 11, beat: 0.5 }, null]) {   // with a beat playing, and without
+      audio.grid = () => grid;
+      const kind = grid ? 'in time' : 'alone';
+      // Stopped while it loads: nothing starts.
+      starts.length = 0;
+      audio.loop(clip);
+      assert.equal(audio.isLooping(clip.id), true, `${kind}: loading, it counts as looping, so a tap stops it`);
+      audio.stop(clip.id);
+      assert.equal(audio.isLooping(clip.id), false);
+      release();
+      await loaded();
+      assert.deepEqual(starts, [], `${kind}: stopped while loading, it never starts`);
+      assert.equal(audio.playing.has(clip.id), false);
+      // ⏹️ Stop all takes it back too.
+      audio.loop(clip);
+      audio.stopAll();
+      release();
+      await loaded();
+      assert.deepEqual(starts, [], `${kind}: Stop all`);
+      // A hit of the same sound meanwhile does not: the loop takes over from it.
+      audio.loop(clip);
+      audio.start(clip.id, { buffer: {}, duration: 0.5 });
+      release();
+      await loaded();
+      assert.equal(starts.length, 2, `${kind}: the hit, then the loop`);
+      assert.equal(starts[1], grid ? 11 : 10, `${kind}: the loop starts ${grid ? 'on the next bar' : 'at once'}`);
+      assert.equal(audio.isLooping(clip.id), true);
+      audio.stop(clip.id);
+    }
+  } finally {
+    audio.load = plainLoad;
+    audio.grid = plainGrid;
+    audio.playing.clear();
+    audio.pending.clear();
+    audio.ctx = null;
+  }
+});
+
 test('a context the phone stops (a call, a locked screen; iOS says interrupted) is asked back at once while the page shows', async () => {
   const { audio } = await import('../web/audio.js');
   const doc = { visibilityState: 'visible' };

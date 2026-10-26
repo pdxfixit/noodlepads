@@ -89,6 +89,7 @@ Other contexts:
 | `ctx`, `master`, `limiter`, `analyser` | the output graph | `context()` | everyone above; `meter.js` (analyser); `log-send.js`, `things.js`, `wave.js` read `ctx` |
 | `playing` | Map id → `{src, gain, t0, duration, loop, clip}`: what plays through `start`/`loopInTime` | `start`, `loopInTime`, `stop`, the `onended` handlers | `meter.js run` (progress of each), `wave.js follow`, `sheet.js sheetPlaying`, `things.js`, `app.js` (any loop?) |
 | `ringing` | Map id → earlier hits still ringing under 🔔 Overlap | `start` with `ring` | `stop`, `stopAll` |
+| `pending` | Map id → a loop asked for while its sound loads (`loadForLoop`) | `loop`, `loopInTime` | `stop` and `stopAll` take it back, so it never starts; `isLooping` counts it, so a tap on the pad stops it (`tests/audio.test.mjs`) |
 | `originals` | Map clip id → Promise<AudioBuffer>: the kept audio (cuts applied) | `original`, `keepOriginal`, `forget`; `sheet.js saveSheet` sets it directly for a re-made ✨ sound | `load`, `bulk.js`, `things.js` (`audio.original`) |
 | `originalTrims` | Map clip id → the `cutKey` the original was made with | `original`, `keepOriginal`, `forget` | `original` |
 | `recordings` | Map file → Promise<AudioBuffer>: one decode of a bundled file shared by an instrument's moved presets | `recording` | `decoded` |
@@ -178,9 +179,9 @@ calls `audio.dropRendered(last.id)` (all of them) after a voice change.
 |---|---|---|
 | `audio.play(clip, {loop, ring, rate, id, when})` | load, then `start`; gives `start`'s entry | pads, DJ (via `tapPad`, `deps.playOnce` for previews and take replays), Kids, sequencer chooser preview, `app.js` |
 | `audio.start(id, loaded, {loop, clip, via, ring, rate, when})` | play an already-loaded `{buffer, duration}`, at `when` on the audio clock (now if passed; the hit it replaces is cut, or rings, from then); returns its `playing` entry | `play`; the sheet, chop, bulk, things with their own buffers |
-| `audio.loop(clip)` | turn a playing sound into a loop (push its stop to 600 s), or start one; while a beat plays, `loopInTime` instead | pads hold, DJ `deps.loop` |
+| `audio.loop(clip)` | turn a playing sound into a loop (push its stop to 600 s), or start one once loaded (`loadForLoop`: not if stopped meanwhile); while a beat plays, `loopInTime` instead | pads hold, DJ `deps.loop` |
 | `audio.unloop(id)` | finish the current pass, then stop | `sheet.js endLive` |
-| `audio.stop(id)` | `fadeStop` it and its ringing hits now | pads, sheet, chop, bulk, Kids keys, things |
+| `audio.stop(id)` | `fadeStop` it and its ringing hits now, and take back a loop of it still loading (`start` uses `cut`, which leaves that loop) | pads, sheet, chop, bulk, Kids keys, things |
 | `audio.stopAll()` | stop every id in `playing` and `ringing` | `app.js` (Esc, `stopEverything`, entering 🧸 Kids), `sheet.js`, `kids.js` |
 
 - **Ring (🔔 Overlap).** With `ring`, a hit of the same id that is still
@@ -199,7 +200,8 @@ calls `audio.dropRendered(last.id)` (all of them) after a voice change.
 - `app.js` sets `audio.grid = () => seq.grid()`. `sequencer.js grid` returns
   the audio-clock time of the next bar's "1" (at least 20 ms away) and the
   length of a beat, or null when the beat is stopped.
-- `audio.loop` with a grid calls `loopInTime(clip, grid)`: the sound is padded
+- `audio.loop` with a grid calls `loopInTime(clip, grid)`: once loaded (and not
+  stopped meanwhile), on the beat's place read again then, the sound is padded
   with silence to `loopBeats(duration, beat) × beat` seconds (`padTo`: 1, 2,
   4, 8 or 16 beats, else whole bars of 4, at most 128 beats; 2% slack), set to
   loop, started at `grid.next`. What played before fades at that moment.

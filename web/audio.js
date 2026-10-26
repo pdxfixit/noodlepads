@@ -195,6 +195,7 @@ export const audio = {
   originalTrims: new Map(),  // clip id -> cutKey() of the trim, edits and fade `originals` holds it with
   rendered: new Map(),   // `${clip id}:${recipeKey}` -> Promise<{buffer, duration}>
   broken: new Set(),     // clip ids whose audio failed to load, decode or render
+  pending: new Map(),    // clip id -> a loop asked for while its sound loads (loadForLoop); stop() takes it back
 
   // What the page should do when audio changes. Set once by the app.
   on: {
@@ -393,7 +394,7 @@ export const audio = {
       const { keep, cut } = ringOver([...(this.ringing.get(id) ?? []), { ...before, end: before.t0 + before.duration }], at, true);
       for (const v of cut) fadeStop(v, at);
       this.ringing.set(id, keep);
-    } else this.stop(id, at);
+    } else this.cut(id, at);
     const { src, gain } = makeVoice(ctx, buffer, this.master);
     if (via) {
       src.disconnect();
@@ -426,7 +427,10 @@ export const audio = {
     const grid = this.grid();
     if (grid) { this.loopInTime(clip, grid); return; }
     const entry = this.playing.get(clip.id);
-    if (!entry) { this.play(clip, { loop: true }); return; }
+    if (!entry) {
+      this.loadForLoop(clip).then((loaded) => { if (loaded) this.start(clip.id, loaded, { loop: true, clip }); });
+      return;
+    }
     entry.loop = true;
     entry.src.stop(entry.t0 + MAX_LOOP_SECONDS);
     this.on.looping(clip.id, true);
@@ -437,11 +441,27 @@ export const audio = {
   // beat maker; null means no beat is playing.
   grid: () => null,
 
-  // Starts a clip looping on the beat: from grid.next, repeating every
-  // loopBeats() beats. What it was playing rings on until then.
+  // A loop's sound, loaded; null when it failed, or when the loop was taken
+  // back while it loaded: stop() (a tap on the pad, a finger let go of a
+  // looping pad, ⏹️ Stop all) or a newer loop of the same clip. Until then
+  // the clip counts as looping, so that tap stops it rather than playing it.
+  async loadForLoop(clip) {
+    const ask = {};
+    this.pending.set(clip.id, ask);
+    let loaded = null;
+    try { loaded = await this.load(clip); } catch { /* broken: load() marks it */ }
+    if (this.pending.get(clip.id) !== ask) return null;
+    this.pending.delete(clip.id);
+    return loaded;
+  },
+
+  // Starts a clip looping on the beat: from the next bar, repeating every
+  // loopBeats() beats. What it was playing rings on until then. The beat's
+  // place is read again once the sound has loaded.
   async loopInTime(clip, grid) {
-    let loaded;
-    try { loaded = await this.load(clip); } catch { return; }
+    const loaded = await this.loadForLoop(clip);
+    if (!loaded) return;
+    grid = this.grid() ?? grid;
     const ctx = this.wake();
     const period = loopBeats(loaded.duration, grid.beat) * grid.beat;
     const at = Math.max(grid.next, ctx.currentTime + 0.01);
@@ -482,12 +502,20 @@ export const audio = {
   },
 
   isLooping(id) {
-    return !!this.playing.get(id)?.loop;
+    return !!this.playing.get(id)?.loop || this.pending.has(id);
   },
 
-  // `at`: when it fades, on the audio clock (now, unless a hit booked
-  // ahead takes its place then).
+  // Stops what plays under `id`, and a loop of it still loading. `at`: when
+  // it fades, on the audio clock (now by default).
   stop(id, at = this.ctx?.currentTime ?? 0) {
+    this.pending.delete(id);   // a loop still loading never starts
+    this.cut(id, at);
+  },
+
+  // Fades out what plays under `id` (and its hits ringing under it) at `at`.
+  // A new hit of the same sound does this to the last one: unlike stop(), it
+  // leaves a loop that is still loading to start.
+  cut(id, at) {
     for (const v of this.ringing.get(id) ?? []) fadeStop(v, at);   // and its hits ringing under it
     this.ringing.delete(id);
     const entry = this.playing.get(id);
@@ -499,6 +527,6 @@ export const audio = {
   },
 
   stopAll() {
-    for (const id of new Set([...this.playing.keys(), ...this.ringing.keys()])) this.stop(id);
+    for (const id of new Set([...this.playing.keys(), ...this.ringing.keys(), ...this.pending.keys()])) this.stop(id);
   },
 };
