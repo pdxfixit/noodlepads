@@ -148,7 +148,7 @@ The 13 per-person stores that sync: `clips, overrides, orders, patterns, beats, 
 
 ### The `changed` stamp
 
-`merge3.js STAMP` = `'changed'`. `state.js persist` calls `stampEdit(store, value)` on every write of a `STAMPED` store. `merge3.js stampOf` reads it (else `saved`, else `edited`) for "the newer edit wins"; a tie goes to the cloud. `cleanStamp` drops a stamp more than a day ahead. `backup.js cleanBackup` keeps it. Writes a sync makes (`deps.put`, `storeLoaded`) bypass `persist`, so they carry the stamp they arrived with.
+`merge3.js STAMP` = `'changed'`. `state.js persist` calls `stampEdit(store, value)` on every write of a `STAMPED` store. `merge3.js stampOf` reads it (else `saved`, else `edited`) for "the newer edit wins"; a tie goes to the cloud. `cleanStamp` drops a stamp more than a day ahead. `backup.js cleanBackup` keeps it, and so does `settings.js cleanPrefs` (which `cloud.js storedLists` runs on `prefs`), so a setting changed on two devices goes to the newer edit. Writes a sync makes (`deps.put`, `storeLoaded`) bypass `persist`, so they carry the stamp they arrived with.
 
 ### Sounds in pieces
 
@@ -445,7 +445,6 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 
 **Gotchas found while reading:**
 
-- **A person's settings clash always goes to the cloud (as read).** `cloud.js storedLists` passes `prefs` through `settings.js cleanPrefs`, which returns only `{personId, values}` and drops the `changed` stamp. Both sides of a `prefs` merge then have stamp 0, `ctx.localNewer` is false, and a key changed on both devices takes the cloud's value. Other kinds keep their stamp. Likely unintended; no test covers it.
 - **Edits during a sync do not schedule a sync.** `cloud.js` counts `applying` for the whole of `syncNow`, network waits included, and `db.onChange` ignores every store while it is non-zero. An edit pushed in the same sync is fine; one made after its last push slice waits for the next focus, blur, 5-minute tick or change.
 - **Every sync redraws.** `storeLoaded` (always called by `pullOnce`) ends with `readStorage`, `notifyAllSettings`, `renderPeople`, `refreshPeople`, and `syncNow` reads storage again.
 - **Reports expire lazily.** `reports.js` deletes expired rows only when a new report arrives.

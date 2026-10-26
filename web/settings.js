@@ -20,6 +20,7 @@ import { PAD_STOPS, fromOldSize } from './pad-size.js';
 import { SKIN_IDS } from './skins.js';
 import { cleanSeen, cleanReaches } from './firsts.js';
 import { PLAYED, instrumentIds } from './instruments.js';
+import { cleanStamp, STAMP } from './merge3.js';
 
 // A person's level (ADR 0019): 🧸 Kids, Regular or Advanced.
 export const LEVELS = ['kids', 'regular', 'advanced'];
@@ -129,14 +130,17 @@ export const PERSONAL_KEYS = Object.keys(SETTINGS).filter(isPersonal);
 // Anything else in `settings` (renamedPeople) is this device's alone.
 export const inBackups = (key) => Object.hasOwn(SETTINGS, key);
 
-// A person's settings as stored: only keys and values this copy knows.
+// A person's settings as stored: only keys and values this copy knows, and
+// when they were last changed (merge3.js STAMP), so a clash in a sync goes to
+// the newer edit.
 export function cleanPrefs(raw) {
   const values = {};
   for (const key of PERSONAL_KEYS) {
     const value = raw?.values && Object.hasOwn(raw.values, key) ? allowedValue(key, raw.values[key]) : undefined;
     if (value !== undefined) values[key] = value;
   }
-  return { personId: raw?.personId, values };
+  const changed = cleanStamp(raw?.[STAMP]);
+  return { personId: raw?.personId, values, ...(changed === undefined ? {} : { [STAMP]: changed }) };
 }
 
 const listeners = new Map();  // key -> Set of functions called with the new value

@@ -18,6 +18,7 @@ import { cleanBackup } from '../web/backup.js';
 import { mergeLoaded } from '../web/merge.js';
 import { newId } from '../web/util.js';
 import { appMeta } from '../web/device-meta.js';
+import { cleanPrefs } from '../web/settings.js';
 
 const KIT = ['kick', 'snare'];
 const KEYS = { clips: 'id', overrides: 'id', orders: 'personId', patterns: 'personId', beats: 'id', people: 'id',
@@ -37,7 +38,8 @@ class Device {
     this.stores = Object.fromEntries(Object.keys(KEYS).map((k) => [k, []]));
     this.bases = new Map();   // "person|kind:id" -> the last-synced copy (IndexedDB `bases`)
   }
-  lists() { return this.stores; }
+  // What a sync reads, as cloud.js storedLists gives it: a person's settings through cleanPrefs.
+  lists() { return { ...this.stores, prefs: this.stores.prefs.map(cleanPrefs) }; }
   async put(store, r) {
     const k = KEYS[store];
     this.stores[store] = [...this.stores[store].filter((x) => x[k] !== r[k]), r];
@@ -644,6 +646,17 @@ test('a tempo changed on both devices: the newer edit wins, whichever syncs firs
     await first(); await second(); await first();
     assert.deepEqual([beatOf(a).map((x) => x.bpm), beatOf(b).map((x) => x.bpm)], [[90], [90]], order);
     assert.deepEqual(contentOf(a), contentOf(b));
+  }
+});
+
+test('a setting changed on both devices: the newer edit wins, whichever syncs first', async () => {
+  for (const order of ['A first', 'B first']) {
+    const { a, b, syncA, syncB } = await twoDevices();
+    await a.put('prefs', { personId: 'p-a', values: { padSize: 0.9 }, changed: Date.now() - 5000 });
+    await b.put('prefs', { personId: 'p-a', values: { padSize: 0.13 }, changed: Date.now() - 1000 });
+    const [first, second] = order === 'A first' ? [syncA, syncB] : [syncB, syncA];
+    await first(); await second(); await first();
+    assert.deepEqual([a.stores.prefs[0].values.padSize, b.stores.prefs[0].values.padSize], [0.13, 0.13], order);
   }
 });
 
