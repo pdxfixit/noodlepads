@@ -97,7 +97,7 @@ test('"They are deleted from the cloud after 14 days": the report table keeps 14
   assert.equal(TTL_MS, 14 * 24 * 60 * 60 * 1000);
 });
 
-test('an expired report goes even when no new report comes: any cloud write sweeps it', async () => {
+test('an expired report goes even when no new report comes: a make, open, push, share or PIN change sweeps it, apart from the metrics', async () => {
   const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('') } };
   const now = Date.now();
   const report = (key, expires) => env.DB.db.prepare('INSERT INTO reports (key, device, app, errors, body, created, expires) VALUES (?, ?, ?, ?, ?, ?, ?)')
@@ -111,6 +111,46 @@ test('an expired report goes even when no new report comes: any cloud write swee
   }), env);
   assert.equal(res.status, 201);
   assert.deepEqual(env.DB.rows('SELECT key FROM reports').map((r) => r.key), ['new']);
+  // A metrics batch that fails (here, a table gone) never keeps an expired report.
+  env.DB.db.exec('DROP TABLE activity');
+  report('old-too', now - 1000);
+  const made = await worker.fetch(new Request('https://noodlepads.com/api/profiles', {
+    method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'X-Noodle-App': 'v=abc&w=400&t=1' },
+    body: JSON.stringify({ id: 'p-b', name: 'Baron Bagel', avatar: '', color: '#1F3FA8' }),
+  }), env);
+  assert.equal(made.status, 201);
+  assert.deepEqual(env.DB.rows('SELECT key FROM reports').map((r) => r.key), ['new']);
+});
+
+test('an expired report also goes when someone only syncs or looks at the profile list, and the Worker logs how many went', async () => {
+  const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('') } };
+  const now = Date.now();
+  const report = (key, expires) => env.DB.db.prepare('INSERT INTO reports (key, device, app, errors, body, created, expires) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(key, 'K7Q4-M2XD', 'v1.0.1-abc1234', 0, '{}', expires - TTL_MS, expires);
+  const api = (method, path, key) => worker.fetch(new Request(`https://noodlepads.com/api/${path}`, {
+    method, headers: { Origin: ORIGIN, ...(key ? { Authorization: `Bearer ${key}` } : {}) },
+  }), env);
+  const { key } = await (await worker.fetch(new Request('https://noodlepads.com/api/profiles', {
+    method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8' }),
+  }), env)).json();
+  const said = [];
+  const log = console.log;
+  console.log = (...args) => said.push(args.join(' '));
+  try {
+    report('old-1', now - 1000);
+    report('old-2', now - 2000);
+    report('new', now + 60_000);
+    assert.equal((await api('GET', 'profiles/p-a/records?since=0', key)).status, 200);
+    assert.deepEqual(env.DB.rows('SELECT key FROM reports').map((r) => r.key), ['new'], 'a pull');
+    report('old-3', now - 1000);
+    assert.equal((await api('GET', 'profiles')).status, 200);
+    assert.deepEqual(env.DB.rows('SELECT key FROM reports').map((r) => r.key), ['new'], 'a look at the list');
+    assert.equal((await api('GET', 'profiles')).status, 200);
+  } finally {
+    console.log = log;
+  }
+  assert.deepEqual(said, ['reports: 2 expired, deleted', 'reports: 1 expired, deleted'], 'a line when some went, none when none did');
 });
 
 // Feedback (Ben, 2026-10-19: privacy changes "all approved", kept "90d?"):

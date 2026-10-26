@@ -1,6 +1,8 @@
 // POST /api/log: an opt-in problem report (ADR 0009), checked, cleaned again
 // and kept in D1's `reports` table for 14 days. Each report first deletes the
-// ones past their expiry, so nothing scheduled is needed. The IP is never
+// ones past their expiry, and so does every make, open, pull, push, share and
+// PIN change, and every look at the profile list (worker/metrics.js
+// expireReports): nothing is scheduled. The IP is never
 // used or stored: a device may send 10 a minute; the whole site 1,000 routine
 // reports a day, and 1,000 holding an error or a silent tap, a share of their own;
 // and all kept reports together at most 40 MB.

@@ -9,7 +9,7 @@ import { isFunName } from '../web/names.js';
 import { CLOUD_ID } from '../web/reid.js';
 import { ORIGIN, json, fail, Refuse, readJson, readBytes, randomId, sha256Hex, toBytes, withinDaily, utcDay } from './http.js';
 import { isPin, newSalt, hashSecret, checkSecret, shareCode, isShareCode, plainCode } from './pin.js';
-import { noteEvent, forgetProfile } from './metrics.js';
+import { noteEvent, forgetProfile, expireReports } from './metrics.js';
 import { allowed } from './events-worker.js';
 
 // A D1 row holds at most 2,000,000 bytes; audio goes in pieces a little smaller.
@@ -871,6 +871,11 @@ export async function handleCloud(request, env, now = Date.now(), ctx = null) {
     })().catch((err) => console.error('metrics:', err));
     if (ctx?.waitUntil) ctx.waitUntil(done);
     else await done;
+  } else if (seen.list) {
+    // Anyone looking at the list counts as the site being used.
+    const done = expireReports(env, now);
+    if (ctx?.waitUntil) ctx.waitUntil(done);
+    else await done;
   }
   return res;
 }
@@ -885,7 +890,7 @@ async function route(request, env, now, seen) {
     if (a === 'cloud' && parts.length === 1 && m === 'GET') return json(200, { ok: true, chunk: CHUNK_BYTES, maxSound: MAX_SOUND_BYTES });
     if (a === 'profiles') {
       if (parts.length === 1) {
-        if (m === 'GET') return await listProfiles(env);
+        if (m === 'GET') { seen.list = true; return await listProfiles(env); }
         if (m === 'POST') return await makeProfile(request, env, now, seen);
       } else if (typeof b === 'string' && PERSON_ID.test(b)) {
         needProvenCheck(request, env, b);

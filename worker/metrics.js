@@ -78,6 +78,7 @@ async function quietly(env, statements, why) {
 // key before a new PIN gave it another, so it stays one device.
 export async function noteEvent(env, request, seen, now) {
   if (!KINDS.includes(seen?.kind) || typeof seen.profile !== 'string') return false;
+  if (seen.kind !== 'pin-wrong') await expireReports(env, now);
   // Switched off: nothing noted, but old rows still go on time.
   if (!optedIn(request)) return SWEEPS.has(seen.kind) ? quietly(env, () => sweep(env, now), 'sweep') : false;
   const place = placeOf(request);
@@ -104,15 +105,31 @@ export async function noteEvent(env, request, seen, now) {
 }
 
 // Rows past KEEP_MS (a device's past DEVICE_KEEP_MS) go: nothing scheduled.
-// So do problem reports past their expiry (reports.js deletes them too, when
-// the next one arrives), so one goes after 14 days even if no report comes.
 export function sweep(env, now) {
   const before = now - KEEP_MS;
   return [
     env.DB.prepare('DELETE FROM activity WHERE at < ?').bind(before),
     env.DB.prepare('DELETE FROM devices WHERE last_seen < ?').bind(now - DEVICE_KEEP_MS),
-    env.DB.prepare('DELETE FROM reports WHERE expires < ?').bind(now),
   ];
+}
+
+// Problem reports past their expiry go on every make, open, pull, push,
+// share and PIN change, and on a look at the profile list (cloud.js
+// handleCloud), in a query of their own, so trouble with the metrics tables
+// never keeps one. reports.js deletes them too, when the next report arrives;
+// with these, one goes about 14 days on, once the site is next used. Nothing
+// is scheduled. Each delete that finds some says how many in the Worker's
+// log. Returns how many went; never throws.
+export async function expireReports(env, now) {
+  try {
+    const res = await env.DB.prepare('DELETE FROM reports WHERE expires < ?').bind(now).run();
+    const gone = Number(res?.meta?.changes ?? 0);
+    if (gone) console.log(`reports: ${gone} expired, deleted`);
+    return gone;
+  } catch (err) {
+    if (!missingTable(err)) console.error('metrics (reports):', err);
+    return 0;
+  }
 }
 
 // A deleted profile's metrics go with it ("gone from the cloud at once",

@@ -114,7 +114,8 @@ CREATE TABLE IF NOT EXISTS share_sounds (
 CREATE INDEX IF NOT EXISTS share_sounds_sound ON share_sounds (sound_id);
 
 -- Opt-in problem reports (ADR 0009): kept 14 days, then deleted by the next
--- report that arrives. No IP is stored.
+-- report that arrives, or the next make, open, pull, push, share, PIN change
+-- or look at the profile list (worker/metrics.js expireReports). No IP is stored.
 CREATE TABLE IF NOT EXISTS reports (
   key     TEXT PRIMARY KEY,   -- <ISO time>_<device>_<random>
   device  TEXT NOT NULL,
