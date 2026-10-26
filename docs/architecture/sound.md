@@ -300,7 +300,7 @@ without `first` or `muted`.
 
 1. **Cuts, on the stored audio** (`keptAudio`): `cuts.js applyEdits` on a
    copy; cut to `keptRange` (the trim; all of it for an `exact` sound; else
-   `trimBounds`, the quiet ends found on the recording as stored); `applyFade`.
+   `trimBounds`, the quiet ends found on the recording as stored, to the millisecond); `applyFade`.
    With a gain edit, `cuts.js levelForGain` scales by the *unedited* part's
    peak and marks the buffer `keepLevel`.
 2. **The plan** (`voices.js renderPlan`): the playing chain (muted steps out,
@@ -612,7 +612,7 @@ by a load of its current version").
 
 | Seam | Where | What a fix in one place misses |
 |---|---|---|
-| The kept audio is built three times | `audio.js keptAudio`, `chop.js rebuild`, `chop.js evenOut` (and `sheet.js acceptAudio` for a new sound: `slice` to `trimBounds`) | a change to the cut order (edits → trim → fade → levelForGain) in `keptAudio` leaves the trim editor drawing and playing something else |
+| The kept audio is built three times | `audio.js keptAudio`, `chop.js rebuild`, `chop.js evenOut` (all three take their range from `keptRange`: the automatic trim to the millisecond; `sheet.js acceptAudio` and `makeSound` use `keptAudio` itself) | a change to the cut order (edits → trim → fade → levelForGain) in `keptAudio` leaves the trim editor drawing and playing something else |
 | Two fades | `cuts.js applyFade` (seconds, before voices) and `voices.js STEP_RENDERS.fade` (shares of the length, a step) | the same min-of-ramps loop is written twice |
 | Walkie and Monster written twice | `voices.js RECIPES.walkie` vs `SPECIAL_RENDERS.walkie`; `RECIPES.monster` vs `SPECIAL_RENDERS.boom` | a fix to the static burst or the bass shelf reaches old sounds or knob sounds, not both |
 | Two noise tails | `voices.js noiseBuffer` and `steps.js roomTail` | same formula; `noiseBuffer` uses the context's channel count, `roomTail` always 2 |

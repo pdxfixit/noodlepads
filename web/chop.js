@@ -17,7 +17,7 @@
 // ("Baby Burp"). The pure parts are in cuts.js; sheet.js calls in here.
 
 import { state, persist } from './state.js';
-import { audio, slice, trimBounds } from './audio.js';
+import { audio, slice, keptRange } from './audio.js';
 import { currentPerson, clipsFor, nextClipColor } from './board.js';
 import { renderPads } from './pads.js';
 import { encodeWav } from './sequencer.js';
@@ -229,12 +229,10 @@ export function createCut(sheet) {
   // What a trim keeps of the recording. No trim means the automatic one:
   // the quiet ends off (or all of it, for a beat made into a sound). The
   // quiet is found on the recording as stored, as audio.js does.
+  // Exactly audio.js keptRange, so what the sheet plays after an edit is what
+  // the pad plays after a reload (the automatic trim is not rounded).
   function rangeOf(trim) {
-    const full = cut.full;
-    const auto = trimBounds(full);
-    return cleanTrim(trim, full.duration)
-      ?? (cut.exact ? null : cleanTrim({ start: auto.start, end: auto.start + auto.duration }, full.duration))
-      ?? { start: 0, end: full.duration };
+    return keptRange(cut.full, { trim, exact: cut.exact });
   }
 
   // The part Select part changes, kept inside what the trim keeps: the

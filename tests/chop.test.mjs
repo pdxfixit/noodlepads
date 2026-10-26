@@ -407,3 +407,53 @@ test('🔊 Even it out on a ✨ sound just remade works on the new sound, not th
     renderPads();
   }
 });
+
+// Saved, then the page reloaded (audio.forget: decoded again from what was
+// stored), a ✨ sound remade and evened out plays exactly as the sheet
+// played it before the save.
+test('a ✨ sound remade and evened out sounds the same after a reload as in the sheet', async () => {
+  const { currentPerson } = await import('../web/board.js');
+  const { renderPads } = await import('../web/pads.js');
+  const { renderSynth, RATE: SYNTH_RATE } = await import('../web/synth.js');
+  await setSetting('advancedBeats', false);
+  // What a stored made sound decodes to: its recipe, rendered.
+  const made = (recipe) => {
+    const samples = renderSynth(recipe, SYNTH_RATE);
+    const b = new FakeAudioBuffer({ length: samples.length, numberOfChannels: 1, sampleRate: SYNTH_RATE });
+    b.copyToChannel(samples, 0);
+    return b;
+  };
+  const clip = { id: 'user-reload-1', personId: currentPerson().id, label: 'Zap', emoji: '🔫', color: 'red', created: 1, blob: new Blob(['x']), mime: 'audio/wav', voice: 'normal', synth: { tone: 'buzzy', from: 1600, to: 120, length: 0.35, shape: 'drop', pulses: 1 } };
+  state.userClips.push(clip);
+  renderPads();
+  const decoded = audio.decoded;
+  audio.decoded = async (c) => (c?.id === clip.id ? made(c.synth) : recording);
+  try {
+    if (!document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+    audio.forget(clip.id);
+    pads().find((p) => p.dataset.id === clip.id).parent.querySelector('[data-edit]').dispatch('click');
+    await page.settle();
+    $('#make-starters').children.find((b) => b.dataset.make === 'wind').dispatch('click');
+    await page.settle();
+    $('#cut-even').dispatch('click');
+    await page.settle();
+    $('#save-btn').closest('form').dispatch('submit');
+    await page.settle();
+    const saved = { ...state.userClips.find((c) => c.id === clip.id), source: 'user' };
+    assert.equal(saved.edits?.[0]?.kind, 'gain', 'evened out');
+    const inSheet = await audio.original(saved);
+    audio.forget(clip.id);   // a reload
+    const reloaded = await audio.original(saved);
+    assert.ok(inSheet !== reloaded, 'decoded again');
+    assert.equal(reloaded.length, inSheet.length);
+    const a = inSheet.getChannelData(0), b = reloaded.getChannelData(0);
+    let most = 0;
+    for (let i = 0; i < a.length; i++) most = Math.max(most, Math.abs(a[i] - b[i]));
+    assert.ok(most < 1e-6, `sample for sample (${most})`);
+  } finally {
+    audio.decoded = decoded;
+    if ($('#sheet').open) $('#sheet').close();
+    state.userClips = state.userClips.filter((c) => c.id !== clip.id);
+    renderPads();
+  }
+});

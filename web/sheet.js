@@ -11,7 +11,7 @@
 // tune, and a slider on a live step changes the sound while it loops.
 
 import { state, persist, setOverride, deleteUserClip, saveMyVoice, deleteMyVoice } from './state.js';
-import { audio, trimBounds, slice, keptAudio, levelsOf, levelVerdict, TOO_LOUD, padTo } from './audio.js';
+import { audio, trimBounds, keptAudio, levelsOf, levelVerdict, TOO_LOUD, padTo } from './audio.js';
 import { meter, drawGrille, levelOf } from './meter.js';
 import { currentPerson, clipsFor, colorName, nextClipColor } from './board.js';
 import { overrideFor, withHidden } from './model.js';
@@ -1524,7 +1524,7 @@ async function acceptAudio(blob, origin) {
         : 'That recording is silent. Check the microphone, then tap Record again.');
       return;
     }
-    const original = slice(buffer, bounds.start, bounds.duration);
+    const original = keptAudio(buffer, null);   // as audio.js keeps it, so a reload plays the same
     sheet.pending = { blob, mime: blob.type, original };
     sheet.trim = sheet.edits = sheet.fade = null;
     cut.recorded(buffer);

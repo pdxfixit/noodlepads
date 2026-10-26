@@ -165,12 +165,15 @@ export function padTo(buffer, seconds, keep = buffer.duration) {
 // What the trim keeps of a stored recording, `{start, end}` seconds: the
 // clip's trim, or all of it for a beat made into a sound (its length is the
 // bars), or else the quiet at both ends taken off.
+// The quiet ends are found to the millisecond, as a trim is kept (cleanTrim),
+// so the trim editor's handles and what plays agree; under MIN_PIECE of
+// sound keeps all of it.
 export function keptRange(buffer, clip) {
   const kept = cleanTrim(clip?.trim, buffer.duration);
   if (kept) return kept;
   if (clip?.exact) return { start: 0, end: buffer.duration };
   const { start, duration } = trimBounds(buffer);
-  return { start, end: start + duration };
+  return cleanTrim({ start, end: start + duration }, buffer.duration) ?? { start: 0, end: buffer.duration };
 }
 
 // The audio a clip's voices start from, out of its whole stored recording:
