@@ -1629,6 +1629,18 @@ export function createDJ({ el, deps }) {
     if (beatRec) stopBeatRec('leave');
     if (rec) stopRec();
   }
+  // Another person shows: nothing of this one's stays live on their screen.
+  // A recording ends as this person's (kept; `keep: false`, the person was
+  // deleted, drops a take in progress), a take playing back stops, and the
+  // take card and a beat's ↩️ Undo go.
+  function personLeft({ keep = true } = {}) {
+    if (!keep && rec) { clearInterval(recTimer); rec = null; showRec(); }
+    leave();
+    stopReplay();
+    lastTake = null;
+    el.done.hidden = true;
+    beatLine?.close();
+  }
   // The beat stopped (sequencer onStop): a recording into it ends too, so
   // ● Record never says recording with nothing playing.
   function beatStopped() {
@@ -1705,5 +1717,5 @@ export function createDJ({ el, deps }) {
   showMode();
   // Recording a take, or playing one back: the update bar waits (update.js).
   const busy = () => recording() || !!replaying;
-  return { render, keydown, keyup, touching, level, flashClip, looping, escape, stopReplay, steps, renderGrid, showSetup, shown, leave, beatStopped, busy, setMode, recording, clickOff };
+  return { render, keydown, keyup, touching, level, flashClip, looping, escape, stopReplay, personLeft, steps, renderGrid, showSetup, shown, leave, beatStopped, busy, setMode, recording, clickOff };
 }

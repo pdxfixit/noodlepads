@@ -130,6 +130,9 @@ function playAs(id) {
 // nobody left, a new person.
 function startOver(note) {
   const left = people();
+  // Before nobody is on show, so the keys let go of the one who was (gone:
+  // their take in progress goes with them).
+  if (state.personId) dj?.personLeft({ keep: !!person(state.personId) });
   state.personId = null;
   if (!left.length) { closeWhoNow(); addPerson(); return; }
   if (left.length === 1 && !needsPin(left[0].id)) { setPerson(left[0].id); return; }
@@ -151,7 +154,7 @@ function showPerson(p, { behind = false } = {}) {
   if (!behind) closeWhoNow();
   delete document.body.dataset.locked;
   if (state.personId && state.personId !== p.id) {
-    dj?.leave();   // a take or a recording into the beat ends as the person's own
+    dj?.personLeft();   // a take or a recording into the beat ends as the person's own
     leftPerson(state.personId);
   }
   state.personId = p.id;
