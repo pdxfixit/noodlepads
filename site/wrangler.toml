@@ -52,28 +52,32 @@ simple = { limit = 10, period = 60 }
 # (worker/cloud.js LIMITERS): each counted by the hash of the request's key,
 # or for an open by the profile opened, never by an address. Far above what a
 # family meets, a big restore included (docs/architecture/cloud.md).
+# Their namespace ids are this app's own block, 41510-41519 (each flarepress
+# app's feedback limiter is 415N: Isopix 4150, this app 4151; its other
+# limiters 415N0-415N9), so none meets another app's on the account
+# (docs/deploy-cloudflare.md).
 # A push: 60 a minute a key (the app pushes 20 s after a change; a restore of
 # a full profile is a few dozen pushes, and resumes where it stopped).
 [[ratelimits]]
 name = "PUSH_LIMITER"
-namespace_id = "4152"
+namespace_id = "41511"
 simple = { limit = 60, period = 60 }
 
 # A sound's start: 600 a minute a key (a restore asks once per sound, one at
 # a time, and starts again from the first when it is cut off).
 [[ratelimits]]
 name = "SOUND_LIMITER"
-namespace_id = "4153"
+namespace_id = "41512"
 simple = { limit = 600, period = 60 }
 
 # A share: 10 a minute a key (a kid shares one thing at a time).
 [[ratelimits]]
 name = "SHARE_LIMITER"
-namespace_id = "4154"
+namespace_id = "41513"
 simple = { limit = 10, period = 60 }
 
 # An open: 10 a minute a profile (once per device, and again after a new PIN).
 [[ratelimits]]
 name = "OPEN_LIMITER"
-namespace_id = "4155"
+namespace_id = "41514"
 simple = { limit = 10, period = 60 }

@@ -67,17 +67,23 @@ jobs:
       # GitHub secret goes into the Worker as its secret of the same name, by
       # wrangler (wrangler first), each deploy, so a new value takes at once.
       # Unset, this says so and goes on: the Worker then lets the checks' ids
-      # pass on the id alone, as before.
+      # pass on the id alone, as before. A failed put stops the deploy here,
+      # before the upload, so the live Worker never runs without the secret
+      # the live checks send.
       - name: Put the checks' secret into the Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CHECKS_KEY: ${{ secrets.CHECKS_KEY }}
         run: |
+          set -euo pipefail
           if [ -z "$CHECKS_KEY" ]; then
             echo "::notice title=CHECKS_KEY not set::The GitHub secret CHECKS_KEY is empty, so the Worker's is left as it is. Until the Worker holds one, the deploy checks' ids pass on the id alone (TODO.md, Ben does: Give the deploy checks a secret)."
             exit 0
           fi
-          printf '%s' "$CHECKS_KEY" | "$FLAREPRESS/tools/wrangler.sh" "$GITHUB_WORKSPACE/site" secret put CHECKS_KEY
+          if ! printf '%s' "$CHECKS_KEY" | "$FLAREPRESS/tools/wrangler.sh" "$GITHUB_WORKSPACE/site" secret put CHECKS_KEY; then
+            echo "::error title=CHECKS_KEY not put::wrangler could not put CHECKS_KEY into the Worker; nothing was uploaded. Read the wrangler lines above, fix, and push again."
+            exit 1
+          fi
       - uses: pdxfixit/flarepress@v1  # rolling: the owner moves v1 to release
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

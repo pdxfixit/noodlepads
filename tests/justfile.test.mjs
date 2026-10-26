@@ -163,6 +163,10 @@ test("GitHub puts the checks' secret into the Worker before the upload, and the 
   assert.match(step, /CHECKS_KEY: \$\{\{ secrets\.CHECKS_KEY \}\}/);
   assert.match(step, /if \[ -z "\$CHECKS_KEY" \]; then\n\s+echo "::notice[^\n]*CHECKS_KEY[^\n]*"\n\s+exit 0/, 'empty: says so and goes on');
   assert.match(step, /printf '%s' "\$CHECKS_KEY" \| "\$FLAREPRESS\/tools\/wrangler\.sh" "\$GITHUB_WORKSPACE\/site" secret put CHECKS_KEY/, 'the value from stdin, never on the command line');
+  // A failed put stops the deploy before the upload, so the live checks never meet a Worker without the secret.
+  const failed = wf.slice(put, wf.indexOf('- uses:', put));
+  assert.match(step, /set -euo pipefail/);
+  assert.match(failed, /::error[^\n]*\n\s+exit 1/);
   const checks = wf.slice(wf.lastIndexOf('- name:', at('run: just deploy-checks')), at('run: just deploy-checks'));
   assert.match(checks, /CHECKS_KEY: \$\{\{ secrets\.CHECKS_KEY \}\}/);
   assert.doesNotMatch(checks, /CLOUDFLARE_API_TOKEN/);

@@ -115,4 +115,9 @@ test('site/wrangler.toml declares each limiter, a minute window, far above what 
   ]);
   const ids = [...declared.values()].map((d) => d.ns);
   assert.equal(new Set(ids).size, ids.length, 'each limiter its own namespace');
+  // Each flarepress app's feedback limiter is 415N (Isopix 4150, this app
+  // 4151); this app's others are its own block, 41510-41519, so no other app
+  // on the account can pick the same (docs/deploy-cloudflare.md).
+  assert.equal(declared.get('FEEDBACK_LIMITER')?.ns, '4151');
+  for (const name of Object.values(LIMITERS)) assert.match(declared.get(name).ns, /^4151\d$/, name);
 });
