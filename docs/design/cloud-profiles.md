@@ -121,10 +121,12 @@ in the cloud on this device:
   and uploaded once. A clip's audio never changes (trims, voices and edits are
   settings), so a clip id's entry never goes stale.
 
-The link also holds `pin` (the profile has one), `remember` (this device
-remembers it: the key is stored; otherwise it lives in the page's memory
-only) and `check` (a PBKDF2 hash of the PIN, so the device can check it
-offline). Backups never carry `cloud`: it is this device's link.
+The link also holds `pin` (the profile has one), `rememberUntil` (this
+device remembers it until then, in ms: the key is stored; otherwise it lives
+in the page's memory only), `noOffer` (Not now on the offer to remember) and
+`check` (a PBKDF2 hash of the PIN, so the device can check it offline). An
+older link's `remember: true` (before 2026-10-19) has no day it ends: its
+key serves one visit. Backups never carry `cloud`: it is this device's link.
 
 A second store, `bases` (key `id`, `"<person>|<kind>:<record id>"`), holds
 each synced record as it was at the last sync, without its audio:
@@ -203,8 +205,10 @@ A device key goes in `Authorization: Bearer <key>`.
 - **Asked each time the person is opened** (Ben, Q9): switching to them, or
   starting the app on them. Online, `open` checks it and gives a key; offline,
   the device's own `check` lets them in and the sync waits. The key is a
-  session key, held for the visit only: no device remembers a PIN (Ben,
-  2026-10-19). Each open deletes the key this device held before, so a device
+  session key, held for the visit only, unless the device remembers them:
+  🔑 Remember, offered after the PIN (Ben, 2026-10-26), opens again with
+  `remember: true` for a key that lasts, kept on the device for 30 days;
+  then, or on Forget this device, it is deleted with `DELETE …/key`. Each open deletes the key this device held before, so a device
   holds one key per profile; session keys a week old are deleted on the next
   open. A new PIN or a reset deletes every key. A device that finds its key
   refused asks the public list: no PIN (a reset) opens again by itself; a PIN
@@ -456,6 +460,7 @@ Ben: "login sprawl is a concern."
 | Profile deleted elsewhere (Offline there, or pruned) | 404 on sync: the person stays on the device, goes 📴 Offline here, and says so |
 | A sound over 25 MB | it stays on the device; the rest syncs, and the ☁️ sheet says how many stayed |
 | A PIN not remembered, after a reload | the PIN is asked when the person is opened; their sync waits for it |
+| A remembered PIN's 30 days are up | at start (or the next open) the device deletes its key here and in the cloud, and asks the PIN again |
 | A pull with a bad record | dropped and counted by `cleanBackup`, like a backup |
 | A push cut off halfway | `sent` holds what got through; the next sync sends the rest |
 | Two devices push the same record at once | the second push leaves it (`stale`), pulls the first, merges and pushes again |

@@ -852,8 +852,19 @@ ADR 0002.
   keyboard, problem reports and the device code stay with the device.
 - **PIN:** optional, 4 digits, in a person's profile sheet (once they are in
   the cloud). It is asked each time that person is opened, on every device;
-  no device keeps the key (it lives for the visit only, `cloud.js`
-  `sessionKeys`), so a person with a PIN syncs only once it is typed.
+  the key lives for the visit only (`cloud.js` `sessionKeys`), so a person
+  with a PIN syncs only once it is typed. **🔑 Remember them here?** opens
+  once a PIN opens someone (on switching to them, or ☁️ Open from the cloud;
+  Ben, 2026-10-26): 🔑 Remember asks the cloud for a key that lasts, keeps it
+  on the device and skips their PIN and its guard here for 30 days
+  (`REMEMBER_DAYS`; the link's `rememberUntil`). Not now, ✕ or Esc stops the
+  offer on this device (`noOffer`). Their profile's PIN part has 🔑 Remember
+  on this device (asks the PIN) or Forget this device, with the day it ends
+  in the hint. Forget, a removed PIN, a PIN changed elsewhere, or the day
+  coming (checked at start and on each open) drops the key here and in the
+  cloud, so the PIN is asked again (`cloud-ui.js` `offerRemember`, `cloud.js`
+  `rememberHere`, `forgetHere`). A PIN changed on this device stays
+  remembered.
   **Nothing of theirs is read or changed past it** (Ben, 2026-10-24), and
   once typed it holds until the page reloads (`cloud.js` `pinGuards`, the
   PIN typed on this visit): their profile opens only after it (so 🗂️ See

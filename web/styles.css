@@ -1856,6 +1856,8 @@ button.sa-row { cursor: pointer; }
 .pf-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .pf-two .secondary { padding: 6px 10px; line-height: 1.2; }
 .secondary.pf-danger { border-color: #B3261E; color: #B3261E; box-shadow: 0 5px 0 #7E1A15; }
+/* 🔑 Remember on this device / Forget this device, under Change and Remove. */
+.pf-remember { margin-top: 14px; padding: 6px 10px; line-height: 1.2; }
 @media (prefers-reduced-motion: reduce) {
   .pf-pill.settle { animation: none; }
   .pf-switch::before, .pf-switch::after { transition: none; }
@@ -4305,6 +4307,9 @@ dialog.np-dialog.sheet-warn {
 .sheet-warn-buttons { display: flex; gap: 10px; margin-top: 6px; }
 .sheet-warn-buttons .chain-tool { flex: 1 1 0; min-width: 0; }
 .sheet-warn-drop { border-color: #B3261E; background: #B3261E; color: #fff; }
+/* 🔑 Remember them here? (cloud-ui.js offerRemember): the same small modal,
+   after a PIN opens someone; 🔑 Remember is the board color. */
+.remember-yes { border-color: var(--board); background: var(--board); color: #fff; }
 /* ── ⚙️ Settings → About → Feedback (feedback.js) ──
    A small modal, centered on every width, phones too (Ben, 2026-10-19:
    "centered, modalish, esc exits"), as the throw-away question above is:

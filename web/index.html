@@ -658,6 +658,7 @@
             <button type="button" class="secondary" id="cloud-pin-change">Change PIN</button>
             <button type="button" class="secondary pf-danger" id="cloud-pin-off">Remove PIN</button>
           </div>
+          <button type="button" class="secondary pf-wide pf-remember" id="cloud-pin-remember" hidden>🔑 Remember on this device</button>
           <p class="set-note" id="profile-pin-note" role="status"></p>
         </section>
       </div>
@@ -806,6 +807,17 @@
       <p class="field-hint pin-forgot" id="pin-forgot" hidden></p>
       <button type="button" class="quiet pin-new" id="pin-new" hidden>👋 Someone new</button>
       <button type="button" class="quiet danger pin-unknown" id="pin-unknown" hidden>🤷 I don't know the PIN</button>
+    </div>
+  </dialog>
+
+  <dialog id="remember-dialog" class="np-dialog sheet-warn" aria-labelledby="remember-title">
+    <div class="sheet-warn-body">
+      <h2 class="sheet-warn-title" id="remember-title">🔑 Remember them here?</h2>
+      <p class="sheet-warn-sub" id="remember-sub"></p>
+      <div class="sheet-warn-buttons">
+        <button type="button" class="chain-tool" id="remember-no" data-close>Not now</button>
+        <button type="button" class="chain-tool remember-yes" id="remember-yes">🔑 Remember</button>
+      </div>
     </div>
   </dialog>
 

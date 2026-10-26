@@ -19,6 +19,7 @@ import {
   api, CloudError, cloudTrouble, cloudThere, inCloud, linkOf, keyOf, isOffline, statusOf, syncNow,
   openProfile, unlock, pinIsNew, checkPin, setPin, setOffline, removeProfile, putUpNow, wantsCloud, shareable, shareItem, showCode,
   sharedHere, openShare, forgetShare, remixShare, fetchShare, checkShared, mySharesOf, unshareItem, listProfiles,
+  rememberHere, declineRemember, offersRemember, forgetHere, rememberedUntil, REMEMBER_DAYS,
 } from './cloud.js';
 import { mergeSummary } from './merge.js';
 
@@ -153,7 +154,7 @@ async function askOnce(personId, { locked = false } = {}) {
   const p = people({ includeHidden: true }).find((x) => x.id === personId);
   const fresh = pinIsNew(personId);
   try {
-    const opened = await withPin((pin) => unlock(personId, pin), {
+    const opened = await withPin(async (pin) => { await unlock(personId, pin); return pin; }, {
       title: `${p?.avatar ? `${p.avatar} ` : ''}${p?.name ?? 'PIN'}`,
       hint: fresh
         ? "They have a new PIN. Type it to open them here. Don't know it? Their things on this device are deleted; the cloud keeps what it has."
@@ -165,11 +166,36 @@ async function askOnce(personId, { locked = false } = {}) {
       await dropPerson(personId);
       return false;
     }
+    // They show at once; the offer opens over them.
+    if (opened) offerRemember(personId, opened.result);
     return !!opened;
   } catch (err) {
     announce(trouble(err));
     return false;
   }
+}
+
+// 🔑 Remember them here? Offered once a PIN opens someone (Ben, 2026-10-26):
+// this device then skips their PIN for REMEMBER_DAYS. Not now, ✕ or Esc
+// stops the offer on this device; their profile's PIN part keeps the choice.
+let rememberDone = null;
+async function offerRemember(personId, pin) {
+  if (!offersRemember(personId)) return;
+  const p = people({ includeHidden: true }).find((x) => x.id === personId);
+  el.rememberTitle.textContent = `🔑 Remember ${p ? nameOf(p) : 'them'} here?`;
+  el.rememberSub.textContent = `This device opens them without the PIN for ${REMEMBER_DAYS} days. Anyone using it can open them.`;
+  const yes = await new Promise((resolve) => {
+    rememberDone = resolve;
+    openDialog(el.remember);
+  });
+  if (!yes) { await declineRemember(personId); return; }
+  try {
+    await rememberHere(personId, pin);
+    announce(`🔑 Remembered on this device for ${REMEMBER_DAYS} days.`);
+  } catch (err) {
+    announce(trouble(err));
+  }
+  refresh();
 }
 
 // The PIN guard (people.js, backup-ui.js): their PIN, asked before their
@@ -288,6 +314,7 @@ export function drawPin(personId) {
   el.backupBtn.setAttribute('aria-label', `Back up ${nameOf(p)}: one file of everything of theirs`);
 
   const hasPin = !!link?.pin;
+  const until = hasPin && !pinIsNew(personId) ? rememberedUntil(personId) : 0;
   const now = flash && flash.id === personId && flash.until > Date.now() ? flash : null;
   el.pinState.hidden = !p.added;
   el.pinState.textContent = now ? now.text : hasPin ? '🔒 PIN on' : '🔓 No PIN';
@@ -295,10 +322,14 @@ export function drawPin(personId) {
   el.pinState.classList.toggle('flash', !!now);
   el.pinBtn.hidden = !p.added || hasPin;
   el.pinTools.hidden = !p.added || !hasPin;
+  el.pinRemember.hidden = !p.added || !hasPin || pinIsNew(personId);
+  el.pinRemember.textContent = until ? 'Forget this device' : '🔑 Remember on this device';
   el.pinPartHint.textContent = !p.added ? "Someone from the app's own list can't have a PIN."
     : hasPin ? (pinIsNew(personId)
       ? `They got a new PIN on another device. Open ${nameOf(p)} and type it.`
-      : `Asked every time ${nameOf(p)} is opened, on every device, and before the name, picture or color changes.`)
+      : until
+        ? `This device skips it until ${new Date(until).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}. Asked every time ${nameOf(p)} is opened on any other device.`
+        : `Asked every time ${nameOf(p)} is opened, on every device, and before the name, picture or color changes.`)
       : linked ? `Anyone on any device can open ${nameOf(p)}.`
         : 'A PIN needs the cloud. Setting one turns it on.';
 }
@@ -363,7 +394,7 @@ export function disarmCloud(personId) {
 // A tap in the Cloud or PIN part: true when it was one of their buttons.
 // `note` says what went wrong (in the PIN part); the pill says what went right.
 export async function pinClick(personId, t, note = () => {}) {
-  const parts = [el.cloudSwitch, el.syncBtn, el.shareBtn, el.backupBtn, el.pinBtn, el.pinChange, el.pinOff];
+  const parts = [el.cloudSwitch, el.syncBtn, el.shareBtn, el.backupBtn, el.pinBtn, el.pinChange, el.pinOff, el.pinRemember];
   if (t !== el.cloudSwitch) disarmCloud(personId);
   if (!parts.includes(t)) return false;
   const p = people({ includeHidden: true }).find((x) => x.id === personId);
@@ -426,6 +457,22 @@ export async function pinClick(personId, t, note = () => {}) {
       if (!inCloud(personId)) await putUpNow(personId);   // a PIN needs the cloud
       await setPin(personId, null, next);
       flashPin(personId, '✅ PIN set');
+    });
+    return true;
+  }
+  // 🔑 Remember on this device asks the PIN (the cloud gives a key that
+  // lasts for it); Forget this device needs none.
+  if (t === el.pinRemember) {
+    if (rememberedUntil(personId)) {
+      await run(async () => { await forgetHere(personId); flashPin(personId, '🔒 Forgotten here'); });
+      return true;
+    }
+    await run(async () => {
+      const got = await withPin(async (pin) => { await rememberHere(personId, pin); return true; }, {
+        title: `${p?.avatar ? `${p.avatar} ` : ''}${p ? nameOf(p) : 'PIN'}`,
+        hint: `Type their PIN. This device then opens them without it for ${REMEMBER_DAYS} days.`,
+      });
+      if (got) flashPin(personId, '🔑 Remembered here');
     });
     return true;
   }
@@ -708,9 +755,10 @@ async function onListClick(e) {
   el.listNote.textContent = 'Opening…';
   try {
     const opened = b.dataset.pin === 'true'
-      ? await withPin((pin) => openProfile(id, pin), { title: 'Their PIN', hint: 'Type the PIN to open this profile on this device.' })
+      ? await withPin(async (pin) => { await openProfile(id, pin); return pin; }, { title: 'Their PIN', hint: 'Type the PIN to open this profile on this device.' })
       : { result: await openProfile(id) };
     if (!opened) { el.listNote.textContent = ''; return; }
+    if (b.dataset.pin === 'true') offerRemember(id, opened.result);
     el.listNote.textContent = statusOf(id)?.state === 'trouble' ? statusOf(id).text : '☁️ On this device now ✓';
     b.closest('li')?.remove();
     refresh();
@@ -729,11 +777,13 @@ export function initCloudUI(hooks) {
   Object.assign(el, {
     pin: $('#pin-dialog'), pinTitle: $('#pin-title'), pinHint: $('#pin-hint'), pinNote: $('#pin-note'), pinDots: $('#pin-dots'), pinKeys: $('#pin-keys'),
     pinForgot: $('#pin-forgot'), pinNew: $('#pin-new'), pinUnknown: $('#pin-unknown'),
+    remember: $('#remember-dialog'), rememberTitle: $('#remember-title'), rememberSub: $('#remember-sub'), rememberYes: $('#remember-yes'),
     avatar: $('#avatar-dialog'), avatarGrid: $('#avatar-grid'),
     cloudSwitch: $('#profile-cloud'), cloudText: $('#profile-cloud-text'), cloudTools: $('#profile-cloud-tools'),
     syncBtn: $('#cloud-sync'), shareBtn: $('#cloud-share'), backupBtn: $('#cloud-backup'),
     pinState: $('#profile-pin-state'), pinPartHint: $('#profile-pin-hint'), pinPartNote: $('#profile-pin-note'),
     pinBtn: $('#cloud-pin'), pinTools: $('#profile-pin-tools'), pinChange: $('#cloud-pin-change'), pinOff: $('#cloud-pin-off'),
+    pinRemember: $('#cloud-pin-remember'),
     list: $('#cloud-list'), listNote: $('#cloud-list-note'), listItems: $('#cloud-list-items'),
     shareDialog: $('#share-dialog'), shareNote: $('#share-note'), shareWhat: $('#share-what'), shareItems: $('#share-items'),
     shareMine: $('#share-mine'), shareMineNote: $('#share-mine-note'),
@@ -742,7 +792,7 @@ export function initCloudUI(hooks) {
     sharedItems: $('#shared-items'), sharedNone: $('#shared-none'),
     browse: $('#cloud-browse'), sharedBtn: $('#shared-browse'),
   });
-  for (const d of [el.pin, el.avatar, el.list, el.shareDialog, el.sharedDialog]) setupDialog(d);
+  for (const d of [el.pin, el.remember, el.avatar, el.list, el.shareDialog, el.sharedDialog]) setupDialog(d);
 
   // PIN pad: 1–9, then 0 under 8 and ⌫ beside it, big keys.
   el.pinKeys.replaceChildren(...['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '⌫'].map((k) => {
@@ -774,6 +824,10 @@ export function initCloudUI(hooks) {
     el.pin.close();
     done?.('unknown');
   });
+
+  // 🔑 Remember them here?: Remember says yes; Not now, ✕ or Esc close it, a no.
+  el.rememberYes.addEventListener('click', () => { const done = rememberDone; rememberDone = null; el.remember.close(); done?.(true); });
+  el.remember.addEventListener('close', () => { const done = rememberDone; rememberDone = null; done?.(false); });
 
   avatarAll = emojiMore({
     grid: el.avatarGrid,
