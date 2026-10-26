@@ -286,7 +286,7 @@ test('the People dialog is a short list, one line per person; a line opens their
   assert.equal(colors.length, 8, 'every person color');
   assert.equal(colors[0].getAttribute('aria-label'), 'Blue');
   assert.equal(colors[0].getAttribute('aria-pressed'), 'true');
-  assert.equal($('#profile-delete').textContent, 'Delete');
+  assert.equal($('#profile-delete').textContent, '🗑️ Delete');
   assert.equal($('#profile-delete').getAttribute('aria-label'), 'Delete Pip');
   assert.equal($('#profile-cloud').hidden, true, "boards.json's own people have no cloud");
   assert.equal($('#people-gone').hidden, true, 'nobody is deleted yet');
@@ -322,13 +322,13 @@ test('adding a person puts them on the end of the row with a fun name (nobody ty
 
 test('deleting an added person (in their profile) asks twice, then removes them and closes the sheet', async () => {
   const remove = profile(4).querySelector('[data-remove]');
-  assert.equal(remove.textContent, 'Delete');
+  assert.equal(remove.textContent, '🗑️ Delete');
   remove.dispatch('click');
   assert.equal(remove.textContent, 'Tap again to delete');
   assert.equal(people().length, 5);
   $('#profile-colors').querySelectorAll('[data-color]')[0].dispatch('click');
   await page.settle();
-  assert.equal(remove.textContent, 'Delete', 'any other tap takes it back');
+  assert.equal(remove.textContent, '🗑️ Delete', 'any other tap takes it back');
   remove.dispatch('click');
   remove.dispatch('click');
   await page.settle();
@@ -349,7 +349,7 @@ test('deleting Pip (from boards.json) asks twice, then removes his sounds, beats
   state.patterns.set('pip', { personId: 'pip', name: 'x', bpm: 100, rows: [] });
   state.orders.set('pip', { personId: 'pip', ids: ['pip-laser'] });
   $('#people-open').dispatch('click');
-  assert.equal(removeButton(0).textContent, 'Delete (and 🔊 1 sound)');
+  assert.equal(removeButton(0).textContent, '🗑️ Delete (and 🔊 1 sound)');
   // ✏️ 1: an earlier test changed one of Pip's presets, and preset edits count too (🗂️ See all).
   assert.equal($('#people-edit').children[0].querySelector('.pe-counts').textContent, '🔊\u00a01\u00a0· 🥁\u00a01\u00a0· ✏️\u00a01', 'the row says what Pip has here');
   assert.equal($('#people-edit').children[0].querySelector('.pe-counts').getAttribute('aria-label'), 'Pip has 1 sound, 1 beat, 1 preset edit');

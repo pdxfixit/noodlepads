@@ -1929,8 +1929,15 @@ button.sa-row { cursor: pointer; }
   .pf-pill.settle { animation: none; }
   .pf-switch::before, .pf-switch::after { transition: none; }
 }
-.pf-end { margin-top: 22px; }
-#profile-delete:disabled { opacity: 0.4; cursor: not-allowed; }
+/* Delete: a red-edged box of its own, set well apart from the rest, with a
+   full-width red button that fills red once it asks "Tap again". */
+.pf-zone { margin-top: 32px; border-color: #B3261E; }
+.pf-zone .secondary.pf-danger { line-height: 1.2; padding: 6px 16px; }
+.secondary.pf-danger.armed { background: #B3261E; color: #fff; }
+.secondary.pf-danger:focus-visible { box-shadow: 0 5px 0 #7E1A15, inset 0 0 0 3px #B3261E; }
+.secondary.pf-danger.armed:focus-visible { box-shadow: 0 5px 0 #7E1A15, inset 0 0 0 3px #fff; }
+.secondary.pf-danger:active, .secondary.pf-danger:focus-visible:active { box-shadow: 0 1px 0 #7E1A15; }
+#profile-delete:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
 /* Settings: one block per topic, with the Beats choice as big radio cards. */
 .set-note { min-height: 1.4em; margin: -6px 0 6px; font-weight: 700; }

@@ -121,7 +121,7 @@ test('"To delete a profile": the steps name real buttons, and switching the clou
   const line = claim('To delete a profile');
   assert.ok(line.includes('☁️ In the cloud') && html.includes('☁️ In the cloud'));
   assert.ok(html.includes('👥 People'));
-  assert.ok(line.includes('tap Delete three times') && html.includes('id="profile-delete" data-remove>Delete<'));
+  assert.ok(line.includes('tap Delete three times') && html.includes('id="profile-delete" data-remove aria-describedby="profile-delete-hint">🗑️ Delete<'));
   const js = readFileSync(new URL('../web/cloud.js', import.meta.url), 'utf8');
   assert.match(js, /if \(inCloud\(personId\)\) await deleteFromCloud\(personId, pin\)/, 'Offline deletes the profile first');
   const ui = readFileSync(new URL('../web/cloud-ui.js', import.meta.url), 'utf8');

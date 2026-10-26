@@ -662,10 +662,13 @@
           <p class="set-note" id="profile-pin-note" role="status"></p>
         </section>
       </div>
-      <div class="sheet-actions pf-end">
-        <button type="button" class="quiet danger" id="profile-delete" data-remove>Delete</button>
+      <!-- Delete: a red box of its own at the end, apart from what is safe to
+           tap (Ben, 2026-10-26: "an actual button that is separated and
+           visually distinct"). Two taps, three for a cloud copy (people.js). -->
+      <div class="pf-part pf-zone">
+        <p class="field-hint" id="profile-delete-hint">Delete takes them, their recordings and their beats off this device.</p>
+        <button type="button" class="secondary pf-danger pf-wide" id="profile-delete" data-remove aria-describedby="profile-delete-hint">🗑️ Delete</button>
       </div>
-      <p class="field-hint" id="profile-delete-hint">Delete takes them, their recordings and their beats off this device.</p>
     </div>
   </dialog>
 
