@@ -46,7 +46,7 @@ A small rule (a label, a color, a layout) needs only its row in `decisions.md`.
 | [0019](0019-kids-level.md) | Three levels per person, 🧸 Kids · Regular · Advanced; Kids is four big picture screens, left by a grown-up sum | Accepted, built |
 | [0020](0020-scratch-documents.md) | A scratch beat and song per person, open by default; grooves load into it; 💾 Keep names it "<fun name> (<groove> version)" | Accepted, built |
 | [0021](0021-beat-pins.md) | A 📌 pin is a time on the beat record, left out when not pinned | Proposed |
-| [0022](0022-north-star.md) | North star: a kid-sized music studio (sounds, patterns, a playlist, live play), no brand named | Accepted |
+| [0022](0022-north-star.md) | Mission and north star: a music studio for kids and amateurs (sounds, patterns, a playlist, live play); no ads, accounts, socials or AI-made music; no brand named | Accepted |
 | [0023](0023-piano-roll-notes.md) | A tune row stores notes (pitch, start, length) for 🎹 the piano roll; old melody rows are read as notes, and older copies still play them roughly | Accepted |
 | [0024](0024-playlist-lanes.md) | Song is a playlist: up to 8 lanes of beat blocks at one song tempo; pick a beat, tap a spot | Accepted, built |
 | [0025](0025-github-deploys.md) | GitHub deploys every push to main with this repo's own token; agents hold no Cloudflare credentials; the site folder and its ID placeholders live in this repo | Accepted |
@@ -86,3 +86,4 @@ Each one, and why not.
 
 What gets easier, what gets harder, and what would make us revisit this.
 ```
+| [0034](0034-agent-council.md) | An agent council of 22 seats reviews every change against the mission and can block a feature or a deploy; never a rollback; results live in the work | Accepted |

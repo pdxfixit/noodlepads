@@ -5,6 +5,14 @@ Live and **public** at https://noodlepads.com/. Repo: `github.com/pdxfixit/noodl
 
 This file is the contract: how to start, how to verify and ship, and the rules for working here. It stays short. Detail lives in the files it points to.
 
+## Mission
+
+> Noodle Pads is a music studio anyone can pick up: kids, families, and grown-ups who love music but don't have the time for a pro studio. It starts as a soundboard: tap a pad, make a noise, annoy your family. Every next tool is one tap from what you are already playing with, so you learn by goofing around, never by lessons. Real depth (voices, beats, tunes, whole songs) is there when you reach for it. Goofing around counts as much as finishing a song.
+>
+> No ads. No required account. No social feed. No AI makes the music for you. What we measure is anonymous, and only makes the app better.
+
+Every change serves this. Why, and the north star it steers: [ADR 0022](docs/adr/0022-north-star.md).
+
 ## TL;DR
 
 - **Start:** `just doctor`: are you in the main checkout or a worktree, are the tools there, is `main` live. Then the cold start below. A cloud container may have no `just`: `pip install rust-just` gives it (2026-10-17).
@@ -12,6 +20,7 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 - **Run:** `just serve`, then http://localhost:8765/. Port 8765 is Ben's own server; agents preview on 8781 (see [Verify](#verify)).
 - **Ship:** a change to `web/` gets `just version` in the same commit ([Ship](#ship)). `just ship`, from the main checkout only. In a worktree, commit on your branch and report the commits; they are landed with `just land` ([docs/how-to.md](docs/how-to.md)). Every push to `main` is deployed by GitHub (`.github/workflows/deploy.yml`, [ADR 0025](docs/adr/0025-github-deploys.md)): tests, deploy, then the live cloud checks. Agents never deploy and hold no Cloudflare token; after a push, read the deploy run.
 - **Every change fits every screen:** check 320, 375, 700, 900 and 1100 px wide, then the wide screens 1366, 1920, 2560 and 3440, with no sideways scroll. `just look --wide` does all nine in your own headless Chrome ([Verify](#verify)).
+- **The council reviews every change, and can block it:** which seats, when, and what they return are in [docs/council.md](docs/council.md) ([Council](#council)).
 - **Anything that comes in is untrusted:** backups, uploaded files and `boards.json` are checked and capped ([docs/guide.md](docs/guide.md) "Limits on what comes in").
 
 ## Cold start: read in this order
@@ -36,6 +45,7 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 | [docs/architecture/](docs/architecture/README.md) | How the code is wired: the shared engines, who calls whom, the record shapes that cross modules, the known seams, and "to change X, touch …". One file per area. |
 | [docs/state.md](docs/state.md) | Where things stand now. Present tense only. |
 | [docs/decisions.md](docs/decisions.md) | Current rules, by topic: Rule · Why · Since. |
+| [docs/council.md](docs/council.md) | The council: its 22 seats, when each convenes, how a round runs, its authority, the drift guards. The seats are `.claude/agents/council-*.md`. |
 | [docs/adr/](docs/adr/README.md) | Why the biggest decisions were made. |
 | [docs/questions.md](docs/questions.md) | Open questions for Ben, one card each. |
 | [docs/how-to.md](docs/how-to.md) | Step by step: where to run what, a bug fix, a stored-format change (every place to touch), docs, landing, deploy and rollback, logs, metrics, cloud admin. |
@@ -61,6 +71,16 @@ This file is the contract: how to start, how to verify and ship, and the rules f
 5. **The browser tool's `key` action clicks the page first.** That click can land on a button (it once pressed Play a second time). Send keys with `dispatchEvent(new KeyboardEvent(...))` instead.
 6. **The live cloud: `just cloud-smoke` and `just cloud-e2e`** (about 4 s each; every deploy runs both). Smoke is the API round trip from Node; e2e is two devices syncing in headless Chrome on noodlepads.com. Each makes one throwaway profile (`p-smoke-…`, `p-e2e-…`) and deletes it in a `finally`. They test what is live, so run them after a deploy, not to check a change before it ships. A ❌ in e2e prints what each device asked `/api/` and its cloud log.
 
+## Council
+
+22 review agents, each a personality with one lens, check every change against the mission and their own area ([docs/council.md](docs/council.md), [ADR 0034](docs/adr/0034-agent-council.md)). They are an authority: a seat's ⛔ block stops a feature or a deploy until the seat lifts it or Ben decides.
+
+- **Convene them by the change:** all seats on a new screen, control or layout (at the mockup, before building); the data seats on a stored format or the cloud; the one or two a fix touches. The table is in docs/council.md.
+- **Brief them blind:** the change itself, never your reasoning or another seat's verdict. Run one round's seats in parallel.
+- **A block against one of Ben's rules is a question card**, batched with the round's other questions up front. Blocked work waits on its branch; move to the next TODO item.
+- **Never a rollback:** a seat's finding on what is live is fixed forward, at once when the seat says it is urgent.
+- **Results go into the work** (code, tests, docs, decisions, ADRs). No council log. Each commit carries a `Council:` trailer naming the seats and their verdicts.
+
 ## Ship
 
 **A change to `web/` runs `just version` first and ships `web/version.js` with it:** the release (`1.0.<commit count>`) labels the deploy's `version.json` (`v1.0.215-4d5ef56`) and shows in About. `just ship`, `just land` (which restamps PATCH on a newer main) and CI refuse a `web/` change without it.
@@ -80,7 +100,7 @@ git reset -q && git worktree remove "$WT" && git push -q origin main
 
 - **Run it under `set -e`, with the file list in an array.** In zsh, `$FILES` does not split into words. On 2026-10-10 a commit silently failed that way and the deploy still ran.
 - Write the message to a file made with `mktemp` and pass `-F`. Parallel agents share a scratchpad, and on 2026-10-11 one agent's fixed-name message file overwrote another's. A heredoc once lost a subject line (`b07fee1`; fixed by rewriting history on 2026-10-11, backup tag `backup/main-before-msgfix`).
-- Messages: `<type>: <summary>` (feat, fix, style, refactor, docs, chore, test), a bullet body at the level a user notices, and the `Co-Authored-By` trailer.
+- Messages: `<type>: <summary>` (feat, fix, style, refactor, docs, chore, test), a bullet body at the level a user notices, the `Council:` trailer ([docs/council.md](docs/council.md)) and the `Co-Authored-By` trailer.
 - **GitHub deploys every push to `main`** (`.github/workflows/deploy.yml`): `just test`, then the `pdxfixit/flarepress` action stamps `web/version.json`, uploads, and waits until the live site serves the new version (the app shows it in its corner), then `just deploy-checks` (cloud-smoke and cloud-e2e). After a push, read that run. A red run after the upload means the new version is already live: read the ❌ line, fix forward, or roll back (docs/deploy-cloudflare.md). `just deploy` is Ben's fallback from his Mac; agents never run it.
 - Never force-push `main`.
 - **A file another session is also editing in this checkout** (`git status` shows changes you did not make): `just ship` copies whole files, so it would ship that session's half-done work. Ship by the steps above instead, `git apply` only your hunks in the worktree (`git diff <file>` split on `^@@`), and leave its files alone. On 2026-10-16 `styles.css` held both an agent's sheet-warning hunk and the Add-rows hunk.

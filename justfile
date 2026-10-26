@@ -429,3 +429,7 @@ rollback:
 [doc("The daily live check, here: /, /version.json and /api/cloud answer, and /api/cloud says ok (3 retries, 20 s apart). GitHub runs it daily (.github/workflows/live.yml)")]
 live-check *args:
     python3 tools/live_check.py {{args}}
+
+[doc("The council's tripwire: names any seat whose last N reviews (default 10) in the commits' Council: trailers were all a plain pass (docs/council.md)")]
+council-tripwire n="10":
+    @python3 tools/council.py {{n}}

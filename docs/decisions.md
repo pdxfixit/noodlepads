@@ -16,7 +16,8 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 
 | Rule | Why | Since |
 |---|---|---|
-| The app's direction is a kid-sized music studio: make sounds, build patterns, arrange them, play live ([ADR 0022](adr/0022-north-star.md)). No other product is named or imitated. | Ben: "North Star yes but not the brand name". | 2026-10-12 |
+| The mission is AGENTS.md's ([ADR 0022](adr/0022-north-star.md)): a music studio for kids and amateurs, starting as a soundboard, learned by goofing around. No ads, required account, social feed or AI-made music. | Ben, 2026-10-26: "real depth … simply revealed". | 2026-10-26 |
+| The app's direction is a music studio sized for kids and amateurs: make sounds, build patterns, arrange them, play live ([ADR 0022](adr/0022-north-star.md)). No other product is named or imitated. | Ben: "North Star yes but not the brand name"; amateurs added 2026-10-26. | 2026-10-12 |
 | Each person has a level: 🧸 Kids · Regular · Advanced, replacing the Advanced switch ([ADR 0019](adr/0019-kids-level.md)). Kids: big picture Pads (swipe pages; the person's pad size, by slider or pinch), hold-to-record mic, a 4×8 beat, toy Live keys; fun, no reading needed. A grown-up leaves by ⚙️ and a sum. | Ben: "a kids mode… to support a 5yo"; "a grown-up sum"; "the gear, not a padlock"; "make the interface fun for kids". | 2026-10-12 |
 | 🧸 Kids' Pads show only presets whose picture shows the sound they make (`KIDS_PADS`, kids-logic.js): animals, silly, effects, game, sci-fi, spoken callouts, and the drums that look like what they are; never a note, chord or bass note. | Ben, 2026-10-22: the kid mode pads "have to have matching sounds to the emoji pictures… engaging, interesting and funny ones". | 2026-10-22 |
 | 🧸 Kids' mic: a tap counts 3, 2, 1 (a beep each), then it listens until the next tap, 10 s at most; a hold listens at once and the lift stops it. While it listens the mic swells and glows with how loud the voice is. | Ben, 2026-10-22: "a 321 countdown and then the pulse should match the audio level. It can be held still if they want but both should be capable". | 2026-10-22 |
@@ -318,6 +319,10 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | Rule | Why | Since |
 |---|---|---|
 | Mockups first for a new screen, a new layout or a moved control; fixes and restyles inside an agreed design go straight to building. | Ben: "Yes, for new screens and layouts". | 2026-10-12 |
+| An agent council of 22 seats (`docs/council.md`) reviews every change, scaled by its kind, and can block a feature or a deploy; a block against Ben's rule goes to him ([ADR 0034](adr/0034-agent-council.md)). | Ben: "They are an authority … they can absolutely block". | 2026-10-26 |
+| A council finding on what is live is fixed forward, never rolled back. | Ben: "should instead force an immediate change, so that we're rolling forward". | 2026-10-26 |
+| Council results live in the code, tests, docs and ADRs, plus a `Council:` commit trailer; no council log. | Ben: a thing "just for them" is "an anti-pattern". | 2026-10-26 |
+| Council seats merge only after Ben approves; a seat or agent may propose it. | Ben, 2026-10-26. | 2026-10-26 |
 | Human-run tests are kept to a minimum. Agents check with tests, `just look` and the live checks; TODO's "Ben does" gets no device tries. What only a person can judge stays in state.md as "not yet tried on a phone". | Ben, 2026-10-16: "human-run tests should be kept to a minimum"; he reports tries as he goes. | 2026-10-16 |
 | Agents delegate independent work to background agents in worktrees and land it with `just land`. | Ben keeps talking while work runs. | 2026-10-12 |
 | `just land` is flarepress's shared tool, the same in every flarepress app, and it pulls `main` from GitHub before it lands. | A main left behind GitHub was landed on; one tool keeps every repo's fixes in one place (Ben). | 2026-10-17 |
