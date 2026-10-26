@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import worker from '../worker/index.js';
 import { ORIGIN } from '../worker/http.js';
 import { TTL_MS } from '../worker/reports.js';
+import { LIMITS } from '../worker/cloud.js';
 import { KEEP_MS, DEVICE_KEEP_MS } from '../worker/metrics.js';
 import { FakeD1 } from './fake-d1.mjs';
 import { PRIVACY, PRIVACY_TITLE, PRIVACY_URL } from '../web/privacy.js';
@@ -47,16 +48,16 @@ test('README carries every line of the statement, word for word; Help points at 
 });
 
 test('"Anyone who opens noodlepads.com sees the list": the list needs no key, no PIN, no Origin', async () => {
-  claim('sees the list of profiles');
+  claim('sees the list of the newest');
   const call = cloud();
   await call('POST', 'profiles', { body: { id: 'p-a', name: 'Sir Squid', avatar: '🐙', color: '#1F3FA8', pin: '1234' } });
   const res = await call('GET', 'profiles', { origin: null });
   assert.equal(res.status, 200);
   const [p] = (await res.json()).profiles;
   assert.deepEqual([p.name, p.avatar, p.color, p.pin], ['Sir Squid', '🐙', '#1F3FA8', true]);
-  // Besides its random id and when its look changed, the list holds what the line names, and no more.
+  // Besides its random id, the list holds what the line names, and no more (`edited`: when its look last changed).
   assert.deepEqual(Object.keys(p).sort(), ['avatar', 'color', 'edited', 'id', 'name', 'pin']);
-  for (const words of ['fun names', 'avatars', 'colors', 'has a PIN']) assert.ok(claim('sees the list of profiles').includes(words), `the list line names: ${words}`);
+  for (const words of ['fun names', 'avatars', 'colors', 'has a PIN', 'when its look last changed', `newest ${LIMITS.listed}`]) assert.ok(claim('sees the list of').includes(words), `the list line names: ${words}`);
 });
 
 test('"Anyone who has a sound\'s link can play it": even a profile with a PIN', async () => {
@@ -92,8 +93,9 @@ test('"Profile names are made up by the app; nobody types one": the Worker refus
   assert.ok(!/createElement\('input'\)/.test(js));
 });
 
-test('"They are deleted from the cloud after 14 days": the report table keeps 14 days', () => {
-  assert.match(claim('Problem reports'), /deleted from the cloud after 14 days/);
+test('"They are deleted from the cloud about 14 days later, once the site is next used": the report table keeps 14 days', () => {
+  // About, and once the site is used: nothing is scheduled (no Cron Triggers, docs/decisions.md).
+  assert.match(claim('Problem reports'), /deleted from the cloud about 14 days later, once the site is next used/);
   assert.equal(TTL_MS, 14 * 24 * 60 * 60 * 1000);
 });
 
@@ -196,11 +198,12 @@ test('"Everyone on this device goes to the cloud once they make something, unles
   assert.equal(hasMade({ prefs: [{ personId: 'p-a', values: {} }] }, 'p-a'), false, 'settings alone are not something made');
 });
 
-test('"Everyone in the cloud is in that list": the list has no filter', async () => {
-  claim('Everyone in the cloud is in that list');
+test('"the list of the newest 300 profiles": no other filter, newest first, 300 at most', async () => {
+  claim(`the newest ${LIMITS.listed} profiles`);
   const call = cloud();
   for (const id of ['p-a', 'p-b']) await call('POST', 'profiles', { body: { id, name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '1234' } });
   assert.equal((await (await call('GET', 'profiles?family=PLUM-7K3Q', { origin: null })).json()).profiles.length, 2);
+  assert.equal(LIMITS.listed, 300);
 });
 
 // Ben, 2026-10-11 (Q18): "allow to be unshared. copies remain".
@@ -282,7 +285,7 @@ test('usage events go to the site only, from every device while Share play data 
 test('"Problem reports … send": the statement names everything a report holds, and no User-Agent string', () => {
   const line = claim('Problem reports');
   for (const words of ['event log', 'no sounds and no names', 'its settings', 'how many sounds, beats and songs',
-    'browser, system and device type', 'never the full browser string', 'screen size', 'time zone', 'sound timing', "the app's version", 'random code']) {
+    'browser, system and device type', 'never the full browser string', 'screen size', 'time zone', 'sound timing', "the app's version", 'random codes for this device and this visit']) {
     assert.ok(line.includes(words), `the report line names: ${words}`);
   }
   const report = cleanPayload({
