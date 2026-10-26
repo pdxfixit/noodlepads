@@ -64,3 +64,26 @@ test('a keyboard key held on a looping sound stops it, and its repeats do not lo
   assert.deepEqual(calls.map(([w]) => w), ['play', 'loop']);
   looping.clear();
 });
+
+test('a 👆 tile: a mouse held on a looping tile stops it, and it stays stopped', async () => {
+  $('#ke-input').querySelector('[data-input="touch"]').dispatch('click');
+  const tile = $('#dj-touch').querySelector('[data-clip]');
+  tile.dispatch('pointerdown', { button: 0, pointerId: 5, shiftKey: true });   // loops it
+  tile.dispatch('pointerup', { pointerId: 5 });
+  assert.equal(looping.size, 1);
+  calls.length = 0;
+  tile.dispatch('pointerdown', { button: 0, pointerId: 6 });
+  await wait(450);
+  tile.dispatch('pointerup', { pointerId: 6 });
+  assert.deepEqual(calls.map(([w]) => w), ['stop']);
+  assert.equal(looping.size, 0);
+  $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');
+});
+
+test('Shift+Enter on a looping key stops it, and does not loop it again', () => {
+  loopA();
+  calls.length = 0;
+  key().dispatch('click', { detail: 0, shiftKey: true });
+  assert.deepEqual(calls.map(([w]) => w), ['stop']);
+  assert.equal(looping.size, 0);
+});
