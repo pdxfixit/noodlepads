@@ -749,8 +749,11 @@ async function lookOnce(screen, w, bg = '', skin = '') {
         if (VIEWS[screen].js) await evaluate(`(async () => { ${VIEWS[screen].js} })()`);
         if (opts.js) await evaluate(`(async () => { ${opts.js} })()`);
       } else {
+        // Every view starts at Regular (a Kids view keeps 🧸 Kids): the views
+        // share storage, so a view that turned Advanced on (song-tempos,
+        // wave-own) left it on for the next one. --advanced turns it on below.
         if (!VIEWS[screen].kids) {
-          await evaluate(`(async () => { const s = await import('/settings.js'); if (s.getSetting('level') === 'kids') { await s.setSetting('level', 'regular'); await new Promise((r) => setTimeout(r, 150)); } })()`);
+          await evaluate(`(async () => { const s = await import('/settings.js'); if (s.getSetting('level') !== 'regular') { await s.setSetting('level', 'regular'); await new Promise((r) => setTimeout(r, 150)); } })()`);
         }
         // --skin: the person's pad skin, before the view (the widths share storage, so it is set each time).
         if (skin) {

@@ -7,7 +7,7 @@ and "Ship" give the rules; this is the wiring under them.
 
 **In one paragraph.** `just test` runs `node --check` on `web/`, `worker/` and `tools/*.mjs`,
 then `node --test` (every `*.test.mjs`, one process per file), then the
-Python tools' unittest. 71 test files start the real `app.js` on a stand-in
+Python tools' unittest. Over 70 test files start the real `app.js` on a stand-in
 page built from `index.html` (`fake-dom.mjs installPage`), with no browser,
 no sound, no layout and, unless a test seeds one, no IndexedDB. Cloud tests
 route `fetch('/api/…')` straight into the real Worker (`worker/index.js`) on
@@ -22,7 +22,7 @@ version.json as `v<RELEASE>-<short commit>` from `web/version.js`.
 | Layer | Files | Runs on | Checks |
 |---|---|---|---|
 | Pure modules | most `tests/*.test.mjs` | Node, imports `web/*.js` directly | logic, data shapes, cleaners |
-| The real app on a stand-in page | 71 test files (`installPage` + `import('../web/app.js')`) | Node + `fake-dom.mjs` | wiring, rendering, flows, stored records |
+| The real app on a stand-in page | over 70 test files (`installPage` + `import('../web/app.js')`) | Node + `fake-dom.mjs` | wiring, rendering, flows, stored records |
 | The real Worker | `worker*.test.mjs`, `metrics`, `events-route`, `feedback-route`, `privacy`, cloud app tests | Node + `fake-d1.mjs`, `new Request` | routes, SQL against `worker/schema.sql` |
 | Whole-repo guards | `no-names`, `docs`, `offline`, `modules`, `help`, `log-clean`, `migrations`… (below) | Node, reading files or `git ls-files` | rules every change must keep |
 | Tools | `tools/test_*.py`, `skills/noodlepads-logs/test_gate.py` | `python3 -m unittest` | the tools, and generated files in `web/` |
@@ -257,11 +257,12 @@ to check `--bg` and `--skin`.
 4. For each view × width × `--bg` × `--skin` (`lookOnce`): set the window
    (`mobile` under 768 px), add `noodleFirstSteps` before the page's scripts
    (true only for a view with `firstSteps`), navigate (with `?bg=`), wait
-   400 ms; set the level back to Regular unless the view is a Kids one; set
-   `padSkin` and `advancedBeats` if asked; click the view's screen tab; on
-   Beats set ⌨️ Keys to the view's `keys`; wait 150 ms, run the view's `js`,
-   then `--js`; wait 400 ms; run `MEASURE`; scroll or grow the window to the
-   page's height (up to 8000 px); screenshot.
+   400 ms; put the level back to Regular unless it is a Kids view (checked
+   by hand only: no test runs Chrome); set `padSkin` and `advancedBeats` if
+   asked; click the view's screen tab; on Beats set ⌨️ Keys to the view's
+   `keys`; wait 150 ms, run the view's `js`, then `--js`; wait 400 ms; run
+   `MEASURE`; scroll or grow the window to the page's height (up to 8000
+   px); screenshot.
 5. A width whose errors were a load failure (`net::ERR_`, "Failed to load
    resource") is retried once, and the report says so.
 6. Print the table, then each failing row's reasons and every `console.log`
@@ -510,7 +511,7 @@ them, once older than `TEST_GRACE_MS`, for `cloud-prune --smoke`.
 | Add a test that drives the app | the four steps above; `testManifest()`; helpers from `new-beat.mjs`, `song-ui.mjs`, `banner.mjs`; `node --test --test-force-exit tests/<file>`; `just prove` |
 | A test on a device with data | `fakeIndexedDB().seed(DB_NAME, DB_VERSION, SCHEMA, …)` before `installPage` |
 | A test through the cloud | `FakeD1`, `worker/index.js` default export, `http.js ORIGIN`, a `globalThis.fetch` router after `installPage` |
-| Teach the stand-in page something | `fake-dom.mjs` (`FakeElement`, `matcher`, `installPage`'s globals); run the whole suite, since 71 files start the app on it |
+| Teach the stand-in page something | `fake-dom.mjs` (`FakeElement`, `matcher`, `installPage`'s globals); run the whole suite, since over 70 files start the app on it |
 | Teach the fake IndexedDB a call | `fake-idb.mjs`, and the inline stand-ins if that call reaches them |
 | A new file in `web/` | `sw.js SHELL` (or `NOT_LOADED` in `offline.test.mjs`), docs/layout.md, `docs/architecture/` |
 | A new control | its `aria-label`, `help.js` and `MUST_MENTION`, 44 px or a `MEASURE` exemption, `just look` |
