@@ -545,8 +545,8 @@ def smoke_plan(rows, now):
 
 
 def smoke_shares(db, now):
-    """Share codes the checks made: each smoke run shares a beat, and a share
-    outlives its profile (a share is forever, for everyone else's)."""
+    """Share codes the checks left: a share made before 2026-10-26 outlived
+    its profile, and a killed check's profile goes with its shares."""
     like = ' OR '.join(f"profile_id LIKE '{prefix}%'" for prefix in TEST_PREFIXES)
     return db.query(f'SELECT code, profile_id FROM shares WHERE ({like}) AND created < {int(now - TEST_GRACE_MS)}')
 
@@ -568,14 +568,16 @@ METRICS_TABLES = ('activity', 'devices')
 
 
 def delete_profile_sql(pid, metrics=METRICS_TABLES):
-    """Deleting a profile, as worker/cloud.js deleteProfile does: its sounds go,
-    except those a share uses, which stay owned by no profile; its metrics go
-    too (`metrics`: the metrics tables the database has)."""
+    """Deleting a profile, as worker/cloud.js deleteProfile does: its share
+    codes and every sound of its own go (a share names only its sharer's
+    sounds; a remix holds its own copy); its metrics go too (`metrics`: the
+    metrics tables the database has)."""
     q = quoted(pid, PROFILE_ID)
     return [f'DELETE FROM {t} WHERE profile_id = {q}' for t in metrics] + [
-        f'DELETE FROM sound_chunks WHERE sound_id IN (SELECT id FROM sounds WHERE profile_id = {q} AND {UNSHARED})',
-        f'DELETE FROM sounds WHERE profile_id = {q} AND {UNSHARED}',
-        f"UPDATE sounds SET profile_id = '' WHERE profile_id = {q}",
+        f'DELETE FROM share_sounds WHERE code IN (SELECT code FROM shares WHERE profile_id = {q})',
+        f'DELETE FROM shares WHERE profile_id = {q}',
+        f'DELETE FROM sound_chunks WHERE sound_id IN (SELECT id FROM sounds WHERE profile_id = {q})',
+        f'DELETE FROM sounds WHERE profile_id = {q}',
         f'DELETE FROM records WHERE profile_id = {q}',
         f'DELETE FROM keys WHERE profile_id = {q}',
         f'DELETE FROM profiles WHERE id = {q}',

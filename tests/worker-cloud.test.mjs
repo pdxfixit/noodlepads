@@ -421,19 +421,32 @@ test('a share code: anyone who has it sees the snapshot, read-only, with no key,
   assert.equal(theirs.status, 409, "a share names only the profile's own sounds");
 });
 
-test('a share is forever: deleting its sound, or the whole profile, keeps what it uses', async () => {
+// The council's review, 2026-10-26: deleting a profile kept its shares, and
+// 🚫 Unshare needs the profile's key, so a deleted kid's shared voice could
+// never be unshared. A share now lasts until it is unshared or its profile goes.
+test('a share outlives the sound it uses, until its profile is deleted: then its codes and audio go, and a remix stays', async () => {
   const c = cloud();
   const a = await made(c, 'p-a');
   const s = await sound(c, a, 'p-a', 7);
   const gone = await sound(c, a, 'p-a', 9, [9]);
   await c.call('POST', 'profiles/p-a/records', { key: a, body: { put: [{ kind: 'clips', id: 'user-1', body: { sound: s } }, { kind: 'clips', id: 'user-2', body: { sound: gone } }] } });
   const { data: { code } } = await c.call('POST', 'profiles/p-a/shares', { key: a, body: { kind: 'sound', title: 'Burp', bundle: { clips: [{ id: 'user-1', sound: s }] } } });
+  const { data: { code: beat } } = await c.call('POST', 'profiles/p-a/shares', { key: a, body: { kind: 'beat', title: 'Boom', bundle: { beats: [{ id: 'beat-1' }] } } });
   await c.call('POST', 'profiles/p-a/records', { key: a, body: { del: [{ kind: 'clips', id: 'user-1' }, { kind: 'clips', id: 'user-2' }] } });
   assert.deepEqual(c.env.DB.rows('SELECT id FROM sounds').map((r) => r.id), [s], 'the unshared sound went; the shared one stays');
-  assert.equal((await c.call('DELETE', 'profiles/p-a', { key: a, body: {} })).status, 200);
-  assert.deepEqual(c.env.DB.rows('SELECT id, profile_id FROM sounds'), [{ id: s, profile_id: '' }], 'owned by no profile now');
   assert.equal((await c.call('GET', `shares/${code}`)).status, 200);
-  assert.deepEqual((await c.call('GET', `sounds/${s}`)).data, new Uint8Array([7, 7]));
+  // Someone remixed it: their own record, with their own copy of the audio (web/cloud.js remixShare, then their sync).
+  const b = await made(c, 'p-b', { name: 'Sir Squid' });
+  const theirs = await sound(c, b, 'p-b', 7);
+  await c.call('POST', 'profiles/p-b/records', { key: b, body: { put: [{ kind: 'clips', id: 'user-9', body: { sound: theirs } }] } });
+  const { data: { code: their } } = await c.call('POST', 'profiles/p-b/shares', { key: b, body: { kind: 'sound', title: 'Burp remix', bundle: { clips: [{ id: 'user-9', sound: theirs }] } } });
+  assert.equal((await c.call('DELETE', 'profiles/p-a', { key: a, body: {} })).status, 200);
+  for (const x of [code, beat]) assert.equal((await c.call('GET', `shares/${x}`)).status, 404, 'its codes stop working');
+  assert.equal((await c.call('GET', `sounds/${s}`)).status, 404, 'its audio is gone');
+  assert.deepEqual(c.env.DB.rows('SELECT id FROM sounds').map((r) => r.id), [theirs], 'only the remix\'s copy is left');
+  assert.deepEqual(c.env.DB.rows('SELECT code FROM shares').map((r) => r.code), [their]);
+  assert.deepEqual(c.env.DB.rows('SELECT code FROM share_sounds').map((r) => r.code), [their]);
+  assert.deepEqual((await c.call('GET', `sounds/${theirs}`)).data, new Uint8Array([7, 7]), 'the remix still plays');
 });
 
 // Ben, 2026-10-11 (Q18): "allow to be unshared. copies remain". The sharer

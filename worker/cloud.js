@@ -261,12 +261,17 @@ async function changeProfile(request, env, id, now, seen) {
 // A sound no share uses (SQL, on the table `sounds`).
 const UNSHARED = 'NOT EXISTS (SELECT 1 FROM share_sounds WHERE share_sounds.sound_id = sounds.id)';
 
-// Deleting a profile deletes its sounds, except those a share uses: those
-// stay, owned by no profile (profile_id ''), until the share is unshared.
-const dropSounds = (env, id) => [
-  env.DB.prepare(`DELETE FROM sound_chunks WHERE sound_id IN (SELECT id FROM sounds WHERE profile_id = ? AND ${UNSHARED})`).bind(id),
-  env.DB.prepare(`DELETE FROM sounds WHERE profile_id = ? AND ${UNSHARED}`).bind(id),
-  env.DB.prepare("UPDATE sounds SET profile_id = '' WHERE profile_id = ?").bind(id),
+// Deleting a profile deletes its shares and every sound of its own (a share
+// names only its sharer's sounds: ownSound). Unshare needs the profile's key,
+// so a share left behind could never be ended. A remix someone made is their
+// own record with its own copy of the audio, under their profile, so it stays.
+// (Sounds with profile_id '' are the shares' of profiles deleted before
+// 2026-10-26, which kept them.)
+const dropProfileData = (env, id) => [
+  env.DB.prepare('DELETE FROM share_sounds WHERE code IN (SELECT code FROM shares WHERE profile_id = ?)').bind(id),
+  env.DB.prepare('DELETE FROM shares WHERE profile_id = ?').bind(id),
+  env.DB.prepare('DELETE FROM sound_chunks WHERE sound_id IN (SELECT id FROM sounds WHERE profile_id = ?)').bind(id),
+  env.DB.prepare('DELETE FROM sounds WHERE profile_id = ?').bind(id),
 ];
 
 async function deleteProfile(request, env, id, now) {
@@ -275,7 +280,7 @@ async function deleteProfile(request, env, id, now) {
   const p = await getProfile(env, id);
   await needPin(env, p, body.pin, now);
   await env.DB.batch([
-    ...dropSounds(env, id),
+    ...dropProfileData(env, id),
     env.DB.prepare('DELETE FROM records WHERE profile_id = ?').bind(id),
     env.DB.prepare('DELETE FROM keys WHERE profile_id = ?').bind(id),
     env.DB.prepare('DELETE FROM profiles WHERE id = ?').bind(id),

@@ -927,9 +927,10 @@ ADR 0002.
 - **🔗 Share…** (in a person's ☁️) gives a code like `ABCD-2345` for one sound,
   beat or song: a snapshot, read-only. Shared already lists that person's
   codes; 🚫 Unshare (two taps) ends one for everyone (the Worker deletes it,
-  and audio nothing else uses). ⚙️ Settings → 🔗 Sharing → 🔗 Shared with me
+  and audio nothing else uses). Deleting the profile from the cloud ends
+  all of them. ⚙️ Settings → 🔗 Sharing → 🔗 Shared with me
   opens a code: ▶ Play, 🎛️ Remix (an editable copy on your board, named
-  "<title> remix", that stays after an unshare), ✕ Remove (two taps) takes
+  "<title> remix", that stays after an unshare or its sharer's delete), ✕ Remove (two taps) takes
   it off this device's list. An unshared code shows "No longer shared".
 - **Ids are random.** A profile's id is its person's random id (`p-…`); the
   Worker makes, lists and syncs no other, and the app's API client refuses
@@ -949,8 +950,8 @@ ADR 0002.
 - **To delete a profile and everything in it:** 👥 People → tap them → tap
   Delete three times (the third deletes the cloud copy), or switch ☁️ In the
   cloud off (tap twice) to keep it on this device. Either asks for the PIN
-  if it has one. What it
-  shared stays shared.
+  if it has one. Its share codes stop working too (remixes others made
+  stay theirs).
 - **What's private:** read [Privacy](../README.md#privacy) in the README. Everyone who makes something is
   in the public list unless their ☁️ In the cloud is switched off.
 - **Managing the database** (Ben): `just cloud-profiles` lists every profile;

@@ -7,7 +7,7 @@
 //   cloud-smoke  the API round trip from Node, through web/cloud-api.js:
 //                make, wrong PIN, open, push, pull, a sound in two pieces
 //                read back byte for byte, a share read with no key, the
-//                list, delete, and everything gone.
+//                list, delete, and everything gone, its share code too.
 //   cloud-e2e    two devices (two browser contexts: separate IndexedDB) in
 //                headless Chrome on the live site: A makes a person, a beat
 //                and a sound and syncs; B opens the profile from the ☁️ list
@@ -172,8 +172,9 @@ async function smoke({ url }) {
       await refused(api.open(id, pin), 404, 'profile');
       const res = await fetch(`${url}/api/sounds/${sound}`);
       must(res.status === 404, `its sound answers ${res.status}`);
-      await readShare();
-      return 'gone: not listed, opens 404, its sound 404s; the share stays (forever)';
+      const shared = await fetch(`${url}/api/shares/${code}`);
+      must(shared.status === 404, `its share code answers ${shared.status}`);
+      return 'gone: not listed, opens 404, its sound and its share code 404';
     });
   } catch (err) {
     if (!err?.said) s.fail(err?.message || String(err));   // a step says its own

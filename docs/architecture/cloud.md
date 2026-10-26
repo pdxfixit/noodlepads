@@ -159,7 +159,7 @@ The 13 per-person stores that sync: `clips, overrides, orders, patterns, beats, 
 - **Making:** `cloud-ui.js` (🔗 Share… or `shareSounds` from ✏️ Edit sounds) → `cloud.js shareItem`: syncs first, `cloud-sync.js shareBundle` builds `{kind, title, bundle: {clips, beats, songs}}` (kit sounds as `kit:<id>`; `personId`, `group`, `pinned` and `blob` stripped), each clip gets its cloud `sound` from `link.sounds`, `renderShare` (= `share-render.js renderPreview`) records a preview WAV, `uploadAudio` puts it up, then `api.share`.
 - **Shape in D1:** `shares` row (code, profile_id, kind, title ≤ 24 chars, bundle JSON ≤ 1 MB, preview sound id, hash, created) plus `share_sounds` rows that keep the audio alive after its clip or profile goes.
 - **Receiving:** `openShare` (localStorage `shared`, at most `MAX_SHARED` 100, `{code, kind, title, at, gone?}`), `checkShared` marks unshared ones `gone`, `fetchShare`, ▶ Play (`cloud-ui.js playPreview`: decodes the preview into `audio.master`), 🎛️ Remix (`remixShare`: `shareDoc` with fresh ids → `cleanBackup` → `storeLoaded`).
-- **Unsharing:** `DELETE /api/profiles/:id/shares/:code` deletes the share, its `share_sounds`, and audio nothing else uses.
+- **Unsharing:** `DELETE /api/profiles/:id/shares/:code` deletes the share, its `share_sounds`, and audio nothing else uses. Deleting the profile (`deleteProfile`, and `cloud_admin.py delete_profile_sql` for a prune) deletes all its shares and sounds: 🚫 Unshare needs the profile's key, so a share left behind could never be ended. Shares of profiles deleted before 2026-10-26 still stand, with their sounds under profile_id `''`.
 
 ### Three meanings of "offline"
 
@@ -266,9 +266,9 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 | `profiles` | `id` | `makeProfile`, `changeProfile`, `checkSecret`, `touch`, push (rev, `record_bytes`) | list, open, pull, every keyed route | until deleted or pruned |
 | `keys` | `hash` (SHA-256 of the key) | `newKey`, `openProfile` (old sessions), `forgetKey`, `changeProfile` (new PIN), `deleteProfile` | `keyProfile` (marks `used`) | session keys a week; any key 180 days unused; 20 a profile |
 | `records` | `(profile_id, kind, id)` | push (tombstones `deleted = 1`) | pull, push (orphan sounds), unshare | tombstones forever |
-| `sounds` | `id` | `startSound`, `putPiece` (`got`), push (orphans: a deleted clip's, and a changed clip's old audio) and unshare, `dropSounds` (profile_id `''`) | `getSound`, `ownSound`, push | until no record or share uses it; unfinished, an hour (`PENDING_MS`) |
+| `sounds` | `id` | `startSound`, `putPiece` (`got`), push (orphans: a deleted clip's, and a changed clip's old audio) and unshare, `deleteProfile` (all its own; profile_id `''` only on shared sounds of profiles deleted before 2026-10-26) | `getSound`, `ownSound`, push | until no record or share uses it; unfinished, an hour (`PENDING_MS`) |
 | `sound_chunks` | `(sound_id, n)` | `putPiece` | `getSound`, `need` | with its sound |
-| `shares`, `share_sounds` | `code`; `(code, sound_id)` | `makeShare`, `unshare` | `getShare`, `myShares` | until unshared |
+| `shares`, `share_sounds` | `code`; `(code, sound_id)` | `makeShare`, `unshare`, `deleteProfile` | `getShare`, `myShares` | until unshared or its profile is deleted |
 | `reports` | `key` = `<ISO>_<device>_<random>` | `reports.js handleLog` | the telemetry runner | `TTL_MS` 14 days, deleted when the next report arrives |
 | `counters` | `(name, day)` | `http.js withinDaily` (`check-profiles`: the deploy checks' own) | the same | old days stay |
 | `devices` | `hash` (key hash) | `metrics.js noteEvent` | the runner | 90 days since last seen |
@@ -289,7 +289,7 @@ All JSON bodies go through `http.js readJson`: `Origin` must be `https://noodlep
 | `POST /api/profiles/:id/open` | Origin; PIN if set | 5 wrong → 10-minute wait (401 `tries`, 429 `wait`); a new key: the profile keeps its 20 most recently used, and sweeps session keys over a week old and any unused 180 days |
 | `DELETE /api/profiles/:id/key` | Origin, key | deletes the key sent |
 | `PATCH /api/profiles/:id` | Origin, key; current PIN for `newPin` | look kept only if `edited` ≥ stored; a new PIN deletes every key and returns a new one |
-| `DELETE /api/profiles/:id` | Origin, key, PIN | deletes records, keys, unshared sounds, metrics |
+| `DELETE /api/profiles/:id` | Origin, key, PIN | deletes records, keys, shares, every sound of its own, metrics |
 | `GET /api/profiles/:id/records?since=N` | key | 500 a page, never split inside one push |
 | `POST /api/profiles/:id/records` | Origin, key | body ≤ 4 MB; ≤ 200 records; each ≤ 512 KB; a clip must name whole audio of this profile (409 `sound`); a push that adds bytes: 507 `records full` over 10 MB of records a profile, 507 `cloud full` over 60 MB in all (each record its JSON + `ROW_BYTES` 100); 5,000 pushes a UTC day |
 | `POST /api/profiles/:id/sounds` | Origin, key | ≤ 25 MB; `audio/*` mime; 507 over 40 MB a profile (its unfinished sounds counted whole) or 400 MB in all (others' unfinished ones only as far as they uploaded); first deletes every sound left unfinished over `PENDING_MS` (an hour) |
@@ -385,13 +385,13 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 | Cloudflare stores fun name, avatar, color, sounds, beats, songs, settings, the names given | records also hold takes, kit edits, pad order and groups, DJ keys, layouts, own voices; and `activity`/`devices` rows per profile (country, browser, OS, device type, width, app version) while `sendUsage` is on | incomplete; the metrics are left to the shared policy on purpose (`tests/privacy.test.mjs`: no usage words in the lines) |
 | the list shows fun names and avatars only; everyone in the cloud is in it | the list also carries id, color, `edited` and whether a PIN is set; only the newest 300, `CLOUD_ID` ids only | slightly understated; "everyone" stops at 300 |
 | a sound's link plays for anyone | `getSound` needs no key | true |
-| a share code works after its profile is deleted, until 🚫 Unshare | `deleteProfile` keeps shares and their audio (`dropSounds`) | true |
+| a share code works until 🚫 Unshare or its profile is deleted | `deleteProfile` deletes its shares and sounds (`dropProfileData`); a remix's audio is its maker's own | true |
 | a PIN is not security | 4 digits, PBKDF2, waits; audio needs no PIN | true |
 | nobody types a profile name | `funNamed` before upload; Worker `isFunName` | true |
 | ☁️ off stays on this device | `isOffline` keeps them out; usage events are still sent from the device (not per person) | true for their things |
 | problem reports: cleaned log, settings, counts, browser/system/type, screen size, time zone, sound timing, a random code; deleted after 14 days | the payload also holds the app version, a per-page session id, the send time and the device pixel ratio. Expired reports are deleted only when the next report arrives | deletion is lazy: with no new report, an expired one stays in D1 |
 | feedback: only what was typed and the app's version; no name or IP | as typed; `X-App-Version` is `'dev'` on the live site (see gotchas); 90 days is the runner's job (unverified here) | true; the version part does not work |
-| deleting a profile: gone from the cloud at once, except what it shared | `deleteProfile` deletes records, keys, profile, unshared audio, and `forgetProfile` its metrics | true |
+| deleting a profile: gone from the cloud at once, with every share code it made | `deleteProfile` deletes records, keys, shares, audio, profile, and `forgetProfile` its metrics | true |
 
 ## Seams (one job done twice, or in an odd home)
 

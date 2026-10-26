@@ -164,14 +164,17 @@ test('"until the sharer taps 🚫 Unshare. Remixes others made of it stay theirs
   assert.equal((await call('GET', `sounds/${mine}`, { origin: null })).status, 200, 'the remix still plays');
 });
 
-test('"Anyone with a share code can see and play what was shared, even after its profile is deleted"', async () => {
-  claim('Anyone with a share code');
+// The council's review, 2026-10-26: a deleted profile's shares could never be
+// unshared (Unshare needs its key), so they go with it.
+test('"Anyone with a share code can see and play what was shared, until … their profile is deleted": "gone from the cloud at once, with every share code it made"', async () => {
+  claim('until the sharer taps 🚫 Unshare or their profile is deleted');
+  claim('gone from the cloud at once, with every share code it made');
   const call = cloud();
   const { key } = await (await call('POST', 'profiles', { body: { id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8' } })).json();
   const { code } = await (await call('POST', 'profiles/p-a/shares', { key, body: { kind: 'beat', title: 'Wobbly Taco', bundle: { beats: [{ id: 'beat-1' }] } } })).json();
+  assert.equal((await call('GET', `shares/${code}`, { origin: null })).status, 200, 'no key, no PIN');
   await call('DELETE', 'profiles/p-a', { key, body: {} });
-  const seen = await call('GET', `shares/${code}`, { origin: null });
-  assert.equal(seen.status, 200, 'no key, no PIN, and the profile is gone');
+  assert.equal((await call('GET', `shares/${code}`, { origin: null })).status, 404, 'the profile is gone, and its code with it');
 });
 
 // Usage data is described only in the shared policy (Ben, 2026-10-16: "have it

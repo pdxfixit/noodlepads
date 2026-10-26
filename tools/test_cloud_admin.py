@@ -207,13 +207,17 @@ class Prune(unittest.TestCase):
         plan, _ = ca.prune(self.db, empty=True, now=NOW, out=quiet()[1])
         self.assertEqual([p['id'] for p, _ in plan], ['p-empty'])
 
-    def test_yes_deletes_everything_of_theirs_but_keeps_shared_sounds(self):
+    def test_yes_deletes_everything_of_theirs_shares_too(self):
+        # As the Worker's deleteProfile (2026-10-26): a share code can't outlive its
+        # profile, since nobody could unshare it then.
         self.db.execute(f"INSERT INTO shares (code, profile_id, kind, title, bundle, hash, created) VALUES ('ABCD2345', 'p-old', 'sound', 'Burp', '{{}}', 'h', 1);"
                         f"INSERT INTO share_sounds (code, sound_id) VALUES ('ABCD2345', '{S1}');")
         ca.prune(self.db, days=180, empty=True, yes=True, now=NOW, out=quiet()[1])
         self.assertEqual(sorted(r['id'] for r in ca.list_profiles(self.db)), ['p-busy', 'p-new'])
         self.assertEqual(self.db.query("SELECT COUNT(*) AS n FROM records WHERE profile_id = 'p-old'")[0]['n'], 0)
-        self.assertEqual(self.db.query('SELECT id, profile_id FROM sounds'), [{'id': S1, 'profile_id': ''}])
+        self.assertEqual(self.db.query('SELECT id FROM sounds'), [])
+        self.assertEqual(self.db.query('SELECT code FROM shares'), [])
+        self.assertEqual(self.db.query('SELECT code FROM share_sounds'), [])
 
     def test_loose_sounds_go_too(self):
         self.db.execute(f"INSERT INTO sounds (id, profile_id, mime, bytes, chunks, sha256, got, created) VALUES ('{S2}', 'p-busy', 'audio/wav', 9, 1, 'y', 1, {NOW - 2 * DAY}),"
