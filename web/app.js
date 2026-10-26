@@ -212,7 +212,9 @@ function applyKids() {
   document.body.classList.toggle('kids', on);
   showKids(on);
   page?.screen(on ? 'kids' : state.screen);
-  if (!on) refitLines();
+  // Kids wrote the kid's beat (the scratch) behind the beat maker's back:
+  // show it again, so a pill tapped next builds on the kid's squares.
+  if (!on) { showView(); refitLines(); }
 }
 function enterKids() {
   grownUp = false;

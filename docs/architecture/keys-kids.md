@@ -7,7 +7,7 @@
 - **The keys own no beat.** In mode `'beat'` every change to the open beat goes through `deps.seq` (the one `sequencer.js createSequencer` object). The keys view only draws its own small grid of it (`dj.js renderGrid`).
 - **Pure rules sit apart:** `rhythm.js` (keys, snapping, takes), `keyset.js` (✏️ Layout for keys), `touch.js` (bands), `touch-grid.js` (the grid tree), `kids-logic.js` (Kids), `finger.js` (lift-to-play).
 - **🧸 Kids is a module singleton** (`kids.js`, state at module level, wired by `initKids`). It shares the data, `audio.js`, the person's settings and a few helpers with the regular app. It has its own beat player, recorder, toy keys and tune snap, and none of the keys panel.
-- **The kid's beat is the person's scratch beat** (ADR 0020). Kids writes it straight into `state.savedBeats`; the beat maker reads it again the next time a view shows (`sequencer.js show`).
+- **The kid's beat is the person's scratch beat** (ADR 0020). Kids writes it straight into `state.savedBeats`; the beat maker reads it again when a view shows (`sequencer.js show`), and leaving Kids shows the view again (`app.js applyKids` → `showView`).
 
 ## Files and who calls whom
 
@@ -266,7 +266,7 @@ Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, �
 `app.js applyKids` decides: Kids shows when `kidsVisit || (level === 'kids' && !grownUp)`. It runs on start, on `showPerson`, on `onSetting('level')`, from `enterKids` (🧸 `#kids-open`, or `[data-kids-open]` in the person menu), from Settings' 🧸 Kids (`onKids`), and from the right sum (`deps.grownUp`).
 
 - **In:** ends Edit sounds, `dj.leave()`, `seq.stop()`, `song.stop()`, `audio.stopAll()`, closes every open dialog, `body.kids`, `kids.js showKids(true)`, usage screen `'kids'`.
-- **Out:** `showKids(false)` stops the tune, the beat, the recorder and held keys, and closes its sum (`closeSum('kids')`); then `refitLines`.
+- **Out:** `showKids(false)` stops the tune, the beat, the recorder and held keys, and closes its sum (`closeSum('kids')`); then `showView` (the beat maker reads the kid's squares again) and `refitLines`.
 - `grownUp` (a grown-up let out a Kids-level person) and `kidsVisit` (a Regular or Advanced person visiting) last until reload. The level never changes by the sum (questions.md Q63).
 - A person change calls `refreshKids` (stops tune and beat, redraws).
 
@@ -406,7 +406,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | Latency in four places (above) | A change to one leaves the others. |
 | Dead exports kept for tests | `rhythm.js hitTime`, `applySnaps`, `countInBeats`, `snapHits`; `kids-logic.js squareSeconds`; `touch-grid.js emptyBlock`, `swapBlocks`. The app uses none of them. |
 | Dead wiring | `app.js` passes `el.tryingStop` to `createDJ`; `dj.js` never reads it. `dj.js` returns `deck`, `touchNow`, `letGo`, `stopReplay`; `app.js` calls none. |
-| Kids writes the scratch behind the beat maker's back | `sequencer.js` re-reads only in `show()`. Leaving Kids calls no `show()`, so Beats may hold a stale scratch until the next screen change; a pill tapped then would save over the kid's squares (likely; untested). |
+| Kids writes the scratch behind the beat maker's back | `sequencer.js` re-reads only in `show()`, so every way out of Kids must end in `showView` (`applyKids` does). |
 | Deletes skip `persist` | `app.js` `deleteTake`, `deleteLayout`, `deleteTouchLayout` call `db.remove` and only log a failure; `beatLibrary.remove` shows a notice. `adoptKidsBeat` writes with `db.batch`. |
 
 ## Invariants and gotchas
@@ -427,6 +427,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | A held key loops only on OS repeat past 350 ms; lifting a modifier forgets all holds | no test found (`shift-holds.test.mjs` covers Shift-click only) |
 | Every remembered key (`dj-input`, `dj-size`, `dj-click`, `beat-keys`, `kids-tab`) starts the app safely | `startup-remembered.test.mjs` |
 | A take's `ring` is stored only when true, only on a hit | `overlap.test.mjs`, `rhythm.test.mjs` |
+| Leaving Kids shows the beat maker again, so it holds the kid's squares, never an older copy to save over them | `kids-scratch-back.test.mjs` |
 | Kids' square *i* is pill 2*i* of a 16-pill bar, in every bar | `kids.test.mjs` |
 | Kids' keys mean `instNotes` changes for the whole person | `kids.test.mjs` (🎹 instrument button) |
 | `kids-logic.js` stays importable in Node; it imports `sequencer.js`, so that module must stay importable too | every Kids unit test |
