@@ -25,6 +25,7 @@
 // works while the song plays.
 
 import { openDialog, setupDialog } from './dialogs.js';
+import { tempoKey } from './tempo-key.js';
 import { encodeWav, normalize, barSteps, SIGNATURES } from './sequencer.js';
 import { fadeStop, tooLate } from './audio.js';
 import { logEvent } from './log.js';
@@ -150,6 +151,8 @@ export function soundSong(ctx, laneGains, planned, seq, t0 = 0) {
 export function createSong(deps) {
   const { el, audio, meter, seq } = deps;
   let song = null;
+  // On a phone the song's tempo folds into one key (tempo-key.js); its line holds ➖ the tempo ➕ (with Advanced, the way into 🎼 Tempo).
+  const songKey = el.tempoKey && el.tempoBox ? tempoKey(el.tempoKey, el.tempoBox, () => song?.tempo ?? 100) : null;
 
   let timer = 0;
   let raf = 0;
@@ -847,6 +850,7 @@ export function createSong(deps) {
 
   // The deck's tempo: typed (Regular), or a button saying it (Advanced).
   function renderTempoOpen() {
+    songKey?.show();
     const adv = advanced();
     el.tempoField.hidden = adv;
     el.tempoOpen.hidden = !adv;

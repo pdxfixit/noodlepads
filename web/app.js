@@ -590,7 +590,7 @@ const songBook = {
 function makeSequencer() {
   return createSequencer({
     el: {
-      play: $('#seq-play'), bpm: $('#seq-bpm'), bpmOut: $('#seq-bpm-out'), bpmType: $('#seq-bpm-type'),
+      play: $('#seq-play'), bpm: $('#seq-bpm'), bpmOut: $('#seq-bpm-out'), bpmType: $('#seq-bpm-type'), tempoKey: $('#seq-tempo-key'), tempoBox: $('#seq-tempo'),
       rows: $('#seq-rows'), moveBar: $('#seq-move'), add: $('#seq-add'), addTune: $('#seq-add-tune'), roll: $('#roll'), top: $('#seq-deck'), controls: $('#seq-shape-line'), djPlay: $('#dj-play'),
       empty: $('#seq-empty'), noRows: $('#seq-no-rows'),
       chooser: $('#chooser'), chooserTitle: $('#chooser-title'), chooserGrid: $('#chooser-grid'),
@@ -682,7 +682,7 @@ function makeSong() {
       songs: $('#songs'), songsList: $('#songs-list'), songsEmpty: $('#songs-empty'), songsNote: $('#songs-note'),
       play: $('#song-play'), sound: $('#song-sound'),
       tempo: $('#song-tempo'), tempoDown: $('#song-tempo-down'), tempoUp: $('#song-tempo-up'),
-      tempoField: $('#song-tempo-field'), tempoOpen: $('#song-tempo-open'),
+      tempoField: $('#song-tempo-field'), tempoOpen: $('#song-tempo-open'), tempoKey: $('#song-tempo-key'), tempoBox: $('#song-tempo-box'),
       tempoSheet: $('#tempo-sheet'), tempoTitle: $('#tempo-title'), tempoListView: $('#tempo-list-view'), tempoEditView: $('#tempo-edit-view'),
       tempoBase: $('#tempo-base'), tempoMarks: $('#tempo-marks'), tempoAdd: $('#tempo-add'),
       tempoBar: $('#tempo-bar'), tempoBpm: $('#tempo-bpm'), tempoHint: $('#tempo-hint'),
@@ -948,7 +948,7 @@ async function start() {
       takeLine: $('#dj-take-line'), doneRename: $('#dj-done-rename'), doneClose: $('#dj-done-close'), takeName: $('#dj-take-name'), takeLength: $('#dj-take-length'),
       takesOpen: $('#dj-takes-open'), takes: $('#takes'), pictures: $('#pictures'), picturesTitle: $('#pictures-title'), picturesGrid: $('#pictures-grid'), picturesNote: $('#pictures-note'), takesList: $('#takes-list'), takesEmpty: $('#takes-empty'),
       click: $('#dj-click'), overlap: $('#dj-overlap'), beatClick: $('#dj-beat-click'), play: $('#dj-play'), tempo: $('#dj-tempo'), grid: $('#dj-grid'),
-      size: $('#dj-size'),
+      size: $('#dj-size'), tempoKey: $('#dj-tempo-key'), clickKey: $('#dj-click-key'),
       beatbar: $('#dj-beatbar'), count: $('#dj-count'), noRows: $('#dj-no-rows'), deck: $('.dj-bar'), setup: $('#dj-setup'), clickTempo: $('#dj-click-tempo'), clickBpm: $('#dj-click-bpm'), clickBpmOut: $('#dj-click-bpm-out'), bpm: $('#dj-bpm'), bpmType: $('#dj-bpm-type'), bpmSlider: $('#dj-bpm-slider'), bars: $('#dj-bars'), sigs: $('#dj-sigs') },
     deps: {
       personId: () => state.personId,

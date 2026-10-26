@@ -150,15 +150,16 @@ test('Beats with ⌨️ Keys: the control bar sticks under the slim bar while th
   assert.doesNotMatch(css, /screen-live[^{]*\.dj-bar[^{]*\{[^}]*position: sticky/, '🎤 Live\'s bar scrolls');
 });
 
-test('on a phone the Keys control bar\'s lines are ▶ Play · ● Record, then the tempo and ⏲️, and the whole bar sticks (it tucks into the slim bar, mini-deck.test.mjs)', () => {
+test('on a phone the Keys control bar is one line, ▶ Play · ● Record · the tempo key · ⏲️ · ✏️, and the whole bar sticks (it tucks into the slim bar, mini-deck.test.mjs)', () => {
   const run = html.match(/<div class="beat-run">([\s\S]*?)<\/div>/);
   assert.ok(run, 'the first line has a box of its own');
   assert.deepEqual([...run[1].matchAll(/id="([^"]+)"/g)].map((m) => m[1]), ['dj-play', 'dj-record']);
   assert.ok(html.indexOf('<div class="beat-more">') > html.indexOf('<div class="beat-run">'), 'the tempo and ⏲️ after it, in a box of their own');
   assert.match(css, /\.beat-run, \.beat-more \{ display: contents; \}/, 'both lay out as if not there, elsewhere');
+  // Ben, 2026-10-26: one line on a phone; the boxes lay out as if not there.
+  assert.match(css, /body\.keys-on \.dj-bar > \.beat-go \{ display: flex; \}/, 'one line of its own');
+  assert.doesNotMatch(css, /body\.keys-on \.dj-bar :is\(\.beat-run, \.beat-more\) \{ display: flex/, 'no box a line of its own');
   const phone = block('max-width: 600px');
-  assert.match(phone, /body\.keys-on \.dj-bar > \.beat-go \{ display: contents; \}/, 'its two boxes become the bar\'s own lines');
-  assert.match(phone, /body\.keys-on \.dj-bar :is\(\.beat-run, \.beat-more\) \{ display: flex; flex: 1 1 100%;/);
   assert.doesNotMatch(phone, /sticky/, 'no line sticks on its own: the bar does, at every width');
 });
 

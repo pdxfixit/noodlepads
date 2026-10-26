@@ -62,7 +62,7 @@ const MODULES = [
   'mix', 'mixer', 'model', 'names', 'notes', 'nudge', 'offline', 'old-backup', 'overflow', 'pad-size', 'pads', 'people',
   'pill-select', 'pitch', 'play-count', 'playlist', 'privacy', 'reid', 'rhythm', 'roll', 'row-volume', 'scratch', 'sequencer',
   'settings-ui', 'settings', 'shape', 'share-render', 'sheet', 'skins', 'slide', 'song', 'starters', 'state', 'steps',
-  'store', 'stretch-worker', 'stretch', 'sync-timing', 'synth', 'tap-watch', 'telemetry', 'things', 'tips', 'tooltips', 'touch-grid', 'touch', 'track-page', 'tweaks',
+  'store', 'stretch-worker', 'stretch', 'sync-timing', 'synth', 'tap-watch', 'telemetry', 'tempo-key', 'things', 'tips', 'tooltips', 'touch-grid', 'touch', 'track-page', 'tweaks',
   'ui', 'update', 'usage', 'util', 'voice-knobs', 'voices', 'wave', 'welcome', 'who-now', 'zip',
 ];
 

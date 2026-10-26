@@ -109,8 +109,10 @@
            ▶ Play (● Record with ⌨️ Keys on), the tempo, ⏲️, then the bars. -->
       <div class="beat-deck deck deck-end" id="seq-deck">
         <div class="beat-go">
-          <button type="button" class="seq-play" id="seq-play" aria-pressed="false">▶ Play</button>
-          <div class="beat-tempo tempo-box" role="group" aria-label="Tempo">
+          <button type="button" class="seq-play" id="seq-play" data-icon="▶" aria-pressed="false">▶ Play</button>
+          <!-- On a phone the tempo is one key that opens it as a line of its own (tempo-key.js). -->
+          <button type="button" class="tempo-key" id="seq-tempo-key" aria-expanded="false" aria-controls="seq-tempo" aria-label="Tempo 100 BPM: tap to change it"><span class="tempo-key-num">100</span><span class="tempo-key-open" aria-hidden="true">▾</span></button>
+          <div class="beat-tempo tempo-box" id="seq-tempo" role="group" aria-label="Tempo">
             <button type="button" class="tempo-step down" data-tempo-step="-1" aria-label="Slower"></button>
             <input type="range" id="seq-bpm" step="1" aria-label="Tempo">
             <button type="button" class="seq-bpm-num" id="seq-bpm-out"></button>
@@ -178,10 +180,11 @@
              the line that sticks while the keys scroll (Ben, 2026-10-18). -->
         <div class="beat-go">
           <div class="beat-run">
-            <button type="button" class="seq-play" id="dj-play" aria-pressed="false" hidden>▶ Play</button>
-            <button type="button" class="dj-rec" id="dj-record" aria-pressed="false">● Record</button>
+            <button type="button" class="seq-play" id="dj-play" data-icon="▶" aria-pressed="false" hidden>▶ Play</button>
+            <button type="button" class="dj-rec" id="dj-record" data-icon="●" aria-pressed="false">● Record</button>
           </div>
           <div class="beat-more">
+            <button type="button" class="tempo-key" id="dj-tempo-key" aria-expanded="false" aria-controls="dj-tempo" aria-label="Tempo 100 BPM: tap to change it"><span class="tempo-key-num">100</span><span class="tempo-key-open" aria-hidden="true">▾</span></button>
             <div class="beat-tempo tempo-box" id="dj-tempo" role="group" aria-label="Tempo" hidden>
               <button type="button" class="tempo-step down" data-tempo-step="-1" aria-label="Slower"></button>
               <input type="range" id="dj-bpm-slider" step="1" aria-label="Tempo">
@@ -194,6 +197,7 @@
             <button type="button" class="seq-click edit-keys-open" id="dj-change-tempo" aria-label="✏️ Layout: how the pads are laid out" title="✏️ Layout">✏️</button>
             <!-- 🎤 Live's own, in the place Beats has its tempo and ⏲️ (Ben, 2026-10-26: the controls at the
                  top, so every view agrees): the click's tempo, kept in room while the click is off, and ⏲️. -->
+            <button type="button" class="tempo-key" id="dj-click-key" aria-expanded="false" aria-controls="dj-click-tempo" aria-label="Tempo 100 BPM: tap to change it"><span class="tempo-key-num">100</span><span class="tempo-key-open" aria-hidden="true">▾</span></button>
             <div class="dj-click-tempo tempo-box" id="dj-click-tempo" role="group" aria-label="Click track tempo">
               <button type="button" class="tempo-step down" data-click-step="-1" aria-label="Click track slower"></button>
               <input type="range" id="dj-click-bpm" step="1" aria-label="Click track tempo">
@@ -205,7 +209,7 @@
             <!-- At the right, as Beats' 🎚️ ✏️ Layout ⇆: 🔔 Overlap and ✏️ Layout (just 🔔 and ✏️ on a phone), then 🎬 Takes. -->
             <button type="button" class="seq-click dj-word" id="dj-overlap" data-word="Overlap" aria-pressed="false" title="Overlap: each hit rings over the last (this visit only)" aria-label="Overlap: each key's hits ring over each other instead of starting the sound again. For this visit only.">🔔</button>
             <button type="button" class="seq-click dj-word" id="dj-change" data-word="Layout" aria-label="✏️ Layout: how the keys or pads are laid out" title="✏️ Layout: how the keys or pads are laid out">✏️</button>
-            <button type="button" class="seq-tool" id="dj-takes-open">🎬 Takes</button>
+            <button type="button" class="seq-tool" id="dj-takes-open" data-icon="🎬" aria-label="🎬 Takes: everything you recorded">🎬 Takes</button>
           </div>
         </div>
         <div class="beat-shape" id="dj-setup" role="group" aria-label="The beat: bars and time signature" hidden>
@@ -284,7 +288,8 @@
       </div>
       <div class="song-deck deck deck-end">
         <button type="button" class="seq-play song-play" id="song-play" aria-pressed="false">▶ Play song</button>
-        <div class="song-tempo" role="group" aria-label="The song's tempo: every beat in it plays this fast">
+        <button type="button" class="tempo-key" id="song-tempo-key" aria-expanded="false" aria-controls="song-tempo-box" aria-label="Tempo 100 BPM: tap to change it"><span class="tempo-key-num">100</span><span class="tempo-key-open" aria-hidden="true">▾</span></button>
+        <div class="song-tempo" id="song-tempo-box" role="group" aria-label="The song's tempo: every beat in it plays this fast">
           <button type="button" class="seq-tool tempo-nudge" id="song-tempo-down" aria-label="Slower">➖</button>
           <label class="song-tempo-field" id="song-tempo-field"><input type="number" id="song-tempo" min="60" max="180" step="1" inputmode="numeric" aria-label="Song tempo in BPM"><span class="song-tempo-unit">BPM</span></label>
           <!-- With Advanced: the tempo says itself, and a tap opens 🎼 Tempo (its tempo changes, ADR 0031). -->

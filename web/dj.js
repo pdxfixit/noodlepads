@@ -33,6 +33,7 @@ import { drawBands, createTouchEditor } from './dj-touch.js';
 import { createPillSelect } from './pill-select.js';
 import { moreMenu } from './overflow.js';
 import { follower, keepInView } from './follow.js';
+import { tempoKey } from './tempo-key.js';
 
 const STOPS = tempoStops();   // the click track slider's positions (see sequencer.js)
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
@@ -563,6 +564,7 @@ export function createDJ({ el, deps }) {
   function showRec() {
     const on = !!rec || !!beatRec;
     putText(el.record, on ? '■ Stop' : '● Record');
+    el.record.dataset.icon = on ? '■' : '●';   // all it shows where its line is short (styles.css)
     putAttr(el.record, 'aria-pressed', String(on));
     el.record.classList.toggle('recording', on);
     showSetup();
@@ -762,6 +764,11 @@ export function createDJ({ el, deps }) {
   // ── Beats with ⌨️ Keys (once DJ's Beat Builder): hits land on the beat's grid, forgivingly ──
 
   let mode = 'free';   // 'free' on 🎤 Live, 'beat' on Beats with ⌨️ Keys (setMode)
+  // On a phone each tempo folds into one key (tempo-key.js): the keys view's (the beat's) and Live's (the click's).
+  const tempoKeys = [
+    el.tempoKey && tempoKey(el.tempoKey, el.tempo, () => deps.seq.beat()?.bpm ?? deps.seq.tempo()),
+    el.clickKey && tempoKey(el.clickKey, el.clickTempo, () => deps.seq.tempo()),
+  ].filter(Boolean);
   let clickWanted = recall('dj-click') === '1';
   // 🔔 Overlap on Live (Ben, 2026-10-12: "a button for the whole session"):
   // on, every key's repeated hits ring over each other; off, a hit restarts
@@ -1357,6 +1364,7 @@ export function createDJ({ el, deps }) {
   // the time signature. They change the open beat, as on the Beats screen,
   // and wait while recording, since the hits are landing on that grid.
   function showSetup() {
+    for (const k of tempoKeys) k.show();
     // The click track's tempo: the open beat's, or with none open a
     // tempo for this visit (100 BPM to start).
     const bpm = deps.seq.tempo();
@@ -1396,8 +1404,10 @@ export function createDJ({ el, deps }) {
   el.bpmSlider.max = STOPS.length - 1;
   el.bpmSlider.addEventListener('input', () => {
     const bpm = STOPS[Number(el.bpmSlider.value)];
-    if (!countingIn() && bpm && bpm !== deps.seq.beat()?.bpm) deps.seq.setTempo(bpm);
+    if (!countingIn() && bpm && bpm !== deps.seq.beat()?.bpm) { deps.seq.setTempo(bpm, { dragging: true }); showSetup(); }
   });
+  // Saved, and looping pads brought in line, once the drag ends (a phone drags it in its tempo line).
+  el.bpmSlider.addEventListener('change', () => { if (!countingIn() && deps.seq.beat()) deps.seq.setTempo(deps.seq.beat().bpm); });
   // Tapping the number swaps it for a field to type a tempo into, as on Beats.
   el.bpm.addEventListener('click', () => {
     if (countingIn() || !deps.seq.beat()) return;
@@ -1424,8 +1434,9 @@ export function createDJ({ el, deps }) {
   el.bpmType.addEventListener('blur', () => endTyping(true));
   el.clickBpm.addEventListener('input', () => {
     const bpm = STOPS[Number(el.clickBpm.value)];
-    if (bpm && bpm !== deps.seq.tempo()) deps.seq.setTempo(bpm);
+    if (bpm && bpm !== deps.seq.tempo()) { deps.seq.setTempo(bpm, { dragging: true }); showSetup(); }
   });
+  el.clickBpm.addEventListener('change', () => deps.seq.setTempo(deps.seq.tempo()));
   el.deck.addEventListener('click', (e) => {
     const b = e.target.closest('[data-tempo-step], [data-bars], [data-sig]');
     if (!b || !deps.seq.beat()) return;

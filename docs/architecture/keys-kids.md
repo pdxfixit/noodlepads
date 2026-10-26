@@ -38,7 +38,7 @@
 | Open beat | none: `seq.show('live')` sets `pattern` to null | the one open beat (ADR 0017), drawn in `#dj-grid` |
 | ● Record | a take (`startRec` / `stopRec`) | into the beat (`startBeatRec` / `stopBeatRec`) |
 | Takes button | shown | hidden |
-| ⏲️ Click track | `#dj-click` in the footer, with its own tempo slider `#dj-click-bpm` | `#dj-beat-click` on the control bar |
+| ⏲️ Click track | `#dj-click` on the control bar, after its own tempo `#dj-click-tempo` (slider `#dj-click-bpm`; on a phone the tempo key `#dj-click-key`) | `#dj-beat-click` on the control bar |
 | Tempo | `seq.tempo()`: the sequencer's `LOOSE` tempo (100 BPM, never saved) | the open beat's, saved with it |
 | 🔔 Overlap | `#dj-overlap`, for the visit (`overlap`, never saved) | hidden; each row's own 🔔 decides |
 | A key with no row | nothing | `showRow` adds its row (`seq.addRowFor`) |

@@ -43,6 +43,7 @@ button { font: inherit; color: inherit; }
 /* The proposed tempo key: the number, BPM under it; a tap opens the tempo. */
 .chip { flex: none; width: 56px; height: 52px; padding: 0; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; font: 800 1.1rem/1 var(--display); display: grid; place-content: center; gap: 2px; }
 .chip small { font: 800 0.6rem/1 var(--ui); opacity: 0.8; letter-spacing: 0.05em; }
+.rec .dot { color: #D93A2B; }
 .chip.open { background: var(--led); color: var(--ink); border-color: var(--led); }
 .chev { flex: none; width: 44px; height: 44px; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 10px; background: transparent; font-size: 1.1rem; }
 .num { flex: none; font: 800 1rem/1.05 var(--display); text-align: center; text-decoration: underline dotted rgb(255 255 255 / 0.6) 2px; text-underline-offset: 4px; }
@@ -61,6 +62,14 @@ button { font: inherit; color: inherit; }
 /* Option B: the bar's line turns into the tempo while it is open; nothing below moves or is covered. */
 .strip .line { gap: 10px; }
 .done { flex: none; width: 52px; height: 52px; border: 0; border-radius: 12px; background: var(--led); color: var(--ink); font: 800 1.2rem/1 var(--ui); }
+/* Option C: the tempo opens as a line of its own under the bar; the bar stays, nothing is covered. */
+.cline { display: flex; align-items: center; gap: 8px; flex: 1 1 100%; padding-top: 10px; border-top: 2px solid rgb(255 255 255 / 0.15); }
+.cline .slider { height: 8px; }
+.cline .slider::after { width: 32px; height: 32px; margin: -16px; }
+.animal { flex: none; font-size: 1.4rem; }
+/* The closed key without the word BPM: the number, and ▾ to say it opens. */
+.chip.v2 { grid-auto-flow: row; }
+.chip.v2 small { font-size: 0.75rem; opacity: 0.9; }
 .tag { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--led); color: var(--ink); font-size: 0.8rem; }
 </style>
 </head>
@@ -73,30 +82,30 @@ button { font: inherit; color: inherit; }
 <div class="row">
   <figure><figcaption>Now <small>375 px</small></figcaption>
     <div class="phone" style="width:375px"><div class="panel"><div class="bar">
-      <div class="line"><button class="rec">● Record</button><button class="word push">🎬 Takes</button></div>
+      <div class="line"><button class="rec"><span class="dot">●</span> Record</button><button class="word push">🎬 Takes</button></div>
       <div class="line"><button class="chev">⌄</button><span class="num">100<br>BPM</span><button class="chev">⌃</button><button class="sq push">⏲️</button><button class="sq">🔔</button><button class="sq">✏️</button></div>
     </div><div class="below"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></figure>
   <figure><figcaption>Proposed <small>430 px (big iPhone)</small></figcaption>
     <div class="phone" style="width:430px"><div class="panel"><div class="bar">
-      <div class="line"><button class="rec grow">● Record</button><button class="chip">100<small>BPM</small></button><button class="sq">⏲️</button><button class="sq">🔔</button><button class="sq">✏️</button><button class="sq">🎬</button></div>
+      <div class="line"><button class="rec grow"><span class="dot">●</span> Record</button><button class="chip">100<small>BPM</small></button><button class="sq">⏲️</button><button class="sq">🔔</button><button class="sq">✏️</button><button class="sq">🎬</button></div>
     </div><div class="below"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></figure>
   <figure><figcaption>Proposed <small>375 px</small></figcaption>
     <div class="phone" style="width:375px"><div class="panel"><div class="bar">
-      <div class="line"><button class="rec grow">●</button><button class="chip">100<small>BPM</small></button><button class="sq">⏲️</button><button class="sq">🔔</button><button class="sq">✏️</button><button class="sq">🎬</button></div>
+      <div class="line"><button class="rec grow"><span class="dot">●</span></button><button class="chip">100<small>BPM</small></button><button class="sq">⏲️</button><button class="sq">🔔</button><button class="sq">✏️</button><button class="sq">🎬</button></div>
     </div><div class="below"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></figure>
   <figure><figcaption>Proposed <small>320 px: two lines still</small></figcaption>
     <div class="phone" style="width:320px"><div class="panel"><div class="bar">
-      <div class="line"><button class="rec grow">● Record</button><button class="sq">🎬</button></div>
+      <div class="line"><button class="rec grow"><span class="dot">●</span> Record</button><button class="sq">🎬</button></div>
       <div class="line"><button class="chip">100<small>BPM</small></button><button class="sq push">⏲️</button><button class="sq">🔔</button><button class="sq">✏️</button></div>
     </div><div class="below"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></figure>
 </div>
 
-<h2>Tapping the tempo: two ways it could open</h2>
+<h2>Tapping the tempo: three ways it could open</h2>
 <p class="note">Either way: drag the slider, or ⌄ ⌃ for the next common tempo, or tap the number to type one. The tempo changes as you go (the click and a playing beat follow at once). Tapping outside, the tempo key again or Esc closes it.</p>
 <div class="row">
   <figure><figcaption>A. It drops down <small>over the top of the pads, under the bar; the bar stays</small></figcaption>
     <div class="phone" style="width:375px"><div class="panel"><div class="bar">
-      <div class="line"><button class="rec grow">●</button><button class="chip open">100<small>BPM</small></button><button class="sq">⏲️</button><button class="sq">🔔</button><button class="sq">✏️</button><button class="sq">🎬</button></div>
+      <div class="line"><button class="rec grow"><span class="dot">●</span></button><button class="chip open">100<small>BPM</small></button><button class="sq">⏲️</button><button class="sq">🔔</button><button class="sq">✏️</button><button class="sq">🎬</button></div>
     </div>
     <div class="pop" style="--tip: 96px"><div class="line"><button class="chev">⌄</button><span class="slider"></span><button class="chev">⌃</button><span class="num">100<br>BPM</span></div><p class="hint">Tap ⏲️ three times in time to set it by tapping.</p></div>
     <div class="below"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></figure>
@@ -104,6 +113,18 @@ button { font: inherit; color: inherit; }
     <div class="phone" style="width:375px"><div class="panel"><div class="bar strip">
       <div class="line"><button class="chev">⌄</button><span class="slider"></span><button class="chev">⌃</button><span class="num">100<br>BPM</span><button class="done">✓</button></div>
     </div><div class="below"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></figure>
+  <figure><figcaption>C. A line of its own under the bar <small>the bar stays (▶ ● ⏲️ reachable), nothing is covered; the pads move down while it is open</small></figcaption>
+    <div class="phone" style="width:375px"><div class="panel"><div class="bar">
+      <div class="line"><button class="rec grow"><span class="dot">●</span></button><button class="chip open">100<small>▾</small></button><button class="sq">⏲️</button><button class="sq">🔔</button><button class="sq">✏️</button><button class="sq">🎬</button></div>
+      <div class="cline"><span class="animal">🐢</span><button class="chev">⌄</button><span class="slider"></span><button class="chev">⌃</button><span class="animal">🐇</span><span class="num">100</span></div>
+    </div><div class="below"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div></figure>
+</div>
+
+<h2>The closed tempo key</h2>
+<p class="note">Left: as drawn above, with the word BPM under the number. Right: the number and a ▾ that says it opens, no music word (screen readers still hear "Tempo 100 BPM").</p>
+<div class="row">
+  <figure><figcaption>100 over BPM</figcaption><div class="bar" style="width:140px;border-radius:16px"><button class="chip">100<small>BPM</small></button></div></figure>
+  <figure><figcaption>100 over ▾</figcaption><div class="bar" style="width:140px;border-radius:16px"><button class="chip v2">100<small>▾</small></button></div></figure>
 </div>
 
 <h2>🥁 Beats with ⌨️ Keys</h2>
@@ -111,13 +132,13 @@ button { font: inherit; color: inherit; }
 <div class="row">
   <figure><figcaption>Now <small>375 px</small></figcaption>
     <div class="phone" style="width:375px"><div class="panel"><div class="bar">
-      <div class="line"><button class="play grow">▶ Play</button><button class="rec grow">● Record</button></div>
+      <div class="line"><button class="play grow">▶ Play</button><button class="rec grow"><span class="dot">●</span> Record</button></div>
       <div class="line"><button class="chev">⌄</button><span class="num">100<br>BPM</span><button class="chev">⌃</button><button class="sq push">⏲️</button><button class="sq">✏️</button></div>
       <div class="line"><span class="barsel"><span>1 bar</span><span>2 bars</span><span>4 bars</span></span><button class="sq">🎚️</button><button class="sq">⇆</button></div>
     </div><div class="below"><i></i><i></i><i></i><i></i></div></div></div></figure>
   <figure><figcaption>Proposed <small>375 px</small></figcaption>
     <div class="phone" style="width:375px"><div class="panel"><div class="bar">
-      <div class="line"><button class="play grow">▶ Play</button><button class="rec grow">●</button><button class="chip">100<small>BPM</small></button><button class="sq">⏲️</button><button class="sq">✏️</button></div>
+      <div class="line"><button class="play grow">▶ Play</button><button class="rec grow"><span class="dot">●</span></button><button class="chip">100<small>BPM</small></button><button class="sq">⏲️</button><button class="sq">✏️</button></div>
       <div class="line"><span class="barsel"><span>1 bar</span><span>2 bars</span><span>4 bars</span></span><button class="sq">🎚️</button><button class="sq">⇆</button></div>
     </div><div class="below"><i></i><i></i><i></i><i></i></div></div></div></figure>
 </div>

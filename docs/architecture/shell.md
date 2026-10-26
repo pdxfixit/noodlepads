@@ -209,6 +209,22 @@ mode's own button (`.mode:not(.open) > :not(.mode-open), .mode.open >
 through `lines.js fitLine` (`fit-tight`, `fit-short`, `fit-stack`).
 `tests/four-tabs.test.mjs` guards the bar.
 
+### The tempo key (phones)
+
+`tempo-key.js tempoKey(key, box, bpm)` is the one tempo key every control
+bar has on a phone: `#seq-tempo-key` (Beats, `sequencer.js`, box
+`#seq-tempo`), `#dj-tempo-key` and `#dj-click-key` (⌨️ Keys and 🎤 Live,
+`dj.js`, boxes `#dj-tempo` and `#dj-click-tempo`) and `#song-tempo-key`
+(`song.js`, box `#song-tempo-box`). It only opens and closes: the key's
+`aria-expanded`, the box's `.tempo-open`, Esc. Each screen keeps its own
+slider, ⌄ ⌃ and typed number inside the box, and calls `show()` from its
+tempo redraw (`showTempo`, `showSetup`, `renderTempoOpen`) so the key reads
+the tempo. CSS (`styles.css`, "The tempo key") shows the key and folds the
+box only at 600 px and under; the open box is the bar's last line. Words
+on ▶ / ● / 🎬 give way by `@container panel` width, showing `data-icon`
+(set beside each label in `sequencer.js showPlayKeys` and `dj.js`).
+`tests/tempo-key.test.mjs` guards it.
+
 ### ✏️ Edit sounds (the shell's part)
 
 `app.js setEditing(on)`: goes to Pads first, sets `state.editing`, clears

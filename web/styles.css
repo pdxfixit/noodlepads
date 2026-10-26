@@ -652,11 +652,9 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
   .beat-shape .seq-barsel button { flex: 1 0 auto; }   /* never narrower than its word */
   .beat-go .seq-play { width: 6.5rem; padding: 0 12px; }
   .beat-go .dj-rec { padding: 0 14px; }
-  /* Beat Builder has ● Record too: ▶ Play and ● Record share the first line,
-     the tempo and ⏲️ the next, in the same order (provisional, questions.md). */
-  .beat-go:has(.seq-play:not([hidden]) + .dj-rec) { flex-wrap: wrap; }
-  .beat-go:has(.seq-play:not([hidden]) + .dj-rec) :is(.seq-play, .dj-rec) { flex: 1 1 40%; width: auto; }
-  .beat-go:has(.seq-play:not([hidden]) + .dj-rec) .beat-tempo { flex: 1 1 calc(100% - 60px); }
+  /* Beats with ⌨️ Keys has ● Record too: ▶ Play and ● Record share the room
+     the tempo key, ⏲️ and ✏️ leave on the one line (Ben, 2026-10-26). */
+  .beat-go:has(.seq-play:not([hidden]) + .dj-rec) :is(.seq-play, .dj-rec) { flex: 1 1 0; width: auto; min-width: 44px; }
 }
 /* Beats with ⌨️ Keys has ● Record too, so its bar runs out of room before a
    phone's does: up to 879 px its bars take a line of their own, as on a phone
@@ -693,42 +691,80 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
 body.keys-on .dj-bar { position: sticky; top: calc(var(--head-h, 0px) - var(--deck-h, 0px)); z-index: 6; }
 @media (max-width: 600px) {
   body.keys-on .dj-bar { row-gap: 10px; }
-  body.keys-on .dj-bar > .beat-go { display: contents; }
-  body.keys-on .dj-bar :is(.beat-run, .beat-more) { display: flex; flex: 1 1 100%; align-items: center; gap: 8px; min-width: 0; }
 }
-/* 🎤 Live on a phone, laid out as Beats with ⌨️ Keys: ● Record and 🎬 Takes
-   on the first line; the click's tempo, then ⏲️ 🔔 ✏️ as 48 px squares at the
-   right, on the next (Ben, 2026-10-26). */
+/* Tap tempo's "keep tapping…" and "👆 96" (dj.js) are wider than ⏲️: from
+   601 px ⏲️ widens over the tempo's room for that moment, the tempo out of
+   sight, so the buttons after it stay put (on Beats with ⌨️ Keys it ran over
+   the bars from 761 px). On a phone ⏲️ keeps its size and says 👆, while the
+   tempo key shows the tempo the taps set (below). */
+@media (min-width: 601px) {
+  body.screen-live .dj-bar #dj-click.tapping { flex: 0 1 calc(16rem + 60px); font-size: 0.95rem; }   /* the tempo, a gap and ⏲️ */
+  body.screen-live .dj-bar .beat-more:has(#dj-click.tapping) > #dj-click-tempo { display: none; }
+  body.keys-on .dj-bar .beat-more:has(#dj-beat-click.tapping) > #dj-tempo { display: none; }
+}
 @media (max-width: 600px) {
-  body.screen-live .dj-bar > .beat-go { flex-wrap: wrap; row-gap: 10px; }
-  body.screen-live .dj-bar .dj-status { flex: 1 1 0; }
-  body.screen-live .dj-bar #dj-takes-open { margin-left: auto; }
-  body.screen-live .dj-bar :is(#dj-click-tempo, #dj-click, #dj-overlap, #dj-change) { order: 1; }
-  body.screen-live .dj-bar #dj-click-tempo { flex: 1 1 calc(100% - 168px); min-width: 0; }
+  .deck .seq-click.tapping { width: 44px; padding: 0; font-size: 0; }
+  .deck .seq-click.tapping::after { content: "👆" / ""; font-size: 1.2rem; }
+}
+/* The tempo key (tempo-key.js; Ben, 2026-10-26: "far more capable of
+   collapsing … some sort of a click open slider"). On a phone every bar's
+   tempo is one key, the number over ▾; a tap opens the tempo as a line of its
+   own, last in the bar, so nothing under the bar is covered: 🐢 ⌄ slider ⌃ 🐇
+   and the number to type (🎼 Song: ➖ the tempo ➕). Wider screens keep the
+   tempo in the bar and never show the key. */
+.tempo-key { display: none; }
+@media (max-width: 600px) {
+  .tempo-key { display: grid; flex: none; width: 48px; min-height: 52px; place-content: center; gap: 3px; padding: 0; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; color: #fff; }
+  .tempo-key:has(+ [hidden]) { display: none; }   /* its tempo isn't on this bar now (Live's in the keys view, and back) */
+  .tempo-key-num { font: 800 1.1rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+  .tempo-key-open { font-size: 0.8rem; line-height: 1; }
+  .tempo-key[aria-expanded="true"] { background: var(--led); border-color: var(--led); color: var(--ink); }
+  .tempo-key + :is(.tempo-box, .song-tempo):not(.tempo-open) { display: none; }
+  /* Open: 🐢 and the slider across the whole line to 🐇 (a long slider is
+     easy to hit on a tempo), then ⌄ the number ⌃ under it. 🎼 Song's line is
+     ➖ the tempo ➕. */
+  .tempo-key + :is(.tempo-box, .song-tempo).tempo-open { display: flex; order: 9; flex: 1 1 100%; flex-wrap: wrap; justify-content: center; min-width: 0; align-items: center; gap: 8px 12px; }
+  .tempo-key + .tempo-box.tempo-open::before { content: "🐢" / ""; order: 0; flex: none; font-size: 1.4rem; }
+  .tempo-key + .tempo-box.tempo-open::after { content: "🐇" / ""; order: 2; flex: none; font-size: 1.4rem; }
+  .tempo-key + .tempo-box.tempo-open input[type="range"] { display: block; order: 1; flex: 1 1 calc(100% - 7rem); min-width: 0; min-height: 44px; }
+  .tempo-key + .tempo-box.tempo-open .tempo-step { display: grid; order: 3; margin: 0; }
+  .tempo-key + .tempo-box.tempo-open :is(output, .seq-bpm-num, .seq-bpm-type) { order: 4; margin: 0; max-width: none; white-space: nowrap; }
+  .tempo-key + .tempo-box.tempo-open .tempo-step.up { order: 5; }
+  /* Every bar wraps, so the open line goes under the rest. */
+  .beat-go, .song-deck { flex-wrap: wrap; row-gap: 10px; }
+  .song-deck #song-sound { order: 10; flex-basis: 100%; }   /* its own line, under the open tempo */
+  .song-deck .song-play { flex: 1 1 0; }
+  .song-deck .tempo-key { flex: none; }
+  .seq .beat-go .seq-play { flex: 1 1 auto; width: auto; }
+  body.keys-on .dj-bar > .beat-go { display: flex; }
+  body.keys-on .dj-bar :is(.seq-play, .dj-rec) { flex: 1 1 auto; width: auto; min-width: 44px; }
+  /* 🎤 Live on one line (Ben, 2026-10-26): ● Record filling the room, then the
+     tempo key, ⏲️ 🔔 ✏️ 🎬 as 44 px keys, 6 px apart (it fits from 354 px). What
+     is happening while recording gets a line of its own. */
+  body.screen-live .dj-bar > .beat-go { gap: 6px; }
+  body.screen-live .dj-bar .dj-rec { flex: 1 1 auto; min-width: 44px; }
+  body.screen-live .dj-bar :is(#dj-click, .dj-word, #dj-takes-open) { width: 44px; }
+  body.screen-live .dj-bar .dj-status { order: 8; flex: 1 1 100%; }
   body.screen-live .dj-bar #dj-overlap { margin-left: 0; }
-  body.screen-live .dj-bar #dj-click { width: 48px; }
+  body.keys-on .dj-bar > .beat-go { gap: 6px; }
+  body.keys-on .dj-bar #dj-change-tempo { width: 44px; }
 }
-/* Narrow phones (it overlapped ⏲️ at 360): ⌄ 100 ⌃ needs more room than ⏲️ 🔔 ✏️ leave it, so the
-   tempo fills the second line, and ⏲️ 🔔 ✏️ sit at the right of the third. */
-@media (max-width: 369px) {
-  body.screen-live .dj-bar #dj-click-tempo { flex-basis: 100%; }
-  body.screen-live .dj-bar #dj-click { margin-left: auto; }
-}
-/* Tap tempo's "keep tapping…" and "👆 96" (dj.js) never fit a 48 px ⏲️ (on a
-   phone it ran over ✏️ on Beats with ⌨️ Keys): for that moment ⏲️ widens over
-   the tempo's room, the tempo out of sight, so the buttons after it stay put
-   (on Beats with ⌨️ Keys it ran over the bars from 761 px). Below 370 px
-   Live's tempo has a line of its own, so it stays. */
-body.screen-live .dj-bar #dj-click.tapping { flex: 0 1 calc(16rem + 60px); font-size: 0.95rem; }   /* the tempo, a gap and ⏲️ */
-body.screen-live .dj-bar .beat-more:has(#dj-click.tapping) > #dj-click-tempo { display: none; }
-body.keys-on .dj-bar .beat-more:has(#dj-beat-click.tapping) > #dj-tempo { display: none; }
+/* A phone's bar keeps its buttons on one line by giving up words first
+   (Ben, 2026-10-26): 🎬 Takes → 🎬, ● Record → a red ●, then ▶ Play → ▶,
+   measured by the panel's own width. The word stays in its text, so screen
+   readers and its tooltip still say it; data-icon is what shows. */
 @media (max-width: 600px) {
-  body.keys-on .dj-bar #dj-beat-click.tapping { flex: 1 1 auto; width: auto; padding: 0 10px; font-size: 0.95rem; }
-  body.screen-live .dj-bar #dj-click.tapping { flex: 1 1 calc(100% - 112px); width: auto; padding: 0 10px; }   /* the tempo's slot: before 🔔 ✏️ */
+  .dj-bar #dj-takes-open { padding: 0; font-size: 0; }
+  .dj-bar #dj-takes-open::before { content: attr(data-icon) / ""; font-size: 1.2rem; }
 }
-@media (max-width: 369px) {
-  body.screen-live .dj-bar .beat-more:has(#dj-click.tapping) > #dj-click-tempo { display: flex; }
-  body.screen-live .dj-bar #dj-click.tapping { flex: 0 1 auto; }
+@container panel (max-width: 22.99rem) {
+  .dj-bar .dj-rec { padding: 0; font-size: 0; }
+  .dj-bar .dj-rec::before { content: attr(data-icon) / ""; font-size: 1.4rem; }
+  .dj-bar .dj-rec:not(.recording)::before { color: #D93A2B; }
+}
+@container panel (max-width: 19.49rem) {
+  .dj-bar .beat-go .seq-play { padding: 0; font-size: 0; }   /* over the narrowest phones' Play (below) */
+  .dj-bar .beat-go .seq-play::before { content: attr(data-icon) / ""; font-size: 1.3rem; }
 }
 /* Up to 760 px the line has no room for words: just 🔔 and ✏️, 48 px squares, as Beats' ✏️ on a phone. */
 @media (max-width: 760px) {

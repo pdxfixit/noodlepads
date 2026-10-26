@@ -40,6 +40,7 @@ opens with a comment saying what it owns. How the app behaves is in
   - `usage.js`: the usage switch (`sendUsage`) as the counting modules read it; imports nothing, so the Worker can import them
   - `overflow.js`: ⋯ menus: where a line runs out of room, its less-used buttons (marked `data-more-word`) hide and a ⋯ at its end lists them; a tap there taps the real button (Beats' row header line)
   - `lines.js`: lines of controls that stay on one line, giving way step by step as room runs out (the toolbar, the beat bar, the beat's bars · time signature · swing), and keys for a slider with five stops or fewer (Tone, On the beat's note lengths), falling back to the slider when they don't fit
+  - `tempo-key.js`: on a phone, each control bar's tempo folded into one key (the number over ▾) that opens it as a line of its own under the bar; Beats, ⌨️ Keys, 🎤 Live's click and 🎼 Song each keep their own tempo controls inside it
   - `mix.js`: ➕ Mix with another sound (pure: two sounds in, one out)
   - `pitch.js`: 🎵 Find its note (pure: samples in, a note out)
   - `synth.js`: ✨ Make one's sounds from nothing (pure: recipe in, samples out)

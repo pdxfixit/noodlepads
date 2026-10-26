@@ -16,6 +16,7 @@
 // at every level), which lets hits overlap, up to MAX_RINGING at once.
 
 import { openDialog, setupDialog } from './dialogs.js';
+import { tempoKey } from './tempo-key.js';
 import { newId, recall, remember } from './util.js';
 import { makeVoice, fadeStop, tooLate } from './audio.js';
 import { getSetting, onSetting } from './settings.js';
@@ -640,17 +641,23 @@ export function createSequencer(deps) {
   const swingNow = () => (advanced && pattern ? pattern.swing || 0 : 0);  // simple mode always plays straight
   const STOPS = tempoStops();
   // Puts the slider and the number in step with the tempo (the open beat's, or the loose one).
+  let beatKey = null;   // on a phone, the tempo folded into one key (tempo-key.js)
   function showTempo({ slider = true } = {}) {
+    beatKey?.show();
     if (slider) el.bpm.value = stopFor(shape().bpm, STOPS);
     el.bpm.setAttribute('aria-valuetext', `${shape().bpm} BPM`);
     el.bpmOut.textContent = `${shape().bpm} BPM`;
     el.bpmOut.setAttribute('aria-label', `Tempo ${shape().bpm} BPM. Tap to type a tempo.`);
   }
-  function setTempo(bpm) {
+  // { dragging }: a slider on its way (⌨️ Keys, 🎤 Live's click) retimes and
+  // shows the tempo only; its `change` sets it once more, to save it and
+  // bring looping pads in line, as Beats' own slider does (below).
+  function setTempo(bpm, { dragging = false } = {}) {
     const was = shape().bpm;
     shape().bpm = Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(bpm)));
     retime(was);
     showTempo();
+    if (dragging) return;
     save();
     deps.onTempo?.();
   }
@@ -716,6 +723,7 @@ export function createSequencer(deps) {
   let doc = null;
   const LOOSE = { bpm: DEFAULT_BPM, bars: 1 };     // the click track's tempo while nothing is open (not saved)
   const shape = () => pattern ?? LOOSE;     // what the click and the clock follow
+  if (el.tempoKey && el.tempoBox) beatKey = tempoKey(el.tempoKey, el.tempoBox, () => shape().bpm);
 
   // The same person again (a cloud sync or a loaded backup redraws whoever
   // is showing): a beat playing carries on, and the keys view's recording
@@ -1110,6 +1118,7 @@ export function createSequencer(deps) {
       if (!b) continue;
       b.setAttribute('aria-pressed', String(on));
       b.textContent = on ? '■ Stop' : '▶ Play';
+      b.dataset.icon = on ? '■' : '▶';   // all it shows where its line is short (styles.css)
     }
     roll?.showPlay();
   }

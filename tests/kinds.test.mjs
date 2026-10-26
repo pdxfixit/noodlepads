@@ -31,7 +31,7 @@ test('the emoji are the ones the app already shows for each kind', () => {
 // Ben, 2026-10-11 (Q28): "Takes are 🎬", on DJ's Takes button too.
 test('the DJ Takes button wears the takes emoji', () => {
   const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
-  const button = html.match(/id="dj-takes-open">([^<]*)</)?.[1];
+  const button = html.match(/id="dj-takes-open"[^>]*>([^<]*)</)?.[1];
   assert.equal(button, `${KIND_EMOJI.takes} Takes`);
 });
 
