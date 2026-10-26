@@ -22,7 +22,7 @@ before(async () => {
   const { audio } = await import('../web/audio.js');
   ({ takePlay } = await import('../web/play-count.js'));
   audio.play = () => {};
-  audio.loop = (clip) => { looping.add(clip.id); };
+  audio.loop = (clip) => { looping.add(clip.id); };   // a loop counts nothing more by itself
   audio.isLooping = (id) => looping.has(id);
   audio.stop = (id) => { looping.delete(id); };
 });
@@ -41,4 +41,27 @@ test('a key on 🎤 Live counts once, as a key; a pad counts once, as a pad', ()
   pad.dispatch('pointerdown', { button: 0, pointerId: 2 });
   page.winEvent('pointerup', { pointerId: 2 });
   assert.deepEqual(takePlay(), { pads: 1 });
+});
+
+test('a 👆 touch tile counts once, as a key', () => {
+  $('#live-tab').dispatch('click');
+  $('#ke-input').querySelector('[data-input="touch"]').dispatch('click');
+  const tile = $('#dj-touch').querySelector('[data-clip]');
+  takePlay();
+  tile.dispatch('pointerdown', { button: 0, pointerId: 3 });   // a mouse plays on press
+  tile.dispatch('pointerup', { pointerId: 3 });
+  assert.deepEqual(takePlay(), { keys: 1 });
+  $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');
+});
+
+test('Shift+Enter on a key loops it, counted once as a key; a tap that stops the loop counts nothing', () => {
+  const key = $('#dj-keys').querySelector('[data-code="KeyA"]');
+  takePlay();
+  key.dispatch('click', { detail: 0, shiftKey: true });
+  assert.equal(looping.size, 1, 'it loops');
+  assert.deepEqual(takePlay(), { keys: 1 }, 'started: one play');
+  key.dispatch('pointerdown', { button: 0, pointerId: 4 });
+  key.dispatch('pointerup', { pointerId: 4 });
+  assert.equal(looping.size, 0, 'the tap stopped it');
+  assert.equal(takePlay(), null, 'a stop is not a play');
 });
