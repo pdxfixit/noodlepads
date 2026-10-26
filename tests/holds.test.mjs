@@ -49,6 +49,7 @@ test('the words name every kind there is, leave out kinds with none, and say "no
   };
   assert.equal(holdsWords(stores), '🔊 27 sounds · 🥁 4 beats · 🎼 1 song · 🎬 1 take · 👥 2 people · 12 MB of audio');
   assert.equal(holdsWords({ clips: [{}], overrides: [{}, {}], decks: [{}] }), '🔊 1 sound · ✏️ 2 sound edits · 🎛️ 1 DJ key set');
+  assert.equal(holdsWords({ voices: [{}, {}], layouts: [{}], touchLayouts: [{}, {}] }), '⭐ 2 voices · ⌨️ 1 key layout · 👆 2 touch layouts', 'a backup carries them too');
   assert.equal(holdsWords({ songs: [{ personId: 'me' }] }), '🎼 1 song', 'an old open song with no id counts');
   assert.equal(holdsWords({ settings: [{}], orders: [{}] }), 'nothing yet');
   assert.equal(holdsWords({}), 'nothing yet');

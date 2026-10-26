@@ -277,7 +277,7 @@ Three separate counters say "what is here":
 | Counter | Counts | Used by |
 |---|---|---|
 | `model.js personThings` / `personCounts` / `countsText` (`PERSON_KINDS`) | sounds, beats, songs, takes, voices, edits, key sets, layouts, touch layouts | 👥 People, 🗂️ See all, the one-person load sheet |
-| `old-backup.js holdings` / `holdsWords` | sounds, beats, songs, takes, people, edits, DJ key sets, audio bytes (no voices or layouts) | "A backup now holds…", Older sounds |
+| `old-backup.js holdings` / `holdsWords` | sounds, beats, songs, takes, voices, people, edits, DJ key sets, key and touch layouts, audio bytes | "A backup now holds…", Older sounds |
 | `merge.js mergeSummary` | the merge's `added` counts | the notice after a load |
 
 ### Backups (format 1.x, ADR 0011)
@@ -374,7 +374,7 @@ Nothing found is changed or deleted.
    A new store missed in `deletePerson` outlives its person, and `adoptStoredPeople` then brings the person back. Missed in `PERSON_STORES`, the store keeps old plain ids. Missed in `merge.js STORES`, it never loads from a backup.
 2. **Writes bypass `persist`** (see the table above). A fix to failure reporting in `persist` misses `storeLoaded`, the app.js deletes, `adoptKidsBeat` and cloud.js. A refused delete is told by `removeRecord`, by its own copy of the same words (`deleteUserClip`, `deleteMyVoice`, `beatLibrary.remove`, `songBook.remove`), or not at all (`setOpen(null)`, song `close`, where nothing is lost).
 3. **Four "stores as lists" builders** (above). A new store added to one is easy to miss in the others: `people.js storedLists` feeds 👥 counts and See all, `backup-ui.js` feeds backups, `cloud.js` feeds sync.
-4. **Three counters of what is here** (above). "A backup now holds…" does not mention voices or key/touch layouts, though a backup carries them.
+4. **Three counters of what is here** (above). A new kind a backup carries goes into `holdings` and `holdsWords` too (`tests/holds.test.mjs`), or "A backup now holds…" leaves it out.
 5. **`extensionFor` is defined twice:** `util.js extensionFor` and `old-backup.js extensionFor` (the second says it copies the first). Pluralizers are three: `util.js count`, `old-backup.js plural`, and `model.js`'s private `plural`.
 6. **Making an own sound is done in five places, each building the record by hand:**
    - `sheet.js saveSheet`

@@ -61,9 +61,12 @@ export function holdings(stores) {
     beats: list(stores, 'beats').length,
     songs: songbook.length + list(stores, 'songs').filter((s) => !s?.id || !saved.has(s.id)).length,
     takes: list(stores, 'takes').length,
+    voices: list(stores, 'voices').length,
     people: list(stores, 'people').length,
     edits: list(stores, 'overrides').length,
     djKeys: list(stores, 'decks').length,
+    layouts: list(stores, 'layouts').length,
+    touchLayouts: list(stores, 'touchLayouts').length,
     audio: list(stores, 'clips').reduce((sum, c) => sum + (Number(c?.blob?.size) || 0), 0),
   };
 }
@@ -75,8 +78,9 @@ export function holdings(stores) {
 export function holdsWords(stores, other = 0) {
   const h = holdings(stores);
   const parts = [
-    ['sounds', 'sound'], ['beats', 'beat'], ['songs', 'song'], ['takes', 'take'],
+    ['sounds', 'sound'], ['beats', 'beat'], ['songs', 'song'], ['takes', 'take'], ['voices', 'voice'],
     ['people', 'person'], ['edits', 'sound edit'], ['djKeys', 'DJ key set'],
+    ['layouts', 'key layout'], ['touchLayouts', 'touch layout'],
   ].filter(([k]) => h[k] > 0).map(([k, word]) => `${KIND_EMOJI[k]} ${plural(h[k], word)}`);
   if (h.audio > 0) parts.push(`${sizeWords(h.audio)} of audio`);
   if (other > 0) parts.push(plural(other, 'other saved thing'));
