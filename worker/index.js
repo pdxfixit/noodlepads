@@ -15,6 +15,9 @@
 //   FEEDBACK          the R2 bucket `app-suggestions`, shared by every app's feedback, ours under v1/noodlepads/
 //                     (the telemetry runner's daily pull copies each message to Ben's notes and deletes it)
 //   FEEDBACK_LIMITER  a rate limit on POST /api/feedback, counted for the app as a whole, never per sender
+//   PUSH_LIMITER, SOUND_LIMITER, SHARE_LIMITER, OPEN_LIMITER
+//                     rate limits on a push, a sound's start, a share and an open, per profile key
+//                     (an open: per profile), never per address (worker/cloud.js LIMITERS)
 // No secrets.
 
 import { handleLog } from './reports.js';

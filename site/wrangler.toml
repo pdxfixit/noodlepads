@@ -4,8 +4,9 @@
 # Deployed by flarepress (github.com/pdxfixit/flarepress): on every push to
 # main by .github/workflows/deploy.yml, or by Ben's `just deploy`.
 # Apex only: a www copy would be a second origin with its own saved sounds.
-# One D1 database, an R2 bucket for usage events, the shared feedback bucket
-# and its rate limit, nothing else (keep the free-plan footprint small).
+# One D1 database, an R2 bucket for usage events, the shared feedback bucket,
+# rate limits (feedback's, and the cloud's per profile), nothing else (keep
+# the free-plan footprint small).
 # This repo is public: the database id is ${D1_DATABASE_ID}, filled at deploy
 # time from a GitHub secret or ~/.config/noodlepads/cloud.json.
 name = "noodlepads-com"
@@ -45,4 +46,34 @@ bucket_name = "app-suggestions"
 [[ratelimits]]
 name = "FEEDBACK_LIMITER"
 namespace_id = "4151"
+simple = { limit = 10, period = 60 }
+
+# Per-profile rate limits on the cloud routes that spend a shared daily cap
+# (worker/cloud.js LIMITERS): each counted by the hash of the request's key,
+# or for an open by the profile opened, never by an address. Far above what a
+# family meets, a big restore included (docs/architecture/cloud.md).
+# A push: 60 a minute a key (the app pushes 20 s after a change; a restore of
+# a full profile is a few dozen pushes, and resumes where it stopped).
+[[ratelimits]]
+name = "PUSH_LIMITER"
+namespace_id = "4152"
+simple = { limit = 60, period = 60 }
+
+# A sound's start: 600 a minute a key (a restore asks once per sound, one at
+# a time, and starts again from the first when it is cut off).
+[[ratelimits]]
+name = "SOUND_LIMITER"
+namespace_id = "4153"
+simple = { limit = 600, period = 60 }
+
+# A share: 10 a minute a key (a kid shares one thing at a time).
+[[ratelimits]]
+name = "SHARE_LIMITER"
+namespace_id = "4154"
+simple = { limit = 10, period = 60 }
+
+# An open: 10 a minute a profile (once per device, and again after a new PIN).
+[[ratelimits]]
+name = "OPEN_LIMITER"
+namespace_id = "4155"
 simple = { limit = 10, period = 60 }

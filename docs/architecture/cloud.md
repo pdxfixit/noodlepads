@@ -3,7 +3,7 @@
 **Answer first.**
 
 - **One Worker, five doors.** `worker/index.js` sends `/api/log` to `reports.js`, `/api/events` and `/api/feedback` to the vendored `events-worker.js`, and every other `/api` path to `cloud.js`. Every path with no static file behind it goes to `env.ASSETS`. Static files never reach the Worker.
-- **One D1 database (`DB`), two R2 buckets (`EVENTS`, `FEEDBACK`), one rate limit (`FEEDBACK_LIMITER`).** No secrets. D1 holds profiles, records, audio, shares, problem reports, daily counters and player metrics.
+- **One D1 database (`DB`), two R2 buckets (`EVENTS`, `FEEDBACK`), five rate limits** (`FEEDBACK_LIMITER` for the whole app; `PUSH_LIMITER`, `SOUND_LIMITER`, `SHARE_LIMITER`, `OPEN_LIMITER` per profile key, `cloud.js LIMITERS`). No secrets. D1 holds profiles, records, audio, shares, problem reports, daily counters and player metrics.
 - **The device owns the working copy.** `web/cloud.js` binds the sync to storage; `web/cloud-sync.js` holds the sync itself, run on injected storage and API; `web/merge3.js` is the three-way merge of one record; `web/cloud-api.js` is the HTTP client. The Worker only checks, stores and hands back.
 - **Four things leave the device besides cloud profiles:** problem reports (opt-in, `sendLogs`), usage events (on by default, `sendUsage`), device metrics (the `X-Noodle-App` header on cloud calls, also behind `sendUsage`), and feedback (typed by a grown-up). Each has its own sender, its own cap and its own home.
 - **One problem-report allowlist, run twice.** `web/log-clean.js` `cleanPayload` cleans the report on the device, and `worker/clean.js` runs the same function again on arrival. The only hand-kept copy is `worker/clean.js` `KIT_IDS` (the kit's ids).
@@ -286,16 +286,16 @@ All JSON bodies go through `http.js readJson`: `Origin` must be `https://noodlep
 | `GET /api/cloud` | — | — |
 | `GET /api/profiles` | — | 300 newest, `CLOUD_ID` only, never a deploy check's (`TEST_PROFILE`, left out in the SQL before the 300) |
 | `POST /api/profiles` | Origin | fun name, listed emoji, person color; 409 if it exists; 507 at 1,000 profiles; 429 at 10 new a UTC day across the site (a deleted one still counts); the deploy checks' ids (`TEST_PROFILE`: `p-smoke-…`, `p-e2e-…`) 100 a day on their own counter; first deletes every check profile over `CHECK_MS` (10 minutes) old (a sound's start does too). A check profile holds only `CHECK_LIMITS`: 64 KB of records and shares, one sound of at most 4 MB, one share |
-| `POST /api/profiles/:id/open` | Origin; PIN if set | 5 wrong → 10-minute wait (401 `tries`, 429 `wait`); a new key: the profile keeps its 20 most recently used, and sweeps session keys over a week old and any unused 180 days |
+| `POST /api/profiles/:id/open` | Origin; PIN if set | 10 a minute a profile (`OPEN_LIMITER`, keyed by the profile id: an open has no key yet); 5 wrong → 10-minute wait (401 `tries`, 429 `wait`); a new key: the profile keeps its 20 most recently used, and sweeps session keys over a week old and any unused 180 days |
 | `DELETE /api/profiles/:id/key` | Origin, key | deletes the key sent |
 | `PATCH /api/profiles/:id` | Origin, key; current PIN for `newPin` | look kept only if `edited` ≥ stored; a new PIN deletes every key and returns a new one |
 | `DELETE /api/profiles/:id` | Origin, key, PIN | deletes records, keys, shares, every sound of its own, metrics |
 | `GET /api/profiles/:id/records?since=N` | key | 500 a page, never split inside one push |
-| `POST /api/profiles/:id/records` | Origin, key | body ≤ 4 MB; ≤ 200 records; each ≤ 512 KB; a clip must name whole audio of this profile (409 `sound`); a push that adds bytes: 507 `records full` over 10 MB of records a profile, 507 `cloud full` over 60 MB in all (each record its JSON + `ROW_BYTES` 100); 5,000 pushes a UTC day |
-| `POST /api/profiles/:id/sounds` | Origin, key | ≤ 25 MB; `audio/*` mime; 507 over 40 MB a profile (its unfinished sounds counted whole) or 400 MB in all (others' unfinished ones only as far as they uploaded); first deletes every sound left unfinished over `PENDING_MS` (an hour); the caps are checked in the same `INSERT … SELECT … WHERE` that makes the sound, so starts sent at once can't all pass |
+| `POST /api/profiles/:id/records` | Origin, key | body ≤ 4 MB; ≤ 200 records; each ≤ 512 KB; 60 a minute a key (`PUSH_LIMITER`); a clip must name whole audio of this profile (409 `sound`); a push that adds bytes: 507 `records full` over 10 MB of records a profile, 507 `cloud full` over 60 MB in all (each record its JSON + `ROW_BYTES` 100); 5,000 pushes a UTC day |
+| `POST /api/profiles/:id/sounds` | Origin, key | 600 a minute a key (`SOUND_LIMITER`); ≤ 25 MB; `audio/*` mime; 507 over 40 MB a profile (its unfinished sounds counted whole) or 400 MB in all (others' unfinished ones only as far as they uploaded); first deletes every sound left unfinished over `PENDING_MS` (an hour); the caps are checked in the same `INSERT … SELECT … WHERE` that makes the sound, so starts sent at once can't all pass |
 | `PUT /api/sounds/:sid/:n` | Origin, owner's key | `n` 0–99 by the path, < `chunks`; exact piece size; 404 on a sound left unfinished over an hour |
 | `GET`/`HEAD /api/sounds/:sid` | — | 404 until every piece is in |
-| `POST /api/profiles/:id/shares` | Origin, key | body ≤ 1 MB + 4 KB; ≤ 100 clips, 100 beats, 20 songs; title ≤ 24; 50 shares a profile; its bundle, title and rows count in the profile's 10 MB and everyone's 60 MB (507 `records full` / `cloud full`); 500 a UTC day; same snapshot → same code |
+| `POST /api/profiles/:id/shares` | Origin, key | 10 a minute a key (`SHARE_LIMITER`); body ≤ 1 MB + 4 KB; ≤ 100 clips, 100 beats, 20 songs; title ≤ 24; 50 shares a profile; its bundle, title and rows count in the profile's 10 MB and everyone's 60 MB (507 `records full` / `cloud full`); 500 a UTC day; same snapshot → same code |
 | `GET /api/profiles/:id/shares` | key | — |
 | `DELETE /api/profiles/:id/shares/:code` | Origin, key | only the sharer; gives its bytes back |
 | `GET /api/shares/:code` | — | case and dashes ignored |
@@ -303,6 +303,8 @@ All JSON bodies go through `http.js readJson`: `Origin` must be `https://noodlep
 | `POST /api/log` | Origin | JSON, 64 KB, `cleanUpload`; 10 a minute a device code; 1,000 a UTC day (`reports`), and 1,000 more holding an error or a silent tap (`reports-problems`, `isProblem`); all kept reports at most 40 MB (`MAX_STORED_BYTES`, else 507); 204 |
 | `POST /api/events` | Origin | `text/plain`, ≤ 64 KB, UUID batch id (`X-Batch` or `?batch=`); stored in R2 `EVENTS` as `v1/<day>/<batch>.jsonl`; 204 |
 | `POST /api/feedback` | Origin | `text/plain`, 1–4096 bytes, `X-Feedback` UUID, `X-App-Version` `[0-9A-Za-z.+_]{1,32}`; rate limit 10 a minute for the whole app; R2 `FEEDBACK` as `v1/noodlepads/<day>/<version>-<id>.txt`; 204 |
+
+**Per-profile rate limits** (`cloud.js slowDown`, before the route runs): a push, a sound's start and a share count by the SHA-256 of the request's key (as `keys.hash`), an open by the profile id; never an IP (the edge rule is the per-IP one). Over the limit answers 429 `{error: 'busy'}`, which `cloudTrouble` reads as busy, try later; the sync tries again on its next run. No key: not counted (the key check refuses it). No binding (the tests' env), or a limiter that throws: not limited. The limits are far above a family's: the app pushes 20 s after a change and every 5 minutes while open; a restore of a full profile is a few dozen pushes of 200 records or 4 MB, saved one by one, so a cut-off restore goes on where it stopped; its sound starts go one at a time, at most a few a second, and start again from the first when cut off, so that limit is the highest. Pulls and sound downloads are never limited. A profile holds up to 20 keys, each counted on its own, and a minute's limit slows one profile without stopping it over a whole day: the daily caps still hold everyone back. `tests/worker-limits.test.mjs`.
 
 Any D1 error inside a cloud route answers 503 `{error: 'cloud', over}` (`over` when the message looks like a daily limit). `cloudTrouble` says "The cloud is resting until tomorrow."
 
@@ -473,7 +475,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 
 ## Deploy settings
 
-- `site/wrangler.toml`: Worker `noodlepads-com`, `main = ../worker/index.js`, assets `../web` as `ASSETS`, D1 `noodle-pads` as `DB` (`${D1_DATABASE_ID}` filled at deploy), R2 `noodlepads-telemetry` as `EVENTS`, R2 `app-suggestions` as `FEEDBACK`, rate limit `FEEDBACK_LIMITER` (10 a minute), custom domain apex only.
+- `site/wrangler.toml`: Worker `noodlepads-com`, `main = ../worker/index.js`, assets `../web` as `ASSETS`, D1 `noodle-pads` as `DB` (`${D1_DATABASE_ID}` filled at deploy), R2 `noodlepads-telemetry` as `EVENTS`, R2 `app-suggestions` as `FEEDBACK`, rate limits `FEEDBACK_LIMITER` (10 a minute), `PUSH_LIMITER` (60), `SOUND_LIMITER` (600), `SHARE_LIMITER` (10), `OPEN_LIMITER` (10), each a 60 s window, custom domain apex only.
 - `site/site.conf`: `url`, `committed=web worker site`, `pwa=0` (meaning not checked here), `version_wait=90`, `release=web/version.js`, `rollback=revert` (the Worker must match the live D1 tables).
 - `web/.assetsignore` keeps `.DS_Store` and itself out of the upload.
 

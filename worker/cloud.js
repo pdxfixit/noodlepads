@@ -764,6 +764,35 @@ async function takeUses(request, env, id, now) {
   return json(200, { ok: true });
 }
 
+// ── per-profile rate limits ──
+
+// Rate-limit bindings (site/wrangler.toml), one per route that spends a
+// shared daily cap or writes a lot, so one profile can't use them up for
+// every family: a push (5,000 a day), a sound's start, a share (500 a day)
+// and an open (it makes a key). Each counts by the hash of the key the
+// request carries, or for an open (which has no key yet) by the profile it
+// opens; never by an IP address. The limits are far above what a family
+// meets, a big restore included (docs/architecture/cloud.md).
+export const LIMITERS = { records: 'PUSH_LIMITER', sounds: 'SOUND_LIMITER', shares: 'SHARE_LIMITER', open: 'OPEN_LIMITER' };
+
+// Throws 429 'busy' (the app's "try later") over the limit. No binding (the
+// tests' env), no key (needKey refuses it next), or a limiter that fails:
+// the call goes on.
+async function slowDown(request, env, binding, profileId) {
+  const limiter = env[binding];
+  if (!limiter) return;
+  const held = bearer(request);
+  const key = binding === LIMITERS.open ? profileId : held && await sha256Hex(held);
+  if (!key) return;
+  let success = true;
+  try {
+    ({ success } = await limiter.limit({ key }));
+  } catch (err) {
+    console.error('cloud: rate limit', err);
+  }
+  if (!success) throw new Refuse(429, 'busy');
+}
+
 // ── routing ──
 
 // Every /api/ path but /api/log. Returns a Response. A route that makes,
@@ -802,6 +831,7 @@ async function route(request, env, now, seen) {
         if (m === 'GET') return await listProfiles(env);
         if (m === 'POST') return await makeProfile(request, env, now, seen);
       } else if (typeof b === 'string' && PERSON_ID.test(b)) {
+        if (parts.length === 3 && m === 'POST' && Object.hasOwn(LIMITERS, c)) await slowDown(request, env, LIMITERS[c], b);
         if (parts.length === 2 && m === 'PATCH') return await changeProfile(request, env, b, now, seen);
         if (parts.length === 2 && m === 'DELETE') return await deleteProfile(request, env, b, now);
         if (parts.length === 3 && c === 'open' && m === 'POST') return await openProfile(request, env, b, now, seen);
