@@ -93,7 +93,7 @@ Other contexts:
 | `originalTrims` | Map clip id → the `cutKey` the original was made with | `original`, `keepOriginal`, `forget` | `original` |
 | `recordings` | Map file → Promise<AudioBuffer>: one decode of a bundled file shared by an instrument's presets | `recording` | `decoded` |
 | `rendered` | Map `audio.key(clip)` → Promise<{buffer, duration}> | `load`, `dropRendered`, `forget` | `load` |
-| `broken` | Set of clip ids that failed | `load`'s catch | `pads.js` (draws `.broken`) |
+| `broken`, `brokenAt`, `wanted` | Set of clip ids that failed; when each last failed; the key last asked for per id | `load`'s catch, `load`, `mend`, `forget` | `pads.js` (draws `.broken`), `load` (warm-ups skip a broken id; a tap retries after `BROKEN_RETRY_MS`) |
 | `on` | `{started, progress, looping, broken}` hooks | `app.js` (`started` → `meter.run`), `pads.js initPads` (`progress` → `setProgress`, `looping`, `broken`) | `start`, `loopInTime`, `stop`, `load`, `kids.js` calls `audio.on.started()` |
 | `grid` | `() => {next, beat}` or null | `app.js`: `audio.grid = () => seq.grid()` | `loop`, `syncLoops` |
 
@@ -593,10 +593,16 @@ turned on.
 
 `audio.load`'s failure adds the id to `audio.broken` and calls
 `on.broken(id, true)` → `pads.js` adds `.broken`. `audio.play` shows the
-notice. The failed render and kept audio are not cached, so the next load
-(a tap, the warm-up) tries again; one that loads takes the id out of
-`broken` and calls `on.broken(id, false)`. Test: `tests/audio.test.mjs` ("a
-sound that failed to load is tried again next time").
+notice. The failed render and kept audio are not cached. A warm-up (any
+`load` without `retry`) leaves a broken id alone; a tap (`audio.play`,
+`loopInTime`: `load(clip, {retry: true})`) tries it again, at most once every
+`BROKEN_RETRY_MS` (3 s). Only a load of the key last asked for (`wanted`, the
+sound as its pad has it now) mends it: the id leaves `broken` and
+`on.broken(id, false)` takes the stripes off. `forget(id)` (new audio) clears
+it too. A file that is not there (a 404) or will not decode stays broken
+until a reload brings a fixed one: each tap tries and fails again. Tests:
+`tests/audio.test.mjs` ("a broken sound: warm-ups skip it…", "…mended only
+by a load of its current version").
 
 ## Seams
 

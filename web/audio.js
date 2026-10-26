@@ -13,6 +13,8 @@ import { cleanTrim, cleanEdits, applyEdits, applyFade, cutKey, hasGain, levelFor
 import { voicingOf, voice } from './instruments.js';
 
 const MAX_LOOP_SECONDS = 600;
+// A broken sound is tried again by a tap at most this often (ms).
+export const BROKEN_RETRY_MS = 3000;
 
 // A sound that is stopped early fades out over this long instead of being cut
 // mid-wave, which clicks. Short enough to still sound like a cut-off.
@@ -197,6 +199,9 @@ export const audio = {
   rendered: new Map(),   // `${clip id}:${recipeKey}` -> Promise<{buffer, duration}>
   broken: new Set(),     // clip ids whose audio failed to load, decode or render
   pending: new Map(),    // clip id -> a loop asked for while its sound loads (loadForLoop); stop() takes it back
+  brokenAt: new Map(),   // clip id -> when (clock()) its last load failed
+  wanted: new Map(),     // clip id -> the key last asked for: the sound as its pad has it now
+  clock: () => Date.now(),
 
   // What the page should do when audio changes. Set once by the app.
   on: {
@@ -331,32 +336,54 @@ export const audio = {
     return `${clip.id}:${recipeKey(clip)}${cutKey(clip)}`;
   },
 
-  load(clip) {
+  // `retry` (a tap): a broken sound is tried again, at most once every
+  // BROKEN_RETRY_MS. Anything else (a warm-up) leaves a broken sound alone,
+  // so a file that is not there or will not decode is not fetched and
+  // decoded over and over.
+  load(clip, { retry = false } = {}) {
     const key = this.key(clip);
+    this.wanted.set(clip.id, key);
     if (!this.rendered.has(key)) {
+      if (this.broken.has(clip.id) && !(retry && this.clock() - (this.brokenAt.get(clip.id) ?? 0) >= BROKEN_RETRY_MS)) {
+        return Promise.reject(new Error(`Clip ${clip.id} is broken: a tap tries it again`));
+      }
       // An exact-length clip in its normal voice keeps its full length, silent
       // tail included, so looping it keeps time.
       const plain = recipeKey(clip) === 'normal:null';
       const kept = this.original(clip);
       const job = kept.then((buffer) => applyChain(buffer, chainOf(clip), clip.tweaks, clip.level))
         .then((r) => (clip.exact && plain ? { ...r, duration: r.buffer.duration } : r));
-      job.then(() => { if (this.broken.delete(clip.id)) this.on.broken(clip.id, false); }, (err) => {
+      job.catch((err) => {
         console.error(`Clip ${clip.id} (${recipeKey(clip)}) did not load:`, err);
-        // Not kept, so the next tap tries again (a dropped connection, a phone short of memory).
+        // Not kept, so a later tap tries again (a dropped connection, a phone short of memory).
         if (this.rendered.get(key) === job) this.rendered.delete(key);
         if (this.originals.get(clip.id) === kept) this.forgetOriginal(clip.id);
         this.broken.add(clip.id);
+        this.brokenAt.set(clip.id, this.clock());
         this.on.broken(clip.id, true);
       });
       this.rendered.set(key, job);
     }
-    return this.rendered.get(key);
+    const job = this.rendered.get(key);
+    // Mended only by the sound as the pad has it now (the key last asked for).
+    if (this.broken.has(clip.id)) job.then(() => this.mend(clip.id, key), () => {});
+    return job;
   },
 
-  // Drops everything cached for a clip (it was deleted, or its audio replaced).
+  mend(id, key) {
+    if (this.wanted.get(id) !== key || !this.broken.delete(id)) return;
+    this.brokenAt.delete(id);
+    this.on.broken(id, false);
+  },
+
+  // Drops everything cached for a clip (it was deleted, or its audio
+  // replaced): new audio is tried afresh, broken or not.
   forget(id) {
     this.forgetOriginal(id);
     this.dropRendered(id);
+    this.wanted.delete(id);
+    this.brokenAt.delete(id);
+    if (this.broken.delete(id)) this.on.broken(id, false);
   },
   forgetOriginal(id) {
     this.originals.delete(id);
@@ -377,7 +404,7 @@ export const audio = {
     this.wake();
     let loaded;
     try {
-      loaded = await this.load(clip);
+      loaded = await this.load(clip, { retry: true });
     } catch {
       showNotice(`“${clip.label}” didn't load, so it can't play. ${clip.source === 'bundled'
         ? `Check that ${clip.file} exists and is an MP3, M4A or WAV.`
@@ -469,7 +496,7 @@ export const audio = {
     const ask = {};
     this.pending.set(clip.id, ask);
     let loaded = null;
-    try { loaded = await this.load(clip); } catch { /* broken: load() marks it */ }
+    try { loaded = await this.load(clip, { retry: true }); } catch { /* broken: load() marks it */ }
     if (this.pending.get(clip.id) !== ask) return null;
     this.pending.delete(clip.id);
     return loaded;

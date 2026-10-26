@@ -324,36 +324,72 @@ test('a context the phone stops (a call, a locked screen; iOS says interrupted) 
   });
 });
 // A sound that failed to load (a dropped connection, a phone short of
-// memory) is tried again on the next tap, and its pad stops looking broken
-// once it plays.
-test('a sound that failed to load is tried again next time, and is no longer broken once it loads', async () => {
-  const { audio } = await import('../web/audio.js');
+// memory) is tried again by a tap, at most once every few seconds, and its
+// pad stops looking broken once it plays. A warm-up never tries it again:
+// a file that is not there (a 404) or will not decode would be fetched and
+// decoded over and over.
+test('a broken sound: warm-ups skip it, a tap tries again after a short wait, and it is mended once it loads', async () => {
+  const { audio, BROKEN_RETRY_MS } = await import('../web/audio.js');
   globalThis.AudioBuffer ??= FakeAudioBuffer;
-  const realFetch = globalThis.fetch;
-  const realDecode = audio.decode;
-  const realBroken = audio.on.broken;
-  const realError = console.error;
+  const real = { fetch: globalThis.fetch, decode: audio.decode, broken: audio.on.broken, error: console.error, clock: audio.clock };
   const marks = [];
   let online = false;
-  globalThis.fetch = async () => (online ? { ok: true, arrayBuffer: async () => new ArrayBuffer(8) } : { ok: false, status: 503 });
+  let fetched = 0;
+  let now = 1000;
+  globalThis.fetch = async () => { fetched++; return online ? { ok: true, arrayBuffer: async () => new ArrayBuffer(8) } : { ok: false, status: 503 }; };
   audio.decode = async () => fakeBuffer([Array.from({ length: 500 }, (_, i) => Math.sin(i / 3) * 0.5)], RATE);
   audio.on.broken = (id, on = true) => marks.push([id, on]);
+  audio.clock = () => now;
   console.error = () => {};
   const clip = { id: 'retry-1', source: 'bundled', file: 'clips/kit/retry.wav' };
   try {
     await assert.rejects(audio.load(clip));
     assert.ok(audio.broken.has('retry-1'));
     online = true;
-    const loaded = await audio.load(clip);
-    assert.ok(loaded.buffer.length > 0, 'the next try loads it');
+    await assert.rejects(audio.load(clip), 'a warm-up does not try a broken sound again');
+    await assert.rejects(audio.load(clip, { retry: true }), 'nor does a tap straight after');
+    assert.equal(fetched, 1);
+    now += BROKEN_RETRY_MS;
+    const loaded = await audio.load(clip, { retry: true });
+    assert.equal(fetched, 2, 'a tap a few seconds later tries again');
+    assert.ok(loaded.buffer.length > 0);
     assert.equal(audio.broken.has('retry-1'), false);
     assert.deepEqual(marks, [['retry-1', true], ['retry-1', false]], 'the pad is marked, then unmarked');
   } finally {
-    globalThis.fetch = realFetch;
-    audio.decode = realDecode;
-    audio.on.broken = realBroken;
-    console.error = realError;
+    Object.assign(globalThis, { fetch: real.fetch });
+    Object.assign(audio, { decode: real.decode, clock: real.clock });
+    audio.on.broken = real.broken;
+    console.error = real.error;
     audio.forget('retry-1');
-    audio.broken.delete('retry-1');
+  }
+});
+
+// Only the sound as the pad has it now mends it: an older version of it
+// that finishes loading after the new one failed leaves it broken.
+test('a broken sound is mended only by a load of its current version', async () => {
+  const { audio } = await import('../web/audio.js');
+  globalThis.AudioBuffer ??= FakeAudioBuffer;
+  const real = { fetch: globalThis.fetch, decode: audio.decode, broken: audio.on.broken, error: console.error };
+  let release;
+  const calls = [new Promise((r) => { release = r; }), Promise.resolve({ ok: false, status: 503 })];
+  globalThis.fetch = () => calls.shift();
+  audio.decode = async () => fakeBuffer([Array.from({ length: 500 }, (_, i) => Math.sin(i / 3) * 0.5)], RATE);
+  audio.on.broken = () => {};
+  console.error = () => {};
+  const old = { id: 'retry-2', source: 'bundled', file: 'clips/kit/retry.wav' };
+  const now = { ...old, trim: { start: 0, end: 0.4 } };
+  try {
+    const first = audio.load(old);
+    await assert.rejects(audio.load(now));
+    assert.ok(audio.broken.has('retry-2'));
+    release({ ok: true, arrayBuffer: async () => new ArrayBuffer(8) });
+    await first;
+    assert.ok(audio.broken.has('retry-2'), 'the old version loading does not mend the new one');
+  } finally {
+    Object.assign(globalThis, { fetch: real.fetch });
+    audio.decode = real.decode;
+    audio.on.broken = real.broken;
+    console.error = real.error;
+    audio.forget('retry-2');
   }
 });
