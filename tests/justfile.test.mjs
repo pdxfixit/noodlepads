@@ -82,6 +82,10 @@ test('GitHub deploys only after the tests', () => {
   const wf = readFileSync(join(root, '.github/workflows/deploy.yml'), 'utf8');
   const at = (s) => { const i = wf.indexOf(s); assert.ok(i >= 0, `deploy.yml runs ${s}`); return i; };
   assert.ok(at('run: just test') < at('uses: pdxfixit/flarepress@'));
+  // The release checks too: test.yml runs them beside the deploy, not before it,
+  // so a web/ change without `just version` went live before test.yml went red.
+  assert.ok(at('run: tools/version_bumped.sh') < at('uses: pdxfixit/flarepress@'));
+  assert.ok(at('run: python3 tools/bump_version.py --check') < at('uses: pdxfixit/flarepress@'));
   assert.doesNotMatch(wf, /deploy-migrated/);
   assert.ok(at('uses: pdxfixit/flarepress@') < at('run: just deploy-checks'));
   // flarepress's rolling v1 tag, the action and the checkout alike (Ben, 2026-10-15).

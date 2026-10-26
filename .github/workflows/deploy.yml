@@ -1,5 +1,5 @@
 # Every push to main is deployed to https://noodlepads.com (Ben, 2026-10-15):
-# the tests, then the flarepress action (check, gate,
+# the tests and the release checks, then the flarepress action (check, gate,
 # stamp, wrangler deploy, verify), then the live checks. GitHub holds this
 # repo's own Cloudflare token (Workers, its zone, D1 read only); no agent
 # holds one. Ben's `just deploy` on the Mac is the fallback.
@@ -43,6 +43,13 @@ jobs:
         run: curl -sSfL https://github.com/casey/just/releases/download/1.58.0/just-1.58.0-x86_64-unknown-linux-musl.tar.gz | sudo tar xz -C /usr/local/bin just
       - name: just test
         run: just test
+      # The release checks test.yml runs too, here as well: test.yml runs beside
+      # this workflow, so without them a web/ change pushed without `just version`
+      # went live under the old release before test.yml went red.
+      - name: web/version.js bumped after the last change to web/
+        run: tools/version_bumped.sh
+      - name: web/version.js PATCH is the commit count of its commit
+        run: python3 tools/bump_version.py --check
       - uses: pdxfixit/flarepress@v1  # rolling: the owner moves v1 to release
         with:
           site: site

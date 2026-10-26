@@ -175,7 +175,7 @@ what it forces an agent to do.
 | `docs.test.mjs` | every relative Markdown link in AGENTS.md, CLAUDE.md, README.md, TODO.md, `docs/*.md`, `docs/adr`, `docs/design`, `docs/architecture` and `docs/architecture` resolves; every ADR is in the index, with a number of its own; CLAUDE.md starts `@AGENTS.md`; the problem-report design doc matches `worker/reports.js` | renumber a clashing ADR; fix the link |
 | `architecture.test.mjs` | (since `22b41aa`; the first test is TODO until the area files land) every `web/` and `worker/` module is named in `docs/architecture/`; every backticked file and every backticked "file.js name" pair it cites exists; the ✅ claims (one AudioContext, the offline renders, the recorders, the schedulers) | update `docs/architecture/` in the same commit |
 | `question-cards.test.mjs` | every card in docs/questions.md has its own number | renumber |
-| `justfile.test.mjs` | every public recipe has a `just --list` line that does not start mid-sentence; every recipe is named in AGENTS.md, README.md, how-to, deploy-cloudflare or layout; every tool in `tools/` is named there; deploy runs flarepress's check, stamp and verify; `site.conf committed=` holds web, worker and site; `wrangler.toml` holds no ids; deploy.yml runs the tests before the action and the live checks after | document the recipe or tool |
+| `justfile.test.mjs` | every public recipe has a `just --list` line that does not start mid-sentence; every recipe is named in AGENTS.md, README.md, how-to, deploy-cloudflare or layout; every tool in `tools/` is named there; deploy runs flarepress's check, stamp and verify; `site.conf committed=` holds web, worker and site; `wrangler.toml` holds no ids; deploy.yml runs the tests and the release checks before the action and the live checks after | document the recipe or tool |
 | `tools/test_justfile.py` | every recipe has a doc; README "Running it yourself" names exactly the recipes; `test-quiet` prints only the failures and keeps the log | add the recipe to README |
 | `headers.test.mjs` | `web/_headers`: the CSP closed by default, no inline or eval, no outside origin but Cloudflare's beacon, fonts only from `web/fonts/`, microphone and screen share for this site | change the CSP line on purpose |
 | `colors.test.mjs`, `contrast.test.mjs` | 4.5:1 for the pairs they list, with colors read from `styles.css` tokens, `boards.json` and `model.js` | a new pair needs a new line: a new color nobody lists is not checked |
@@ -372,7 +372,8 @@ Who reads the label after that:
 
 **On every push to `main`**, `.github/workflows/deploy.yml`, one at a time in
 push order (a newer push waits): checkout with full history; flarepress at
-`v1` into `.flarepress/` (for the recipes); Node and just; `just test`; the
+`v1` into `.flarepress/` (for the recipes); Node and just; `just test`;
+`version_bumped.sh` and `bump_version.py --check`; the
 `pdxfixit/flarepress@v1` action on `site/` (check, gate, stamp, wrangler
 deploy, verify); `just deploy-checks` with `CHROME=/usr/bin/google-chrome`.
 
@@ -388,7 +389,8 @@ The action's steps, from flarepress (its site.sh and wrangler.sh):
 
 A red run after step 4 means the new version is live: fix forward or roll
 back (docs/deploy-cloudflare.md). `test.yml` and `deploy.yml` run side by
-side on a push to `main`: the deploy does not wait for the release checks.
+side on a push to `main`, so the deploy runs the release checks itself
+before the action (`justfile.test.mjs` pins the order).
 
 **Daily**, `.github/workflows/live.yml` runs `live_check.py`: `/`,
 version.json and `/api/cloud` answer, `/api/cloud` says ok; 3 retries, 20 s
@@ -462,7 +464,7 @@ them, once older than `TEST_GRACE_MS`, for `cloud-prune --smoke`.
 | `startup-remembered.test.mjs` `remembered` map | by hand | a new `localStorage` key is not started with unless added |
 | `colors.test.mjs` pairs | by hand | a new text/background pair is not checked |
 | The version label's shape (`v<release>-<sha>`) and its readers' rules | none | `feedback.js appVersion` and the Worker refuse `-`; `doctor.sh` compares with `git describe` |
-| deploy.yml runs `just test` but not the release checks; `test.yml` runs them in parallel | land, ship | a direct push to `main` with a stale release deploys with the old release in its label, and only `test.yml` goes red |
+| `test.yml` and `deploy.yml` each list `just test` and the two release checks | `justfile.test.mjs` (deploy.yml's order) | a new check added to one workflow only runs there |
 | `test.yml` and `deploy.yml` both pin Node 26.11.1 and just 1.58.0 | by hand | a bump in one runs the tests on another Node |
 | `serve.py` and the stand-in page both fake version.json and `/api/cloud`, differently (`dev` vs 404; `ok:false` vs whatever a test routes) | none | — |
 | The 44 px exemptions live in `look.mjs MEASURE` `exempt`, the decisions behind them in docs/decisions.md | by hand | — |
