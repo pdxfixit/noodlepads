@@ -256,22 +256,26 @@ export async function loadStorage({ onLateOpen = () => {}, waitMs = STORAGE_WAIT
 
 // Saves a kid's edit. A record that syncs is stamped with when it changed
 // (merge3.js), so a clash with another device's edit keeps the newer one.
+// Resolves false when open storage refused it (a full disk), so a screen can
+// keep the work open to save again; with no storage at all this visit keeps
+// everything in memory, as the notice says, and it resolves true.
 export async function persist(store, value) {
   try {
     await db.put(store, stampEdit(store, value));
   } catch (err) {
     console.error(`Saving to ${store} failed:`, err);
     showNotice(wouldNotSave(err));
+    return !db.handle;
   }
+  return true;
 }
 
 // An override that changes nothing is deleted rather than stored, so the
-// clip goes back to following boards.json.
+// clip goes back to following boards.json. Resolves as persist() does.
 export async function setOverride(next) {
   if (Object.keys(next).length > 1) {
     state.overrides.set(next.id, next);
-    await persist('overrides', next);
-    return;
+    return persist('overrides', next);
   }
   state.overrides.delete(next.id);
   try {
@@ -279,7 +283,9 @@ export async function setOverride(next) {
   } catch (err) {
     console.error('Removing an override failed:', err);
     showNotice(wouldNotSave(err));
+    return !db.handle;
   }
+  return true;
 }
 
 // Bundled people store only what differs from boards.json; a record that

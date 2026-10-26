@@ -833,11 +833,15 @@ async function makeMix() {
     ...(here.exact && made.other.exact ? { exact: true } : {}),
     created: Date.now(),
   };
+  state.userClips.push(clip);
+  if (!(await persist('clips', clip))) {
+    state.userClips = state.userClips.filter((c) => c !== clip);
+    sheetError('That mix didn’t save. Tap Make it a new sound to try again.');
+    return;
+  }
   // What it plays now is what it plays after a reload: its quiet ends off
   // (keptAudio), or all of it when it is exact.
   audio.keepOriginal(clip, Promise.resolve(keptAudio(made.buffer, clip)));
-  state.userClips.push(clip);
-  await persist('clips', clip);
   closeSheet();
   renderPads();
   showNotice(`Made “${clip.label}” from ${here.label} and ${made.other.label}. It’s on your board.`);
@@ -1585,10 +1589,11 @@ async function saveSheet() {
       created: Date.now(),
     };
     state.userClips.push(clip);
-    await persist('clips', clip);
+    if (!(await persist('clips', clip))) { state.userClips = state.userClips.filter((c) => c !== clip); return keptOpen(); }
     saved = { ...clip, source: 'user' };
   } else if (sheet.clip.source === 'user') {
     const clip = state.userClips.find((c) => c.id === sheet.clip.id);
+    const was = { ...clip };
     delete clip.fx;
     delete clip.tweaks;
     delete clip.trim;
@@ -1602,12 +1607,20 @@ async function saveSheet() {
       Object.assign(clip, { blob: sheet.pending.blob, mime: sheet.pending.mime, synth: sheet.pending.synth });
       audio.forget(clip.id);
     }
-    await persist('clips', clip);
+    if (!(await persist('clips', clip))) {
+      for (const k of Object.keys(clip)) delete clip[k];
+      Object.assign(clip, was);
+      if (sheet.pending?.synth) audio.forget(clip.id);   // the old audio plays again
+      return keptOpen();
+    }
     saved = { ...clip, source: 'user' };
   } else {
     const base = currentPerson().clips.find((c) => c.id === sheet.clip.id);
-    await setOverride(overrideFor(base, state.overrides.get(base.id),
-      { label, emoji: sheet.emoji, color: sheet.color, ...fields }, state.manifest.palette));
+    const was = state.overrides.get(base.id);
+    if (!(await setOverride(overrideFor(base, was, { label, emoji: sheet.emoji, color: sheet.color, ...fields }, state.manifest.palette)))) {
+      if (was) state.overrides.set(base.id, was); else state.overrides.delete(base.id);
+      return keptOpen();
+    }
     saved = { ...base, ...state.overrides.get(base.id), personId: p.id, source: 'bundled' };
   }
   // The sheet already has the sound as trimmed; voices tried before are no
@@ -1617,6 +1630,12 @@ async function saveSheet() {
   audio.load(saved).catch(() => {});
   closeSheet();
   renderPads();
+}
+
+// Storage refused the save (a full disk): nothing changed in memory either,
+// and the sheet stays open with the work in it, to save again.
+function keptOpen() {
+  sheetError('That didn’t save. Your changes are still here: tap Save to try again.');
 }
 
 async function removeFromSheet() {
