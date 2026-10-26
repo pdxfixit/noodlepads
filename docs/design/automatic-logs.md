@@ -19,7 +19,7 @@ Written 2026-10-11 for `TODO.md` "Agents do" → Automatic logs, within the deci
 | Where | The site's one D1 database, table `reports` (`worker/reports.js`) |
 | How long | 14 days in D1 (each new report first deletes the expired ones; nothing scheduled); then the telemetry runner keeps it, its device code a year at most |
 | How it is read | The telemetry runner harvests it daily; `telemetry.py pull` brings it to the Mac's mirror; `just logs` reads it there, and the `noodlepads-logs` recurrent leg files new errors in `TODO.md` once a week |
-| Abuse limits | 64 KB a body, 10 uploads a minute per device code, 1,000 a day for the whole site, the Worker re-checks every field, the site's Origin only; the IP is never used or stored |
+| Abuse limits | 64 KB a body, 10 uploads a minute per device code, 1,000 a day for the whole site (and 1,000 more holding an error or a silent tap, 2026-10-26), the Worker re-checks every field, the site's Origin only; the IP is never used or stored |
 | CSP | No change: `connect-src 'self'` already allows it |
 
 ---
@@ -249,7 +249,7 @@ The endpoint is public; anyone can POST to it, not only the app.
 | Threat | Limit |
 |---|---|
 | Flood from one device | 10 uploads a minute per device code (`PER_DEVICE_MINUTE`). Client side, once a minute |
-| Flood from many devices | 1,000 reports a day for the whole site (`PER_DAY`), then 429 until the next day, at no cost. A Cloudflare WAF rate-limit rule is the next step if it ever happens |
+| Flood from many devices | 1,000 reports a day for the whole site (`PER_DAY`; reports holding an error or a silent tap have 1,000 of their own, `PROBLEMS_PER_DAY`, which keeps routine reports from crowding real ones out, though a hostile flood can fill both), and all kept reports together at most 40 MB (`MAX_STORED_BYTES`, then 507), so a flood never takes the sounds' room. A full share answers 429 until the next day, at no cost. A Cloudflare WAF rate-limit rule is the next step if it ever happens |
 | Huge bodies | 64 KB cap, checked before parsing |
 | Using the store to host text or links | The Worker re-runs the allowlist: free text only in two fields, 200 characters each |
 | Cross-site pages posting from a visitor's browser | `Origin` must be the soundboard's. (A script can fake `Origin`; this only stops other web pages) |

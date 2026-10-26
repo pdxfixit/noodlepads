@@ -299,7 +299,7 @@ All JSON bodies go through `http.js readJson`: `Origin` must be `https://noodlep
 | `DELETE /api/profiles/:id/shares/:code` | Origin, key | only the sharer |
 | `GET /api/shares/:code` | — | case and dashes ignored |
 | `POST /api/profiles/:id/uses` | Origin, key | retired: ≤ 32 KB, stores nothing, answers ok; to remove about 2026-11-16 |
-| `POST /api/log` | Origin | JSON, 64 KB, `cleanUpload`; 10 a minute a device code; 1,000 a UTC day; 204 |
+| `POST /api/log` | Origin | JSON, 64 KB, `cleanUpload`; 10 a minute a device code; 1,000 a UTC day (`reports`), and 1,000 more holding an error or a silent tap (`reports-problems`, `isProblem`); all kept reports at most 40 MB (`MAX_STORED_BYTES`, else 507); 204 |
 | `POST /api/events` | Origin | `text/plain`, ≤ 64 KB, UUID batch id (`X-Batch` or `?batch=`); stored in R2 `EVENTS` as `v1/<day>/<batch>.jsonl`; 204 |
 | `POST /api/feedback` | Origin | `text/plain`, 1–4096 bytes, `X-Feedback` UUID, `X-App-Version` `[0-9A-Za-z.+_]{1,32}`; rate limit 10 a minute for the whole app; R2 `FEEDBACK` as `v1/noodlepads/<day>/<version>-<id>.txt`; 204 |
 

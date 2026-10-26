@@ -82,12 +82,28 @@ test('10 a minute from one device, then 429; another device still sends', async 
   assert.equal((await handleLog(post(upload()), env, now + 61_000)).status, 204, 'a minute later it may send again');
 });
 
-test('1,000 a day for the whole site, then 429 until the next UTC day', async () => {
+// A routine report: no error and no silent tap in it.
+const routine = (extra = {}) => upload({ entries: [{ t: 97400, kind: 'beat', data: { action: 'stop', seconds: 16.2, hits: 88 } }], ...extra });
+
+test('1,000 routine reports a day for the whole site, then 429 until the next UTC day', async () => {
   const env = fakeEnv();
   const now = Date.parse('2026-10-11T12:00:00Z');
   env.DB.db.prepare("INSERT INTO counters (name, day, n) VALUES ('reports', '2026-10-11', 1000)").run();
-  assert.equal((await handleLog(post(upload()), env, now)).status, 429);
-  assert.equal((await handleLog(post(upload()), env, now + 86400000)).status, 204);
+  assert.equal((await handleLog(post(routine()), env, now)).status, 429);
+  assert.equal((await handleLog(post(routine()), env, now + 86400000)).status, 204);
+});
+
+// Ben, 2026-10-26: routine reports must never crowd out the ones that say something broke.
+test('a report with an error or a silent tap has a daily share of its own: a full routine day still takes it', async () => {
+  const env = fakeEnv();
+  const now = Date.parse('2026-10-11T12:00:00Z');
+  env.DB.db.prepare("INSERT INTO counters (name, day, n) VALUES ('reports', '2026-10-11', 1000)").run();
+  assert.equal((await handleLog(post(routine()), env, now)).status, 429, 'routine: the day is full');
+  assert.equal((await handleLog(post(upload()), env, now + 1)).status, 204, 'an error still gets in');
+  const tap = { t: 98000, kind: 'tap', data: { screen: 'pads', on: 'pad', why: 'unheard', covered: true } };
+  assert.equal((await handleLog(post(routine({ device: 'AAAA-BBBB', entries: [tap] })), env, now + 2)).status, 204, 'a silent tap still gets in');
+  env.DB.db.prepare("UPDATE counters SET n = 1000 WHERE name = 'reports-problems'").run();
+  assert.equal((await handleLog(post(upload({ device: 'CCCC-DDDD' })), env, now + 3)).status, 429, 'its own share is capped too');
 });
 
 test('another site’s page cannot post: wrong or missing Origin is 403', async () => {
@@ -155,4 +171,18 @@ test('every other path goes to the static assets; /api/ paths go to the cloud ro
   assert.equal(hello.status, 200);
   assert.equal((await hello.json()).ok, true);
   assert.equal((await worker.fetch(post(upload()), env)).status, 204);
+});
+
+// The security seat, 2026-10-26: made-up reports in both shares must never fill the database the kids' sounds share.
+test('kept reports together stay under 40 MB: past it, 507, and an expired report frees its room', async () => {
+  const { MAX_STORED_BYTES } = await import('../worker/reports.js');
+  const env = fakeEnv();
+  const now = Date.parse('2026-10-11T12:00:00Z');
+  const filler = 'x'.repeat(MAX_STORED_BYTES - 10);
+  env.DB.db.prepare('INSERT INTO reports (key, device, app, errors, body, created, expires) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run('k1', 'ZZZZ-ZZZZ', 'a', 0, filler, now - 1000, now + 86400000);
+  const res = await handleLog(post(upload()), env, now);
+  assert.equal(res.status, 507);
+  assert.equal(reports(env).length, 1, 'nothing more was kept');
+  assert.equal((await handleLog(post(upload()), env, now + 2 * 86400000)).status, 204, 'once the big one expires, reports fit again');
 });
