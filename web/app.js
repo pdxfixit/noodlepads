@@ -507,6 +507,10 @@ for (const b of document.querySelectorAll('[data-move-open]')) b.addEventListene
     if (e.target.closest?.('input, textarea, select, [contenteditable]')) return;
     if (keysShow() && dj.keydown(e)) return;
     if (e.key === 'Escape' && keysShow() && dj.escape()) return;
+    // Esc that a control used (overflow.js closing a row menu, pill-select.js
+    // letting go of a pick) is defaultPrevented above. Those two listen on the
+    // document too, and that works only because they are registered first
+    // (createSequencer runs before bindEvents, in start()).
     if (e.key === 'Escape') { if (hasChosen()) clearChosen(); else stopEverything(); return; }
     if (spaceStops(e)) { e.preventDefault(); stopEverything(); return; }
     if (e.key === 'ArrowRight') { stepPerson(1); return; }
