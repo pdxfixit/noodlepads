@@ -6,11 +6,12 @@
 // edits to bundled clips. A clip's voice is a setting, never baked in: the
 // original audio is kept and the voice is rendered from it on load.
 //
-// This file starts everything and holds what spans screens (who is showing,
-// Edit sounds, the beat maker). The rest is one module per concern:
-// state.js + store.js (data), model.js + board.js (what is on the board),
-// audio.js + meter.js (sound), pads.js, sheet.js, people.js, backup-ui.js,
-// settings-ui.js, help.js, sequencer.js (screens).
+// This file starts everything, builds every screen and hands each its
+// elements and callbacks (the only composition root), and holds what spans
+// screens: who is showing, which screen shows, ✏️ Edit sounds, 🧸 Kids on or
+// off, the page keys and the footer. The rest is one module per concern;
+// docs/architecture/shell.md "The composition root" says what each one gets
+// from here, and docs/layout.md has a line for every file.
 
 import { state, loadStorage, persist, setOverride, adoptStoredPeople, reIdStoredPeople, renamedId, removeRecord } from './state.js';
 import { audio, voicesMade, fadeStop } from './audio.js';

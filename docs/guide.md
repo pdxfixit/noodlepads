@@ -752,7 +752,8 @@ and included in backups, `sendLogs` too; the device code is in localStorage
 - **Backups** (⚙️ Settings → 💾 Save a backup / 📂 Load a backup). Above the
   buttons, worked out each time Settings opens, a line says what a backup
   would hold by kind ("A backup now holds 🔊 27 sounds · 🥁 4 beats · 🎼 1 song ·
-  👥 2 people · 12 MB of audio"; kinds with none are left out); the notice after
+  🎬 1 take · ⭐ 2 voices · 👥 2 people · ✏️ 3 sound edits · 🎛️ 1 DJ key set ·
+  ⌨️ 1 key layout · 👆 1 touch layout · 12 MB of audio"; kinds with none are left out); the notice after
   saving says it again with the file's size. The words come from
   `holdsWords` in `web/old-backup.js`, so the older-sounds section says them
   the same way. A backup is one zip with

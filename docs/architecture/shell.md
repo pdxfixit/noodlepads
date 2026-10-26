@@ -335,7 +335,7 @@ never asks.
 
 ### Dialogs and sheets
 
-`index.html` has 33 `<dialog>`s. Every one is wired by `dialogs.js
+Every `<dialog>` in `index.html` is wired by `dialogs.js
 setupDialog` (✕ `[data-close]`, a backdrop click that also started on the
 backdrop, Esc; `beforeClose()` returning false keeps it open) and opened by
 `dialogs.js openDialog(dialog, { focus, returnTo, opener })`, the only
@@ -355,7 +355,7 @@ just before a dialog opens: `tips.js` (the sound sheet's tip), `nudge.js`
 | `people-dialog`, `profile-dialog`, `names-dialog` | `people.js` | |
 | `things-dialog` | `things.js` | |
 | `load-who` | `backup-ui.js` | |
-| `pin-dialog`, `avatar-dialog`, `cloud-list`, `share-dialog`, `shared-dialog` | `cloud-ui.js` | `welcome.js` listens to `avatar-dialog` and `cloud-list` closing; `cloud-list` can't be closed while someone comes down or after a stop (`beforeClose`), and ▶ Play as them closes it then calls `app.js playAs` |
+| `pin-dialog`, `remember-dialog`, `avatar-dialog`, `cloud-list`, `share-dialog`, `shared-dialog` | `cloud-ui.js` | `welcome.js` listens to `avatar-dialog` and `cloud-list` closing; `cloud-list` can't be closed while someone comes down or after a stop (`beforeClose`), and ▶ Play as them closes it then calls `app.js playAs` |
 | `bulk-dialog` | `bulk.js` | |
 | `sheet`, `sheet-warn` | `sheet.js` | |
 | `library`, `chooser`, `tune-who`, `grooves`, `mixer`, `roll` | `sequencer.js` (`mixer.js`, `roll.js` inside) | app.js looks them up for `createSequencer`; `listen-ui.js` also finds `grooves` |
@@ -605,11 +605,6 @@ blocks beside each animation. Pads size by container queries (`@container`,
 | The welcome reaches into other dialogs | `welcome.js` closes `#settings-dialog`, listens to `#cloud-list` and `#avatar-dialog` closing | renaming those ids, or their owners closing them a different way |
 | `mini-deck.js` reads app state from body classes | `screen-beats`, `keys-on`, `head-slim` | renaming a class in app.js or ui.js breaks the tucked deck silently |
 | The level is read in two shapes | `level` and `advancedBeats` (`settings.js storedPair`) | new code should read `level` (or `advancedBeats` for "Advanced on"); both stay in step only through `setSetting` |
-
-**Stale bits found:**
-
-- `app.js` header comment lists "help.js, sequencer.js (screens)" as the
-  module list; long out of date.
 
 ## Invariants and gotchas
 
