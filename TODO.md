@@ -101,6 +101,8 @@ Other work:
   - 🧸 Kids' tune row ignores 🎵 Find its note's root, accents and row speed (keys-kids.md).
   - Stale docs and comments: AGENTS.md cites a missing `tests/pill-height.test.mjs` and says `just look` flags only short buttons; docs/deploy-cloudflare.md lists the removed `just deploy-migrated`; docs/layout.md's `follow.js`, `overflow.js`, `worker/clean.js` and `tests/` lines; `dialogs.js` says four dialogs (there are 33); `state.js` lists the old `'dj'` screen; `track-page.js errorOf` names a retired `visits` module.
 
+- **An agent council for every future change** (Ben, 2026-10-26): up to 10 advisory personalities (music educator, child psychologist, early literacy, UX, a staff architect and more) that review changes before they ship. Proposal is with Ben (seats, which changes convene which seats, advisory or veto, when it runs); build once he picks: `.claude/agents/` definitions, a Council section in AGENTS.md, a decisions.md row.
+
 ### Offered, not approved
 
 Agents suggested these; nothing happens until Ben says yes.
