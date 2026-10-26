@@ -608,7 +608,6 @@ blocks beside each animation. Pads size by container queries (`@container`,
 
 **Stale bits found:**
 
-- `dialogs.js` opening comment: "the app's four `<dialog>`s"; there are 33.
 - `app.js` header comment lists "help.js, sequencer.js (screens)" as the
   module list; long out of date.
 
