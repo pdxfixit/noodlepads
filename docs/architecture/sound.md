@@ -595,7 +595,7 @@ turned on.
 `on.broken(id, true)` → `pads.js` adds `.broken`. `audio.play` shows the
 notice. The failed render and kept audio are not cached. A warm-up (any
 `load` without `retry`) leaves a broken id alone; a tap (`audio.play`,
-`loopInTime`: `load(clip, {retry: true})`) tries it again, at most once every
+`loadForLoop`: `load(clip, {retry: true})`) tries it again, at most once every
 `BROKEN_RETRY_MS` (3 s). Only a load of the key last asked for (`wanted`, the
 sound as its pad has it now) mends it: the id leaves `broken` and
 `on.broken(id, false)` takes the stripes off. `forget(id)` (new audio) clears
