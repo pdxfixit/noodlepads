@@ -58,7 +58,7 @@ opens with a comment saying what it owns. How the app behaves is in
   - `cloud.js`: cloud profiles: the list, keys, records by rev, sounds in 1.9 MB pieces, share codes, last activity, free-plan caps
   - `metrics.js`: player metrics (ADR 0016): each device's row and the activity log with its place (nothing of the IP), the User-Agent read as families; 14 days kept (a device's row 90); skipped while its tables are missing. The feature-use counts and visits it once kept are retired (ADR 0027)
   - `pin.js`: PINs (salted PBKDF2, 5 tries then a 10-minute wait) and share codes; `http.js`: shared answers, ids, daily counters
-  - `reports.js`: `POST /api/log` takes an opt-in problem report (site's Origin, JSON, 64 KB, 10 a minute per device, 1,000 a day) into D1 for 14 days
+  - `reports.js`: `POST /api/log` takes a problem report (site's Origin, JSON, 64 KB, 10 a minute per device, 1,000 a day) into D1 for 14 days
   - `clean.js`: the Worker's copy of the report allowlist (numbers, booleans, listed values, two short free-text fields)
   - `schema.sql`: the D1 tables
 - `tools/logs.py`: `just logs`, problem reports read from the telemetry runner's mirror (`noodlepads__reports` in `~/.local/state/telemetry/telemetry.sqlite3`, read only): list, `--errors`, a device code, `--json`, `--grep`, `--sql`, and the weekly `--digest`. `~/.config/noodlepads/cloud.json` (outside the repo; template `tools/cloud.example.json`, read by `tools/cloud_config.py`) names the D1 account and database for the cloud-db recipes. Tests: `tools/test_logs.py`, `tools/test_cloud_config.py`

@@ -89,8 +89,9 @@ export const SETTINGS = {
   // 📮 Send problem reports (log-send.js). The device's, and backups carry it
   // like every setting (Ben, Q5: "Carry it"): restoring one on a new tablet
   // brings the family's choice along. The device code (log-send.js,
-  // localStorage `log-device`) is never in a backup.
-  sendLogs: { default: false, values: [false, true], scope: 'device' },
+  // localStorage `log-device`) is never in a backup. On by default (Ben,
+  // 2026-10-26): a device where someone switched it off keeps it off.
+  sendLogs: { default: true, values: [false, true], scope: 'device' },
   // Usage events and counts (telemetry.js; Ben,
   // 2026-10-16: on by default, a switch turns it off, and off sends nothing,
   // ever). The device's, as the device is what sends. ⚙️ Settings → 📊 Play

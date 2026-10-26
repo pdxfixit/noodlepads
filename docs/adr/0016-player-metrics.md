@@ -35,7 +35,7 @@
 - **Keeping the User-Agent:** families are all the report needs.
 - **Analytics Engine, Cloudflare Web Analytics, or a third-party script:** another product, another origin in the CSP, and a view of visitors who are not in the cloud.
 - **A Worker cron copying Cloudflare's stats into D1:** a daily harvest from the Mac reaches back a month, and the Worker would need an analytics token.
-- **The device code from problem reports as the device:** it never leaves the device except in an opt-in report ([decisions.md](../decisions.md)).
+- **The device code from problem reports as the device:** it never leaves the device except in a problem report (opt-in until 2026-10-26, then on by default) ([decisions.md](../decisions.md)).
 - **Counting every DJ key or beat pill:** too many writes for what it tells.
 
 ## Consequences

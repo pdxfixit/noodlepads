@@ -1,6 +1,6 @@
 # 0009. Opt-in problem reports: one route on the site, 14 days in D1, and the telemetry runner's mirror
 
-- **Status:** Accepted
+- **Status:** Accepted; amended 2026-10-26 (on by default)
 - **Date:** 2026-10-11, 2026-10-15, 2026-10-16
 - **Decided by:** Ben, 2026-10-11: approved the plan in [automatic-logs.md](../design/automatic-logs.md) (an inbox in the cloud, a local SQLite archive kept forever), "it should be part of the recurrent skill, but only running 1/day", and the one-database footprint of [ADR 0002](0002-cloud-profiles-on-one-worker.md); 2026-10-15: "the D1 data to be pruned frequently" (14 days); 2026-10-16: "i want consistent local storage mirror of this data", "the telemetry tooling needs to take this over"
 
@@ -15,7 +15,7 @@
 
 ## Decision
 
-- **Opt-in, per device.** A Settings switch, off by default. Backups carry it like every setting (Ben, Q5: "Carry it"); the device code never goes in one.
+- **Per device, on by default.** A Settings switch, on unless someone switches it off; a device switched off stays off (Ben, 2026-10-26: "default problem reports to being on all devices", after a bug only his installed app showed; opt-in, off by default, until then). Backups carry it like every setting (Ben, Q5: "Carry it"); the device code never goes in one.
 - **Cleaned twice.** The app keeps only numbers, booleans, values from fixed lists, and two free-text fields (error messages, notices) with every known name blanked and a 200-character cap. The Worker (`worker/clean.js`) applies the same allowlist again, because anyone can POST.
 - **One route.** `POST /api/log`: from the site's own Origin, JSON, at most 64 KB. At most 10 a minute from one device code, and 1,000 a day in all (`counters`). The IP is never stored or used.
 - **D1 as an inbox.** Table `reports` (`worker/schema.sql`): key `<ISO time>_<device>_<random>`, the device, app version, error count and the cleaned upload, with an expiry 14 days on. Each report that arrives first deletes the expired ones, so no scheduled job is needed.
