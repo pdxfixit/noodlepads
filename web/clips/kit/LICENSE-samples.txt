@@ -80,5 +80,34 @@ and its body lifted under its peak where noted in tools/make_samples.py
 (HITS), so it plays about as loud as the other sounds; the kick, taiko and
 conga have their own overtones added so a phone speaker plays them.
 
-Every other clip in this folder is made by tools/make_placeholders.py, or
-is one of the old app's starter sounds.
+Spoken clips: Apple system voices (to be replaced)
+
+These 16 clips are spoken by Apple's macOS system voices, through the
+macOS `say` command (tools/make_placeholders.py, KIT_CALLOUTS and
+cackle). They are Apple's voices, not recordings made for this app. They
+will be replaced, by our own recordings or by a CC0 set.
+
+  file               says                 macOS voice
+  lets-go.wav        "Let's go!"          Fred
+  oh-yeah.wav        "Oh yeah!"           Ralph
+  bruh.wav           "Bruh."              Albert
+  no-way.wav         "No way!"            Samantha
+  nice.wav           "Nice!"              Daniel
+  gg.wav             "G G!"               Zarvox
+  level-up.wav       "Level up!"          Trinoids
+  drop-the-beat.wav  "Drop the beat!"     Junior
+  oof.wav            "Oof!"               Ralph
+  wow.wav            "Wow!"               Samantha
+  ready.wav          "Ready?"             Daniel
+  go.wav             "Go!"                Fred
+  boom-word.wav      "Boom!"              Albert
+  yes.wav            "Yes!"               Junior
+  evil-laugh.wav     "Mwa ha ha ha ha!"   Bad News
+  cackle.wav         heh, hah, hee laughs Junior, sped up 1.4 times
+
+The first 14 are the 🗣️ callouts; the last two are the Evil laugh and
+Cackle presets.
+
+Every other clip in this folder is synthesized by
+tools/make_placeholders.py (no recording and no voice in it), or is one of
+the old app's starter sounds.
