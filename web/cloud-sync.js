@@ -644,9 +644,15 @@ async function pushAll(link, deps, { of: shaOf, map: hereSha }, report, bases_) 
   const needsAudio = (r) => r.kind === 'clips' && r.record.blob
     && (!link.sounds[r.id] || (hereSha.has(r.id) && hereSha.get(r.id) !== link.sounds[r.id].sha256));
   for (const [k, r] of now) {
-    if (needsAudio(r) && r.record.blob.size > CLOUD_MAX_SOUND) {
+    if (!needsAudio(r)) continue;
+    if (r.record.blob.size > CLOUD_MAX_SOUND) {
       now.delete(k);
       report.tooBig = (report.tooBig ?? 0) + 1;
+    } else if (r.record.blob?.size === 0) {
+      // No audio at all (a backup can carry an empty file): nothing to hear,
+      // and the Worker takes no empty sound, so it stays here quietly rather
+      // than stop the whole sync.
+      now.delete(k);
     }
   }
   // Every clip's audio is in the cloud before its record. A sound the cloud

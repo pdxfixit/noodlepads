@@ -346,6 +346,18 @@ test('pushes fit what the cloud takes: split by bytes as well as count, and a re
   assert.deepEqual(pushSlices([]), []);
 });
 
+test('an empty sound (no audio at all, say from a backup) stays on the device, and the rest still syncs', async () => {
+  const { api, env } = server();
+  const { a, link } = await startA(api);
+  a.stores.clips.push({ id: 'user-8', personId: 'p-a', label: 'Hush', mime: 'audio/wav', blob: new Blob([], { type: 'audio/wav' }), created: 8 });
+  const r = await syncProfile(link, a.deps(api));
+  assert.equal(r.pushed, 4, 'everything else went');
+  assert.equal(r.tooBig, undefined, 'not called too long');
+  assert.equal(env.DB.rows("SELECT COUNT(*) AS n FROM records WHERE id = 'user-8'")[0].n, 0);
+  assert.ok(a.stores.clips.some((c) => c.id === 'user-8'), 'still here');
+  assert.equal((await syncProfile(link, a.deps(api))).deleted, 0, 'and never sent as a delete');
+});
+
 test("a person's settings travel with their profile", async () => {
   const { api } = server();
   const { a, link } = await startA(api);
