@@ -9,6 +9,8 @@ const BAR = 3;   // CSS px per bar
 const GAP = 1;   // CSS px between bars
 export const WAVE_PAD = 10;  // CSS px kept clear at each end, inside the rounded corners (chop.js places its handles by it)
 const PAD = WAVE_PAD;
+const MIN_SWEEP = 0.5;   // seconds: a loop shorter than this is held lit, not swept
+const stillWanted = () => !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 export function createWave(canvas) {
   let buffer = null;     // what is drawn
@@ -87,8 +89,10 @@ export function createWave(canvas) {
         const entry = audio.playing.get(id);
         if (!entry || !audio.ctx) { draw(0); return; }
         // A loop sweeps again on each pass, as the pads' fill does, until it
-        // ends: let go (audio.unloop), it finishes its pass sweeping.
+        // ends: let go (audio.unloop), it finishes its pass sweeping. With
+        // reduced motion, or too short to follow (a strobe), it is held lit.
         looped ||= entry.loop;
+        if (looped && (entry.duration < MIN_SWEEP || stillWanted())) { draw(1); raf = requestAnimationFrame(frame); return; }
         const t = Math.max(0, (audio.ctx.currentTime - entry.t0) / entry.duration);
         const p = looped ? t % 1 : Math.min(1, t);
         draw(from + p * (to - from));

@@ -64,3 +64,22 @@ test('a loop let go finishes its pass with the line sweeping, not jumping to the
   audio.playing.get('preview').loop = false;   // let go in the second pass
   assert.equal(at(2.5), quarter, 'a quarter of the way through the last pass');
 }));
+
+// A device asking for less motion sees a loop's wave held lit, as the pads
+// hold a looping pad lit; so does a loop too short to follow (a strobe).
+const allLit = (bars) => bars.length > 0 && bars.every((a) => a === 1);
+test('with reduced motion a loop holds its wave lit, with no sweeping line', () => restoring(() => {
+  globalThis.matchMedia = (q) => ({ matches: q === '(prefers-reduced-motion: reduce)' });
+  const { at, bars } = following({});
+  assert.equal(at(0.5), undefined, 'no line');
+  assert.ok(allLit(bars), 'every bar lit');
+}));
+
+test('a loop under half a second holds its wave lit instead of strobing', () => restoring(() => {
+  globalThis.matchMedia = () => ({ matches: false });
+  const { at, bars } = following({}, 0.3);
+  assert.equal(at(0.1), undefined, 'no line');
+  assert.ok(allLit(bars), 'every bar lit');
+  const once = following({ loop: false }, 0.3);
+  assert.ok(once.at(0.1) > 0, 'played once, a short sound still sweeps');
+}));
