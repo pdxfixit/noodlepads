@@ -82,11 +82,15 @@ export function createWave(canvas) {
     // `from` and `to` (0 to 1) are the part of the wave it is playing.
     follow(id, from = 0, to = 1) {
       cancelAnimationFrame(raf);
+      let looped = false;
       const frame = () => {
         const entry = audio.playing.get(id);
         if (!entry || !audio.ctx) { draw(0); return; }
+        // A loop sweeps again on each pass, as the pads' fill does, until it
+        // ends: let go (audio.unloop), it finishes its pass sweeping.
+        looped ||= entry.loop;
         const t = Math.max(0, (audio.ctx.currentTime - entry.t0) / entry.duration);
-        const p = entry.loop ? t % 1 : Math.min(1, t);   // a loop sweeps again on each pass, as the pads' fill does
+        const p = looped ? t % 1 : Math.min(1, t);
         draw(from + p * (to - from));
         raf = requestAnimationFrame(frame);
       };
