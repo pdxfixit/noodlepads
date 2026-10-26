@@ -1108,7 +1108,7 @@ export function createSong(deps) {
   el.laneName.addEventListener('change', () => {
     const lane = song.lanes[laneOpen];
     if (!lane) return;
-    const wanted = el.laneName.value.trim().slice(0, MAX_LANE_NAME) || LANE_DEFAULTS[laneOpen % LANE_DEFAULTS.length].name;
+    const wanted = cutName(el.laneName.value.trim(), MAX_LANE_NAME) || LANE_DEFAULTS[laneOpen % LANE_DEFAULTS.length].name;
     el.laneName.value = wanted;
     if (wanted === lane.name) return;
     edit(() => { lane.name = wanted; });

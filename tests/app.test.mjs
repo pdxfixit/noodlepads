@@ -2274,6 +2274,9 @@ test('🎼 Song: its own tab, Advanced or not; pick a beat, then tap a spot on a
   lanes()[1].querySelector('[data-lane-pick]').dispatch('click');
   assert.equal($('#lane-sheet').open, true);
   assert.equal($('#lane-name').value, 'Bass');
+  $('#lane-name').value = `${'a'.repeat(15)}🦄zz`;   // 16 characters at most, never half an emoji (names.js cutName)
+  $('#lane-name').dispatch('change');
+  assert.equal(songNow().lanes[1].name, `${'a'.repeat(15)}🦄`);
   $('#lane-name').value = 'Wobbles';
   $('#lane-name').dispatch('change');
   $('#lane-grid').querySelector('[data-lane-emoji="🐸"]').dispatch('click');
