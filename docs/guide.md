@@ -549,6 +549,8 @@ and included in backups, `sendLogs` too; the device code is in localStorage
 - **➕ Mix with another sound** (Advanced, `mix.js`) layers two sounds, as each
   plays now, into a new pad: a WAV with `from: {id, how: 'mix'}` naming the
   sound it was made from, and a blended name ("Burp" and "Honk" make "Burponk").
+  Like a recording it loses its quiet ends, except a mix of two beats made into
+  sounds: it is `exact` too, so it keeps its length and loops in time.
 - **Pad order** is boards.json order until someone moves a pad in Edit sounds
   (drag one, or Alt+← → from the keyboard), within its group. The new order is saved per person in IndexedDB too; sounds it doesn't
   name (added later) go at the end, and pads in a closed group keep their places.

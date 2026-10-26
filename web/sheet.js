@@ -829,9 +829,12 @@ async function makeMix() {
     blob: encodeWav(made.buffer),
     mime: 'audio/wav',
     from: { id: here.id, how: 'mix' },
+    // Two beats made into sounds: the mix keeps their length too, to loop in time.
+    ...(here.exact && made.other.exact ? { exact: true } : {}),
     created: Date.now(),
   };
-  // What it plays now is what it plays after a reload: its quiet ends off (keptAudio).
+  // What it plays now is what it plays after a reload: its quiet ends off
+  // (keptAudio), or all of it when it is exact.
   audio.keepOriginal(clip, Promise.resolve(keptAudio(made.buffer, clip)));
   state.userClips.push(clip);
   await persist('clips', clip);

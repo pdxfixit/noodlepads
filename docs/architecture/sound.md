@@ -572,7 +572,8 @@ voice`).
 
 ### Exact sounds
 
-A beat, song or take made into a sound (`exact: true`) keeps its silent tail
+A beat, song or take made into a sound (`exact: true`), and a ➕ mix of two
+such sounds (`sheet.js makeMix`), keeps its silent tail
 and full length: `keptRange` keeps all of it, `keptAudio` returns it as is,
 `load` reports the buffer length in Normal, and `chop.js rangeOf` starts from
 all of it. Any voice still trims its ends.

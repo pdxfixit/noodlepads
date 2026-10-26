@@ -1339,3 +1339,38 @@ test('a live slider\'s first drag finds its loop already rendered when the sheet
     await advanced(false);
   }
 });
+
+// Two beats made into sounds keep their length to loop in time (`exact`);
+// a ➕ mix of two of them is one too, so it loops in time as they do.
+test('➕ a mix of two beat-sounds keeps its whole length, silent tail and all', async () => {
+  const { state } = await import('../web/state.js');
+  const { currentPerson } = await import('../web/board.js');
+  const { renderPads } = await import('../web/pads.js');
+  const withTail = fakeBuffer([[...plain.getChannelData(0), ...new Array(2000).fill(0)]], 8000);
+  const beat = (id) => ({ id, personId: currentPerson().id, label: `Beat ${id.slice(-1)}`, emoji: '🥁', color: 'red', created: 1, blob: new Blob(['x']), mime: 'audio/wav', voice: 'normal', exact: true });
+  const a = beat('user-beat-a'), b = beat('user-beat-b');
+  state.userClips.push(a, b);
+  renderPads();
+  await advanced(true);
+  try {
+    for (const c of [a, b]) { audio.forget(c.id); audio.originals.set(c.id, Promise.resolve(withTail)); audio.originalTrims.set(c.id, ''); }
+    if (!document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+    pads().find((p) => p.dataset.id === a.id).parent.querySelector('[data-edit]').dispatch('click');
+    await page.settle();
+    $('#mix-btn').dispatch('click');
+    $('#mix-with').value = b.id;
+    $('#mix-with').dispatch('change');
+    $('#mix-make').dispatch('click');
+    await page.settle();
+    const made = state.userClips.at(-1);
+    assert.deepEqual(made.from, { id: a.id, how: 'mix' });
+    assert.equal(made.exact, true, 'kept as long as the beats');
+    assert.equal((await audio.original(made)).length, withTail.length, 'the silent tail stays');
+    state.userClips = state.userClips.filter((c) => c.id !== made.id);
+  } finally {
+    if ($('#sheet').open) $('#sheet').close();
+    state.userClips = state.userClips.filter((c) => c.id !== a.id && c.id !== b.id);
+    renderPads();
+    await advanced(false);
+  }
+});
