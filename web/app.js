@@ -431,10 +431,15 @@ export function spaceStops(e) {
 }
 
 function bindEvents() {
-  // Any first gesture unlocks audio, so the first pad tap plays instantly.
+  // Any gesture unlocks audio, so the first pad tap plays instantly: the
+  // first one makes the context, and each after resumes it should the phone
+  // have stopped it meanwhile (a call, a locked screen), so the first tap
+  // back plays too. Coming back to the page asks for it at once.
   const unlock = () => audio.wake();
-  window.addEventListener('pointerdown', unlock, { once: true, capture: true });
-  window.addEventListener('keydown', unlock, { once: true, capture: true });
+  window.addEventListener('pointerdown', unlock, { capture: true });
+  window.addEventListener('keydown', unlock, { capture: true });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'hidden') audio.revive(); });
+  window.addEventListener('pageshow', () => audio.revive());
 
   el.stopAll.addEventListener('click', stopEverything);
   el.editToggle.addEventListener('click', () => setEditing(!state.editing));

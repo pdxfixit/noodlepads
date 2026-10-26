@@ -220,14 +220,30 @@ export const audio = {
       this.master.connect(this.limiter);
       this.limiter.connect(this.analyser);
       this.analyser.connect(this.ctx.destination);
+      // A phone call, a locked screen or another app taking the sound can
+      // leave the context 'suspended' (or 'interrupted' on iOS). Ask for it
+      // back as soon as it goes, while the page shows; where the browser
+      // wants a tap first, the next tap's wake() resumes it.
+      this.ctx.addEventListener?.('statechange', () => {
+        if (globalThis.document?.visibilityState !== 'hidden') this.revive();
+      });
     }
     return this.ctx;
   },
 
   wake() {
-    const ctx = this.context();
-    if (ctx.state !== 'running') ctx.resume().catch(() => {});
-    return ctx;
+    this.context();
+    this.revive();
+    return this.ctx;
+  },
+
+  // Resumes the context when it is there and not running: the page shown
+  // again (app.js), the context interrupted (above), or a tap (wake). Makes
+  // no context of its own. A context the browser has closed stays closed.
+  revive() {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state === 'running' || ctx.state === 'closed') return;
+    try { ctx.resume().catch(() => {}); } catch { /* resume() refused outright */ }
   },
 
   decode(arrayBuffer) {

@@ -222,3 +222,36 @@ test('iOS: the page asks for a playback audio session before its first sound, so
   withPage({ navigator: { audioSession: { set type(v) { throw new Error(`no ${v}`); } } } }, () => { audio.ctx = null; assert.ok(audio.context()); });
   audio.ctx = null;
 });
+
+test('a context the phone stops (a call, a locked screen; iOS says interrupted) is asked back at once while the page shows', async () => {
+  const { audio } = await import('../web/audio.js');
+  const doc = { visibilityState: 'visible' };
+  withPage({ document: doc }, () => {
+    audio.ctx = null;
+    const ctx = audio.context();
+    assert.equal(typeof ctx.listeners.statechange, 'function', 'it listens for the context leaving running');
+    for (const state of ['suspended', 'interrupted']) {
+      const before = ctx.resumes;
+      ctx.state = state;
+      ctx.listeners.statechange();
+      assert.equal(ctx.resumes, before + 1, `${state}: resumed`);
+    }
+    // Hidden, it waits for the page to show again (app.js visibilitychange).
+    doc.visibilityState = 'hidden';
+    const before = ctx.resumes;
+    ctx.state = 'suspended';
+    ctx.listeners.statechange();
+    assert.equal(ctx.resumes, before, 'not while hidden');
+    // revive(): only a context that is there, not running and not closed.
+    audio.revive();
+    assert.equal(ctx.resumes, before + 1);
+    ctx.state = 'running';
+    audio.revive();
+    ctx.state = 'closed';
+    audio.revive();
+    assert.equal(ctx.resumes, before + 1);
+    audio.ctx = null;
+    audio.revive();
+    assert.equal(audio.ctx, null, 'revive never makes a context: only a tap may');
+  });
+});

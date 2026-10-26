@@ -40,10 +40,16 @@ threshold -2 dB, knee 0, ratio 20, attack 2 ms, release 150 ms) ─► audio.ana
 (fftSize 512) ─► ctx.destination
 ```
 
-- `audio.wake()` calls `context()` and `resume()`s it when it is not running.
-  `app.js bindEvents` calls it on the first `pointerdown` or `keydown` (capture,
-  once), so the first tap plays at once. `audio.play` and `audio.start` call
-  `wake()` themselves.
+- `audio.wake()` calls `context()` and `revive()`. `app.js bindEvents` calls
+  it on every `pointerdown` and `keydown` (capture), so the first tap plays at
+  once, and so does the first tap after the phone stopped the sound. `audio.play`
+  and `audio.start` call `wake()` themselves.
+- `audio.revive()` `resume()`s a context that exists and is neither running
+  nor closed; it never makes one. It runs on the context's `statechange`
+  (while the page shows: a call, a locked screen, iOS `'interrupted'`), and
+  on `visibilitychange` to visible and `pageshow` (`app.js bindEvents`). A
+  suspended context's clock stands still, so a beat picks up where it was
+  (Tests: `tests/audio.test.mjs`, `tests/audio-wake.test.mjs`).
 - `audio.decode(arrayBuffer)` is `decodeAudioData` on this context. So every
   decoded clip is at the context's sample rate, whatever the file's.
 - Who connects to `audio.master` directly, outside `audio.playing`:

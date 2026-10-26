@@ -400,12 +400,17 @@ export function installPage({ hash = '', storage, manifest, firstSteps = false }
         createOscillator() { return { connect() {}, start() {}, stop() {}, frequency: { value: 0 } }; }
         resume() { return Promise.resolve(); }
       },
-      addEventListener(type, fn) {
+      // `once` is kept, as a browser keeps it: such a listener hears one event.
+      addEventListener(type, fn, opts) {
         if (!winListeners.has(type)) winListeners.set(type, []);
-        winListeners.get(type).push(fn);
+        if (opts?.once) {
+          const once = (e) => { winListeners.set(type, winListeners.get(type).filter((f) => f !== once)); return fn(e); };
+          once.orig = fn;
+          winListeners.get(type).push(once);
+        } else winListeners.get(type).push(fn);
       },
       removeEventListener(type, fn) {
-        winListeners.set(type, (winListeners.get(type) ?? []).filter((f) => f !== fn));
+        winListeners.set(type, (winListeners.get(type) ?? []).filter((f) => f !== fn && f.orig !== fn));
       },
     },
     matchMedia: () => ({ matches: false }),
