@@ -688,7 +688,8 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   lists hidden people under "Deleted — bring back". The only person here
   can't be deleted: Delete is greyed and the box says why. For someone in the cloud the second tap deletes them here
   and the sheet stays, showing only the Delete box: its red button moves to
-  the top as ☁️ Delete their cloud copy too, which deletes their cloud
+  the top as ☁️ Delete their cloud copy too, which asks ("☁️ Tap again to
+  delete their cloud copy", taken back after 4 s) and then deletes their cloud
   profile too (asking for the PIN if they have one; `cloud-ui.js`
   `deleteLeftCloud`), and ☁️ Keep their cloud copy takes the spot the first
   two taps hit (focus moves there), so a stray third tap keeps it, as ✕
@@ -952,7 +953,7 @@ ADR 0002.
   `just cloud-reset-pin "<fun name>" --to 1234`, or clears it with no `--to`;
   each device then asks for the new PIN once (or opens with none).
 - **To delete a profile and everything in it:** 👥 People → tap them → tap
-  Delete twice, then ☁️ Delete their cloud copy too, or switch ☁️ In the
+  Delete twice, then ☁️ Delete their cloud copy too twice, or switch ☁️ In the
   cloud off (tap twice) to keep it on this device. Either asks for the PIN
   if it has one. Its share codes stop working too (remixes others made
   stay theirs).

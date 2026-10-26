@@ -1,12 +1,13 @@
 // Delete in a profile sheet, for someone in the cloud (Ben, 2026-10-24): two
 // taps delete them from this device, and the sheet stays with only the Delete
-// box: ☁️ Delete their cloud copy too, moved to its top, deletes the cloud
-// copy (asking for the PIN if they have one); ☁️ Keep their cloud copy, in the
+// box: ☁️ Delete their cloud copy too, moved to its top, asks "Tap again",
+// then deletes the cloud copy (asking for the PIN if they have one); ☁️ Keep
+// their cloud copy, in the
 // spot the first two taps hit (Ben, 2026-10-26: "so an accidental third click
 // can't"), and ✕ keep it. Someone not in the cloud goes in two taps, as before.
 // The real app with a stand-in IndexedDB, against the real Worker and a fake D1.
 
-import { test, before } from 'node:test';
+import { test, before, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { installPage } from './fake-dom.mjs';
 import { fakeIndexedDB } from './fake-idb.mjs';
@@ -67,7 +68,7 @@ const closeSheets = () => { $('#profile-dialog').close(); $('#people-dialog').cl
 const del = () => $('#profile-delete');
 const tap = async () => { del().dispatch('click'); await settle(); };
 
-test('in the cloud with no PIN: the second tap deletes them here and keeps the sheet; the third deletes the cloud copy', async () => {
+test('in the cloud with no PIN: the second tap deletes them here and keeps the sheet; the cloud button asks, then deletes the cloud copy', async () => {
   sheetOf(OPEN);
   assert.match($('#profile-delete-hint').textContent, /Then they can delete their cloud copy too/);
   assert.equal($('#profile-keep').hidden, true, 'no Keep before the second tap');
@@ -85,13 +86,18 @@ test('in the cloud with no PIN: the second tap deletes them here and keeps the s
   assert.equal($('#profile-keep').hidden, false, '☁️ Keep takes the spot the taps hit');
   assert.equal($('#profile-keep').getAttribute('aria-describedby'), 'profile-delete-hint', 'and reads why when it gets the focus');
   assert.ok(document.activeElement === $('#profile-keep'), 'and has the focus, so a third Enter keeps it');
+  assert.ok(!del().classList.contains('armed'), 'the cloud button has not asked yet');
+  await tap();
+  assert.equal(del().textContent, '☁️ Tap again to delete their cloud copy', 'it asks first, as every Delete does');
+  assert.ok(del().classList.contains('armed'));
+  assert.ok(inD1(OPEN), 'nothing gone on the first tap');
   await tap();
   assert.equal(inD1(OPEN), false, 'the cloud copy is gone');
   assert.equal($('#profile-dialog').open, false);
   closeSheets();
 });
 
-test('in the cloud with a PIN: the third tap asks for it; a wrong one asks again', async () => {
+test('in the cloud with a PIN: the cloud button asks, then the PIN; a wrong one asks again', async () => {
   sheetOf(LOCKED);
   await settle();
   assert.equal($('#pin-dialog').open, true, 'their profile opens past their PIN (Ben, 2026-10-24)');
@@ -102,6 +108,8 @@ test('in the cloud with a PIN: the third tap asks for it; a wrong one asks again
   await tap();
   assert.equal(state.peopleEdits.has(LOCKED), false);
   assert.match($('#profile-delete-hint').textContent, /it asks for their PIN/);
+  await tap();
+  assert.equal($('#pin-dialog').open, false, 'it asks "Tap again" before the PIN');
   await tap();
   assert.equal($('#pin-dialog').open, true);
   typePin('1111');
@@ -120,6 +128,16 @@ test('☁️ Keep after the second tap keeps the cloud copy, and the next sheet 
   await tap();
   await tap();
   assert.equal(state.peopleEdits.has(KEPT), false);
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    del().dispatch('click');
+    assert.equal(del().textContent, '☁️ Tap again to delete their cloud copy');
+    mock.timers.tick(4100);
+    assert.equal(del().textContent, '☁️ Delete their cloud copy too', 'the ask takes itself back after 4 s');
+    assert.ok(!del().classList.contains('armed'));
+  } finally {
+    mock.timers.reset();
+  }
   $('#profile-keep').dispatch('click');
   await settle();
   assert.equal($('#profile-dialog').open, false, 'it closes the sheet, as ✕ does');

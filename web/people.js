@@ -32,7 +32,7 @@ let showPerson = () => {};
 let startOver = () => {};
 let profileFor = null;   // the person whose profile sheet is open
 // Someone Delete just took off this device whose cloud copy is still there:
-// {id, name, avatar, color, key, pin}. Their sheet stays open for the third tap.
+// {id, name, avatar, color, key, pin}. Their sheet stays open for the cloud copy's Delete.
 let left = null;
 
 // What each person has on this device, as lists the way a backup holds them:
@@ -281,24 +281,25 @@ function renderProfile(fresh = false) {
 }
 
 // The sheet of someone just deleted here, cloud copy left: only the Delete box
-// shows, its red button moved to the top for the third tap and ☁️ Keep where
-// the first two landed. Keep and ✕ keep the cloud copy.
+// shows, its red button moved to the top for the cloud copy and ☁️ Keep where
+// the first two landed. Keep and ✕ keep the cloud copy. The red button asks
+// first, as every Delete does (Ben, 2026-10-26): `left.asked` once it has.
 function drawLeft() {
   el.profile.style.setProperty('--c', left.color);
   el.profileAvatar.replaceChildren(avatarBadge(left));
   el.profileName.textContent = left.name;
   el.profileParts.hidden = true;
   const del = el.profileDelete;
-  del.classList.add('armed');
+  del.classList.toggle('armed', !!left.asked);
   del.disabled = false;
-  del.textContent = '☁️ Delete their cloud copy too';
-  del.setAttribute('aria-label', `Delete the cloud copy of ${left.name} too`);
+  del.textContent = left.asked ? '☁️ Tap again to delete their cloud copy' : '☁️ Delete their cloud copy too';
+  del.setAttribute('aria-label', left.asked ? `Tap again to delete the cloud copy of ${left.name}` : `Delete the cloud copy of ${left.name} too`);
   el.profileZone.classList.add('left');
   el.profileKeep.hidden = false;
   el.profileDeleteHint.textContent = `${left.name} is deleted from this device. Their cloud copy is still there, for any other phone or tablet.${left.pin ? ' Deleting it asks for their PIN.' : ''}`;
 }
 
-// Any other tap takes back a half-done Delete. The third tap waits until the
+// Any other tap takes back a half-done Delete. The cloud copy's waits until the
 // sheet closes.
 function disarmDelete() {
   clearTimeout(armTimer);
@@ -306,6 +307,14 @@ function disarmDelete() {
   if (left?.id === profileFor || !el.profileDelete.classList.contains('armed')) return;
   el.profileDelete.classList.remove('armed');
   renderProfile();
+}
+
+// The cloud copy's Delete takes back its "Tap again", as Delete does.
+function unaskCloud() {
+  armTimer = null;
+  if (!left?.asked) return;
+  left.asked = false;
+  drawLeft();
 }
 
 // The guard: asks for the PIN, true once it is right. Call it only when
@@ -414,7 +423,18 @@ async function onProfileClick(e) {
     return;
   }
   armedAt = e.timeStamp;
-  if (left?.id === id) { await deleteCloudToo(); return; }
+  if (left?.id === id) {
+    clearTimeout(armTimer);
+    if (!left.asked) {
+      left.asked = true;
+      drawLeft();
+      announce(`Tap again to delete the cloud copy of ${left.name}.`);
+      armTimer = setTimeout(unaskCloud, ARM_MS);
+      return;
+    }
+    await deleteCloudToo();
+    return;
+  }
   const p = anyone(id);
   if (!t.classList.contains('armed')) {
     t.classList.add('armed');
@@ -425,7 +445,7 @@ async function onProfileClick(e) {
     armTimer = setTimeout(disarmDelete, ARM_MS);
     return;
   }
-  // In the cloud: the sheet stays for a third tap, so keep what deleting
+  // In the cloud: the sheet stays for the cloud copy's Delete, so keep what deleting
   // the cloud copy needs. A profile with a PIN keeps no key; it is asked.
   if (inCloud(id)) {
     const pin = !!linkOf(id)?.pin;
@@ -436,7 +456,7 @@ async function onProfileClick(e) {
     return;
   }
   if (left?.id === id) {
-    // Nobody else shows while the sheet waits for the third tap: a PIN pad
+    // Nobody else shows while the sheet waits for the cloud copy's Delete: a PIN pad
     // for the next person would cover it (Ben, 2026-10-24). The sheet's
     // closing brings them on.
     renderPeopleEditor();
@@ -451,13 +471,18 @@ async function onProfileClick(e) {
   announce(`${p.name} is deleted from this device.`);
 }
 
-// Delete's third tap: the cloud copy goes too, past their PIN if they have one.
+// The cloud copy's Delete, asked and tapped again: the cloud copy goes too,
+// past their PIN if they have one.
 async function deleteCloudToo() {
   const gone = left;
   profileNote('');
   const { ok, note } = await deleteLeftCloud(gone);
   if (note) profileNote(note);
-  if (!ok) return;
+  if (!ok) {
+    // The PIN pad closed or the cloud said no: it asks again next time.
+    if (left === gone) unaskCloud();
+    return;
+  }
   el.profile.close();
   el.personAdd.focus({ preventScroll: true });
   announce(`${gone.name} is deleted from the cloud too.`);
@@ -512,7 +537,7 @@ export function initPeople(hooks) {
     left = null;
     stopHold();
     disarmDelete();
-    // Deleted while on show, the sheet open for the third tap: someone else
+    // Deleted while on show, the sheet open for the cloud copy's Delete: someone else
     // comes on now.
     if (waited && !person(state.personId)) refreshPeople(goneNote(waited.name));
   });

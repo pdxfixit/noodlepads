@@ -221,7 +221,7 @@ export async function askEditPin(personId, hint = 'Type their PIN to change thei
   }
 }
 
-// Delete's third tap in a profile sheet (people.js): deletes the cloud copy of
+// ☁️ Delete their cloud copy too, tapped twice, in a profile sheet (people.js): deletes the cloud copy of
 // someone just deleted from this device. `left` is what the sheet kept of
 // them: their id, the key this device held (none with a PIN) and whether they
 // have a PIN, which is asked. `ok` once it is gone; `note` says what went wrong.

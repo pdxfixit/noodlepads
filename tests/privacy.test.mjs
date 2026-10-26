@@ -117,17 +117,17 @@ test('"Feedback is sent only when a grown-up answers a sum and taps Send": alway
   assert.ok(!JSON.stringify(put).includes('192.0.2.44') && !JSON.stringify(put).includes('iPhone'));
 });
 
-test('"To delete a profile": the steps name real buttons, and switching the cloud off or Delete\'s third tap deletes the cloud copy', async () => {
+test('"To delete a profile": the steps name real buttons, and switching the cloud off or ☁️ Delete their cloud copy too deletes the cloud copy', async () => {
   const line = claim('To delete a profile');
   assert.ok(line.includes('☁️ In the cloud') && html.includes('☁️ In the cloud'));
   assert.ok(html.includes('👥 People'));
-  assert.ok(line.includes('tap Delete twice, then ☁️ Delete their cloud copy too') && html.includes('id="profile-delete" data-remove aria-describedby="profile-delete-hint">🗑️ Delete<'));
+  assert.ok(line.includes('tap Delete twice, then ☁️ Delete their cloud copy too twice') && html.includes('id="profile-delete" data-remove aria-describedby="profile-delete-hint">🗑️ Delete<'));
   const people = readFileSync(new URL('../web/people.js', import.meta.url), 'utf8');
-  assert.ok(people.includes("del.textContent = '☁️ Delete their cloud copy too'"), 'the button the steps name');
+  assert.ok(people.includes("'☁️ Delete their cloud copy too'"), 'the button the steps name');
   const js = readFileSync(new URL('../web/cloud.js', import.meta.url), 'utf8');
   assert.match(js, /if \(inCloud\(personId\)\) await deleteFromCloud\(personId, pin\)/, 'Offline deletes the profile first');
   const ui = readFileSync(new URL('../web/cloud-ui.js', import.meta.url), 'utf8');
-  assert.match(ui, /const go = \(pin\) => removeProfile\(left\.id, left\.key, pin\)/, 'the third tap deletes the profile (tests/delete-cloud.test.mjs runs it)');
+  assert.match(ui, /const go = \(pin\) => removeProfile\(left\.id, left\.key, pin\)/, '☁️ Delete their cloud copy too deletes the profile (tests/delete-cloud.test.mjs runs it)');
 });
 
 test('"Everyone on this device goes to the cloud once they make something, unless … Offline"', () => {

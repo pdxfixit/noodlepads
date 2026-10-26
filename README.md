@@ -126,7 +126,7 @@ this copy the same and ties the claims to the code).
 - A song 🎧 From a song listens to is heard only in this browser, as it plays: it is never saved, synced or sent. Only the beats made from it are kept.
 - Problem reports, if you turn them on, send this device's cleaned event log (no sounds and no names), its settings, how many sounds, beats and songs it has, its browser, system and device type (never the full browser string), its screen size, time zone and sound timing, and a random code for this device. They are deleted from the cloud after 14 days.
 - Feedback is sent only when a grown-up answers a sum and taps Send in ⚙️ Settings → About → Feedback: only what they typed, and the app's version. Only the people who make the app read it, and it is deleted after 90 days. No name or IP address is stored with it.
-- To delete a profile and everything in it: 👥 People, tap them, tap Delete twice, then ☁️ Delete their cloud copy too, or switch ☁️ In the cloud off (tap it twice) to keep this device's own copy. Either asks for its PIN if it has one. It is gone from the cloud at once, with every share code it made.
+- To delete a profile and everything in it: 👥 People, tap them, tap Delete twice, then ☁️ Delete their cloud copy too twice, or switch ☁️ In the cloud off (tap it twice) to keep this device's own copy. Either asks for its PIN if it has one. It is gone from the cloud at once, with every share code it made.
 
 What the app sends about how it is used, and how long it is kept, is in the full policy, shared by every pdxfixit app: [Privacy policy](https://privacy.pdxfixit.com/noodlepads/).
 

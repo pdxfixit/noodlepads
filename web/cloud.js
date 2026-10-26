@@ -590,7 +590,7 @@ export async function setPin(personId, current, next) {
 }
 
 // Deletes a profile from the cloud with `key`, or with a key opened by the
-// PIN when there is none. Delete's third tap in a profile sheet (people.js)
+// PIN when there is none. ☁️ Delete their cloud copy too in a profile sheet (people.js)
 // calls it for someone already gone from this device.
 export async function removeProfile(personId, key, pin) {
   if (!key) key = (await api.open(personId, pin, false)).key;
