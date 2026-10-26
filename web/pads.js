@@ -835,7 +835,7 @@ export function initPads(hooks) {
     padFor(id)?.classList.toggle('looping', on);
     onLooping(id, on);
   };
-  audio.on.broken = (id) => padFor(id)?.classList.add('broken');
+  audio.on.broken = (id, on = true) => padFor(id)?.classList.toggle('broken', on);
 
   // A mouse plays a pad on pointerdown (quicker than click). A finger plays
   // it on the lift, and only if it stayed put, so a scroll that starts on a

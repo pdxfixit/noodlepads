@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { trimBounds, peaks } from '../web/audio.js';
-import { fakeBuffer } from './helpers.mjs';
+import { fakeBuffer, FakeAudioBuffer } from './helpers.mjs';
 
 const RATE = 1000;
 const approx = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} !== ${b}`);
@@ -322,4 +322,38 @@ test('a context the phone stops (a call, a locked screen; iOS says interrupted) 
     audio.revive();
     assert.equal(audio.ctx, null, 'revive never makes a context: only a tap may');
   });
+});
+// A sound that failed to load (a dropped connection, a phone short of
+// memory) is tried again on the next tap, and its pad stops looking broken
+// once it plays.
+test('a sound that failed to load is tried again next time, and is no longer broken once it loads', async () => {
+  const { audio } = await import('../web/audio.js');
+  globalThis.AudioBuffer ??= FakeAudioBuffer;
+  const realFetch = globalThis.fetch;
+  const realDecode = audio.decode;
+  const realBroken = audio.on.broken;
+  const realError = console.error;
+  const marks = [];
+  let online = false;
+  globalThis.fetch = async () => (online ? { ok: true, arrayBuffer: async () => new ArrayBuffer(8) } : { ok: false, status: 503 });
+  audio.decode = async () => fakeBuffer([Array.from({ length: 500 }, (_, i) => Math.sin(i / 3) * 0.5)], RATE);
+  audio.on.broken = (id, on = true) => marks.push([id, on]);
+  console.error = () => {};
+  const clip = { id: 'retry-1', source: 'bundled', file: 'clips/kit/retry.wav' };
+  try {
+    await assert.rejects(audio.load(clip));
+    assert.ok(audio.broken.has('retry-1'));
+    online = true;
+    const loaded = await audio.load(clip);
+    assert.ok(loaded.buffer.length > 0, 'the next try loads it');
+    assert.equal(audio.broken.has('retry-1'), false);
+    assert.deepEqual(marks, [['retry-1', true], ['retry-1', false]], 'the pad is marked, then unmarked');
+  } finally {
+    globalThis.fetch = realFetch;
+    audio.decode = realDecode;
+    audio.on.broken = realBroken;
+    console.error = realError;
+    audio.forget('retry-1');
+    audio.broken.delete('retry-1');
+  }
 });

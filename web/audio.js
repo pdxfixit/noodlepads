@@ -203,7 +203,7 @@ export const audio = {
     started: noop,        // a sound began (start the level meter)
     progress: noop,       // (id, 0-1)
     looping: noop,        // (id, on)
-    broken: noop,         // (id)
+    broken: noop,         // (id, on): it failed to load, or (on false) loaded after all
   },
 
   context() {
@@ -337,12 +337,16 @@ export const audio = {
       // An exact-length clip in its normal voice keeps its full length, silent
       // tail included, so looping it keeps time.
       const plain = recipeKey(clip) === 'normal:null';
-      const job = this.original(clip).then((buffer) => applyChain(buffer, chainOf(clip), clip.tweaks, clip.level))
+      const kept = this.original(clip);
+      const job = kept.then((buffer) => applyChain(buffer, chainOf(clip), clip.tweaks, clip.level))
         .then((r) => (clip.exact && plain ? { ...r, duration: r.buffer.duration } : r));
-      job.catch((err) => {
+      job.then(() => { if (this.broken.delete(clip.id)) this.on.broken(clip.id, false); }, (err) => {
         console.error(`Clip ${clip.id} (${recipeKey(clip)}) did not load:`, err);
+        // Not kept, so the next tap tries again (a dropped connection, a phone short of memory).
+        if (this.rendered.get(key) === job) this.rendered.delete(key);
+        if (this.originals.get(clip.id) === kept) this.forgetOriginal(clip.id);
         this.broken.add(clip.id);
-        this.on.broken(clip.id);
+        this.on.broken(clip.id, true);
       });
       this.rendered.set(key, job);
     }
@@ -351,9 +355,12 @@ export const audio = {
 
   // Drops everything cached for a clip (it was deleted, or its audio replaced).
   forget(id) {
+    this.forgetOriginal(id);
+    this.dropRendered(id);
+  },
+  forgetOriginal(id) {
     this.originals.delete(id);
     this.originalTrims.delete(id);
-    this.dropRendered(id);
   },
 
   // Drops the voiced copies of a clip except the one `keep` names, so trying

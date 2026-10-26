@@ -154,7 +154,7 @@ presets again. So most taps hit the `rendered` cache.
 |---|---|---|---|---|
 | `audio.recordings` | bundled file path | `recording` | a failed fetch deletes its entry; never otherwise | the file never changes during a visit |
 | `audio.originals` | clip id, checked against `originalTrims` = `cuts.js cutKey(clip)` | `original` (lazily remade when `cutKey` changes), `keepOriginal` | `forget(id)` | the blob and `file`: a replaced recording must call `forget` (`sheet.js`, `bulk.js`, `backup-ui.js`, `cloud.js`, `people.js` do) |
-| `audio.rendered` | `audio.key(clip)` = `` `${id}:${recipeKey(clip)}${cutKey(clip)}` `` | `load` | `dropRendered(id, keep)` (every key of the id but `keep`), `forget(id)` | `level`, `shift`, `chord`, `exact`, the blob: fixed per id, or `forget` is called |
+| `audio.rendered` | `audio.key(clip)` = `` `${id}:${recipeKey(clip)}${cutKey(clip)}` `` | `load` | `dropRendered(id, keep)` (every key of the id but `keep`), `forget(id)`, a failed load (its own key, and the kept audio it used) | `level`, `shift`, `chord`, `exact`, the blob: fixed per id, or `forget` is called |
 | `sheet.js sheet.previews` | `recipeKey({fx, tweaks})`, or `head:…` for the live head | `rendered`, `startLive`, Find its note | replaced with a new Map when the sound, trim or recording changes, and on close | the trim: the whole map is of one trim |
 | `sequencer.js ready` | clip id → loaded | `prepare` (on play, per row) | `prepareBeats` clears it | a voice change: `prepare` re-reads `audio.load` each play |
 | `listen-ui.js prints` | `audio.key(clip)` of `` `${personId}-${kit}` `` → fingerprint | `printFor` | never (one per sound as it plays, per visit) | the blob: a kit sound's file never changes |
@@ -589,8 +589,11 @@ turned on.
 ### Broken sounds
 
 `audio.load`'s failure adds the id to `audio.broken` and calls
-`on.broken` → `pads.js` adds `.broken`. `audio.play` shows the notice.
-Nothing removes an id from `broken` but a reload.
+`on.broken(id, true)` → `pads.js` adds `.broken`. `audio.play` shows the
+notice. The failed render and kept audio are not cached, so the next load
+(a tap, the warm-up) tries again; one that loads takes the id out of
+`broken` and calls `on.broken(id, false)`. Test: `tests/audio.test.mjs` ("a
+sound that failed to load is tried again next time").
 
 ## Seams
 

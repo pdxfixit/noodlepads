@@ -2605,3 +2605,14 @@ test('each group on Pads sits with its pads in one .pad-fold', () => {
   const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
   assert.match(css.match(/\.pad-fold \{[^}]*\}/)?.[0] ?? '', /outline: 2px solid/, 'an outline, which takes no room from the pads');
 });
+
+// A pad whose sound failed to load looks broken (striped); once a later try
+// loads it, it looks like a pad again.
+test('a pad marked broken is unmarked when its sound loads after all', async () => {
+  const { audio } = await import('../web/audio.js');
+  const pad = pads().find((p) => p.dataset.id);
+  audio.on.broken(pad.dataset.id, true);
+  assert.ok(pad.classList.contains('broken'));
+  audio.on.broken(pad.dataset.id, false);
+  assert.equal(pad.classList.contains('broken'), false);
+});
