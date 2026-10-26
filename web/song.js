@@ -147,7 +147,7 @@ export function soundSong(ctx, laneGains, planned, seq, t0 = 0) {
 }
 
 // deps: el (the screen's elements), audio, meter, seq (the beat maker: its
-// beatPlan, prepareBeats, soundHit, stop and colorOf), beats(personId)
+// beatPlan, prepareBeats, soundHit, endMix and stop), beats(personId)
 // (saved beats a song can use), load(personId) -> the stored open song or
 // undefined, save(song) (as the open song), close(personId) (nothing open),
 // songs: {list(personId), put(song), remove(id)} (every saved song),
@@ -1282,6 +1282,7 @@ export function createSong(deps) {
     for (const list of voices.values()) for (const v of list) fadeStop(v, now);
     voices = new Map();
     for (const g of laneGains) setTimeout(() => { try { g.disconnect?.(); } catch { /* gone */ } }, 1000);
+    seq.endMix?.(laneGains);   // its mix graphs, and their 〰️ 🤖 oscillators, go too
     laneGains = [];
     shown = new Set();
     planned = null;

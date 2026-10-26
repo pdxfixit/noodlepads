@@ -1001,6 +1001,8 @@ export function createSequencer(deps) {
     const now = audio.context().currentTime;
     const after = Math.round((at - t0) / (bar() * baseStep()));   // bars the old beat played
     ringing = [...ringing, ...voices.flat()].filter((v) => !(v.end <= now));
+    const before = pattern;
+    letGo((m) => m.p === before);   // rings out, then goes
     pattern = cleanPattern(saved, personId);
     save();
     t0 = at;
@@ -1140,6 +1142,8 @@ export function createSequencer(deps) {
     growHook = null;
     // A chip waiting for the bar line is taken back: a tap on it now opens it at once.
     if (queued) { queued = null; showChips(); }
+    // The beat's graphs (and a 🎹 note preview's) go once they ring out; a groove sample keeps its own.
+    letGo((m) => m.dest === audio.master && m.p !== sample?.pattern);
     if (!playing()) return;
     clearInterval(timer);
     cancelAnimationFrame(raf);
@@ -1324,6 +1328,11 @@ export function createSequencer(deps) {
   // effects change. The master's level is set on every use, so a fader moved
   // while playing is heard at once. A graph put aside rings out first.
   const buses = new WeakMap();   // dest -> WeakMap(beat -> graph)
+  // The graphs on the live context, {dest, p, bus}: 〰️ Warble and 🤖 Robot
+  // run oscillators until their graph is disposed, so each is let go
+  // (letGo) once what played through it stops.
+  const liveMixes = new Set();
+  const RING_MS = 6000;          // a graph let go is disposed after its tails ring out
   function busFor(ctx, dest, p) {
     let made = buses.get(dest);
     if (!made) buses.set(dest, (made = new WeakMap()));
@@ -1332,7 +1341,11 @@ export function createSequencer(deps) {
       const old = bus;
       try { bus = buildMix(ctx, dest, p); } catch { bus = { key: mixKey(p), master: null, input: () => dest, dispose() {} }; }
       made.set(p, bus);
-      if (old && ctx === audio.context()) setTimeout(() => old.dispose(), 6000);
+      if (ctx === audio.context()) {
+        for (const m of liveMixes) if (m.bus === old) liveMixes.delete(m);
+        liveMixes.add({ dest, p, bus });
+        if (old) setTimeout(() => old.dispose(), RING_MS);
+      }
     }
     const gain = bus.master?.gain;
     if (gain) {
@@ -1340,6 +1353,17 @@ export function createSequencer(deps) {
       else gain.value = masterLevel(p);
     }
     return bus;
+  }
+
+  // Lets go of the live graphs `which({dest, p})` picks: forgotten now,
+  // disposed once their tails have rung. A later hit builds a fresh one.
+  function letGo(which) {
+    for (const m of [...liveMixes]) {
+      if (!which(m)) continue;
+      liveMixes.delete(m);
+      if (buses.get(m.dest)?.get(m.p) === m.bus) buses.get(m.dest).delete(m.p);
+      setTimeout(() => m.bus.dispose(), RING_MS);
+    }
   }
 
   function hit(i, time, loud, note = 0, len = 0) {
@@ -2665,7 +2689,7 @@ export function createSequencer(deps) {
   // a groove or closing the dialog ends it.
   // 🎧 From a song's ▶ on each part plays a beat of its own the same way
   // (hearBeat): one thing at a time, and its `onEnd` hears when it stops.
-  let sample = null;   // {id, voices: Map(row → list), timer, onEnd}
+  let sample = null;   // {id, voices: Map(row → list), timer, onEnd, pattern (the beat heard)}
   function showHearKey(b) {
     const g = GROOVES.find((x) => x.id === b.dataset.hear);
     const on = sample?.id === b.dataset.hear;
@@ -2679,7 +2703,8 @@ export function createSequencer(deps) {
     clearTimeout(sample.timer);
     const now = audio.context().currentTime;
     for (const list of sample.voices.values()) for (const v of list) fadeStop(v, now);
-    const { onEnd } = sample;
+    const { onEnd, pattern: heard } = sample;
+    if (heard) letGo((m) => m.p === heard);
     sample = null;
     showHearKeys();
     onEnd?.();
@@ -2696,6 +2721,7 @@ export function createSequencer(deps) {
     sample = mine;
     showHearKeys();
     const plan = beatPlan(raw);
+    mine.pattern = plan.pattern;
     await prepareBeats([plan.pattern]);
     if (sample !== mine) return;   // stopped while its sounds loaded
     const ctx = audio.wake();
@@ -3349,6 +3375,8 @@ export function createSequencer(deps) {
   // Loads every sound the beats use (fresh: a voice may have changed),
   // keeping the ones a beat or song playing now still needs.
   const prepareBeats = (patterns) => refresh(patterns.flatMap((p) => p.rows));
+  // A song stopped: its graphs (into its lanes' gains, `dests`) go once they ring out.
+  const endMix = (dests) => letGo((m) => dests.includes(m.dest));
   // Sounds row i of beat `p` at `time` into `dest`, cutting off or
   // overlapping the row's earlier hits in `list`. False if its sound is gone.
   function soundHit(ctx, dest, list, p, i, time, loud, note, len = 0) {
@@ -3360,7 +3388,7 @@ export function createSequencer(deps) {
 
   return { setPerson, show, tempo: () => shape().bpm, render, play, stop, playing, grid, beatClock, rowFor, addRowFor, addSnaps, snapshot, restore, setClick, beat,
     cyclePill, clearRow, dropRow, toggleRing, ringTool, openLibrary, metronome, clickAt, setGrow, setTempo, setBars, setSignature, signature: () => sigOf(), advanced: () => advanced,
-    beatPlan, prepareBeats, soundHit, thumbnail, levelOf, setLevel, putLevel, toggleMute, levelState,
+    beatPlan, prepareBeats, soundHit, endMix, thumbnail, levelOf, setLevel, putLevel, toggleMute, levelState,
     trying, putTrialAway, keep, onScratch, sampling: () => sample?.id ?? null, hearBeat, stopHearing: stopSample,
     // A beat in 🗂️ My beats opened by id (🎧 From a song's 🥁 Open part A); false when it is not there.
     openSaved: (id) => { const saved = library().find((b) => b.id === id); if (saved) openBeat(cleanPattern(saved, personId), { resume: false }); return !!saved; },

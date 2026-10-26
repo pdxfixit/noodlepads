@@ -15,7 +15,7 @@
 | Row menus | `overflow.js moreMenu(root)` | `createSequencer` (on `el.rows`), `dj.js` | the whole visit |
 | Beat bar fitting | `lines.js fitLine(bar, BEAT_BAR_STEPS)` | `createSequencer`, one per `.beat-bar` | the whole visit |
 | The tucked play bar | `mini-deck.js initMiniDeck()` | `app.js start()` | the whole visit |
-| A mix graph | `mixer.js buildMix(ctx, dest, p)` | `sequencer.js busFor`, cached per destination and beat object | until its beat object is dropped, or rebuilt when `mixKey` changes |
+| A mix graph | `mixer.js buildMix(ctx, dest, p)` | `sequencer.js busFor`, cached per destination and beat object | on the live context, until what played through it stops (`letGo`) or `mixKey` changes; then disposed after 6 s (`RING_MS`) |
 
 `sequencer.js` and `song.js` never import `app.js`. `app.js` reaches them only through the returned objects; they reach the board only through `deps`.
 
@@ -195,7 +195,9 @@ Latency is worked out in two places with the same sum: `sequencer.js outputDelay
 
 So the graph from `mixer.js buildMix` holds only the effects and the master level. Level, mute and solo are handled in the sequencer.
 
-**`sequencer.js busFor(ctx, dest, p)`** keeps one graph per destination and beat object (`WeakMap(dest → WeakMap(beat → graph))`), rebuilt when `mixer.js mixKey(p)` changes (the master and row effect ids, and `bpm`, which 🔁 Echo needs). On the live context an old graph is disposed after 6 s, once its tails have rung. Effects are `steps.js` kinds built live (`buildLive`); 〰️ Warble and 🤖 Robot start oscillators, which `dispose()` stops. If building fails, the bus falls back to the destination itself.
+**`sequencer.js busFor(ctx, dest, p)`** keeps one graph per destination and beat object (`WeakMap(dest → WeakMap(beat → graph))`), rebuilt when `mixer.js mixKey(p)` changes (the master and row effect ids, and `bpm`, which 🔁 Echo needs). Effects are `steps.js` kinds built live (`buildLive`); 〰️ Warble and 🤖 Robot start oscillators, which `dispose()` stops. If building fails, the bus falls back to the destination itself.
+
+**Letting go of live graphs.** `liveMixes` lists every graph on the live context. `letGo(which)` forgets the ones it picks and disposes them after 6 s (`RING_MS`), once their tails have rung; the next hit builds a fresh one. It runs on every `stop()` (the graphs into `audio.master`, except a groove sample's), on a chip switch (the old beat's), at the end of a sample (`stopSample`), and when 🎼 Song stops (`seq.endMix(laneGains)`). Offline renders are never listed. Guard: `tests/mix-let-go.test.mjs`.
 
 **The 🎚️ Mixer sheet** (`mixer.js createMixer`) only draws and listens. Every change goes back through the sequencer (`setLevel`, `toggleMute`, `toggleSolo`, `setRowFx`, `setMaster`, `setMasterFx`, `allOn`), each of which saves and redraws (`mixChanged` also calls `onBeatChange`). It is opened by any `[data-mixer]` button (Beats and ⌨️ Keys).
 
@@ -380,7 +382,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 |---|---|
 | `app.js` | `setPerson`, `show`, `stop`, `playing`, `render`, `beat`, `grid`, `clickOff`, `toggleLock`, `endLock` |
 | `dj.js` (⌨️ Keys) | `play`, `stop`, `playing`, `beat`, `tempo`, `setTempo`, `setBars`, `setSignature`, `signature`, `advanced`, `grid`, `beatClock`, `metronome`, `clickAt`, `setClick`, `setGrow`, `rowFor`, `addRowFor`, `addSnaps`, `snapshot`, `restore`, `cyclePill`, `clearRow`, `dropRow`, `toggleRing`, `ringTool`, `levelOf`, `levelState`, `setLevel`, `putLevel`, `toggleMute`, `trying`, `putTrialAway`, `onScratch`, `lockChips`, `locked`, `lockChanged`, `addPicker`, `putRows`, `paintRows`, `saveBeat` |
-| `song.js` | `stop`, `beatPlan`, `prepareBeats`, `soundHit` |
+| `song.js` | `stop`, `beatPlan`, `prepareBeats`, `soundHit`, `endMix` |
 | `share-render.js` | `beatPlan`, `prepareBeats`, `soundHit` |
 | `listen-ui.js` | `hearBeat`, `stopHearing`, `openSaved` |
 | nobody (grep of `web/` and `tests/`) | `keep`, `openLibrary`, `openMixer`, `toggleSolo`, `setFx`, `setMaster`, `setMasterFx`, `openRoll`, `rollRow`, `sampling`, `queuedBeat`, `thumbnail` |
@@ -389,7 +391,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 
 | deps | Filled with |
 |---|---|
-| `el`, `audio`, `meter`, `seq` | the Song elements; the shared audio and meter; the sequencer (`stop`, `beatPlan`, `prepareBeats`, `soundHit`; its comment also names `colorOf`, which the sequencer does not have) |
+| `el`, `audio`, `meter`, `seq` | the Song elements; the shared audio and meter; the sequencer (`stop`, `beatPlan`, `prepareBeats`, `soundHit`, `endMix`) |
 | `beats(personId)` | `state.savedBeats` of that person minus hidden beats, newest `saved` first |
 | `load`, `save`, `close` | `state.songs` + IndexedDB `songs` (the open song) |
 | `songs` | `app.js songBook {list, put, remove}` |
@@ -413,7 +415,6 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | **Scratch flows are written twice**: beats (`newScratch`, `keepAside`, `keep`, `nameScratch`, `uniqueName`) and songs (`newScratch`, `keep`, `nameScratch`, `uniqueSongName`) | a rule change (what counts as empty, the banner text, naming) must be made in both |
 | **Beat-level fields are listed by hand** in `cleanPattern`, `samePattern`, `beatToFile` and `mixKey` | a new field cleaned but not added to `beatToFile` is lost in a beat file; `samePattern` already ignores `signature` |
 | **Two `buildMix` functions**: `mixer.js buildMix` (the beat's graph) and `sheet.js buildMix` (➕ Mix with another sound) | same name, unrelated jobs |
-| **Mix graphs on the live context are disposed only when rebuilt for the same beat object.** Each song play, each `hearBeat` and each beat switch makes new beat objects (`cleanPattern`), so new graphs | likely: a 〰️ Warble or 🤖 Robot effect leaves its oscillators running after a song or sample ends (`steps.js` starts them with no stop). Not checked in a browser |
 | **The roll's `commit(i, tune, {quiet})`**: `roll.js` passes a third argument the sequencer ignores | a drag re-renders the whole Beats screen on every move |
 | **Page turning**: `follow.js keepInView/pageTurn` for Beats, the roll and ⌨️ Keys; `song.js follow` has its own sum | a change to how far a page turns must be made twice |
 | **Dead code kept in step**: `isUnsaved` and `samePattern` are used only by tests; `row.collapsed` is cleaned and stored but never read; `overflow.js fitMore` and the `more-tight` class are used by no screen or stylesheet | edits keep them working for nothing |
