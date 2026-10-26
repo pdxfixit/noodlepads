@@ -292,7 +292,7 @@ Each touches something a test here cannot fully check (a stored record, the clou
 | Today | 1,636 lines. Live's takes (recording whatever is played, replay, rename, delete, make into a sound: ~265 lines from "Live: record whatever is played") sit inside `createDJ` beside the keys and Beats with ⌨️ Keys. |
 | Shape | `dj-takes.js createTakes(ctx)`, called by `createDJ` with what it needs. |
 | Size | About 265 lines moved; 5 files. |
-| Risk | Closures over `createDJ`'s state; replay is on `setTimeout` (a bug in TODO), so move it as is. |
+| Risk | Closures over `createDJ`'s state; replay is on the audio clock since the council round's fix (2026-10-26, `audio.book`), so move it as is. |
 | Guards | `tests/app.test.mjs` Live, `tests/rhythm.test.mjs` (`planTake`), `just look live`. Proof: an architecture check that only `dj.js` calls `createTakes`. |
 
 ### C15. Split `sequencer.js`'s factory · 210 min
