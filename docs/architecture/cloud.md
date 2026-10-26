@@ -66,13 +66,15 @@ Shape (as written by `cloud.js saveLink`):
 | Field | Meaning |
 |---|---|
 | `id` | the person id = the profile id (`p-…`) |
-| `key` | the device key; stored only when the profile has no PIN (`keepsKey`). A PIN profile's key lives in `cloud.js sessionKeys` for this page's life |
+| `key` | the device key; stored only when the profile has no PIN, or this device remembers the PIN (`keepsKey`). Any other PIN profile's key lives in `cloud.js sessionKeys` for this page's life |
 | `rev` | the profile `rev` this device has caught up to |
 | `sent` | `{"<kind>:<id>": hash}`: each record as the cloud has it (`cloud-sync.js hashOf`) |
 | `sounds` | `{<clip id>: {sha256, sound}}`: the audio's hash and its cloud sound id |
 | `pin` | the profile has a PIN |
 | `check` | `{salt, hash}`: PBKDF2 of the PIN, so the device can check it with no network |
 | `newPin` | the profile got a PIN this device never had typed; until typed, the person can't open, and 🤷 I don't know the PIN deletes them here |
+| `rememberUntil` | ms: 🔑 Remember on this device skips the PIN here until then (`REMEMBER_DAYS`, 30). Set by `cloud.js rememberHere`; cleared by `forgetHere`, a removed PIN or a PIN changed elsewhere; a PIN changed on this device keeps it |
+| `noOffer` | they said Not now to the offer, so `offersRemember` stops offering it on this device |
 
 Readers and writers:
 
@@ -80,16 +82,17 @@ Readers and writers:
 - `state.js readStorage` loads it; `state.js reIdStoredPeople` deletes links whose id is not a `CLOUD_ID` (logs `cloud {unlinked}`).
 - Read by `cloud.js` (`linkOf`, `inCloud`, `keyOf`, `pinIsNew`, `needsPin`, `pinGuards`), `people.js` (`linkOf`, `keyOf` when deleting), `who-now.js` (`linkOf(...).pin`).
 - Backups never carry it (`backup-ui.js storedLists` has no `cloud`).
-- `state.js` `state.cloud` comment still lists a `remember` field; no code writes it now (Remember was retired 2026-10-19).
+- `state.js` `state.cloud` comment still lists the old `remember` field (no day it ends, from before 2026-10-19) and not `rememberUntil` or `noOffer`.
 
 ### Keys: remembered and session
 
 - A no-PIN profile gets a remembered key (`keys.session = 0`): `putInCloud` (create, or open after a 409) and `openProfile` with no PIN (`remember = !pin`).
-- A PIN profile gets a session key (`session = 1`): `unlock` always calls `api.open(id, pin, false)`; `openProfile` with a PIN passes `remember: false`. The key goes in `sessionKeys`, never IndexedDB.
+- A PIN profile gets a session key (`session = 1`): `unlock` calls `api.open(id, pin, remembers(link))`, so `false` unless this device remembers them. The key goes in `sessionKeys`, never IndexedDB.
+- 🔑 Remember on this device (Ben, 2026-10-26): after a PIN opens someone, `cloud-ui.js offerRemember` asks once (`cloud.js offersRemember`); their profile's PIN part offers it too. `rememberHere(personId, pin)` opens again with `remember: true`, keeps that lasting key in the link, drops the visit's key (`api.forget` on the old one) and sets `rememberUntil`. While it holds, `needsPin` and `pinGuards` are false. `rememberedUntil` forgets a remembering whose day has come; so does `initCloud` at start. `forgetHere` (Forget this device, or the day) deletes the key here and in the cloud.
 - `unlock` deletes the device's previous key in the cloud (`api.forget`), so a device holds one key per profile.
-- The Worker deletes session keys older than `SESSION_KEY_MS` (7 days) only when that profile is next opened (`openProfile`).
-- A new PIN, or a PIN reset by Ben, deletes every key of the profile (`changeProfile`). The next sync gets 401 → `cloud.js keyRefused` asks the public list: no PIN now → opens again by itself; a PIN → `newPin: true`, status `locked`.
-- `initCloud` moves a stored key of a PIN profile (from the retired Remember) into `sessionKeys` for this visit.
+- The Worker deletes session keys older than `SESSION_KEY_MS` (7 days) only when that profile is next opened (`openProfile`). That is why a remembered PIN asks for a lasting key.
+- A new PIN, or a PIN reset by Ben, deletes every key of the profile (`changeProfile`). The next sync gets 401 → `cloud.js keyRefused` asks the public list: no PIN now → opens again by itself; a PIN → `newPin: true`, `rememberUntil` cleared, status `locked`. A PIN changed on this device keeps its `rememberUntil`.
+- `initCloud` moves a stored key of a PIN profile with no `rememberUntil` (from the retired Remember, before 2026-10-19) into `sessionKeys` for this visit.
 
 ### PINs (and the three PIN sets in `cloud.js`)
 
@@ -426,7 +429,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 - **Edits during a sync do not schedule a sync.** `cloud.js` counts `applying` for the whole of `syncNow`, network waits included, and `db.onChange` ignores every store while it is non-zero. An edit pushed in the same sync is fine; one made after its last push slice waits for the next focus, blur, 5-minute tick or change.
 - **Every sync redraws.** `storeLoaded` (always called by `pullOnce`) ends with `readStorage`, `notifyAllSettings`, `renderPeople`, `refreshPeople`, and `syncNow` reads storage again.
 - **Reports expire lazily.** `reports.js` deletes expired rows only when a new report arrives.
-- **`log-clean.js RULES.cloud` lists `remember` and `forgot`**, which no code logs any more (dead entries; harmless).
+- **`log-clean.js RULES.cloud` lists `forgot`**, which no code logs any more (dead entry; harmless). `remember` is logged again by 🔑 Remember (`true`) and `forgetHere` (`false`).
 - **Session keys are swept only on open.** A PIN profile nobody opens again keeps its old session keys.
 - **`cloud-sync.js pieces(0)`** is `[[0, 0]]`, but `startSound` refuses 0 bytes; an empty clip would fail its upload.
 - **`track-page.js errorOf`'s comment names a `visits` module**, which no longer exists.
