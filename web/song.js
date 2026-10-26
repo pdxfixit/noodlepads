@@ -293,7 +293,10 @@ export function createSong(deps) {
     disarm(false);
     song.tempo = before.tempo;
     setMarks(before.tempos ?? []);
-    song.lanes = before.lanes;
+    // A lane's mute and loudness are not undo steps: they stay as they are now.
+    // (Lanes are only ever added at the end, so index i is the same lane.)
+    const now = song.lanes;
+    song.lanes = before.lanes.map((l, i) => (now[i] ? { ...l, muted: now[i].muted, volume: now[i].volume } : l));
     if (sel && !song.lanes[sel.lane]?.blocks[sel.block]) sel = null;
     save();
     render();

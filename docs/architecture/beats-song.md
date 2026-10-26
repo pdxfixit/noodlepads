@@ -299,7 +299,7 @@ A song from before lanes (only `slots`) becomes lane 1's blocks, back to back, a
 ### Editing and undo
 
 - Pick a beat in the strip (`deps.beats`: the person's beats minus the scratch), then tap a lane bar (`tapSpot` → `placeBlock`); the first block sets an empty song's tempo from its beat. Drag a selected block's ⟷ end, or ➖ ➕, for repeats (`setTimes`, `timesForEnd`, `maxTimes`); 🗑️ asks first.
-- Every edit goes through `edit(change)`, which pushes a snapshot `{tempo, tempos, lanes}` (40 steps, `MAX_UNDO`) and saves. Lane mute and volume are **not** undo steps. Most edits stop playback first.
+- Every edit goes through `edit(change)`, which pushes a snapshot `{tempo, tempos, lanes}` (40 steps, `MAX_UNDO`) and saves. Lane mute and volume are **not** undo steps, and `undoStep` keeps them as they are now (lanes are only added at the end, so a lane keeps its index; `tests/song-undo-mute.test.mjs`). Most edits stop playback first.
 - 🎼 Tempo sheet (Advanced): marks are added, changed and removed there (`putTempo`, `removeTempo`); everyone hears and sees them.
 - The scratch song, 🆕 New, 💾 Keep and a typed name work as for beats (`newScratch`, `keep`, `nameScratch`, `wantedName`), with `uniqueSongName` and `deps.songName`.
 
