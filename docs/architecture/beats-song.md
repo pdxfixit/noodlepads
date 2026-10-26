@@ -294,7 +294,7 @@ A song from before lanes (only `slots`) becomes lane 1's blocks, back to back, a
 
 ### Playing
 
-`song.js play`: `seq.stop()`, plan from `startBar` (a bar tapped in the ruler), `seq.prepareBeats`, one `GainNode` a lane (`laneGainsFor`: its volume, 0 when muted) into `audio.master`, `t0 = currentTime + 0.1`, then `tick` every 25 ms books events before `currentTime + 0.1` with `seq.soundHit`, keyed `lane:beatId:row` for cutting. A lane's speaker changes its gain live (`liveLevel`). It stops itself 0.2 s after the end. `follow` lights blocks (`playingAt`) and moves the line, both at the time heard (`heardAt`: the clock less `outputDelay`, `tests/song-playhead.test.mjs`); `deps.onHit` is wired but only acts while ⌨️ Keys shows, which it never does on the Song screen.
+`song.js play`: `seq.stop()`, plan from `startBar` (a bar tapped in the ruler), `seq.prepareBeats`, one `GainNode` a lane (`laneGainsFor`: its volume, 0 when muted) into `audio.master`, `t0 = currentTime + 0.1`, then `tick` every 25 ms books events before `currentTime + 0.1` with `seq.soundHit`, keyed `lane:beatId:row` for cutting. A lane's speaker changes its gain live (`liveLevel`). It stops itself 0.2 s after its end is heard (`heardAt`). `follow` lights blocks (`playingAt`) and moves the line, both at the time heard (`heardAt`: the clock less `outputDelay`, `tests/song-playhead.test.mjs`), and the song stops once its end is heard; `outputLatency` is reported by Chrome and Firefox (Android too), not by Safari, where `heardAt` is the plain clock less `baseLatency` if any; `deps.onHit` is wired but only acts while ⌨️ Keys shows, which it never does on the Song screen.
 
 ### Editing and undo
 

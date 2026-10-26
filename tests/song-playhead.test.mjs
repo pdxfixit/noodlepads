@@ -52,7 +52,15 @@ test('a block stays lit until its last bar has come out of the speaker', async (
   ctx.currentTime = 12.75;   // 0.05 s into bar 2, as heard
   frame?.();
   assert.deepEqual(lit(), [false, true]);
-  $('#song-play').dispatch('click');
+  // It ends once its end is heard (4.8 s, then 0.2 s more), not 0.15 s
+  // early on the clock, so the line reaches the end.
+  const wait = () => new Promise((r) => setTimeout(r, 60));
+  ctx.currentTime = 15.2;   // the end, plus 0.2 s, on the clock; heard 0.15 s later
+  await wait();
+  assert.equal($('#song-play').getAttribute('aria-pressed'), 'true', 'still playing: the end is not heard yet');
+  ctx.currentTime = 15.3;
+  await wait();
+  assert.equal($('#song-play').getAttribute('aria-pressed'), 'false', 'heard to the end, it stops');
   ctx.outputLatency = 0;
   ctx.currentTime = 0;
 });

@@ -1269,7 +1269,7 @@ export function createSong(deps) {
       mixEnds = mixEnds.filter((x) => x !== m);
     }
     meter.run();
-    if (ctx.currentTime > t0 + (planned.seconds - from) + 0.2) stop();
+    if (heardAt() > planned.seconds + 0.2) stop();   // once its end is heard, so the line reaches it
   }
 
   // The playhead follows the clock; the lanes scroll to keep it in view, a
