@@ -5039,7 +5039,7 @@ dialog.kids-sum {
   color: var(--ink);
 }
 dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
-.kids-sum-q { margin: 0 0 16px; text-align: center; font: 900 3rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.kids-sum-q { margin: 0 0 16px; text-align: center; font: 900 min(3rem, 11vw)/1 var(--font-display); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .kids-sum-typed { display: inline-block; min-width: 1.6em; border-bottom: 4px solid var(--ink); }
 .kids-sum-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .kids-sum-keys button { min-height: 64px; border: 0; border-radius: 16px; background: var(--chalk); color: var(--ink); box-shadow: 0 5px 0 var(--chalk-edge); font: 900 2rem/1 var(--font-display); }
@@ -5048,6 +5048,10 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
 /* Feedback's sum: a wrong answer says so above the keys, and asks another (grown-up.js). */
 .kids-sum-note { margin: -4px 0 14px; text-align: center; font-weight: 800; }
 .kids-sum-note[hidden] { display: none; }
+/* Three wrong answers: the keys dim and ⏳ counts down the wait (grown-up.js showWait). */
+.kids-sum-wait { margin: -4px 0 14px; text-align: center; font: 900 2rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.kids-sum-wait[hidden] { display: none; }
+.kids-sum-keys button:disabled { opacity: 0.35; box-shadow: none; }
 
 /* Settings' Level: three keys across the dialog. */
 .set-levels { display: flex; width: 100%; margin: 8px 0; border-color: rgb(20 19 24 / 0.3); }

@@ -12,14 +12,21 @@ import { versionFor } from './instruments.js';
 
 // ── The grown-up sum ──
 
-// Two numbers from 6 to 9: every answer has two digits (12 to 18), which a
-// five-year-old cannot guess by tapping one key.
+// A number from 12 to 39 and one from 6 to 9: a sum a grown-up does at a
+// glance (27 + 8), and every answer has two digits, from 18 to 48, so a
+// five-year-old cannot guess it by tapping one key, and its first digit
+// (1 to 4) gives nothing away.
 export function makeSum(random = Math.random) {
-  const pick = () => 6 + Math.floor(random() * 4);
-  const a = pick();
-  const b = pick();
+  const a = 12 + Math.floor(random() * 28);
+  const b = 6 + Math.floor(random() * 4);
   return { a, b, answer: a + b };
 }
+
+// After SUM_WAIT.after wrong answers in a row, each next try waits
+// SUM_WAIT.ms first, until a right answer: tapping at random takes a long
+// time. Tests shorten it.
+export const SUM_WAIT = { after: 3, ms: 30000 };
+export const sumWait = (wrongs) => (wrongs >= SUM_WAIT.after ? SUM_WAIT.ms : 0);
 
 // One digit tapped. `done` once as many digits as the answer has are in;
 // `right` only if they are the answer.

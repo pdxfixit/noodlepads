@@ -1,6 +1,8 @@
-// The grown-up sum (#kids-sum): two numbers from 6 to 9 (kids-logic.js
-// makeSum), answered on big number keys, so a young kid can't get past it by
-// tapping. Two places ask it:
+// The grown-up sum (#kids-sum): a number from 12 to 39 plus one from 6 to 9
+// (kids-logic.js makeSum), answered on big number keys, so a young kid can't
+// get past it by tapping. After three wrong answers in a row each next try
+// waits 30 s (kids-logic.js sumWait): the keys dim and ⏳ counts down, no
+// words; a right answer ends it. Two places ask it:
 //   🧸 Kids' ⚙️ (kids.js): a wrong answer goes quietly back to the kid's
 //     screens (ADR 0019).
 //   ⚙️ Settings → About → Feedback (feedback.js), at every level (Ben,
@@ -8,11 +10,17 @@
 // The dialog closes as every dialog does (✕, the backdrop, Esc).
 
 import { setupDialog, openDialog } from './dialogs.js';
-import { makeSum, typeDigit } from './kids-logic.js';
+import { makeSum, typeDigit, sumWait } from './kids-logic.js';
 
 const el = {};
 // What is being asked: { sum, typed, right(), wrong(), stay, owner }, or null.
 let ask = null;
+// Wrong answers in a row (whoever asked), and the time the next try may
+// come (Date.now() ms; 0: no wait). Kept until the page reloads.
+let wrongs = 0;
+let waitUntil = 0;
+let ticker = 0;
+const waiting = () => Date.now() < waitUntil;
 
 export const WRONG_NOTE = "That's not it. Here's another one.";
 
@@ -30,25 +38,48 @@ function newSum() {
   el.typed.textContent = '?';
 }
 
+// While a wait runs the number keys dim and do nothing, and ⏳ counts the
+// seconds down; then they wake for the next try.
+function showWait() {
+  clearInterval(ticker);
+  const tick = () => {
+    const left = Math.ceil((waitUntil - Date.now()) / 1000);
+    const on = left > 0;
+    el.box.classList.toggle('waiting', on);
+    el.wait.hidden = !on;
+    el.left.textContent = String(Math.max(0, left));
+    for (const k of el.keys.querySelectorAll('[data-digit]')) k.disabled = on;
+    if (!on) clearInterval(ticker);
+  };
+  tick();
+  if (waiting()) ticker = setInterval(tick, 250);
+}
+
 function tapDigit(d) {
-  if (!ask) return;
+  if (!ask || waiting()) return;
   const next = typeDigit(ask.typed, d, ask.sum.answer);
   ask.typed = next.typed;
   el.typed.textContent = next.typed;
   if (!next.done) return;
   const { right, wrong, stay } = ask;
   if (next.right) {
+    wrongs = 0;
+    waitUntil = 0;
     ask = null;
     el.dialog.close();
     right?.();
     return;
   }
   wiggle(el.box);
+  wrongs += 1;
+  const wait = sumWait(wrongs);
+  if (wait) waitUntil = Date.now() + wait;
   wrong?.();
   if (stay) {
     el.note.textContent = WRONG_NOTE;
     el.note.hidden = false;
     newSum();
+    showWait();
   } else {
     ask = null;
     setTimeout(() => el.dialog.close(), 400);
@@ -61,9 +92,10 @@ function wire() {
   Object.assign(el, {
     dialog: q('#kids-sum'), box: q('#kids-sum-box'), a: q('#kids-sum-a'), b: q('#kids-sum-b'),
     typed: q('#kids-sum-typed'), keys: q('#kids-sum-keys'), note: q('#kids-sum-note'),
+    wait: q('#kids-sum-wait'), left: q('#kids-sum-left'),
   });
   setupDialog(el.dialog);
-  el.dialog.addEventListener('close', () => { ask = null; });
+  el.dialog.addEventListener('close', () => { ask = null; clearInterval(ticker); });
   el.keys.addEventListener('click', (e) => {
     const k = e.target.closest?.('[data-digit]');
     if (k) tapDigit(k.dataset.digit);
@@ -79,6 +111,7 @@ export function askSum({ right, wrong, stay = false, owner = '' } = {}) {
   newSum();
   el.note.textContent = '';
   el.note.hidden = true;
+  showWait();
   openDialog(el.dialog);
 }
 

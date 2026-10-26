@@ -273,7 +273,7 @@ Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, �
 
 ### The grown-up gate (`grown-up.js`)
 
-One dialog `#kids-sum`, wired on first use. `askSum({ right, wrong, stay, owner })` shows two numbers 6–9 (`kids-logic.js makeSum`); digits go through `typeDigit`. Kids asks with `owner: 'kids'` and no `stay`: a wrong answer wiggles and closes. `feedback.js` asks with `stay: true` at every level. `closeSum(owner)` closes only the asker's sum. Behind it: `settings-ui.js initSettingsUI({ gate })`, where `app.js` passes `gate: () => kidsShowing() && askGrownUp()`.
+One dialog `#kids-sum`, wired on first use. `askSum({ right, wrong, stay, owner })` shows a number 12–39 plus one 6–9 (`kids-logic.js makeSum`: the answer always has two digits, 18–48, its first digit no clue); digits go through `typeDigit`. After three wrong answers in a row (`wrongs`, whoever asked, until the page reloads) each next try waits 30 s (`sumWait`, `SUM_WAIT`): the keys dim and ⏳ counts down (`showWait`); a right answer ends it. Kids asks with `owner: 'kids'` and no `stay`: a wrong answer wiggles and closes. `feedback.js` asks with `stay: true` at every level. `closeSum(owner)` closes only the asker's sum. Behind it: `settings-ui.js initSettingsUI({ gate })`, where `app.js` passes `gate: () => kidsShowing() && askGrownUp()`.
 
 ### Its recorder, beside the sound sheet's
 

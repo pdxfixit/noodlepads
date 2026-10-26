@@ -190,9 +190,12 @@ five-year-old, with no words to read and nothing to delete, edit or share:
 
 ⏹️ (or Esc, or Space) stops everything: every sound, the beat, a ● tune
 and a mic recording, which is kept as its pad without playing (a 3, 2, 1
-is called off). The ⚙️ gear asks a grown-up sum (two numbers from 6 to
-9, big number keys; `grown-up.js`, which ⚙️ Settings → About → Feedback asks
-too); right opens Settings and the regular app until the page reloads, wrong
+is called off). The ⚙️ gear asks a grown-up sum (a number from 12 to 39
+plus one from 6 to 9, so the answer always has two digits and its first
+digit gives nothing away; big number keys; `grown-up.js`, which ⚙️ Settings →
+About → Feedback asks too). After three wrong answers in a row each next try
+waits 30 s: the number keys dim and ⏳ counts down, no words, until a right
+answer (kept until the page reloads); right opens Settings and the regular app until the page reloads, wrong
 goes quietly back. 🧸 Kids mode at the end of the corner menu (the round
 button's), or 🧸 at the top of the regular app before ❓ and ⚙️ (from 600 px
 wide: on a phone a fourth button wraps the title; it waits at the top, out of

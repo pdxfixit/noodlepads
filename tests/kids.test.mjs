@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
 import {
-  makeSum, typeDigit, kidsRange, kidsAutoPx, kidsPadPx, kidsShare, shareOf, kidsSliderAt, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder, KIDS_PADS,
+  makeSum, typeDigit, sumWait, SUM_WAIT, kidsRange, kidsAutoPx, kidsPadPx, kidsShare, shareOf, kidsSliderAt, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder, KIDS_PADS,
   newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds, KIDS_TEMPOS,
   TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote, keptTune,
   kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS, keyPitch, keyRate, keyPlayId, isHighKey,
@@ -21,17 +21,27 @@ import { isScratch, scratchId } from '../web/scratch.js';
 
 // ── Pure ──
 
-test('the grown-up sum: two numbers from 6 to 9, so the answer always has two digits', () => {
+test('the grown-up sum: 12 to 39 plus 6 to 9, so the answer always has two digits, and its first digit gives nothing away', () => {
   for (const r of [0, 0.3, 0.6, 0.999]) {
     const s = makeSum(() => r);
-    assert.ok(s.a >= 6 && s.a <= 9 && s.b >= 6 && s.b <= 9, JSON.stringify(s));
+    assert.ok(s.a >= 12 && s.a <= 39 && s.b >= 6 && s.b <= 9, JSON.stringify(s));
     assert.equal(s.answer, s.a + s.b);
     assert.equal(String(s.answer).length, 2);
   }
+  assert.equal(makeSum(() => 0).answer, 18);
+  assert.equal(makeSum(() => 0.999).answer, 48);
   let n = 0;
   const seen = new Set();
-  for (let i = 0; i < 40; i++) seen.add(makeSum(() => ((n = (n * 7 + 3) % 10) / 10)).a);
+  const firsts = new Set();
+  for (let i = 0; i < 40; i++) { const s = makeSum(() => ((n += 0.618034) % 1)); seen.add(s.a); firsts.add(String(s.answer)[0]); }
   assert.ok(seen.size > 1, 'random each time');
+  assert.ok(firsts.size >= 3, `the first digit varies: ${[...firsts]}`);
+});
+
+test('the grown-up sum waits after three wrong answers in a row', () => {
+  assert.deepEqual([0, 1, 2].map(sumWait), [0, 0, 0]);
+  assert.equal(sumWait(3), 30000, 'the next try waits 30 s');
+  assert.equal(sumWait(7), 30000, 'and every one after, until a right answer');
 });
 
 test('typing the answer: done after as many digits as it has; right only when they match', () => {
@@ -733,6 +743,37 @@ test('⚙️ asks a sum; a wrong answer goes quietly back to the kid\'s screens'
   assert.equal($('#kids-sum').open, false);
   assert.equal($('#settings-dialog').open, false);
   assert.equal(document.body.classList.contains('kids'), true);
+});
+
+// After three wrong answers in a row the next try waits (30 s; shortened
+// here): the keys dim and do nothing, ⏳ counts down, no words; then they
+// wake, and a right answer ends the waits.
+test('three wrong answers in a row: the next try waits, the keys dim and ⏳ counts down; then it asks again', async () => {
+  const wrong = () => String(Number($('#kids-sum-a').textContent) + Number($('#kids-sum-b').textContent) === 19 ? 20 : 19);
+  const keys = () => $('#kids-sum-keys').querySelectorAll('[data-digit]');
+  const plain = SUM_WAIT.ms;
+  SUM_WAIT.ms = 1200;
+  // One wrong answer already (the test before): two more.
+  for (let i = 0; i < 2; i++) {
+    $('#settings-open').dispatch('click');
+    assert.equal($('#kids-sum-wait').hidden, true, `no wait yet (${i + 2} of 3)`);
+    for (const d of wrong()) $('#kids-sum-keys').querySelector(`[data-digit="${d}"]`).dispatch('click');
+    await new Promise((r) => setTimeout(r, 450));
+  }
+  $('#settings-open').dispatch('click');
+  assert.equal($('#kids-sum').open, true);
+  assert.equal($('#kids-sum-wait').hidden, false, '⏳ shows');
+  assert.ok(Number($('#kids-sum-left').textContent) >= 1, `seconds left: ${$('#kids-sum-left').textContent}`);
+  assert.ok(keys().every((k) => k.disabled), 'the keys dim');
+  // A digit tapped now does nothing, not even the right answer.
+  const answer = String(Number($('#kids-sum-a').textContent) + Number($('#kids-sum-b').textContent));
+  for (const d of answer) keys().find((k) => k.dataset.digit === d).dispatch('click');
+  assert.equal($('#kids-sum').open, true, 'still waiting');
+  assert.equal($('#kids-sum-typed').textContent, '?');
+  await until(() => $('#kids-sum-wait').hidden, 'the wait to end', 3000);
+  assert.ok(keys().every((k) => !k.disabled), 'the keys wake');
+  $('#kids-sum').close();
+  SUM_WAIT.ms = plain;
 });
 
 test('the right answer opens Settings and the regular app; the level stays Kids', async () => {
