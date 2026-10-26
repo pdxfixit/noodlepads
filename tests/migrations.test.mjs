@@ -79,6 +79,7 @@ test('migration 006 counts each profile\'s record bytes as the Worker does', () 
     'p-a': Buffer.byteLength('{"name":"Ünï"}') + ROW_BYTES + ROW_BYTES,
     'p-b': Buffer.byteLength('{"clips":[]}') + Buffer.byteLength('Burp') + 3 * ROW_BYTES,
   }, 'bytes, not characters; a tombstone costs a row; a share its bundle, title and rows');
+  assert.deepEqual(db.prepare('SELECT DISTINCT bytes_counted AS c FROM profiles').all().map((r) => r.c), [0], 'the newer Worker counts each again itself');
 });
 
 // 007: every key there counts as used now, so none expires before 180 days of its own.

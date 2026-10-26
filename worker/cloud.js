@@ -202,8 +202,8 @@ async function makeProfile(request, env, now, seen) {
   const salt = body.pin ? newSalt() : null;
   const hash = body.pin ? await hashSecret(body.pin, salt) : null;
   const edited = Number.isFinite(body.edited) ? Math.min(body.edited, now) : now;
-  await env.DB.prepare(`INSERT INTO profiles (id, name, avatar, color, pin_hash, pin_salt, rev, edited, created, active)
-    VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`).bind(body.id, look.name, look.avatar, look.color, hash, salt, edited, now, now).run();
+  await env.DB.prepare(`INSERT INTO profiles (id, name, avatar, color, pin_hash, pin_salt, rev, edited, created, active, bytes_counted)
+    VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 1)`).bind(body.id, look.name, look.avatar, look.color, hash, salt, edited, now, now).run();
   Object.assign(seen, { kind: 'make', profile: body.id });
   return json(201, { key: await newKey(env, body.id, now, false, seen), rev: 0 });
 }
@@ -327,9 +327,17 @@ function checkRecordKey(r) {
   if (!r || !KINDS.includes(r.kind) || typeof r.id !== 'string' || !RECORD_ID.test(r.id)) throw new Refuse(400, 'record');
 }
 
-// A profile's bytes counted again from what it holds (its records and shares).
-const recount = (env, id) => env.DB.prepare(`UPDATE profiles SET record_bytes = (SELECT COALESCE(SUM(${SIZE}), 0) FROM records WHERE records.profile_id = ?)
-  + (SELECT COALESCE(SUM(${SHARE_SIZE}), 0) FROM shares WHERE shares.profile_id = ?) WHERE id = ? RETURNING record_bytes`).bind(id, id, id).first();
+// A profile's bytes counted from what it holds (its records and shares).
+const COUNT = `(SELECT COALESCE(SUM(${SIZE}), 0) FROM records WHERE records.profile_id = profiles.id)
+  + (SELECT COALESCE(SUM(${SHARE_SIZE}), 0) FROM shares WHERE shares.profile_id = profiles.id)`;
+const recount = (env, id) => env.DB.prepare(`UPDATE profiles SET record_bytes = ${COUNT}, bytes_counted = 1 WHERE id = ? RETURNING record_bytes`)
+  .bind(id).first();
+// Counts the profiles this Worker hasn't counted yet (bytes_counted 0): a
+// push from the Worker before this one, after migration 006, left its count
+// low. The writer first, then up to 5 more each time, so every count is
+// exact soon after the deploy; then it writes nothing.
+const countUncounted = (env, id) => env.DB.prepare(`UPDATE profiles SET record_bytes = ${COUNT}, bytes_counted = 1
+  WHERE bytes_counted = 0 AND (id = ? OR id IN (SELECT id FROM profiles WHERE bytes_counted = 0 AND id <> ? LIMIT 5))`).bind(id, id).run();
 
 // Takes `growth` more bytes for profile `id`, or a 507: its own cap
 // ('records full'), else everyone's ('cloud full'). One UPDATE checks both
@@ -341,6 +349,7 @@ const recount = (env, id) => env.DB.prepare(`UPDATE profiles SET record_bytes = 
 // rare, and only ever generous.)
 async function reserve(env, id, growth) {
   if (growth <= 0) return 0;
+  await countUncounted(env, id);
   const take = () => env.DB.prepare(`UPDATE profiles SET record_bytes = record_bytes + ?
     WHERE id = ? AND record_bytes + ? <= ? AND (SELECT SUM(record_bytes) FROM profiles) + ? <= ? RETURNING record_bytes`)
     .bind(growth, id, growth, LIMITS.profileRecordBytes, growth, LIMITS.totalRecordBytes).first();

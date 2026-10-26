@@ -286,7 +286,7 @@ test('a profile holds at most 10 MB of records, and everyone 60 MB; a push that 
   assert.equal((await push({ put: [big(20)] })).status, 200, 'and makes room');
   // Everyone's: every profile's count, added up (here, p-a and a big p-z).
   const key2 = await made(c, 'p-b');
-  c.env.DB.db.prepare("INSERT INTO profiles (id, name, color, edited, created, record_bytes) VALUES ('p-z', 'Sir Squid', '#1F3FA8', 0, 0, ?)")
+  c.env.DB.db.prepare("INSERT INTO profiles (id, name, color, edited, created, record_bytes, bytes_counted) VALUES ('p-z', 'Sir Squid', '#1F3FA8', 0, 0, ?, 1)")
     .run(LIMITS.totalRecordBytes - bytes() - 1000);
   const all = await push({ put: [{ kind: 'beats', id: 'beat-1', body: { name: 'x'.repeat(2000) } }] }, key2, 'p-b');
   assert.equal(all.status, 507);
@@ -322,6 +322,30 @@ test('pushes sent at once take their room one at a time, so they never overshoot
   c.env.DB.batch = realBatch;
   assert.equal(failed.status, 503);
   assert.equal(c.env.DB.rows("SELECT record_bytes AS b FROM profiles WHERE id = 'p-a'")[0].b, kept);
+});
+
+// The security seat, 2026-10-26: a push the older Worker takes between
+// migration 006 and the deploy leaves a count low, which no refusal would
+// ever correct. The newer Worker counts every such profile again itself.
+test('counts an older Worker left low are made again from the first pushes after the deploy', async () => {
+  const c = cloud();
+  const key = await made(c, 'p-a');
+  const others = [];
+  for (let i = 0; i < 7; i++) others.push([`p-old-${i}`, await made(c, `p-old-${i}`)]);
+  for (const [id, k] of [['p-a', key], ...others]) {
+    await c.call('POST', `profiles/${id}/records`, { key: k, body: { put: [{ kind: 'beats', id: 'beat-1', body: { name: 'x'.repeat(1000) } }] } });
+  }
+  // As migration 006 leaves them, after the older Worker wrote more: low, and not counted by this one.
+  c.env.DB.db.prepare('UPDATE profiles SET record_bytes = 0, bytes_counted = 0').run();
+  const low = () => c.env.DB.rows('SELECT id FROM profiles WHERE bytes_counted = 0 OR record_bytes = 0 ORDER BY id').map((r) => r.id);
+  await c.call('POST', 'profiles/p-a/records', { key, body: { put: [{ kind: 'beats', id: 'beat-2', body: {} }] } });
+  assert.equal(low().length, 8 - 6, 'the writer and five more are counted');
+  assert.ok(!low().includes('p-a'));
+  await c.call('POST', 'profiles/p-a/records', { key, body: { put: [{ kind: 'beats', id: 'beat-3', body: {} }] } });
+  assert.deepEqual(low(), [], 'then the rest');
+  const [{ kept, counted }] = c.env.DB.rows(`SELECT (SELECT SUM(record_bytes) FROM profiles) AS kept,
+    (SELECT SUM(LENGTH(CAST(body AS BLOB)) + 100) FROM records) AS counted`);
+  assert.equal(kept, counted, 'every count exact');
 });
 
 test("a profile's record bytes stay exact through edits, deletes, tombstones and stale writes", async () => {
@@ -491,7 +515,7 @@ test("a share's bundle counts against the profile's 10 MB and everyone's 60 MB; 
   assert.equal((await c.call('DELETE', `profiles/p-a/shares/${code}`, { key: a })).status, 200);
   assert.equal(bytes(), 0, 'unsharing gives it back');
   // Everyone's.
-  c.env.DB.db.prepare("INSERT INTO profiles (id, name, color, edited, created, record_bytes) VALUES ('p-z', 'Sir Squid', '#1F3FA8', 0, 0, ?)")
+  c.env.DB.db.prepare("INSERT INTO profiles (id, name, color, edited, created, record_bytes, bytes_counted) VALUES ('p-z', 'Sir Squid', '#1F3FA8', 0, 0, ?, 1)")
     .run(LIMITS.totalRecordBytes - 500_000);
   const full = await c.call('POST', 'profiles/p-a/shares', { key: a, body: body('Boom') });
   assert.deepEqual([full.status, full.data.error], [507, 'cloud full']);

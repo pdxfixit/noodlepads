@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   edited       INTEGER NOT NULL,          -- when name, avatar or color last changed
   created      INTEGER NOT NULL,
   active       INTEGER NOT NULL DEFAULT 0,-- last open, pull or push, to the hour (`just cloud-prune`)
-  record_bytes INTEGER NOT NULL DEFAULT 0 -- its records' and shares' size: JSON + 100 a row (worker/cloud.js ROW_BYTES), capped
+  record_bytes INTEGER NOT NULL DEFAULT 0,-- its records' and shares' size: JSON + 100 a row (worker/cloud.js ROW_BYTES), capped
+  bytes_counted INTEGER NOT NULL DEFAULT 0 -- 1 once the Worker that keeps record_bytes counted it (0: an older Worker may have written since)
 );
 
 -- A device that opened a profile (with its PIN, if it has one) keeps a key.
