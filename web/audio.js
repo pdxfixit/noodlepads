@@ -263,11 +263,15 @@ export const audio = {
   // the trim screen holds it while it is open. An instrument's preset (ADR
   // 0030) is its recording moved to its note, or several notes of it at
   // once for a chord (boards.json `shift`, `chord`): that is its stored
-  // audio, so a trim, an edit or a voice works on it as on any sound.
+  // audio, so a trim, an edit or a voice works on it as on any sound. An
+  // instrument's preset that plays its recording as it is (`inst`, no
+  // `shift`) shares that one decode too, as a copy.
   async decoded(clip) {
-    if (clip.source === 'bundled' && voicingOf(clip)) {
+    if (clip.source === 'bundled' && (voicingOf(clip) || clip.inst)) {
       const whole = await this.recording(clip.file);
-      const channels = Array.from({ length: whole.numberOfChannels }, (_, c) => voice(whole.getChannelData(c), voicingOf(clip)));
+      const semitones = voicingOf(clip);
+      const channels = Array.from({ length: whole.numberOfChannels }, (_, c) => (semitones
+        ? voice(whole.getChannelData(c), semitones) : Float32Array.from(whole.getChannelData(c))));
       const moved = new AudioBuffer({ length: channels[0].length, numberOfChannels: channels.length, sampleRate: whole.sampleRate });
       channels.forEach((d, c) => moved.copyToChannel(d, c));
       return moved;
@@ -284,7 +288,8 @@ export const audio = {
   },
 
   // A bundled file decoded once, however many presets play it (an
-  // instrument's recording: every note and chord of it reads this). Never
+  // instrument's recording: every note and chord of it, and the preset that
+  // plays it unmoved, read this). Never
   // handed out to be changed: decoded() reads it and makes its own.
   recordings: new Map(),   // file -> Promise<AudioBuffer>
   recording(file) {

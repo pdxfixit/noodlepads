@@ -92,7 +92,7 @@ Other contexts:
 | `pending` | Map id → a loop asked for while its sound loads (`loadForLoop`) | `loop`, `loopInTime` | `stop` and `stopAll` take it back, so it never starts; `isLooping` counts it, so a tap on the pad stops it (`tests/audio.test.mjs`) |
 | `originals` | Map clip id → Promise<AudioBuffer>: the kept audio (cuts applied) | `original`, `keepOriginal`, `forget`; `sheet.js saveSheet` sets it directly for a re-made ✨ sound | `load`, `bulk.js`, `things.js` (`audio.original`) |
 | `originalTrims` | Map clip id → the `cutKey` the original was made with | `original`, `keepOriginal`, `forget` | `original` |
-| `recordings` | Map file → Promise<AudioBuffer>: one decode of a bundled file shared by an instrument's moved presets | `recording` | `decoded` |
+| `recordings` | Map file → Promise<AudioBuffer>: one decode of a bundled file shared by an instrument's presets | `recording` | `decoded` |
 | `rendered` | Map `audio.key(clip)` → Promise<{buffer, duration}> | `load`, `dropRendered`, `forget` | `load` |
 | `broken` | Set of clip ids that failed | `load`'s catch | `pads.js` (draws `.broken`) |
 | `on` | `{started, progress, looping, broken}` hooks | `app.js` (`started` → `meter.run`), `pads.js initPads` (`progress` → `setProgress`, `looping`, `broken`) | `start`, `loopInTime`, `stop`, `load`, `kids.js` calls `audio.on.started()` |
@@ -128,9 +128,10 @@ setProgress` ignores ids that are not a pad.
 5. `audio.original(clip)`: on a miss (or a new `cutKey`), `decoded(clip)` →
    `keptAudio(buffer, clip)`.
 6. `audio.decoded(clip)`:
-   - a bundled preset with a voicing (`instruments.js voicingOf`: `chord`, or
-     a non-zero `shift`): `recording(file)` (one fetch and decode per file),
-     then `instruments.js voice()` on each channel into a new buffer;
+   - an instrument's preset (`inst`, or a voicing: `instruments.js voicingOf`
+     is `chord` or a non-zero `shift`): `recording(file)` (one fetch and
+     decode per file), then `instruments.js voice()` on each channel into a
+     new buffer, or a plain copy for a preset that plays its file unmoved;
    - any other bundled clip: `fetch(clip.file)` and `decode`;
    - an own sound: `clip.blob.arrayBuffer()` and `decode`.
 7. `audio.start(id, loaded, {loop, clip, ring, rate})`: a new
@@ -531,7 +532,7 @@ and the `robot` knob.
 
 | | Preset (kit) | Own sound |
 |---|---|---|
-| Audio | `file` (shared `recordings` when voiced) | `blob` |
+| Audio | `file` (shared `recordings` for an instrument's presets) | `blob` |
 | Moves to a note | `shift` / `chord` before anything else | never |
 | Turned down by `level` | yes | no |
 | 🔊 Even it out | hidden | shown |
@@ -604,7 +605,6 @@ Nothing removes an id from `broken` but a reload.
 | `instruments.js voice` in Python | `tools/preset_loudness.py voiced` | a change to the resampling changes loudness the tool no longer models |
 | Instrument id naming | `instruments.js instrumentKitId` and `tools/kit_instruments.py` | must name presets the same way |
 | The semitone rate in six places | see Concepts | — |
-| An unmoved instrument preset decodes its file again | `audio.js decoded`: only a `shift`/`chord` preset uses `recording(file)`; 14 presets today (`piano-cs`, `organ-ds`, `808-e`…) share a file but play it unmoved, so that file is fetched and decoded a second time | `tests/instruments.test.mjs` "decode it once" covers only moved presets |
 | Kids voices are classic | `kids-logic.js KIDS_VOICES` stores `voice`/`fx` steps; the sheet now stores knobs | a change to how knobs sound never reaches 🧸 Kids' voices |
 | A preset's live loop skips the level | `sheet.js startLive`: with no head steps or knobs, the head is `sheet.original` as is (no `finish` peak 0.9, no preset `level`); the saved render has both | (likely) a loudness jump between dragging and letting go on such a preset; unverified by ear |
 | 👂 Plain skips the level | `sheet.js playPlain` plays `sheet.original` | by design "plain", but louder than the pad for a preset with `level` |
@@ -652,7 +652,7 @@ Nothing removes an id from `broken` but a reload.
 | A new preset, or a kit WAV | `web/clips/kit/`, boards.json, then `just preset-loudness --fix`; an instrument note: `tools/kit_instruments.py` |
 | A new instrument | `instruments.js INSTRUMENTS` (and `FAMILIES`), its recordings (`tools/make_samples.py` or `make_placeholders.py`), `tools/kit_instruments.py`, `just preset-loudness --fix`; `settings.js` takes the ids from `instrumentIds` |
 | Who plays a group by default | `instruments.js PLAYED` |
-| What decoding a clip means | `audio.js decoded` (and `recording` for moved presets) |
+| What decoding a clip means | `audio.js decoded` (and `recording` for an instrument's presets) |
 | What invalidates a render | `audio.js key` = `voices.js recipeKey` + `cuts.js cutKey`; any new field that changes the sound must enter one of them, or every place that changes it must call `audio.forget` |
 | The limiter | `audio.js context`; `sequencer.js follow` reads `reduction` |
 | Pads looping in time | `audio.js loopBeats`, `loopInTime`, `syncLoops`; `sequencer.js grid`; `app.js` `deps.onTempo` |

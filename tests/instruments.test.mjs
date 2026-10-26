@@ -208,3 +208,33 @@ test('two presets of one recording decode it once, and each gets its own moved c
     audio.recordings.clear();
   }
 });
+
+// 14 presets (piano-cs, organ-ds, 808-e…) play their instrument's recording
+// as it is, beside the notes moved from it: one fetch and decode serves them
+// all, and each gets a copy it may change.
+test('an instrument preset that plays its recording unmoved shares the one decode with the moved ones', async () => {
+  const { audio } = await import('../web/audio.js');
+  globalThis.AudioBuffer ??= FakeAudioBuffer;
+  const rec = new FakeAudioBuffer({ length: 1000, numberOfChannels: 1, sampleRate: 22050 });
+  for (let i = 0; i < 1000; i++) rec.getChannelData(0)[i] = Math.sin(i / 5);
+  const keep = Float32Array.from(rec.getChannelData(0));
+  let fetched = 0;
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => { fetched++; return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) }; };
+  const realDecode = audio.decode;
+  audio.decode = async () => rec;
+  try {
+    const up = await audio.decoded({ source: 'bundled', file: 'clips/kit/test-61.wav', inst: 'piano', shift: 2 });
+    const same = await audio.decoded({ source: 'bundled', file: 'clips/kit/test-61.wav', inst: 'piano' });
+    assert.equal(fetched, 1, 'one fetch for the file');
+    assert.ok(Math.abs(up.length - 890) <= 1);
+    assert.equal(same.length, 1000, 'played as it is');
+    assert.ok(same !== rec, 'a copy, never the shared recording');
+    same.getChannelData(0)[0] = 9;
+    assert.deepEqual(rec.getChannelData(0), keep, 'the recording itself is never changed');
+  } finally {
+    globalThis.fetch = realFetch;
+    audio.decode = realDecode;
+    audio.recordings.clear();
+  }
+});
