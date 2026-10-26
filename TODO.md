@@ -90,6 +90,8 @@ Other work:
 
 - [ ] Move `skills/noodlepads-logs` to `~/src/skills/noodlepads-logs` and link it (the skills workspace convention); the recurrent routine's leg is now named `noodlepads-logs`, and its state file `~/.local/state/skills/noodlepads-logs.state.json`
 
+- [ ] **One beat engine** (Ben, 2026-10-26: "I would prefer to have one beat engine and just… optional hooks for the kids' side"): 🧸 Kids' `playBeat` plays through `sequencer.js`, with hooks for what Kids leaves out. Design and plan first (`docs/design/one-beat-engine.md`), council on the plan, then Ben's OK before building.
+- [ ] **Deduplicate and simplify** (Ben, 2026-10-26: "where can we deduplicate in code or otherwise simplify refactor?"): a ranked survey with estimates (`docs/design/simplify.md`); Ben picks what gets built.
 - [ ] **Bugs found while mapping docs/architecture/ (2026-10-26).** Each: write the failing test first, then fix, then update the area file's Seams or gotchas. ✔ = confirmed in the code; the rest are likely.
   - ✔ `web/feedback.js appVersion` refuses the `-` in a live label (`v1.0.277-b328291`), so feedback from noodlepads.com is tagged `dev` (the Worker's rule likely too).
   - ✔ `tools/look.mjs`: `VIEWS.beat = VIEWS.beats` replaces the `beat` view defined above it, so its 🆕 New script never runs.
