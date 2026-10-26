@@ -7,7 +7,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
@@ -23,6 +25,17 @@ const ANY_CASE = new Set([
 // A name that is also an everyday word in code (a maximum): caught when
 // written as a name (capitalized) or as an id ('…', "…", #…, …-kick).
 const AS_NAME = new Set(['9baf3a40312f39849f46dad1040f2f039f1cffa1238c41e9db675315cfad39b6']);
+
+// The same hashes kept outside the repo (Ben, 2026-10-26): the GitHub secret
+// NOODLE_NAME_HASHES in CI, ~/.config/noodlepads/names.json on Ben's Mac, as
+// {"anyCase": ["…"], "asName": "…"} (or a list). Once CI has shown they match
+// the ones above, the ones above go, and a checkout without them skips.
+export function outsideHashes(env = process.env, file = join(homedir(), '.config/noodlepads/names.json')) {
+  const raw = env.NOODLE_NAME_HASHES || (existsSync(file) ? readFileSync(file, 'utf8') : '');
+  if (!raw.trim()) return null;
+  const j = JSON.parse(raw);
+  return { anyCase: new Set(j.anyCase), asName: new Set([j.asName].flat()) };
+}
 
 // Every place in `text` a name is written, as "word" strings. The hash sets
 // are parameters so the self-test below runs on made-up names: a test that
@@ -47,6 +60,23 @@ export function namesIn(text, { anyCase = ANY_CASE, asName = AS_NAME } = {}) {
   }
   return found;
 }
+
+test('the hashes kept outside the repo are the same ones, wherever CI has them', () => {
+  const outside = outsideHashes();
+  // A push to this repo always has the secret; a fork's pull request never does.
+  if (process.env.GITHUB_EVENT_NAME === 'push') assert.ok(outside, 'NOODLE_NAME_HASHES is set for this workflow');
+  if (!outside) return;
+  assert.deepEqual([...outside.anyCase].sort(), [...ANY_CASE].sort(), 'the same names, any case');
+  assert.deepEqual([...outside.asName].sort(), [...AS_NAME].sort(), 'the same name that is also a word');
+});
+
+test('outsideHashes reads the secret first, then the Mac file, and takes asName as one or a list', () => {
+  assert.equal(outsideHashes({}, '/nonexistent/names.json'), null);
+  const one = outsideHashes({ NOODLE_NAME_HASHES: JSON.stringify({ anyCase: ['a', 'b'], asName: 'c' }) }, '/nonexistent');
+  assert.deepEqual([[...one.anyCase], [...one.asName]], [['a', 'b'], ['c']]);
+  const list = outsideHashes({ NOODLE_NAME_HASHES: JSON.stringify({ anyCase: [], asName: ['c', 'd'] }) }, '/nonexistent');
+  assert.deepEqual([...list.asName], ['c', 'd']);
+});
 
 test('namesIn finds a name however it is written, and leaves everyday words alone', () => {
   // Made-up names with their own hashes: Pip and Juno as names in any case,

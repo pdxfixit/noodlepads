@@ -23,6 +23,8 @@ jobs:
       - name: Install just (pinned release; Ubuntu's is too old for [doc] and [positional-arguments])
         run: curl -sSfL https://github.com/casey/just/releases/download/1.58.0/just-1.58.0-x86_64-unknown-linux-musl.tar.gz | sudo tar xz -C /usr/local/bin just && just --version
       - name: just test
+        env:
+          NOODLE_NAME_HASHES: ${{ secrets.NOODLE_NAME_HASHES }}   # the kids' names' hashes, kept out of the repo
         run: just test
       - name: web/version.js bumped after the last change to web/
         run: tools/version_bumped.sh
