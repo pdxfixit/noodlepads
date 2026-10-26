@@ -95,4 +95,4 @@ Every seat is the same kind of model wearing a different hat, so seats tend to a
 
 ## Running a round
 
-An agent convenes a seat by starting an agent with that seat's file as its brief (in Claude Code, the `council-<seat>` agent type; elsewhere, the file's text as the prompt), plus the change. Run the seats of one round in parallel, in one message.
+An agent convenes a seat by starting an agent with that seat's file as its brief (in Claude Code, the `council-<seat>` agent type; elsewhere, the file's text as the prompt), plus the change. Run the seats of one round in parallel, in one message. A Claude Code session runs at most 20 agents at once (`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`), so a full round starts the last two when the first finish. In a first round over the whole app, keep `just look` to the screen-facing seats, a run or two each: every run starts its own headless Chrome on one machine.
