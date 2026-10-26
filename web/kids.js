@@ -290,6 +290,35 @@ let voice = null;      // the lit voice button: 'robot', 'tiny', 'spooky' or nul
 let lastId = null;     // the sound recorded last this visit; a voice tap changes it
 
 const canRecord = () => globalThis.window?.isSecureContext && !!navigator.mediaDevices?.getUserMedia && 'MediaRecorder' in (globalThis.window ?? {});
+// The microphone was refused (the browser said no, or its permission is
+// denied). The mic stays pressable, so it records once a grown-up allows it.
+let micRefused = false;
+const MIC_LABEL = 'Record: tap for 3, 2, 1 and talk, tap again to stop; or hold and talk';
+const MIC_OFF = 'The microphone is off: a grown-up can allow it in the browser';
+
+// No microphone here, or it was refused: 🚫 over 🎙️ (styles.css
+// .kids-mic.blocked), no words, and the first-steps wiggle stops, since
+// a tap can't record. Without a microphone at all the mic is off too.
+function showMic() {
+  const can = canRecord();
+  const blocked = !can || micRefused;
+  el.mic.disabled = !can;
+  el.mic.classList.toggle('blocked', blocked);
+  el.mic.setAttribute('aria-label', blocked ? MIC_OFF : MIC_LABEL);
+  el.mic.classList.toggle('kids-nudge', !blocked && kidsHint('mic'));   // wiggles until the first recording (ADR 0028)
+}
+
+// A permission the browser already holds shows before any tap: denied is
+// blocked, granted clears an earlier refusal. Not every browser can say.
+function askPermission() {
+  try {
+    navigator.permissions?.query?.({ name: 'microphone' }).then((p) => {
+      if (p.state === 'prompt') return;
+      micRefused = p.state === 'denied';
+      if (showing && tab === 'record') showMic();
+    }, () => {});
+  } catch { /* this browser can't say: the first tap finds out */ }
+}
 
 function renderRecord() {
   for (const b of el.voices) b.setAttribute('aria-pressed', String(b.dataset.kidsVoice === voice));
@@ -299,8 +328,8 @@ function renderRecord() {
     el.last.textContent = last.emoji;
     el.last.style.setProperty('--pad', deps.colorOf(last));
   }
-  el.mic.disabled = !canRecord();
-  el.mic.classList.toggle('kids-nudge', kidsHint('mic'));   // wiggles until the first recording (ADR 0028)
+  showMic();
+  askPermission();
 }
 
 const dropStream = (stream) => stream?.getTracks().forEach((t) => t.stop());
@@ -351,9 +380,12 @@ async function askMicrophone() {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch {
     rec.mode = null;
+    micRefused = true;
+    showMic();
     wiggle(el.mic);
     return;
   }
+  if (micRefused) { micRefused = false; showMic(); }
   // Called off, or Kids left, while the browser asked: nothing to record.
   if (!rec.mode || !showing) { dropStream(stream); rec.mode = null; return; }
   rec.stream = stream;

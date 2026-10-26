@@ -139,7 +139,11 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   (`--kids-level`, from an analyser on the microphone; under reduced motion
   only the glow moves). A recording under 0.3 s or silence keeps nothing.
   It becomes a pad of the kid's own, saved as the sound sheet saves one, and
-  plays. 🤖 Robot, 🐭 Tiny (Chipmunk) and
+  plays. With no microphone (or not a secure page) the mic is off, and
+  when the browser refuses it (or its permission says denied) the mic
+  stays pressable for a retry; either way 🚫 sits over 🎙️, its tooltip
+  says the microphone is off, and the first-steps wiggle stops
+  (`kids.js` `showMic`). 🤖 Robot, 🐭 Tiny (Chipmunk) and
   👻 Spooky (Monster with Stadium's echo) light for the next recordings and
   change the last one at once; tap a lit one for Normal.
 - **🥁 Beats**: four drums (kick, snare, hi-hat, clap) of eight squares, ▶️/⏹️,

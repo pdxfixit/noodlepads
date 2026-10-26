@@ -42,8 +42,16 @@ test('👆 over the first pad, and only there, until a pad is tapped; then never
   assert.equal(hands().length, 0, 'once per person');
 });
 
-test('the mic wiggles until the first recording', async () => {
+test('the mic wiggles until the first recording; a mic that can\'t record never wiggles', async () => {
   await tab('record');
+  assert.equal($('#kids-mic').disabled, true, 'the stand-in page has no microphone');
+  assert.equal($('#kids-mic').classList.contains('kids-nudge'), false, 'off: nothing to nudge toward');
+  // A stand-in microphone: the mic records, so it wiggles.
+  window.MediaRecorder = class {};
+  navigator.mediaDevices = { getUserMedia: async () => ({ getTracks: () => [] }) };
+  await tab('pads');
+  await tab('record');
+  assert.equal($('#kids-mic').disabled, false);
   assert.equal($('#kids-mic').classList.contains('kids-nudge'), true);
   await (await import('../web/tips.js')).markSeen('kids-mic');   // as a kept recording does (kids.js keep)
   await tab('pads');

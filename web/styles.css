@@ -4880,6 +4880,11 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
 .kids-mic.recording { scale: calc(1 + var(--kids-level, 0) * 0.14); box-shadow: 0 8px 0 #7E1612, 0 0 0 calc(8px + var(--kids-level, 0) * 28px) rgb(255 229 138 / 0.55); transition: scale 70ms linear, box-shadow 70ms linear; }
 .kids-mic.counting .kids-mic-face { font: 900 1em/1 var(--font-display); color: #fff; }
 .kids-mic:disabled { opacity: 0.45; }
+/* No microphone, or it was refused: 🚫 over 🎙️, no words (kids.js showMic). */
+.kids-mic { position: relative; }
+.kids-mic.blocked, .kids-mic.blocked span { background: #5A5C70; }
+.kids-mic.blocked { box-shadow: 0 8px 0 #2E2F3D; }
+.kids-mic.blocked::after { content: '🚫'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 1.15em; line-height: 1; pointer-events: none; }
 .kids-last {
   width: min(30vw, 22dvh, 150px);
   aspect-ratio: 1;
@@ -5078,7 +5083,7 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
   animation: kids-hand 1.2s ease-in-out infinite;
 }
 @keyframes kids-hand { 0%, 100% { transform: translate(-30%, 0) scale(1); } 50% { transform: translate(-30%, -14%) scale(1.1); } }
-.kids-mic.kids-nudge:not(.recording, .counting) { animation: kids-nudge 2.4s ease-in-out infinite; }
+.kids-mic.kids-nudge:not(.recording, .counting, .blocked, :disabled) { animation: kids-nudge 2.4s ease-in-out infinite; }
 @keyframes kids-nudge { 0%, 70%, 100% { rotate: 0deg; } 76% { rotate: -9deg; } 82% { rotate: 9deg; } 88% { rotate: -6deg; } 94% { rotate: 5deg; } }
 @media (prefers-reduced-motion: reduce) { .kids-hand, .kids-mic.kids-nudge:not(.recording, .counting) { animation: none; } }
 

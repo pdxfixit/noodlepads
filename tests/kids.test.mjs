@@ -490,6 +490,8 @@ test('Record: the mic and three voices; without a microphone the mic is off', ()
   $('[data-kids-tab="record"]').dispatch('click');
   assert.deepEqual($('#kids').querySelectorAll('[data-kids-voice]').map((b) => b.textContent), ['🤖', '🐭', '👻']);
   assert.equal($('#kids-mic').disabled, true, 'the stand-in page has no microphone');
+  assert.ok($('#kids-mic').classList.contains('blocked'), '🚫 over 🎙️');
+  assert.match($('#kids-mic').getAttribute('aria-label'), /microphone is off/, 'its tooltip says why');
   $('[data-kids-voice="robot"]').dispatch('click');
   assert.equal($('[data-kids-voice="robot"]').getAttribute('aria-pressed'), 'true');
   $('[data-kids-voice="robot"]').dispatch('click');
@@ -519,6 +521,30 @@ function fakeMicrophone() {
   globalThis.MediaRecorder = window.MediaRecorder;
   navigator.mediaDevices = { getUserMedia: async () => { const s = { stopped: 0, getTracks() { return [{ stop: () => { s.stopped += 1; } }]; } }; mic.streams.push(s); return s; } };
 }
+
+test('Record: a refused microphone shows 🚫 over 🎙️; once it is allowed, the mic is itself again', async () => {
+  fakeMicrophone();
+  const allow = navigator.mediaDevices.getUserMedia;
+  navigator.mediaDevices.getUserMedia = async () => { throw new Error('NotAllowedError'); };
+  $('[data-kids-tab="pads"]').dispatch('click');
+  $('[data-kids-tab="record"]').dispatch('click');
+  const m = $('#kids-mic');
+  assert.equal(m.classList.contains('blocked'), false, 'a microphone to ask for');
+  m.dispatch('pointerdown', { pointerId: 30 });
+  await page.settle();
+  m.dispatch('pointerup', { pointerId: 30 });
+  await page.settle();
+  assert.ok(m.classList.contains('blocked'), 'refused: 🚫 over 🎙️');
+  assert.match(m.getAttribute('aria-label'), /microphone is off/);
+  assert.equal(m.classList.contains('kids-nudge'), false, 'no wiggle toward it');
+  assert.equal(m.disabled, false, 'still pressable, for when a grown-up allows it');
+  navigator.mediaDevices.getUserMedia = allow;
+  m.dispatch('pointerdown', { pointerId: 31 });
+  await page.settle();
+  assert.equal(m.classList.contains('blocked'), false, 'allowed: the mic again');
+  assert.match(m.getAttribute('aria-label'), /^Record/);
+  $('[data-kids-tab="pads"]').dispatch('click');   // calls the hold off, nothing kept
+});
 
 test('Record: hold the mic, let go, and it is a new pad of the kid\'s own, in the lit voice; a voice tap changes it', async () => {
   const { audio } = await import('../web/audio.js');
