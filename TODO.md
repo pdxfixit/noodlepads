@@ -89,7 +89,8 @@ Other work:
 - [ ] Move `skills/noodlepads-logs` to `~/src/skills/noodlepads-logs` and link it (the skills workspace convention); the recurrent routine's leg is now named `noodlepads-logs`, and its state file `~/.local/state/skills/noodlepads-logs.state.json`
 
 
-- **An agent council for every future change** (Ben, 2026-10-26): up to 10 advisory personalities (music educator, child psychologist, early literacy, UX, a staff architect and more) that review changes before they ship. Proposal is with Ben (seats, which changes convene which seats, advisory or veto, when it runs); build once he picks: `.claude/agents/` definitions, a Council section in AGENTS.md, a decisions.md row.
+- **An agent council for every future change** (Ben, 2026-10-26). Decided so far: seats are personalities with the authority to block a feature or a deploy, in service of the mission and their own area; more than 10 seats, technical ones included; scaled by change type (full council on a new screen or control at mockup stage; stored format or cloud: architect, privacy, parent; a fix: the seats it touches); they advise throughout development, and their first runs review the app as it is now, as widely as they can; seats that keep agreeing merge only after Ben approves; results land in the code, the docs and ADRs, with no council-only log. Open with Ben: the roster, guards against drift. Then build: `.claude/agents/` seats, a Council section in AGENTS.md, decisions.md rows, an ADR.
+- **A mission statement for the app** (Ben, 2026-10-26): easy music making and silly soundboards for ages 3 to 100. An agent interviews Ben, drafts it, and it goes in AGENTS.md and an ADR beside the north star (ADR 0022). The council serves it.
 
 ### Offered, not approved
 
