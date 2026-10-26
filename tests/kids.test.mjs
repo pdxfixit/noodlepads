@@ -12,7 +12,7 @@ import { testManifest } from './test-board.mjs';
 import {
   makeSum, typeDigit, kidsRange, kidsAutoPx, kidsPadPx, kidsShare, shareOf, kidsSliderAt, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder, KIDS_PADS,
   newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds, KIDS_TEMPOS,
-  TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote,
+  TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote, keptTune,
   kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS, keyPitch, keyRate, keyPlayId, isHighKey,
 } from '../web/kids-logic.js';
 import { MELODY_NOTES } from '../web/notes.js';
@@ -220,6 +220,21 @@ test('● a tune: notes land in one tune row on the instrument\'s C; a new recor
   assert.equal(clean.bars, 4);
   const tapped = withSquare(c, ids, 2, 5, true);
   assert.deepEqual(tuneRowOf(tapped).tune, [{ p: 0, s: 0, l: 2 }]);
+});
+
+test('● a tune: a new recording keeps the beat with the tune it replaces, as a beat of its own under a fun name', () => {
+  const ids = ['p-kick', 'p-snare', 'p-hihat', 'p-clap'];
+  const beat = withBars(withSquare(newKidsBeat('p-a', ids, scratchId('p-a'), 5), ids, 0, 0, true), TUNE_BARS);
+  assert.equal(keptTune(beat, { id: 'beat-x', name: 'Funky Moose' }), null, 'no tune: nothing to keep');
+  const tuned = withTuneNote(beat, { clipId: 'p-a-piano-c', pitch: 4, s: 2, l: 1, fresh: true });
+  const kept = keptTune(tuned, { id: 'beat-x', name: 'Funky Moose' }, 9);
+  assert.equal(kept.id, 'beat-x');
+  assert.equal(kept.name, 'Funky Moose');
+  assert.equal(kept.personId, 'p-a');
+  assert.ok(!isScratch(kept), 'not the scratch: it lists in 🗂️ My beats');
+  assert.deepEqual(tuneRowOf(kept).tune, [{ p: 4, s: 2, l: 1 }]);
+  assert.deepEqual(squaresOf(kept, ids), squaresOf(tuned, ids), 'its drums too');
+  assert.equal(kept.saved, 9);
 });
 
 test('the voices: 🤖 Robot, 🐭 Tiny (Chipmunk), 👻 Spooky (Monster with an echo); tap again for Normal', () => {
@@ -928,14 +943,24 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   assert.equal($('#kids-play').getAttribute('aria-pressed'), 'true', 'the beat plays on, with the tune');
   assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [0, 9], 'the tune stays');
   // A new recording: its first note starts the tune again; a tap on ● stops it early.
+  // The tune it replaces is kept first, a beat of its own in 🗂️ My beats,
+  // as 🆕 New keeps a beat: Kids has no Undo, and a kid can't read a line.
+  const kept = () => state.savedBeats.filter((b) => b.personId === state.personId && !b.id.startsWith('beat-scratch-') && tuneOf(b));
+  const keptBefore = kept().length;
   rec.dispatch('click');
   await page.settle();
   await until(() => rec.classList.contains('recording'), 'recording again');
   assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [0, 9], 'the old tune stays until a key lands');
+  assert.equal(kept().length, keptBefore, 'nothing kept until a key lands');
   await new Promise((r) => setTimeout(r, dt * 1.5));
   keys[2].dispatch('pointerdown', { pointerId: 13 });
   keys[2].dispatch('pointerup', { pointerId: 13 });
   assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [4], 'started again, with the E');
+  assert.equal(kept().length, keptBefore + 1, 'the earlier tune is kept');
+  const earlier = kept().at(-1);
+  assert.deepEqual(tuneOf(earlier).tune.map((n) => n.p), [0, 9], 'C then A, as it was');
+  assert.equal(earlier.rows.length, 5, 'with the drums');
+  assert.ok(earlier.name && earlier.name !== 'Scratch beat', `a fun name: ${earlier.name}`);
   rec.dispatch('click');
   assert.equal(rec.classList.contains('recording'), false, 'stopped early');
   assert.equal(rec.getAttribute('aria-pressed'), 'false');
@@ -964,6 +989,10 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   assert.equal(rows.length, 5);
   assert.equal(rows.filter((r) => r.classList.contains('tune')).length, 1, 'one tune row, for 🎹 the piano roll');
   assert.equal(document.querySelectorAll('.beat-bar')[0].querySelector('[data-beat-name]').value, 'Scratch beat', 'the scratch: 💾 Keep names it');
+  // And the earlier tune waits in 🗂️ My beats.
+  document.querySelectorAll('.beat-bar')[0].querySelector('[data-beat-open]').dispatch('click');
+  assert.ok($('#lib-list').querySelector(`[data-load="${earlier.id}"]`), `"${earlier.name}" in 🗂️ My beats`);
+  $('#library').close();
   $('#pads-tab').dispatch('click');
   audio.load = plainLoad;
   delete ctx.currentTime;

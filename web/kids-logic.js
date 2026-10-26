@@ -4,7 +4,7 @@
 // (four drums, eight squares) and its three tempos, and the three voices.
 // kids.js draws all of it.
 
-import { cleanRow, STEPS, multiplyRows } from './sequencer.js';
+import { cleanRow, cleanPattern, STEPS, multiplyRows } from './sequencer.js';
 import { addNote } from './notes.js';
 import { chainFields, voiceStep } from './voices.js';
 import { SCRATCH_NAME } from './scratch.js';
@@ -221,9 +221,10 @@ export function withSquare(beat, clipIds, drum, square, on, now = Date.now()) {
 // ● counts 3, 2, 1 at the beat's tempo, then the beat goes round once
 // through its bars while the keys land on the nearest pill; it stops by
 // itself as the beat comes round, or at the next tap, and the beat plays on
-// with the tune. The first note of a new recording throws the old tune away
-// (an empty take changes nothing). A grown-up sees the tune row on 🥁 Beats,
-// in 🎹 the piano roll, and keeps the beat with 💾 Keep.
+// with the tune. The first note of a new recording starts the tune again
+// (an empty take changes nothing); the beat with the tune it replaces is
+// kept first in 🗂️ My beats (keptTune). A grown-up sees the tune row on
+// 🥁 Beats, in 🎹 the piano roll, and keeps the beat with 💾 Keep.
 export const TUNE_BARS = 4;
 export const TUNE_COUNT = 3;   // beats of 3, 2, 1 before the beat starts
 export const pillSeconds = (bpm) => 60 / bpm / (STEPS / 4);
@@ -263,6 +264,17 @@ export function withTuneNote(beat, { clipId, pitch, s, l = 1, fresh = false }, n
   if (!made && !fresh) return beat;
   rows[rows.indexOf(row)] = cleanRow({ ...row, clipId: fresh ? clipId : row.clipId, steps: Array(total).fill(false), tune: made?.tune ?? tune });
   return { ...beat, rows, saved: now };
+}
+
+// A tune about to be replaced by a new ● recording is kept first, the way
+// 🆕 New keeps a scratch with hits: the whole beat, its drums and that tune,
+// a beat of its own in 🗂️ My beats under `name` (a fun name), so a grown-up
+// can find the earlier one. Kids has no Undo and a kid can't read a "Kept
+// as …" line, so nothing shows; the kid just plays again. Null when the beat
+// has no tune to lose.
+export function keptTune(beat, { id, name }, now = Date.now()) {
+  if (!tuneRowOf(beat)?.tune?.length) return null;
+  return { ...cleanPattern(beat, beat.personId), id, name, created: now, saved: now };
 }
 
 // ── Voices ──
