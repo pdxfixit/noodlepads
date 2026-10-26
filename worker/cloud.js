@@ -23,7 +23,7 @@ export const LIMITS = {
   profiles: 1000,                    // profiles in all
   profileBytes: 40 * 1024 * 1024,    // one profile's sounds
   totalBytes: 400 * 1024 * 1024,     // every sound
-  newProfilesPerDay: 50,
+  newProfilesPerDay: 10,             // across the site (Ben, 2026-10-26)
   checkProfilesPerDay: 100,          // the deploy checks' (TEST_PROFILE): two a deploy
   pushesPerDay: 5000,
   sharesPerDay: 500,

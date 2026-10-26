@@ -39,7 +39,7 @@ Verified against Cloudflare's docs on 2026-10-11 (D1, Workers Free):
 | Storage per database | 500 MB | about 50 MB a year (5 kids, 50 sounds each, about 200 KB a sound) | all sounds together at most 400 MB; one profile at most 40 MB |
 | Row or BLOB size | 2,000,000 bytes | audio in pieces of 1,900,000 bytes | `CHUNK_BYTES` |
 | Rows read a day | 5,000,000 | about 2,000 | list at most 300 profiles; pulls read only changed rows (index on `rev`) |
-| Rows written a day | 100,000 | about 1,500 | 2,000 reports (1,000 routine, 1,000 holding an error or a silent tap; all kept reports at most 40 MB), 50 new profiles, 5,000 pushes and 500 shares a day; 200 records a push; last activity at most once an hour a profile |
+| Rows written a day | 100,000 | about 1,500 | 2,000 reports (1,000 routine, 1,000 holding an error or a silent tap; all kept reports at most 40 MB), 10 new profiles (and the deploy checks' 100), 5,000 pushes and 500 shares a day; 200 records a push; last activity at most once an hour a profile |
 | Worker requests a day | 100,000 | about 3,500 at most | no polling while hidden: sync on open, on change (20 s debounce), on focus and blur, and every 5 minutes only while shown and focused (per device: below) |
 | Worker CPU per request | 10 ms | PIN check about 2 ms | PBKDF2 at 20,000 rounds |
 | Request body | 100 MB | at most 1.9 MB (one audio piece) | `readCapped` |
@@ -441,7 +441,7 @@ Ben: "login sprawl is a concern."
   (no record and no share uses them), and deletes them with `--yes`. Shared
   sounds stay. A device whose profile was pruned keeps everything and goes
   Offline (Q20).
-- **Already there:** 50 new profiles a UTC day (deleted or not; the deploy checks' throwaway profiles count on a cap of their own, 100 a day), 1,000 in all, 300 listed. The deploy checks' profiles are `p-smoke-…` and `p-e2e-…`; `just cloud-prune --smoke` removes any a killed check left, with their share codes.
+- **Already there:** 10 new profiles a UTC day across the site (Ben, 2026-10-26) (deleted or not; the deploy checks' throwaway profiles count on a cap of their own, 100 a day), 1,000 in all, 300 listed. The deploy checks' profiles are `p-smoke-…` and `p-e2e-…`; `just cloud-prune --smoke` removes any a killed check left, with their share codes.
 - **Proposed, not built:** (1) the list shows only profiles active in the
   last 180 days (one `WHERE`, about 5 minutes, but a returning kid would look
   missing until their device syncs); (2) a cap of new profiles per device a

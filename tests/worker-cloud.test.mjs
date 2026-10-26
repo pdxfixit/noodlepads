@@ -554,10 +554,11 @@ test('last activity: opening, pulling and pushing mark it, at most once an hour'
   assert.equal(active(), T0 + ACTIVE_STEP_MS * 3.5);
 });
 
-test('daily caps: 50 new profiles a UTC day', async () => {
+// Ben, 2026-10-26: 10 new profiles a day across the site.
+test('daily caps: 10 new profiles a UTC day', async () => {
   const c = cloud();
-  c.env.DB.db.prepare("INSERT INTO counters (name, day, n) VALUES ('profiles', '2026-10-11', 50)").run();
-  assert.equal((await c.call('POST', 'profiles', { body: look('p-late') })).status, 429);
+  for (let i = 0; i < 10; i++) await made(c, `p-day-${i}`);
+  assert.equal((await c.call('POST', 'profiles', { body: look('p-late') })).status, 429, 'the eleventh waits for tomorrow');
   c.later(86400000);
   assert.equal((await c.call('POST', 'profiles', { body: look('p-late') })).status, 201);
 });

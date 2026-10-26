@@ -285,7 +285,7 @@ All JSON bodies go through `http.js readJson`: `Origin` must be `https://noodlep
 |---|---|---|
 | `GET /api/cloud` | — | — |
 | `GET /api/profiles` | — | 300 newest, `CLOUD_ID` only |
-| `POST /api/profiles` | Origin | fun name, listed emoji, person color; 409 if it exists; 507 at 1,000 profiles; 429 at 50 new a UTC day (a deleted one still counts); the deploy checks' ids (`TEST_PROFILE`: `p-smoke-…`, `p-e2e-…`) 100 a day on their own counter |
+| `POST /api/profiles` | Origin | fun name, listed emoji, person color; 409 if it exists; 507 at 1,000 profiles; 429 at 10 new a UTC day across the site (a deleted one still counts); the deploy checks' ids (`TEST_PROFILE`: `p-smoke-…`, `p-e2e-…`) 100 a day on their own counter |
 | `POST /api/profiles/:id/open` | Origin; PIN if set | 5 wrong → 10-minute wait (401 `tries`, 429 `wait`); a new key: the profile keeps its 20 most recently used, and sweeps session keys over a week old and any unused 180 days |
 | `DELETE /api/profiles/:id/key` | Origin, key | deletes the key sent |
 | `PATCH /api/profiles/:id` | Origin, key; current PIN for `newPin` | look kept only if `edited` ≥ stored; a new PIN deletes every key and returns a new one |

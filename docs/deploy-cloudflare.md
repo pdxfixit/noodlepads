@@ -95,7 +95,7 @@ https://noodlepads.com, both even if one fails, in about 8 s together:
   `p-e2e-…`) and deletes it in a `finally`, whatever failed. For about 4 s it
   shows in the public list under a fun name. Their ids (`worker/cloud.js
   TEST_PROFILE`) count on a daily cap of their own, 100 a UTC day, so the
-  checks never use up kids' 50 new profiles a day. Deleting the profile
+  checks never use up kids' 10 new profiles a day. Deleting the profile
   deletes its share code too.
 - On GitHub the checks' cleanup (`cloud-prune --smoke --yes`, a D1 write)
   warns instead: the deploy token reads D1 only. Share codes from checks
