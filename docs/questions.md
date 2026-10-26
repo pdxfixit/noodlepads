@@ -8,18 +8,6 @@ When Ben answers, record the answer in [decisions.md](decisions.md) (and an ADR 
 
 From the council's first round (2026-10-26, `docs/council.md`), asked in the chat one at a time; a card is deleted when its answer is recorded. Cards marked ⛔ are blocks against one of your rules: the seat stopped the work, and only you can uphold or overrule it.
 
-### Q63. Which phones and tablets does the family use, and how old is the oldest?
-
-**Recommend:** tell me the oldest iPhone, iPad and Android, so I set a browser floor and a plain "too old" notice.
-The app needs about Safari 16.4, Chrome 117, Firefox 115; below that it half-draws. Two seats found that an iPhone with the ringer switch off plays no sound at all; I fix that now either way (one line, `navigator.audioSession`). iOS also deletes a site's sounds after 7 days unvisited.
-**Answer:**
-
-### Q64. The spoken callouts and the cackle are macOS `say` voices. OK to ship them publicly?
-
-**Recommend:** replace them, with your own recordings (no names) or a CC0 voice set.
-14 callouts and the evil laugh come from Apple's built-in voices. Apple's terms may not allow redistributing their output, and the credits file hides where they came from. I can't check the terms from here.
-**Answer:**
-
 ### Q65. Save a beat or song as an audio file (WAV), with no cloud needed?
 
 **Recommend:** yes, as ⬇️ Save as audio file beside 🔊 Save as a sound.
