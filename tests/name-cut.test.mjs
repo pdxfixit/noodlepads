@@ -30,6 +30,18 @@ test('cutName: by characters, never half an emoji, never a piece of one built of
   assert.equal(cutName(`${'a'.repeat(22)}👍🏽z`), `${'a'.repeat(22)}👍🏽`);
   assert.equal(nameLength(CUT), 24);
   assert.equal(cutName(null), '');
+  assert.equal(cutName(`${'a'.repeat(23)}\uD83E`), 'a'.repeat(23), 'half an emoji an old cut left is dropped');
+  assert.equal(cutName(`ab\uDD84c`), 'abc');
+});
+
+test('cutName is bounded: a name of a megabyte is cut in a few milliseconds', () => {
+  const huge = '🦄a'.repeat(350000);   // about 1 MB of UTF-16
+  cutName(huge);
+  const start = performance.now();
+  const out = cutName(huge);
+  assert.ok(performance.now() - start < 50, `${performance.now() - start} ms`);
+  assert.equal(out, '🦄a'.repeat(12));
+  assert.equal(cutName(`${'x'.repeat(1e6)}🦄`, 24), 'x'.repeat(24));
 });
 
 test('every name and label is cut the same way', () => {

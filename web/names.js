@@ -13,15 +13,24 @@ export const MAX_PERSON = 20;   // "Captain Cranberries" (19), a person's fun na
 // `[...name].length`, never UTF-16 units, and the cut is never inside one:
 // an emoji in the last place stays whole or goes whole, and one built of
 // several (👍🏽, 👨‍👩‍👧) is never left in pieces. Before, most cuts were
-// `.slice(0, 24)`, which could leave half an emoji.
+// `.slice(0, 24)`, which could leave half an emoji; half of one an old cut
+// left (a lone surrogate) is dropped, so the next clean mends the name.
+// Bounded for untrusted input (a backup, a share title at the Worker): only
+// a prefix of a few times `max` is ever looked at, and segmenting stops at
+// the cut, so a name of megabytes costs no more than a short one.
 const GRAPHEMES = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter() : null;
+const LOOK = 8;   // times `max`: code units looked at, far past any real name's
+const LONE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
 export const nameLength = (text) => [...String(text ?? '')].length;
 export function cutName(text, max = MAX_LABEL) {
-  const s = String(text ?? '');
-  if (nameLength(s) <= max) return s;
+  let s = String(text ?? '');
+  if (s.length > max * LOOK) s = s.slice(0, max * LOOK);
+  s = s.replace(LONE, '');
+  if (s.length <= max) return s;   // no more units than `max`: no more characters either
   let out = '';
   let n = 0;
-  for (const part of GRAPHEMES ? Array.from(GRAPHEMES.segment(s), (g) => g.segment) : s) {
+  for (const g of GRAPHEMES ? GRAPHEMES.segment(s) : s) {
+    const part = GRAPHEMES ? g.segment : g;
     n += nameLength(part);
     if (n > max) break;
     out += part;
