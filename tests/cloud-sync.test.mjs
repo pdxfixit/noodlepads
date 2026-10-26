@@ -10,7 +10,7 @@ import { ORIGIN } from '../worker/http.js';
 import { FakeD1 } from './fake-d1.mjs';
 import { createCloudApi, CloudError, cloudTrouble } from '../web/cloud-api.js';
 import {
-  syncProfile, recordsOf, planPush, decideRecord, hashOf, pieces, shareBundle, shareDoc, hasMade, syncNote, CHUNK_BYTES, CLOUD_MAX_SOUND, keyOf,
+  syncProfile, recordsOf, planPush, decideRecord, hashOf, pieces, shareBundle, shareDoc, hasMade, syncNote, pushSlices, CHUNK_BYTES, CLOUD_MAX_SOUND, keyOf,
   progressShare, soundBytes, newProgress,
 } from '../web/cloud-sync.js';
 import { LIMITS } from '../worker/cloud.js';
@@ -317,6 +317,31 @@ test('a full profile keeps a new sound home and says so; its beats and edits sti
   await syncProfile(bl, b.deps(api));
   assert.deepEqual(await bytesOf(b.stores.clips.find((c) => c.id === 'user-2').blob), [1, 2, 3, 4, 5, 6, 7, 8]);
   assert.equal(syncNote({ tooBig: 1, full: 2 }), 'In the cloud ✓ (one sound too long for the cloud, and 2 sounds the cloud has no room for stay on this device)');
+});
+
+test('pushes fit what the cloud takes: split by bytes as well as count, and a record too big for the cloud stays home', async () => {
+  const { api, env } = server();
+  const { a, link } = await startA(api);
+  // Long takes of about 400 KB each: twelve are more than one push's 4 MB.
+  for (let i = 0; i < 12; i++) a.stores.takes.push({ id: `take-${i}`, personId: 'p-a', name: `Take ${i}`, notes: 'x'.repeat(400_000) });
+  a.stores.takes.push({ id: 'take-huge', personId: 'p-a', name: 'Huge', notes: 'x'.repeat(600_000) });
+  const pushes = [];
+  const counting = { ...api, push: (...args) => { pushes.push(args[2].length + args[3].length); return api.push(...args); } };
+  const r = await syncProfile(link, { ...a.deps(api), api: counting });
+  assert.equal(r.heavy, 1, 'the one over 512 KB is counted');
+  assert.equal(r.pushed, 16, 'the four records and the twelve takes all went');
+  assert.ok(pushes.length >= 2, 'in more than one push');
+  assert.equal(env.DB.rows("SELECT COUNT(*) AS n FROM records WHERE kind = 'takes'")[0].n, 12);
+  assert.equal(syncNote(r), 'In the cloud ✓ (one thing too big for the cloud stays on this device)');
+  assert.ok(a.stores.takes.some((t) => t.id === 'take-huge'), 'still here');
+  const again = await syncProfile(link, a.deps(api));
+  assert.deepEqual([again.pushed, again.deleted, again.heavy], [0, 0, 1], 'nothing sent again, never a delete, and still said');
+
+  // By count, by bytes, and one item over the limit alone.
+  assert.deepEqual(pushSlices([1, 1, 1, 1, 1], 100, 2), [[0, 2], [2, 4], [4, 5]]);
+  assert.deepEqual(pushSlices([40, 40, 40, 10], 100, 200), [[0, 2], [2, 4]]);
+  assert.deepEqual(pushSlices([10, 500, 10], 100, 200), [[0, 1], [1, 2], [2, 3]]);
+  assert.deepEqual(pushSlices([]), []);
 });
 
 test("a person's settings travel with their profile", async () => {

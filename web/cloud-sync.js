@@ -28,7 +28,32 @@ export const CHUNK_BYTES = 1_900_000;
 // app makes longer ones (a 3-minute song as a sound); those stay on the
 // device, and the sync carries on with everything else.
 export const CLOUD_MAX_SOUND = 25 * 1024 * 1024;
+// What one push may hold (worker/cloud.js LIMITS): records, one record's
+// JSON (as text length, the way the Worker measures it), and the body's bytes.
 export const PER_PUSH = 200;
+export const RECORD_BYTES = 512 * 1024;
+export const PUSH_BYTES = 4 * 1024 * 1024;
+// Room in a push for what is not a record: `{"put":[…],"del":[…],"since":N}`.
+const PUSH_ROOM = 1024;
+
+// Pushes in order, each within PER_PUSH items and `max` bytes: `sizes[i]` is
+// item i's size. Returns the index ranges [start, end). An item over `max`
+// alone gets a push of its own (the caller keeps such records home).
+export function pushSlices(sizes, max = PUSH_BYTES - PUSH_ROOM, perPush = PER_PUSH) {
+  const out = [];
+  let start = 0;
+  let bytes = 0;
+  sizes.forEach((size, i) => {
+    if (i > start && (i - start >= perPush || bytes + size > max)) {
+      out.push([start, i]);
+      start = i;
+      bytes = 0;
+    }
+    bytes += size + 1;   // and its comma
+  });
+  if (sizes.length > start) out.push([start, sizes.length]);
+  return out;
+}
 
 const list = (doc, name) => (Array.isArray(doc?.[name]) ? doc[name] : []);
 export const keyOf = (kind, id) => `${kind}:${id}`;
@@ -615,11 +640,27 @@ async function pushAll(link, deps, { of: shaOf, map: hereSha }, report, bases_) 
     const s = link.sounds[r.id];
     return { ...rest, sound: s.sound, sha256: s.sha256, bytes: blob?.size };
   };
-  const work = [...plan.put.map((r) => ({ put: r })), ...plan.del.map((d) => ({ del: d }))];
+  // A record the cloud refuses for its size (over RECORD_BYTES) stays on this
+  // device, as it is in the cloud now; the rest go in pushes the cloud takes.
+  // Each record is sent as it is now, with its hash taken at the same moment,
+  // so an edit made while the pushes run is never taken for sent.
+  const utf8 = new TextEncoder();
+  const work = [];
+  for (const r of plan.put) {
+    const text = JSON.stringify(body(r));
+    if (text.length > RECORD_BYTES) {
+      report.heavy = (report.heavy ?? 0) + 1;
+      continue;
+    }
+    const wire = { kind: r.kind, id: r.id, body: JSON.parse(text) };
+    const k = keyOf(r.kind, r.id);
+    work.push({ put: r, wire, hash: hashOf(r.record, shaOf(k)), bytes: utf8.encode(text).length + utf8.encode(`{"kind":"${r.kind}","id":"${r.id}","body":}`).length });
+  }
+  for (const d of plan.del) work.push({ del: d, bytes: utf8.encode(JSON.stringify(d)).length });
   let stale = 0;
-  for (let i = 0; i < work.length; i += PER_PUSH) {
-    const slice = work.slice(i, i + PER_PUSH);
-    const put = slice.filter((w) => w.put).map((w) => ({ kind: w.put.kind, id: w.put.id, body: body(w.put) }));
+  for (const [from, to] of pushSlices(work.map((w) => w.bytes))) {
+    const slice = work.slice(from, to);
+    const put = slice.filter((w) => w.put).map((w) => w.wire);
     const del = slice.filter((w) => w.del).map((w) => w.del);
     const res = await api.push(id, link.key, put, del, link.rev ?? 0, deps.signal);
     const left = new Set((res.stale ?? []).map((s) => keyOf(s.kind, s.id)));
@@ -628,8 +669,8 @@ async function pushAll(link, deps, { of: shaOf, map: hereSha }, report, bases_) 
       const k = w.put ? keyOf(w.put.kind, w.put.id) : keyOf(w.del.kind, w.del.id);
       if (left.has(k)) continue;   // the next round pulls the other device's and merges
       if (w.put) {
-        link.sent[k] = hashOf(w.put.record, shaOf(k));
-        bases_.set(k, w.put.record);
+        link.sent[k] = w.hash;
+        bases_.set(k, w.wire.body);
       } else {
         delete link.sent[k];
         bases_.drop(k);
@@ -647,12 +688,13 @@ async function pushAll(link, deps, { of: shaOf, map: hereSha }, report, bases_) 
 
 // What a sync's status says: in the cloud, and what stayed on this device.
 export function syncNote(report) {
-  const sounds = (n) => (n === 1 ? 'one sound' : `${n} sounds`);
+  const count = (n, one, many) => (n === 1 ? `one ${one}` : `${n} ${many}`);
   const left = [];
-  if (report?.tooBig) left.push(`${sounds(report.tooBig)} too long for the cloud`);
-  if (report?.full) left.push(`${sounds(report.full)} the cloud has no room for`);
+  if (report?.tooBig) left.push(`${count(report.tooBig, 'sound', 'sounds')} too long for the cloud`);
+  if (report?.full) left.push(`${count(report.full, 'sound', 'sounds')} the cloud has no room for`);
+  if (report?.heavy) left.push(`${count(report.heavy, 'thing', 'things')} too big for the cloud`);
   if (!left.length) return 'In the cloud ✓';
-  const n = (report.tooBig ?? 0) + (report.full ?? 0);
+  const n = (report.tooBig ?? 0) + (report.full ?? 0) + (report.heavy ?? 0);
   return `In the cloud ✓ (${left.join(', and ')} ${n === 1 ? 'stays' : 'stay'} on this device)`;
 }
 

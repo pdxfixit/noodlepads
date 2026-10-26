@@ -230,7 +230,7 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 1. Clips over `CLOUD_MAX_SOUND` (25 MB) whose audio the cloud lacks stay home (`report.tooBig`).
 2. Audio first, for each clip with no cloud sound or with audio changed here (`hashAudio`): `uploadAudio` → `api.startSound({sha256, bytes, mime})` → `{id, need}` → `api.putPiece` for each needed piece (`pieces`). `link.sounds[clip] = {sha256, sound, print}`. The Worker lets the clip's old audio go when the push names the new one. A 507 (the profile or the cloud is full) keeps that sound home (`report.full`) and the push carries on with everything else.
 3. `planPush(local, sent)`: put what hashes differently, delete what is in `sent` but gone. A clip still on the device is never a delete.
-4. Slices of `PER_PUSH` (200): `api.push(id, key, put, del, link.rev)`. A clip body is the record minus `blob`, plus `sound`, `sha256`, `bytes`.
+4. A record whose JSON is over `RECORD_BYTES` (512 KB, the Worker's `recordBytes`) stays home as the cloud has it (`report.heavy`). The rest go in slices (`pushSlices`) of at most `PER_PUSH` (200) items and `PUSH_BYTES` (4 MB, less 1 KB for the envelope): `api.push(id, key, put, del, link.rev)`. A clip body is the record minus `blob`, plus `sound`, `sha256`, `bytes`. Each body is a snapshot taken with its hash before the pushes start, so an edit made meanwhile is pushed next time, never taken for sent.
 5. The Worker writes only records with `rev <= since`; the rest come back in `stale`. Landed records update `sent` and the base. `link.rev` moves to the new rev only when `res.was === link.rev` (nobody else pushed in between). Bases and link are saved after each slice.
 
 `syncProfile` repeats pull + push while `stale` is non-zero, at most `SYNC_ROUNDS` (3). A 409 `sound` (the cloud lost audio this device thought it had) drops that sound from `link.sounds` and pushes once more. Then `pushLook` sends name, avatar and color by `api.change` when this device's `edited` is newer.
@@ -254,7 +254,7 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 | `POST …/shares` | `{kind, title, bundle: {clips, beats, songs}, preview}` → `{code}` |
 | `GET /api/shares/:code` → | `{code, kind, title, bundle, preview, created}` (any `personId` stripped) |
 | any error → | `{error, …}` with `wait`, `tries`, `over`, `sound` or `id` (`http.js fail`); `cloud-api.js` turns it into `CloudError` |
-| `syncProfile` → | `{pulled, pushed, deleted, sounds, merged, clashes, kept, tooBig?, full?}`; `cloud-sync.js syncNote` turns it into the status line |
+| `syncProfile` → | `{pulled, pushed, deleted, sounds, merged, clashes, kept, tooBig?, full?, heavy?}`; `cloud-sync.js syncNote` turns it into the status line |
 
 ## D1 tables (`worker/schema.sql`)
 
@@ -400,7 +400,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 | record kinds | `CLOUD_KINDS`, worker `KINDS`, `STAMPED`, schema comment | a new per-person store added to `CLOUD_KINDS` and `KINDS` but not `STAMPED` would never get its `changed` stamp, so its clashes always go to the cloud (no test) |
 | record content and hash | `cloud-sync.js canonical` + `NOT_CONTENT`, `merge3.js canon` + `NOT_CONTENT` | a new non-content field added to one makes "changed" and "same" disagree |
 | the stores as lists | `cloud.js storedLists`, `backup-ui.js storedLists`, `state.js storedLists` | the cloud's maps `prefs` through `cleanPrefs`; a new store must be added to all three |
-| pieces and caps | `CHUNK_BYTES` (web and worker), `CLOUD_MAX_SOUND`/`MAX_SOUND_BYTES` (tested equal), `PER_PUSH`/`LIMITS.perPush` (no test) | the Worker's `GET /api/cloud` already returns `chunk` and `maxSound`; the app ignores them |
+| pieces and caps | `CHUNK_BYTES` (web and worker), `CLOUD_MAX_SOUND`/`MAX_SOUND_BYTES` (tested equal), `PER_PUSH`, `RECORD_BYTES`, `PUSH_BYTES`/`LIMITS.perPush`, `recordBytes`, `pushBytes` (tested equal) | the Worker's `GET /api/cloud` already returns `chunk` and `maxSound`; the app ignores them |
 | browser and OS families | `agent.js parseAgent` (reports, metrics), `track-page.js browserOf` and `environment` `os` (usage events) | different order of checks and different case (`'Chrome'` vs `'chrome'`; `OPT/` only in `browserOf`) |
 | the site's origin | `worker/http.js ORIGIN`, `worker/clean.js KNOWN.origin` (literal), `log-send.js LIVE_HOST`, `index.js EVENTS_OPTS`/`FEEDBACK_OPTS` (from `ORIGIN`) | a domain change must touch all of them |
 | kit ids | `boards.json`, `worker/clean.js KIT_IDS` (test-guarded), `sw.js KIT` (test-guarded by the file list) | three lists of one kit |
@@ -454,7 +454,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 | a new per-person store that syncs | `store.js SCHEMA`; `state.js` (`readStorage`, `storedLists`); `cloud.js storedLists`; `backup-ui.js storedLists`; `cloud-sync.js CLOUD_KINDS` (and `ONE_EACH`, `MADE`, `recordsOf`); `merge3.js STAMPED` (and `KEEP_BOTH`, `KIND_RULES`); `worker/cloud.js KINDS`; the `schema.sql` comment; `backup.js cleanBackup`; `merge.js` |
 | a new cloud route | `worker/cloud.js route` (+ Origin check, `seen` if it should count in metrics); `web/cloud-api.js`; `cloud.js`; `tests/worker-cloud.test.mjs`; `docs/design/cloud-profiles.md` §5; `privacy.js` if it stores or shows something new |
 | a D1 table or column | `worker/migrations/NNN-*.sql`, `worker/schema.sql` (and its `migrations` insert), `tests/migrations.test.mjs` passes; TODO "Ben does" for `just cloud-migrate --yes` |
-| a cloud limit | `worker/cloud.js LIMITS` (or `CHUNK_BYTES`, `MAX_SOUND_BYTES`), the web twin (`cloud-sync.js CHUNK_BYTES`, `CLOUD_MAX_SOUND`, `PER_PUSH`), `cloud-api.js cloudTrouble` for a new answer |
+| a cloud limit | `worker/cloud.js LIMITS` (or `CHUNK_BYTES`, `MAX_SOUND_BYTES`), the web twin (`cloud-sync.js CHUNK_BYTES`, `CLOUD_MAX_SOUND`, `PER_PUSH`, `RECORD_BYTES`, `PUSH_BYTES`), `cloud-api.js cloudTrouble` for a new answer |
 | a merge rule | `merge3.js KIND_RULES` (and `KEEP_BOTH`); `tests/merge3.test.mjs`; `cloud-profiles.md` §6 |
 | when sync runs | `sync-timing.js` constants; `tests/sync-timing.test.mjs` (incl. the request budget) |
 | a new `logEvent` kind or field | `log-clean.js RULES` (`text` for free text); fixed lists in `SETTING_VALUES`, `VOICE_IDS`…; maybe `track-page.js contentOf`/`appEventOf` |

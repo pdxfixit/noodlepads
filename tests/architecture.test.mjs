@@ -181,6 +181,8 @@ test('✅ limits written on both sides of the cloud agree', async () => {
   const events = await worker('events-worker.js');
   assert.equal(sync.CHUNK_BYTES, cloud.CHUNK_BYTES, FIX);
   assert.equal(sync.PER_PUSH, cloud.LIMITS.perPush, FIX);
+  assert.equal(sync.RECORD_BYTES, cloud.LIMITS.recordBytes, FIX);
+  assert.equal(sync.PUSH_BYTES, cloud.LIMITS.pushBytes, FIX);
   assert.equal(feedback.MAX_BYTES, events.MAX_FEEDBACK, FIX);
 });
 
