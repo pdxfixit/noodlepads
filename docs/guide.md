@@ -1042,7 +1042,10 @@ sound is at most 25 MB; a profile's sounds at most 40 MB and everyone's 400
 MB. A record (a beat, a take…) is at most 512 KB of JSON, a push at most 4 MB
 and 200 records; a profile's records at most 10 MB and everyone's 60 MB (each
 counts its JSON and 100 bytes, so a deleted one's tombstone counts too). A
-push or sound over a cap is refused (507) and stays on the device; a push
+push or sound over a cap is refused (507) and stays on the device. A sound
+not whole an hour after its upload started is given up, and its device
+starts it again; until then it counts in full for its own profile, and for
+everyone else only as far as it has uploaded. A push
 that adds nothing (an edit that shrinks, a delete) always lands. A day (UTC)
 allows 50 new profiles, 5,000 pushes and 500 shares; a profile, 200 shares.
 A profile keeps the keys of its 20 most recently used devices, and a device

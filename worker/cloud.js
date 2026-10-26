@@ -426,11 +426,30 @@ async function push(request, env, id, now, seen) {
 
 // ── sounds ──
 
-async function storedBytes(env, profileId) {
-  const mine = await env.DB.prepare('SELECT COALESCE(SUM(bytes), 0) AS b FROM sounds WHERE profile_id = ?').bind(profileId).first();
-  const all = await env.DB.prepare('SELECT COALESCE(SUM(bytes), 0) AS b FROM sounds').first();
+// A sound not whole an hour after it started is given up: it counts for
+// nothing, takes no more pieces, and goes at the next start. An hour is many
+// times what 14 pieces take on a slow phone; its device starts it again.
+export const PENDING_MS = 60 * 60 * 1000;
+const WHOLE = 'sounds.got >= sounds.chunks';
+
+// Sound bytes stored: `mine` counts the profile's unfinished sounds whole,
+// as declared, so it can't start more than it may keep; `all` counts the
+// pieces others' unfinished sounds have received, so a start that never
+// uploads can't make the cloud full for everyone.
+async function storedBytes(env, profileId, now) {
+  const fresh = now - PENDING_MS;
+  const mine = await env.DB.prepare(`SELECT COALESCE(SUM(bytes), 0) AS b FROM sounds WHERE profile_id = ? AND (${WHOLE} OR created >= ?)`)
+    .bind(profileId, fresh).first();
+  const all = await env.DB.prepare(`SELECT COALESCE(SUM(CASE WHEN ${WHOLE} THEN bytes WHEN created >= ? THEN MIN(bytes, got * ?) ELSE 0 END), 0) AS b FROM sounds`)
+    .bind(fresh, CHUNK_BYTES).first();
   return { mine: mine.b, all: all.b };
 }
+
+// Deletes every unfinished sound older than PENDING_MS, and its pieces.
+const dropStale = (env, now) => env.DB.batch([
+  env.DB.prepare(`DELETE FROM sound_chunks WHERE sound_id IN (SELECT id FROM sounds WHERE NOT (${WHOLE}) AND created < ?)`).bind(now - PENDING_MS),
+  env.DB.prepare(`DELETE FROM sounds WHERE NOT (${WHOLE}) AND created < ?`).bind(now - PENDING_MS),
+]);
 
 async function need(env, soundId, chunks) {
   const got = new Set((await env.DB.prepare('SELECT n FROM sound_chunks WHERE sound_id = ?').bind(soundId).all()).results.map((r) => r.n));
@@ -444,10 +463,11 @@ async function startSound(request, env, id, now) {
   if (!SHA.test(sha256 ?? '')) throw new Refuse(400, 'sha256');
   if (!Number.isInteger(bytes) || bytes < 1 || bytes > MAX_SOUND_BYTES) throw new Refuse(413, 'size');
   if (typeof mime !== 'string' || !/^audio\/[a-z0-9.+-]{1,40}(;[ a-z0-9=.-]{0,40})?$/i.test(mime)) throw new Refuse(400, 'mime');
+  await dropStale(env, now);
   const have = await env.DB.prepare('SELECT id, chunks FROM sounds WHERE profile_id = ? AND sha256 = ? AND bytes = ?')
     .bind(id, sha256, bytes).first();
   if (have) return json(200, { id: have.id, need: await need(env, have.id, have.chunks) });
-  const used = await storedBytes(env, id);
+  const used = await storedBytes(env, id, now);
   if (used.mine + bytes > LIMITS.profileBytes) throw new Refuse(507, 'profile full');
   if (used.all + bytes > LIMITS.totalBytes) throw new Refuse(507, 'cloud full');
   const soundId = newSoundId();
@@ -460,8 +480,10 @@ async function startSound(request, env, id, now) {
 async function putPiece(request, env, soundId, n, now) {
   if (request.headers.get('Origin') !== ORIGIN) throw new Refuse(403, 'origin');
   const who = await needKey(request, env, null, now);
-  const s = await env.DB.prepare('SELECT profile_id, bytes, chunks FROM sounds WHERE id = ?').bind(soundId).first();
+  const s = await env.DB.prepare('SELECT profile_id, bytes, chunks, got, created FROM sounds WHERE id = ?').bind(soundId).first();
   if (!s || s.profile_id !== who) throw new Refuse(404, 'sound');
+  // Given up (PENDING_MS): the device starts it again.
+  if (s.got < s.chunks && s.created < now - PENDING_MS) throw new Refuse(404, 'sound');
   if (!Number.isInteger(n) || n < 0 || n >= s.chunks) throw new Refuse(400, 'piece');
   const data = await readBytes(request, CHUNK_BYTES);
   if (data === null || data.byteLength !== pieceSize(s.bytes, n)) throw new Refuse(400, 'piece size');

@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../worker/index.js';
-import { CHUNK_BYTES, MAX_SOUND_BYTES, LIMITS, SESSION_KEY_MS, ACTIVE_STEP_MS, ROW_BYTES, KEY_IDLE_MS, KEYS_PER_PROFILE, pieceCount, pieceSize } from '../worker/cloud.js';
+import { CHUNK_BYTES, MAX_SOUND_BYTES, LIMITS, SESSION_KEY_MS, ACTIVE_STEP_MS, ROW_BYTES, KEY_IDLE_MS, KEYS_PER_PROFILE, PENDING_MS, pieceCount, pieceSize } from '../worker/cloud.js';
 import { ORIGIN } from '../worker/http.js';
 import { WAIT_MS } from '../worker/pin.js';
 import { FakeD1 } from './fake-d1.mjs';
@@ -317,6 +317,35 @@ test("a profile's record bytes stay exact through edits, deletes, tombstones and
   exact();
   await push({ put: [{ kind: 'beats', id: 'beat-1', body: { back: true } }] });
   exact();
+});
+
+// The council's review, 2026-10-26: a start counted its declared bytes before
+// anything uploaded, and an unfinished sound never went, so a few 25 MB starts
+// made the cloud "full" for everyone.
+test('an unfinished sound counts for others only as far as it uploaded, and is given up after an hour', async () => {
+  const c = cloud();
+  c.env.DB.db.prepare("INSERT INTO sounds (id, profile_id, mime, bytes, chunks, sha256, got, created) VALUES ('s-z', 'p-z', 'audio/wav', ?, 1, 'z', 1, 0)")
+    .run(LIMITS.totalBytes - 26 * 1024 * 1024);
+  const start = (key, id, n, bytes = MAX_SOUND_BYTES) => c.call('POST', `profiles/${id}/sounds`, { key, body: { sha256: sha(n), bytes, mime: 'audio/wav' } });
+  const a = await made(c, 'p-a');
+  const b = await made(c, 'p-b');
+  assert.equal((await start(a, 'p-a', 1)).status, 201);
+  assert.equal((await start(b, 'p-b', 2)).status, 201, "p-a's start, with nothing uploaded, takes no room from p-b");
+  const own = await start(a, 'p-a', 3);
+  assert.deepEqual([own.status, own.data.error], [507, 'profile full'], 'its own start counts whole against its own 40 MB');
+  // Pieces that did arrive count for everyone.
+  const part = await start(a, 'p-a', 4, CHUNK_BYTES + 10);
+  assert.equal((await c.call('PUT', `sounds/${part.data.id}/0`, { key: a, raw: new Uint8Array(CHUNK_BYTES) })).status, 200);
+  const cc = await made(c, 'p-c');
+  assert.equal((await start(cc, 'p-c', 5)).data.error, 'cloud full', 'its 1.9 MB that arrived leave too little for 25 MB more');
+  c.later(PENDING_MS + 1);
+  assert.equal((await start(cc, 'p-c', 5)).status, 201, 'given up, its piece counts no more');
+  assert.equal((await c.call('PUT', `sounds/${part.data.id}/1`, { key: a, raw: new Uint8Array(10) })).status, 404, 'given up: no more pieces');
+  const again = await start(a, 'p-a', 3);
+  assert.equal(again.status, 201, 'an hour on, the unfinished ones are gone');
+  assert.deepEqual(c.env.DB.rows("SELECT id FROM sounds WHERE profile_id = 'p-a'").map((r) => r.id), [again.data.id]);
+  assert.deepEqual(c.env.DB.rows('SELECT DISTINCT sound_id FROM sound_chunks'), [], 'with their pieces');
+  assert.equal(c.env.DB.rows("SELECT COUNT(*) AS n FROM sounds WHERE id = 's-z'")[0].n, 1, 'a whole sound stays');
 });
 
 test('changing the PIN needs the current one, and closes the profile on every other device', async () => {
