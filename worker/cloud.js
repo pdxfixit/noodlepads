@@ -329,7 +329,7 @@ async function changeProfile(request, env, id, now, seen) {
 const UNSHARED = 'NOT EXISTS (SELECT 1 FROM share_sounds WHERE share_sounds.sound_id = sounds.id)';
 
 // Deleting a profile deletes its shares and every sound of its own (a share
-// names only its sharer's sounds: ownSound). Unshare needs the profile's key,
+// names only its sharer's sounds: ownSounds). Unshare needs the profile's key,
 // so a share left behind could never be ended. A remix someone made is their
 // own record with its own copy of the audio, under their profile, so it stays.
 // (Sounds with profile_id '' are the shares' of profiles deleted before
@@ -692,10 +692,15 @@ async function getSound(env, soundId) {
 // ── shares ──
 
 // A sound the profile has, whole, or a Refuse.
-async function ownSound(env, profileId, soundId) {
-  if (typeof soundId !== 'string' || !SOUND_ID.test(soundId)) throw new Refuse(400, 'sound');
-  const s = await env.DB.prepare('SELECT got, chunks FROM sounds WHERE id = ? AND profile_id = ?').bind(soundId, profileId).first();
-  if (!s || s.got < s.chunks) throw new Refuse(409, 'sound', { sound: soundId });
+// Every one of `soundIds` is the profile's own and whole, in one query
+// however many a share names (D1 caps the queries in one call).
+async function ownSounds(env, profileId, soundIds) {
+  for (const s of soundIds) if (typeof s !== 'string' || !SOUND_ID.test(s)) throw new Refuse(400, 'sound');
+  if (!soundIds.length) return;
+  const rows = (await env.DB.prepare('SELECT id, got, chunks FROM sounds WHERE profile_id = ? AND id IN (SELECT value FROM json_each(?))')
+    .bind(profileId, JSON.stringify(soundIds)).all()).results;
+  const whole = new Map(rows.map((r) => [r.id, r.got >= r.chunks]));
+  for (const s of soundIds) if (!whole.get(s)) throw new Refuse(409, 'sound', { sound: s });
 }
 
 // Shares a snapshot: {kind, title, bundle: {clips, beats, songs}, preview?}.
@@ -721,11 +726,11 @@ async function makeShare(request, env, id, now, seen) {
   const sounds = new Set();
   for (const c of bundle.clips) {
     if (!c || typeof c !== 'object') throw new Refuse(400, 'sound');
-    await ownSound(env, id, c.sound);
     sounds.add(c.sound);
   }
   const preview = body.preview ?? null;
-  if (preview !== null) { await ownSound(env, id, preview); sounds.add(preview); }
+  if (preview !== null) sounds.add(preview);
+  await ownSounds(env, id, [...sounds]);
   const text = JSON.stringify(bundle);
   if (text.length > LIMITS.shareBytes) throw new Refuse(413, 'bundle');
   const hash = await sha256Hex(JSON.stringify([body.kind, title, text, preview]));

@@ -591,6 +591,28 @@ async function sound(c, key, id, n, bytes = [7, 7]) {
   return data.id;
 }
 
+test('a share of 100 sounds checks them in one D1 query, and still refuses one that is not whole or not its own', async () => {
+  const c = cloud();
+  const key = await made(c, 'p-a');
+  const sounds = [];
+  for (let n = 1; n <= 100; n++) {
+    const { data: { id } } = await c.call('POST', 'profiles/p-a/sounds', { key, body: { sha256: sha(n), bytes: 1, mime: 'audio/wav' } });
+    await c.call('PUT', `sounds/${id}/0`, { key, raw: new Uint8Array([n]) });
+    sounds.push(id);
+  }
+  const clips = sounds.map((s, i) => ({ id: `user-${i}`, label: 'Boom', sound: s }));
+  const checks = () => c.env.DB.queries.filter((q) => /FROM sounds WHERE/.test(q)).length;
+  const before = checks();
+  assert.equal((await c.call('POST', 'profiles/p-a/shares', { key, body: { kind: 'sound', title: 'Lots', bundle: { clips } } })).status, 201);
+  assert.ok(checks() - before <= 2, `${checks() - before} sound checks`);
+  const { data: { id: half } } = await c.call('POST', 'profiles/p-a/sounds', { key, body: { sha256: sha(999), bytes: 4, mime: 'audio/wav' } });
+  const r = await c.call('POST', 'profiles/p-a/shares', { key, body: { kind: 'sound', title: 'Half', bundle: { clips: [...clips.slice(0, 3), { id: 'user-x', sound: half }] } } });
+  assert.deepEqual([r.status, r.data.sound], [409, half], 'a sound still arriving is refused, by name');
+  const other = await made(c, 'p-b');
+  const theirs = await c.call('POST', 'profiles/p-b/shares', { key: other, body: { kind: 'sound', title: 'Mine', bundle: { clips: clips.slice(0, 1) } } });
+  assert.equal(theirs.status, 409, "another profile's sound is refused");
+});
+
 test('a sound share with no sound is refused: it would play and remix nothing', async () => {
   const c = cloud();
   const key = await made(c, 'p-a');
