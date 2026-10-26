@@ -354,7 +354,7 @@ One open beat per person (ADR 0017), owned by `sequencer.js` (`pattern`, `doc`, 
 
 ### Hold to loop, tap to stop
 
-`HOLD_TO_LOOP_MS` (350) in `dj.js`; the pads' own hold in `pads.js`; Kids has no loops. A tap on a looping sound stops it (`pads.js tapPad`), and a take records that as `'stop'`.
+`HOLD_TO_LOOP_MS` (350) in `dj.js`; the pads' own hold in `pads.js`; Kids has no loops. A tap on a looping sound stops it (`pads.js tapPad`), and a take records that as `'stop'`; held on, it stays stopped (`dj.js pointerDown`, `keydown`, and `finger.js`'s `hold: false`).
 
 ### Lift to play (`finger.js`)
 
@@ -427,7 +427,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | A take ends, kept, when the keys leave the screen or Kids shows (`dj.leave`) | `live-take-leave.test.mjs` |
 | ⏹️ Stop all and 🧸 Kids stop a take playing back, its hits still to come too | `take-stop-all.test.mjs` |
 | A change of person ends a take or a recording into the beat as the first person's; a beat Undo offered before does nothing for the next person | `keys-person-change.test.mjs` |
-| A held key loops only on OS repeat past 350 ms; lifting a modifier forgets all holds | no test found (`shift-holds.test.mjs` covers Shift-click only) |
+| A held key loops only on OS repeat past 350 ms; a press that stopped a loop never loops it again, held by key, mouse or finger; lifting a modifier forgets all holds | `keys-stop-hold.test.mjs` (repeats and the mouse; the modifier: no test found) |
 | Every remembered key (`dj-input`, `dj-size`, `dj-click`, `beat-keys`, `kids-tab`) starts the app safely | `startup-remembered.test.mjs` |
 | A take's `ring` is stored only when true, only on a hit | `overlap.test.mjs`, `rhythm.test.mjs` |
 | Leaving Kids shows the beat maker again, so it holds the kid's squares, never an older copy to save over them | `kids-scratch-back.test.mjs` |

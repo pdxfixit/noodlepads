@@ -312,11 +312,14 @@ export function createDJ({ el, deps }) {
   }
 
   // A touch or click: plays now, and loops if still held after the hold time.
-  // With Shift it loops at once (a looping sound stops, as a tap does).
+  // With Shift it loops at once (a looping sound stops, as a tap does). A
+  // press that stopped a loop stays a stop, however long it is held, as on
+  // 🔊 Pads.
   function pointerDown(target, id, shift = false) {
     if (shift) { shiftPlay(target); return; }
+    const wasLooping = deps.isLooping?.(soundOf(target));
     const clip = playTarget(target);
-    if (!clip) return;
+    if (!clip || wasLooping) return;
     clearTimeout(holds.get(id));
     holds.set(id, setTimeout(() => { holds.delete(id); loopIt(clip); }, HOLD_TO_LOOP_MS));
   }
@@ -358,7 +361,9 @@ export function createDJ({ el, deps }) {
     // The first key pressed shows a keyboard is there: the letters (and Q / D) come out.
     if (!keyboardSeen) { keyboardSeen = true; render(); }
     // Shift: "that one was meant a pill earlier", for recording into the beat.
-    if (play(code, { earlier: e.shiftKey })) held.set(code, { at: now, looped: false });
+    // A press that stopped a loop never loops it again on its repeats.
+    const wasLooping = deps.isLooping?.(deck()[code]);
+    if (play(code, { earlier: e.shiftKey })) held.set(code, { at: now, looped: wasLooping });
     keyEl(code)?.classList.add('down');
     return true;
   }
