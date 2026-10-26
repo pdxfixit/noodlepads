@@ -15,6 +15,7 @@ import { ORIGIN } from '../worker/http.js';
 import { FakeD1 } from './fake-d1.mjs';
 import { readFileSync } from 'node:fs';
 import { isFunName, funName } from '../web/names.js';
+import { PIN_RESET_EMAIL } from '../web/contact.js';
 
 let page;
 let $;
@@ -211,7 +212,7 @@ test('☁️ Open from the cloud: a PIN pad with no Remember on this device, and
   assert.equal($('#pin-remember'), null, 'no device remembers a PIN (Ben, 2026-10-19)');
   assert.equal($('#pin-unknown').hidden, true, 'nothing of theirs is here to delete');
   assert.equal($('#pin-forgot').hidden, false);
-  assert.match($('#pin-forgot').textContent, /pin\.reset@noodlepads\.com/);
+  assert.ok($('#pin-forgot').textContent.includes(PIN_RESET_EMAIL), 'the forgotten-PIN line shows the address from web/contact.js');
   typePin('1111');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'asked again');
@@ -466,7 +467,7 @@ test('Settings has no 🔓 What\'s private; the PIN pad still says where a forgo
   assert.equal($('#set-privacy'), null);
   assert.equal($('#privacy-list'), null);
   const { FORGOT_PIN } = await import('../web/cloud-ui.js');
-  assert.match(FORGOT_PIN, /pin\.reset@noodlepads\.com/);
+  assert.ok(FORGOT_PIN.includes(PIN_RESET_EMAIL), 'the PIN pad names the address from web/contact.js');
 });
 
 // Found by `just cloud-e2e` (2026-10-11): the start-up sync and one right
