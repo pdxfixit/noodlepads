@@ -232,7 +232,7 @@ with nobody opened comes back to Who's playing?. Someone added later gets no
 **Pick your stage name** follows in the same dialog: a big face on the
 person's color with their name and 🎲, six fun names (dealt as 👥 People's
 Pick a name deals them; 🎲 deals six more), a row of seven pictures ending in
-… (the full picture chooser), the ten person colors, then Skip and ▶ Let's
+… (the full picture chooser), the eight person colors, then Skip and ▶ Let's
 play. Each tap changes them at once, through the profile sheet's own paths
 (`people.js` `editLook`), so they sync, a PIN guards them and the name stays a
 fun name; the screen takes the color as you tap. Skip puts back the name,

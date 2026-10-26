@@ -302,7 +302,9 @@ export function isKitClip(clip) {
 // is still how they are recognized (isDefaultPerson, app.js settlePeople,
 // which gives an old "Me" a fun name).
 export const SOLO_NAME = 'Me';
-export const SOLO_COLOR = '#1F3FA8';
+// Today's blue (PERSON_COLORS): made in an old color, the first person showed
+// in it with no color chosen in their profile until storage was read again.
+export const SOLO_COLOR = '#2D3FD6';
 
 // The app is Noodle Pads (Ben, 2026-10-11), and that is the headline for
 // everyone.

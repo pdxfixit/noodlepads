@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   PERSON_COLORS, mergePeople, colorName, padColor, orderClips, clipsForPerson,
-  overrideFor, withHidden, personEditRecord, nextPersonColor, validateManifest,
+  overrideFor, withHidden, personEditRecord, nextPersonColor, validateManifest, personColor,
 } from '../web/model.js';
 import { PICTURES, pictureTakenBy, overrideWithEmoji } from '../web/model.js';
 import { isFunName, FUN_NAMES } from '../web/names.js';
@@ -418,6 +418,7 @@ test('soloPerson: one added board with a fun name and a picture, never "Me", whi
   const me = soloPerson('p-1', 5, () => 0);
   assert.deepEqual(me, { id: 'p-1', name: me.name, fun: true, avatar: PICTURES[0], color: SOLO_COLOR, added: true, created: 5, solo: true });
   assert.ok(isFunName(me.name) && me.name !== SOLO_NAME, me.name);
+  assert.ok(PERSON_COLORS.includes(me.color) && personColor(me.color) === me.color, 'one of today\'s person colors, never an old one');
   const merged = mergePeople([], new Map([[me.id, me]]), { kit: [{ id: 'kick', file: 'k.wav' }] });
   assert.deepEqual(merged.map((p) => [p.name, p.clips.length]), [[me.name, 1]]);
 });

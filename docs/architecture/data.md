@@ -387,7 +387,6 @@ Nothing found is changed or deleted.
 7. **Editing one sound is done in three ways:** `sheet.js saveSheet`, `bulk.js changeSounds` (through `model.js withBulkChanges`) and `app.js setClipEmoji`. All three branch on own sound or preset, then call `persist('clips')` or `setOverride(overrideFor…)`.
 8. **The open-beat and open-song wiring lives in `app.js`** (`setOpen`, `beatLibrary`, `songBook`, the dj `deps`), not in `state.js`. A change to how a beat or song is stored is made there.
 9. **Finding a preset edit's person.** It is done by exact prefix plus kit lookup (`state.js deletePerson`), by `.some` over kit ids (`backup.js` `isKitCopy`), and by the longest kit id that is a suffix (`model.js kitIdOf` for `personIdsIn`; `sequencer.js beatToFile` sorts its own). None depends on kit order (gotcha 1).
-10. **`SOLO_COLOR` is an old person color.** `model.js` `SOLO_COLOR` is `#1F3FA8`, a key of `OLD_PERSON_COLORS`. A new device's first person is made in that color. They show in it until the next `readStorage` moves it to `#2D3FD6` in memory; storage keeps the old one until the record saves again. Until then the profile's color picker shows no color as chosen.
 
 ## Invariants and gotchas
 
