@@ -193,6 +193,7 @@ Ben: *"Optimizing the user interface for a variety of screens is very important.
 **Working while Ben is away**
 - Do not stop to ask. Pick the option closest to [docs/decisions.md](docs/decisions.md), name the call in your report, and keep going. [docs/questions.md](docs/questions.md) is only for questions that need Ben's answer before work can go on.
 - Keep [TODO.md](TODO.md) fresh in the same commit: tick Ben's items that are done, delete moot ones, and add new things only Ben can do under "Ben does".
+- **Wrangler first, Ben last** (Ben, 2026-10-26): before asking Ben to do anything in Cloudflare, do it with wrangler through the deploy: a binding, rate limiter, Worker secret, route or cron in `site/wrangler.toml`, or a `wrangler` step in `.github/workflows/deploy.yml` (it holds the token; agents never do). Ask Ben only for what wrangler can't reach: the token's own permissions, zone WAF rules, GitHub secrets. Say why when you ask.
 - **Keep human-run tests to a minimum** (Ben, 2026-10-16): verify it yourself with tests, `just look` and the live checks. Add no device tries to "Ben does"; what only a person can judge (sound, real touch) stays as "not yet tried on a phone" in [docs/state.md](docs/state.md), and Ben reports tries as he goes.
 
 ## Privacy
