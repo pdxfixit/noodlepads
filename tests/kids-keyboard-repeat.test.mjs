@@ -49,7 +49,14 @@ test('a finger\'s tap on a Kids pad, then the browser\'s click: one play', () =>
   assert.deepEqual(played, [pad.dataset.clip]);
 });
 
-test('Kids\' buttons show a focus ring with a dark band and a white ring, seen on any fill', () => {
+// What a test of the CSS's text can't check: that the ring is seen, and
+// not clipped, on a real screen. That is `just look kids-beats` (and keys,
+// record) at 320 and 375 px and `--height 680`, with the ring drawn.
+test('Kids\' focus ring: an outline only, off the button, so its own shadows stay; the playhead stays on a focused square; the beat grid leaves room for it', () => {
   const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
-  assert.match(css, /\.kids :focus-visible \{[^}]*outline: 4px solid #fff;[^}]*box-shadow: 0 0 0 4px #111/);
+  const rule = css.match(/\n\.kids :focus-visible \{([^}]*)\}/)?.[1] ?? '';
+  assert.match(rule, /outline: 4px solid #fff; outline-offset: 4px;/);
+  assert.doesNotMatch(rule, /box-shadow/, 'a button\'s own shadow (3D, pressed, recording) is never covered');
+  assert.match(css, /\.kids \.kids-square\.now:focus-visible \{[^}]*var\(--led\)/, 'the playhead\'s yellow on a focused square');
+  assert.match(css, /\.kids-beat \{[^}]*padding: 8px;/, 'room for the 8 px ring inside the scrolling grid');
 });

@@ -5100,7 +5100,7 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
    the tabs): a square is 44 px at least, and where the room is shorter than
    the nine rows the grid scrolls inside its own box instead of spilling out
    of it. The padding keeps the playing square's outline inside the box. */
-.kids-beat { flex: 1 1 auto; min-height: 0; display: grid; gap: 8px; margin: 0 -6px; padding: 0 6px 6px; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; }
+.kids-beat { flex: 1 1 auto; min-height: 0; display: grid; gap: 8px; margin: 0 -8px; padding: 8px; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; }
 .kids-beat[data-layout="across"] { grid-template-columns: minmax(56px, 90px) repeat(8, 1fr); grid-template-rows: repeat(4, minmax(48px, 1fr)); }
 .kids-beat[data-layout="down"] { grid-template-columns: repeat(4, 1fr); grid-template-rows: minmax(48px, 64px) repeat(8, minmax(44px, 1fr)); }
 /* A short screen (a phone with its browser bar showing): the bars and the
@@ -5244,10 +5244,13 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
    it read as part of the pad's picture (Ben, 2026-10-16). A white edge sets
    it apart from any pad's emoji. */
 .kids-pad:has(> .kids-hand) { position: relative; z-index: 2; }
-/* Kids' buttons focused from a keyboard or a switch: a dark band round the
-   button, then a white ring, so it shows on the board's color and on a pad's,
-   light or dark. */
-.kids :focus-visible { outline: 4px solid #fff; outline-offset: 4px; box-shadow: 0 0 0 4px #111; }
+/* Kids' buttons focused from a keyboard or a switch: a white ring a little
+   off the button, so it sits on the board's color (made for white words),
+   whatever the button's own fill. An outline only, so a button's own shadow
+   (its 3D edge, pressed, recording, playing) still shows. A square under the
+   playhead keeps its yellow ring, doubled to say it has focus too. */
+.kids :focus-visible { outline: 4px solid #fff; outline-offset: 4px; }
+.kids .kids-square.now:focus-visible { outline: 8px double var(--led); outline-offset: 1px; }
 .kids-hand {
   position: absolute;
   z-index: 3;
