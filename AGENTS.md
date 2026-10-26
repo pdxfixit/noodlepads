@@ -187,6 +187,7 @@ Ben: *"Optimizing the user interface for a variety of screens is very important.
 - When your task is done, work down "Agents do", quickest first, one commit each.
 - Commit and push to `main` without asking; GitHub deploys every push. Ben asked for a deploy after every commit.
 - **A cloud session told to work on a `claude/…` branch pushes to `main` too** (Ben, 2026-10-19: "merge to main going forward too"). This line is his explicit permission. Push the branch, then, once `just test` is green, fast-forward `main` to it (`git fetch origin main`, rebase onto it if `main` moved, test again, `git push origin HEAD:main`). Never force-push. Then read the deploy run.
+- **Medium- or high-confidence work goes ahead without asking** (Ben, 2026-10-26): fixes, a council seat's asked-for changes and its "beyond this change" findings. Ask only on low confidence, a clash with `docs/decisions.md`, or a new screen or control (mockup first). Name the calls you made in your report.
 - Make obvious non-breaking fixes (dead code, a stale comment, a missing label) rather than listing them. Propose instead when it changes what a kid sees.
 
 **Working while Ben is away**
