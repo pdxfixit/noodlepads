@@ -17,6 +17,8 @@ test('every element app.js hands the keys panel is read there', () => {
   const els = app.slice(start, app.indexOf('\n    deps: {', start));
   const names = [...els.matchAll(/\b(\w+): [$[{]/g)].map((m) => m[1]).filter((n) => n !== 'el');
   assert.ok(names.length > 50, 'the el map was found');
+  // Only names whose value starts with `$(`, `[` or `{` (an element, a list
+  // of them, an editor's own map) are found; any other value is not checked.
   // Read as `el.name` (or `el.part.name`, an editor's own `el`), or taken
   // out of `el` by a destructure; a bare `.name` elsewhere does not count.
   const unread = names.filter((n) => !new RegExp(`\\bel(\\.\\w+)*\\??\\.${n}\\b|\\{[^}]*\\b${n}\\b[^}]*\\} = el\\b`).test(panel));
