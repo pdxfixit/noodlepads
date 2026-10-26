@@ -243,6 +243,21 @@ class Prune(unittest.TestCase):
         self.assertEqual(ids, ['p-busy', 'p-e2e-running', 'p-empty', 'p-new', 'p-old'])
         self.assertEqual([r['code'] for r in self.db.query('SELECT code FROM shares')], ['KEEP2345'])
 
+    def test_a_deleted_share_code_gives_its_bytes_back_to_its_profile(self):
+        # The security seat, 2026-10-26: shares count in record_bytes (worker/cloud.js
+        # SHARE_SIZE), so deleting one here must lower it as unshare does.
+        profile(self.db, 'p-e2e-running', NOW - 30_000, NOW - 30_000)
+        self.db.execute("UPDATE profiles SET record_bytes = 1000 WHERE id = 'p-e2e-running';"
+                        "INSERT INTO shares (code, profile_id, kind, title, bundle, hash, created) VALUES"
+                        f" ('RUNS2345', 'p-e2e-running', 'beat', 'Burp', '{{}}', 'h', {NOW - 3600_000});"
+                        f"INSERT INTO share_sounds (code, sound_id) VALUES ('RUNS2345', '{S1}');")
+        ca.prune(self.db, smoke=True, yes=True, now=NOW, out=quiet()[1])
+        self.assertEqual(self.db.query('SELECT code FROM shares'), [])
+        cost = len('{}') + len('Burp') + 100 * 2
+        self.assertEqual(self.db.query("SELECT record_bytes FROM profiles WHERE id = 'p-e2e-running'"), [{'record_bytes': 1000 - cost}])
+        # A database before migration 006 has no record_bytes: nothing to lower.
+        self.assertFalse(any('record_bytes' in s for s in ca.delete_share_sql('ABCD2345', counted=False)))
+
     def test_an_id_that_is_not_an_id_never_reaches_sql(self):
         with self.assertRaises(ca.Trouble):
             ca.delete_profile_sql("p-a'; DROP TABLE profiles; --")

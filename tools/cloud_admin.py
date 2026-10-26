@@ -154,6 +154,10 @@ def has_table(db, name):
     return any(r.get('name') == name for r in rows)
 
 
+def has_column(db, table, column):
+    return any(r.get('name') == column for r in db.query(f'PRAGMA table_info({table})'))
+
+
 # ── schema and migrations ──
 
 def schema(db, yes, out=print):
@@ -551,9 +555,19 @@ def smoke_shares(db, now):
     return db.query(f'SELECT code, profile_id FROM shares WHERE ({like}) AND created < {int(now - TEST_GRACE_MS)}')
 
 
-def delete_share_sql(code):
+# What a share costs its profile's record_bytes (as worker/cloud.js SHARE_SIZE).
+SHARE_SIZE = ('LENGTH(CAST(shares.bundle AS BLOB)) + LENGTH(CAST(shares.title AS BLOB))'
+              ' + 100 * (1 + (SELECT COUNT(*) FROM share_sounds WHERE share_sounds.code = shares.code))')
+
+
+def delete_share_sql(code, counted=True):
+    """Deleting a share code, as worker/cloud.js unshare does: its profile's
+    record_bytes goes down by what it cost (`counted`: the database has that
+    column, migration 006)."""
     q = quoted(code, SHARE_CODE)
-    return [f'DELETE FROM share_sounds WHERE code = {q}', f'DELETE FROM shares WHERE code = {q}']
+    lower = [f'UPDATE profiles SET record_bytes = MAX(0, record_bytes - (SELECT {SHARE_SIZE} FROM shares WHERE code = {q}))'
+             f' WHERE id = (SELECT profile_id FROM shares WHERE code = {q})'] if counted else []
+    return lower + [f'DELETE FROM share_sounds WHERE code = {q}', f'DELETE FROM shares WHERE code = {q}']
 
 
 def loose_sounds(db, now):
@@ -620,7 +634,7 @@ def prune(db, days=None, empty=False, yes=False, now=None, out=print, smoke=Fals
         return plan, loose
     metrics = [t for t in METRICS_TABLES if has_table(db, t)] if plan else []
     statements = ([s for p, _ in plan for s in delete_profile_sql(p['id'], metrics)] + [s for x in loose for s in delete_sound_sql(x['id'])]
-                  + [s for x in shares for s in delete_share_sql(x['code'])])
+                  + [s for x in shares for s in delete_share_sql(x['code'], has_column(db, 'profiles', 'record_bytes'))])
     for i in range(0, len(statements), 60):
         db.execute(';\n'.join(statements[i:i + 60]) + ';')
     left = {r['id'] for r in list_profiles(db)} & {p['id'] for p, _ in plan}
