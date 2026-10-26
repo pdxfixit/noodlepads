@@ -619,6 +619,7 @@ export function createSequencer(deps) {
   let ringing = [];      // a beat's voices after a chip switched away from it, still ringing out
   let stats = null;      // this play's numbers, logged when it stops
   const ready = new Map();   // clip id -> {buffer, duration}, for scheduling without awaiting
+  let preparing = 0;         // prepareBeats calls whose callers may still be booking from `ready`
   const pills = [];          // pills[row][step]
   const cell = { row: 0, step: 0 };  // the one pill in the Tab order; arrow keys move it
   let speakers = null;       // the rows' speakers and their loudness popover (set once the rows listen)
@@ -1105,6 +1106,12 @@ export function createSequencer(deps) {
     const asked = pattern;
     await refresh(pattern.rows);
     if (playing() || pattern !== asked) return;   // stopped, or another beat opened, while its sounds loaded
+    // Only the open beat's sounds stay (a song playing stopped as this began),
+    // so a sound deleted or taken off every row is not kept decoded all visit.
+    if (!preparing) {
+      const used = new Set(pattern.rows.map((r) => r.clipId));
+      for (const id of [...ready.keys()]) if (!used.has(id)) ready.delete(id);
+    }
     queue = [];
     t0 = ctx.currentTime + 0.05;
     if (countIn) {
@@ -3388,8 +3395,15 @@ export function createSequencer(deps) {
     return { pattern: p, seconds, hits };
   }
   // Loads every sound the beats use (fresh: a voice may have changed),
-  // keeping the ones a beat or song playing now still needs.
-  const prepareBeats = (patterns) => refresh(patterns.flatMap((p) => p.rows));
+  // keeping the ones a beat or song playing now still needs. Its caller
+  // books hits from `ready` right after, so play() leaves `ready` whole
+  // until then (`preparing`).
+  function prepareBeats(patterns) {
+    preparing++;
+    const done = refresh(patterns.flatMap((p) => p.rows));
+    done.then(() => setTimeout(() => { preparing--; }, 0));
+    return done;
+  }
   // 🎼 Song is done with these graphs: those into its lanes' gains `dests`
   // (only beat `p`'s, when given). They go once they ring out.
   const endMix = (dests, p) => letGo((m) => dests.includes(m.dest) && (!p || m.p === p));
