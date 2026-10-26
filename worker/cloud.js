@@ -184,9 +184,12 @@ export const TEST_PROFILE = /^p-(smoke|e2e)-/;
 export const CHECK_LIMITS = { recordBytes: 64 * 1024, soundBytes: 4 * 1024 * 1024, sounds: 1, shares: 1 };
 export const CHECK_MS = 10 * 60 * 1000;
 const isCheck = (id) => TEST_PROFILE.test(id);
+const IS_CHECK = "(id LIKE 'p-smoke-%' OR id LIKE 'p-e2e-%')";
+const NOT_CHECK = `NOT ${IS_CHECK}`;
 
 async function listProfiles(env) {
-  const rows = await env.DB.prepare('SELECT * FROM profiles ORDER BY created DESC LIMIT ?').bind(LIMITS.listed).all();
+  // Check profiles are left out in the SQL, so any number of them can't push kids out of the 300.
+  const rows = await env.DB.prepare(`SELECT * FROM profiles WHERE ${NOT_CHECK} ORDER BY created DESC LIMIT ?`).bind(LIMITS.listed).all();
   return json(200, { profiles: rows.results.filter((r) => CLOUD_ID.test(r.id) && !isCheck(r.id)).map(looks) });
 }
 
@@ -203,9 +206,10 @@ async function wipeProfile(env, id) {
 }
 
 // Deletes every check profile older than CHECK_MS (a check killed midway,
-// or someone using such an id to keep a profile).
+// or someone using such an id to keep a profile): when a profile is made,
+// and when a sound starts.
 async function dropOldChecks(env, now) {
-  const old = (await env.DB.prepare("SELECT id FROM profiles WHERE (id LIKE 'p-smoke-%' OR id LIKE 'p-e2e-%') AND created < ?")
+  const old = (await env.DB.prepare(`SELECT id FROM profiles WHERE ${IS_CHECK} AND created < ?`)
     .bind(now - CHECK_MS).all()).results;
   for (const { id } of old) await wipeProfile(env, id);
 }
@@ -542,6 +546,8 @@ async function startSound(request, env, id, now) {
   if (!Number.isInteger(bytes) || bytes < 1 || bytes > MAX_SOUND_BYTES) throw new Refuse(413, 'size');
   if (typeof mime !== 'string' || !/^audio\/[a-z0-9.+-]{1,40}(;[ a-z0-9=.-]{0,40})?$/i.test(mime)) throw new Refuse(400, 'mime');
   await dropStale(env, now);
+  await dropOldChecks(env, now);
+  await getProfile(env, id);   // an old check profile starting one has just gone
   const have = await env.DB.prepare('SELECT id, chunks FROM sounds WHERE profile_id = ? AND sha256 = ? AND bytes = ?')
     .bind(id, sha256, bytes).first();
   if (have) return json(200, { id: have.id, need: await need(env, have.id, have.chunks) });

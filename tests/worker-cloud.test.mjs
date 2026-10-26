@@ -741,6 +741,19 @@ test("a deploy check's profile holds 64 KB of records, one sound of 4 MB and one
   assert.deepEqual(c.env.DB.rows('SELECT id FROM profiles ORDER BY id').map((r) => r.id), ['p-kid', 'p-kid-2']);
 });
 
+// The security seat, 2026-10-26: check profiles were left out after the
+// list's 300, so 300 of them pushed every kid out; and only a new profile swept them.
+test("check profiles never push a kid out of the list, and a sound's start sweeps old ones too", async () => {
+  const c = cloud();
+  const kid = await made(c, 'p-kid');
+  const add = c.env.DB.db.prepare("INSERT INTO profiles (id, name, color, edited, created) VALUES (?, 'Sir Squid', '#1F3FA8', 0, ?)");
+  for (let i = 0; i < LIMITS.listed; i++) add.run(`p-e2e-${i}`, T0 + 1 + i);
+  assert.deepEqual((await c.call('GET', 'profiles', { origin: null })).data.profiles.map((p) => p.id), ['p-kid']);
+  c.later(CHECK_MS + LIMITS.listed + 1);
+  assert.equal((await c.call('POST', 'profiles/p-kid/sounds', { key: kid, body: { sha256: sha(1), bytes: 10, mime: 'audio/wav' } })).status, 201);
+  assert.deepEqual(c.env.DB.rows('SELECT id FROM profiles').map((r) => r.id), ['p-kid']);
+});
+
 test('writes come only from the site’s own page', async () => {
   const c = cloud();
   assert.equal((await c.call('POST', 'profiles', { body: look('p-a'), origin: 'https://evil.example' })).status, 403);
