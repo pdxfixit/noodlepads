@@ -375,7 +375,7 @@ Who reads the label after that:
 | `update.js` | compares the live version.json with the loaded one; `dev` never asks | the 🆕 bar |
 | `sw.js` | version.json network only; the cache is marked with the version it was filled for (`MARK`) and refilled when a page load finds another | offline copy |
 | `device-meta.js appMeta` | keeps `[A-Za-z0-9._-]`, 40 characters | `X-Noodle-App` on cloud calls |
-| `feedback.js appVersion` | `^[0-9A-Za-z.+_]{1,32}$`, else `dev` | the deployed label holds `-`, so live feedback is filed as `dev` (likely unintended; the Worker's `events-worker.js` rule allows no `-` either) |
+| `feedback.js appVersion` | the label with each `-` sent as `+` (`v1.0.277+b328291`), cut to 32 characters, if it then matches `^[0-9A-Za-z.+_]{1,32}$` (the Worker's `events-worker.js` rule), else `dev` | live feedback is filed under its release; a dev copy under `dev` |
 | `backup.js makeBackup` | stored as given | in every backup |
 | `doctor.sh` | compares version.json's `commit` with `main` | ✅ only for main's commit with no `-dirty`; otherwise says how far main is ahead (`tools/test_doctor.py`) |
 | `serve.py` | answers `{"version":"dev"}` when web/version.json is absent, and `/api/cloud` with `ok:false` | a dev copy under `just serve` and `just look` |

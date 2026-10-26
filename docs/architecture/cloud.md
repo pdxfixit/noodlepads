@@ -310,6 +310,11 @@ All JSON bodies go through `http.js readJson`: `Origin` must be `https://noodlep
 
 Any D1 error inside a cloud route answers 503 `{error: 'cloud', over}` (`over` when the message looks like a daily limit). `cloudTrouble` says "The cloud is resting until tomorrow."
 
+**D1's limits that shape the routes** (https://developers.cloudflare.com/d1/platform/limits/, checked 2026-10-26):
+
+- A Worker invocation may send only so many queries (50 on the Free plan), and one `db.batch()` counts as one query, however many statements it holds (https://developers.cloudflare.com/d1/platform/limits/, "Batch limits"). So a push or a share reads its sounds and records in a few queries with `json_each` over one JSON parameter (a query binds at most 100 values), and writes in one batch (`tests/worker-cloud.test.mjs` counts the calls of a 200-sound push and checks a 100-sound share's sound reads).
+- Since 2026-09-01 the Free plan enforces its daily row reads (5 million) and row writes (100,000): past either, every query fails until midnight UTC (https://developers.cloudflare.com/changelog/post/2026-09-01-d1-free-tier-limit-enforcement/). That is the daily-limit message `over` catches. Every row a sweep or `expireReports` deletes counts as written.
+
 ## Share codes
 
 `worker/pin.js shareCode` = 8 characters from `CODE_CHARS` (no 0/O, 1/I), about 40 bits; `isShareCode` checks `[A-HJ-NP-Z2-9]{8}`; `plainCode` uppercases and drops anything not A–Z or 0–9. Shown as `ABCD-2345` (`cloud.js showCode`). The device's own check (`cloud.js openShare`, `sharedHere`) accepts `[A-Z2-9]{8}`, a little wider (an I or O passes the device and gets 404 from the Worker).
@@ -350,7 +355,7 @@ The player id is localStorage `telemetry-player` (a random UUID, `newPlayer`), n
 
 ## Feedback
 
-⚙️ Settings → About → Feedback → `grown-up.js askSum` → `#feedback-dialog` → `feedback.js createFeedbackSender`: live host only, ≤ 4096 UTF-8 bytes, one `X-Feedback` UUID per text (a retry of the same text reuses it), `X-App-Version` = `appVersion(state.version)` (the label's `-` sent as `+`), `credentials: 'omit'`. 204 means sent. The text never enters the log, reports or usage events.
+⚙️ Settings → About → Feedback → `grown-up.js askSum` → `#feedback-dialog` → `feedback.js createFeedbackSender`: live host only, ≤ 4096 UTF-8 bytes, one `X-Feedback` UUID per text (a retry of the same text reuses it), `X-App-Version` = `appVersion(state.version)` (the label's `-` sent as `+`, cut to the Worker's 32 characters; `versionLabel` allows 40), `credentials: 'omit'`. 204 means sent. The text never enters the log, reports or usage events.
 
 ## The service worker (`sw.js`)
 
@@ -394,7 +399,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 | nobody types a profile name | `funNamed` before upload; Worker `isFunName` | true |
 | ☁️ off stays on this device | `isOffline` keeps them out; usage events are still sent from the device (not per person) | true for their things |
 | problem reports: cleaned log, settings, counts, browser/system/type, screen size, time zone, sound timing, the app's version, random codes for this device and this visit; deleted about 14 days later, once the site is next used | the payload also holds the send time and the device pixel ratio (part of the screen size). Expired reports are deleted when the next report arrives, or on a make, open, pull, push, share or PIN change, or a look at the profile list | true: nothing is scheduled (no Cron Triggers, Ben 2026-10-26), so the line says "about" and "once the site is next used" |
-| feedback: only what was typed and the app's version; no name or IP | as typed; `X-App-Version` is the live label with its dash sent as `+` (`v1.0.277+b328291`), since the Worker allows `[0-9A-Za-z.+_]` only; 90 days is the runner's job (unverified here) | true |
+| feedback: only what was typed and the app's version; no name or IP | as typed; `X-App-Version` is the live label with its dash sent as `+` (`v1.0.277+b328291`), since the Worker allows `[0-9A-Za-z.+_]{1,32}` only. Checked: the telemetry runner's reader (`SUGGEST_KEY` in pdxfixit/telemetry's telemetry.py) matches the version part with the same `[0-9A-Za-z.+_]{1,32}`, so a `+` label is harvested; 90 days is the runner's job | true |
 | deleting a profile: gone from the cloud at once, with every share code it made | `deleteProfile` deletes records, keys, shares, audio, profile, and `forgetProfile` its metrics | true |
 
 ## Seams (one job done twice, or in an odd home)
@@ -452,7 +457,11 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 - **Record bytes are kept as a running count.** `push` and `makeShare` first reserve their growth in one `UPDATE … SET reserved_bytes = reserved_bytes + ? WHERE record_bytes + reserved_bytes + ? <= cap AND (SELECT SUM(record_bytes + reserved_bytes) FROM profiles) + ? <= total RETURNING` (`reserve`), so writes sent at once can't all pass on the same count. Reservations live in `profiles.reserved_bytes`, apart from what is written, so a recount never wipes them; one older than `RESERVE_MS` (a minute: a write that died between taking and settling) counts for nothing. The write's batch ends its reservation (`settle`), subtracts what the records it writes held and adds what landed; a failed batch gives the room back (`release`). A refusal counts the profile's written bytes again first, so a drift high never refuses wrongly. A push's growth is read before its write, so its batch checks the caps once more, from what its records hold at that moment (another push may have deleted them and filled the room): over a cap, a `SELECT … json('over a cap')` stops the batch, and the push answers 507. Everyone's total is `SUM(record_bytes)` over `profiles`, one row per profile. `profiles.bytes_counted` is 0 until this Worker has counted the profile itself (migration 006 leaves every one at 0, as a push the older Worker took after it left the count low): each reservation counts the writer and up to 5 more such profiles (`countUncounted`), so every count is exact soon after the deploy. `tests/fake-d1.mjs` `slow` makes each query wait a turn, so such races show in a test.
 - **Old keys are swept only on open.** A PIN profile nobody opens again keeps its old session keys (at most 20); an idle key is also deleted when it is next sent.
 - **`track-page.js errorOf`'s comment names a `visits` module**, which no longer exists.
-- **A sync triggered on hide is not `keepalive`, on purpose.** A closing page can cut it off, and nothing is lost or wedged: a pull stores nothing in the link until its merge is done, a push is one D1 batch whose `sent`, bases and `rev` are saved after it lands (a lost answer only means the next pull finds this device's own records, `same`), and audio pieces resume from `need`. `keepalive` could not carry it anyway: browsers cap a page's keepalive bodies at 64 KB in all, and a push may be 4 MB and a piece 1.9 MB.
+- **A sync triggered on hide is not `keepalive`, on purpose.** A closing page can cut it off, and nothing is lost or wedged.
+  - A pull saves nothing in the link until its merge is done.
+  - A push is one D1 batch (`tests/worker-cloud.test.mjs` "a push is all or nothing"). Its `sent`, bases and `rev` are saved only after it lands. An answer lost on the way means the next pull brings this device's own records back, and they match (`same`).
+  - Audio pieces resume from `need`.
+  - `keepalive` could not carry a sync anyway. A page's keepalive bodies may total 64 KiB (the Fetch standard; `log-send.js MAX_BODY_BYTES` stays under it). A push may be `LIMITS.pushBytes` (4 MiB), and an audio piece `CHUNK_BYTES` (1,900,000 bytes).
 
 ## To change X, touch …
 

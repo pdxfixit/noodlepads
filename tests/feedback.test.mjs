@@ -32,7 +32,14 @@ test('the version header is the deployed commit, or "dev" for anything the Worke
   assert.equal(appVersion('1.0.3+dirty'), '1.0.3+dirty');
   // The live site's label (versionLabel's version) has a dash, which the Worker refuses.
   assert.equal(appVersion('v1.0.277-b328291'), 'v1.0.277+b328291');
-  for (const bad of ['dev copy', '', 'a'.repeat(33), 'v1/../x', null, undefined, 7]) assert.equal(appVersion(bad), 'dev', String(bad));
+  for (const bad of ['dev copy', '', 'a'.repeat(41), 'v1/../x', null, undefined, 7]) assert.equal(appVersion(bad), 'dev', String(bad));
+  // versionLabel keeps up to 40 characters; the Worker takes 32: a longer label is cut, keeping its release.
+  for (let n = 33; n <= 40; n++) {
+    const label = `v1.0.277-${'b'.repeat(n - 9)}`;
+    const sent = appVersion(label);
+    assert.equal(sent.length, 32, `${n} characters`);
+    assert.ok(sent.startsWith('v1.0.277+') && /^[0-9A-Za-z.+_]{1,32}$/.test(sent), sent);
+  }
 });
 
 test('Send posts the text as typed, without cookies, with its id and the version; 204 is sent', async () => {

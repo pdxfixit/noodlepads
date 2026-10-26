@@ -33,10 +33,12 @@ export const SAY = {
 // The X-App-Version header: the deployed version, or 'dev' for anything the
 // Worker would refuse (a dev copy, a missing version.json). The Worker allows
 // A-Z a-z 0-9 . + _ only, and a live label has a dash (v1.0.277-b328291), so
-// the dash is sent as a + (v1.0.277+b328291, semver's build part).
+// the dash is sent as a + (v1.0.277+b328291, semver's build part). The Worker
+// takes 32 characters and a label may have 40 (util.js versionLabel): a longer
+// one is cut to its first 32, which keep the release.
 export const appVersion = (v) => {
   const sent = typeof v === 'string' ? v.replace(/-/g, '+') : '';
-  return /^[0-9A-Za-z.+_]{1,32}$/.test(sent) ? sent : 'dev';
+  return /^[0-9A-Za-z.+_]{1,40}$/.test(sent) ? sent.slice(0, 32) : 'dev';
 };
 
 // The sending, apart from the page so it can be tested.
