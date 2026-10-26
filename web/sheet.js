@@ -739,11 +739,12 @@ async function findItsNote() {
   if (!sheet.original) return;
   const base = tuneOf(sheet.chain).base.map((s) => ({ ...s }));
   const key = recipeKey({ fx: base });   // the sheet's previews are all of this trim
-  if (!sheet.previews.has(key)) sheet.previews.set(key, sheet.original.then((b) => applyChain(b, base)));
+  // The same render ▶︎ plays for that chain (the preset's level too), as it shares its key.
+  const job = previewOf(key, () => sheet.original.then((b) => applyChain(b, base, null, sheet.clip?.level)));
   const expected = sheet.original;
   el.noteOut.textContent = 'Listening…';
   try {
-    const rendered = await sheet.previews.get(key);
+    const rendered = await job;
     if (sheet.original !== expected || !el.sheet.open) return;
     const note = findNote(rendered.buffer);
     sheet.found = { midi: note ? note.midi : null, key: baseKey(sheet.chain) };
@@ -1159,6 +1160,22 @@ async function previewVoice({ play = true } = {}) {
 // and `muted` for the knob layers muted.
 const storedTweaks = () => cleanTweaks({ ...sheet.tweaks, muted: [...sheet.muted], first: sheet.knobsFirst && !plainChain() });
 
+// A render of this sheet's sound, kept by `key` (made by `make` the first
+// time). Only the last KEEP_PREVIEWS used are kept, so trying setting after
+// setting on a long recording does not fill a phone's memory; the one asked
+// for now is always kept.
+const KEEP_PREVIEWS = 6;
+function previewOf(key, make) {
+  const job = sheet.previews.get(key) ?? make();
+  sheet.previews.delete(key);
+  sheet.previews.set(key, job);   // the newest last
+  for (const old of sheet.previews.keys()) {
+    if (sheet.previews.size <= KEEP_PREVIEWS) break;
+    sheet.previews.delete(old);
+  }
+  return job;
+}
+
 // The render of the sound as it is now, if one was started.
 const nowRendered = () => sheet.previews.get(recipeKey({ fx: sheet.chain, tweaks: storedTweaks() }));
 
@@ -1167,8 +1184,7 @@ function rendered() {
   const chain = sheet.chain.map((s) => ({ ...s }));
   const tweaks = storedTweaks();
   const key = recipeKey({ fx: chain, tweaks });
-  if (!sheet.previews.has(key)) sheet.previews.set(key, sheet.original.then((buffer) => applyChain(buffer, chain, tweaks, sheet.clip?.level)));
-  return sheet.previews.get(key);
+  return previewOf(key, () => sheet.original.then((buffer) => applyChain(buffer, chain, tweaks, sheet.clip?.level)));
 }
 
 // ── Layers ────────────────────────────────────────────────────────────
@@ -1252,8 +1268,7 @@ function liveHead() {
   if (!sheet.original || !split?.tail.length) return null;
   const { head: steps, headTweaks: knobs } = split;
   const key = `head:${recipeKey({ fx: steps, tweaks: knobs })}`;
-  if (!sheet.previews.has(key)) sheet.previews.set(key, sheet.original.then((b) => applyChain(b, steps, knobs, sheet.clip?.level)));
-  return { split, head: sheet.previews.get(key) };
+  return { split, head: previewOf(key, () => sheet.original.then((b) => applyChain(b, steps, knobs, sheet.clip?.level))) };
 }
 const primeLive = () => liveHead()?.head.catch(() => {});
 
@@ -1382,8 +1397,7 @@ async function playPlain() {
 // and turned down by a preset's level (applyChain in Normal), so 👂 Plain
 // against ▶︎ compares the voice, not the volume. Its trim, edits and fade stay.
 function plainSound() {
-  if (!sheet.previews.has('plain')) sheet.previews.set('plain', sheet.original.then((b) => applyChain(b, [], null, sheet.clip?.level)));
-  return sheet.previews.get('plain');
+  return previewOf('plain', () => sheet.original.then((b) => applyChain(b, [], null, sheet.clip?.level)));
 }
 
 // Stops the plain sound. `redraw` puts the voiced wave back, without playing it.

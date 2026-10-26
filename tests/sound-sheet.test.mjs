@@ -1374,3 +1374,37 @@ test('➕ a mix of two beat-sounds keeps its whole length, silent tail and all',
     await advanced(false);
   }
 });
+
+// Every setting tried in the sheet renders the sound once and keeps it while
+// the sheet is open. Only the last few are kept, so trying knob after knob on
+// a long recording does not fill a phone's memory; the one playing now stays.
+test('the sheet keeps only its last few renders: an early try is rendered again, the current one is not', async () => {
+  const { state } = await import('../web/state.js');
+  const { currentPerson } = await import('../web/board.js');
+  const { renderPads } = await import('../web/pads.js');
+  const clip = { id: 'user-tries-1', personId: currentPerson().id, label: 'Hum', emoji: '🐝', color: 'red', created: 1, blob: new Blob(['x']), mime: 'audio/webm', voice: 'normal' };
+  state.userClips.push(clip);
+  renderPads();
+  let renders = 0;
+  const kept = Promise.resolve(plain);
+  const then = kept.then.bind(kept);
+  kept.then = (...a) => { renders++; return then(...a); };
+  if (!document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+  audio.forget(clip.id);
+  audio.originals.set(clip.id, kept);
+  audio.originalTrims.set(clip.id, '');
+  pads().find((p) => p.dataset.id === clip.id).parent.querySelector('[data-edit]').dispatch('click');
+  await page.settle();
+  // The row redraws after each change: its slider is looked up again.
+  const tryPitch = async (v) => { const pitch = knob('pitch'); pitch.value = String(v); pitch.dispatch('input'); pitch.dispatch('change'); await page.settle(); };
+  for (let v = 1; v <= 10; v++) await tryPitch(v);
+  let before = renders;
+  await tryPitch(10);
+  assert.equal(renders, before, 'the sound as it is now is kept');
+  before = renders;
+  await tryPitch(1);
+  assert.ok(renders > before, 'the first try was let go, and renders again');
+  $('#sheet').close();
+  state.userClips = state.userClips.filter((c) => c.id !== clip.id);
+  renderPads();
+});
