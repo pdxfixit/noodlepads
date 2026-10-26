@@ -89,6 +89,8 @@ Other work:
 - [ ] Move `skills/noodlepads-logs` to `~/src/skills/noodlepads-logs` and link it (the skills workspace convention); the recurrent routine's leg is now named `noodlepads-logs`, and its state file `~/.local/state/skills/noodlepads-logs.state.json`
 
 
+- **An agent council for every future change** (Ben, 2026-10-26): up to 10 advisory personalities (music educator, child psychologist, early literacy, UX, a staff architect and more) that review changes before they ship. Proposal is with Ben (seats, which changes convene which seats, advisory or veto, when it runs); build once he picks: `.claude/agents/` definitions, a Council section in AGENTS.md, a decisions.md row.
+
 ### Offered, not approved
 
 Agents suggested these; nothing happens until Ben says yes.
