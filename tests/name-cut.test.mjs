@@ -78,3 +78,14 @@ test('every name and label is cut the same way', () => {
     assert.equal(broken(made), false, made);
   }
 });
+
+test('a backup\'s emoji and a take\'s sound ids are cut the same way: never inside a character', () => {
+  const family = '👨‍👩‍👧‍👦';   // 7 characters, 11 UTF-16 units
+  const out = cleanBackup({ app: 'noodlepads', format: '1.1', overrides: [{ id: 'pip-kick', emoji: family }, { id: 'pip-snare', emoji: 'a😀😀😀😀' }] },
+    () => null, { peopleIds: new Set(['pip']), clipIds: new Set(['pip-kick', 'pip-snare']), colorOk: () => true });
+  assert.equal(out.overrides[0].emoji, family, 'whole, never 👨‍👩‍👧');
+  assert.equal(out.overrides[1].emoji, 'a😀😀😀😀');
+  const take = cleanTake({ id: 'take-a', personId: 'p', name: 'Jam', duration: 1, events: [{ t: 0, clipId: `${'a'.repeat(63)}🦄z`, kind: 'hit' }] });
+  assert.equal(broken(take.events[0].clipId), false);
+  assert.equal(take.events[0].clipId, `${'a'.repeat(63)}🦄`);
+});

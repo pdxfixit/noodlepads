@@ -83,7 +83,8 @@ const MAX_JSON_BYTES = 8 * 1024 * 1024;
 export const MAX_SOUND_BYTES = 80 * 1024 * 1024;
 const MAX_RECORDS = { people: 100, clips: 2000, overrides: 2000, orders: 100, patterns: 100, beats: 1000, settings: 50, decks: 100, takes: 500, songs: 100, songbook: 1000, prefs: 100, layouts: 500, voices: 500, touchLayouts: MAX_TOUCH_LAYOUTS };
 
-const text = (v, max) => (typeof v === 'string' ? v.slice(0, max) : undefined);
+// Cut by characters, never inside one (an emoji of several stays whole: names.js cutName).
+const text = (v, max) => (typeof v === 'string' ? cutName(v, max) : undefined);
 // A name or label: trimmed, cut to `max`, and undefined when nothing is left.
 const title = (v, max) => (typeof v === 'string' ? cutName(v.trim(), max).trim() || undefined : undefined);
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
