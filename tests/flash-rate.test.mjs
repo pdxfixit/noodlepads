@@ -63,12 +63,20 @@ test('a ⌨️ key hit again and again is lit three times a second', async () =>
   $('#live-tab').dispatch('click');
   const key = () => $('#dj-keys').querySelector('[data-code="KeyA"]');
   const lit = [];
-  for (let i = 0; i < 5; i++) {
-    page.key('a', { code: 'KeyA', timeStamp: 1000 + i * 150 });
-    page.docEvent('keyup', { key: 'a', code: 'KeyA' });
-    lit.push(key().classList.contains('hit'));
-    await wait(130);   // past the 120 ms light
-  }
+  // The flash cap reads performance.now(): hold it to 150 ms a hit, so a slow
+  // run (the whole suite at once) can't stretch the five hits past a second.
+  const realNow = performance.now;
+  let clock = realNow.call(performance);
+  performance.now = () => clock;
+  try {
+    for (let i = 0; i < 5; i++) {
+      page.key('a', { code: 'KeyA', timeStamp: 1000 + i * 150 });
+      page.docEvent('keyup', { key: 'a', code: 'KeyA' });
+      lit.push(key().classList.contains('hit'));
+      await wait(130);   // past the 120 ms light
+      clock += 150;
+    }
+  } finally { performance.now = realNow; }
   assert.deepEqual(lit, [true, true, true, false, false]);
   $('#pads-tab').dispatch('click');
 });
