@@ -94,7 +94,11 @@ const MAX_RECORDS = { people: 100, clips: 2000, overrides: 2000, orders: 100, pa
 // A date or a version: plain text, cut.
 const text = (v, max) => (typeof v === 'string' ? v.slice(0, max) : undefined);
 // An id or a palette color: as it is, or refused. Never cut or mended,
-// which could turn a broken id into one already here.
+// which could turn a broken id into one already here. Counted in characters
+// like every cut, so a string of astral characters now fits where it was
+// refused; it still has to pass what follows: a person id is checked against
+// PERSON_ID and the known people, a palette color against the palette
+// (`colorOk`), and a pad id in an order matches no sound and is never played.
 const exact = (v, max) => (typeof v === 'string' && nameLength(v) <= max && cutName(v, max) === v ? v : undefined);
 // A picture: cut by characters, never inside one (an emoji of several stays whole: names.js cutName).
 const picture = (v, max) => (typeof v === 'string' ? cutName(v, max) : undefined);

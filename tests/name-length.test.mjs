@@ -60,3 +60,16 @@ test('every name field in the page holds MAX_NAME', () => {
   assert.ok(fields.length >= 10);
   for (const tag of fields) assert.match(tag, new RegExp(`maxlength="${MAX_NAME}"`), tag);
 });
+
+test('exact(): ids and colors that now fit by characters are still refused by the checks after it', () => {
+  const astral = '🥁'.repeat(24);
+  const bundled = { peopleIds: new Set(['p-pip-1']), clipIds: new Set(), colorOk: (c) => c === 'blue' };
+  const out = cleanBackup({
+    format: '1.0',
+    people: [{ id: `p-${'🥁'.repeat(20)}`, added: true, name: 'X' }, { id: 'p-pip-1' }],
+    clips: [{ id: 'user-a', personId: 'p-pip-1', label: 'A', emoji: '🥁', color: astral, voice: 'normal', mime: 'audio/wav', created: 1, file: 'a.wav' }],
+  }, () => blob, bundled);
+  assert.deepEqual(out.people.map((p) => p.id), ['p-pip-1'], 'a person id of astral characters is refused by PERSON_ID');
+  assert.equal(out.clips[0].color, undefined, 'a color that is not on the palette is dropped');
+  assert.equal(out.clips[0].label, 'A');
+});

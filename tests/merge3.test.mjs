@@ -228,3 +228,23 @@ test('both orders give the same content when the edits don\'t clash', () => {
   const R = beat({ bpm: 120, rows: [row('kick', 'x...'), row('snare', '..xx')] });
   assert.ok(sameContent(merge3('beats', B, L, R).record, merge3('beats', B, R, L).record));
 });
+
+// C11: a copy of the app that still writes `collapsed` on a row, and one that no longer does, edit the same beat.
+test('a row with and without the old collapsed flag is one row: two devices\' edits merge, with no clash and no second copy', () => {
+  const steps = Array.from({ length: 16 }, (_, i) => i % 4 === 0);
+  const row = { clipId: 'kick', steps, accents: steps.map(() => false), rate: 1, ring: false, muted: false, melody: false, notes: Array(16).fill(null) };
+  const beat = (extra, withFlag) => ({ id: 'beat-1', personId: 'p-a', name: 'Groove', bpm: 90, bars: 1, created: 1, saved: 1, rows: [withFlag ? { ...row, collapsed: false } : row], ...extra });
+  const base = beat({}, true);
+  const local = beat({ bpm: 100 }, false);          // a new copy: no flag, a tempo edit
+  const remote = beat({ name: 'Groove 2' }, false);  // another new copy: no flag, a rename
+  const r = resolve('beats', base, local, remote);
+  assert.equal(r.action, 'merged', 'no keep-both copy');
+  assert.equal(r.clashes, 0);
+  assert.equal(r.record.bpm, 100);
+  assert.equal(r.record.name, 'Groove 2');
+  assert.deepEqual(r.record.rows, [row]);
+  // A device that still writes the flag (remote) against one that does not (local), same row otherwise.
+  const old = beat({ name: 'Groove 2' }, true);
+  const r2 = resolve('beats', base, local, old);
+  assert.notEqual(r2.action, 'keepBoth');
+});
