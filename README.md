@@ -101,6 +101,7 @@ folder `site/`: [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md).
 |---|---|
 | [docs/guide.md](docs/guide.md) | How the app works: every screen, and how sounds, beats and songs are stored |
 | [docs/layout.md](docs/layout.md) | The file map |
+| [docs/formats.md](docs/formats.md) | The backup format, field by field |
 | [AGENTS.md](AGENTS.md) | How to work on this repo, for people and coding agents: start, verify, ship, the rules |
 | [docs/how-to.md](docs/how-to.md) | Step by step: a bug fix, a stored-format change, landing, deploy and rollback |
 | [docs/decisions.md](docs/decisions.md) | Every rule decided so far, and why |

@@ -281,6 +281,8 @@ Three separate counters say "what is here":
 
 ### Backups (format 1.x, ADR 0011)
 
+The format, field by field, for a reader with no JavaScript: [docs/formats.md](../formats.md). Keep it true in the same commit as any change to `backup.js` or to a record it carries.
+
 **backup.json**: `{app: 'noodlepads', format: '1.2', exported, version, people, clips (without blob, with file, and heard from 1.2), overrides, orders, patterns, beats, settings, decks, takes, songs, songbook, prefs, layouts, voices, touchLayouts}`. The audio is under `sounds/<id>.<ext>`; from 1.2 each own sound also has `sounds/<id>.heard.wav`, the sound as it plays (`backup.js heardWav`, rendered by `backup-ui.js heardOf` through `audio.load`; `makeBackup`'s `heardOf` option, capped at `MAX_HEARD_BYTES`), which loading reads past. Never in a backup: `cloud`, `bases`, `renamedPeople`, localStorage.
 
 **Accepted** (`backup.js refusal`): app `noodlepads` or `noodle-pads`, any `1.x`. A pre-1.0 file (`beforeOne`: format `1` as a number, or an app id ending `-soundboard`) loads with `oldStores`.

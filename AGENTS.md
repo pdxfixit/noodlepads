@@ -45,6 +45,7 @@ Every change serves this. Why, and the north star it steers: [ADR 0022](docs/adr
 | [docs/guide.md](docs/guide.md) | How the app works: every screen, how things are stored, cloud profiles, keyboard use, limits on what comes in. |
 | [docs/layout.md](docs/layout.md) | The file map: one line per file in `web/`, `worker/` and `tools/`. |
 | [docs/architecture/](docs/architecture/README.md) | How the code is wired: the shared engines, who calls whom, the record shapes that cross modules, the known seams, and "to change X, touch …". One file per area. |
+| [docs/formats.md](docs/formats.md) | The backup format, field by field, for v2 (Android) to read with no JavaScript. Kept true with `web/backup.js` (`tests/formats-doc.test.mjs`). |
 | [docs/state.md](docs/state.md) | Where things stand now. Present tense only. |
 | [docs/decisions.md](docs/decisions.md) | Current rules, by topic: Rule · Why · Since. |
 | [docs/council.md](docs/council.md) | The council: its 22 seats, when each convenes, how a round runs, its authority, the drift guards. The seats are `.claude/agents/council-*.md`. |
