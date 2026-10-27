@@ -569,6 +569,21 @@ body.editing .pad { position: relative; overflow: visible; }
   animation: loop-pulse 0.5s ease-in-out infinite alternate;
 }
 @keyframes loop-pulse { to { box-shadow: 0 1px 0 var(--pad-edge), 0 0 0 7px rgb(255 255 255 / 0.5); } }
+/* Tiles (no skin chosen): the pulse is the opacity of a ring inside the pad,
+   which the browser animates off the main thread. Animating the pad's own
+   box-shadow, as the skins' pulses still do, repaints and restyles the pad
+   every frame; four pads looping cost more than a beat playing. */
+:root:not([data-skin]) .pad.looping { animation: none; }
+:root:not([data-skin]) .pad.looping::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 5px rgb(255 255 255 / 0.9);
+  pointer-events: none;
+  animation: loop-ring 0.5s ease-in-out infinite alternate;
+}
+@keyframes loop-ring { from { opacity: 0.2; } to { opacity: 1; } }
 
 /* The empty slot at the end of the bed. */
 .pad-add {
@@ -2920,9 +2935,20 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 }
 /* Lit: pressed, just hit, or looping. The whole tile brightens and glows. */
 .dj-key.down, .dj-key.hit { filter: brightness(1.45) saturate(1.2); box-shadow: 0 0 18px 4px var(--c), 0 1px 0 color-mix(in srgb, var(--c) 55%, black); }
-.dj-key.looping { animation: dj-pulse 0.9s ease-in-out infinite alternate; }
-@keyframes dj-pulse { from { filter: brightness(1.1); box-shadow: 0 0 6px 1px var(--c); } to { filter: brightness(1.5); box-shadow: 0 0 20px 5px var(--c); } }
-@media (prefers-reduced-motion: reduce) { .dj-key.looping { animation: none; filter: brightness(1.35); } }
+/* Looping: a steady brightness, and a glow whose opacity pulses (a layer the
+   browser fades off the main thread; the old pulse animated filter and box-shadow). */
+.dj-key.looping, .touch-tile.looping { filter: brightness(1.3); }
+.dj-key.looping::after, .touch-tile.looping::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 20px 5px var(--c);
+  pointer-events: none;
+  animation: dj-pulse 0.9s ease-in-out infinite alternate;
+}
+@keyframes dj-pulse { from { opacity: 0.25; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .dj-key.looping, .touch-tile.looping { filter: brightness(1.35); } .dj-key.looping::after, .touch-tile.looping::after { animation: none; opacity: 0.6; } }
 .dj-key:active, .dj-key.hit { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--c) 55%, black); }
 .dj-key.empty { background: transparent; box-shadow: none; outline: 2px dashed rgb(255 255 255 / 0.3); outline-offset: -2px; }
 .dj-sym { grid-area: sym; font: 800 1.35rem/1 var(--font-display); }
@@ -2962,6 +2988,7 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 .touch-band[data-size="l"] .touch-tiles { --across: 2; }
 .touch-tile {
   --c: #333040;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2990,8 +3017,6 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 .touch-band[data-size="s"] .touch-name { font-size: 0.7rem; font-stretch: 80%; }
 .touch-band[data-size="l"] .touch-name { font-size: 1rem; }
 .touch-tile.down, .touch-tile.hit { filter: brightness(1.45) saturate(1.2); box-shadow: 0 0 18px 4px var(--c), 0 1px 0 color-mix(in srgb, var(--c) 55%, black); transform: translateY(3px); }
-.touch-tile.looping { animation: dj-pulse 0.9s ease-in-out infinite alternate; }
-@media (prefers-reduced-motion: reduce) { .touch-tile.looping { animation: none; filter: brightness(1.35); } }
 .touch-empty { margin: 8px 0; color: rgb(255 255 255 / 0.85); font-weight: 700; }
 @media (min-width: 700px) {
   .touch-tiles { --tile: 128px; grid-template-columns: repeat(auto-fit, minmax(min(var(--tile), 100%), 1fr)); }
