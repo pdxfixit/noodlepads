@@ -26,6 +26,7 @@ import {
 import { newProgress, progressShare } from './cloud-sync.js';
 import { askSum } from './grown-up.js';
 import { SETTINGS } from './settings.js';
+import { obviousPin, PIN_OBVIOUS } from './codes.js';
 import { mergeSummary } from './merge.js';
 
 // Where a forgotten PIN goes: Ben resets it by hand (`just cloud-reset-pin`). The address is built in web/contact.js.
@@ -137,7 +138,7 @@ export function askWait({ title, wait, locked }) {
   // The waits double up to a day (worker/pin.js): one that ends on another day names it.
   const end = new Date(Date.now() + wait * 1000);
   const time = end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  const opens = end.toDateString() === new Date().toDateString() ? `at ${time}` : `${end.toLocaleDateString([], { weekday: 'long' })} at ${time}`;
+  const opens = end.toDateString() === new Date(Date.now()).toDateString() ? `at ${time}` : `${end.toLocaleDateString([], { weekday: 'long' })} at ${time}`;
   pinDigits = '';
   drawDots();
   el.pinTitle.textContent = title;
@@ -482,6 +483,8 @@ async function askNewPin(hint, { title = 'A new PIN', shown = '' } = {}) {
   for (;;) {
     const next = await askPin({ title, hint, note, shown });
     if (next === null) return null;
+    // Asked again at once, saying why, so the second pad is never wasted on one the cloud would refuse.
+    if (obviousPin(next)) { note = PIN_OBVIOUS; continue; }
     const again = await askPin({ title: 'Once more', hint: 'Type the same four numbers again.' });
     if (again === null) return null;
     if (again === next) return next;

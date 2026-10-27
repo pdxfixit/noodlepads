@@ -8,6 +8,7 @@
 // old person colors takes the nearest new one as it is read. The real app with a
 // stand-in IndexedDB, against the real Worker and a fake D1.
 
+import { PIN_OBVIOUS } from '../web/codes.js';
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { installPage } from './fake-dom.mjs';
@@ -184,7 +185,7 @@ test('Change PIN asks for the PIN now (a wrong one asks again), then the new one
   $('#cloud-pin-change').dispatch('click');
   await settle();
   assert.equal($('#pin-title').textContent, 'The PIN now');
-  typePin('1111');
+  typePin('7391');
   await settle();
   assert.match($('#pin-note').textContent, /4 tries left/);
   typePin('2468');
@@ -229,43 +230,66 @@ test('on a later visit Change and Remove PIN still show; Remove PIN asks "Leave 
   closeSheets();
 });
 
+// The security seat, 2026-10-27: 1234, 0000 and the like are the first PINs anyone tries.
+test('an obvious PIN is refused on the pad, in plain words, before Once more; closing the pad changes nothing', async () => {
+  await sheetOf(LATER);
+  $('#profile-cloud').dispatch('click');
+  await settle();
+  await answerSum();
+  for (const obvious of ['1234', '0000', '4321']) {
+    typePin(obvious);
+    await settle();
+    assert.equal($('#pin-title').textContent, '☁️ Pick their PIN', `${obvious}: asked again from the start, not Once more`);
+    assert.equal($('#pin-note').textContent, PIN_OBVIOUS);
+  }
+  assert.match(PIN_OBVIOUS, /too easy to guess/);
+  assert.equal(cloud.inCloud(LATER), false, 'nothing went to the cloud');
+  typePin('7391');
+  await settle();
+  assert.equal($('#pin-title').textContent, 'Once more', 'a PIN that is not obvious goes on');
+  $('#pin-dialog').close();
+  await settle();
+  assert.equal($('#pin-dialog').open, false);
+  closeSheets();
+});
+
 // A tester, 2026-10-19: a different second PIN "didn't do anything".
 test('a second PIN that does not match says so on the pad and asks again; closing the pad changes nothing', async () => {
   await sheetOf(LATER);   // out of the cloud since the test before
   $('#profile-cloud').dispatch('click');
   await settle();
   await answerSum();
-  typePin('1111');
+  typePin('7391');
   await settle();
   assert.equal($('#pin-title').textContent, 'Once more');
-  typePin('2222');
+  typePin('8246');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'the pad stays');
   assert.equal($('#pin-title').textContent, '☁️ Pick their PIN', 'from the start, with the public line');
   assert.equal($('#pin-public').hidden, false);
   assert.equal($('#pin-note').textContent, ui.PIN_MISMATCH);
   assert.equal(cloud.inCloud(LATER), false, 'nothing went to the cloud');
-  typePin('3333');
+  typePin('5917');
   await settle();
   assert.equal($('#pin-note').textContent, '', 'the note goes once a new try starts');
-  typePin('3333');
+  typePin('5917');
   await settle();
   await notNow();
   assert.equal(pill(), '✅ In the cloud, PIN set');
 
   $('#cloud-pin-change').dispatch('click');
   await settle();
-  typePin('3333');
+  typePin('5917');
   await settle();
-  typePin('4444');
+  typePin('6082');
   await settle();
-  typePin('5555');
+  typePin('4730');
   await settle();
   assert.equal($('#pin-note').textContent, ui.PIN_MISMATCH, 'Change says it too');
   $('#pin-dialog').close();
   await settle();
   assert.equal($('#pin-dialog').open, false);
-  assert.ok((await call(`profiles/${LATER}/open`, { pin: '3333', remember: false })).key, 'closing kept the PIN it had');
+  assert.ok((await call(`profiles/${LATER}/open`, { pin: '5917', remember: false })).key, 'closing kept the PIN it had');
   closeSheets();
 });
 
@@ -344,7 +368,7 @@ test('✕ at the sum, the first PIN pad or Once more sends nothing: they stay on
   sw.dispatch('click');
   await settle();
   await answerSum();
-  typePin('1111');
+  typePin('7391');
   await settle();
   assert.equal($('#pin-title').textContent, 'Once more');
   assert.equal($('#pin-public').hidden, true, 'the public line is on the first pad only');
@@ -367,25 +391,25 @@ test('the PIN pad closing a moment later never ends the next ask: a mismatch is 
     await sheetOf(LATER);   // its PIN is 3333 since the mismatch test
     $('#cloud-pin-change').dispatch('click');
     await settle();
-    typePin('3333');
+    typePin('5917');
     await settle(); await tick();
     assert.equal($('#pin-title').textContent, 'A new PIN');
-    typePin('4444');
+    typePin('6082');
     await settle(); await tick();
     assert.equal(pad.open, true, 'Once more is still asking');
     assert.equal($('#pin-title').textContent, 'Once more');
-    typePin('5555');
+    typePin('4730');
     await settle(); await tick();
     assert.equal(pad.open, true, 'a mismatch keeps the pad open');
     assert.equal($('#pin-note').textContent, ui.PIN_MISMATCH);
     assert.ok(pad.classList.contains('pin-wrong'), 'said in red, the dots shake');
-    typePin('6666');
+    typePin('3175');
     await settle(); await tick();
     assert.ok(!pad.classList.contains('pin-wrong'), 'calm again on the next try');
-    typePin('6666');
+    typePin('3175');
     await settle(); await tick();
     assert.equal(pill(), '✅ PIN changed');
-    assert.ok((await call(`profiles/${LATER}/open`, { pin: '6666', remember: false })).key);
+    assert.ok((await call(`profiles/${LATER}/open`, { pin: '3175', remember: false })).key);
   } finally {
     pad.close = close;
   }

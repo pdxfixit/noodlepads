@@ -35,6 +35,7 @@ import crypto from 'node:crypto';
 import { createCloudApi, CloudError } from '../web/cloud-api.js';
 import { uploadAudio, CHUNK_BYTES } from '../web/cloud-sync.js';
 import { funName } from '../web/names.js';
+import { obviousPin } from '../web/codes.js';
 import { PICTURES, PERSON_COLORS } from '../web/model.js';
 import { launchChrome, connect, evaluate, waitFor } from './chrome.mjs';
 import { CHECKS_HEADER } from '../worker/cloud.js';
@@ -160,7 +161,7 @@ async function smoke({ url }) {
   const api = apiFor(url);
   const s = steps();
   const id = testId('smoke');
-  const pin = String(crypto.randomInt(10000)).padStart(4, '0');
+  const pin = madeUpPin();
   const wrong = String((Number(pin) + 1) % 10000).padStart(4, '0');
   const look = { id, name: funName(), avatar: pick(PICTURES), color: pick(PERSON_COLORS) };
   let key = null;
@@ -360,7 +361,7 @@ async function e2e({ url }) {
   const s = steps();
   const pid = testId('e2e');
   // Every profile in the cloud has a PIN; this one's is made up for the run.
-  const pin = String(crypto.randomInt(10000)).padStart(4, '0');
+  const pin = madeUpPin();
   console.log(`☁️  cloud-e2e on ${url}: two devices, throwaway profile ${pid}`);
   const devices = [];
   let made = null;
@@ -551,6 +552,14 @@ async function e2e({ url }) {
   }
   console.log(s.failed ? `❌ cloud-e2e failed (${s.total()})` : `✅ cloud-e2e passed (${s.total()})`);
   return s.failed ? 1 : 0;
+}
+
+// A PIN for a throwaway profile: the Worker refuses the obvious ones (web/codes.js).
+function madeUpPin() {
+  for (;;) {
+    const pin = String(crypto.randomInt(10000)).padStart(4, '0');
+    if (!obviousPin(pin)) return pin;
+  }
 }
 
 export async function main(mode, argv) {

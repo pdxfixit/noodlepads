@@ -69,7 +69,7 @@ const makeBeat = async (personId) => {
 
 // Someone on this device, put in the cloud by a grown-up with a PIN and
 // showing; then another device (its own key) changes their PIN to `pin`.
-const FIRST_PIN = '1212';
+const FIRST_PIN = '3961';
 async function personUp(id) {
   await setPersonEdit(id, { id, name: funName(names()), fun: true, avatar: '🦊', color: '#1F3FA8', added: true, created: 4 });
   await makeBeat(id);
@@ -100,7 +100,7 @@ test('a PIN set on another device: the next sync closes the person showing until
   assert.notEqual(state.personId, id, 'their board is no longer showing');
   assert.match($('#pin-hint').textContent, /They have a new PIN/);
   assert.equal($('#pin-unknown').hidden, false, '🤷 I don\'t know the PIN is offered');
-  typePin('1111');
+  typePin('7391');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'a wrong one asks again');
   $('#pin-dialog').close();

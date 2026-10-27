@@ -119,7 +119,7 @@ test('in the cloud with a PIN: the cloud button asks, then the PIN; a wrong one 
   assert.equal($('#pin-dialog').open, false, 'it asks "Tap again" before the PIN');
   await tap();
   assert.equal($('#pin-dialog').open, true);
-  typePin('1111');
+  typePin('7391');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'asked again');
   assert.ok(inD1(LOCKED));

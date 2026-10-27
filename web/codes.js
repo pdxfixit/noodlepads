@@ -20,6 +20,20 @@ export const hex = (bytes) => [...new Uint8Array(bytes)].map((b) => b.toString(1
 // makes the same hash (tests/pin-hash-python.test.mjs).
 export const PIN_ROUNDS = 20_000;
 
+// PINs anyone would try first: four of one digit, a straight run up or down,
+// and this short list of common picks. A PIN is refused when it is made or
+// changed (worker/cloud.js, the PIN pad), never when it is typed to open: a
+// profile already holding one keeps working. tools/cloud_admin.py reads this
+// line for its reset, so keep the list on one line, in single quotes.
+export const OBVIOUS_PINS = ['1212', '1122', '1313', '2580', '0852', '1004', '2000', '6969', '1984', '2020'];
+export function obviousPin(pin) {
+  const d = [...String(pin)].map(Number);
+  const steps = new Set(d.slice(1).map((n, i) => n - d[i]));
+  return (steps.size === 1 && [...steps].every((s) => s >= -1 && s <= 1)) || OBVIOUS_PINS.includes(pin);
+}
+// What the pad says when one is refused, here and from the Worker's 400 'pin'.
+export const PIN_OBVIOUS = "That PIN is too easy to guess, like 1234 or 0000. Pick four numbers that aren't in a row or all the same.";
+
 export async function hashSecret(secret, saltHex, rounds = PIN_ROUNDS) {
   const salt = Uint8Array.from(saltHex.match(/../g).map((h) => parseInt(h, 16)));
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), 'PBKDF2', false, ['deriveBits']);

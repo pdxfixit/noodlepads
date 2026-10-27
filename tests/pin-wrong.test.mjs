@@ -23,18 +23,18 @@ test('a PIN the cloud refuses (wrong, or too many wrong tries) is a pin-wrong ev
 
   for (const [status, body] of [[401, { error: 'pin', tries: 4 }], [429, { error: 'wait', wait: 600 }]]) {
     globalThis.fetch = answer(status, body);
-    await assert.rejects(unlock('p-a', '0000'));
+    await assert.rejects(unlock('p-a', '9024'));
   }
   assert.deepEqual(pinWrong(), [{ action: 'pin-wrong' }, { action: 'pin-wrong' }]);
 
   globalThis.fetch = answer(503, { error: 'cloud' });
-  await assert.rejects(unlock('p-a', '0000'));
+  await assert.rejects(unlock('p-a', '9024'));
   assert.equal(pinWrong().length, 2, 'a resting cloud is not a wrong PIN');
   // A minute's rate limit, the Worker's or the edge's (a page of its own), is no PIN at all.
   globalThis.fetch = answer(429, { error: 'slow' });
-  await assert.rejects(unlock('p-a', '0000'));
+  await assert.rejects(unlock('p-a', '9024'));
   globalThis.fetch = async () => new Response('<html>rate limited</html>', { status: 429, headers: { 'Content-Type': 'text/html' } });
-  await assert.rejects(unlock('p-a', '0000'));
+  await assert.rejects(unlock('p-a', '9024'));
   assert.equal(pinWrong().length, 2, 'a 429 slow is not a wrong PIN');
   assert.ok(!JSON.stringify(tel.queued()).includes('p-a'), 'and no record names the person');
 });

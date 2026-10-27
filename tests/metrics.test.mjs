@@ -40,7 +40,7 @@ function cloud() {
   return { env, call, at: (t) => { now = t; } };
 }
 
-const make = async (call, id = 'p-a', pin = '1234') => (await (await call('POST', 'profiles', {
+const make = async (call, id = 'p-a', pin = '7413') => (await (await call('POST', 'profiles', {
   body: { id, name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin },
 })).json()).key;
 
@@ -76,7 +76,7 @@ test('make, open, pull, push and share each log one event with its place; the de
   assert.equal((await call('GET', 'profiles/p-a/records?since=0', { key, cf: VANCOUVER, ip: '198.51.100.9' })).status, 200);
   assert.equal((await call('POST', 'profiles/p-a/records', { key, body: { put: [{ kind: 'beats', id: 'beat-1', body: { name: 'x' } }], del: [] } })).status, 200);
   assert.equal((await call('POST', 'profiles/p-a/shares', { key, body: { kind: 'beat', title: 'Taco', bundle: { beats: [{ id: 'beat-1' }] } } })).status, 201);
-  const other = (await (await call('POST', 'profiles/p-a/open', { body: { pin: '1234', remember: true }, ua: 'Mozilla/5.0 (Windows NT 10.0) Chrome/129.0 Safari/537.36', meta: appMeta('abc', 1920, false) })).json()).key;
+  const other = (await (await call('POST', 'profiles/p-a/open', { body: { pin: '7413', remember: true }, ua: 'Mozilla/5.0 (Windows NT 10.0) Chrome/129.0 Safari/537.36', meta: appMeta('abc', 1920, false) })).json()).key;
   assert.ok(other);
 
   const acts = env.DB.rows('SELECT * FROM activity ORDER BY id');
@@ -113,10 +113,10 @@ test('nothing stored holds the IP, a hash of it, or the User-Agent', async () =>
 
 test('a refused PIN or key writes nothing: a stranger cannot spend the database\'s daily writes', async () => {
   const { env, call } = cloud();
-  await make(call, 'p-a', '1234');
-  for (let i = 0; i < 4; i++) assert.equal((await call('POST', 'profiles/p-a/open', { body: { pin: '0000' }, cf: VANCOUVER })).status, 401);
-  assert.equal((await call('POST', 'profiles/p-a/open', { body: { pin: '0000' }, cf: VANCOUVER })).status, 429, 'the fifth wrong PIN locks');
-  assert.equal((await call('POST', 'profiles/p-a/open', { body: { pin: '0000' }, cf: VANCOUVER })).status, 429, 'a locked try is refused');
+  await make(call, 'p-a', '7413');
+  for (let i = 0; i < 4; i++) assert.equal((await call('POST', 'profiles/p-a/open', { body: { pin: '9024' }, cf: VANCOUVER })).status, 401);
+  assert.equal((await call('POST', 'profiles/p-a/open', { body: { pin: '9024' }, cf: VANCOUVER })).status, 429, 'the fifth wrong PIN locks');
+  assert.equal((await call('POST', 'profiles/p-a/open', { body: { pin: '9024' }, cf: VANCOUVER })).status, 429, 'a locked try is refused');
   assert.equal((await call('GET', 'profiles/p-a/records?since=0', { key: 'a'.repeat(32) })).status, 401);
   assert.equal((await call('POST', 'profiles/p-zz/open', { body: {} })).status, 404);
   assert.deepEqual(env.DB.rows('SELECT kind, device, country FROM activity ORDER BY id'), [
@@ -128,7 +128,7 @@ test('a new PIN gives the device a new key, and it stays one device', async () =
   const { env, call } = cloud();
   const key = await make(call);
   await call('GET', 'profiles/p-a/records?since=0', { key });
-  const res = await call('PATCH', 'profiles/p-a', { key, body: { pin: '1234', newPin: '5678' } });
+  const res = await call('PATCH', 'profiles/p-a', { key, body: { pin: '7413', newPin: '5307' } });
   const { key: next } = await res.json();
   await call('GET', 'profiles/p-a/records?since=0', { key: next });
   const devices = env.DB.rows('SELECT hash, syncs FROM devices');
@@ -165,7 +165,7 @@ test('before the migration runs, every route works and only the metrics are skip
     assert.ok(key);
     assert.equal((await call('GET', 'profiles/p-a/records?since=0', { key })).status, 200);
     assert.equal((await call('POST', 'profiles/p-a/records', { key, body: { put: [{ kind: 'beats', id: 'b-1', body: {} }] } })).status, 200);
-    assert.equal((await call('POST', 'profiles/p-a/open', { body: { pin: '1234' } })).status, 200);
+    assert.equal((await call('POST', 'profiles/p-a/open', { body: { pin: '7413' } })).status, 200);
   } finally {
     console.error = realError;
   }
@@ -202,7 +202,7 @@ test('a call without X-Noodle-App (the usage switch off) leaves no device or eve
   assert.equal(old, 1, 'with the header, the make is noted');
   at(T0 + 20 * DAY);
   const off = { meta: null };
-  const key2 = (await (await call('POST', 'profiles', { ...off, body: { id: 'p-b', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '1234' } })).json()).key;
+  const key2 = (await (await call('POST', 'profiles', { ...off, body: { id: 'p-b', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '7413' } })).json()).key;
   assert.equal((await call('GET', 'profiles/p-b/records?since=0', { ...off, key: key2 })).status, 200);
   assert.deepEqual(env.DB.rows("SELECT * FROM activity WHERE profile_id = 'p-b'"), []);
   assert.deepEqual(env.DB.rows("SELECT * FROM devices WHERE profile_id = 'p-b'"), []);
@@ -214,7 +214,7 @@ test('with a ctx, the metrics run after the answer (waitUntil)', async () => {
   const waiting = [];
   const req = new Request('https://noodlepads.com/api/profiles', {
     method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'X-Noodle-App': appMeta('abc', 400, true) },
-    body: JSON.stringify({ id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '1234' }),
+    body: JSON.stringify({ id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '7413' }),
   });
   const res = await worker.fetch(req, env, { waitUntil: (p) => waiting.push(p) });
   assert.equal(res.status, 201);
@@ -228,7 +228,7 @@ test('deleting a profile deletes its metrics: it is gone from the cloud at once'
   const key = await make(call);
   await make(call, 'p-b');
   await call('GET', 'profiles/p-a/records?since=0', { key });
-  assert.equal((await call('DELETE', 'profiles/p-a', { key, body: { pin: '1234' } })).status, 200);
+  assert.equal((await call('DELETE', 'profiles/p-a', { key, body: { pin: '7413' } })).status, 200);
   for (const t of ['activity', 'devices']) {
     assert.equal(env.DB.rows(`SELECT COUNT(*) AS n FROM ${t} WHERE profile_id = 'p-a'`)[0].n, 0, t);
   }

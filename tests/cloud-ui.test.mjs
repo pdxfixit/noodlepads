@@ -215,7 +215,7 @@ test('☁️ Open from the cloud: a PIN pad with no Remember on this device, and
   assert.equal($('#pin-unknown').hidden, true, 'nothing of theirs is here to delete');
   assert.equal($('#pin-forgot').hidden, false);
   assert.ok($('#pin-forgot').textContent.includes(PIN_RESET_EMAIL), 'the forgotten-PIN line shows the address from web/contact.js');
-  typePin('1111');
+  typePin('7391');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'asked again');
   assert.match($('#pin-note').textContent, /4 tries left/);
@@ -246,7 +246,7 @@ test('a PIN is asked each time the person is opened, every time, unless 🔑 Rem
   await settle();
   assert.equal($('#pin-dialog').open, true, 'its PIN is asked');
   assert.equal(state.personId, before, 'the board does not change until it is typed');
-  typePin('0000');
+  typePin('9024');
   await settle();
   assert.equal(state.personId, before);
   typePin('2468');
@@ -299,7 +299,7 @@ test('a PIN guards the profile: asked before it opens, once per visit; a wrong o
 
   rows()[lineOf(id)].querySelector('[data-profile]').dispatch('click');
   await settle();
-  typePin('0000');
+  typePin('9024');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'asked again');
   assert.match($('#pin-note').textContent, /That PIN isn't right\. 4 tries left/);
@@ -336,10 +336,10 @@ test('someone only on this device opens their profile and changes the color at o
   $('#profile-dialog').close();
 
   const id = 'p-lock';
-  await personWithPin(id, '2580');
+  await personWithPin(id, '4815');
   rows()[lineOf(id)].querySelector('[data-profile]').dispatch('click');
   await settle();
-  for (let i = 0; i < 5; i++) { typePin('1111'); await settle(); }
+  for (let i = 0; i < 5; i++) { typePin('7391'); await settle(); }
   assert.equal($('#pin-dialog').open, true, 'the pad says the wait itself (tests/pin-pad-tries.test.mjs)');
   assert.match($('#pin-hint').textContent, /A grown-up knows the PIN/);
   $('#pin-back').dispatch('click');
@@ -400,7 +400,7 @@ test('a grown-up puts them up (a typed name is swapped for a fun one); ☁️ of
   sw.dispatch('click');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'the second tap asks the PIN');
-  typePin('1111');
+  typePin('7391');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'a wrong PIN asks again');
   assert.match($('#pin-note').textContent, /3 tries left|4 tries left/);

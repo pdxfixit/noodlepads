@@ -155,7 +155,7 @@ test('opens are also counted per address (a keyed daily hash, never the address)
   const c = cloud(100);
   c.env.OPEN_SITE_LIMITER = fakeLimiter(3);
   for (const id of ['p-one', 'p-two', 'p-three', 'p-four']) await made(c, id);
-  const open = (id, pin = '1111', ip = '203.0.113.9') => c.call('POST', `profiles/${id}/open`, { body: { pin }, ip });
+  const open = (id, pin = '7391', ip = '203.0.113.9') => c.call('POST', `profiles/${id}/open`, { body: { pin }, ip });
   // Wrong PINs on three different profiles are counted (and are 401s) ...
   for (const id of ['p-one', 'p-two', 'p-three']) assert.equal((await open(id)).status, 401);
   // ... the fourth open from that address is over its limit: slow, not a PIN answer.

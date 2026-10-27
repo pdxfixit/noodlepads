@@ -274,7 +274,7 @@ test('the profile\'s PIN part: Forget this device asks the grown-up sum first (a
   await settle();
   assert.equal($('#pin-dialog').open, true, 'Remember asks for the PIN');
   assert.match($('#pin-hint').textContent, /until someone taps Forget this device/);
-  typePin('1111');
+  typePin('7391');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'a wrong one asks again');
   assert.equal(cloud.isRemembered(OFFER), false);
@@ -319,7 +319,7 @@ test('🔗 Share on a device that remembers them asks the PIN for each code; a w
   await settle();
   assert.equal($('#pin-dialog').open, true, 'making the code asks the PIN');
   assert.equal($('#pin-hint').textContent, ui.SHARE_PIN_HINT);
-  typePin('1111');
+  typePin('7391');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'a wrong one asks again');
   assert.match($('#pin-note').textContent, /PIN/);
@@ -434,7 +434,7 @@ test('🔑 Forget all N devices: shown for N above 1 only; the sum, then the PIN
   typeSum(sum());
   await settle();
   assert.equal($('#pin-dialog').open, true, 'then the PIN');
-  typePin('1111');
+  typePin('7391');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'a wrong PIN asks again');
   assert.equal(keyRows(KEPT).length, 2, 'and deletes nothing');

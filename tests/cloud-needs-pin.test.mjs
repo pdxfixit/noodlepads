@@ -164,7 +164,7 @@ test('a start with only the pending link opens with the PIN just picked: if the 
   const id = 'p-pending';
   await newPerson(id);
   const name = state.peopleEdits.get(id).name;
-  await call('profiles', { id, name, avatar: '🦊', color: '#1F3FA8', pin: '4321' });   // the create went through
+  await call('profiles', { id, name, avatar: '🦊', color: '#1F3FA8', pin: '6153' });   // the create went through
   // What goUp had saved before the tab died: no key, a PIN, its check.
   const check = { salt: '00'.repeat(16), hash: '00'.repeat(32) };
   state.cloud.set(id, { id, key: null, rev: 0, sent: {}, sounds: {}, pin: true, check });
@@ -172,7 +172,7 @@ test('a start with only the pending link opens with the PIN just picked: if the 
   const asked = ui.askToOpen(id);
   await settle();
   assert.equal($('#pin-dialog').open, true);
-  typePin('4321');
+  typePin('6153');
   await settle();
   assert.equal(await asked, true);
   assert.ok(cloud.keyOf(id));
@@ -209,9 +209,9 @@ test('already in the cloud (409): the PIN just picked is never tried; a pad asks
   $('#profile-cloud').dispatch('click');
   await settle();
   await answer(sumAnswer());
-  typePin('1111');
+  typePin('7391');
   await settle();
-  typePin('1111');
+  typePin('7391');
   await settle();
   const after = sent.slice(before);
   assert.equal(after.filter(([m, p]) => m === 'POST' && p === '/api/profiles').length, 1);
@@ -220,7 +220,7 @@ test('already in the cloud (409): the PIN just picked is never tried; a pad asks
   assert.equal($('#pin-dialog').open, true, 'a pad of its own');
   assert.equal($('#pin-hint').textContent, 'Already in the cloud with a PIN. Type that one to join up.');
   assert.equal($('#pin-public').hidden, true);
-  typePin('0000');
+  typePin('9024');
   await settle();
   assert.match($('#pin-note').textContent, /4 tries left/);
   typePin('7788');
@@ -242,9 +242,9 @@ test('✕ at the join pad leaves them on this device, nothing joined, nothing se
   $('#profile-cloud').dispatch('click');
   await settle();
   await answer(sumAnswer());
-  typePin('1111');
+  typePin('7391');
   await settle();
-  typePin('1111');
+  typePin('7391');
   await settle();
   assert.equal($('#pin-hint').textContent, 'Already in the cloud with a PIN. Type that one to join up.');
   $('#pin-dialog').close();
@@ -262,12 +262,12 @@ test('a row with no PIN in the way (made by hand): 409, then 404 on the join pad
   $('#profile-cloud').dispatch('click');
   await settle();
   await answer(sumAnswer());
-  typePin('1111');
+  typePin('7391');
   await settle();
-  typePin('1111');
+  typePin('7391');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'the join pad');
-  typePin('2222');
+  typePin('8246');
   await settle();
   assert.equal($('#pin-dialog').open, false);
   assert.equal(cloud.inCloud(id), false);

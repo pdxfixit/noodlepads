@@ -8,6 +8,7 @@
 // CloudError 400 'id', with no exception.
 
 import { isCloudId } from './reid.js';
+import { PIN_OBVIOUS } from './codes.js';
 
 export class CloudError extends Error {
   constructor(status, data = {}) {
@@ -147,6 +148,8 @@ export function cloudTrouble(err) {
   if (err.status === 429 && err.network) return 'This network has put as many people in the cloud as it can today. Try again tomorrow.';
   if (err.status === 429) return 'The cloud is busy today. Try again tomorrow.';
   // From the 2nd wrong try the pad also says who to ask, before the wait (council, 2026-10-27).
+  // A PIN everybody tries first is refused when it is made or changed (worker/cloud.js).
+  if (err.status === 400 && err.error === 'pin') return PIN_OBVIOUS;
   if (err.status === 401 && err.error === 'pin') return `That PIN isn't right. ${err.tries} ${err.tries === 1 ? 'try' : 'tries'} left.${err.tries <= 3 ? ' Ask a grown-up for the PIN.' : ''}`;
   if (err.status === 401) return 'This device needs to open this profile again (its PIN changed).';
   if (err.status === 404 && err.error === 'profile') return "That profile isn't in the cloud any more.";

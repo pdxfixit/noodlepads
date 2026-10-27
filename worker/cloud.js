@@ -8,6 +8,7 @@ import { isListedEmoji } from '../web/emoji-check.js';
 import { isFunName, cutName } from '../web/names.js';
 import { CLOUD_ID, SYNCED } from '../web/reid.js';
 import { ORIGIN, json, fail, Refuse, readJson, readBytes, randomId, sha256Hex, hmacHex, toBytes, withinDaily, utcDay } from './http.js';
+import { obviousPin } from '../web/codes.js';
 import { isPin, newSalt, hashSecret, checkSecret, OPENING, KEYED, shareCode, isShareCode, plainCode } from './pin.js';
 import { noteEvent, forgetProfile, expireReports } from './metrics.js';
 import { allowed } from './events-worker.js';
@@ -323,6 +324,7 @@ async function makeProfile(request, env, now, seen) {
   const look = checkLooks(body);
   // A profile needs a PIN: any `pin` that is not four digits is refused.
   if (!isPin(body.pin)) throw new Refuse(400, 'needs pin');
+  if (obviousPin(body.pin)) throw new Refuse(400, 'pin', { obvious: true });
   await dropOldChecks(env, now);
   await sweepDailyCounters(env, now);
   if (await env.DB.prepare('SELECT 1 AS x FROM profiles WHERE id = ?').bind(body.id).first()) throw new Refuse(409, 'exists');
@@ -404,6 +406,8 @@ async function changeProfile(request, env, id, now, seen) {
   // key and the PIN. Checked before anything changes.
   if (body.newPin === null) throw new Refuse(400, 'needs pin');
   if (body.newPin !== undefined && !isPin(body.newPin)) throw new Refuse(400, 'pin');
+  // One everybody tries first (1234, 0000 ...): the PIN pad says why.
+  if (body.newPin !== undefined && obviousPin(body.newPin)) throw new Refuse(400, 'pin', { obvious: true });
   const look = checkLooks(body, { partial: true });
   if (Object.keys(look).length) {
     const edited = Number.isFinite(body.edited) ? Math.min(body.edited, now) : now;

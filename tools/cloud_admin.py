@@ -692,8 +692,18 @@ def find_profile(db, who, out=print):
 
 
 # PINs anyone would try first, on top of four of one digit and straight runs
-# (obvious_pin). A reset never picks one (Ben, 2026-10-27).
-OBVIOUS_PINS = frozenset({'1212', '1122', '1313', '2580', '0852', '1004', '2000', '6969', '1984', '2020'})
+# (obvious_pin). A reset never picks one (Ben, 2026-10-27). The list is the
+# Worker's and the app's too, so it is read from web/codes.js, not repeated here.
+def _obvious_list():
+    src = (ROOT / 'web' / 'codes.js').read_text()
+    listed = re.search(r"export const OBVIOUS_PINS = \[([^\]]*)\]", src)
+    pins = re.findall(r"'(\d{4})'", listed.group(1)) if listed else []
+    if not pins:
+        raise SystemExit('web/codes.js lost its OBVIOUS_PINS list: the reset tool reads it')
+    return frozenset(pins)
+
+
+OBVIOUS_PINS = _obvious_list()
 
 
 def obvious_pin(pin):

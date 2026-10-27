@@ -612,9 +612,9 @@ test('a full cloud says what is full: the profile\'s sounds, its records, or eve
 test('a wrong PIN says how many tries are left; opening with the right one works', async () => {
   const { api } = server();
   await api.create({ id: 'p-k', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '2468' });
-  const wrong = await api.open('p-k', '1111').catch((e) => e);
+  const wrong = await api.open('p-k', '7391').catch((e) => e);
   assert.equal(cloudTrouble(wrong), "That PIN isn't right. 4 tries left.");
-  const second = await api.open('p-k', '1111').catch((e) => e);
+  const second = await api.open('p-k', '7391').catch((e) => e);
   assert.equal(cloudTrouble(second), "That PIN isn't right. 3 tries left. Ask a grown-up for the PIN.", 'from the 2nd wrong try, who to ask');
   assert.ok((await api.open('p-k', '2468')).key);
 });

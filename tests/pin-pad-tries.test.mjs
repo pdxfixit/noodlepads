@@ -45,26 +45,26 @@ test('wrong tries count down, then the wait screen names a grown-up, the time, a
   $('#cloud-list-items').children[0].querySelector('[data-open]').dispatch('click');
   await page.settle();
 
-  typePin('1111');
+  typePin('7391');
   await page.settle();
   assert.equal($('#pin-dialog').open, true);
   assert.equal($('#pin-note').textContent, "That PIN isn't right. 4 tries left.", 'the 1st wrong try: just the count');
-  typePin('1111');
+  typePin('7391');
   await page.settle();
   assert.equal($('#pin-note').textContent, "That PIN isn't right. 3 tries left. Ask a grown-up for the PIN.");
-  typePin('1111');
+  typePin('7391');
   await page.settle();
-  typePin('1111');
+  typePin('7391');
   await page.settle();
   assert.match($('#pin-note').textContent, /^That PIN isn't right\. 1 try left\. Ask a grown-up/, 'one try, singular');
   assert.equal($('#pin-back').hidden, true, 'no way back while there are tries');
 
-  typePin('1111');
+  typePin('7391');
   await page.settle();
   assert.equal($('#pin-dialog').open, true, 'the wait is said on the pad, not by a banner after it closes');
   assert.ok($('#pin-dialog').classList.contains('pin-waiting'), 'no dots or keys');
   assert.match($('#pin-hint').textContent, /A grown-up knows the PIN/);
-  assert.match($('#pin-note').textContent, /^The PIN pad opens again at \d{1,2}:\d{2}/);
+  assert.match($('#pin-note').textContent, /^The PIN pad opens again (\w+day )?at \d{1,2}:\d{2}/, 'a wait that crosses midnight names the day');
   assert.equal($('#pin-back').hidden, false);
   assert.equal($('#pin-back').textContent, '⬅️ Back to Pads');
   typePin('2468');
@@ -78,15 +78,21 @@ test('wrong tries count down, then the wait screen names a grown-up, the time, a
 
 test('a wait of hours names the day the pad opens again, not only a time that could be today', async () => {
   const { askWait } = await import('../web/cloud-ui.js');
-  const pending = askWait({ title: 'Sir Squid', wait: 24 * 3600, locked: false });
-  const day = new Date(Date.now() + 24 * 3600 * 1000).toLocaleDateString([], { weekday: 'long' });
-  assert.match($('#pin-note').textContent, new RegExp(`^The PIN pad opens again ${day} at \\d{1,2}:\\d{2}`));
-  $('#pin-back').dispatch('click');
-  await pending;
-  const short = askWait({ title: 'Sir Squid', wait: 600, locked: false });
-  assert.match($('#pin-note').textContent, /^The PIN pad opens again at \d{1,2}:\d{2}/, 'a short wait: just the time');
-  $('#pin-back').dispatch('click');
-  await short;
+  const realNow = Date.now;
+  Date.now = () => new Date(2026, 9, 27, 12, 0, 0).getTime();   // noon, so 10 minutes on is still today
+  try {
+    const pending = askWait({ title: 'Sir Squid', wait: 24 * 3600, locked: false });
+    const day = new Date(Date.now() + 24 * 3600 * 1000).toLocaleDateString([], { weekday: 'long' });
+    assert.match($('#pin-note').textContent, new RegExp(`^The PIN pad opens again ${day} at \\d{1,2}:\\d{2}`));
+    $('#pin-back').dispatch('click');
+    await pending;
+    const short = askWait({ title: 'Sir Squid', wait: 600, locked: false });
+    assert.match($('#pin-note').textContent, /^The PIN pad opens again at \d{1,2}:\d{2}/, 'a short wait: just the time');
+    $('#pin-back').dispatch('click');
+    await short;
+  } finally {
+    Date.now = realNow;
+  }
 });
 
 test('the next pad starts fresh: keys back, Back hidden', async () => {
