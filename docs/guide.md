@@ -190,8 +190,8 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   Kids' ▶️ plays it too, on the Beats screen and here. The first note of a
   new recording starts the tune again, so a kid can do it over (an empty
   take changes nothing); the beat with the tune it replaces is kept first,
-  a beat of its own in 🗂️ My beats under a fun name, as 🆕 New keeps a beat
-  (`kids-logic.js` `keptTune`). Nothing shows on the kid's screen: Kids has
+  a beat of its own in 🗂️ My beats under a fun name with 🧸 in front (so a
+  grown-up can find it), as 🆕 New keeps a beat (`kids-logic.js` `keptTune`). Nothing shows on the kid's screen: Kids has
   no Undo, and a kid can't read a "Kept as …" line. A grown-up finds the tune row on 🥁 Beats and in 🎹
   the piano roll, and keeps the beat with 💾 Keep.
 

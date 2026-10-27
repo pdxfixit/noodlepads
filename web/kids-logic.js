@@ -9,6 +9,7 @@ import { addNote } from './notes.js';
 import { chainFields, voiceStep } from './voices.js';
 import { SCRATCH_NAME } from './scratch.js';
 import { versionFor } from './instruments.js';
+import { cutName, MAX_LABEL } from './names.js';
 
 // ── The grown-up sum ──
 
@@ -299,10 +300,14 @@ export function withTuneNote(beat, { clipId, pitch, s, l = 1, fresh = false }, n
 // a beat of its own in 🗂️ My beats under `name` (a fun name), so a grown-up
 // can find the earlier one. Kids has no Undo and a kid can't read a "Kept
 // as …" line, so nothing shows; the kid just plays again. Null when the beat
-// has no tune to lose.
+// has no tune to lose. Its name wears 🧸 in front (Ben, 2026-10-26: the
+// child psychologist's ask), so a grown-up can tell a kid's tune in
+// 🗂️ My beats from their own; a long name is cut to leave room for it.
+export const KIDS_TUNE_MARK = '🧸 ';
+export const kidsTuneName = (name) => KIDS_TUNE_MARK + cutName(String(name ?? '').trim(), MAX_LABEL - KIDS_TUNE_MARK.length);
 export function keptTune(beat, { id, name }, now = Date.now()) {
   if (!tuneRowOf(beat)?.tune?.length) return null;
-  return { ...cleanPattern(beat, beat.personId), id, name, created: now, saved: now };
+  return { ...cleanPattern(beat, beat.personId), id, name: kidsTuneName(name), created: now, saved: now };
 }
 
 // ── Voices ──

@@ -18,6 +18,7 @@ import {
 import { MELODY_NOTES } from '../web/notes.js';
 import { BEAT_ID, cleanPattern, STEPS } from '../web/sequencer.js';
 import { isScratch, scratchId } from '../web/scratch.js';
+import { cutName } from '../web/names.js';
 
 // ── Pure ──
 
@@ -272,7 +273,9 @@ test('● a tune: a new recording keeps the beat with the tune it replaces, as a
   const tuned = withTuneNote(beat, { clipId: 'p-a-piano-c', pitch: 4, s: 2, l: 1, fresh: true });
   const kept = keptTune(tuned, { id: 'beat-x', name: 'Funky Moose' }, 9);
   assert.equal(kept.id, 'beat-x');
-  assert.equal(kept.name, 'Funky Moose');
+  assert.equal(kept.name, '🧸 Funky Moose', 'a grown-up can tell a kid\'s tune in 🗂️ My beats by its 🧸');
+  const long = keptTune(tuned, { id: 'beat-x', name: 'Extremely Long Beat Name Indeed' }).name;
+  assert.ok(long.startsWith('🧸 ') && cutName(long) === long, 'a long name is cut to keep the mark and still fit a name');
   assert.equal(kept.personId, 'p-a');
   assert.ok(!isScratch(kept), 'not the scratch: it lists in 🗂️ My beats');
   assert.deepEqual(tuneRowOf(kept).tune, [{ p: 4, s: 2, l: 1 }]);
@@ -1097,6 +1100,7 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   assert.deepEqual(tuneOf(earlier).tune.map((n) => n.p), [0, 9], 'C then A, as it was');
   assert.equal(earlier.rows.length, 5, 'with the drums');
   assert.ok(earlier.name && earlier.name !== 'Scratch beat', `a fun name: ${earlier.name}`);
+  assert.ok(earlier.name.startsWith('🧸 '), `🧸 marks a kid's tune in 🗂️ My beats: ${earlier.name}`);
   rec.dispatch('click');
   assert.equal(rec.classList.contains('recording'), false, 'stopped early');
   assert.equal(rec.getAttribute('aria-pressed'), 'false');
