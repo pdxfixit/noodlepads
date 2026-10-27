@@ -101,7 +101,7 @@ The `state.screen` comment in `state.js` says `'dj'`. The values are `app.js` `S
 
 | Path | What it does | On failure |
 |---|---|---|
-| `state.js persist(store, value)` | `stampEdit` (in place), then `db.put` | console error and a banner: "This browser wouldn't save that change…", or "Not saved: another soundboard tab…" while `loadStorage` waits. Resolves false when open storage refused it (with no storage at all, true: the visit keeps everything in memory); `setOverride` passes it on. The sound sheet's Save and ➕ Mix roll the in-memory clip back on false and keep the sheet open (`tests/sheet-save-fail.test.mjs`) |
+| `state.js persist(store, value)` | `stampEdit` (in place), then `db.put` | console error and a banner: "This browser wouldn't save that change…", or "Not saved: another soundboard tab…" while `loadStorage` waits. Resolves false when storage refused it, open or not (waiting for another tab, closed for an upgrade); true only with no storage at all (`storageFailed`: the visit keeps everything in memory); `setOverride` passes it on. The sound sheet's Save and ➕ Mix roll the in-memory clip back on false and keep the sheet open (`tests/sheet-save-fail.test.mjs`) |
 | `state.js setOverride(next)` | puts when the override changes something, else deletes it so the preset follows boards.json again | as `persist` |
 | `state.js setPersonEdit(id, changes)` | `model.js personEditRecord`: a boards.json person keeps only differences (none: record deleted); an added person stores everything and gets `edited` on a name/color/avatar change | put: as `persist`; delete: console only |
 | `state.js deleteUserClip`, `deleteMyVoice` | memory first, then `db.remove` | banner: "…it may come back after a reload" |

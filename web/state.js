@@ -256,16 +256,17 @@ export async function loadStorage({ onLateOpen = () => {}, waitMs = STORAGE_WAIT
 
 // Saves a kid's edit. A record that syncs is stamped with when it changed
 // (merge3.js), so a clash with another device's edit keeps the newer one.
-// Resolves false when open storage refused it (a full disk), so a screen can
-// keep the work open to save again; with no storage at all this visit keeps
-// everything in memory, as the notice says, and it resolves true.
+// Resolves false when storage refused it (a full disk, or storage not open:
+// waiting for another tab, or closed for a newer copy's upgrade), so a screen
+// can keep the work open to save again. Only with no storage at all does this
+// visit keep everything in memory, as the notice says, and it resolves true.
 export async function persist(store, value) {
   try {
     await db.put(store, stampEdit(store, value));
   } catch (err) {
     console.error(`Saving to ${store} failed:`, err);
     showNotice(wouldNotSave(err));
-    return !db.handle;
+    return storageFailed;
   }
   return true;
 }
@@ -283,7 +284,7 @@ export async function setOverride(next) {
   } catch (err) {
     console.error('Removing an override failed:', err);
     showNotice(wouldNotSave(err));
-    return !db.handle;
+    return storageFailed;
   }
   return true;
 }

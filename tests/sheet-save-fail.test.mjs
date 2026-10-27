@@ -94,3 +94,26 @@ test('a ➕ mix saved when storage refuses: no new pad in memory, and the sheet 
   $('#sheet').close();
   await setSetting('advancedBeats', false);
 });
+
+// Storage that is there but not open now (waiting for another tab to let
+// go, or closed for a newer copy's upgrade) is a refusal too: only a browser
+// with no storage at all keeps a visit in memory.
+test('a Save while storage is closed for another tab keeps the sheet open', async () => {
+  const { db } = await import('../web/store.js');
+  const here = pads()[0].dataset.id;
+  audio.originals.set(here, Promise.resolve(plain));
+  await openPad(here);
+  $('#clip-label').value = 'Honk honk';
+  const handle = db.handle;
+  db.handle = null;   // what onversionchange does
+  try {
+    $('#sheet-form').dispatch('submit');
+    await page.settle();
+    assert.equal($('#sheet').open, true, 'the work stays');
+    assert.match($('#sheet-error').textContent, /didn’t save/);
+    assert.equal(state.overrides.get(here)?.label === 'Honk honk', false, 'nothing changed in memory');
+  } finally {
+    db.handle = handle;
+    $('#sheet').close();
+  }
+});
