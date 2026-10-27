@@ -2814,7 +2814,9 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 .dj-grid-pills i.now { outline: 2px solid rgb(255 255 255 / 0.7); outline-offset: 1px; }
 .dj-grid-pills i.on.now { background: #fff; }
 /* The ruler: each bar's number over its "1", a dot over each beat. */
-.dj-grid-ruler .dj-grid-pills { padding-block: 8px 2px; }
+.dj-grid-ruler .dj-grid-pills { padding-block: 6px 0; }
+/* Its head is empty, as Beats' ruler's is: no 44 px minimum, or a band of dead space. */
+.dj-grid-ruler .dj-grid-head { min-height: 0; padding-block: 0; }
 .dj-grid-ruler .dj-grid-pills i { height: auto; background: none; font: 800 0.8rem/1 var(--font-display); font-style: normal; color: rgb(255 255 255 / 0.55); text-align: center; cursor: default; }
 .dj-grid-ruler .dj-grid-pills i.one { color: #fff; }
 /* While recording, the beat can still grow (first pass): a dashed empty pill after the last. */
