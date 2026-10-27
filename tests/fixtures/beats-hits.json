@@ -1,0 +1,490 @@
+{
+ "about": "Two beats made on 🥁 Beats and every hit each books: the kit sound, seconds after the first pill, the rate (a tune note faster for a higher note) and the hit's own gain (a loud pill louder). A plain bar of 4/4 at 120 BPM; two bars of 3/4 at 90 BPM with swing 40, a 2× row, a tune, a muted row and a loud pill. Written by the one-beat-engine work (docs/design/one-beat-engine.md); tests/beats-same-hits.test.mjs checks the app against it.",
+ "beats": {
+  "plain": {
+   "beat": {
+    "bpm": 120,
+    "bars": 1,
+    "signature": "4/4",
+    "swing": 0,
+    "advanced": false,
+    "rows": [
+     {
+      "sound": "kick",
+      "pills": [
+       0,
+       4,
+       8,
+       12
+      ],
+      "loud": [
+       0
+      ]
+     },
+     {
+      "sound": "snare",
+      "pills": [
+       4,
+       12
+      ]
+     },
+     {
+      "sound": "shaker",
+      "pills": [
+       0,
+       2,
+       4,
+       6,
+       8,
+       10,
+       12,
+       14
+      ]
+     }
+    ]
+   },
+   "hits": [
+    {
+     "sound": "kick",
+     "at": 0,
+     "rate": 1,
+     "gain": 1.5
+    },
+    {
+     "sound": "shaker",
+     "at": 0,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0.25,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "kick",
+     "at": 0.5,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0.5,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "snare",
+     "at": 0.5,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0.75,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "kick",
+     "at": 1,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1.25,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "kick",
+     "at": 1.5,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1.5,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "snare",
+     "at": 1.5,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1.75,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "kick",
+     "at": 2,
+     "rate": 1,
+     "gain": 1.5
+    },
+    {
+     "sound": "shaker",
+     "at": 2,
+     "rate": 1,
+     "gain": 1
+    }
+   ]
+  },
+  "swung": {
+   "beat": {
+    "bpm": 90,
+    "bars": 2,
+    "signature": "3/4",
+    "swing": 40,
+    "advanced": true,
+    "rows": [
+     {
+      "sound": "kick",
+      "pills": [
+       0,
+       6,
+       12,
+       18
+      ],
+      "loud": [
+       12
+      ]
+     },
+     {
+      "sound": "shaker",
+      "rate": 2,
+      "pills": [
+       0,
+       1,
+       3,
+       4,
+       6,
+       7,
+       9,
+       10,
+       12,
+       13,
+       15,
+       16,
+       18,
+       19,
+       21,
+       22
+      ]
+     },
+     {
+      "sound": "snare",
+      "muted": true,
+      "pills": [
+       6,
+       18
+      ]
+     },
+     {
+      "sound": "note-c",
+      "tune": [
+       {
+        "p": 0,
+        "s": 0,
+        "l": 2
+       },
+       {
+        "p": 7,
+        "s": 3.5,
+        "l": 1
+       },
+       {
+        "p": 12,
+        "s": 8,
+        "l": 4
+       },
+       {
+        "p": 4,
+        "s": 23,
+        "l": 1
+       }
+      ]
+     }
+    ]
+   },
+   "hits": [
+    {
+     "sound": "kick",
+     "at": 0,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "note-c",
+     "at": 0,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0.116666667,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0.283333333,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0.333333333,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0.566666667,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "note-c",
+     "at": 0.583333333,
+     "rate": 1.498307077,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0.616666667,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0.783333333,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0.9,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1.116666667,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "kick",
+     "at": 1.133333333,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1.283333333,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "note-c",
+     "at": 1.333333333,
+     "rate": 2,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1.333333333,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1.566666667,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1.616666667,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1.783333333,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1.9,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "kick",
+     "at": 2,
+     "rate": 1,
+     "gain": 1.5
+    },
+    {
+     "sound": "shaker",
+     "at": 2,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 2.116666667,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 2.283333333,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 2.333333333,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 2.566666667,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 2.616666667,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 2.783333333,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 2.9,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 3,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 3.116666667,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "kick",
+     "at": 3.133333333,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 3.283333333,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 3.333333333,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 3.566666667,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 3.616666667,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 3.783333333,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "note-c",
+     "at": 3.9,
+     "rate": 1.25992105,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 3.9,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "kick",
+     "at": 4,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "note-c",
+     "at": 4,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 4,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 4.116666667,
+     "rate": 1,
+     "gain": 1
+    }
+   ]
+  }
+ }
+}
