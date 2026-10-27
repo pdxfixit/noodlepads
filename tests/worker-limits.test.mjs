@@ -32,6 +32,7 @@ function fakeLimiter(limit) {
 function cloud(limit = 2) {
   const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') } };
   for (const name of Object.values(LIMITERS)) env[name] = fakeLimiter(limit);
+  env.OPEN_SITE_LIMITER = fakeLimiter(1000);   // the whole site's count: its own test
   const call = async (method, path, { body, key, raw } = {}) => {
     const headers = { Origin: ORIGIN };
     if (key) headers.Authorization = `Bearer ${key}`;
@@ -148,13 +149,28 @@ test('a limiter that fails lets the call through; no binding limits nothing', as
   for (let i = 0; i < 5; i++) assert.equal((await c.call('POST', 'profiles/p-one/open', { body: { pin: '2468' } })).status, 200);
 });
 
+test('opens are also counted for the whole site under one key, before the PIN is checked: over it, 429 slow and no try is spent', async () => {
+  const c = cloud(100);
+  c.env.OPEN_SITE_LIMITER = fakeLimiter(3);
+  for (const id of ['p-one', 'p-two', 'p-three', 'p-four']) await made(c, id);
+  const open = (id, pin = '1111') => c.call('POST', `profiles/${id}/open`, { body: { pin } });
+  // Wrong PINs on three different profiles are counted (and are 401s) ...
+  for (const id of ['p-one', 'p-two', 'p-three']) assert.equal((await open(id)).status, 401);
+  // ... the fourth open, anywhere, is over the site's limit: slow, not a PIN answer.
+  const over = await open('p-four', '2468');
+  assert.deepEqual([over.status, over.data.error], [429, 'slow']);
+  assert.deepEqual([...new Set(c.env.OPEN_SITE_LIMITER.keys)], ['site'], 'one key for everyone, never an address or a profile');
+  assert.equal(c.env.OPEN_LIMITER.keys.length, 3, 'the profile count is not reached once the site is over');
+  assert.equal(c.env.DB.rows('SELECT fails FROM profiles WHERE id = ?', 'p-four')[0].fails, 0, 'the PIN was not looked at');
+});
+
 test('site/wrangler.toml declares each limiter, a minute window, far above what a family meets', () => {
   const toml = readFileSync(new URL('../site/wrangler.toml', import.meta.url), 'utf8');
   const declared = new Map([...toml.matchAll(/\[\[ratelimits\]\]\s*\nname = "(\w+)"\s*\nnamespace_id = "(\d+)"\s*\nsimple = \{ limit = (\d+), period = (\d+) \}/g)]
     .map(([, name, ns, limit, period]) => [name, { ns, limit: Number(limit), period: Number(period) }]));
   assert.deepEqual(Object.values(LIMITERS).map((n) => [n, declared.get(n)?.limit, declared.get(n)?.period]), [
     ['PUSH_LIMITER', 60, 60], ['SOUND_LIMITER', 600, 60], ['SHARE_LIMITER', 10, 60], ['OPEN_LIMITER', 10, 60],
-    ['PULL_LIMITER', 600, 60], ['DOWNLOAD_LIMITER', 1200, 60],
+    ['PULL_LIMITER', 600, 60], ['DOWNLOAD_LIMITER', 1200, 60], ['OPEN_SITE_LIMITER', 60, 60],
   ]);
   const ids = [...declared.values()].map((d) => d.ns);
   assert.equal(new Set(ids).size, ids.length, 'each limiter its own namespace');

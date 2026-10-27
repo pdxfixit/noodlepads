@@ -83,6 +83,14 @@ name = "OPEN_LIMITER"
 namespace_id = "41514"
 simple = { limit = 10, period = 60 }
 
+# An open, all profiles together: 60 a minute for the whole site (one key), so
+# one client can't try the 5 PINs of every listed profile. A family opens a
+# few times a day; over it is 429 slow, "busy right now" in the app.
+[[ratelimits]]
+name = "OPEN_SITE_LIMITER"
+namespace_id = "41517"
+simple = { limit = 60, period = 60 }
+
 # A pull: 600 a minute a profile (a page is 500 records; a restore of a full
 # profile is a few dozen pages, one after another), so one key can't spend
 # D1's daily reads for every family.

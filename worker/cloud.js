@@ -900,7 +900,12 @@ async function takeUses(request, env, id, now) {
 export const LIMITERS = {
   records: 'PUSH_LIMITER', sounds: 'SOUND_LIMITER', shares: 'SHARE_LIMITER', open: 'OPEN_LIMITER',
   pull: 'PULL_LIMITER', download: 'DOWNLOAD_LIMITER',
+  // Every open on the site together, counted under one key: the per-profile
+  // count above can't stop one client trying 5 PINs on each listed profile
+  // (council, 2026-10-27). A family opens a few times a day.
+  openSite: 'OPEN_SITE_LIMITER',
 };
+const SITE = 'site';
 
 // Throws 429 'slow' when `profileId` is over the binding's limit: a minute's
 // wait, apart from the daily caps' 429 'busy' (the app says "busy right
@@ -962,7 +967,11 @@ async function route(request, env, now, seen) {
         if (m === 'POST') return await makeProfile(request, env, now, seen);
       } else if (typeof b === 'string' && PERSON_ID.test(b)) {
         needProvenCheck(request, env, b);
-        if (parts.length === 3 && c === 'open' && m === 'POST') await slowDown(env, LIMITERS.open, b);
+        if (parts.length === 3 && c === 'open' && m === 'POST') {
+          // The whole site's count first, then this profile's; both before the PIN is looked at.
+          await slowDown(env, LIMITERS.openSite, SITE);
+          await slowDown(env, LIMITERS.open, b);
+        }
         if (parts.length === 2 && m === 'PATCH') return await changeProfile(request, env, b, now, seen);
         if (parts.length === 2 && m === 'DELETE') return await deleteProfile(request, env, b, now);
         if (parts.length === 3 && c === 'open' && m === 'POST') return await openProfile(request, env, b, now, seen);
