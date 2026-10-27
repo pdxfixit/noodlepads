@@ -50,6 +50,19 @@ function openNew() {
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Waits for the 3-2-1 count to end and the stand-in recorder to listen. A
+// fixed 60 ms wait lost that race on a busy machine: the count's timers came
+// late, so Stop landed during the count and called the recording off ("Tap
+// Record…" where the test wanted the quiet-recording tip).
+async function until(done, what) {
+  const by = Date.now() + 10_000;
+  while (!done()) {
+    assert.ok(Date.now() < by, `still waiting after 10 s: ${what}`);
+    await wait(2);
+  }
+}
+const untilListening = () => until(() => recorders.at(-1)?.state === 'recording', 'the count to end and the recorder to listen');
+
 test('Record counts 3, 2, 1 before it listens', async () => {
   openNew();
   recorders.length = 0;
@@ -58,8 +71,7 @@ test('Record counts 3, 2, 1 before it listens', async () => {
   assert.equal($('#rec-label').textContent, '3');
   assert.match($('#rec-status').textContent, /Get ready… 3/);
   assert.equal(recorders[0].state, 'inactive', 'not listening during the count');
-  await wait(60);
-  assert.equal(recorders[0].state, 'recording');
+  await untilListening();
   assert.equal($('#rec-label').textContent, 'Stop');
   $('#sheet').close();
 });
@@ -82,8 +94,11 @@ async function recordAndStop(samples) {
   openNew();
   decoded = fakeBuffer([samples], 8000);
   $('#rec-btn').dispatch('click');
-  await wait(60);
+  await untilListening();
   $('#rec-btn').dispatch('click');
+  // The blob read and decode are not timers, so settle() alone could return
+  // while the note still says it is saving.
+  await until(() => !/Saving the recording/.test($('#rec-status').textContent), 'the recording to be read');
   await page.settle();
   return $('#rec-status').textContent;
 }
