@@ -14,7 +14,7 @@
 
 import { countAt, KEY_ROWS, KEY_CODES, keyboardOrder, defaultDeck, fallbackLabel, layoutLabel, detectLayout, LAYOUTS, LAYOUT_NAMES, keyFor, clockText, createSnapper, tapTempo, TAP_GAP_MAX } from './rhythm.js';
 import { SIGNATURES, COMMON_BPMS, tempoStops, stopFor, typedBpm } from './beat.js';
-import { recall, remember, onePressOneClick, showLooping } from './util.js';
+import { recall, remember, onePressOneClick, showLooping, mayFlash } from './util.js';
 import { PICTURES, pictureTakenBy } from './model.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
 import { openDialog, setupDialog, openerOf } from './dialogs.js';
@@ -239,6 +239,9 @@ export function createDJ({ el, deps }) {
   function light(code, { ripple = true } = {}) {
     const k = keyEl(code);
     if (!k) return;
+    // Past three flashes a second a key is not lit again (util.js mayFlash);
+    // the glow and ripples around it wait too.
+    if (!mayFlash(k)) return;
     k.classList.add('hit');
     setTimeout(() => k.classList.remove('hit'), 120);
     const color = k.style.getPropertyValue?.('--c')?.trim() || '#ffffff';  // set on the tile by render()
@@ -248,7 +251,8 @@ export function createDJ({ el, deps }) {
     for (const [c, [r, i]] of where) {
       const d = Math.max(Math.abs(r - r0), Math.abs(i - c0));
       if (d < 1 || d > 2) continue;
-      keyEl(c)?.animate?.([
+      const near = keyEl(c);
+      if (near && mayFlash(near)) near.animate?.([
         { boxShadow: `0 0 0 0 transparent`, filter: 'brightness(1)' },
         { boxShadow: `0 0 ${22 - d * 6}px ${6 - d * 2}px ${color}`, filter: `brightness(${1.5 - d * 0.15})` },
         { boxShadow: `0 0 0 0 transparent`, filter: 'brightness(1)' },
@@ -258,6 +262,7 @@ export function createDJ({ el, deps }) {
   // A tile's hit lights it and tints the panel's glow (no ripple: bands are not a keyboard).
   function lightTiles(clipId) {
     for (const t of tilesOf(clipId)) {
+      if (!mayFlash(t)) continue;
       t.classList.add('hit');
       setTimeout(() => t.classList.remove('hit'), 120);
       el.panel?.style.setProperty('--glow', t.style.getPropertyValue?.('--c')?.trim() || '#ffffff');

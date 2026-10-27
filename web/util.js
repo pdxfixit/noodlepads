@@ -114,3 +114,20 @@ export function showLooping(button, on) {
   if (on) button.setAttribute('aria-pressed', 'true');
   else button.removeAttribute('aria-pressed');
 }
+
+// No pad, key or tile flashes more than three times in any one second
+// (WCAG 2.3.1; accessibility seat, council round 1): a beat or a mashed
+// pad can hit one sound a dozen times a second, and each hit lit it. Asked
+// by whatever is about to light `node` for a moment: true says go ahead and
+// counts it, false says skip the light (the sound itself is never skipped).
+export const MAX_FLASHES = 3;
+const FLASH_WINDOW_MS = 1000;
+const flashes = new WeakMap();   // node -> the times of its last few flashes
+export function mayFlash(node, now = performance.now()) {
+  const times = flashes.get(node) ?? [];
+  while (times.length && now - times[0] >= FLASH_WINDOW_MS) times.shift();
+  if (times.length >= MAX_FLASHES) return false;
+  times.push(now);
+  flashes.set(node, times);
+  return true;
+}

@@ -9,7 +9,7 @@ import { people, person, clipsFor, findClip, padColor } from './board.js';
 import { voiceById, amountText, chainOf, chainText, stepLook } from './voices.js';
 import { announce } from './ui.js';
 import { isKitClip, ownSoundsTitle, groupKit, openKitGroups, withHidden } from './model.js';
-import { remember, recall, onePressOneClick, showLooping } from './util.js';
+import { remember, recall, onePressOneClick, showLooping, mayFlash } from './util.js';
 import { countPlay } from './play-count.js';
 import { groupOwn, cleanGroups, UNGROUPED } from './groups.js';
 import { SETTINGS, getSetting, setSetting, onSetting } from './settings.js';
@@ -41,7 +41,11 @@ export function setProgress(id, p) {
   const pad = padFor(id);
   if (!pad) return;
   pad.style.setProperty('--progress', p);
-  pad.classList.toggle('playing', p > 0 && p < 1);
+  const playing = p > 0 && p < 1;
+  // A short sound that loops would light and unlight its pad many times a
+  // second (Switch, Lit pads): past three a second it stays as it was.
+  if (playing && !pad.classList.contains('playing') && !mayFlash(pad)) return;
+  pad.classList.toggle('playing', playing);
 }
 
 // Whose sounds: a round button in the top right corner, like an account
@@ -590,6 +594,7 @@ export function tapPad(clip, { ring = false, kind = 'pads' } = {}) {
 }
 
 export function flash(pad) {
+  if (!mayFlash(pad)) return;
   pad.classList.add('hit');
   setTimeout(() => pad.classList.remove('hit'), 90);
 }
