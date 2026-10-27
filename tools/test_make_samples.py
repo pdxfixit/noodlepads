@@ -71,8 +71,8 @@ def pcm_of(path):
 
 class WriteWav(unittest.TestCase):
     """One writer for both tools: the placeholders fade their first and last
-    5 ms, the recorded clips (cut with their own ends) do not. The bytes are
-    what each tool's own copy wrote before they were one."""
+    5 ms, the recorded clips (cut with their own ends) do not. The recorded
+    clips' bytes are pinned; the placeholders' fade is checked by its shape."""
 
     def test_the_recorded_clips_are_written_without_a_fade(self):
         x = [0.0, 0.5, -1.0, 0.25, 1.0, -0.5] * 40

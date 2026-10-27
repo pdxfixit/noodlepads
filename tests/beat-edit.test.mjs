@@ -9,7 +9,7 @@ const beat = (name, rows, bpm = 100) => cleanPattern({ name, bpm, rows }, 'pip')
 
 // ── comparing two beats (tests/helpers.mjs) ──
 
-test('samePattern compares tempo, sounds and pills', () => {
+test('the samePattern test helper compares tempo, sounds and pills', () => {
   const a = beat('A', [{ clipId: 'x', steps: on(0, 4) }]);
   assert.ok(samePattern(a, beat('Other name', [{ clipId: 'x', steps: on(0, 4) }])));
   assert.ok(!samePattern(a, beat('A', [{ clipId: 'x', steps: on(0, 4) }], 120)));
