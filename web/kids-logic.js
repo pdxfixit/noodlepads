@@ -140,12 +140,23 @@ export const KIDS_PADS = [
   // Spoken callouts whose face or sign says the word.
   'wow', 'no-way', 'oh-yeah', 'oof', 'nice', 'yes', 'go', 'ready', 'lets-go',
   // Drums and percussion that look like what they are.
-  'snare', 'clap', 'kick', 'snap', 'shaker', 'tambourine', 'ride', 'crash', 'drumroll', 'rimshot', 'boom', 'clave', 'conga', 'djembe-slap', 'plink', 'bloop', 'horn-stab', 'rewind',
+  'clap', 'kick', 'snap', 'shaker', 'tambourine', 'ride', 'crash', 'drumroll', 'rimshot', 'boom', 'clave', 'conga', 'djembe-slap', 'plink', 'bloop', 'horn-stab', 'rewind',
   // The startles, last (Ben, 2026-10-26: the child psychologist, a sudden
   // loud noise frightens some 3-year-olds), so a small kid swiping for fun
   // meets them only at the end.
   ...KIDS_STARTLES,
 ];
+
+// No picture twice on a Kids screen (the pre-reader and child psychologist
+// seats; Ben, 2026-10-26): a kid who can't read tells two buttons apart by
+// their pictures, so one picture is never two things. Three presets wear a
+// picture of their own here because theirs is a tab's or a skin's: 💥 stays
+// the crash's, so the deep boom is a 🧨 (the regular app's 🔊 is the Pads tab)
+// and the teleport a 🌌 (its 🌀 is the Spinner skin). The snare is not a pad
+// here at all: its 🥁 is the Beats tab's, and the beat has the snare (🪘).
+// tests/kids-pictures.test.mjs reads every picture each screen can show.
+export const KIDS_PAD_PICTURES = { boom: '🧨', teleport: '🌌' };
+export const padPicture = (clip) => (clip?.kit && KIDS_PAD_PICTURES[clip.kitId]) || clip?.emoji || '🔊';
 
 // The pads in Kids: the kid's own sounds first, newest first (a new
 // recording is the first pad), then any other sound of the board's own, then
@@ -170,6 +181,9 @@ export const KIDS_DRUMS = ['kick', 'snare', 'shaker', 'clap'];
 export const KIDS_DRUM_PICTURES = { snare: '🪘' };
 export const drumPicture = (clip) => KIDS_DRUM_PICTURES[clip.kitId] ?? clip.emoji;
 export const KIDS_SQUARES = 8;
+// ▶️ on the Beats screen; while it plays the same button shows ⏸️, since the
+// ⏹️ of Stop all is always on screen too (no picture twice).
+export const KIDS_PLAY_FACES = { idle: '▶️', playing: '⏸️' };
 const PER_SQUARE = STEPS / KIDS_SQUARES;
 
 // 🐢 slow, the middle, 🏃 fast. Tapping a lit one goes back to the middle.
@@ -370,9 +384,17 @@ export const pressKind = (ms) => (ms < TAP_MS ? 'tap' : 'hold');
 // The count before a tapped recording listens: 3, 2, 1, a number each
 // `ms`, as the sound sheet's Record counts. Tests shorten it.
 export const KIDS_COUNT = { from: 3, ms: 700 };
+// The big mic's face at rest: 🎤, because the Record tab is already 🎙️.
+export const KIDS_MIC_FACE = '🎤';
 
-// A new sound's picture: the first of these not on the board yet.
-export const KIDS_EMOJI = ['🦄', '🐸', '🐙', '🦖', '🐶', '🐱', '🐵', '🐷', '🐰', '🦁', '🐯', '🐨', '🐼', '🐔', '🐧', '🐢'];
+// A new sound's picture: the first of these not on the board yet. None is
+// a picture Kids shows already (a preset pad's: no 🐶 🐱 🐸 🦁; a voice's, a
+// tab's, a button's), so a recording never looks like another pad or button
+// (tests/kids-pictures.test.mjs). After all 28 are used they come round.
+export const KIDS_EMOJI = [
+  '🦄', '🐙', '🦖', '🐵', '🐷', '🐰', '🐯', '🐨', '🐼', '🐔', '🐧', '🐢', '🦊', '🐻',
+  '🦓', '🦒', '🐘', '🦔', '🦉', '🦋', '🐞', '🐳', '🐬', '🦈', '🦀', '🐊', '🦜', '🦩',
+];
 export const pictureFor = (used) => KIDS_EMOJI.find((e) => !used.has(e)) ?? KIDS_EMOJI[used.size % KIDS_EMOJI.length];
 
 // ── Live keys ──
@@ -408,6 +430,10 @@ export const isHighKey = (k) => (k.up || 0) >= 12;
 // Notes keeps, so an instrument picked elsewhere plays here too; a tap from
 // one not in this list starts it again at Pluck.
 export const KIDS_INSTRUMENTS = ['pluck', 'piano', 'marimba', 'steel', 'kalimba'];
+// The picture an instrument wears in Kids: its own, except the piano's 🎹,
+// which is the Keys tab's, so it wears 🎼 here.
+export const KIDS_INST_PICTURES = { piano: '🎼' };
+export const instPicture = (inst) => KIDS_INST_PICTURES[inst?.id] ?? inst?.emoji ?? '🎵';
 export const nextKidsInstrument = (now) => KIDS_INSTRUMENTS[(KIDS_INSTRUMENTS.indexOf(now) + 1) % KIDS_INSTRUMENTS.length];
 // The kit id a key plays on instrument `inst`: its note on that instrument
 // (`piano-e` for note-e), or the note itself on Pluck or one that plays no Notes.

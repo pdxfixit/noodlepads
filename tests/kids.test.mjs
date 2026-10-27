@@ -13,7 +13,7 @@ import {
   makeSum, typeDigit, sumWait, SUM_WAIT, kidsRange, kidsAutoPx, kidsPadPx, kidsShare, shareOf, kidsSliderAt, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder, KIDS_PADS,
   KIDS_STARTLES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds, KIDS_TEMPOS,
   TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote, keptTune,
-  KIDS_DRUMS, drumPicture, kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS, keyPitch, keyRate, keyPlayId, isHighKey,
+  KIDS_DRUMS, drumPicture, kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS, keyPitch, keyRate, keyPlayId, isHighKey, instPicture,
 } from '../web/kids-logic.js';
 import { MELODY_NOTES } from '../web/notes.js';
 import { BEAT_ID, cleanPattern, STEPS } from '../web/beat.js';
@@ -515,8 +515,8 @@ test('🎹 the instrument button: every key wears who plays it; a tap moves to t
   const button = $('#kids-inst');
   assert.equal(button.closest('[data-kids-view]').dataset.kidsView, 'keys', 'on the Keys screen');
   const badges = () => $('#kids-keys').querySelectorAll('.kids-key-inst').map((b) => b.textContent);
-  assert.equal(button.textContent, instrumentById('pluck').emoji);
-  assert.deepEqual(badges(), Array(8).fill(instrumentById('pluck').emoji), 'every key wears the picture the button shows');
+  assert.equal(button.textContent, instPicture(instrumentById('pluck')));
+  assert.deepEqual(badges(), Array(8).fill(instPicture(instrumentById('pluck'))), 'every key wears the picture the button shows');
   assert.ok($('#kids-keys').querySelector('.kids-key').getAttribute('aria-label').endsWith(' on Pluck'));
   const seen = [];
   for (let i = 0; i < KIDS_INSTRUMENTS.length; i++) {
@@ -525,8 +525,8 @@ test('🎹 the instrument button: every key wears who plays it; a tap moves to t
     await page.settle();
     const inst = getSetting('instNotes');
     seen.push(inst);
-    assert.equal(button.textContent, instrumentById(inst).emoji, 'the button shows the instrument now on');
-    assert.deepEqual(badges(), Array(8).fill(instrumentById(inst).emoji), 'and so does every key');
+    assert.equal(button.textContent, instPicture(instrumentById(inst)), 'the button shows the instrument now on');
+    assert.deepEqual(badges(), Array(8).fill(instPicture(instrumentById(inst))), 'and so does every key');
     const c = $('#kids-keys').querySelector('.kids-key');
     assert.ok(c.getAttribute('aria-label').endsWith(` on ${instrumentById(inst).name}`), c.getAttribute('aria-label'));
     assert.equal(played.length, 1, 'a note plays on it');
@@ -540,7 +540,7 @@ test('Record: the mic and three voices; without a microphone the mic is off', ()
   $('[data-kids-tab="record"]').dispatch('click');
   assert.deepEqual($('#kids').querySelectorAll('[data-kids-voice]').map((b) => b.textContent), ['🤖', '🐭', '👻']);
   assert.equal($('#kids-mic').disabled, true, 'the stand-in page has no microphone');
-  assert.ok($('#kids-mic').classList.contains('blocked'), '🚫 over 🎙️');
+  assert.ok($('#kids-mic').classList.contains('blocked'), '🚫 over 🎤');
   assert.match($('#kids-mic').getAttribute('aria-label'), /microphone is off/, 'its tooltip says why');
   $('[data-kids-voice="robot"]').dispatch('click');
   assert.equal($('[data-kids-voice="robot"]').getAttribute('aria-pressed'), 'true');
@@ -572,7 +572,7 @@ function fakeMicrophone() {
   navigator.mediaDevices = { getUserMedia: async (constraints) => { mic.asked.push(constraints); const s = { stopped: 0, getTracks() { return [{ stop: () => { s.stopped += 1; } }]; } }; mic.streams.push(s); return s; } };
 }
 
-test('Record: a refused microphone shows 🚫 over 🎙️; once it is allowed, the mic is itself again', async () => {
+test('Record: a refused microphone shows 🚫 over 🎤; once it is allowed, the mic is itself again', async () => {
   fakeMicrophone();
   const allow = navigator.mediaDevices.getUserMedia;
   navigator.mediaDevices.getUserMedia = async () => { throw new Error('NotAllowedError'); };
@@ -584,7 +584,7 @@ test('Record: a refused microphone shows 🚫 over 🎙️; once it is allowed, 
   await page.settle();
   m.dispatch('pointerup', { pointerId: 30 });
   await page.settle();
-  assert.ok(m.classList.contains('blocked'), 'refused: 🚫 over 🎙️');
+  assert.ok(m.classList.contains('blocked'), 'refused: 🚫 over 🎤');
   assert.match(m.getAttribute('aria-label'), /microphone is off/);
   assert.equal(m.classList.contains('kids-nudge'), false, 'no wiggle toward it');
   assert.equal(m.disabled, false, 'still pressable, for when a grown-up allows it');
@@ -659,7 +659,7 @@ test('Record: a tap counts 3, 2, 1 on the mic, then it listens until the next ta
   assert.equal(face(), '3');
   await until(() => face() === '2', '2');
   await until(() => face() === '1', '1');
-  await until(() => face() === '🎙️' && $('#kids-mic').classList.contains('recording'), 'listening');
+  await until(() => face() === '🎤' && $('#kids-mic').classList.contains('recording'), 'listening');
   assert.equal($('#kids-mic').classList.contains('counting'), false);
   assert.equal(mic.streams.at(-1).stopped, 0, 'the same microphone, asked for once, is listening');
   assert.equal(state.userClips.length, before, 'nothing kept yet');
@@ -685,7 +685,7 @@ test('Record: a tap during 3, 2, 1 calls it off, and nothing is kept', async () 
   $('#kids-mic').dispatch('pointerup', { pointerId: 5 });
   await page.settle();
   assert.equal($('#kids-mic').classList.contains('counting'), false);
-  assert.equal($('#kids-mic-face').textContent, '🎙️');
+  assert.equal($('#kids-mic-face').textContent, '🎤');
   assert.equal($('#kids-mic').classList.contains('recording'), false);
   assert.equal(mic.streams.at(-1).stopped, 1, 'the microphone is let go');
   await new Promise((r) => setTimeout(r, 150));

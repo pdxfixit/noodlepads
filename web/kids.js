@@ -36,6 +36,7 @@ import {
   KIDS_DRUMS, drumPicture, KIDS_SQUARES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName,
   kidsVoiceFields, voiceAfter, MAX_RECORD_SECONDS, MIN_RECORD_SECONDS, pressKind, KIDS_COUNT, pictureFor, KIDS_KEYS, keyRate, keyPlayId, keyPitch, isHighKey, beatLayout, cleanTab,
   nextKidsInstrument, keyKitId, kidsPlayedRows, squareFits, barOf, totalOf, KIDS_LOAD_WAIT,
+  padPicture, instPicture, KIDS_PLAY_FACES, KIDS_MIC_FACE,
   TUNE_BARS, TUNE_COUNT, pillSeconds, withBars, pillAt, withTuneNote, keptTune,
 } from './kids-logic.js';
 import { STEPS, MAX_SWING, outputDelay, stepsHeard } from './beat.js';
@@ -120,7 +121,7 @@ function renderPads() {
     const p = make('div', 'kids-page');
     p.dataset.page = String(i);
     p.append(...list.map((clip) => {
-      const pad = make('button', 'kids-pad', { type: 'button', textContent: clip.emoji || '🔊' });
+      const pad = make('button', 'kids-pad', { type: 'button', textContent: padPicture(clip) });
       pad.dataset.clip = clip.id;
       pad.setAttribute('aria-label', clip.label || 'Sound');
       pad.style.setProperty('--pad', deps.colorOf(clip));
@@ -296,7 +297,7 @@ let micRefused = false;
 const MIC_LABEL = 'Record: tap for 3, 2, 1 and talk, tap again to stop; or hold and talk';
 const MIC_OFF = 'The microphone is off: a grown-up can allow it in the browser';
 
-// No microphone here, or it was refused: 🚫 over 🎙️ (styles.css
+// No microphone here, or it was refused: 🚫 over 🎤 (styles.css
 // .kids-mic.blocked), no words, and the first-steps wiggle stops, since
 // a tap can't record. Without a microphone at all the mic is off too.
 function showMic() {
@@ -417,7 +418,7 @@ function count() {
 
 function showCount(text) {
   el.mic.classList.toggle('counting', !!text);
-  el.micFace.textContent = text || '🎙️';
+  el.micFace.textContent = text || KIDS_MIC_FACE;
 }
 
 // Listens: the recorder runs on the stream, the ring fills as the time runs
@@ -636,7 +637,7 @@ function renderBeat() {
 }
 
 function showPlay() {
-  el.play.textContent = playing ? '⏹️' : '▶️';
+  el.play.textContent = playing ? KIDS_PLAY_FACES.playing : KIDS_PLAY_FACES.idle;
   el.play.setAttribute('aria-label', playing ? 'Stop' : 'Play');
   el.play.setAttribute('aria-pressed', String(!!playing));
 }
@@ -798,7 +799,7 @@ function keyClip(i) {
 const keysInstrument = () => instrumentById(getSetting('instNotes')) ?? instrumentById(PLAYED.notes.default);
 function showInstButton() {
   const inst = keysInstrument();
-  el.inst.textContent = inst.emoji;
+  el.inst.textContent = instPicture(inst);
   el.inst.dataset.inst = inst.id;
   el.inst.setAttribute('aria-label', `Next instrument (now ${inst.name})`);
 }
@@ -824,7 +825,7 @@ function renderKeys() {
     const clip = keyClip(i);
     const high = isHighKey(k);
     const b = make('button', high ? 'kids-key high' : 'kids-key', { type: 'button' });
-    const who = make('span', 'kids-key-inst', { textContent: inst.emoji });
+    const who = make('span', 'kids-key-inst', { textContent: instPicture(inst) });
     who.setAttribute('aria-hidden', 'true');
     const face = make('span', 'kids-key-face', { textContent: clip?.emoji ?? '🎵' });
     if (high) face.append(make('span', 'kids-key-star', { textContent: '✦' }));

@@ -114,11 +114,14 @@ five-year-old, with no words to read and nothing to delete, edit or share:
 
 - **🔊 Pads**: big picture pads, the kid's own sounds first (newest first),
   then only the presets whose picture shows the sound they make, funniest
-  first (`kids-logic.js` `KIDS_PADS`, 69 of them: the animals, the silly
+  first (`kids-logic.js` `KIDS_PADS`, 68 of them: the animals, the silly
   ones, effects, game and sci-fi sounds, spoken callouts with a face or sign
   that says the word, then the drums that look like what they are, and last
   the startles: 💥 explosion, siren, alarm, airhorn, 😈 evil laugh and buzzer,
-  which frighten some small kids). A 🍎 that
+  which frighten some small kids). No picture is used twice on a Kids
+  screen (Ben, 2026-10-26; `tests/kids-pictures.test.mjs`): the boom wears a
+  🧨 (🔊 is the Pads tab), the teleport a 🌌 (🌀 is a skin), and there is
+  no snare pad (🥁 is the Beats tab; the beat has the snare). A 🍎 that
   plays a note, a 🌞 chord, a 🐘 bass note or a 🎩 hi-hat never shows: their
   pictures teach a grown-up something and a small kid the wrong thing (Ben,
   2026-10-22). A preset a grown-up hid in ✏️ Edit sounds stays hidden here
@@ -133,7 +136,7 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   is ignored. A tap plays from the start; no holding or looping. The round button at the top left shows the
   person's pad skin; each tap moves to the next one (Tiles after Googly eyes)
   and keeps it, as ⚙️ Settings → 🎨 Look would.
-- **🎙️ Record**: tap the big mic and it counts 3, 2, 1 on its face (a beep
+- **🎙️ Record**: tap the big mic (🎤, as 🎙️ is the tab) and it counts 3, 2, 1 on its face (a beep
   each), then listens until the next tap; or hold it and let go to stop
   (Ben, 2026-10-22: "both should be capable"). A press under 350 ms is a tap
   (`kids-logic.js` `pressKind`); the hold's first moments are thrown away and
@@ -145,7 +148,7 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   It becomes a pad of the kid's own, saved as the sound sheet saves one, and
   plays. With no microphone (or not a secure page) the mic is off, and
   when the browser refuses it (or its permission says denied) the mic
-  stays pressable for a retry; either way 🚫 sits over 🎙️, its tooltip
+  stays pressable for a retry; either way 🚫 sits over 🎤, its tooltip
   says the microphone is off, and the first-steps wiggle stops
   (`kids.js` `showMic`). 🤖 Robot, 🐭 Tiny (Chipmunk) and
   👻 Spooky (Monster with Stadium's echo) light for the next recordings and
@@ -159,7 +162,8 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   of a 16-pill bar), so the regular app's Beats opens it whenever nothing
   else is open. A kids beat from before (`beat-kids-…`) becomes the scratch,
   or a beat in 🗂️ Beats when the scratch already has hits.
-  Across on a wide screen; down the screen on a phone. ▶️ shows ⏹️ at once
+  Across on a wide screen; down the screen on a phone. ▶️ shows ⏸️ at once
+  (⏹️ is Stop all, always on screen)
   and a second tap stops it, even while the sounds are still loading (they
   never start two beats); if the sounds take more than two seconds, ▶️ comes
   back to be tapped again. A square lights as its pill comes out of the

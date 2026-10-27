@@ -252,7 +252,7 @@ And back the other way, `app.js makeSequencer` wires `onHit` → `dj.flashClip`,
 
 ### Screens
 
-Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, 🎹 Keys. Plus ⏹️ (`stopAll`: sounds, the beat, ●, held keys, and a mic recording, kept without playing: `stopRecording({ quiet: true })`; then `deps.stopAll` = `app.js stopEverything({ keepClicks: true })`: the whole app quiet, the grown-up's saved ⏲️ choices kept), and ⚙️ (the regular `#settings-open`, gated). The tab is remembered on the device (`kids-tab`).
+Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, 🎹 Keys. No picture is used twice on a screen (`tests/kids-pictures.test.mjs` reads them all): `KIDS_PAD_PICTURES`, `KIDS_INST_PICTURES`, `KIDS_MIC_FACE`, `KIDS_PLAY_FACES` and the `KIDS_EMOJI` pool exist for that. Plus ⏹️ (`stopAll`: sounds, the beat, ●, held keys, and a mic recording, kept without playing: `stopRecording({ quiet: true })`; then `deps.stopAll` = `app.js stopEverything({ keepClicks: true })`: the whole app quiet, the grown-up's saved ⏲️ choices kept), and ⚙️ (the regular `#settings-open`, gated). The tab is remembered on the device (`kids-tab`).
 
 | Tab | Draws | Plays by |
 |---|---|---|
@@ -283,7 +283,7 @@ One dialog `#kids-sum`, wired on first use. `askSum({ right, wrong, stay, owner 
 | MIME list | `audio/webm;codecs=opus`, `audio/mp4`, `audio/webm`, `audio/ogg` | the same list, written again |
 | Meter | `meter.js levelOf` → `--kids-level` | `levelOf` → the grille, plus Too loud |
 | Rejects | under 0.3 s (`MIN_RECORD_SECONDS`) or silent (`audio.js trimBounds`): a wiggle | silent: a sentence; too long |
-| Saves | a new clip `{id: newId('user'), personId, label, emoji: pictureFor, color, ...kidsVoiceFields(voice), blob, mime, created}` via `deps.saveClip` (`state.userClips` + `persist('clips')`) | the sheet's own save, with trim, edits, knobs |
+| Saves | a new clip `{id: newId('user'), personId, label, emoji: pictureFor (from `KIDS_EMOJI`, none a picture Kids shows already), color, ...kidsVoiceFields(voice), blob, mime, created}` via `deps.saveClip` (`state.userClips` + `persist('clips')`) | the sheet's own save, with trim, edits, knobs |
 | Voice | 🤖 🐭 👻 change the last sound at once (`tapVoice`, `audio.dropRendered`) | the sheet's voices |
 
 ### The kid's beat: a regular beat, read and written by Kids
