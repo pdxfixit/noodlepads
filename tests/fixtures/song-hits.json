@@ -1,0 +1,1883 @@
+{
+ "about": "Every hit 🎼 Song books when it plays a song, and 💃 Grooves' sample (hearBeat) books for a beat: the sound, seconds after the first pill, rate, length, the gain of each node it goes through and its fade. Written by the one-beat-engine work (docs/design/one-beat-engine.md); tests/song-same-hits.test.mjs checks the app against it.",
+ "song": [
+  {
+   "clip": "pip-name",
+   "start": 0,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    0,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 0,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 0,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1.5,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-spring",
+   "start": 0,
+   "length": 0.5,
+   "stop": 0.308,
+   "rate": 0.749154,
+   "gain": [
+    1,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     0.3
+    ],
+    [
+     "ramp",
+     0,
+     0.308
+    ]
+   ]
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 0,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 0.1995,
+   "length": 1,
+   "stop": 0.407,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     0.399
+    ],
+    [
+     "ramp",
+     0,
+     0.407
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 0.3,
+   "length": 1,
+   "stop": 0.908,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    0,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     0.9
+    ],
+    [
+     "ramp",
+     0,
+     0.908
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 0.3,
+   "length": 1,
+   "stop": 0.908,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     0.9
+    ],
+    [
+     "ramp",
+     0,
+     0.908
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 0.399,
+   "length": 1,
+   "stop": 0.5075,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     0.4995
+    ],
+    [
+     "ramp",
+     0,
+     0.5075
+    ]
+   ]
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 0.399,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 0.4995,
+   "length": 1,
+   "stop": 0.608,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     0.6
+    ],
+    [
+     "ramp",
+     0,
+     0.608
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 0.4995,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-spring",
+   "start": 0.525,
+   "length": 0.5,
+   "stop": 0.683,
+   "rate": 1.122462,
+   "gain": [
+    1,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     0.675
+    ],
+    [
+     "ramp",
+     0,
+     0.683
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 0.6,
+   "length": 1,
+   "stop": 0.8075,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     0.7995
+    ],
+    [
+     "ramp",
+     0,
+     0.8075
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 0.6,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    0,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 0.6,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 0.6,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 0.7995,
+   "length": 1,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 0.9,
+   "length": 1,
+   "stop": 1.508,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    0,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     1.5
+    ],
+    [
+     "ramp",
+     0,
+     1.508
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 0.9,
+   "length": 1,
+   "stop": 1.508,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     1.5
+    ],
+    [
+     "ramp",
+     0,
+     1.508
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 0.999,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1.5,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 0.999,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 1.2,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    0,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 1.2,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-spring",
+   "start": 1.2,
+   "length": 0.5,
+   "stop": null,
+   "rate": 1.498307,
+   "gain": [
+    1,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 1.2,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 1.3995,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 1.5,
+   "length": 1,
+   "stop": 2.108,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    0,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     2.1
+    ],
+    [
+     "ramp",
+     0,
+     2.108
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 1.5,
+   "length": 1,
+   "stop": 2.108,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     2.1
+    ],
+    [
+     "ramp",
+     0,
+     2.108
+    ]
+   ]
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 1.599,
+   "length": 0.2,
+   "stop": 8.283,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     8.275
+    ],
+    [
+     "ramp",
+     0,
+     8.283
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 1.8,
+   "length": 0.3,
+   "stop": 8.283,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    0,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     8.275
+    ],
+    [
+     "ramp",
+     0,
+     8.283
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 1.8,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 1.8,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1.5,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 1.9995,
+   "length": 1,
+   "stop": 2.207,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     2.199
+    ],
+    [
+     "ramp",
+     0,
+     2.207
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 2.1,
+   "length": 1,
+   "stop": 8.283,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    0,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     8.275
+    ],
+    [
+     "ramp",
+     0,
+     8.283
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 2.1,
+   "length": 1,
+   "stop": 2.708,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     2.7
+    ],
+    [
+     "ramp",
+     0,
+     2.708
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 2.199,
+   "length": 1,
+   "stop": 8.283,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     8.275
+    ],
+    [
+     "ramp",
+     0,
+     8.283
+    ]
+   ]
+  },
+  {
+   "clip": "pip-spring",
+   "start": 2.199,
+   "length": 0.5,
+   "stop": 8.283,
+   "rate": 0.561231,
+   "gain": [
+    1,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     2.349
+    ],
+    [
+     "ramp",
+     0,
+     2.357
+    ],
+    [
+     "set",
+     1,
+     8.275
+    ],
+    [
+     "ramp",
+     0,
+     8.283
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 2.2995,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 2.4,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 2.7,
+   "length": 1,
+   "stop": 3.308,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     3.3
+    ],
+    [
+     "ramp",
+     0,
+     3.308
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 2.799,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1.5,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 3,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 3.1995,
+   "length": 0.3,
+   "stop": 8.283,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    0.4,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     8.275
+    ],
+    [
+     "ramp",
+     0,
+     8.283
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 3.3,
+   "length": 1,
+   "stop": 3.908,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     3.9
+    ],
+    [
+     "ramp",
+     0,
+     3.908
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 3.6,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 3.9,
+   "length": 1,
+   "stop": 4.508,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     4.5
+    ],
+    [
+     "ramp",
+     0,
+     4.508
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 4.2,
+   "length": 0.3,
+   "stop": 8.283,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     8.275
+    ],
+    [
+     "ramp",
+     0,
+     8.283
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 4.5,
+   "length": 1,
+   "stop": 8.283,
+   "rate": 1,
+   "gain": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     8.275
+    ],
+    [
+     "ramp",
+     0,
+     8.283
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 4.8,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1.5,
+    0.8,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-spring",
+   "start": 4.8,
+   "length": 0.5,
+   "stop": 5.108,
+   "rate": 0.749154,
+   "gain": [
+    1,
+    0.8,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     5.1
+    ],
+    [
+     "ramp",
+     0,
+     5.108
+    ]
+   ]
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 4.8,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 4.9995,
+   "length": 1,
+   "stop": 5.207,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     5.199
+    ],
+    [
+     "ramp",
+     0,
+     5.207
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 5.199,
+   "length": 1,
+   "stop": 5.3075,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     5.2995
+    ],
+    [
+     "ramp",
+     0,
+     5.3075
+    ]
+   ]
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 5.199,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 5.2995,
+   "length": 1,
+   "stop": 5.408,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     5.4
+    ],
+    [
+     "ramp",
+     0,
+     5.408
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 5.2995,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-spring",
+   "start": 5.325,
+   "length": 0.5,
+   "stop": 5.483,
+   "rate": 1.122462,
+   "gain": [
+    1,
+    0.8,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     5.475
+    ],
+    [
+     "ramp",
+     0,
+     5.483
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 5.4,
+   "length": 1,
+   "stop": 5.6075,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     5.5995
+    ],
+    [
+     "ramp",
+     0,
+     5.6075
+    ]
+   ]
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 5.4,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 5.5995,
+   "length": 1,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 5.799,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1.5,
+    0.8,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 5.799,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-spring",
+   "start": 6,
+   "length": 0.5,
+   "stop": null,
+   "rate": 1.498307,
+   "gain": [
+    1,
+    0.8,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 6,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 6.1995,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 6.399,
+   "length": 0.2,
+   "stop": 8.283,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     8.275
+    ],
+    [
+     "ramp",
+     0,
+     8.283
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 6.6,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1.5,
+    0.8,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 6.7995,
+   "length": 1,
+   "stop": 7.007,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     6.999
+    ],
+    [
+     "ramp",
+     0,
+     7.007
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 6.999,
+   "length": 1,
+   "stop": 8.283,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     8.275
+    ],
+    [
+     "ramp",
+     0,
+     8.283
+    ]
+   ]
+  },
+  {
+   "clip": "pip-spring",
+   "start": 6.999,
+   "length": 0.5,
+   "stop": 8.283,
+   "rate": 0.561231,
+   "gain": [
+    1,
+    0.8,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     7.149
+    ],
+    [
+     "ramp",
+     0,
+     7.157
+    ],
+    [
+     "set",
+     1,
+     8.275
+    ],
+    [
+     "ramp",
+     0,
+     8.283
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 7.0995,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 7.485,
+   "length": 0.3,
+   "stop": 7.779071,
+   "rate": 1,
+   "gain": [
+    1.5,
+    0.8,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1.5,
+     7.771071
+    ],
+    [
+     "ramp",
+     0,
+     7.779071
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 7.771071,
+   "length": 0.3,
+   "stop": 8.283,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     8.275
+    ],
+    [
+     "ramp",
+     0,
+     8.283
+    ]
+   ]
+  }
+ ],
+ "hear": [
+  {
+   "clip": "pip-name",
+   "start": 0,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1.5,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-spring",
+   "start": 0,
+   "length": 0.5,
+   "stop": 0.341333,
+   "rate": 0.749154,
+   "gain": [
+    1,
+    0.8,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     0.333333
+    ],
+    [
+     "ramp",
+     0,
+     0.341333
+    ]
+   ]
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 0,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 0.221667,
+   "length": 1,
+   "stop": 0.451333,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     0.443333
+    ],
+    [
+     "ramp",
+     0,
+     0.451333
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 0.443333,
+   "length": 1,
+   "stop": 0.563,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     0.555
+    ],
+    [
+     "ramp",
+     0,
+     0.563
+    ]
+   ]
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 0.443333,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 0.555,
+   "length": 1,
+   "stop": 0.674667,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     0.666667
+    ],
+    [
+     "ramp",
+     0,
+     0.674667
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 0.555,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-spring",
+   "start": 0.583333,
+   "length": 0.5,
+   "stop": 0.758,
+   "rate": 1.122462,
+   "gain": [
+    1,
+    0.8,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     0.75
+    ],
+    [
+     "ramp",
+     0,
+     0.758
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 0.666667,
+   "length": 1,
+   "stop": 0.896333,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     0.888333
+    ],
+    [
+     "ramp",
+     0,
+     0.896333
+    ]
+   ]
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 0.666667,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 0.888333,
+   "length": 1,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 1.11,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1.5,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 1.11,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-spring",
+   "start": 1.333333,
+   "length": 0.5,
+   "stop": null,
+   "rate": 1.498307,
+   "gain": [
+    1,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 1.333333,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 1.555,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-zapper",
+   "start": 1.776667,
+   "length": 0.2,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 2,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1.5,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-horn",
+   "start": 2.221667,
+   "length": 1,
+   "stop": 2.451333,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     0.5,
+     2.443333
+    ],
+    [
+     "ramp",
+     0,
+     2.451333
+    ]
+   ]
+  },
+  {
+   "clip": "pip-horn",
+   "start": 2.443333,
+   "length": 1,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    0.5,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-spring",
+   "start": 2.443333,
+   "length": 0.5,
+   "stop": 2.618,
+   "rate": 0.561231,
+   "gain": [
+    1,
+    0.8,
+    1
+   ],
+   "fade": [
+    [
+     "set",
+     1,
+     2.61
+    ],
+    [
+     "ramp",
+     0,
+     2.618
+    ]
+   ]
+  },
+  {
+   "clip": "pip-name",
+   "start": 2.555,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 3.11,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1.5,
+    0.8,
+    1
+   ],
+   "fade": []
+  },
+  {
+   "clip": "pip-name",
+   "start": 3.555,
+   "length": 0.3,
+   "stop": null,
+   "rate": 1,
+   "gain": [
+    1,
+    0.8,
+    1
+   ],
+   "fade": []
+  }
+ ]
+}
