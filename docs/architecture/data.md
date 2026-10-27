@@ -359,6 +359,8 @@ Nothing found is changed or deleted.
 
 `state.js persist` stamps `changed` in place (`merge3.js stampEdit`). The cloud's three-way merge uses it for "the newer edit wins" (`stampOf` falls back to `saved` and `edited`). App.js persists beats, the open beat and saved songs as `structuredClone`, so the copy in memory has no stamp while the stored copy does. Only the next `readStorage` brings the stamp into memory. Whether a sync from memory loses a clash because of this is unverified (cloud area).
 
+A sync that changes the open beat while it plays is merged into the next save (`sequencer.js save`, `mergedWithStored`; see beats-song.md), so a tap never undoes it. A sync that deletes the open beat while it plays is not honoured the same way: the next tap saves the screen's beat again and re-creates it, an edit beating a delete (the same rule `merge3.js` applies between devices).
+
 ## Seams
 
 1. **The list of stores is written out by hand in about ten places, and only SCHEMA is tested:**
