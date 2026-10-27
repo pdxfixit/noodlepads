@@ -34,6 +34,13 @@ export function groupLabel(group, kitGroups = []) {
   return `${emoji} ${name}`;
 }
 
+// Who plays a band of Notes, Chords or Bass: its first tile's own
+// instrument, else the person's pick for the group.
+function bandInstrument(b, clipById) {
+  const first = b.sounds.map(clipById).find((c) => c?.kit && c.group === b.group);
+  return instrumentById(presetInstrument(first)) ?? pickedFor(b.group);
+}
+
 // Draws `touch` into `box` for playing: a heading and a grid of tiles per
 // band, each tile a sound in its family's color. A sound that is gone is
 // left out, and so is a band with none left. With a grid (touch-grid.js),
@@ -88,7 +95,20 @@ function playBand(b, i, clips, deps) {
   const head = document.createElement('h3');
   head.className = 'touch-head';
   head.id = `touch-head-${i}`;
-  head.textContent = groupLabel(b.group, deps.kitGroups());
+  const name = groupLabel(b.group, deps.kitGroups());
+  head.textContent = name;
+  // Notes, Chords and Bass say who plays them, as a small picture after the
+  // name (Ben, 2026-10-27); the words are in the heading's label and tooltip.
+  if (hasPicker(b.group)) {
+    const who = bandInstrument(b, deps.clipById);
+    const pic = document.createElement('span');
+    pic.className = 'touch-head-inst';
+    pic.setAttribute('aria-hidden', 'true');
+    pic.textContent = who.emoji;
+    head.append(' ', pic);
+    head.title = `${name.replace(/^\S+ /, '')}: played by ${who.name}`;
+    head.setAttribute('aria-label', head.title);
+  }
   band.setAttribute('aria-labelledby', head.id);
   const tiles = document.createElement('div');
   tiles.className = 'touch-tiles';
@@ -430,21 +450,17 @@ export function createTouchEditor({ el, deps }) {
   // 0030). The button shows the band's own instrument; a pick plays every
   // tile's note on another one, and is the person's pick too.
   const kitName = (group) => deps.kitGroups().find((g) => g.id === group)?.name ?? group;
-  function bandInstrument(b) {
-    const first = b.sounds.map(clip).find((c) => c?.kit && c.group === b.group);
-    return instrumentById(presetInstrument(first)) ?? pickedFor(b.group);
-  }
   function instLine(b, i) {
     if (!hasPicker(b.group)) return [];
     const g = { id: b.group, name: kitName(b.group) };
     const open = instBand === i;
     const line = document.createElement('div');
     line.className = 'te-band-inst';
-    const pick = pickerButton(g, open, { where: `band-${i}`, inst: bandInstrument(b), title: `Who plays this band: pick an instrument, and every pad keeps its note` });
+    const pick = pickerButton(g, open, { where: `band-${i}`, inst: bandInstrument(b, clip), title: `Who plays this band: pick an instrument, and every pad keeps its note` });
     pick.dataset.instBand = i;
     line.append(pick);
     if (!open) return [line];
-    const list = pickerList(g, { where: `band-${i}`, now: bandInstrument(b).id, label: `Who plays ${label(b.group)}` });
+    const list = pickerList(g, { where: `band-${i}`, now: bandInstrument(b, clip).id, label: `Who plays ${label(b.group)}` });
     for (const c of list.querySelectorAll('[data-inst]')) c.dataset.instBand = i;
     return [line, list];
   }
