@@ -18,7 +18,7 @@ import { recall, remember, onePressOneClick } from './util.js';
 import { PICTURES, pictureTakenBy } from './model.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
 import { openDialog, setupDialog, openerOf } from './dialogs.js';
-import { setSetting, onSetting, deviceChoice } from './settings.js';
+import { SETTINGS, getSetting, setSetting, onSetting, deviceChoice } from './settings.js';
 import { createKeysEditor } from './dj-keys.js';
 import { fadeAway, showBanner } from './ui.js';
 import { drawSpeaker, speakerControls, percent } from './row-volume.js';
@@ -38,7 +38,9 @@ const STOPS = tempoStops();   // the click track slider's positions (see sequenc
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
 // How long a line with Undo (for the beat, or a take taken out) stays (held while touched).
 const LINE_MS = 10000;
-export const HOLD_TO_LOOP_MS = 350;   // as on the pads: hold this long and it keeps repeating
+export const HOLD_TO_LOOP_MS = SETTINGS.holdToLoop.default;   // as on the pads: hold this long and it keeps repeating
+// What the person chose (⚙️ holdToLoop), asked at each press.
+const holdTime = () => getSetting('holdToLoop');
 
 // One color per family, like the groups of the periodic table. Dark enough
 // for white text (tests/contrast.test.mjs). A person's own sounds use their color.
@@ -322,7 +324,7 @@ export function createDJ({ el, deps }) {
     const clip = playTarget(target);
     if (!clip || wasLooping) return;
     clearTimeout(holds.get(id));
-    holds.set(id, setTimeout(() => { holds.delete(id); loopIt(clip); }, HOLD_TO_LOOP_MS));
+    holds.set(id, setTimeout(() => { holds.delete(id); loopIt(clip); }, holdTime()));
   }
   function shiftPlay(target) {
     const wasLooping = deps.isLooping?.(soundOf(target));
@@ -352,7 +354,7 @@ export function createDJ({ el, deps }) {
     if (e.repeat) {
       // Still down: loop once it has been held long enough.
       const h = held.get(code);
-      if (h && !h.looped && now - h.at >= HOLD_TO_LOOP_MS) {
+      if (h && !h.looped && now - h.at >= holdTime()) {
         h.looped = true;
         const clip = deps.clipById(deck()[code]);
         if (clip) loopIt(clip);
@@ -385,7 +387,7 @@ export function createDJ({ el, deps }) {
   const fingers = fingerTaps({
     onTap: (t) => playTarget(t),
     onHold: (t) => { const clip = playTarget(t); if (clip) loopIt(clip); },
-    holdMs: HOLD_TO_LOOP_MS,
+    holdMs: holdTime,
   });
   // `sel` finds what was pressed in `box`; `targetOf` says which sound it is.
   function listen(box, sel, targetOf) {

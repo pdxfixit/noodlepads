@@ -12,13 +12,15 @@ import { isKitClip, ownSoundsTitle, groupKit, openKitGroups, withHidden } from '
 import { remember, recall, onePressOneClick } from './util.js';
 import { countPlay } from './play-count.js';
 import { groupOwn, cleanGroups, UNGROUPED } from './groups.js';
-import { getSetting, setSetting, onSetting } from './settings.js';
+import { SETTINGS, getSetting, setSetting, onSetting } from './settings.js';
 import { padWidth, sliderAt } from './pad-size.js';
 import { fingerTaps, isFinger } from './finger.js';
 import { hasPicker, pickerButton, pickerList, instrumentBadge } from './inst-picker.js';
 import { PLAYED } from './instruments.js';
 
-export const HOLD_TO_LOOP_MS = 350;  // hold a pad this long and it keeps repeating; a tap stops it
+export const HOLD_TO_LOOP_MS = SETTINGS.holdToLoop.default;  // hold a pad this long and it keeps repeating; a tap stops it
+// What the person chose (⚙️ holdToLoop), asked at each press.
+const holdTime = () => getSetting('holdToLoop');
 
 const el = {};
 let openSheet = () => {};
@@ -852,7 +854,7 @@ export function initPads(hooks) {
   const fingers = fingerTaps({
     onTap: (clip) => tapPad(clip),
     onHold: startLoop,
-    holdMs: HOLD_TO_LOOP_MS,
+    holdMs: holdTime,
   });
   el.pads.addEventListener('pointerdown', (e) => {
     if (state.editing || e.button !== 0) return;
@@ -863,7 +865,7 @@ export function initPads(hooks) {
     if (isFinger(e)) { fingers.down(e, clip, { hold: !audio.isLooping(clip.id) }); return; }
     if (e.shiftKey && !audio.isLooping(clip.id)) { startLoop(clip); return; }
     if (tapPad(clip)) return;
-    holds.set(e.pointerId, setTimeout(() => audio.loop(clip), HOLD_TO_LOOP_MS));
+    holds.set(e.pointerId, setTimeout(() => audio.loop(clip), holdTime()));
   });
   // A mouse let go before the hold time is just a click.
   const release = (e) => {

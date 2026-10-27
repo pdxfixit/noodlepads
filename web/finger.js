@@ -27,7 +27,9 @@ const note = (id, what) => {
 // in place; `onHold(data)` (with `holdMs`) when it stays still that long, and
 // then the lift does nothing. A move past the slop, or a pointercancel (the
 // browser took the touch for a scroll), drops the finger silently.
-// `data` is whatever the caller passed to down(), such as the pad.
+// `data` is whatever the caller passed to down(), such as the pad. `holdMs`
+// is a number, or a function asked at each press (a hold time the person can
+// change, settings.js holdToLoop).
 export function fingerTaps({ onTap, onHold = null, holdMs = 0 }) {
   const down = new Map();   // pointer id -> {x, y, data, timer}
   const drop = (id) => {
@@ -44,7 +46,7 @@ export function fingerTaps({ onTap, onHold = null, holdMs = 0 }) {
       drop(e.pointerId);
       const f = { x: e.clientX ?? 0, y: e.clientY ?? 0, data, timer: 0 };
       if (onHold && hold) {
-        f.timer = setTimeout(() => { down.delete(e.pointerId); note(e.pointerId, 'hold'); onHold(data); }, holdMs);
+        f.timer = setTimeout(() => { down.delete(e.pointerId); note(e.pointerId, 'hold'); onHold(data); }, typeof holdMs === 'function' ? holdMs() : holdMs);
       }
       down.set(e.pointerId, f);
       note(e.pointerId, 'down');
