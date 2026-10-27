@@ -112,6 +112,11 @@ A person on the 🧸 Kids level (ADR 0019; `kids.js`, its pure parts in
 `kids-logic.js`) sees four picture screens in place of the regular app, for a
 five-year-old, with no words to read and nothing to delete, edit or share:
 
+Held sideways on a phone (a window under 520 px tall and wider than tall)
+the four tabs and ⏹️ stand in a column down the left edge, so every screen
+keeps the height under the gear and nothing is cut off; the grown-up sum's
+ten keys go five across (`just look kids-pads --landscape`).
+
 - **🔊 Pads**: big picture pads, the kid's own sounds first (newest first),
   then only the presets whose picture shows the sound they make, funniest
   first (`kids-logic.js` `KIDS_PADS`, 68 of them: the animals, the silly

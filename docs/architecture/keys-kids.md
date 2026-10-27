@@ -252,7 +252,7 @@ And back the other way, `app.js makeSequencer` wires `onHit` → `dj.flashClip`,
 
 ### Screens
 
-Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, 🎹 Keys. No picture is used twice on a screen (`tests/kids-pictures.test.mjs` reads them all): `KIDS_PAD_PICTURES`, `KIDS_INST_PICTURES`, `KIDS_MIC_FACE`, `KIDS_PLAY_FACES` and the `KIDS_EMOJI` pool exist for that. Plus ⏹️ (`stopAll`: sounds, the beat, ●, held keys, and a mic recording, kept without playing: `stopRecording({ quiet: true })`; then `deps.stopAll` = `app.js stopEverything({ keepClicks: true })`: the whole app quiet, the grown-up's saved ⏲️ choices kept), and ⚙️ (the regular `#settings-open`, gated). The tab is remembered on the device (`kids-tab`).
+On a window under 520 px tall and wider than tall (a phone held sideways) the tabs and ⏹️ are a column down the left edge (`styles.css`, the landscape block after the Keys rules), and the grown-up sum's keys go five across. Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, 🎹 Keys. No picture is used twice on a screen (`tests/kids-pictures.test.mjs` reads them all): `KIDS_PAD_PICTURES`, `KIDS_INST_PICTURES`, `KIDS_MIC_FACE`, `KIDS_PLAY_FACES` and the `KIDS_EMOJI` pool exist for that. Plus ⏹️ (`stopAll`: sounds, the beat, ●, held keys, and a mic recording, kept without playing: `stopRecording({ quiet: true })`; then `deps.stopAll` = `app.js stopEverything({ keepClicks: true })`: the whole app quiet, the grown-up's saved ⏲️ choices kept), and ⚙️ (the regular `#settings-open`, gated). The tab is remembered on the device (`kids-tab`).
 
 | Tab | Draws | Plays by |
 |---|---|---|

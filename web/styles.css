@@ -4921,7 +4921,8 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
   z-index: 11;
   display: flex;
   flex-direction: column;
-  padding: calc(env(safe-area-inset-top) + 74px) var(--gutter) 0;
+  --kids-view-top: calc(env(safe-area-inset-top) + 74px);   /* where the screens start, under the gear */
+  padding: var(--kids-view-top) var(--gutter) 0;
   background: var(--board);
   color: #fff;
   user-select: none;
@@ -5000,12 +5001,13 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
   align-items: center;
   gap: 12px;
 }
-@media (min-width: 700px) { .kids-top { --kids-top-room: 128px; } }
+/* The level lights sit beside ⚙️ from 421 px (a phone held sideways ran the slider under them). */
+@media (min-width: 421px) { .kids-top { --kids-top-room: 128px; } }
 @media (min-width: 900px) { .kids-top { --kids-top-room: 160px; } }
 /* From 820 px the header's level lights are the big ones and the row is
    62 px tall, so ⚙️ sits 9 px lower (27 to 71): the view starts 9 px lower
    too, keeping the bar level with the gear and the gear's 12 px above the keys. */
-@media (min-width: 820px) { .kids { padding-top: calc(env(safe-area-inset-top) + 83px); } }
+@media (min-width: 820px) { .kids { --kids-view-top: calc(env(safe-area-inset-top) + 83px); } }
 .kids-skin {
   flex: none;
   width: 44px;
@@ -5244,6 +5246,41 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
   .kids-key-inst { top: 50%; left: 18px; translate: 0 -50%; font-size: 1.2rem; }   /* lying down: at the key's left end */
 }
 
+/* A phone held sideways (council round 1, the Kids UX seat, 2026-10-27: the
+   tabs, the beat's last rows and the voices ran off the bottom, cut off by a
+   window 360 px tall). The window is wide and short, so the tabs and ⏹️ stand
+   in a column down the left edge, out of the screens' height, and every
+   screen gets all the height left under the gear. `just look kids-pads --landscape`
+   checks it at 667×375, 740×360, 844×390 and 932×430. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .kids {
+    flex-direction: row;
+    gap: 12px;
+    padding-left: calc(env(safe-area-inset-left) + 8px);
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+  .kids-view { min-width: 0; gap: 8px; }
+  .kids-bar {
+    --kids-tab-h: auto;
+    order: -1;
+    flex: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: 68px;
+    max-width: none;
+    margin: calc(-1 * var(--kids-view-top)) 0 calc(-8px - env(safe-area-inset-bottom));
+    padding: calc(env(safe-area-inset-top) + 8px) 0 calc(8px + env(safe-area-inset-bottom));
+  }
+  .kids-tabs { flex: 1 1 auto; flex-direction: column; gap: 6px; padding: 0 0 8px; border-right: 0; border-bottom: 2px solid rgba(255, 255, 255, 0.28); }
+  .kids-tab { flex: 1 1 0; width: 100%; height: auto; min-height: 44px; max-height: 72px; border-radius: 16px; font-size: 1.7rem; }
+  .kids-stop { width: 56px; height: 56px; align-self: center; font-size: 1.7rem; }
+  /* The beat: squares 44 px tall at least, and the grid's own padding just
+     enough for the playhead's outline, so all four drums fit 360 px. */
+  .kids-beat { padding-block: 6px; }
+  .kids-beat[data-layout="across"] { grid-template-rows: repeat(4, minmax(44px, 1fr)); }
+}
+
 /* The grown-up sum: big number keys. */
 dialog.kids-sum {
   width: min(420px, calc(100vw - 2 * var(--gutter)));
@@ -5261,6 +5298,15 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
 .kids-sum-keys button { min-height: 64px; border: 0; border-radius: 16px; background: var(--chalk); color: var(--ink); box-shadow: 0 5px 0 var(--chalk-edge); font: 900 2rem/1 var(--font-display); }
 .kids-sum-keys button:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--chalk-edge); }
 .kids-sum-zero { grid-column: 2; }
+/* A short, wide window (a phone held sideways): the keys go five across, two
+   rows, so all ten show without scrolling the card (council round 1, Kids UX seat). */
+@media (orientation: landscape) and (max-height: 520px) {
+  dialog.kids-sum { width: min(560px, calc(100vw - 2 * var(--gutter))); padding: 14px 20px; }
+  .kids-sum-q { margin-bottom: 8px; font-size: min(2.4rem, 11vw); }
+  .kids-sum-keys { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .kids-sum-keys button { min-height: 56px; }
+  .kids-sum-zero { grid-column: auto; }
+}
 /* The sum's card is light: its focus rings (the keys, ✕ Back) are dark. */
 dialog.kids-sum :focus-visible { outline: 4px solid var(--ink); outline-offset: 3px; }
 /* ☁️ In the cloud's sum: who it is for, under the title (grown-up.js). */
