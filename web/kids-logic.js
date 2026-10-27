@@ -155,7 +155,12 @@ export function kidsPadOrder(clips) {
 // square i is pill 2i of a 16-pill bar, so the beat is a normal beat. It is
 // the person's scratch beat (ADR 0020, scratch.js), which the regular app
 // opens whenever nothing else is open and plays the same.
-export const KIDS_DRUMS = ['kick', 'snare', 'hihat', 'clap'];
+// Kick 🦶, snare 🪘, shaker 🪇, clap 👏 (Ben, 2026-10-26): each picture shows
+// its sound, and none is a tab's (🔊 🎙️ 🥁 🎹), where the snare's own 🥁 and
+// the hi-hat's 🎩 pun were. The snare wears 🪘 in this grid only.
+export const KIDS_DRUMS = ['kick', 'snare', 'shaker', 'clap'];
+export const KIDS_DRUM_PICTURES = { snare: '🪘' };
+export const drumPicture = (clip) => KIDS_DRUM_PICTURES[clip.kitId] ?? clip.emoji;
 export const KIDS_SQUARES = 8;
 const PER_SQUARE = STEPS / KIDS_SQUARES;
 

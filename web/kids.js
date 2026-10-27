@@ -33,7 +33,7 @@ import { SKINS, nextSkin } from './skins.js';
 import { kidsHint, markSeen } from './tips.js';
 import {
   kidsPadPx, kidsSliderAt, shareOf, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder,
-  KIDS_DRUMS, KIDS_SQUARES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName,
+  KIDS_DRUMS, drumPicture, KIDS_SQUARES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName,
   kidsVoiceFields, voiceAfter, MAX_RECORD_SECONDS, MIN_RECORD_SECONDS, pressKind, KIDS_COUNT, pictureFor, KIDS_KEYS, keyRate, keyPlayId, keyPitch, isHighKey, beatLayout, cleanTab,
   nextKidsInstrument, keyKitId,
   TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote, keptTune,
@@ -613,7 +613,7 @@ function renderBeat() {
   const cells = [];
   drums.forEach((clip, r) => {
     if (!clip) return;
-    const head = make('button', 'kids-drum', { type: 'button', textContent: clip.emoji });
+    const head = make('button', 'kids-drum', { type: 'button', textContent: drumPicture(clip) });
     head.dataset.drum = String(r);
     head.setAttribute('aria-label', clip.label);
     head.style.cssText = at(r + 1, 1);

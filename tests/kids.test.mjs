@@ -13,7 +13,7 @@ import {
   makeSum, typeDigit, sumWait, SUM_WAIT, kidsRange, kidsAutoPx, kidsPadPx, kidsShare, shareOf, kidsSliderAt, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder, KIDS_PADS,
   newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds, KIDS_TEMPOS,
   TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote, keptTune,
-  kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS, keyPitch, keyRate, keyPlayId, isHighKey,
+  KIDS_DRUMS, drumPicture, kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS, keyPitch, keyRate, keyPlayId, isHighKey,
 } from '../web/kids-logic.js';
 import { MELODY_NOTES } from '../web/notes.js';
 import { BEAT_ID, cleanPattern, STEPS } from '../web/sequencer.js';
@@ -137,7 +137,7 @@ test('every Kids pad is a preset of the kit a kid can have without Advanced, eac
 });
 
 test('the kid\'s beat is a normal beat: square i is pill 2i of a 16-pill bar', () => {
-  const ids = ['p-kick', 'p-snare', 'p-hihat', 'p-clap'];
+  const ids = ['p-kick', 'p-snare', 'p-shaker', 'p-clap'];
   const beat = newKidsBeat('p-a', ids, scratchId('p-a'), 5);
   assert.ok(BEAT_ID.test(beat.id) && isScratch(beat), 'the person\'s scratch beat (ADR 0020)');
   assert.equal(beat.bpm, KIDS_TEMPOS.mid);
@@ -161,6 +161,21 @@ test('the kid\'s beat is a normal beat: square i is pill 2i of a 16-pill bar', (
   assert.equal(withSquare(beat, [null, null, null, null], 0, 0, true), beat, 'no drum, no change');
 });
 
+// Ben, 2026-10-26: "each picture shows its sound, and none repeats a tab";
+// the shaker replaces the hi-hat (🎩 was a pun).
+test('the Kids drums are kick 🦶, snare 🪘, shaker 🪇 and clap 👏: four pictures, none a Kids tab\'s, none the 🎩 pun', () => {
+  const kit = JSON.parse(readFileSync(new URL('../web/boards.json', import.meta.url), 'utf8')).kit;
+  assert.deepEqual(KIDS_DRUMS, ['kick', 'snare', 'shaker', 'clap']);
+  const pictures = KIDS_DRUMS.map((id) => drumPicture({ kitId: id, emoji: kit.find((k) => k.id === id).emoji }));
+  assert.deepEqual(pictures, ['🦶', '🪘', '🪇', '👏']);
+  const tabs = [...readFileSync(new URL('../web/index.html', import.meta.url), 'utf8').matchAll(/data-kids-tab="[a-z]+"[^>]*>([^<]+)</g)].map((m) => m[1]);
+  assert.equal(tabs.length, 4);
+  for (const p of pictures) assert.ok(!tabs.includes(p), `${p} is a tab's picture`);
+  assert.equal(new Set(pictures).size, 4);
+  const shared = kit.filter((k) => k.emoji === '🪇');
+  assert.deepEqual(shared.map((k) => k.id), ['shaker'], 'the shaker has 🪇 to itself; the tambourine has a picture of its own');
+});
+
 test('🐢 and 🏃: tap one for slow or fast, tap it again for the middle', () => {
   assert.equal(tempoAfter(110, 'slow'), 80);
   assert.equal(tempoAfter(80, 'slow'), 110);
@@ -175,7 +190,7 @@ test('🐢 and 🏃: tap one for slow or fast, tap it again for the middle', () 
 // Ben, 2026-10-22: "there should be a record button… compose a little tune
 // in here… save it and use it again in the grown up mode".
 test('● a tune: the beat grows to four bars, the drums repeated; a square tapped lands in every bar', () => {
-  const ids = ['p-kick', 'p-snare', 'p-hihat', 'p-clap'];
+  const ids = ['p-kick', 'p-snare', 'p-shaker', 'p-clap'];
   const one = withSquare(newKidsBeat('p-a', ids, scratchId('p-a'), 5), ids, 0, 2, true, 6);
   const four = withBars(one, TUNE_BARS, 7);
   assert.equal(TUNE_BARS, 4);
@@ -205,7 +220,7 @@ test('● a tune: a key lands on the nearest pill; an eager one in the count on 
 });
 
 test('● a tune: notes land in one tune row on the instrument\'s C; a new recording\'s first note starts it again; the regular app keeps it', () => {
-  const ids = ['p-kick', 'p-snare', 'p-hihat', 'p-clap'];
+  const ids = ['p-kick', 'p-snare', 'p-shaker', 'p-clap'];
   const beat = withBars(withSquare(newKidsBeat('p-a', ids, scratchId('p-a'), 5), ids, 0, 0, true), TUNE_BARS);
   assert.equal(tuneRowOf(beat), null);
   const a = withTuneNote(beat, { clipId: 'p-a-piano-c', pitch: 4, s: 2, l: 1, fresh: true }, 8);
@@ -233,7 +248,7 @@ test('● a tune: notes land in one tune row on the instrument\'s C; a new recor
 });
 
 test('● a tune: a new recording keeps the beat with the tune it replaces, as a beat of its own under a fun name', () => {
-  const ids = ['p-kick', 'p-snare', 'p-hihat', 'p-clap'];
+  const ids = ['p-kick', 'p-snare', 'p-shaker', 'p-clap'];
   const beat = withBars(withSquare(newKidsBeat('p-a', ids, scratchId('p-a'), 5), ids, 0, 0, true), TUNE_BARS);
   assert.equal(keptTune(beat, { id: 'beat-x', name: 'Funky Moose' }), null, 'no tune: nothing to keep');
   const tuned = withTuneNote(beat, { clipId: 'p-a-piano-c', pitch: 4, s: 2, l: 1, fresh: true });
@@ -401,7 +416,7 @@ test('Beats: four drums of eight squares; a tap turns one on and saves the kid\'
   assert.equal($('[data-kids-view="pads"]').hidden, true);
   const squares = $('#kids-beat').querySelectorAll('.kids-square');
   assert.equal(squares.length, 32);
-  assert.deepEqual($('#kids-beat').querySelectorAll('.kids-drum').map((d) => d.textContent), ['🦶', '🥁', '🎩', '👏']);
+  assert.deepEqual($('#kids-beat').querySelectorAll('.kids-drum').map((d) => d.textContent), ['🦶', '🪘', '🪇', '👏']);
   const mine = () => state.savedBeats.filter((b) => b.personId === state.personId && b.id.startsWith('beat-scratch-'));
   assert.equal(mine().length, 0, 'nothing saved just for looking');
   squares[8 + 2].dispatch('click');   // the snare's third square
