@@ -95,7 +95,7 @@ test('each groove card names who plays it beyond the drums, a chip per instrumen
   $('#seq-grooves').dispatch('click');
   const chips = (id) => $('#groove-list').querySelector(`[data-groove="${id}"]`).querySelectorAll('.groove-player');
   const soca = chips('soca');
-  assert.deepEqual(soca.map((c) => c.dataset.inst), ['steel'], 'the default ⚡ Synth bass gets no chip');
+  assert.deepEqual(soca.map((c) => c.dataset.inst), ['steel'], 'the default 🎛️ Synth bass gets no chip');
   assert.equal(soca[0].textContent, '🛢️ Steel drum');
   assert.equal(soca[0].dataset.family, 'mallets');
   assert.equal(soca[0].style.props['--fam'], FAMILIES.find((f) => f.id === 'mallets').color);
