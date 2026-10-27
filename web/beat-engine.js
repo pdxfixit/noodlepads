@@ -63,15 +63,14 @@ export function createBeatEngine({ audio, clipById }) {
   // note lasts `len` seconds, then fades out (a sound shorter than that
   // ends sooner). A tune row's notes overlap, so it can play chords.
   // `opts` (a player that is not the beat maker's): clipOf(id) finds the
-  // row's sound (its `root`); found false leaves the found note out; ring
-  // true lets every hit ring; level is the hit's own gain (a player with no
-  // 🎚️ Mixer, 🧸 Kids, gives it).
-  function sound(ctx, dest, list, row, loaded, time, loud = false, note = 0, len = 0, { clipOf = clipById, found = true, ring = false, level = null } = {}) {
+  // row's sound (its `root`); ring true lets every hit ring; level is the
+  // hit's own gain (a player with no 🎚️ Mixer, 🧸 Kids, gives it).
+  function sound(ctx, dest, list, row, loaded, time, loud = false, note = 0, len = 0, { clipOf = clipById, ring = false, level = null } = {}) {
     const voice = makeVoice(ctx, loaded.buffer, dest);
     voice.lift = loud ? ACCENT_GAIN : 1;   // kept, so a level change can reach a hit still ringing
     voice.level = level ?? hitGain(row, loud);
     voice.gain.gain.value = voice.level;
-    const rate = noteRate(note + (row.melody && found ? rootShift(clipOf(row.clipId)?.root) : 0));
+    const rate = noteRate(note + (row.melody ? rootShift(clipOf(row.clipId)?.root) : 0));
     if (rate !== 1) voice.src.playbackRate.value = rate;
     voice.src.start(time, 0, loaded.duration);
     voice.end = time + loaded.duration / rate;
@@ -173,8 +172,6 @@ export function createBeatEngine({ audio, clipById }) {
   //                     only their sounds are waited for before the first pill
   //   mixer             false: no 🎚️ Mixer, straight into the output: every
   //                     row it plays sounds, at full level (a loud hit at ACCENT_GAIN)
-  //   accents, foundNote  false: a loud pill plays as any pill; a tune keeps
-  //                     its own pitch (a player that sounds as it always did)
   //   onPill(pill, at)  each pill of the beat's plain grid, as it is booked
   //   onPass(at)        each time round, as it is booked: `at` the next one's start
   //   onHit(clipId, at) each hit booked
@@ -213,9 +210,8 @@ export function createBeatEngine({ audio, clipById }) {
         const got = soundOf(row.clipId, found);
         if (!got) { run.stats.silent++; continue; }
         const list = run.voices[h.row] ??= [];
-        const loud = h.loud && hooks.accents !== false;
         const dest = mixed ? busFor(ctx, audio.master, p).input(h.row) : audio.master;
-        sound(ctx, dest, list, row, got.loaded, h.at, loud, h.note, h.len, { clipOf: () => got.clip, found: hooks.foundNote !== false, ring: hooks.ring?.(row), level: mixed ? null : loud ? ACCENT_GAIN : 1 });
+        sound(ctx, dest, list, row, got.loaded, h.at, h.loud, h.note, h.len, { clipOf: () => got.clip, ring: hooks.ring?.(row), level: mixed ? null : h.loud ? ACCENT_GAIN : 1 });
         // A hit that has ended lets go of its gain, so a long play holds no nodes.
         const voice = list.at(-1);
         voice.src.onended = () => { try { voice.gain.disconnect(); } catch { /* gone */ } };

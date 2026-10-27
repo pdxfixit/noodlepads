@@ -48,7 +48,8 @@ computer, at https://noodlepads.com/.
   beats. 🗂️ See all shows everything they have made.
 - Each person has a level: 🧸 Kids (big picture pads, a mic with silly voices,
   a simple beat and toy keys, with no reading needed), Regular, or Advanced
-  (more beat and sound tools).
+  (more beat and sound tools). A beat made on 🥁 Beats sounds the same in
+  🧸 Kids: its tune in tune, its loud hits and its swing.
 - ☁️ The cloud: a grown-up can put a person's board in the cloud, with a PIN,
   so it opens on another device too. Nobody goes there by themselves. Remove
   the PIN, or switch ☁️ off, to bring their latest back and keep them on this

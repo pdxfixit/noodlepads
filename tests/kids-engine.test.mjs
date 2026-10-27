@@ -18,7 +18,8 @@ import { testManifest } from './test-board.mjs';
 import {
   kidsPlayedRows, kidsVoiceFields, newKidsBeat, withBars, withSquare, squaresOf, squareFits, withTuneNote, barOf, totalOf, tuneRowOf, pillAt, KIDS_LOAD_WAIT,
 } from '../web/kids-logic.js';
-import { STEPS, cleanRow, hitsDue } from '../web/beat.js';
+import { STEPS, ACCENT_GAIN, cleanRow, hitsDue, noteRate } from '../web/beat.js';
+import { rootShift } from '../web/pitch.js';
 import { createBeatEngine } from '../web/beat-engine.js';
 import { LATE_SECONDS } from '../web/audio.js';
 import { MAX_RINGING } from '../web/rhythm.js';
@@ -83,6 +84,8 @@ test('hitsDue: a beat\'s hits, pills and passes before a time, in its own bars, 
   assert.deepEqual(due.hits.map((h) => round(h.at)), [1, 1.15, 2.2, 2.35], 'the odd pill late by half a pill, round again at pill 12');
   assert.deepEqual(due.passes.map(round), [2.2]);
   assert.equal(due.pills.length, 14);
+  assert.deepEqual(due.pills.slice(0, 3).map((p) => round(p.at)), [1, 1.15, 1.3], 'a pill is told when it sounds, swung like its hits');
+  assert.equal(round(due.pass.next), 2.4, 'the pass clock itself is not swung');
   assert.equal(at.clocks[0].next, 1, 'the clocks given are left as they were');
   assert.equal(round(due.clocks[0].next), 2.4);
 });
@@ -568,32 +571,66 @@ test('● on a grown-up\'s 3/4 beat: a key lands on the 12-pill bar, and the rin
   }
 });
 
-// What a loud pill and a found note sound like in Kids stays as it was in this
-// commit (the next one changes both, as Ben decided): full level, no root.
-test('🧸 Kids ▶ through kids.js sounds a loud pill and a found note as Kids always did: full level, the sound\'s own pitch', async () => {
+// Ben, 2026-10-26: "fix wrong notes only", then "I definitely want things
+// consistent": a tune plays at its found note, a loud pill plays loud and a
+// swung beat swings, as on Beats. The 🎚️ Mixer stays out (full level, straight
+// into the output). Each is proven on its own through kids.js.
+async function kidsPlays(beatRows, { bpm = 150, swing = 0, extra = () => {} } = {}) {
   const t = await kidsWithClock();
+  const pid = state.personId;
+  const mine = await kidsBeatTab();
+  mine().bpm = bpm;
+  mine().bars = 1;
+  mine().swing = swing;
+  mine().rows = beatRows(pid);
+  extra(pid);
+  $('#kids-play').dispatch('click');
+  await t.settle();
+  for (let k = 0; k < 14; k++) { t.now += 0.025; t.tick(); }
+  $('#kids-play').dispatch('click');
+  return { t, pid };
+}
+
+test('🧸 Kids ▶ plays a tune at its found note: the sound moved so its C plays a C', async () => {
+  const pid = state.personId;
+  const hum = { id: `user-hum-${pid}`, personId: pid, label: 'Hum', emoji: '🐝', color: 'teal', ...kidsVoiceFields(null), root: 62, created: 1 };   // a D
+  state.userClips.push(hum);
+  let t;
   try {
-    const pid = state.personId;
-    const hum = { id: `user-hum-${pid}`, personId: pid, label: 'Hum', emoji: '🐝', color: 'teal', ...kidsVoiceFields(null), root: 62, created: 1 };
-    state.userClips.push(hum);
-    const mine = await kidsBeatTab();
-    mine().bpm = 150;
-    mine().bars = 1;
-    mine().rows = [
-      cleanRow({ clipId: `${pid}-kick`, steps: [true], accents: [true] }),
-      cleanRow({ clipId: hum.id, melody: true, steps: [true], tune: [{ p: 0, s: 0, l: 1 }] }),
-    ];
-    $('#kids-play').dispatch('click');
-    await page.settle();
-    for (let k = 0; k < 2; k++) { t.now += 0.025; t.tick(); }
-    $('#kids-play').dispatch('click');
-    const first = t.booked.filter((h) => h.at === round(5.06));
-    assert.deepEqual(first.map(({ clip, rate, gain }) => ({ clip, rate, gain })).sort((a, b) => (a.clip < b.clip ? -1 : 1)),
-      [{ clip: hum.id, rate: 1, gain: 1 }, { clip: `${pid}-kick`, rate: 1, gain: 1 }].sort((a, b) => (a.clip < b.clip ? -1 : 1)));
-    assert.ok(first.every((h) => h.out === audio.master), 'straight into the output');
-    state.userClips.splice(state.userClips.indexOf(hum), 1);
+    ({ t } = await kidsPlays(() => [cleanRow({ clipId: hum.id, melody: true, steps: [true], tune: [{ p: 0, s: 0, l: 1 }, { p: 7, s: 1, l: 1 }] })]));
+    const rates = t.booked.filter((h) => h.clip === hum.id).slice(0, 2).map((h) => h.rate);
+    assert.deepEqual(rates, [noteRate(rootShift(62)), noteRate(7 + rootShift(62))]);
+    assert.ok(rates[0] < 1, 'a D played down to a C');
   } finally {
-    await t.done();
+    state.userClips.splice(state.userClips.indexOf(hum), 1);
+    await t?.done();
+  }
+});
+
+test('🧸 Kids ▶ plays a loud pill loud, at full level through the output\'s limiter, and a plain pill as before', async () => {
+  let t;
+  try {
+    ({ t } = await kidsPlays((pid) => [cleanRow({ clipId: `${pid}-kick`, steps: [true, true], accents: [true, false] })]));
+    const kicks = t.booked.filter((h) => h.clip.endsWith('-kick'));
+    assert.deepEqual(kicks.slice(0, 2).map((h) => h.gain), [ACCENT_GAIN, 1], 'the loud pill at ACCENT_GAIN, the next at full');
+    assert.ok(kicks.every((h) => h.out === audio.master), 'into the master, which the limiter holds under full scale');
+    assert.ok(audio.limiter.threshold.value <= -1 && audio.limiter.ratio.value >= 20, 'a hard limiter just under full scale');
+  } finally {
+    await t?.done();
+  }
+});
+
+test('🧸 Kids ▶ plays the beat\'s swing: the off-beat pills late, and their squares light as they sound', async () => {
+  let t;
+  try {
+    // 150 BPM: a pill is 0.1 s; swing 50 moves pill 1 by half a pill and pill 2 (the "and") by one whole pill.
+    ({ t } = await kidsPlays((pid) => [cleanRow({ clipId: `${pid}-kick`, steps: [true, true, true, true] })], { swing: 50 }));
+    const kicks = t.booked.filter((h) => h.clip.endsWith('-kick')).map((h) => h.at);
+    assert.deepEqual(kicks.slice(0, 4), [5.06, 5.06 + 0.1 + 0.05, 5.06 + 0.2 + 0.1, 5.06 + 0.3 + 0.05].map(round), 'pills 1 and 3 half a pill late, pill 2 a pill late');
+    const squares = t.timeouts.filter((h) => /showSquare/.test(String(h.fn))).map((h) => h.at);
+    assert.deepEqual(squares.slice(0, 2), [5.06, round(5.06 + 0.2 + 0.1)], 'the square of pill 2 lights with its swung hit');
+  } finally {
+    await t?.done();
   }
 });
 

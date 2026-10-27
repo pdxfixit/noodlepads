@@ -314,9 +314,9 @@ Kids writes it with `deps.saveBeat` (`state.savedBeats` + `persist('beats')`). I
 | `ring()` | always: a hit rings over the last, at most `MAX_RINGING` (8) a row, the oldest faded first (Kids had no cap) |
 | `startIn` / `from` | 0.06 s after the sounds load, or ● 's count end |
 | `go()` | `showing` |
-| `onPill(pill, at)` | a square lights at `at + outputDelay` (`beat.js`): when its pill is heard, not when it is booked; the square counts in the beat's own bar (`barOf`) |
+| `onPill(pill, at)` | a square lights at `at + outputDelay` (`beat.js`): when its pill is heard, not when it is booked (`at` is swung like the pill's hits); the square counts in the beat's own bar (`barOf`) |
+| `swing(beat)` | the beat's own, 0–`MAX_SWING` |
 | `onPass(at)` | ● stops as the beat comes round |
-| `accents: false`, `foundNote: false` | for this release only: a loud pill and a tune sound's found note are left out, as the old player did (step 5b turns both on, with the beat's swing) |
 
 `playBeat` claims the run in the same tap (the child-psychologist's block): ▶ shows ⏹ at once, a second tap is ⏹, and ⏹ while the sounds load calls the start off (`run.ready` resolves false, nothing is booked), so three ▶ taps leave one run ticking. If the sounds take more than `KIDS_LOAD_WAIT` (2 s) ▶ is given back. A call with `from` or `onPass` (●) never takes an already-playing run: it ends that one and starts its own, so the recording always has an `onPass` to end it. `stopBeat` logs `{stopped, hits, late, silent}` once a play (`log-clean.js`, `run.stats`). Its beat sounds as the same beat does on Beats except: no 🎚️ Mixer, no row speed, only the rows Kids shows, 0.12 s ahead (Beats' 0.1).
 
@@ -324,11 +324,11 @@ Kids writes it with `deps.saveBeat` (`state.savedBeats` + `persist('beats')`). I
 |---|---|---|
 | Rows played | every row that is `audible` (mute, solo, level) | `kidsPlayedRows` |
 | Pills a bar | `barSteps(signature)` | the same |
-| Loudness | `hitGain` (row level, `ACCENT_GAIN` for loud) | full (until step 5b: then `ACCENT_GAIN` for a loud pill) |
+| Loudness | `hitGain` (row level, `ACCENT_GAIN` for loud) | full, and a loud pill at `ACCENT_GAIN`, into the output's limiter (Kids shows no picture for it) |
 | 🎚️ Mixer and effects | `busFor` | none |
-| Swing, row speed | `swingDelay`, `stepSeconds` | no swing until step 5b; no row speed |
+| Swing, row speed | `swingDelay`, `stepSeconds` | the beat's swing; no row speed |
 | A hit over the last | `ringOver` (cut unless the row rings) | `ringOver` with ring on |
-| Tune note pitch | `noteRate(note + rootShift(root))` | `noteRate(p)` until step 5b (then the same) |
+| Tune note pitch | `noteRate(note + rootShift(root))` | the same: a sound whose note was found plays its C as a C |
 | Count-in | `play({ countIn })`: one bar of blips | ● only: 3 beeps (`TUNE_COUNT`), `beep(at)` |
 | Playhead | `stepsHeard` with `outputDelay` | `setTimeout` per square at `at + outputDelay` |
 | `onHit` to the keys, meter | yes | `audio.on.started()` once |
@@ -410,7 +410,7 @@ Worked out in four places: `beat.js outputDelay`; `app.js` `deps.latency` for th
 
 | Seam | What a fix in one place misses |
 |---|---|
-| Two beat loops: `sequencer.js schedule` and the engine's `play` (Kids) | Kids ignores mute, solo, level, the mixer and row speed on purpose, and until step 5b accents, swing and a tune sound's `root`. A timing fix in `schedule` does not reach `play` until Beats moves onto it (step 6). |
+| Two beat loops: `sequencer.js schedule` and the engine's `play` (Kids) | Kids leaves out mute, solo, level, the mixer and row speed on purpose; accents, swing and a tune sound's `root` play as on Beats. A timing fix in `schedule` does not reach `play` until Beats moves onto it (step 6). |
 | Two snap rules: `rhythm.js createSnapper` (keys) and `kids-logic.js pillAt` (Kids' tune) | Kids has no latency shift, no double-tap filter, no one-hit-per-pill, no tempo-change safety. |
 | Two recorders: `sheet.js` and `kids.js` | MIME list, 10 s cap and the 3-2-1 count are copied, not shared. |
 | Two keyboard mappings: `rhythm.js keyFor` (layout-aware) and `kids.js kidsKeydown` (`e.key` letters) | Kids' keys follow neither Dvorak nor the `djLayout` pick. |

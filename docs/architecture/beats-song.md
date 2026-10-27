@@ -165,7 +165,7 @@ A row with no clock (added while playing, or put back by Undo) gets one from `jo
 
 ### What one hit does (`sound`)
 
-`beat-engine.js sound(ctx, dest, list, row, loaded, time, loud, note, len, opts)` (`opts`: `clipOf`, `found`, `ring`, `level`, for a player with no mixer, 🧸 Kids):
+`beat-engine.js sound(ctx, dest, list, row, loaded, time, loud, note, len, opts)` (`opts`: `clipOf`, `ring`, `level`, for a player with no mixer, 🧸 Kids):
 
 1. `audio.js makeVoice(ctx, buffer, dest)`; its gain is `hitGain(row, loud)` = (1.5 if loud) × the row's level. `voice.lift` is kept, so a level change can reach a hit still ringing (`applyLevel`).
 2. A tune row's note plays faster or slower (`noteRate(note + rootShift(clip.root))`, so a sound whose note 🎵 Find its note found plays its C as a C). A plain row plays at rate 1.
@@ -424,7 +424,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 
 | Seam | What a fix in one place misses |
 |---|---|
-| **Four beat loops.** `sequencer.js schedule` (live), `song.js tick`, `beat-engine.js play` (🧸 Kids), and `hearBeat` (all at once). Kids' looks 0.12 s ahead; the others 0.1 s | Kids plays in the beat's own bars (`hitsDue`) but, until step 5b, ignores accents, swing and a tune row's `rootShift`; it leaves out rates, row level, mute, solo and the 🎚️ Mixer for good. A timing fix in `schedule` or `tick` does not reach the others until steps 6 and 8 |
+| **Four beat loops.** `sequencer.js schedule` (live), `song.js tick`, `beat-engine.js play` (🧸 Kids), and `hearBeat` (all at once). Kids' looks 0.12 s ahead; the others 0.1 s | Kids plays in the beat's own bars, with its accents, swing and a tune row's `rootShift` (`hitsDue`, `sound`); it leaves out rates, row level, mute, solo and the 🎚️ Mixer for good. A timing fix in `schedule` or `tick` does not reach the others until steps 6 and 8 |
 | **`TICK_MS` and `LOOKAHEAD`** are separate constants in `beat-engine.js`, `sequencer.js` and `song.js` (`tests/architecture.test.mjs` checks all three agree) | change one, the beat and the song drift apart in feel; step 8 makes them one pair |
 | **Output latency** is summed in `beat.js outputDelay` and again in `app.js`'s `deps.latency` for `dj.js` | a change to the cap (0.2 s) or the sum must be made twice; Kids ignores latency |
 | **The beat id pattern** `/^beat-[a-z0-9-]{1,48}$/` is written in `beat.js BEAT_ID`, `playlist.js BEAT_REF`, `backup.js` (a local `BEAT_ID`) and inline in `rhythm.js` | only `playlist.js` vs `sequencer.js` is tested (`tests/playlist.test.mjs`) |

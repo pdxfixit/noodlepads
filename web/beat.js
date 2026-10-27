@@ -217,7 +217,7 @@ export function pillHits(row, step) {
 // `at` is {clocks, pass}: a clock per row ({next, step, dt}) and one on the
 // beat's plain grid ({next, pill}) for the pills and passes. Returns the hits
 // ({row, at, loud, note, len}, `len` in seconds), the pills of the plain grid
-// ({pill, at}), the times a new pass starts, and the clocks moved on (new
+// ({pill, at}, swung as the pill's own hits are), the times a new pass starts, and the clocks moved on (new
 // objects; `at` is left as it was). A row new since the last call joins a
 // row at its speed, else the plain grid. The beat is its own bars: its
 // signature's pills a bar, its bars, its swing (`swing`, 0-50). `rows`: the
@@ -256,7 +256,7 @@ export function hitsDue(p, at, until, { mode = 'plain', swing = 0, rows = null, 
     }
   });
   while (pass.next < until) {
-    pills.push({ pill: pass.pill, at: pass.next });
+    pills.push({ pill: pass.pill, at: pass.next + swingDelay(pass.pill, base, swing, groups) });   // swung as its hits are: it lights as it sounds
     pass.next += base;
     pass.pill = (pass.pill + 1) % total;
     if (pass.pill === 0) passes.push(pass.next);

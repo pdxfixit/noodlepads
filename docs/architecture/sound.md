@@ -379,7 +379,7 @@ The chain of gains from a file to the speaker:
 | Each render step | `voices.js finish` | peak 0.9, or `softLimit` for `keepLevel` audio |
 | Quiet / Quietest | `tweaks.js tweakGain` | ×0.5, ×0.25 |
 | Preset level | `voices.js presetGain(clip.level)` | 10^(dB/20), dB in −24…0 |
-| A beat's hit | `beat-engine.js sound` | `hitGain(row, loud)`; an accent is `ACCENT_GAIN` 1.5 |
+| A beat's hit | `beat-engine.js sound` | `hitGain(row, loud)`; an accent is `ACCENT_GAIN` 1.5 (🧸 Kids: 1.5 for a loud pill, else 1, no row level) |
 | A beat's mix | `mixer.js buildMix` via `beat-engine.js busFor` | row levels, mute, solo, effects, master level |
 | Output | `audio.limiter` | holds a pile-up under full scale |
 | Offline renders | `wav.js normalize` | peak 0.9 (bounce, song, share previews) |

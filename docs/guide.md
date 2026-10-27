@@ -159,7 +159,19 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   of a 16-pill bar), so the regular app's Beats opens it whenever nothing
   else is open. A kids beat from before (`beat-kids-…`) becomes the scratch,
   or a beat in 🗂️ My beats when the scratch already has hits.
-  Across on a wide screen; down the screen on a phone.
+  Across on a wide screen; down the screen on a phone. ▶️ shows ⏹️ at once
+  and a second tap stops it, even while the sounds are still loading (they
+  never start two beats); if the sounds take more than two seconds, ▶️ comes
+  back to be tapped again. A square lights as its pill comes out of the
+  speaker. A beat made on 🥁 Beats sounds the same here (Ben, 2026-10-26):
+  a tune plays at its found note (🎵 Find its note), a loud pill plays loud
+  (Kids shows no picture for it), the beat's swing swings, and a grown-up's
+  3/4, 6/8 or 7/8 beat plays in its own bars (the squares past its bar stay
+  dark and do nothing). Rows a grown-up added beyond the four drums and the
+  one tune stay silent here, and the 🎚️ Mixer (a row's level, mute, solo,
+  effects, the master) and a row's speed are left out: every hit plays at
+  full level. Hits ring over each other, at most eight of one sound at a
+  time (`beat-engine.js`, played by `kids.js` `playBeat`).
 - **🎹 Keys**: eight colored keys that play while held, several fingers at
   once (A S D F G H J K on a keyboard). They are pentatonic, always, so no
   note sounds wrong: C D E G A, then high C, high D, high E. A high key plays

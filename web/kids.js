@@ -38,7 +38,7 @@ import {
   nextKidsInstrument, keyKitId, kidsPlayedRows, squareFits, barOf, totalOf, KIDS_LOAD_WAIT,
   TUNE_BARS, TUNE_COUNT, pillSeconds, withBars, pillAt, withTuneNote, keptTune,
 } from './kids-logic.js';
-import { STEPS, outputDelay } from './beat.js';
+import { STEPS, MAX_SWING, outputDelay } from './beat.js';
 import { instrumentById, PLAYED } from './instruments.js';
 
 const el = {};
@@ -672,7 +672,9 @@ const soundOf = (id) => deps.clips({ includeHidden: true, allPresets: true }).fi
 // play, docs/design/one-beat-engine.md), on the audio clock: every pill of
 // every bar (the beat's own: a grown-up's 3/4 too), the drums' squares and
 // the tune row's notes (the tune a ● recording made, the sound faster for a
-// higher note, for as long as the note lasts). Kids leaves out the 🎚️ Mixer
+// higher note, for as long as the note lasts). A beat sounds the same
+// everywhere (Ben, 2026-10-26): a tune plays at its found note (🎵 Find its
+// note), a loud pill plays loud, and the beat's swing swings. Kids leaves out the 🎚️ Mixer
 // (a muted or quiet row still sounds, straight into the output) and row
 // speed, plays only the rows it shows, lets each hit ring over the last
 // (at most MAX_RINGING), and books 0.12 s ahead, as it always has. A square
@@ -700,10 +702,9 @@ function playBeat({ from = null, onPass = null } = {}) {
     lookahead: 0.12,
     go: () => showing,
     mode: () => 'plain',
+    swing: (beat) => Math.min(MAX_SWING, Math.max(0, Number(beat.swing) || 0)),
     ring: () => true,
     mixer: false,
-    accents: false,    // as before the engine: a loud pill is not loud here, and a tune plays at its own pitch
-    foundNote: false,
     rows: (beat) => kidsPlayedRows(beat, drumClips().map((c) => c?.id ?? null)),
     onPill: (p, at) => {
       if (p % 2) return;
