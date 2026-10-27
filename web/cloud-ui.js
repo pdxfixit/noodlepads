@@ -134,13 +134,16 @@ export function askPin({ title = 'PIN', hint = '', note = '', shown = '', forgot
 // Resolves 'back' (⬅️ Back to Pads), 'new' (👋 Someone new, when `locked`: the
 // pad cannot be left) or null (closed).
 export function askWait({ title, wait, locked }) {
-  const opens = new Date(Date.now() + wait * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  // The waits double up to a day (worker/pin.js): one that ends on another day names it.
+  const end = new Date(Date.now() + wait * 1000);
+  const time = end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const opens = end.toDateString() === new Date().toDateString() ? `at ${time}` : `${end.toLocaleDateString([], { weekday: 'long' })} at ${time}`;
   pinDigits = '';
   drawDots();
   el.pinTitle.textContent = title;
   el.pinHint.textContent = 'That was too many tries. A grown-up knows the PIN: ask them.';
   el.pinPublic.hidden = true;
-  el.pinNote.textContent = `The PIN pad opens again at ${opens}.`;
+  el.pinNote.textContent = `The PIN pad opens again ${opens}.`;
   el.pin.classList.remove('pin-wrong');
   el.pin.classList.add('pin-waiting');
   el.pinForgot.hidden = false;

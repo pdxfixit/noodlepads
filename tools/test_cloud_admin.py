@@ -482,7 +482,7 @@ class ResetPin(unittest.TestCase):
     # Ben, 2026-10-26: "reset Captain Cranberries' PIN" from a cold session; 2026-10-27: the tool
     # picks a random PIN for Ben to pass on, never 1234 (the profile list is public).
     def kid(self, db, pid='p-cc', name='Captain Cranberries', active=1):
-        db.execute(f"INSERT INTO profiles (id, name, avatar, color, pin_hash, pin_salt, fails, locked_until, key_fails, key_locked_until, rev, edited, created, active) VALUES ('{pid}', '{name}', '', '#1F3FA8', 'h', 's', 4, 99, 3, 77, 0, 1, 1, {active});"
+        db.execute(f"INSERT INTO profiles (id, name, avatar, color, pin_hash, pin_salt, fails, locked_until, key_fails, key_locked_until, strikes, key_strikes, rev, edited, created, active) VALUES ('{pid}', '{name}', '', '#1F3FA8', 'h', 's', 4, 99, 3, 77, 5, 2, 0, 1, 1, {active});"
                    f"INSERT INTO keys (hash, profile_id, created) VALUES ('k-{pid}', '{pid}', 1);")
 
     def reset(self, db, who, draws, **kw):
@@ -495,7 +495,7 @@ class ResetPin(unittest.TestCase):
         return done, lines
 
     def stored(self, db, pid='p-cc'):
-        return db.query(f"SELECT pin_hash, pin_salt, fails, locked_until, key_fails, key_locked_until FROM profiles WHERE id = '{pid}'")[0]
+        return db.query(f"SELECT pin_hash, pin_salt, fails, locked_until, key_fails, key_locked_until, strikes, key_strikes FROM profiles WHERE id = '{pid}'")[0]
 
     def test_asks_then_sets_a_random_pin_and_drops_every_key(self):
         db = Local(ROOT / 'worker' / 'schema.sql')
@@ -525,6 +525,7 @@ class ResetPin(unittest.TestCase):
         self.assertEqual(len(row['pin_salt']), 32, '16 random bytes, as the Worker makes')
         self.assertEqual((row['fails'], row['locked_until']), (0, 0), 'no wait left from wrong tries')
         self.assertEqual((row['key_fails'], row['key_locked_until']), (0, 0), 'nor on the requests that carry a key')
+        self.assertEqual((row['strikes'], row['key_strikes']), (0, 0), 'and the waits double from 10 minutes again')
         self.assertEqual(db.query('SELECT COUNT(*) AS n FROM keys')[0]['n'], 0, 'every device opens it again')
 
     def test_a_pin_is_always_four_digits_leading_zeros_too(self):

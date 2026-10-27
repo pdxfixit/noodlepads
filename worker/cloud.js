@@ -419,7 +419,7 @@ async function changeProfile(request, env, id, now, seen) {
     // A new PIN closes the profile on every device; this one gets a new key.
     // One UPDATE from one hash to the next: a profile with a PIN never reads as gone mid-change.
     await env.DB.batch([
-      env.DB.prepare('UPDATE profiles SET pin_hash = ?, pin_salt = ?, fails = 0, locked_until = 0, key_fails = 0, key_locked_until = 0 WHERE id = ?').bind(hash, salt, id),
+      env.DB.prepare('UPDATE profiles SET pin_hash = ?, pin_salt = ?, fails = 0, locked_until = 0, key_fails = 0, key_locked_until = 0, strikes = 0, key_strikes = 0 WHERE id = ?').bind(hash, salt, id),
       env.DB.prepare('DELETE FROM keys WHERE profile_id = ?').bind(id),
     ]);
     // The same device, under its new key.

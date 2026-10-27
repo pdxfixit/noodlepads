@@ -595,6 +595,10 @@ test('a rate limit says busy right now, a daily cap says busy today', () => {
   // One profile's own daily allowance (worker/cloud.js withinProfileDaily) says it is this profile's.
   assert.match(cloudTrouble(new CloudError(429, { error: 'busy', mine: true })), /^This profile has done a lot in the cloud today\. It catches up tomorrow/);
   assert.match(cloudTrouble(new CloudError(429, { error: 'wait', wait: 600 })), /Too many wrong tries\. Wait 10 minutes/);
+  // The waits double up to a day (worker/pin.js): a long one is said in hours.
+  assert.match(cloudTrouble(new CloudError(429, { error: 'wait', wait: 80 * 60 })), /Wait 80 minutes/);
+  assert.match(cloudTrouble(new CloudError(429, { error: 'wait', wait: 160 * 60 })), /Wait 3 hours, then/);
+  assert.match(cloudTrouble(new CloudError(429, { error: 'wait', wait: 24 * 3600 })), /Wait 24 hours, then/);
 });
 
 test('a full cloud says what is full: the profile\'s sounds, its records, or everyone\'s', () => {

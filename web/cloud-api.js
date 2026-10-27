@@ -134,7 +134,11 @@ export function cloudTrouble(err) {
   if (!(err instanceof CloudError)) return 'Something went wrong with the cloud. Everything is still here on this device.';
   if (err.status === 0) return "The cloud isn't reachable from here. Everything still works on this device.";
   if (err.status === 503) return 'The cloud is resting until tomorrow. Everything still works here, and it will catch up.';
-  if (err.status === 429 && err.wait) return `Too many wrong tries. Wait ${Math.ceil(err.wait / 60)} minutes, then try again.`;
+  if (err.status === 429 && err.wait) {
+    // The waits double up to a day (worker/pin.js): over two hours is said in hours.
+    const minutes = Math.ceil(err.wait / 60);
+    return `Too many wrong tries. Wait ${minutes > 120 ? `${Math.ceil(minutes / 60)} hours` : `${minutes} minutes`}, then try again.`;
+  }
   // A minute's rate limit (worker/cloud.js slowDown), apart from the daily caps.
   if (err.status === 429 && err.error === 'slow') return 'The cloud is busy right now. Try again in a minute.';
   // One profile's daily allowance (worker/cloud.js withinProfileDaily), apart from the site's.

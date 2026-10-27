@@ -76,6 +76,19 @@ test('wrong tries count down, then the wait screen names a grown-up, the time, a
   assert.ok(!cloud.inCloud('p-far'), 'and nothing was opened');
 });
 
+test('a wait of hours names the day the pad opens again, not only a time that could be today', async () => {
+  const { askWait } = await import('../web/cloud-ui.js');
+  const pending = askWait({ title: 'Sir Squid', wait: 24 * 3600, locked: false });
+  const day = new Date(Date.now() + 24 * 3600 * 1000).toLocaleDateString([], { weekday: 'long' });
+  assert.match($('#pin-note').textContent, new RegExp(`^The PIN pad opens again ${day} at \\d{1,2}:\\d{2}`));
+  $('#pin-back').dispatch('click');
+  await pending;
+  const short = askWait({ title: 'Sir Squid', wait: 600, locked: false });
+  assert.match($('#pin-note').textContent, /^The PIN pad opens again at \d{1,2}:\d{2}/, 'a short wait: just the time');
+  $('#pin-back').dispatch('click');
+  await short;
+});
+
 test('the next pad starts fresh: keys back, Back hidden', async () => {
   $('#cloud-browse').dispatch('click');
   await page.settle();

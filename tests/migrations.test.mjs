@@ -131,3 +131,14 @@ test('009 adds the keyed wrong-PIN count at 0 and keeps every profile, PIN and /
   const row = { ...db.prepare('SELECT id, pin_hash, pin_salt, fails, locked_until, key_fails, key_locked_until FROM profiles').get() };
   assert.deepEqual(row, { id: 'p-a', pin_hash: 'h', pin_salt: 's', fails: 3, locked_until: 99, key_fails: 0, key_locked_until: 0 });
 });
+
+// 010 adds the strikes that double a PIN's wait for each full window of wrong
+// tries (worker/pin.js). Additive: every profile and count stays; both start at 0.
+test('010 adds the strike counts at 0 and keeps every profile, PIN and count', () => {
+  const db = migrated();
+  for (const f of MIGRATIONS.filter((m) => m < '010')) db.exec(read(`../worker/migrations/${f}`));
+  db.exec("INSERT INTO profiles (id, name, color, pin_hash, pin_salt, fails, locked_until, key_fails, key_locked_until, edited, created) VALUES ('p-a', 'Funky Moose', 'teal', 'h', 's', 3, 99, 2, 88, 0, 0)");
+  db.exec(read('../worker/migrations/010-pin-strikes.sql'));
+  const row = { ...db.prepare('SELECT id, pin_hash, fails, locked_until, key_fails, key_locked_until, strikes, key_strikes FROM profiles').get() };
+  assert.deepEqual(row, { id: 'p-a', pin_hash: 'h', fails: 3, locked_until: 99, key_fails: 2, key_locked_until: 88, strikes: 0, key_strikes: 0 });
+});

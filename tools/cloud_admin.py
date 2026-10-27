@@ -733,7 +733,7 @@ def reset_pin(db, who, yes=False, ask=input, out=print):
     # One UPDATE sets the hash and salt together: a clear, then a set, would let a sync
     # between them see the profile with no PIN, which the Worker treats as not there.
     # Both wrong-try counters (opening, and requests that carry a key) start again.
-    db.execute(f"UPDATE profiles SET pin_hash = '{h}', pin_salt = '{salt}', fails = 0, locked_until = 0, key_fails = 0, key_locked_until = 0 WHERE id = {q}; DELETE FROM keys WHERE profile_id = {q};")
+    db.execute(f"UPDATE profiles SET pin_hash = '{h}', pin_salt = '{salt}', fails = 0, locked_until = 0, key_fails = 0, key_locked_until = 0, strikes = 0, key_strikes = 0 WHERE id = {q}; DELETE FROM keys WHERE profile_id = {q};")
     after = db.query(f'SELECT pin_hash FROM profiles WHERE id = {q}')
     if not after or after[0]['pin_hash'] != h:
         raise Trouble('the PIN did not change: check with `just cloud-profiles`.')
