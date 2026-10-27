@@ -74,6 +74,15 @@ test('a ruler numbers the bars over the rows, and a row has no fold', async () =
   assert.equal($('#seq-rows').querySelector('.seq-fold'), null);
 });
 
+test('a beat with no rows has no ruler', async () => {
+  const $ = page.$;
+  keysOff(page);
+  $('[data-beat-new]').dispatch('click');
+  await page.settle();
+  assert.equal($('#seq-rows').querySelectorAll('.seq-row').length, 0, 'no rows');
+  assert.equal($('#seq-rows').querySelector('.seq-ruler'), null, 'so no bar numbers over nothing');
+});
+
 test('the ruler is as tall as its numbers: its empty head has no 44 px minimum', () => {
   const head = rule('.seq-ruler .seq-head');
   assert.match(head, /min-height: 0;/, 'a row head is 44 px tall, the ruler\'s is not a tap target');

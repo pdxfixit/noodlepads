@@ -896,7 +896,8 @@ export function createSequencer(deps) {
     cell.row = Math.min(cell.row, Math.max(0, pattern.rows.length - 1));
     pills.length = 0;
     twins = twinRows(pattern.rows.map((r) => deps.clipById(r.clipId)?.emoji || '🔊'));
-    el.rows.replaceChildren(el.playhead, ruler(), ...pattern.rows.map((row, i) => renderRow(row, i, clips)));
+    // The bar numbers label rows: with none, a lone "1" would float under the empty note.
+    el.rows.replaceChildren(el.playhead, ...(pattern.rows.length ? [ruler()] : []), ...pattern.rows.map((row, i) => renderRow(row, i, clips)));
     el.add.hidden = pattern.rows.length >= MAX_ROWS;
     el.add.disabled = clips.length === 0;
     if (el.addTune) { el.addTune.hidden = el.add.hidden; el.addTune.disabled = el.add.disabled; }
