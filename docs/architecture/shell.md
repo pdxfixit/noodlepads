@@ -127,7 +127,7 @@ Only `app.js` calls these (checked below). Each line is what it hands over.
 |---|---|---|
 | `beatLibrary` | `state.js shelf('savedBeats', 'beats', …)`: `{ list, put, remove }` over `state.savedBeats` and the `beats` store | `createSequencer`, `initListen` |
 | `songBook` | the same over `state.songbook` and `songbook` | `createSong`, `initListen` |
-| `addMadeSound` | a made sound (a bounced beat, a song, a take) as a new pad: a fresh emoji from `MADE_EMOJI` not on this board (`freshEmoji`), `exact: true`, `persist('clips')` | sequencer (🥁), song (🎼), dj (🎛️) |
+| `addMadeSound` | a made sound (a bounced beat, a song, a take) as a new pad: a fresh emoji from `MADE_EMOJI` not on this board (`freshEmoji`), `exact: true`, `model.js newClip` then `board.js addClip` | sequencer (🥁), song (🎼), dj (🎛️) |
 | `setClipEmoji` | a sound's picture: on the record (own sound) or an override (preset); then redraws pads, `seq` and `dj` | dj (`setEmoji`) |
 | `groupsForChooser` | the beat sound chooser's sections: kit groups once, then each person's own sounds, this board first, leaving out anyone whose PIN is not typed (`cloud.js pinGuards`) | sequencer (`groups`) |
 | `closedPeople` | person sections closed in that chooser (localStorage `chooser-closed`) | sequencer (`isGroupOpen`, `toggleGroup`); `followRenames` renames its ids |
@@ -599,7 +599,7 @@ blocks beside each animation. Pads size by container queries (`@container`,
 | Two "a quiet moment" checks, two 2 s polls | `app.js` `busy` for `initUpdate`; `nudge.js quiet` | a new busy state (a new recorder, a new player) must go into `busy`; the nudge only checks dialogs and the update bar |
 | Kids showing vs the Kids level | `app.js applyKids` uses `kidsVisit`/`grownUp`; `tips.js guided`, `kidsHint` and `nudge.js` read only `level` | on a 🧸 visit by a Regular person, tips count as "guided" and no 👆 hand shows; a fix to "is Kids on" must touch all of them |
 | Saving a beat, two writers | `beatLibrary.put` (also Kids' `saveBeat`), `adoptKidsBeat` (`db.batch`) | a change to how a beat is stored (cloning, a new index) |
-| A new clip enters `state.userClips` three ways | `app.js addMadeSound`, `initKids` `saveClip`, the sound sheet's own save | the redraw (`renderPads`) and any new field |
+| A new clip enters `state.userClips` four ways | `board.js addClip` (`app.js addMadeSound`, `initKids` `saveClip`), the sound sheet's own save (twice), `chop.js makePads` | the redraw (`renderPads`) and any new field |
 | The store-writer pattern | the five saved lists (`beatLibrary`, `songBook`, takes, key layouts, touch layouts) are `state.js shelf`; the deck, `makeSong` `save`/`close` and `makeSequencer` `setOpen` still write by hand | each replaces the record in `state` and calls `persist` or `state.js removeRecord`, so a refusal is a notice either way |
 | Two lookup bags for playing saved things | `initThings` `render` and `initCloud` `renderShare` | `initThings`' `songById` also finds an open song in `state.songs`; `renderShare`'s doesn't. A new kind must go in both |
 | `setClipEmoji` redraws by hand | pads, `seq`, `dj` | a new screen that shows a sound's picture must be added there |

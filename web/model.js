@@ -9,6 +9,7 @@ import { cleanTrim, cleanEdits, cleanFade } from './cuts.js';
 import { funName, cutName } from './names.js';
 import { songHasBeats } from './playlist.js';
 import { showsFor, instrumentProblem } from './instruments.js';
+import { newId } from './util.js';
 
 // Deep colors white text reads on: a board's casing. Eight that stay apart
 // for someone with deuteranopia too (Ben, 2026-10-19): the closest pair is
@@ -586,4 +587,13 @@ export function countsText(counts) {
 export function countsWords(counts) {
   const parts = PERSON_KINDS.filter(([k]) => counts?.[k] > 0).map(([k, one, many]) => `${counts[k]} ${counts[k] === 1 ? one : many}`);
   return parts.length ? parts.join(', ') : 'nothing yet';
+}
+
+// A new sound of a kid's own, as a `clips` record (IndexedDB `clips`): the
+// defaults in one place. The caller gives who it is for, its name, picture,
+// color and audio, and any extras (`from`, `exact`, a voice's fields, a
+// `created` of its own). A new required field is added here and in
+// backup.js cleanBackup.
+export function newClip({ blob, ...fields }) {
+  return { id: newId('user'), voice: 'normal', blob, mime: blob?.type, created: Date.now(), ...fields };
 }

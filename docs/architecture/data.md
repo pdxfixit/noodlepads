@@ -14,8 +14,8 @@
 |---|---|---|---|
 | `store.js` | `DB_NAME`, `SCHEMA`, `STAMP_SINCE`, `DB_VERSION`, `STORE_NAMES`, `upgradeStores`, the `db` handle (`open`, `run`, `all`, `put`, `remove`, `batch`, `onChange`) | no (IndexedDB) | state.js; direct writes in app.js, backup-ui.js, cloud.js; leftover.js reads `DB_NAME` |
 | `state.js` | `state`, `STORE_TABLE`, `storedLists`; `readStorage`, `loadStorage`, `persist`, `setOverride`, `removeRecord`, `shelf`, `setPersonEdit`, `deletePerson`, `deleteUserClip`, `saveMyVoice`, `deleteMyVoice`, `adoptStoredPeople`, `reIdStoredPeople`, `reIdIncoming`, `rememberRenames`, `renamedId` | no | nearly every screen |
-| `model.js` | person colors, `kitFor`, `mergePeople`, `clipsForPerson`, `orderClips`, `withNewPresets`, `overrideFor`, `withBulkChanges`, `withHidden`, `overrideWithEmoji`, `personEditRecord`, `validateManifest`, `soloPerson`, `isDefaultPerson`, `personIdsIn`, `kitIdOf`, `presetOwners`, `adoptPeople`, `groupKit`, `PICTURES`, `KIND_EMOJI`, `PERSON_KINDS`, `personThings`, `personCounts` | yes | state.js, board.js, backup.js, merge.js, screens |
-| `board.js` | `people`, `person`, `currentPerson`, `clipsFor`, `anyClip`, `findClip`, `instrumentPicks`, `colorName`, `padColor`, `nextClipColor` | reads `state` | every screen |
+| `model.js` | person colors, `kitFor`, `mergePeople`, `clipsForPerson`, `orderClips`, `withNewPresets`, `overrideFor`, `withBulkChanges`, `withHidden`, `overrideWithEmoji`, `personEditRecord`, `validateManifest`, `soloPerson`, `isDefaultPerson`, `personIdsIn`, `kitIdOf`, `presetOwners`, `adoptPeople`, `groupKit`, `PICTURES`, `KIND_EMOJI`, `PERSON_KINDS`, `personThings`, `personCounts`, `newClip` | yes | state.js, board.js, backup.js, merge.js, screens |
+| `board.js` | `people`, `person`, `currentPerson`, `clipsFor`, `anyClip`, `findClip`, `instrumentPicks`, `colorName`, `padColor`, `nextClipColor`, `addClip` | reads `state` | every screen |
 | `settings.js` | `SETTINGS`, `LEVELS`, `levelOf`, `getSetting`, `setSetting`, `onSetting`, `followPerson`, `notifyAllSettings`, `cleanPrefs`, `allowedValue`, `inBackups`, `storedPair` | reads/writes `state.prefs`, `state.settings` | ~20 modules |
 | `groups.js` | a kid's own groups: `cleanGroups`, `groupOwn`, `pruneGroups`, `moveGroup`, `joinGroups`, `newGroupId` | yes | pads.js, bulk.js, backup.js, merge.js, app.js |
 | `pad-size.js` | the size slider's maths, `PAD_STOPS`, `fromOldSize` (settings upgrade) | yes | pads.js, settings.js |
@@ -375,14 +375,9 @@ A sync that changes the open beat while it plays is merged into the next save (`
 3. **"Stores as lists" is one function** (above): `state.js storedLists`. A new store appears in it once it is in `STORE_TABLE`; `backup-ui.js` and `cloud.js` only choose the options.
 4. **Three counters of what is here** (above). A new kind a backup carries goes into `holdings` and `holdsWords` too (`tests/holds.test.mjs`), or "A backup now holds…" leaves it out.
 5. **`extensionFor` is defined twice:** `util.js extensionFor` and `old-backup.js extensionFor` (the second says it copies the first). Pluralizers are three: `util.js count`, `old-backup.js plural`, and `model.js`'s private `plural`.
-6. **Making an own sound is done in five places, each building the record by hand:**
-   - `sheet.js saveSheet`
-   - `sheet.js makeMix`
-   - `chop.js makePads`
-   - `app.js addMadeSound` (beats, songs, takes made into sounds)
-   - Kids, through `app.js initKids` `saveClip` (kids.js builds the record)
+6. **Making an own sound is done in five places; two use the one way so far.** `model.js newClip(fields)` builds the record (the defaults: `id`, `voice: 'normal'`, `mime`, `created`) and `board.js addClip(clip)` pushes it and stores it. `app.js addMadeSound` (beats, songs, takes made into sounds) and `app.js initKids` `saveClip` (a recording Kids built) use them. Still by hand, each with its own push: `sheet.js saveSheet`, `sheet.js makeMix`, `chop.js makePads`, and `kids.js` builds its record (`newId('user')`).
 
-   A new required field on `clips` must be added to all five, and to `backup.js cleanBackup`.
+   A new required field on `clips` goes in `newClip`, those three, and `backup.js cleanBackup`.
 7. **Editing one sound is done in three ways:** `sheet.js saveSheet`, `bulk.js changeSounds` (through `model.js withBulkChanges`) and `app.js setClipEmoji`. All three branch on own sound or preset, then call `persist('clips')` or `setOverride(overrideFor…)`.
 8. **The open-beat and open-song wiring lives in `app.js`** (`setOpen`, `beatLibrary`, `songBook`, the dj `deps`), not in `state.js`. A change to how a beat or song is stored is made there.
 9. **Finding a preset edit's person.** It is done by `.some` over kit ids (`backup.js` `isKitCopy`), and by `model.js kitIdOf` (`personIdsIn`, `beatToFile`) and `presetOwners` (`deletePerson`). None depends on kit order (gotcha 1).

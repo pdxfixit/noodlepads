@@ -18,10 +18,10 @@ import { audio, voicesMade, fadeStop } from './audio.js';
 import { meter, buildGrille } from './meter.js';
 import { createSequencer } from './sequencer.js';
 import { createBeatEngine } from './beat-engine.js';
-import { people, person, currentPerson, clipsFor, anyClip, padColor, nextClipColor } from './board.js';
+import { people, person, currentPerson, clipsFor, anyClip, padColor, nextClipColor, addClip } from './board.js';
 import { PLAYED } from './instruments.js';
 import { groupOwn, UNGROUPED } from './groups.js';
-import { validateManifest, isKitClip, boardTitle, soloPerson, SOLO_NAME, groupKit, overrideWithEmoji } from './model.js';
+import { validateManifest, isKitClip, boardTitle, soloPerson, SOLO_NAME, groupKit, overrideWithEmoji, newClip } from './model.js';
 
 // The Common section's heading color in the beat maker's sound chooser: a
 // neutral deep grey, as it is nobody's board.
@@ -575,20 +575,8 @@ function freshEmoji(personId, preferred) {
 
 async function addMadeSound({ label, blob, emoji }) {
   const p = currentPerson();
-  const clip = {
-    id: newId('user'),
-    personId: p.id,
-    label,
-    emoji: freshEmoji(p.id, emoji),
-    color: nextClipColor(p.id),
-    voice: 'normal',
-    blob,
-    mime: blob.type,
-    created: Date.now(),
-    exact: true,
-  };
-  state.userClips.push(clip);
-  await persist('clips', clip);
+  const clip = newClip({ personId: p.id, label, emoji: freshEmoji(p.id, emoji), color: nextClipColor(p.id), blob, exact: true });
+  await addClip(clip);
   renderPads();
   return { ...clip, source: 'user' };
 }
@@ -1059,8 +1047,7 @@ async function start() {
     nextColor: (pid = state.personId) => nextClipColor(pid),
     // A recording, saved as the sound sheet saves one; `changed`: its voice changed.
     saveClip: async (clip, { changed = false } = {}) => {
-      if (!changed) state.userClips.push(clip);
-      await persist('clips', clip);
+      await (changed ? persist('clips', clip) : addClip(clip));
       renderPads();
     },
     ownClip: (id) => state.userClips.find((c) => c.id === id),

@@ -1,7 +1,7 @@
 // The board model bound to the app's state: the lookups every screen makes
 // ("who is showing", "their sounds in order"). The logic is in model.js.
 
-import { state } from './state.js';
+import { state, persist } from './state.js';
 import { getSetting } from './settings.js';
 import {
   mergePeople, colorName as paletteColorName, padColor as paletteColor, clipsForPerson,
@@ -78,4 +78,12 @@ export function findClip(id) {
 export function nextClipColor(personId) {
   const names = paletteNames();
   return names[clipsFor(personId, { includeHidden: true }).length % names.length];
+}
+
+// A new sound of a kid's own (model.js newClip) added to the board and
+// stored. Resolves to whether storage took it (`persist`: false when the
+// browser refused, and the clip stays in memory for this visit).
+export function addClip(clip) {
+  state.userClips.push(clip);
+  return persist('clips', clip);
 }
