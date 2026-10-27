@@ -1408,3 +1408,50 @@ test('the sheet keeps only its last few renders: an early try is rendered again,
   state.userClips = state.userClips.filter((c) => c.id !== clip.id);
   renderPads();
 });
+
+// A knob moved changes the part before the live steps: that is rendered
+// again once the sound with the knob has played, so the next drag still
+// waits for nothing.
+test('a knob moved, then a live slider\'s first drag: its loop is rendered already', async () => {
+  const { state } = await import('../web/state.js');
+  const { currentPerson } = await import('../web/board.js');
+  const { renderPads } = await import('../web/pads.js');
+  await advanced(true);
+  const clip = { id: 'user-primed-2', personId: currentPerson().id, label: 'Hum', emoji: '🐝', color: 'red', created: 1, blob: new Blob(['x']), mime: 'audio/webm', voice: 'normal', fx: [{ type: 'echo', repeats: 3, gap: 0.25 }] };
+  state.userClips.push(clip);
+  renderPads();
+  let waits = 0;
+  const kept = Promise.resolve(plain);
+  const then = kept.then.bind(kept);
+  kept.then = (...a) => { waits++; return then(...a); };
+  const realStart = audio.start;
+  audio.start = (id, sound) => { calls.push(['start', id, sound.buffer]); audio.playing.set(id, { fake: true }); };
+  audio.unloop = () => {};
+  try {
+    if (!document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+    audio.forget(clip.id);
+    audio.originals.set(clip.id, kept);
+    audio.originalTrims.set(clip.id, '');
+    pads().find((p) => p.dataset.id === clip.id).parent.querySelector('[data-edit]').dispatch('click');
+    await page.settle();
+    const pitch = knob('pitch');
+    pitch.value = '4';
+    pitch.dispatch('input');
+    pitch.dispatch('change');
+    await page.settle();
+    const before = waits;
+    calls.length = 0;
+    const slider = $('#layer-rows').querySelector('input[data-key="repeats"]');
+    slider.dispatch('pointerdown', { button: 0 });
+    await page.settle();
+    assert.ok(calls.some(([w, id]) => w === 'start' && id === 'preview'), 'it loops');
+    assert.equal(waits, before, 'nothing new was rendered for the drag');
+    slider.dispatch('change');
+  } finally {
+    audio.start = realStart;
+    $('#sheet').close();
+    state.userClips = state.userClips.filter((c) => c.id !== clip.id);
+    renderPads();
+    await advanced(false);
+  }
+});

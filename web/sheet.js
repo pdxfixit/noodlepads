@@ -967,7 +967,7 @@ export function openSheet(mode, clip = null, { returnToPad = null } = {}) {
   clearInterval(playWatch);
   playWatch = setInterval(syncPlay, 150);
   syncPlay();
-  if (mode === 'edit') { previewVoice({ play: false }); primeLive(); }
+  if (mode === 'edit') previewVoice({ play: false });
 }
 
 // ── ▶︎/■ at the top ───────────────────────────────────────────────────
@@ -1137,6 +1137,9 @@ async function previewVoice({ play = true } = {}) {
   }
   const name = stepLook(link()).name;
   const job = rendered();   // as it is now; picking another voice changes sheet.chain
+  // Then the live loop's head for this sound, so a first drag waits for
+  // nothing; after the render the kid is waiting to hear, never racing it.
+  job.then(primeLive, primeLive);
   const expected = sheet.original;
   try {
     const rendered = await job;
@@ -1261,8 +1264,8 @@ function closePalette() {
 // livePlan): the steps before the live ones, rendered once and kept in
 // sheet.previews. With nothing before the live steps it is the sound in
 // Normal: evened out and turned down by a preset's level, as the saved
-// render is. Null when nothing would play live. Started when the sheet opens
-// and when the chain changes, so a first drag waits for nothing.
+// render is. Null when nothing would play live. Started after each full
+// render (previewVoice), so a first drag waits for nothing.
 function liveHead() {
   const split = livePlan(sheet.chain.map((s) => ({ ...s })), storedTweaks());
   if (!sheet.original || !split?.tail.length) return null;
@@ -1338,7 +1341,6 @@ function chainChanged() {
   live.on = false;
   showLink();
   previewVoice();
-  primeLive();
 }
 
 // Adds a step at the end of the kid's own steps (it plays last of them;
