@@ -11,7 +11,7 @@ import { FakeD1 } from './fake-d1.mjs';
 import { createCloudApi, CloudError, cloudTrouble } from '../web/cloud-api.js';
 import {
   syncProfile, recordsOf, planPush, decideRecord, hashOf, pieces, shareBundle, shareDoc, syncNote, pushSlices, CHUNK_BYTES, CLOUD_MAX_SOUND, keyOf,
-  progressShare, soundBytes, newProgress,
+  progressShare, soundBytes, newProgress, keepForeign, MAX_FOREIGN, RECORD_BYTES,
 } from '../web/cloud-sync.js';
 import { LIMITS } from '../worker/cloud.js';
 import { cleanBackup } from '../web/backup.js';
@@ -1095,4 +1095,34 @@ test('an older app\'s edit to a record keeps the fields a newer app wrote into i
   // The other device pulls the older copy's edits.
   await syncProfile(link, newer.deps(api));
   assert.equal(newer.stores.beats[0].bpm, 130);
+});
+
+test('a newer app\'s fields that would push the record over the size cap go, so this device\'s edit still reaches the cloud', async () => {
+  const { api, env } = server();
+  const { a: newer, link } = await startA(api);
+  newer.stores.beats[0] = { ...newer.stores.beats[0], future: 'x'.repeat(RECORD_BYTES - 3000) };
+  await syncProfile(link, newer.deps(api));
+  const inCloud = () => JSON.parse(env.DB.rows("SELECT body FROM records WHERE kind = 'beats'")[0].body);
+  assert.ok(inCloud().future, 'the big field is in the cloud');
+  const { d: older, link: ol } = await openOn(api, 'p-a');
+  await syncProfile(ol, older.deps(api));
+  assert.ok(ol.foreign['beats:beat-1'], 'remembered');
+  await older.put('beats', { ...older.stores.beats[0], name: 'Edited', notes: 'y'.repeat(5000), changed: Date.now() });
+  const report = await syncProfile(ol, older.deps(api));
+  assert.equal(report.heavy, undefined, 'not left at home as too big');
+  assert.equal(report.pushed, 1);
+  assert.equal(inCloud().name, 'Edited', 'the edit reached the cloud');
+  assert.equal(ol.foreign['beats:beat-1'], undefined, 'and the big field was let go to fit');
+});
+
+test('a link keeps newer-app fields for at most MAX_FOREIGN records, the oldest dropped first', () => {
+  const link = { foreign: {} };
+  for (let i = 0; i < MAX_FOREIGN + 5; i++) keepForeign(link, `beats:b${i}`, { cleaned: {}, raw: { i } });
+  assert.equal(Object.keys(link.foreign).length, MAX_FOREIGN);
+  assert.equal(link.foreign['beats:b0'], undefined);
+  assert.ok(link.foreign[`beats:b${MAX_FOREIGN + 4}`]);
+  keepForeign(link, 'beats:b5', { cleaned: {}, raw: { again: true } });   // seen again: now the newest
+  keepForeign(link, 'beats:late', { cleaned: {}, raw: {} });
+  assert.ok(link.foreign['beats:b5'], 'a record kept again is not the next to go');
+  assert.equal(link.foreign['beats:b6'], undefined);
 });

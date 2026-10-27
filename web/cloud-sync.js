@@ -56,6 +56,20 @@ export function pushSlices(sizes, max = PUSH_BYTES - PUSH_ROOM, perPush = PER_PU
 const list = (doc, name) => (Array.isArray(doc?.[name]) ? doc[name] : []);
 export const keyOf = (kind, id) => `${kind}:${id}`;
 
+// How many records' newer-app fields a link keeps (foreign.js): an older app
+// that sees many records with new fields cannot grow its link without end.
+// The oldest kept go first; such a record then loses its fields on this
+// device's next edit of it, as it did before they were kept at all.
+export const MAX_FOREIGN = 100;
+export function keepForeign(link, k, value) {
+  delete link.foreign[k];   // re-set, so it counts as the newest
+  link.foreign[k] = value;
+  for (const old of Object.keys(link.foreign)) {
+    if (Object.keys(link.foreign).length <= MAX_FOREIGN) break;
+    delete link.foreign[old];
+  }
+}
+
 // Every record of `personId`, as Map "kind:id" -> {kind, id, record}.
 // `lists` holds the stores as lists, the way a backup does.
 export function recordsOf(lists, personId, kitIds = []) {
@@ -613,7 +627,7 @@ async function pullOnce(link, deps, { of: shaOf, here: shaHere, map: hereSha }, 
     if (p.deleted || action === 'delete' || p.skip || (action === 'same' && p.same)) delete link.foreign[k];
     else if (f.there) {
       const foreign = foreignOf(f.there, p.kind === 'overrides' ? p.body : { ...p.body, personId: id });
-      if (foreign) link.foreign[k] = foreign; else delete link.foreign[k];
+      if (foreign) keepForeign(link, k, foreign); else delete link.foreign[k];
     }
     if (p.deleted || action === 'delete') {
       // Gone in the cloud: forgotten here. A record this device changed (or
@@ -709,14 +723,23 @@ async function pushAll(link, deps, { of: shaOf, map: hereSha }, report, bases_) 
     // What a newer app wrote into this record goes back with it (foreign.js);
     // the base is the record without it, as this copy of the app knows it.
     const f = link.foreign[k];
-    const sent = f ? restoreForeign(mine, f.cleaned, f.raw) : mine;
-    const text = JSON.stringify(sent);
+    let sent = f ? restoreForeign(mine, f.cleaned, f.raw) : mine;
+    let text = JSON.stringify(sent);
+    // The cap is for this copy's own record: a newer app's fields that would
+    // push it over go, so this device's edit still reaches the cloud.
+    let foreign = !!f;
+    if (f && text.length > RECORD_BYTES) {
+      sent = mine;
+      text = JSON.stringify(sent);
+      foreign = false;
+      delete link.foreign[k];
+    }
     if (text.length > RECORD_BYTES) {
       report.heavy = (report.heavy ?? 0) + 1;
       continue;
     }
     const wire = { kind: r.kind, id: r.id, body: JSON.parse(text) };
-    work.push({ put: r, wire, base: f ? JSON.parse(JSON.stringify(mine)) : wire.body, foreign: !!f, hash: hashOf(r.record, shaOf(k)), bytes: utf8.encode(text).length + utf8.encode(`{"kind":"${r.kind}","id":"${r.id}","body":}`).length });
+    work.push({ put: r, wire, base: foreign ? JSON.parse(JSON.stringify(mine)) : wire.body, foreign, hash: hashOf(r.record, shaOf(k)), bytes: utf8.encode(text).length + utf8.encode(`{"kind":"${r.kind}","id":"${r.id}","body":}`).length });
   }
   for (const d of plan.del) work.push({ del: d, bytes: utf8.encode(JSON.stringify(d)).length });
   let stale = 0;
@@ -737,7 +760,7 @@ async function pushAll(link, deps, { of: shaOf, map: hereSha }, report, bases_) 
         // copy of it is what the next push puts them back into.
         if (w.foreign) {
           const still = foreignOf(w.base, w.wire.body);
-          if (still) link.foreign[k] = still; else delete link.foreign[k];
+          if (still) keepForeign(link, k, still); else delete link.foreign[k];
         }
       } else {
         delete link.sent[k];
