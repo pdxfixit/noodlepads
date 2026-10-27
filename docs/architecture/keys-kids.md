@@ -131,7 +131,7 @@ The footer's how-to (`app.js showHint`, `screenHint`) uses the same `pointer: fi
 2. **A key or tile tapped:** `pointerdown` on `#dj-keys [data-code]` or `#dj-touch [data-clip]` → finger: `fingers.down` (lift plays); mouse: `pointerDown` → `playTarget` → `play(code)` or `playTile(clipId)` → `hit(id)`.
 3. **`dj.js hit(id, { earlier })`:**
    1. `deps.clipById(id)` (`board.js anyClip`).
-   2. `deps.tap(clip, { ring, kind: 'keys' })` = `pads.js tapPad`: a looping sound stops (returns true); else `audio.play(clip, { ring })` and `countPlay('keys')`, so a key's play counts once, as a key. `ring` is 🔔 Overlap on Live only.
+   2. `deps.tap(clip, { ring, kind: 'keys' })` = `pads.js tapPad`: a looping sound stops (returns true); else `audio.play(clip, { ring })` and `countPlay('keys')`, so a key's play counts once, as a key. `ring` is 🔔 Let it ring on Live only.
    3. `record(...)`: into a take, if one records (kind `'hit'` or `'stop'`).
    4. `showRow(clip)`: in mode `'beat'`, a sound with no row gets one (`seq.addRowFor`). Not while a groove plays without recording.
    5. `intoBeat(clip, earlier)`: while recording into the beat, snap the hit (below).
