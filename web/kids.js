@@ -24,7 +24,7 @@ import { levelOf } from './meter.js';
 import { logEvent } from './log.js';
 import { countPlay } from './play-count.js';
 import { fingerTaps, isFinger } from './finger.js';
-import { remember, recall, newId } from './util.js';
+import { remember, recall, newId, onePressOneClick } from './util.js';
 import { soundName, beatName } from './names.js';
 import { askSum, closeSum } from './grown-up.js';
 import { scratchOf, scratchId } from './scratch.js';
@@ -1094,12 +1094,7 @@ export function initKids(d) {
     keys: q('#kids-keys'), inst: q('#kids-inst'), rec: q('#kids-rec'), recFace: q('#kids-rec-face'),
   });
   for (const b of el.tabs) b.addEventListener('click', () => { boing(b); setTab(b.dataset.kidsTab); });
-  // Enter held on a button repeats its keydown, and each repeat clicks it
-  // again: a pad would play on and on, the mic toggle on and off. One press,
-  // one click: the repeats are taken.
-  el.root.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && e.repeat && e.target.closest?.('button')) e.preventDefault?.();
-  });
+  onePressOneClick(el.root);   // a held Enter: a pad would play on and on, the mic toggle on and off
   el.stop.addEventListener('click', stopAll);
   el.skin.addEventListener('click', nextLook);
   showSkinButton();

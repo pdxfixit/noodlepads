@@ -14,7 +14,7 @@
 
 import { countAt, KEY_ROWS, KEY_CODES, keyboardOrder, defaultDeck, fallbackLabel, layoutLabel, detectLayout, LAYOUTS, LAYOUT_NAMES, keyFor, takeFrom, planTake, clockText, MAX_TAKE_SECONDS, createSnapper, tapTempo, TAP_GAP_MAX } from './rhythm.js';
 import { encodeWav, SIGNATURES, COMMON_BPMS, tempoStops, stopFor, pillHolds, typedBpm } from './sequencer.js';
-import { recall, remember, newId } from './util.js';
+import { recall, remember, newId, onePressOneClick } from './util.js';
 import { PICTURES, pictureTakenBy } from './model.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
 import { takeName, soundName } from './names.js';
@@ -388,9 +388,7 @@ export function createDJ({ el, deps }) {
   });
   // `sel` finds what was pressed in `box`; `targetOf` says which sound it is.
   function listen(box, sel, targetOf) {
-    // A held Enter repeats, and each repeat would click again (a loop on and
-    // off): one press, one click.
-    box.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.repeat && e.target.closest?.(sel)) e.preventDefault(); });
+    onePressOneClick(box, sel);   // a held Enter would toggle a loop on and off
     box.addEventListener('pointerdown', (e) => {
       const k = e.target.closest(sel);
       if (!k || e.button > 0) return;

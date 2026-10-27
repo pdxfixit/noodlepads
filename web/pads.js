@@ -9,7 +9,7 @@ import { people, person, clipsFor, findClip, padColor } from './board.js';
 import { voiceById, amountText, chainOf, chainText, stepLook } from './voices.js';
 import { announce } from './ui.js';
 import { isKitClip, ownSoundsTitle, groupKit, openKitGroups, withHidden } from './model.js';
-import { remember, recall } from './util.js';
+import { remember, recall, onePressOneClick } from './util.js';
 import { countPlay } from './play-count.js';
 import { groupOwn, cleanGroups, UNGROUPED } from './groups.js';
 import { getSetting, setSetting, onSetting } from './settings.js';
@@ -880,6 +880,7 @@ export function initPads(hooks) {
   window.addEventListener('pointercancel', () => cancelDrag());
   // Once a touch drag has started, the page must not scroll under it.
   window.addEventListener('touchmove', (e) => { if (drag.active) e.preventDefault(); }, { passive: false });
+  onePressOneClick(el.pads, '.pad');   // a held Enter would toggle a loop on and off
   el.pads.addEventListener('click', (e) => {
     if (drag.suppressClick) return;
     // A pad's ✏️ opens its sheet (while playing too, from a hover); in Edit

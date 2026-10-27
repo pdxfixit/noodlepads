@@ -11,6 +11,7 @@
 
 import { setupDialog, openDialog } from './dialogs.js';
 import { makeSum, typeDigit, sumWait } from './kids-logic.js';
+import { onePressOneClick } from './util.js';
 
 const el = {};
 // What is being asked: { sum, typed, right(), wrong(), stay, owner }, or null.
@@ -96,8 +97,7 @@ function wire() {
   });
   setupDialog(el.dialog);
   el.dialog.addEventListener('close', () => { ask = null; clearInterval(ticker); });
-  // A held Enter on a key would type its digit again on every repeat.
-  el.keys.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.repeat) e.preventDefault(); });
+  onePressOneClick(el.keys);   // a held Enter would type its digit again
   el.keys.addEventListener('click', (e) => {
     const k = e.target.closest?.('[data-digit]');
     if (k) tapDigit(k.dataset.digit);

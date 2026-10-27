@@ -1,5 +1,14 @@
 // Small helpers shared by several modules. No DOM, so tests can load them.
 
+// A held Enter repeats its keydown, and on a focused button each repeat is
+// another click: a sound played on and on, a loop or a pill toggled on and
+// off, a digit typed again. One press, one click: `box` takes Enter's
+// repeats on whatever matches `sel` inside it (Shift+Enter's too). It
+// touches only the `box` it is given, so this file stays free of the page.
+export function onePressOneClick(box, sel = 'button') {
+  box?.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.repeat && e.target.closest?.(sel)) e.preventDefault(); });
+}
+
 // A file extension for an audio MIME type, for download names and zip entries.
 export function extensionFor(mime = '') {
   if (mime.includes('webm')) return 'webm';

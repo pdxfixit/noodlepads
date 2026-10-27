@@ -17,7 +17,7 @@
 
 import { openDialog, setupDialog } from './dialogs.js';
 import { tempoKey } from './tempo-key.js';
-import { newId, recall, remember } from './util.js';
+import { newId, recall, remember, onePressOneClick } from './util.js';
 import { makeVoice, fadeStop, tooLate } from './audio.js';
 import { getSetting, onSetting } from './settings.js';
 import { logEvent } from './log.js';
@@ -2364,6 +2364,7 @@ export function createSequencer(deps) {
   });
 
   let afterHold = () => false;   // set below, once the hold listener is on
+  onePressOneClick(el.rows, '.pill');   // a held Enter would toggle a pill on and off
   el.rows.addEventListener('click', (e) => {
     const rowEl = e.target.closest('.seq-row');
     if (!rowEl) return;

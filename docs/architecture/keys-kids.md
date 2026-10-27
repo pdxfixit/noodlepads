@@ -121,7 +121,7 @@ part   {size: 1…12, band?: index}            a block (no band: empty)
 | Which key a press is | the character typed, found in the picked layout's picture; else `e.code` | `rhythm.js keyFor` |
 | Which layout | `djLayout` setting, else `navigator.keyboard.getLayoutMap()` (`rhythm.js detectLayout`), else QWERTY | `dj.js layoutNow`, `readLayout` |
 | A finger or a mouse | `finger.js isFinger` (touch or pen): plays on the lift, if it stayed within `TAP_SLOP`; held still `HOLD_TO_LOOP_MS` (350 ms) it plays and loops. A mouse plays on press; held 350 ms it loops | `dj.js listen`, `pointerDown` |
-| Enter or Space on a focused key | a `click` with `detail 0` plays it; Shift loops it; Enter's repeats are taken, so a held Enter clicks once | `dj.js listen` |
+| Enter or Space on a focused key | a `click` with `detail 0` plays it; Shift loops it; Enter's repeats are taken, so a held Enter clicks once (`util.js onePressOneClick`, the one guard for 🔊 Pads, Beats' pills, the keys and tiles, 🧸 Kids and the sum) | `dj.js listen` |
 
 The footer's how-to (`app.js showHint`, `screenHint`) uses the same `pointer: fine` test and `dj.touching()` to say "key" or "pad".
 
@@ -322,7 +322,7 @@ Kids writes it with `deps.saveBeat` (`state.savedBeats` + `persist('beats')`). I
 
 - `KIDS_KEYS`: C D E G A, then high C D E (pentatonic). A high key plays its low note at `keyRate` (2×) under its own play id (`keyPlayId`, `<clipId>+12`), so both can sound.
 - The instrument button cycles `KIDS_INSTRUMENTS` and writes the person's `instNotes`, the same setting 🎹 Who plays on Notes keeps. `keyClip` finds `keyKitId(k, inst)` among `clips({ includeHidden: true, allPresets: true })`.
-- Keyboard: `kidsKeydown` maps `e.key` a s d f g h j k (not `rhythm.js keyFor`); Esc or Space stops all; ← → turn pages. On a focused button Enter's repeats are taken (`initKids`, on `#kids`), so a held Enter clicks once. `.kids :focus-visible` is a white outline off the button (outline only, so its own shadows show); a playhead square keeps its yellow, doubled (6 px, no offset); `.kids-beat` is padded 12 px so neither ring is clipped, a pressed square's 1.08 scale too.
+- Keyboard: `kidsKeydown` maps `e.key` a s d f g h j k (not `rhythm.js keyFor`); Esc or Space stops all; ← → turn pages. On a focused button Enter's repeats are taken (`util.js onePressOneClick` on `#kids`, from `initKids`), so a held Enter clicks once. `.kids :focus-visible` is a white outline off the button (outline only, so its own shadows show); a playhead square keeps its yellow, doubled (6 px, no offset); `.kids-beat` is padded 12 px so neither ring is clipped, a pressed square's 1.08 scale too.
 - ● (`startTune`): grows the beat to 4 bars, books 3 beeps on the audio clock, then `playBeat({ from: t0, onPass })`; the recording stops as the beat comes round once (`onPass`), at the next ● tap, ⏹️, a tab change, or leaving. A key held during it lands on lift (`landNote`): `kids-logic.js pillAt` (nearest pill, no latency moved), length the pills held (1–16), `withTuneNote` (the first note of a new recording starts the tune again, after `keepOldTune` puts the beat with the tune it replaces in 🗂️ My beats: `kids-logic.js keptTune`, a fun name from `names.js beatName`).
 
 ### What Kids shares with the regular app

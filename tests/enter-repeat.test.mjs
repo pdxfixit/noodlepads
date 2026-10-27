@@ -51,3 +51,18 @@ test('the grown-up sum\'s keypad: Enter types once, its repeats are taken; its k
   const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
   assert.match(css, /dialog\.kids-sum :focus-visible \{[^}]*outline: 4px solid var\(--ink\)/, 'every button on its light card, ✕ Back too');
 });
+
+test('a pad on 🔊 Pads and a pill on 🥁 Beats: Enter clicks once, its repeats are taken', async () => {
+  const { newBeatWithRow, keysOff } = await import('./new-beat.mjs');
+  $('#pads-tab').dispatch('click');
+  const pad = $('#pads').querySelectorAll('.pad').find((p) => p.dataset.id);
+  assert.equal(press(pad, false), false);
+  assert.equal(press(pad, true), true, 'a looping pad would toggle on and off');
+  keysOff(page);
+  await page.settle();
+  newBeatWithRow(page);
+  await page.settle();
+  const pill = $('#seq-rows').querySelector('.pill');
+  assert.equal(press(pill, false), false);
+  assert.equal(press(pill, true), true, 'Enter and Shift+Enter alike');
+});
