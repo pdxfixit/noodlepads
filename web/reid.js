@@ -17,6 +17,11 @@ export const isCloudId = (id) => typeof id === 'string' && CLOUD_ID.test(id);
 // names no one).
 export const PERSON_STORES = ['people', 'clips', 'overrides', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices', 'touchLayouts'];
 
+// The same without `people`: the record kinds that sync to the cloud and get a
+// `changed` stamp (cloud-sync.js, merge3.js, worker/cloud.js). The one place
+// this list is written; the others are made from it.
+export const SYNCED = PERSON_STORES.filter((s) => s !== 'people');
+
 // One id after the rename: the person's own id, or one made from it (their
 // copy of the kit, `<from>-kick` -> `<to>-kick`). Anything else is unchanged.
 export function remapId(id, from, to) {

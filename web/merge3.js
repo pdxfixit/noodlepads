@@ -22,6 +22,7 @@
 
 import { legacySlots } from './playlist.js';
 import { unionSeen } from './firsts.js';
+import { SYNCED } from './reid.js';
 
 export const STAMP = 'changed';
 const SONG_KINDS = new Set(['songs', 'songbook']);
@@ -29,7 +30,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 // The stores whose records get a `changed` stamp when a kid edits them: every
 // kind that syncs (cloud-sync.js CLOUD_KINDS). People keep their own `edited`.
-export const STAMPED = new Set(['clips', 'overrides', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices', 'touchLayouts']);
+export const STAMPED = new Set(SYNCED);
 
 // Kinds that can keep two copies when a clash can't be merged safely: each
 // has its own ids, so the cloud's copy goes under a new id (merge.js). The

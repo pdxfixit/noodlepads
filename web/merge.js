@@ -24,6 +24,7 @@ import { newId as makeId, count } from './util.js';
 import { joinGroups, cleanGroups } from './groups.js';
 import { STAMP } from './merge3.js';
 import { mapSongBeats } from './playlist.js';
+import { STORE_NAMES } from './store.js';
 
 // A record as text with its keys in order, leaving out `skip` keys, so two
 // records compare by content. When it was last edited (merge3.js STAMP) is
@@ -50,7 +51,8 @@ export async function sameBytes(a, b) {
   return true;
 }
 
-const STORES = ['people', 'clips', 'overrides', 'orders', 'patterns', 'beats', 'settings', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices', 'touchLayouts'];
+// Every store a backup holds: the database's, less the device's own links and bases.
+const STORES = STORE_NAMES.filter((s) => s !== 'cloud' && s !== 'bases');
 const list = (doc, name) => (Array.isArray(doc?.[name]) ? doc[name] : []);
 
 // local: the stores on this device as lists ({key, value} for settings).

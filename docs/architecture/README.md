@@ -90,8 +90,9 @@ The biggest ones. Each area file lists its own in full.
   places (`instruments.js rateOf` and `noteRate` are checked to agree ✅).
 - **The kept audio is built three times:** `audio.js keptAudio`,
   `chop.js rebuild`, `chop.js evenOut`.
-- **Hand-kept lists:** the stores (data.md), the cloud record kinds ✅
-  (`cloud-sync.js CLOUD_KINDS`, `merge3.js STAMPED`, `worker/cloud.js KINDS`),
+- **Hand-kept lists:** the stores (data.md), the cloud record kinds (one
+  list ✅: `reid.js SYNCED`, which `cloud-sync.js CLOUD_KINDS`,
+  `merge3.js STAMPED` and `worker/cloud.js KINDS` are made from),
   voices and step kinds in `log-clean.js`, limits written on both sides of
   the cloud ✅.
 - **Players outside `audio.playing`:** the engine's runs (the beat, the

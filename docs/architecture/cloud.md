@@ -120,15 +120,17 @@ Before the first upload, `cloud.js funNamed` gives a typed name a fun name (`nam
 
 `cloud.js status` (Map person → `{state, text, at}`), `state` one of `syncing`, `ok`, `trouble`, `locked`, `waiting`. Written by `syncNow` and `keyRefused`. Read by `statusOf`, `cloud-ui.js cloudText`/`cloudLabel`/`drawPin`, and through `onCloud(fn)` watchers (`app.js`, `people.js`). `trouble` and `locked` show ⚠️.
 
-### The record kinds (one list, kept four times)
+### The record kinds (one list)
 
 The 13 per-person stores that sync: `clips, overrides, orders, patterns, beats, decks, takes, songs, songbook, prefs, layouts, voices, touchLayouts`.
 
-| Copy | Used for | Guard |
+`web/reid.js SYNCED` (`PERSON_STORES` without `people`) is the one list; the others are made from it. ✅ `tests/architecture.test.mjs` fails when another file writes it out.
+
+| Name | Used for | Guard |
 |---|---|---|
-| `web/cloud-sync.js CLOUD_KINDS` | what a sync reads and pulls; `cloud.js db.onChange` filter | — |
-| `worker/cloud.js KINDS` | what a push may carry | `tests/cloud-sync.test.mjs` ("the app and the Worker agree on every kind") |
-| `web/merge3.js STAMPED` | which stores get the `changed` stamp | none (checked here: equal today) |
+| `web/cloud-sync.js CLOUD_KINDS` (= `SYNCED`) | what a sync reads and pulls; `cloud.js db.onChange` filter | `tests/cloud-sync.test.mjs` |
+| `worker/cloud.js KINDS` (= `SYNCED`) | what a push may carry | `tests/cloud-sync.test.mjs` ("the app and the Worker agree on every kind") |
+| `web/merge3.js STAMPED` (= `new Set(SYNCED)`) | which stores get the `changed` stamp | — |
 | `worker/schema.sql` `records.kind` comment | documentation | none |
 
 `cloud-sync.js ONE_EACH` (`orders, patterns, decks, songs, prefs`) are keyed by person id. `merge3.js KEEP_BOTH` (`clips, beats, takes, songbook, layouts, touchLayouts`) may keep two copies on a clash.
@@ -416,7 +418,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 | PIN hash | `web/cloud.js pinHash`/`PIN_ROUNDS` and `worker/pin.js hashSecret`/`ROUNDS` | a change of rounds or algorithm on one side breaks offline checks (the device's `check` is its own, so only consistency within each side matters today) |
 | share code rules | `web/cloud.js plainCode` + `/^[A-Z2-9]{8}$/`, `worker/pin.js plainCode` + `isShareCode` | the device's check is wider (lets I and O through) |
 | code alphabet | `log-send.js CODE_CHARS` and `worker/pin.js CODE_CHARS` | the same 32 characters, kept by hand |
-| record kinds | `CLOUD_KINDS`, worker `KINDS`, `STAMPED`, schema comment | a new per-person store added to `CLOUD_KINDS` and `KINDS` but not `STAMPED` would never get its `changed` stamp, so its clashes always go to the cloud (no test) |
+| record kinds | `CLOUD_KINDS`, worker `KINDS`, `STAMPED`, schema comment | a new per-person store added to `reid.js PERSON_STORES` is in `CLOUD_KINDS`, `KINDS` and `STAMPED` at once (one list); only the schema comment is by hand |
 | record content and hash | `cloud-sync.js canonical` + `NOT_CONTENT`, `merge3.js canon` + `NOT_CONTENT` | a new non-content field added to one makes "changed" and "same" disagree |
 | the stores as lists | `cloud.js storedLists`, `backup-ui.js storedLists`, `state.js storedLists` | the cloud's maps `prefs` through `cleanPrefs`; a new store must be added to all three |
 | pieces and caps | `CHUNK_BYTES` (web and worker), `CLOUD_MAX_SOUND`/`MAX_SOUND_BYTES` (tested equal), `PER_PUSH`, `RECORD_BYTES`, `PUSH_BYTES`/`LIMITS.perPush`, `recordBytes`, `pushBytes` (tested equal) | the Worker's `GET /api/cloud` already returns `chunk` and `maxSound`; the app ignores them |
@@ -474,7 +476,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 
 | Change | Touch |
 |---|---|
-| a new per-person store that syncs | `store.js SCHEMA`; `state.js` (`readStorage`, `storedLists`); `cloud.js storedLists`; `backup-ui.js storedLists`; `cloud-sync.js CLOUD_KINDS` (and `ONE_EACH`, `MADE`, `recordsOf`); `merge3.js STAMPED` (and `KEEP_BOTH`, `KIND_RULES`); `worker/cloud.js KINDS`; the `schema.sql` comment; `backup.js cleanBackup`; `merge.js` |
+| a new per-person store that syncs | `store.js SCHEMA`; `state.js` (`readStorage`, `storedLists`); `cloud.js storedLists`; `backup-ui.js storedLists`; `reid.js PERSON_STORES` (makes `SYNCED`, so `CLOUD_KINDS`, `STAMPED` and the Worker's `KINDS`); `cloud-sync.js` `ONE_EACH`, `MADE`, `recordsOf`; `merge3.js` `KEEP_BOTH`, `KIND_RULES`; the `schema.sql` comment; `backup.js cleanBackup` |
 | a new cloud route | `worker/cloud.js route` (+ Origin check, `seen` if it should count in metrics); `web/cloud-api.js`; `cloud.js`; `tests/worker-cloud.test.mjs`; `docs/design/cloud-profiles.md` §5; `privacy.js` if it stores or shows something new |
 | a D1 table or column | `worker/migrations/NNN-*.sql`, `worker/schema.sql` (and its `migrations` insert), `tests/migrations.test.mjs` passes; TODO "Ben does" for `just cloud-migrate --yes` |
 | a cloud limit | `worker/cloud.js LIMITS` (or `CHUNK_BYTES`, `MAX_SOUND_BYTES`), the web twin (`cloud-sync.js CHUNK_BYTES`, `CLOUD_MAX_SOUND`, `PER_PUSH`, `RECORD_BYTES`, `PUSH_BYTES`), `cloud-api.js cloudTrouble` for a new answer |

@@ -15,11 +15,12 @@ import { groupName } from './groups.js';
 import { STAMP, resolve } from './merge3.js';
 import { songBeatIds, mapSongBeats } from './playlist.js';
 import { foreignOf, restoreForeign } from './foreign.js';
+import { SYNCED } from './reid.js';
 
 // The stores that belong to one person (`voices` is ⭐ Voices, IndexedDB
 // `voices`). orders, patterns, decks, songs and
 // prefs (the person's settings) hold one record per person, keyed by personId.
-export const CLOUD_KINDS = ['clips', 'overrides', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices', 'touchLayouts'];
+export const CLOUD_KINDS = SYNCED;
 export const ONE_EACH = new Set(['orders', 'patterns', 'decks', 'songs', 'prefs']);
 export const CHUNK_BYTES = 1_900_000;
 // The biggest sound the cloud keeps (worker/cloud.js MAX_SOUND_BYTES). The

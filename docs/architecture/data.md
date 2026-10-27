@@ -5,7 +5,7 @@
 - There is **one database** (`noodle-pads`, `store.js`), **one in-memory copy** of it (`state.js` `state`), and **one rule set** for the board (`model.js`, pure), bound to that copy by `board.js`.
 - There is **no single write path.** `state.js persist` is the common one: it stamps the record and turns a failed write into a banner. App.js, backup-ui.js and cloud.js also write with `store.js db` directly. Their failures are reported in other ways, or only logged to the console.
 - There is **one gate for data that comes in as a whole** (a backup zip, Older sounds found, a cloud pull): `backup.js cleanBackup`, then `merge.js mergeLoaded` through `backup-ui.js storeLoaded`. A beat file does not use it. It is cleaned by `beat.js beatFromFile` (`cleanPattern`).
-- **"Which stores exist" is written out by hand in about ten places** (listed under [Seams](#seams)). Only `SCHEMA` order and the upgrades are tested. Adding a store means touching every one of those places.
+- **"Which stores exist" is written out by hand in about eight places** (listed under [Seams](#seams)). Only `SCHEMA` order and the upgrades are tested. Adding a store means touching every one of those places.
 - **Two kinds of sound:** presets (`source: 'bundled'`, from boards.json; `kit: true` for the shared kit, copied per person as `<personId>-<kitId>`) and own sounds (`source: 'user'`, IndexedDB `clips`, `user-…` ids). A preset is never stored. Only an edit of it is stored, as an `overrides` record.
 
 ## Files and what each owns
@@ -61,7 +61,7 @@
 | `bases` | `id` (`<person>\|<kind>:<record id>`) | 14 | `{id, personId, body}`: each record as last synced | cloud.js only | **never** | sync's own |
 | `touchLayouts` | `id` (`touch-…`) | 15 | `{id, personId, name, created, bands, grid?}` | app.js dj `saveTouchLayout` | yes | yes |
 
-`changed` is the edit stamp (`merge3.js` `STAMP`). `persist` adds it to records of the stores in `merge3.js STAMPED`, which today equals `cloud-sync.js CLOUD_KINDS`. People keep their own `edited` stamp instead.
+`changed` is the edit stamp (`merge3.js` `STAMP`). `persist` adds it to records of the stores in `merge3.js STAMPED`, which is `cloud-sync.js CLOUD_KINDS` (both are `reid.js SYNCED`). People keep their own `edited` stamp instead.
 
 The comments on `state` in `state.js` give older shapes for `patterns` (`rows: [{clipId, steps}]`) and `songs` (`slots`). The cleaners above are the true shapes.
 
@@ -363,19 +363,17 @@ A sync that changes the open beat while it plays is merged into the next save (`
 
 ## Seams
 
-1. **The list of stores is written out by hand in about ten places, and only SCHEMA is tested:**
+1. **The list of stores is written out by hand in about eight places, and only SCHEMA is tested:**
    - `store.js SCHEMA`
    - `state.js readStorage` (a positional destructuring: a new store must go in the same place as in `SCHEMA`)
    - `state.js deletePerson`
    - the four `storedLists`
    - `reid.js PERSON_STORES`
-   - `merge.js` `STORES`
    - `backup.js` `MAX_RECORDS`, `makeBackup`, `personBackupLists`, `cleanBackup`'s return, `STORE_WORDS`
    - `model.js personIdsIn` (leaves out `prefs` on purpose: settings alone make no person)
-   - `merge3.js STAMPED` and `cloud-sync.js CLOUD_KINDS`
    - `leftover.js` `STORES`
 
-   A new store missed in `deletePerson` outlives its person, and `adoptStoredPeople` then brings the person back. Missed in `PERSON_STORES`, the store keeps old plain ids. Missed in `merge.js STORES`, it never loads from a backup.
+   A new store missed in `deletePerson` outlives its person, and `adoptStoredPeople` then brings the person back. Missed in `PERSON_STORES`, the store keeps old plain ids. `merge.js STORES`, `merge3.js STAMPED`, `cloud-sync.js CLOUD_KINDS` and the Worker's `KINDS` are made from `STORE_NAMES` and `reid.js` (one list each), so a new store reaches them without an edit.
 2. **Writes bypass `persist`** (see the table above). A fix to failure reporting in `persist` misses `storeLoaded`, the app.js deletes, `adoptKidsBeat` and cloud.js. A refused delete is told by `removeRecord` (every app.js delete and close), or by its own copy of the same words (`deleteUserClip`, `deleteMyVoice`).
 3. **Four "stores as lists" builders** (above). A new store added to one is easy to miss in the others: `people.js storedLists` feeds 👥 counts and See all, `backup-ui.js` feeds backups, `cloud.js` feeds sync.
 4. **Three counters of what is here** (above). A new kind a backup carries goes into `holdings` and `holdsWords` too (`tests/holds.test.mjs`), or "A backup now holds…" leaves it out.
@@ -420,7 +418,7 @@ A sync that changes the open beat while it plays is merged into the next save (`
 
 | Change | Touch |
 |---|---|
-| **A new IndexedDB store** | 1. `store.js SCHEMA` (new `since`) and its header comment; `tests/store.test.mjs`. 2. `state.js` `state`, `readStorage` (same position), `deletePerson` and `storedLists`. 3. The other storedLists (`backup-ui.js`, `cloud.js`, and `people.js` if it counts). 4. `reid.js PERSON_STORES`. 5. `model.js personIdsIn` (and `PERSON_KINDS`, `personThings` if 👥 counts it). 6. `backup.js`: `MAX_RECORDS`, `makeBackup`, `personBackupLists`, `cleanBackup` (a cleaner and the return), `STORE_WORDS`. 7. `merge.js` `STORES` and a rule. 8. `merge3.js STAMPED` and `cloud-sync.js CLOUD_KINDS` if it syncs (cloud area). 9. The writer in `app.js` deps, or a helper in `state.js`. 10. The backup header comment, docs/guide.md, `web/privacy.js` if it goes to the cloud. |
+| **A new IndexedDB store** | 1. `store.js SCHEMA` (new `since`) and its header comment; `tests/store.test.mjs`. 2. `state.js` `state`, `readStorage` (same position), `deletePerson` and `storedLists`. 3. The other storedLists (`backup-ui.js`, `cloud.js`, and `people.js` if it counts). 4. `reid.js PERSON_STORES`. 5. `model.js personIdsIn` (and `PERSON_KINDS`, `personThings` if 👥 counts it). 6. `backup.js`: `MAX_RECORDS`, `makeBackup`, `personBackupLists`, `cleanBackup` (a cleaner and the return), `STORE_WORDS`. 7. `merge.js`: a rule (its `STORES` follows `SCHEMA`). 8. If it syncs, `reid.js PERSON_STORES` already makes `STAMPED`, `CLOUD_KINDS` and the Worker's `KINDS` (cloud area). 9. The writer in `app.js` deps, or a helper in `state.js`. 10. The backup header comment, docs/guide.md, `web/privacy.js` if it goes to the cloud. |
 | **A new field on an own sound** | the five places that make one (Seam 6); `sheet.js saveSheet`'s edit branch (it deletes fields before assigning); `backup.js cleanBackup` clips; `model.js overrideFor` and `cleanBackup` overrides if presets get it too; `model.js withBulkChanges` if bulk edits change it; `merge.js` skip list if it is not content |
 | **A new setting** | `settings.js SETTINGS` (scope; `values` or `clean`); a control in settings-ui.js; `onSetting` where it acts; `tests/startup-remembered.test.mjs` only if it uses localStorage. Backups carry it automatically. |
 | **A new person field** | people.js `addPerson`; `model.js soloPerson`, `mergePeople` (it copies named fields only), `adoptPeople`, `personEditRecord` (`edited` stamping); `backup.js cleanBackup` people; `merge.js` people rule (its field list); cloud (cloud area) |

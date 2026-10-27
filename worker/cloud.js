@@ -6,7 +6,7 @@
 import { PERSON_ID, PERSON_COLORS, OLD_PERSON_COLORS } from '../web/model.js';
 import { isListedEmoji } from '../web/emoji-check.js';
 import { isFunName, cutName } from '../web/names.js';
-import { CLOUD_ID } from '../web/reid.js';
+import { CLOUD_ID, SYNCED } from '../web/reid.js';
 import { ORIGIN, json, fail, Refuse, readJson, readBytes, randomId, sha256Hex, hmacHex, toBytes, withinDaily, utcDay } from './http.js';
 import { isPin, newSalt, hashSecret, checkSecret, OPENING, KEYED, shareCode, isShareCode, plainCode } from './pin.js';
 import { noteEvent, forgetProfile, expireReports } from './metrics.js';
@@ -75,7 +75,7 @@ export const KEYS_PER_PROFILE = 20;
 export const ACTIVE_STEP_MS = 60 * 60 * 1000;
 
 // The stores that belong to one person (state.js, store.js).
-export const KINDS = ['clips', 'overrides', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices', 'touchLayouts'];
+export const KINDS = SYNCED;
 const RECORD_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const SOUND_ID = /^s-[a-z2-7]{26}$/;
 const SHA = /^[0-9a-f]{64}$/;

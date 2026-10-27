@@ -212,12 +212,26 @@ test('✅ the stores: a person\'s, the backup\'s and the cloud\'s lists follow s
   assert.deepEqual(Object.keys(out).filter((k) => Array.isArray(out[k])).sort(), STORE_NAMES.filter((s) => s !== 'cloud' && s !== 'bases').sort(), FIX);
 });
 
-test('✅ the record kinds that sync are one list, kept three times in one order', async () => {
+test('✅ the record kinds that sync are one list, reid.js SYNCED, which the others are made from', async () => {
+  const { SYNCED, PERSON_STORES } = await web('reid.js');
   const { CLOUD_KINDS } = await web('cloud-sync.js');
   const { STAMPED } = await web('merge3.js');
   const { KINDS } = await worker('cloud.js');
-  assert.deepEqual([...STAMPED], CLOUD_KINDS, FIX);
-  assert.deepEqual(KINDS, CLOUD_KINDS, FIX);
+  assert.deepEqual(SYNCED, PERSON_STORES.filter((s) => s !== 'people'), FIX);
+  assert.deepEqual([...STAMPED], SYNCED, FIX);
+  assert.deepEqual(CLOUD_KINDS, SYNCED, FIX);
+  assert.deepEqual(KINDS, SYNCED, FIX);
+  // No other file writes the list out again.
+  const copies = [...WEB.map((f) => `web/${f}`), ...WORKER.map((f) => `worker/${f}`)].filter((f) => /'clips', 'overrides', 'orders'/.test(read(f)));
+  // (leftover.js reads an old database: its list is frozen on purpose.)
+  assert.deepEqual(copies.sort(), ['web/leftover.js', 'web/reid.js'], FIX);
+});
+
+test('✅ merge.js STORES follow store.js, without the device\'s own links and bases', async () => {
+  const { STORE_NAMES } = await web('store.js');
+  const out = (await web('merge.js')).mergeLoaded;
+  const { put } = await out({}, {});
+  assert.deepEqual(Object.keys(put).sort(), STORE_NAMES.filter((s) => s !== 'cloud' && s !== 'bases').sort(), FIX);
 });
 
 test('✅ limits written on both sides of the cloud agree', async () => {

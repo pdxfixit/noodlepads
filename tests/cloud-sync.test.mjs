@@ -17,13 +17,13 @@ import { LIMITS } from '../worker/cloud.js';
 import { cleanBackup } from '../web/backup.js';
 import { mergeLoaded } from '../web/merge.js';
 import { newId } from '../web/util.js';
+import { SCHEMA } from '../web/store.js';
 import { appMeta } from '../web/device-meta.js';
 import { cleanPrefs } from '../web/settings.js';
 
 const KIT = ['kick', 'snare'];
 const PIN = '2468';   // every profile in the cloud has one
-const KEYS = { clips: 'id', overrides: 'id', orders: 'personId', patterns: 'personId', beats: 'id', people: 'id',
-  settings: 'key', decks: 'personId', takes: 'id', songs: 'personId', songbook: 'id', prefs: 'personId', layouts: 'id', voices: 'id', touchLayouts: 'id' };
+const KEYS = Object.fromEntries(SCHEMA.filter((s) => s.name !== 'cloud' && s.name !== 'bases').map((s) => [s.name, s.keyPath]));
 
 function server() {
   const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') } };
