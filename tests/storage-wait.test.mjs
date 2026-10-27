@@ -3,7 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadStorage, state, removeRecord, deletePerson, setOverride, setPersonEdit } from '../web/state.js';
+import { loadStorage, state, persist, removeRecord, deletePerson, setOverride, setPersonEdit, deleteUserClip, deleteMyVoice } from '../web/state.js';
 import { db, STORE_NAMES } from '../web/store.js';
 import { stubBanner } from './banner.mjs';
 
@@ -112,4 +112,29 @@ test('a delete with no storage at all is quiet and done; one while another tab h
   notice.textContent = '';
   assert.equal(await removeRecord('takes', 'take-a', 'That take'), true, 'no storage: gone, from memory, which is all there is');
   assert.equal(notice.textContent, '', 'and nothing said');
+
+  // Every other write and delete is quiet the same way (one noStorage() in
+  // state.js), so a save can't push an Undo off the banner.
+  state.manifest = { kit: [], people: [{ id: 'pip', name: 'Pip', color: '#2D3FD6', clips: [] }] };
+  const clip = { id: 'c-1', label: 'Honk', personId: 'p-pip-1', source: 'user' };
+  const table = [
+    ['persist', () => persist('clips', { id: 'c-2', label: 'Beep' }), true],
+    ['setOverride (kept)', () => setOverride({ id: 'p-pip-1-kick', label: 'Boom' }), true],
+    ['setOverride (put back)', () => setOverride({ id: 'p-pip-1-kick' }), true],
+    ['setPersonEdit (put back)', async () => { state.peopleEdits.set('pip', { id: 'pip', name: 'Captain Pip' }); await setPersonEdit('pip', { name: 'Pip' }); }],
+    ['setPersonEdit (kept)', () => setPersonEdit('pip', { name: 'Admiral Pip' })],
+    ['deleteUserClip', async () => { state.userClips = [clip]; await deleteUserClip(clip); assert.equal(state.userClips.length, 0); }],
+    ['deleteMyVoice', async () => { state.myVoices = [{ id: 'v-1' }]; await deleteMyVoice('v-1'); assert.equal(state.myVoices.length, 0); }],
+  ];
+  for (const [name, run, expected] of table) {
+    notice.textContent = '';
+    const errors = [];
+    const log = console.error;
+    console.error = (...a) => errors.push(a);
+    try {
+      assert.equal(await run(), expected, `${name} resolves`);
+    } finally { console.error = log; }
+    assert.equal(notice.textContent, '', `${name}: nothing said`);
+    assert.deepEqual(errors, [], `${name}: nothing logged as an error`);
+  }
 });

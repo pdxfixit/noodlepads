@@ -254,6 +254,13 @@ export async function rememberRenames(pairs) {
 
 // This browser gave no storage at all: the board runs from memory only.
 let storageFailed = false;
+// A browser that gives no storage at all (the open failed) has nothing stored
+// to save or to bring back, and was told at the start that nothing saves. Every
+// write and delete here asks this first and stays quiet then: a notice would
+// replace an ↩️ Undo showing (a groove into the scratch closes the open beat).
+// Storage not open for another reason (still opening, or closed for another
+// tab's upgrade) is a refusal, not this.
+const noStorage = () => !db.handle && storageFailed;
 
 // How long the board waits for saved data before showing without it.
 export const STORAGE_WAIT_MS = 1500;
@@ -294,14 +301,16 @@ export async function loadStorage({ onLateOpen = () => {}, waitMs = STORAGE_WAIT
 // Resolves false when storage refused it (a full disk, or storage not open:
 // waiting for another tab, or closed for a newer copy's upgrade), so a screen
 // can keep the work open to save again. Only with no storage at all does this
-// visit keep everything in memory, as the notice says, and it resolves true.
+// visit keep everything in memory, as the notice says: quiet, and true.
 export async function persist(store, value) {
+  const stamped = stampEdit(store, value);
+  if (noStorage()) return true;
   try {
-    await db.put(store, stampEdit(store, value));
+    await db.put(store, stamped);
   } catch (err) {
     console.error(`Saving to ${store} failed:`, err);
     showNotice(wouldNotSave(err));
-    return storageFailed;
+    return false;
   }
   if (MADE.has(store)) keepStorage();
   return true;
@@ -340,12 +349,13 @@ export async function setOverride(next) {
     return persist('overrides', next);
   }
   state.overrides.delete(next.id);
+  if (noStorage()) return true;
   try {
     await db.remove('overrides', next.id);
   } catch (err) {
     console.error('Removing an override failed:', err);
     showNotice(wouldNotRemove(err));
-    return storageFailed;
+    return false;
   }
   return true;
 }
@@ -354,11 +364,7 @@ export async function setOverride(next) {
 // A browser that refuses is told so, since it may come back after a reload.
 // `what` names it in the notice ("That take"). Resolves to whether it went.
 export async function removeRecord(store, key, what) {
-  // A browser that gives no storage at all has nothing stored to bring
-  // back, and was told at the start that nothing saves: no notice, which
-  // would replace an ↩️ Undo showing (a groove into the scratch closes the
-  // open beat).
-  if (!db.handle && storageFailed) return true;
+  if (noStorage()) return true;
   try {
     await db.remove(store, key);
     return true;
@@ -401,6 +407,7 @@ export async function setPersonEdit(id, changes) {
   const next = personEditRecord(base, state.peopleEdits.get(id) || { id }, changes);
   if (!next) {
     state.peopleEdits.delete(id);
+    if (noStorage()) return;
     try { await db.remove('people', id); } catch (err) {
       console.error('Removing a person edit failed:', err);
       showNotice(wouldNotRemove(err));
@@ -449,11 +456,11 @@ export async function deletePerson(id) {
     else if (store === 'overrides') ops.push(...goneEdits.map((o) => ({ store, del: o })));
   }
   ops.push(hidden ? { store: 'people', put: hidden } : { store: 'people', del: id });
-  // With no storage at all (a browser that gives none), there is nothing
-  // stored to leave behind. Storage not open (still opening, or closed for
-  // another tab's upgrade) is a refusal: what is stored would come back.
+  // With no storage at all there is nothing stored to leave behind. Storage
+  // not open (still opening, or closed for another tab's upgrade) is a
+  // refusal: what is stored would come back.
   try {
-    if (db.handle || !storageFailed) await db.batch(ops);
+    if (!noStorage()) await db.batch(ops);
   } catch (err) {
     console.error('Deleting a person failed:', err);
     const name = state.peopleEdits.get(id)?.name ?? bundled?.name ?? 'They';
@@ -475,12 +482,7 @@ export async function deletePerson(id) {
 // since the sound may come back after a reload.
 export async function deleteUserClip(clip) {
   state.userClips = state.userClips.filter((c) => c.id !== clip.id);
-  try {
-    await db.remove('clips', clip.id);
-  } catch (err) {
-    console.error('Delete failed:', err);
-    showNotice(`“${clip.label}” is gone for now, but this browser wouldn't delete it (${err.message || err.name}), so it may come back after a reload.`);
-  }
+  await removeRecord('clips', clip.id, `“${clip.label}”`);
 }
 
 // A kid's own voice (⭐ Save voice, voice-knobs.js), made or changed.
@@ -493,10 +495,5 @@ export async function saveMyVoice(record) {
 // stores knob positions, never which voice made them.
 export async function deleteMyVoice(id) {
   state.myVoices = state.myVoices.filter((v) => v.id !== id);
-  try {
-    await db.remove('voices', id);
-  } catch (err) {
-    console.error('Delete failed:', err);
-    showNotice(`That voice is gone for now, but this browser wouldn't delete it (${err.message || err.name}), so it may come back after a reload.`);
-  }
+  await removeRecord('voices', id, 'That voice');
 }
