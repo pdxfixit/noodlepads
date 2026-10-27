@@ -86,3 +86,30 @@ test('a held-up database: a delete, deleting a person, or an edit put back says 
   await new Promise((r) => setTimeout(r, 20));
   db.handle = null;
 });
+
+// A refused delete is told while another tab holds the database (storage is
+// coming); with no storage at all there is nothing stored to come back, and
+// the start said nothing saves, so it stays quiet: a notice there would push
+// an ↩️ Undo off the banner (a groove into the scratch closes the open beat).
+// Last in this file: a failed open stays failed for the page.
+test('a delete with no storage at all is quiet and done; one while another tab holds the database is told', async () => {
+  const held = slowIndexedDB();
+  globalThis.indexedDB = held;
+  await loadStorage({ waitMs: 10 });
+  notice.textContent = '';
+  assert.equal(await removeRecord('takes', 'take-a', 'That take'), false, 'another tab holds it: refused');
+  assert.match(notice.textContent, /^Not saved: another soundboard tab/);
+  held.req.result = held.database;
+  held.req.onsuccess();
+  await new Promise((r) => setTimeout(r, 20));
+  db.handle = null;
+  const req = {};
+  globalThis.indexedDB = { open: () => req };
+  const loading = loadStorage({ waitMs: 1000 });
+  req.error = new Error('no IndexedDB here');
+  req.onerror();
+  await loading;
+  notice.textContent = '';
+  assert.equal(await removeRecord('takes', 'take-a', 'That take'), true, 'no storage: gone, from memory, which is all there is');
+  assert.equal(notice.textContent, '', 'and nothing said');
+});
