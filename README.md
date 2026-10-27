@@ -80,7 +80,7 @@ the cloud database show what they would do, or ask, before they do it.
 | Check a finger's taps sound | `just taps`: a phone in headless Chrome taps 🔊 Pads, 🎤 Live and 🧸 Kids, fresh, after 🛠️ Make and back, and after a freeze and thaw; each must sound |
 | Back up the cloud database | `just cloud-backup` (a `.sql` file in `~/.local/state/noodlepads/backups/`) |
 | Look in the cloud database | `just cloud-profiles`, `just cloud-stats`, `just cloud-sql "SELECT …"`, or any wrangler command with `just cloud-db …` |
-| Change the cloud database | `just cloud-migrate` (then `--yes`; the deploy runs it too, so by hand only for a drop); `just cloud-prune` (then `--yes`); `just cloud-reset-pin "<fun name>" --to 1234` (no `--to` clears it); `just cloud-schema` for a new, empty database only |
+| Change the cloud database | `just cloud-migrate` (then `--yes`; the deploy runs it too, so by hand only for a drop); `just cloud-prune` (then `--yes`); `just cloud-reset-pin "<fun name>"` (then `--yes`: a random PIN, shown once); `just cloud-schema` for a new, empty database only |
 | Bring problem reports and metrics home | `python3 ~/src/telemetry/telemetry.py pull`: the telemetry runner (pdxfixit/telemetry) harvests them, and this copies its store to `~/.local/state/telemetry/telemetry.sqlite3` |
 | Problem reports | `just logs`, `--errors`, `--digest` read them from that copy |
 | Move the old Mac archives into the runner (once) | `just runner-export all LOGS METRICS OUT` (both in the one file to import), `just runner-export check FILE` (docs/how-to.md, "Retire the old Mac archives") |

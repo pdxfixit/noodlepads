@@ -128,7 +128,7 @@ test('🤷 I don\'t know the PIN asks first, then deletes them from this device;
   assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM profiles WHERE id = ?', id)[0].n, 1, 'the cloud keeps its copy');
 });
 
-test('a PIN Ben cleared (`just cloud-reset-pin`): the device opens them again by itself, no PIN asked', async () => {
+test('a PIN removed on another device: this device opens them again by itself, no PIN asked', async () => {
   const id = 'p-reset';
   await pinSetElsewhere(id, '1470');
   await env.DB.exec(`UPDATE profiles SET pin_hash = NULL, pin_salt = NULL WHERE id = '${id}'; DELETE FROM keys WHERE profile_id = '${id}';`);

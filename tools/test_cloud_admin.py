@@ -2,6 +2,8 @@
 sends to D1, run on the live schema (tests/schema-before-001.sql) or the
 current one (worker/schema.sql)."""
 
+import contextlib
+import io
 import re
 import json
 import os
@@ -454,41 +456,126 @@ class Metrics(unittest.TestCase):
         self.assertEqual(ca.bars([]), '')
 
 
+SHOWN_PIN = re.compile(r'new PIN is (\d{4})\.')
+
+
 class ResetPin(unittest.TestCase):
-    def test_asks_then_clears_the_pin_and_every_key(self):
+    # Ben, 2026-10-26: "reset Captain Cranberries' PIN" from a cold session; 2026-10-27: the tool
+    # picks a random PIN for Ben to pass on, never 1234 (the profile list is public).
+    def kid(self, db, pid='p-cc', name='Captain Cranberries', active=1):
+        db.execute(f"INSERT INTO profiles (id, name, avatar, color, pin_hash, pin_salt, fails, locked_until, rev, edited, created, active) VALUES ('{pid}', '{name}', '', '#1F3FA8', 'h', 's', 4, 99, 0, 1, 1, {active});"
+                   f"INSERT INTO keys (hash, profile_id, created) VALUES ('k-{pid}', '{pid}', 1);")
+
+    def reset(self, db, who, draws, **kw):
+        """reset_pin with `secrets.randbelow` drawing `draws` in turn; the lines it said."""
+        lines, out = quiet()
+        with mock.patch.object(ca.secrets, 'randbelow', side_effect=list(draws)) as rb:
+            done = ca.reset_pin(db, who, out=out, **kw)
+        for call in rb.call_args_list:
+            self.assertEqual(call.args, (10_000,), '0000 to 9999, each alike')
+        return done, lines
+
+    def stored(self, db, pid='p-cc'):
+        return db.query(f"SELECT pin_hash, pin_salt, fails, locked_until FROM profiles WHERE id = '{pid}'")[0]
+
+    def test_asks_then_sets_a_random_pin_and_drops_every_key(self):
         db = Local(ROOT / 'worker' / 'schema.sql')
-        db.execute("INSERT INTO profiles (id, name, avatar, color, pin_hash, pin_salt, fails, rev, edited, created) VALUES ('p-k', 'Sir Squid', '', '#1F3FA8', 'h', 's', 3, 0, 1, 1);"
-                   "INSERT INTO keys (hash, profile_id, created) VALUES ('k1', 'p-k', 1);")
-        self.assertFalse(ca.reset_pin(db, 'p-k', ask=lambda _: 'no', out=quiet()[1]))
-        self.assertEqual(db.query("SELECT pin_hash FROM profiles")[0]['pin_hash'], 'h')
-        self.assertTrue(ca.reset_pin(db, 'p-k', ask=lambda _: 'yes', out=quiet()[1]))
-        self.assertEqual(db.query("SELECT pin_hash, fails FROM profiles"), [{'pin_hash': None, 'fails': 0}])
+        self.kid(db)
+        self.assertFalse(self.reset(db, 'p-cc', [4821], ask=lambda _: 'no')[0])
+        self.assertEqual(self.stored(db)['pin_hash'], 'h')
+        done, lines = self.reset(db, 'p-cc', [4821], ask=lambda _: 'yes')
+        self.assertTrue(done)
+        self.assertEqual(SHOWN_PIN.search(lines[-1]).group(1), '4821')
+        row = self.stored(db)
+        self.assertEqual(row['pin_hash'], ca.pin_hash('4821', row['pin_salt']))
         self.assertEqual(db.query('SELECT COUNT(*) AS n FROM keys')[0]['n'], 0)
 
     def test_an_unknown_profile_is_said(self):
         with self.assertRaises(ca.Trouble):
             ca.reset_pin(Local(ROOT / 'worker' / 'schema.sql'), 'p-none', out=quiet()[1])
 
-    # Ben, 2026-10-26: "reset Captain Cranberries' PIN to 1234" from a cold session.
-    def kid(self, db, pid='p-cc', name='Captain Cranberries', active=1):
-        db.execute(f"INSERT INTO profiles (id, name, avatar, color, pin_hash, pin_salt, fails, locked_until, rev, edited, created, active) VALUES ('{pid}', '{name}', '', '#1F3FA8', 'h', 's', 4, 99, 0, 1, 1, {active});"
-                   f"INSERT INTO keys (hash, profile_id, created) VALUES ('k-{pid}', '{pid}', 1);")
-
     def test_sets_a_new_pin_by_fun_name_in_any_case(self):
         db = Local(ROOT / 'worker' / 'schema.sql')
         self.kid(db)
-        self.assertTrue(ca.reset_pin(db, 'captain cranberries', to='1234', yes=True, out=quiet()[1]))
-        row = db.query("SELECT pin_hash, pin_salt, fails, locked_until FROM profiles")[0]
-        self.assertEqual(row['pin_hash'], ca.pin_hash('1234', row['pin_salt']))
+        done, lines = self.reset(db, 'captain cranberries', [4821], yes=True)
+        self.assertTrue(done)
+        self.assertIn("Captain Cranberries's new PIN is 4821.", lines[-1])
+        self.assertIn('Pass it on', lines[-1])
+        row = self.stored(db)
+        self.assertEqual(row['pin_hash'], ca.pin_hash('4821', row['pin_salt']))
         self.assertEqual(len(row['pin_salt']), 32, '16 random bytes, as the Worker makes')
         self.assertEqual((row['fails'], row['locked_until']), (0, 0), 'no wait left from wrong tries')
         self.assertEqual(db.query('SELECT COUNT(*) AS n FROM keys')[0]['n'], 0, 'every device opens it again')
+
+    def test_a_pin_is_always_four_digits_leading_zeros_too(self):
+        db = Local(ROOT / 'worker' / 'schema.sql')
+        self.kid(db)
+        lines = self.reset(db, 'p-cc', [7], yes=True)[1]
+        self.assertEqual(SHOWN_PIN.search(lines[-1]).group(1), '0007')
+        row = self.stored(db)
+        self.assertEqual(row['pin_hash'], ca.pin_hash('0007', row['pin_salt']), 'the pad types 0007, not 7')
+
+    def test_an_obvious_pin_is_drawn_again(self):
+        db = Local(ROOT / 'worker' / 'schema.sql')
+        self.kid(db)
+        lines = self.reset(db, 'p-cc', [1234, 0, 1111, 4321, 9999, 1212, 2580, 6789, 5739], yes=True)[1]
+        self.assertEqual(SHOWN_PIN.search(lines[-1]).group(1), '5739')
+
+    def test_which_pins_are_obvious(self):
+        for pin in ('1234', '0000', '1111', '4321', '9999', '0123', '6789', '9876', '3210', '1212', '2580'):
+            self.assertTrue(ca.obvious_pin(pin), pin)
+        for pin in ('4821', '0007', '1235', '7890', '1357', '5739'):
+            self.assertFalse(ca.obvious_pin(pin), pin)
+        self.assertLess(sum(ca.obvious_pin(f'{n:04d}') for n in range(10_000)), 50, 'the list stays short')
+
+    def test_a_real_draw_is_four_digits_and_never_obvious(self):
+        for _ in range(500):
+            pin = ca.new_pin()
+            self.assertRegex(pin, r'^\d{4}$')
+            self.assertFalse(ca.obvious_pin(pin), pin)
+
+    def test_one_update_sets_the_hash_and_salt_together(self):
+        # A clear, then a set, would let a sync between them see the profile with no PIN.
+        db = Local(ROOT / 'worker' / 'schema.sql')
+        self.kid(db)
+        before = len(db.ran)
+        self.reset(db, 'p-cc', [4821], yes=True)
+        self.assertEqual(len(db.ran), before + 1, 'one call to the database')
+        statements = [s.strip() for s in db.ran[-1].split(';') if s.strip()]
+        updates = [s for s in statements if s.upper().startswith('UPDATE')]
+        self.assertEqual(len(updates), 1, statements)
+        self.assertIn('pin_hash = ', updates[0])
+        self.assertIn('pin_salt = ', updates[0])
+        self.assertNotIn('NULL', db.ran[-1].upper(), 'never a profile left with no PIN')
+        self.assertEqual([s for s in statements if s not in updates], ["DELETE FROM keys WHERE profile_id = 'p-cc'"])
+
+    def test_the_pin_is_said_once_on_stdout_and_written_nowhere(self):
+        db = Local(ROOT / 'worker' / 'schema.sql')
+        self.kid(db)
+        stdout, stderr = io.StringIO(), io.StringIO()
+        no_file = AssertionError('the PIN is never written to a file')
+        with mock.patch.object(ca.secrets, 'randbelow', side_effect=[4821]), \
+             mock.patch('builtins.open', side_effect=no_file), mock.patch('io.open', side_effect=no_file), \
+             mock.patch('os.open', side_effect=no_file), \
+             contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            self.assertEqual(ca.main(['reset-pin', 'p-cc', '--yes'], db=db), 0)
+        self.assertEqual(stdout.getvalue().count('4821'), 1, stdout.getvalue())
+        self.assertNotIn('4821', stderr.getvalue())
+        self.assertFalse(any('4821' in sql for sql in db.ran), 'only its hash goes to the database')
+        self.assertNotIn('4821', json.dumps(db.query('SELECT * FROM profiles')))
+
+    def test_a_pin_cannot_be_chosen(self):
+        db = Local(ROOT / 'worker' / 'schema.sql')
+        self.kid(db)
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            ca.main(['reset-pin', 'p-cc', '--to', '1234', '--yes'], db=db)
+        self.assertEqual(self.stored(db)['pin_hash'], 'h')
 
     def test_from_a_script_it_shows_who_and_stops_without_yes(self):
         db = Local(ROOT / 'worker' / 'schema.sql')
         self.kid(db)
         lines, out = quiet()
-        self.assertFalse(ca.reset_pin(db, 'Captain Cranberries', to='1234', ask=None, out=out))
+        self.assertFalse(ca.reset_pin(db, 'Captain Cranberries', ask=None, out=out))
         self.assertEqual(db.query("SELECT pin_hash FROM profiles")[0]['pin_hash'], 'h')
         self.assertIn('p-cc: Captain Cranberries, has a PIN', lines)
         self.assertIn('run it again with --yes', lines[-1])
@@ -498,7 +585,7 @@ class ResetPin(unittest.TestCase):
         self.kid(db)
         lines, out = quiet()
         with self.assertRaises(ca.Trouble):
-            ca.reset_pin(db, "Captain Cranberry's", to='1234', yes=True, out=out)
+            ca.reset_pin(db, "Captain Cranberry's", yes=True, out=out)
         self.assertTrue(any('p-cc' in line and 'Captain Cranberries' in line for line in lines))
         self.assertEqual(db.query("SELECT pin_hash FROM profiles")[0]['pin_hash'], 'h')
 
@@ -508,17 +595,10 @@ class ResetPin(unittest.TestCase):
         self.kid(db, 'p-cc2', active=5)
         lines, out = quiet()
         with self.assertRaises(ca.Trouble):
-            ca.reset_pin(db, 'Captain Cranberries', to='1234', yes=True, out=out)
+            ca.reset_pin(db, 'Captain Cranberries', yes=True, out=out)
         self.assertEqual([line.split()[0] for line in lines], ['p-cc2', 'p-cc1'], 'the last active first')
-        self.assertTrue(ca.reset_pin(db, 'p-cc1', to='1234', yes=True, out=quiet()[1]))
+        self.assertTrue(ca.reset_pin(db, 'p-cc1', yes=True, out=quiet()[1]))
         self.assertEqual(db.query("SELECT pin_hash FROM profiles WHERE id = 'p-cc2'")[0]['pin_hash'], 'h')
-
-    def test_a_pin_is_four_digits(self):
-        db = Local(ROOT / 'worker' / 'schema.sql')
-        self.kid(db)
-        for bad in ('123', '12345', 'abcd'):
-            with self.assertRaises(ca.Trouble):
-                ca.reset_pin(db, 'p-cc', to=bad, yes=True, out=quiet()[1])
 
     def test_a_name_with_sql_in_it_is_refused(self):
         with self.assertRaises(ca.Trouble):

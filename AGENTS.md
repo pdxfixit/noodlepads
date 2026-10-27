@@ -21,7 +21,7 @@ Every change serves this. Why, and the north star it steers: [ADR 0022](docs/adr
 - **Ship:** a change to `web/` gets `just version` in the same commit ([Ship](#ship)). `just ship`, from the main checkout only. In a worktree, commit on your branch and report the commits; they are landed with `just land` ([docs/how-to.md](docs/how-to.md)). Every push to `main` is deployed by GitHub (`.github/workflows/deploy.yml`, [ADR 0025](docs/adr/0025-github-deploys.md)): tests, deploy, then the live cloud checks. Agents never deploy and hold no Cloudflare token; after a push, read the deploy run.
 - **Every change fits every screen:** check 320, 375, 700, 900 and 1100 px wide, then the wide screens 1366, 1920, 2560 and 3440, with no sideways scroll. `just look --wide` does all nine in your own headless Chrome ([Verify](#verify)).
 - **The council reviews every change, and can block it:** which seats, when, and what they return are in [docs/council.md](docs/council.md) ([Council](#council)).
-- **"Reset <fun name>'s PIN to 1234":** Ben may ask this cold. Follow [docs/how-to.md](docs/how-to.md) "Reset a forgotten PIN": two commands, from Ben's Mac only.
+- **"Reset <fun name>'s PIN":** Ben may ask this cold. Follow [docs/how-to.md](docs/how-to.md) "Reset a forgotten PIN": two commands, from Ben's Mac only. The tool picks a random PIN and shows it once, for Ben to pass on to the family; never 1234 (Ben, 2026-10-27).
 - **Anything that comes in is untrusted:** backups, uploaded files and `boards.json` are checked and capped ([docs/guide.md](docs/guide.md) "Limits on what comes in").
 
 ## Cold start: read in this order

@@ -7,8 +7,9 @@
     cloud_admin.py profiles                      every profile: id, name, made, last active, records, sound bytes
     cloud_admin.py prune    [--days N] [--empty] [--smoke] [--yes]   profiles idle N days (default 180) or empty, and loose sounds;
                                                  --smoke: what the deploy checks left (p-smoke-…, p-e2e-…, and their shares)
-    cloud_admin.py reset-pin WHO [--to 1234] [--yes]   a forgotten PIN: WHO is the fun name or the id; clears the PIN,
-                                                 or sets it to --to (docs/how-to.md "Reset a forgotten PIN")
+    cloud_admin.py reset-pin WHO [--yes]         a forgotten PIN: WHO is the fun name or the id; gives it a new
+                                                 random PIN, shown once for Ben to pass on (docs/how-to.md
+                                                 "Reset a forgotten PIN")
     cloud_admin.py stats    [--days N]           the players: what each made; then reports the metrics
                                                  (ADR 0016) from the telemetry runner's pulled store
                                                  (read only): devices, places, activity by day and hour
@@ -39,6 +40,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import sqlite3
 import subprocess
 import sys
@@ -646,7 +648,6 @@ def prune(db, days=None, empty=False, yes=False, now=None, out=print, smoke=Fals
 
 # ── a forgotten PIN ──
 
-PIN = re.compile(r'^\d{4}$')
 PIN_ROUNDS = 20_000   # worker/pin.js ROUNDS
 FUN_NAME = re.compile(r"^[A-Za-z][A-Za-z' -]{0,39}$")
 
@@ -687,18 +688,35 @@ def find_profile(db, who, out=print):
     raise Trouble(msg)
 
 
-def reset_pin(db, who, to=None, yes=False, ask=input, out=print):
-    """Clears a profile's PIN, or sets it to `to` (4 digits), from Ben's ask after a forgotten-PIN email.
-    Every key goes, so each device opens the profile again: with no PIN at once, or asking the new one."""
-    if to is not None and not PIN.match(to):
-        raise Trouble('a PIN is 4 digits, like 1234.')
+# PINs anyone would try first, on top of four of one digit and straight runs
+# (obvious_pin). A reset never picks one (Ben, 2026-10-27).
+OBVIOUS_PINS = frozenset({'1212', '1122', '1313', '2580', '0852', '1004', '2000', '6969', '1984', '2020'})
+
+
+def obvious_pin(pin):
+    """Four of one digit (0000), a straight run up or down (1234, 4321), or a common pick (2580)."""
+    d = [int(c) for c in pin]
+    steps = {b - a for a, b in zip(d, d[1:])}
+    return (len(steps) == 1 and steps <= {-1, 0, 1}) or pin in OBVIOUS_PINS
+
+
+def new_pin():
+    """A random 4-digit PIN, each of 0000 to 9999 alike (`secrets`), never an obvious one."""
+    while True:
+        pin = f'{secrets.randbelow(10_000):04d}'
+        if not obvious_pin(pin):
+            return pin
+
+
+def reset_pin(db, who, yes=False, ask=input, out=print):
+    """Gives a profile a new random PIN, from Ben's ask after a forgotten-PIN email. Never 1234 or
+    another PIN everyone knows (Ben, 2026-10-27): the profile list is public. The PIN is shown once,
+    in the last line, for Ben to pass on; only its hash and salt reach the database, and nothing
+    writes it anywhere else. Every key goes, so each device asks for the new PIN once."""
     p = find_profile(db, who, out)
     q = quoted(p['id'], PROFILE_ID)
     out(f"{p['id']}: {(p.get('avatar') or '') + ' ' if p.get('avatar') else ''}{p['name']}, {'has a PIN' if p['pin'] else 'has no PIN'}")
-    if to is None and not p['pin']:
-        out('Nothing to do.')
-        return False
-    doing = f"Set the PIN of {p['name']} to {to}" if to else f"Clear the PIN of {p['name']}"
+    doing = f"Give {p['name']} a new random PIN"
     if not yes:
         if ask is None:
             out(f'{doing}? Nothing changed: run it again with --yes.')
@@ -706,17 +724,16 @@ def reset_pin(db, who, to=None, yes=False, ask=input, out=print):
         if ask(f'{doing}? Every device must open it again. Type yes: ').strip().lower() != 'yes':
             out('Nothing changed.')
             return False
-    if to:
-        salt = os.urandom(16).hex()
-        h = pin_hash(to, salt)
-        db.execute(f"UPDATE profiles SET pin_hash = '{h}', pin_salt = '{salt}', fails = 0, locked_until = 0 WHERE id = {q}; DELETE FROM keys WHERE profile_id = {q};")
-    else:
-        db.execute(f'UPDATE profiles SET pin_hash = NULL, pin_salt = NULL, fails = 0, locked_until = 0 WHERE id = {q}; DELETE FROM keys WHERE profile_id = {q};')
+    pin = new_pin()
+    salt = secrets.token_hex(16)
+    h = pin_hash(pin, salt)
+    # One UPDATE sets the hash and salt together: a clear, then a set, would let a sync
+    # between them see the profile with no PIN.
+    db.execute(f"UPDATE profiles SET pin_hash = '{h}', pin_salt = '{salt}', fails = 0, locked_until = 0 WHERE id = {q}; DELETE FROM keys WHERE profile_id = {q};")
     after = db.query(f'SELECT pin_hash FROM profiles WHERE id = {q}')
-    if not after or after[0]['pin_hash'] != (h if to else None):
+    if not after or after[0]['pin_hash'] != h:
         raise Trouble('the PIN did not change: check with `just cloud-profiles`.')
-    out(f"✅ {p['name']}'s PIN is {to} now. Each device asks for it once." if to
-        else f"✅ {p['name']} has no PIN now. Each device opens it again once (no PIN asked).")
+    out(f"✅ {p['name']}'s new PIN is {pin}. Pass it on to the family: it is shown only this once. Each device asks for it once.")
     return True
 
 
@@ -738,7 +755,6 @@ def main(argv=None, db=None):
     pr.add_argument('--yes', action='store_true')
     rp = sub.add_parser('reset-pin')
     rp.add_argument('who', help='the fun name ("Captain Cranberries") or the profile id')
-    rp.add_argument('--to', help='a new 4-digit PIN; without it the PIN is cleared')
     rp.add_argument('--yes', action='store_true')
     args = ap.parse_args(argv)
     db = db or Wrangler()
@@ -757,7 +773,7 @@ def main(argv=None, db=None):
             prune(db, args.days, args.empty, args.yes, smoke=args.smoke)
         elif args.cmd == 'reset-pin':
             # Typed at a terminal it asks; from a script or an agent it shows who and stops until --yes.
-            reset_pin(db, args.who, args.to, args.yes, ask=input if sys.stdin.isatty() else None)
+            reset_pin(db, args.who, args.yes, ask=input if sys.stdin.isatty() else None)
     except Trouble as err:
         print(f'🛑 {err}', file=sys.stderr)
         return 1

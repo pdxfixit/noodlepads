@@ -1,4 +1,4 @@
-// `just cloud-reset-pin … --to 1234` sets a PIN from Python (tools/cloud_admin.py
+// `just cloud-reset-pin` sets a random PIN from Python (tools/cloud_admin.py
 // pin_hash); the Worker checks it in JavaScript (worker/pin.js hashSecret). The
 // two must make the same hash, or the new PIN would never open the profile.
 

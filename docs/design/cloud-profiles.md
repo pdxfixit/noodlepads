@@ -415,11 +415,12 @@ makes the profile again). Families are gone (Q11).
 
 Ben (Q12): a grown-up emails **the PIN-reset address** with the profile's
 fun name. Ben, or an agent on his Mac when he asks (docs/how-to.md "Reset a
-forgotten PIN"), runs `just cloud-reset-pin "<fun name>" --to 1234` (or the
-profile id; no `--to` clears it): it finds the profile, shows it, and with
-`--yes` sets the PIN (hashed in Python as the Worker hashes it, `pin_hash`)
-or clears it, deletes every key through `just cloud-db`, and checks. Each
-device then asks for the new PIN once, or opens with none. The PIN pad, Help, ⚙️ Settings → 🔓 What's private and README say how.
+forgotten PIN"), runs `just cloud-reset-pin "<fun name>"` (or the profile
+id): it finds the profile, shows it, and with `--yes` picks a random PIN
+(never 1234 or another obvious one; Ben, 2026-10-27), sets it in one UPDATE
+(hashed in Python as the Worker hashes it, `pin_hash`), deletes every key
+through `just cloud-db`, checks, and shows the PIN once for Ben to pass on.
+Each device then asks for the new PIN once. The PIN pad, Help, ⚙️ Settings → 🔓 What's private and README say how.
 
 ## 11. What's private (the disclosure)
 

@@ -93,7 +93,7 @@ Nothing changes. A PIN is asked on every open on every device unless 🔑 Rememb
 
 A profile with no PIN can then exist only by hand (`just cloud-sql`). It is unreachable and unlisted; `just cloud-profiles` marks it "🔓 no PIN", and Ben prunes it.
 
-**`just cloud-reset-pin`** must stop clearing a PIN: without `--to` it refuses and says why. Ben's forgot-PIN path (set a new one) is unchanged. decisions.md's row on a forgotten PIN loses "(or clears it)", and docs/how-to.md "Reset a forgotten PIN" its last paragraph's first sentence.
+**`just cloud-reset-pin`** no longer clears a PIN (done, 2026-10-27): it always sets a new random one, shown once for Ben to pass on (Ben: never 1234).
 
 ## 3. The deploy checks
 
@@ -134,7 +134,7 @@ No device holds a link to a profile without a PIN today: before deploying, check
 | `web/state.js` | The comment naming `wantsCloud`. |
 | `tools/look-cloud.mjs` | Section 3. |
 | `tools/look.mjs` | Views `cloud-off`, `cloud-sum`, `cloud-pin`, `cloud-leave`; `cloud` and `cloud-in` follow the new sheet. |
-| `tools/cloud_admin.py`, `justfile` | `reset-pin` needs `--to`; `profiles` marks a profile with no PIN. |
+| `tools/cloud_admin.py`, `justfile` | `profiles` marks a profile with no PIN (`reset-pin` already never clears one). |
 | `docs/adr/0002-…md` | Rewritten: section 6. |
 | `docs/decisions.md` | Row "The cloud needs a PIN" loses "(to build)"; the ☁️ switch row (2026-10-19) is replaced by this flow; the forgot-PIN row loses "(or clears it)"; "Profiles live in the cloud" says "people a grown-up put there"; the sprawl row's "Nobody who has made nothing goes to the cloud" goes (moot). Each as Ben's rule already says; no new rule but the three answers in section 9. |
 | `docs/architecture/cloud.md` | "Who goes to the cloud", the routes table, "Three meanings of offline" (📴 Offline goes: two meanings left), the privacy-vs-code table, the link's readers. `tests/architecture.test.mjs` with it. |
@@ -178,7 +178,7 @@ Each fails without its change (`just prove`):
 | `tests/delete-cloud.test.mjs` | unchanged and still green: ☁️ Delete their cloud copy too asks "Tap again" before the PIN, for a person who went up through the new flow too. |
 | `tests/cloud-sync.test.mjs`, `tests/new-ids.test.mjs`, `tests/pin-new.test.mjs`, `tests/sync-timing.test.mjs` | a person with sounds is not put up by `syncAll`; the tests that relied on it put up with `goUp`. |
 | `tests/privacy.test.mjs`, `tests/help.test.mjs`, `tests/architecture.test.mjs`, `tests/log-clean.test.mjs` | the new lines, labels, claims and log fields. |
-| `tools/test_cloud_admin.py` | `reset-pin` without `--to` refuses; `profiles` marks no PIN. |
+| `tools/test_cloud_admin.py` | `profiles` marks no PIN. |
 | `just look --wide` | the four new views and `cloud-in`; `--height 680` for the PIN pad at 320. |
 | live, after the deploy | cloud-smoke and cloud-e2e (section 3). |
 

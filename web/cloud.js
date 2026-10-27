@@ -211,12 +211,12 @@ export async function unlock(personId, pin) {
   if (keyOf(personId)) syncNow(personId);
 }
 
-// A key the cloud no longer takes (401 on a sync): a PIN was set or changed
-// on another device, which closes the profile everywhere (worker/cloud.js
-// changeProfile), or Ben cleared a forgotten one (`just cloud-reset-pin`).
-// The public list says which, without spending a wrong try: no PIN now, and
-// it opens again at once; else the PIN is new here and must be typed before
-// the person opens (Ben, 2026-10-19).
+// A key the cloud no longer takes (401 on a sync): a PIN was set, changed or
+// removed on another device, which closes the profile everywhere
+// (worker/cloud.js changeProfile), or Ben gave a forgotten one a new random
+// PIN (`just cloud-reset-pin`). The public list says which, without spending
+// a wrong try: no PIN now, and it opens again at once; else the PIN is new
+// here and must be typed before the person opens (Ben, 2026-10-19).
 async function keyRefused(personId) {
   sessionKeys.delete(personId);
   unlocked.delete(personId);

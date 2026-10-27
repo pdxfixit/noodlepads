@@ -954,9 +954,10 @@ ADR 0002.
 ## For grown-ups
 
 - **A forgotten PIN:** email the PIN-reset address with the profile's fun
-  name. Ben (or an agent on his Mac, when he asks) sets a new one with
-  `just cloud-reset-pin "<fun name>" --to 1234`, or clears it with no `--to`;
-  each device then asks for the new PIN once (or opens with none).
+  name. Ben (or an agent on his Mac, when he asks) runs
+  `just cloud-reset-pin "<fun name>"`, which picks a random PIN (never 1234
+  or another obvious one) and shows it once; Ben passes it on to the family.
+  Each device then asks for the new PIN once.
 - **To delete a profile and everything in it:** 👥 People → tap them → tap
   Delete twice, then ☁️ Delete their cloud copy too twice, or switch ☁️ In the
   cloud off (tap twice) to keep it on this device. Either asks for the PIN

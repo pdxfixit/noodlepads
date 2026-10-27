@@ -126,7 +126,7 @@ cloud-e2e *args:
 taps *args:
     @node tools/look.mjs taps "$@"
 
-# A forgotten PIN: just cloud-reset-pin "Captain Cranberries" --to 1234 (or the id; no --to clears it). Shows who, then --yes does it
+# A forgotten PIN: just cloud-reset-pin "Captain Cranberries" (or the id). Shows who, then --yes sets a random PIN, shown once for Ben to pass on
 [positional-arguments]
 cloud-reset-pin who *args:
     @python3 tools/cloud_admin.py reset-pin "$@"
