@@ -198,7 +198,8 @@ export function initLogSend() {
   const sender = createLogSender({
     fetch: (...args) => globalThis.fetch(...args),
     getLog,
-    enabled: () => getSetting('sendLogs') === true,
+    // 📊 Share play data off stops reports too (Ben, 2026-10-27): one switch a parent can trust.
+    enabled: () => getSetting('sendLogs') === true && getSetting('sendUsage') === true,
     // On only by the default (nobody ticked 📮 here): only problems go.
     problemsOnly: () => !state.settings?.has?.('sendLogs'),
     live: () => globalThis.location?.hostname === LIVE_HOST,

@@ -79,8 +79,8 @@ export const LEVEL_HINTS = {
   advanced: "Advanced: the extra tools too. In the beat maker: each row's speed (½×, 1×, 2×) and a time signature for each beat; the sharps and flats in the presets.",
 };
 
-// 📊 Data sharing' chip: the emoji of each one that is on, or Off.
-export const dataChip = (usage, reports) => (usage || reports ? `${usage ? '📊' : ''}${reports ? '📮' : ''} On` : 'Off');
+// 📊 Data sharing' chip: the emoji of each one that is on, or Off. With 📊 off nothing is sent, 📮 included.
+export const dataChip = (usage, reports) => (usage ? `📊${reports ? '📮' : ''} On` : 'Off');
 
 // A heading's chip says the section's state at a glance, where there is one.
 function chips() {

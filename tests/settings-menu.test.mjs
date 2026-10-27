@@ -281,7 +281,7 @@ test('Send problem reports is a checkbox under Share play data, on by default, w
   assert.equal(sw.getAttribute('role'), null, 'a checkbox, not a switch');
   assert.equal(sw.closest('.set-fold'), $('#set-data'), 'in 📊 Data sharing');
   const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
-  assert.match(html, /id="share-usage"> 📊 Share play data<\/label>\s*<label class="set-check"><input type="checkbox" id="send-logs" aria-describedby="send-logs-grownup"> 📮 Send problem reports<\/label>\s*<p class="field-hint set-check-hint" id="send-logs-grownup">You can switch this off any time\.<\/p>/);
+  assert.match(html, /id="share-usage"> 📊 Share play data<\/label>\s*<label class="set-check"><input type="checkbox" id="send-logs" aria-describedby="send-logs-grownup"> 📮 Send problem reports<\/label>\s*<p class="field-hint set-check-hint" id="send-logs-grownup">You can switch this off any time\. It sends nothing while 📊 Share play data is off\.<\/p>/);
   assert.doesNotMatch(html, /never hold sounds|go only to Ben/, 'what a report holds is in the policy');
   // Ben, 2026-10-26: "default problem reports to being on all devices".
   assert.strictEqual(getSetting('sendLogs'), true);
@@ -362,12 +362,12 @@ test('📊 Share play data is a checkbox in 📊 Data sharing, the last fold, on
   assert.equal(sw.checked, true);
   assert.equal($('#set-data').querySelector('.set-head-chip').textContent, '📊📮 On', 'both on by default');
   const { dataChip } = await import('../web/settings-ui.js');
-  assert.deepEqual([dataChip(true, true), dataChip(false, true), dataChip(false, false)], ['📊📮 On', '📮 On', 'Off']);
+  assert.deepEqual([dataChip(true, true), dataChip(true, false), dataChip(false, true), dataChip(false, false)], ['📊📮 On', '📊 On', 'Off', 'Off']);
   sw.checked = false;
   sw.dispatch('change');
   await page.settle();
   assert.strictEqual(getSetting('sendUsage'), false);
-  assert.equal($('#set-data').querySelector('.set-head-chip').textContent, '📮 On', 'the chip says both at a glance');
+  assert.equal($('#set-data').querySelector('.set-head-chip').textContent, 'Off', 'with 📊 off nothing is sent, 📮 included: the chip says Off');
   sw.checked = true;
   sw.dispatch('change');
   await page.settle();

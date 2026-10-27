@@ -44,6 +44,23 @@ test('reports are on by default; switched off, hiding the page sends nothing', a
   assert.equal(posts.length, 0);
 });
 
+test('📊 Share play data off stops reports too, whether 📮 is on or never chosen', async () => {
+  const { state } = await import('../web/state.js');
+  const before = posts.length;
+  await setSetting('sendUsage', false);
+  try {
+    for (const choice of [true, 'default']) {
+      if (choice === 'default') state.settings.delete('sendLogs'); else await setSetting('sendLogs', true);
+      logEvent('notice', { text: 'something happened' });
+      await hide();
+      assert.equal(posts.length, before, `📮 ${choice}: nothing sent with 📊 off`);
+    }
+  } finally {
+    await setSetting('sendUsage', true);
+    await setSetting('sendLogs', false);   // so the next test's switch-on is a change
+  }
+});
+
 test('with reports on, hiding the page sends what happened since, with no names in it', async () => {
   await setSetting('sendLogs', true);
   const names = namesOnDevice();

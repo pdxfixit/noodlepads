@@ -376,6 +376,8 @@ const SHARED = [
     [/fun names?/, /colou?rs?/, /\bPIN\b/, /when (its|their) look last changed|look last changed/]],
   ['a problem report is kept 14 days', [/Problem reports[^.]*\.[^.]*14 days|14 days[^.]*report/i]],
   ['problem reports are on unless switched off', [/Problem reports[^.]{0,12}(are )?on (unless someone switches them off|to start with)/i]],
+  ['Share play data off stops problem reports too', [/nothing is sent while [^.]*(Share play data|play data switch)[^.]* is off/i]],
+  ['a tap that made no sound adds an open dialog', [/an open dialog/, /how far the tap got/]],
   ['a device nobody chose for sends only after an error or a tap that made no sound', [/only after an error or a tap that made no sound/]],
   ['deleting a profile names the real buttons, and share codes go with it', [/👥 People/, /Delete twice/, /☁️ Delete their cloud copy too/, /☁️ In the cloud/, /every share code it made/]],
   ['sharing ends at 🚫 Unshare or when the profile is deleted', [/🚫 Unshare/, /(sharer taps|until) 🚫 Unshare or their profile is deleted/]],
@@ -389,6 +391,12 @@ for (const [name, patterns] of SHARED) {
     }
   });
 }
+
+test('the policy tells how to stop problem reports, how long one is kept, and how to find yours', () => {
+  const deleting = policyText.slice(policyText.indexOf('## Deleting your data'));
+  assert.match(deleting, /\*\*Problem reports:\*\*[^-]*📮 Send problem reports[^-]*📊 Share play data[^-]*14 days[^-]*📋 in ⚙️ Settings[^-]*\{contact\}/);
+  assert.ok(webCode.includes('📋') || html.includes('📋'), 'the 📋 button exists');
+});
 
 test('every button the policy names is a real one, and the switches it describes default as it says', () => {
   for (const label of ['👥 People', '☁️ Delete their cloud copy too', '☁️ In the cloud', '📊 Data sharing', '📮 Send problem reports', '🚫 Unshare', '⚙️ Settings']) {
