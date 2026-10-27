@@ -78,3 +78,26 @@ test('a sync that finishes after a choice made while it ran keeps the choice (No
   assert.equal(link.key, null, 'and a key this device forgot does not come back');
   assert.equal(link.pin, true);
 });
+
+test('PIN open and 🔑 Remember write their own fields on the link as it is after they wait, not as it was before', async () => {
+  const id = 'p-mid-open';
+  await personInCloud(id);
+  const g = holdNext('/open');
+  const opening = cloud.unlock(id, PIN);
+  await g.reached;
+  await cloud.restoreLink({ ...cloud.linkOf(id), rev: 7, noOffer: true });
+  g.open();
+  await opening;
+  assert.equal(cloud.linkOf(id).rev, 7, 'a change made while the cloud answered stays (open)');
+  assert.equal(cloud.linkOf(id).noOffer, true);
+  await page.settle();   // the sync an open starts
+
+  const h = holdNext('/open');
+  const remembering = cloud.rememberHere(id, PIN);
+  await h.reached;
+  await cloud.restoreLink({ ...cloud.linkOf(id), rev: 9 });
+  h.open();
+  await remembering;
+  assert.equal(cloud.linkOf(id).rev, 9, 'a change made while the cloud answered stays (remember)');
+  assert.equal(cloud.linkOf(id).remembered, true);
+});

@@ -211,7 +211,11 @@ export async function unlock(personId, pin) {
     const before = keyOf(personId);
     if (before && before !== opened.key) api.forget(personId, before).catch(() => {});
     sessionKeys.delete(personId);
-    await saveLink({ ...link, key: opened.key, pin: !!opened.pin, check: await pinCheck(pin), newPin: undefined, keyDropped: undefined });
+    const check = await pinCheck(pin);
+    // The link as it is now: a choice made while the cloud answered stays,
+    // and a link dropped meanwhile stays dropped.
+    const now = linkOf(personId);
+    if (now) await saveLink({ ...now, key: opened.key, pin: !!opened.pin, check, newPin: undefined, keyDropped: undefined });
     status.delete(personId);
   } catch (err) {
     // The cloud said no to the PIN (wrong, or too many wrong tries): a usage
@@ -265,7 +269,9 @@ export async function rememberHere(personId, pin) {
   const before = keyOf(personId);
   if (before && before !== opened.key) api.forget(personId, before).catch(() => {});
   sessionKeys.delete(personId);
-  await saveLink({ ...link, key: opened.key, pin: !!opened.pin, check: await pinCheck(pin), newPin: undefined, remembered: true, rememberUntil: undefined, keyDropped: undefined, noOffer: undefined });
+  const check = await pinCheck(pin);
+  const now = linkOf(personId);   // as it is now, not as it was before the cloud answered
+  if (now) await saveLink({ ...now, key: opened.key, pin: !!opened.pin, check, newPin: undefined, remembered: true, rememberUntil: undefined, keyDropped: undefined, noOffer: undefined });
   unlocked.add(personId);
   pinTyped.add(personId);
   logEvent('cloud', { remember: true });
