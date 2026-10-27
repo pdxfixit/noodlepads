@@ -99,7 +99,7 @@ Other contexts:
 | `playing` | Map id → `{src, gain, t0, duration, loop, clip}`: what plays through `start`/`loopInTime` | `start`, `loopInTime`, `stop`, the `onended` handlers | `meter.js run` (progress of each), `wave.js follow`, `sheet.js sheetPlaying`, `things.js`, `app.js` (any loop?) |
 | `ringing` | Map id → earlier hits still ringing under 🔔 Let it ring | `start` with `ring` | `stop`, `stopAll` |
 | `pending` | Map id → a loop asked for while its sound loads (`loadForLoop`) | `loop`, `loopInTime` | `stop` and `stopAll` take it back, so it never starts; `isLooping` counts it, so a tap on the pad stops it (`tests/audio.test.mjs`) |
-| `originals` | Map clip id → Promise<AudioBuffer>: the kept audio (cuts applied) | `original`, `keepOriginal` (`sheet.js saveSheet`, `makeMix`), `forget` | `load`, `bulk.js`, `things.js` (`audio.original`) |
+| `originals` | Map clip id → Promise<AudioBuffer>: the kept audio (cuts applied) | `original`, `keepOriginal` (`sheet.js saveSheet`, `makeMix`), `forget` | `load` (which drops it once its render is made), `bulk.js`, `things.js` (`audio.original`) |
 | `originalTrims` | Map clip id → the `cutKey` the original was made with | `original`, `keepOriginal`, `forget` | `original` |
 | `recordings` | Map file → Promise<AudioBuffer>: one decode of a bundled file shared by an instrument's presets | `recording` | `decoded` |
 | `rendered` | Map `audio.key(clip)` → Promise<{buffer, duration}> | `load`, `dropRendered`, `forget` | `load` |
@@ -136,7 +136,9 @@ setProgress` ignores ids that are not a pad.
    clip.level)`. A failure is logged, added to `broken`, and `on.broken(id)`
    marks the pad.
 5. `audio.original(clip)`: on a miss (or a new `cutKey`), `decoded(clip)` →
-   `keptAudio(buffer, clip)`.
+   `keptAudio(buffer, clip)`. Once step 4's render is done `load` drops it
+   again (`forgetOriginal`), so a loaded sound holds one decoded copy; except
+   a sound in `audio.held`, whose audio `keepOriginal` set by hand.
 6. `audio.decoded(clip)`:
    - an instrument's preset (`inst`, or a voicing: `instruments.js voicingOf`
      is `chord` or a non-zero `shift`): `recording(file)` (one fetch and
@@ -170,7 +172,7 @@ sound not yet warmed loads it as any tap does. Tests: `tests/warm.test.mjs`.
 | Cache | Key | Made by | Dropped by | Not in the key (safe only because…) |
 |---|---|---|---|---|
 | `audio.recordings` | bundled file path | `recording` | a failed fetch deletes its entry; never otherwise | the file never changes during a visit |
-| `audio.originals` | clip id, checked against `originalTrims` = `cuts.js cutKey(clip)` | `original` (lazily remade when `cutKey` changes), `keepOriginal` | `forget(id)` | the blob and `file`: a replaced recording must call `forget` (`sheet.js`, `bulk.js`, `backup-ui.js`, `cloud.js`, `people.js` do) |
+| `audio.originals` | clip id, checked against `originalTrims` = `cuts.js cutKey(clip)` | `original` (lazily remade when `cutKey` changes), `keepOriginal` | `forget(id)`; and `load` itself, once its render is done (one decoded copy: `rendered` is what a tap plays, so the kept audio is not held beside it; the sheet, `bulk.js`, `things.js` and `chop.js` ask `original` again and hold their own while they work). Not for an id in `audio.held` (`keepOriginal` put it there: a sound just saved or made in the sheet, which keeps its audio until `forget`) | the blob and `file`: a replaced recording must call `forget` (`sheet.js`, `bulk.js`, `backup-ui.js`, `cloud.js`, `people.js` do) |
 | `audio.rendered` | `audio.key(clip)` = `` `${id}:${recipeKey(clip)}${cutKey(clip)}` `` | `load` | `dropRendered(id, keep)` (every key of the id but `keep`), `forget(id)`, a failed load (its own key, and the kept audio it used) | `level`, `shift`, `chord`, `exact`, the blob: fixed per id, or `forget` is called |
 | `sheet.js sheet.previews` | `recipeKey({fx, tweaks})`, `head:…` for the live head, `plain` for 👂 Plain | `previewOf` (from `rendered`, `liveHead`, `plainSound`, Find its note) | the oldest past `KEEP_PREVIEWS` (6 tries) and, apart, `KEEP_HEADS` (2 `head:` keys); the one asked for now always stays; `resetPreviews()` when the sound, trim or recording changes, and on open | the trim: the whole map is of one trim |
 | `beat-engine.js ready` (behind `has`/`get`/`drop`/`keep`/`held`) | clip id → loaded | `prepare` (on play, per row) | `prepareBeats` reloads it (it is never emptied) | a voice change: `prepare` re-reads `audio.load` each play |

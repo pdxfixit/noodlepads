@@ -419,3 +419,28 @@ test('a broken sound is mended only by a load of its current version', async () 
     audio.forget('retry-2');
   }
 });
+
+// One decoded copy: a loaded sound keeps its voiced render, and the kept
+// audio it was made from (a second, full-size copy) is let go. Whoever needs
+// that audio asks original() again.
+test('a loaded sound keeps one decoded copy: the render, not the kept audio under it', async () => {
+  const { audio } = await import('../web/audio.js');
+  globalThis.AudioBuffer ??= FakeAudioBuffer;
+  const decodes = [];
+  const saved = audio.decoded;
+  audio.decoded = async (clip) => { decodes.push(clip.id); return fakeBuffer([Array.from({ length: 600 }, (_, i) => Math.sin(i / 3) * 0.5)], RATE); };
+  const clip = { id: 'one-copy', source: 'bundled', file: 'clips/kit/one.wav' };
+  try {
+    const loaded = await audio.load(clip);
+    assert.ok(loaded.buffer.length > 0);
+    assert.ok(audio.rendered.has(audio.key(clip)), 'the render is kept for the tap');
+    assert.equal(audio.originals.has(clip.id), false, 'the kept audio is let go');
+    assert.equal((await audio.load(clip)).buffer, loaded.buffer, 'a second tap reuses the render, with no new decode');
+    assert.equal(decodes.length, 1);
+    await audio.original(clip);   // the sound sheet asks for it: decoded again
+    assert.equal(decodes.length, 2);
+  } finally {
+    audio.decoded = saved;
+    audio.forget('one-copy');
+  }
+});

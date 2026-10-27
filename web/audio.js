@@ -226,7 +226,8 @@ export const audio = {
   softClip: null,        // after the limiter: a peak that gets past its 2 ms attack is bent, never hard-clipped
   playing: new Map(),    // clip id (or 'preview') -> {src, gain, t0, duration, loop}
   ringing: new Map(),    // clip id -> its earlier hits still ringing under 🔔 Let it ring: [{src, gain, end}]
-  originals: new Map(),  // clip id -> Promise<AudioBuffer>, decoded and trimmed
+  originals: new Map(),  // clip id -> Promise<AudioBuffer>, decoded and trimmed: held while a render or a sheet uses it, then let go (load)
+  held: new Set(),       // clip ids whose originals keepOriginal set by hand: load leaves those be
   originalTrims: new Map(),  // clip id -> cutKey() of the trim, edits and fade `originals` holds it with
   rendered: new Map(),   // `${clip id}:${recipeKey}` -> Promise<{buffer, duration}>
   broken: new Set(),     // clip ids whose audio failed to load, decode or render
@@ -363,6 +364,7 @@ export const audio = {
   // Sets what original() gives for a clip as it is now (the sound sheet
   // already has it, so a new or retrimmed sound is not decoded again).
   keepOriginal(clip, promise) {
+    this.held.add(clip.id);
     this.originalTrims.set(clip.id, cutKey(clip));
     this.originals.set(clip.id, promise);
   },
@@ -400,6 +402,13 @@ export const audio = {
         this.brokenAt.set(clip.id, this.clock());
         this.on.broken(clip.id, true);
       });
+      // One decoded copy: the voiced sound is all a tap needs, so the kept
+      // audio it was made from (a second, full-size copy) is let go once the
+      // render is done. The sound sheet, See all and the wave editor ask
+      // original() again when they need it (decoded again from the same file
+      // or recording). Kept by hand (keepOriginal: a sound just saved or made
+      // in the sheet) it stays, as that call promised.
+      job.then(() => { if (this.originals.get(clip.id) === kept && !this.held.has(clip.id)) this.forgetOriginal(clip.id); }, () => {});
       this.rendered.set(key, job);
     }
     const job = this.rendered.get(key);
@@ -424,6 +433,7 @@ export const audio = {
     if (this.broken.delete(id)) this.on.broken(id, false);
   },
   forgetOriginal(id) {
+    this.held.delete(id);
     this.originals.delete(id);
     this.originalTrims.delete(id);
   },
