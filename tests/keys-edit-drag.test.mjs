@@ -24,7 +24,7 @@ before(async () => {
   audio.play = () => {};
   keysOn(page);
   $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');
-  $('#dj-change-top').dispatch('click');
+  $('#dj-change-bar').dispatch('click');
   $('#ke-groups').querySelector('[data-group]').dispatch('click');   // a group's sounds to drag
 });
 

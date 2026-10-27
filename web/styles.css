@@ -3761,15 +3761,15 @@ body.head-slim.screen-pads .title-tools { left: calc(max(var(--gutter), (100% - 
   body.head-slim.screen-pads .edit-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   body.head-slim.screen-pads .pads-bar .pads-edit { min-width: 48px; padding: 0 10px; }
 }
-/* 🥁 Beats with ⌨️ Keys, and 🎤 Live: scrolled, ✏️ Layout rides at the
-   right of the slim bar, as Edit sounds does on
-   Pads, so it is in reach while the rows and keys scroll (Ben, 2026-10-18).
-   It is a twin of the one at the foot of the keys, which stays. Every width,
-   just ✏️ in the slim bar (Ben, 2026-10-19: "icon only immediately when
-   joining the sticky menu"); its name stays in its text, for screen readers
-   and its tooltip. */
+/* 🎤 Live: scrolled, ✏️ Layout rides at the right of the slim bar, as Edit
+   sounds does on Pads, so it is in reach while the rows scroll (Ben,
+   2026-10-18). It is a twin of the one on Live's bar, which stays. Just ✏️ in
+   the slim bar (Ben, 2026-10-19: "icon only immediately when joining the
+   sticky menu"); its name stays in its text, for screen readers and its
+   tooltip. 🥁 Beats has none here: its ✏️ Layout is on the bar ▾ drops down
+   (Ben, 2026-10-27). */
 .slim-edit { display: none; }
-body.head-slim:is(.keys-on, .screen-live) .slim-edit {
+body.head-slim.screen-live .slim-edit {
   position: fixed;
   z-index: 9;
   top: calc(var(--slim-top) + (var(--slim-h) - 44px) / 2);
@@ -3787,15 +3787,15 @@ body.head-slim:is(.keys-on, .screen-live) .slim-edit {
   white-space: nowrap;
   animation: head-slim-in 160ms ease-out;
 }
-body.head-slim:is(.keys-on, .screen-live) .slim-edit::before { content: "✏️"; font-size: 1.2rem; }
+body.head-slim.screen-live .slim-edit::before { content: "✏️"; font-size: 1.2rem; }
 
 /* 🥁 Beats: the play bar tucks into the slim bar (Ben, 2026-10-19: "rather
    than be full length, collapse into single buttons in the already-sticky
    space"). Once the control bar has scrolled all the way under the slim bar,
-   ▶ (■), ✏️ (Keys on) and ▾ ride at the slim bar's right (mini-deck.js);
-   ● Record stays on the bar, so ⬆️ has room (Ben, 2026-10-25).
+   ▶ (■) and ▾ ride at the slim bar's right (mini-deck.js);
+   ● Record and ✏️ Layout stay on the bar (Ben, 2026-10-25 and -27).
    ▾ drops the whole bar down under the slim bar; ▴ puts it away. The slim
-   bar never grows: as room runs out ❓, ⬆️, ✏️, then ⚙️ give way, one
+   bar never grows: as room runs out ❓, ⬆️, then ⚙️ give way, one
    step at a time, measured (mini-deck.js STEPS). */
 .mini-deck { display: none; }
 /* At the right edge, apart from the round button, ❓, ⚙️ and ⬆️ at the
@@ -3808,10 +3808,6 @@ body.deck-tucked .mini-deck {
   display: flex;
   gap: 6px;
 }
-/* ▶ ✏️ ▾: ▾ at the very right, ✏️ between ▶ and it (Ben, 2026-10-19), in
-   room ▾ keeps at its left. */
-body.deck-tucked.keys-on:not(.tuck-noedit) .mini-more { margin-left: calc(44px + 6px); }
-body.deck-tucked.keys-on .slim-edit { right: calc(max(var(--gutter), calc((100% - var(--max)) / 2 + var(--gutter))) + 44px + 6px); }
 .mini-deck button { flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px; font: 800 1.2rem/1 var(--font-ui); animation: head-slim-in 160ms ease-out; }
 .mini-deck [hidden] { display: none; }
 .mini-play { background: var(--led); color: var(--ink); }
@@ -3824,7 +3820,6 @@ body.deck-open .seq .beat-deck,
 body.deck-open.keys-on .dj-bar { top: var(--head-h, 0px); }
 body.deck-tucked.tuck-notop .to-top,
 body.deck-tucked.tuck-nohelp #help-open,
-body.deck-tucked.tuck-noedit .slim-edit,
 body.deck-tucked.tuck-nosettings #settings-open { display: none; }
 
 

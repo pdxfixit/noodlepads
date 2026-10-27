@@ -1,8 +1,9 @@
 // 🥁 Beats' play bar tucks into the slim bar (Ben, 2026-10-19): once the
 // control bar has scrolled all the way under it, it hides, and ▶ (■) and ▾ ride
 // in the slim bar beside ⬆️; ▾ drops the whole bar down. ● Record stays on the
-// bar, so ⬆️ has room (Ben, 2026-10-25). As the slim bar runs out of room,
-// ❓ (it is back at the top; Ben, 2026-10-25), ⬆️, ✏️, then ⚙️ give way. Where they sit
+// bar, so ⬆️ has room (Ben, 2026-10-25), and so does ✏️ Layout (Ben, 2026-10-27).
+// As the slim bar runs out of room, ❓ (it is back at the top; Ben,
+// 2026-10-25), ⬆️, then ⚙️ give way. Where they sit
 // is checked with `just look beat-groove keys-on --scroll 700 --wide`; this
 // checks the rule, the order and the wiring.
 
@@ -38,17 +39,16 @@ test('the bar is tucked once it reaches where it sticks, on Beats with the heade
   assert.equal(isTucked({ ...at, shown: false }), false, 'a bar not on screen');
 });
 
-test('the slim bar gives way in Ben\'s order: ❓, ⬆️, ✏️, ⚙️', () => {
-  assert.deepEqual(STEPS, ['tuck-nohelp', 'tuck-notop', 'tuck-noedit', 'tuck-nosettings']);
-  for (const [cls, what] of [['tuck-notop', '.to-top'], ['tuck-nohelp', '#help-open'], ['tuck-noedit', '.slim-edit'], ['tuck-nosettings', '#settings-open']]) {
+test('the slim bar gives way in Ben\'s order: ❓, ⬆️, ⚙️', () => {
+  assert.deepEqual(STEPS, ['tuck-nohelp', 'tuck-notop', 'tuck-nosettings']);
+  for (const [cls, what] of [['tuck-notop', '.to-top'], ['tuck-nohelp', '#help-open'], ['tuck-nosettings', '#settings-open']]) {
     assert.ok(css.includes(`body.deck-tucked.${cls} ${what}`), `${cls} hides ${what}`);
   }
   assert.match(css, /body\.deck-tucked:not\(\.deck-open\) \.seq \.beat-deck,\nbody\.deck-tucked:not\(\.deck-open\)\.keys-on \.dj-bar \{ visibility: hidden; \}/,
     'the bar hides where it sticks, unless ▾ dropped it down');
   assert.match(css, /\.mini-deck \{ display: none; \}/);
   assert.match(css, /body\.deck-tucked \.mini-deck \{\n  position: fixed;[^}]*right: max\(var\(--gutter\)[^}]*display: flex;/, 'at the slim bar\'s right, apart from the buttons at its left');
-  assert.match(css, /body\.deck-tucked\.keys-on:not\(\.tuck-noedit\) \.mini-more \{ margin-left: calc\(44px \+ 6px\); \}/, '▶ ✏️ ▾: room for ✏️ before ▾');
-  assert.match(css, /body\.deck-tucked\.keys-on \.slim-edit \{ right: calc\(/, '✏️ one button in from the edge');
+  assert.doesNotMatch(css, /deck-tucked[^{]*\.slim-edit|tuck-noedit/, 'no ✏️ in the slim bar on Beats (Ben, 2026-10-27): ▶ ▾ only, ✏️ Layout is on the bar ▾ drops down');
   const head = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
   const ids = [...head.slice(head.indexOf('id="mini-deck"'), head.indexOf('</header>')).matchAll(/id="(mini-(?:play|rec|more))"/g)].map((m) => m[1]);
   assert.deepEqual(ids, ['mini-play', 'mini-more'], 'no ● Record (it stays on the bar, Ben 2026-10-25), and ▾ last, at the very right');
