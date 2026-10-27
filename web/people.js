@@ -186,6 +186,9 @@ export async function addPerson() {
   offerWelcome(record.id);   // 👋 Who's playing? (welcome.js, ADR 0028)
 }
 
+// Who is being deleted right now: id -> a promise of whether it went.
+export const beingDeleted = new Map();
+
 // Deletes a person and everything of theirs from this device: Delete in their
 // profile sheet, and 🤷 I don't know the PIN (cloud-ui.js). It never deletes
 // the cloud's profile: this device just stops syncing it. A sync of theirs
@@ -193,12 +196,26 @@ export async function addPerson() {
 // 2026-10-24: someone deleted was back after a reload). Returns false when
 // this browser wouldn't delete them: they stay whole, in the cloud too.
 export async function deleteHere(id) {
-  letGoOf(id);   // what they are recording or playing stops now, kept for nobody (app.js)
+  // Being deleted until the delete is done or refused: a recording kept
+  // meanwhile waits for the outcome (beingDeleted), so it is never saved for
+  // nobody, nor lost when the browser refuses.
+  let settle;
+  beingDeleted.set(id, new Promise((r) => { settle = r; }));
+  // What they are recording or playing stops now, KEPT as theirs (app.js):
+  // its saves queue before the delete's one transaction, which takes them
+  // with it, or keeps them all when it is refused.
+  letGoOf(id);
   const p = anyone(id);
   const link = linkOf(id);
-  if (link) await dropLink(id, { keepBases: true });
-  await syncEnded(id);
-  const gone = await deletePerson(id);
+  let gone = null;
+  try {
+    if (link) await dropLink(id, { keepBases: true });
+    await syncEnded(id);
+    gone = await deletePerson(id);
+  } finally {
+    beingDeleted.delete(id);
+    settle(!!gone);
+  }
   if (!gone) {
     if (link) await restoreLink(link);
     return false;

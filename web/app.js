@@ -31,7 +31,7 @@ import { initBulk } from './bulk.js';
 import { initSheet, openSheet, setBeatTempo, isRecording } from './sheet.js';
 import { initUpdate } from './update.js';
 import { registerOffline } from './offline.js';
-import { initPeople, refreshPeople, addPerson, deleteHere, editLook, openPictures, storedLists } from './people.js';
+import { initPeople, refreshPeople, addPerson, deleteHere, beingDeleted, editLook, openPictures, storedLists } from './people.js';
 import { initThings } from './things.js';
 import { initWelcome, markNew, offerWelcome } from './welcome.js';
 import { initWhoNow, openWhoNow, closeWhoNow, whoNowOpen } from './who-now.js';
@@ -114,12 +114,12 @@ async function dropLockedPerson(id) {
 
 // The person on show is being deleted (people.js deleteHere, at the
 // grown-up's tap, before its awaits): the keys' take or beat recording, a
-// take playing back, Kids' mic and tune all stop now, and nothing of theirs
-// is kept.
+// take playing back, Kids' mic and tune all stop now, kept as theirs. The
+// delete takes them with it, or keeps them all when the browser refuses.
 function letGoOf(id) {
   if (id !== state.personId) return;
-  dj?.personLeft({ keep: false });
-  kidsPersonLeaving({ keep: false });
+  dj?.personLeft();
+  kidsPersonLeaving();
 }
 
 // 🎉 Play as them, once someone has come down from the cloud (cloud-ui.js):
@@ -140,11 +140,13 @@ function playAs(id) {
 // nobody left, a new person.
 function startOver(note) {
   const left = people();
-  // Before nobody is on show, so the keys let go of the one who was. A
-  // deleted one let go at the delete tap (`letGoOf`), keeping nothing.
+  // Before nobody is on show, so the keys let go of the one who was: kept
+  // as theirs, unless they are gone (deleted here at the tap, `letGoOf`, or
+  // in another tab), when nothing is saved under a dead id.
   if (state.personId) {
-    dj?.personLeft();
-    kidsPersonLeaving();
+    const keep = !!person(state.personId);
+    dj?.personLeft({ keep });
+    kidsPersonLeaving({ keep });
   }
   state.personId = null;
   if (!left.length) { closeWhoNow(); addPerson(); return; }
@@ -1073,7 +1075,10 @@ async function start() {
     personId: () => state.personId,
     stopAll: () => stopEverything({ keepClicks: true }),   // Kids' ⏹️: the whole app quiet, the grown-up's ⏲️ choices kept
     clips: (opts, pid = state.personId) => clipsFor(pid, opts),
-    isPerson: (pid) => people({ includeHidden: true }).some((p) => p.id === pid),
+    // A person shown (a deleted one from boards.json is stored hidden), not
+    // being deleted; `deletion` waits for one being deleted to go or stay.
+    isPerson: (pid) => !!person(pid) && !beingDeleted.has(pid),
+    deletion: (pid) => beingDeleted.get(pid) ?? null,
     colorOf: (clip) => padColor(clip.color),
     nextColor: (pid = state.personId) => nextClipColor(pid),
     // A recording, saved as the sound sheet saves one; `changed`: its voice changed.

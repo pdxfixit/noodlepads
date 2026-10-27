@@ -20,12 +20,13 @@ const idb = fakeIndexedDB();
 const A = 'p-del-a';
 const B = 'p-del-b';
 const C = 'p-del-c';
+const D = 'p-del-d';   // stays, so the last delete is allowed
 const person = (id, name, created) => ({ id, name, fun: true, avatar: '🦉', color: '#304A00', added: true, created });
 let decodeGate = null;   // while set, decoding waits for it
 
 before(async () => {
   console.error = () => {};
-  idb.seed(DB_NAME, DB_VERSION, SCHEMA, { people: [person(C, 'Captain Cupcake', 1), person(A, 'Admiral Acorn', 2), person(B, 'Baron Bagel', 3)] });
+  idb.seed(DB_NAME, DB_VERSION, SCHEMA, { people: [person(D, 'Duke Dumpling', 0), person(C, 'Captain Cupcake', 1), person(A, 'Admiral Acorn', 2), person(B, 'Baron Bagel', 3)] });
   globalThis.indexedDB = idb;
   page = installPage({ manifest: { ...testManifest(), people: [] }, hash: `#${A}` });
   $ = page.$;
@@ -59,6 +60,14 @@ async function deleteShown(id) {
   await page.settle();
   assert.notEqual(state.personId, id, 'deleted');
   for (const d of ['#profile-dialog', '#people-dialog']) if ($(d).open) $(d).close();
+}
+// The same, without waiting for the page to settle: the delete in flight.
+function deleteShownLater(id) {
+  $('#people-open').dispatch('click');
+  $('#people-edit').children.find((r) => r.dataset.person === id).querySelector('[data-profile]').dispatch('click');
+  $('#profile-delete').dispatch('click', { timeStamp: 1000 });
+  $('#profile-delete').dispatch('click', { timeStamp: 5000 });
+  return page.settle().then(() => { for (const d of ['#profile-dialog', '#people-dialog']) if ($(d).open) $(d).close(); });
 }
 async function intoRecord() {
   $('#kids-open').dispatch('click');
@@ -95,4 +104,37 @@ test('a recording stopped, still being checked when its kid is deleted: not kept
   decodeGate = null;
   await page.settle();
   assert.deepEqual(clipsOf(B), [], 'no pad for the deleted kid');
+});
+
+// The council (storage-sync, 2026-10-26): a decode finishing while the
+// delete's one transaction is in flight saved its pad after the delete had
+// read what to take, an orphan that would bring a person back on the next
+// start (model.js adoptPeople). The kid is "being deleted" from the tap:
+// the pad waits for the outcome.
+test('a recording kept while its kid\'s delete is in flight: not saved for them', async () => {
+  const { db } = await import('../web/store.js');
+  location.hash = `#${C}`; page.winEvent('hashchange'); await page.settle();
+  assert.equal(state.personId, C);
+  // Someone to stay after C goes.
+  await intoRecord();
+  $('#kids-mic').dispatch('pointerdown', { pointerId: 3 });
+  await page.settle();
+  await new Promise((r) => setTimeout(r, 400));
+  let openDecode;
+  decodeGate = { promise: new Promise((r) => { openDecode = r; }) };
+  const batch = db.batch;
+  let openBatch;
+  const held = new Promise((r) => { openBatch = r; });
+  db.batch = async (ops) => { openDecode(); await new Promise((r) => setTimeout(r, 20)); await held; return batch.call(db, ops); };
+  $('#kids-mic').dispatch('pointerup', { pointerId: 3 });
+  const done = deleteShownLater(C);
+  await new Promise((r) => setTimeout(r, 60));   // the decode finished while the delete waits
+  openBatch();
+  await done;
+  db.batch = batch;
+  decodeGate = null;
+  await page.settle();
+  assert.notEqual(state.personId, C, 'deleted');
+  assert.ok(!state.peopleEdits.has(C), 'gone');
+  assert.deepEqual(clipsOf(C), [], 'no pad for the deleted kid, in memory or stored');
 });
