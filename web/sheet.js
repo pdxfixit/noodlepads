@@ -11,8 +11,9 @@
 // tune, and a slider on a live step changes the sound while it loops.
 
 import { state, persist, setOverride, deleteUserClip, saveMyVoice, deleteMyVoice } from './state.js';
-import { audio, trimBounds, keptAudio, levelsOf, levelVerdict, TOO_LOUD, padTo, RAW_MIC } from './audio.js';
-import { meter, drawGrille, levelOf } from './meter.js';
+import { audio, trimBounds, keptAudio, levelsOf, levelVerdict, TOO_LOUD, padTo } from './audio.js';
+import { meter, drawGrille } from './meter.js';
+import { MAX_RECORD_SECONDS, COUNT_IN, canRecord, openMicrophone, dropStream, openRecorder, openMeter } from './mic.js';
 import { currentPerson, clipsFor, colorName, nextClipColor } from './board.js';
 import { overrideFor, withHidden } from './model.js';
 import { applyChain, livePlan, voiceById, amountFor, amountText, chainOf, chainFields, recipeKey, surpriseShape, openVoice, stepLook, MAX_CHAIN } from './voices.js';
@@ -40,14 +41,11 @@ import { emojiMore, withCurrent } from './emoji-more.js';
 let emojiAll = null;   // the "…" full list under the Picture choices (emoji-more.js)
 export const EMOJI = ['📣', '🎺', '🥁', '🎸', '💥', '🚀', '⚡', '🔔', '🎉', '👋', '😂', '😱',
   '🤖', '👻', '🦖', '🐶', '🐱', '🐸', '🐔', '🦆', '🐮', '🍕', '💨', '💩'];
-const MAX_RECORD_SECONDS = 10;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 // A chosen file can be small and still decode to a lot of audio (a long, low
 // bitrate recording), and every voice renders from the decoded copy.
 const MAX_CLIP_SECONDS = 120;
-// Record counts 3, 2, 1 before it listens, so the start of a word isn't
-// lost to the tap. Tests shorten the beat.
-export const COUNT_IN = { from: 3, ms: 700 };
+export { COUNT_IN };   // Record counts 3, 2, 1 before it listens (mic.js); tests shorten the beat
 const LOUD_SHOW_MS = 600;   // how long the grille stays red after the sound hit the top
 
 const el = {};
@@ -97,17 +95,12 @@ const advanced = () => getSetting('advancedBeats') === true;
 
 const recording = {
   stream: null,
-  recorder: null,
-  chunks: [],
-  source: null,
-  analyser: null,
-  timer: 0,
+  recorder: null,       // mic.js openRecorder's, from the tap on Record
+  meter: null,          // mic.js openMeter's, once it listens
   raf: 0,
   started: 0,
-  discard: false,
   counting: 0,          // the count-in timer while it says 3, 2, 1; 0 once it listens
   loudUntil: 0,         // the grille is red until then: the sound hit the top
-  scratch: new Float32Array(512),
 };
 
 export const isSheetOpen = () => el.sheet.open;
@@ -115,10 +108,6 @@ export const isRecording = () => !!recording.recorder;
 
 // The link of the chain being edited.
 const link = () => sheet.chain[sheet.link];
-
-function canRecord() {
-  return window.isSecureContext && !!navigator.mediaDevices?.getUserMedia && 'MediaRecorder' in window;
-}
 
 function sheetError(text) {
   el.sheetError.textContent = text || '';
@@ -1427,7 +1416,7 @@ async function startRecording() {
   endPlain();
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia(RAW_MIC);
+    stream = await openMicrophone();
   } catch (err) {
     sheetError(err.name === 'NotAllowedError'
       ? 'The microphone is blocked. Allow it in this site’s browser settings, then tap Record again.'
@@ -1435,30 +1424,22 @@ async function startRecording() {
     return;
   }
   if (!el.sheet.open) {  // closed while the permission prompt was up
-    stream.getTracks().forEach((t) => t.stop());
+    dropStream(stream);
     return;
   }
-  const mime = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/ogg']
-    .find((m) => MediaRecorder.isTypeSupported?.(m)) || '';
   let recorder;
   try {
-    recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    recorder = openRecorder(stream, (blob) => {
+      acceptAudio(blob, 'recording');
+      track('content.finish', { kind: 'sound-record' });
+    });
   } catch (err) {
-    stream.getTracks().forEach((t) => t.stop());
+    dropStream(stream);
     sheetError(`This browser can't record audio (${err.name}). Choose a sound file instead.`);
     return;
   }
   recording.stream = stream;
   recording.recorder = recorder;
-  recording.chunks = [];
-  recorder.ondataavailable = (e) => { if (e.data.size) recording.chunks.push(e.data); };
-  recorder.onstop = () => {
-    if (recording.discard) return;
-    const type = recorder.mimeType || mime || 'audio/webm';
-    acceptAudio(new Blob(recording.chunks, { type }), 'recording');
-    track('content.finish', { kind: 'sound-record' });
-  };
-  recording.discard = false;
   el.recBtn.setAttribute('aria-pressed', 'true');
   el.sheetPlay.disabled = true;
   el.fileChip.hidden = true;
@@ -1479,23 +1460,17 @@ async function startRecording() {
 
 // The count-in is over: record, and draw the grille from the microphone.
 function listen(recorder) {
-  recorder.start();
-  const ctx = audio.wake();
-  recording.source = ctx.createMediaStreamSource(recording.stream);
-  recording.analyser = ctx.createAnalyser();
-  recording.analyser.fftSize = 512;
-  recording.source.connect(recording.analyser);
+  recorder.start(() => stopRecording());
+  recording.meter = openMeter(audio.wake(), recording.stream);
   recording.started = performance.now();
   recording.loudUntil = 0;
-  recording.timer = setTimeout(() => stopRecording(), MAX_RECORD_SECONDS * 1000);
   el.recLabel.textContent = 'Stop';
 
-  let level = 0;
   const step = () => {
-    level = Math.max(levelOf(recording.analyser, recording.scratch), level * 0.85);
-    // levelOf left this frame's samples in scratch: did any hit the top?
+    const level = recording.meter.level(0.85);
+    // The meter left this frame's samples in scratch: did any hit the top?
     let peak = 0;
-    for (const v of recording.scratch) peak = Math.max(peak, Math.abs(v));
+    for (const v of recording.meter.scratch) peak = Math.max(peak, Math.abs(v));
     const now = performance.now();
     if (peak >= TOO_LOUD) recording.loudUntil = now + LOUD_SHOW_MS;
     const loud = now < recording.loudUntil;
@@ -1513,14 +1488,13 @@ function stopRecording({ discard = false } = {}) {
   if (!r.recorder) return;
   // Stopped during the count-in: nothing was recorded, so nothing is kept.
   const counting = !!r.counting;
-  r.discard = discard || counting;
   clearTimeout(r.counting);
   r.counting = 0;
-  clearTimeout(r.timer);
   cancelAnimationFrame(r.raf);
-  if (r.recorder.state !== 'inactive') r.recorder.stop();
-  r.stream.getTracks().forEach((t) => t.stop());
-  r.source?.disconnect();
+  r.recorder.stop({ discard: discard || counting });
+  dropStream(r.stream);
+  r.meter?.close();
+  r.meter = null;
   r.recorder = null;
   r.stream = null;
   el.recBtn.setAttribute('aria-pressed', 'false');

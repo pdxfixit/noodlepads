@@ -278,8 +278,8 @@ One dialog `#kids-sum`, wired on first use. `askSum({ right, wrong, stay, owner 
 
 | | `kids.js` | `sheet.js` |
 |---|---|---|
-| Start | tap: 3, 2, 1 (`KIDS_COUNT`, a beep each into `audio.master`), then listen until the next tap; hold: listen at once, the lift stops it (`pressKind`, `TAP_MS` 350) | tap: 3, 2, 1 (`COUNT_IN`), then listen until Stop |
-| Limit | `MAX_RECORD_SECONDS` 10 (its own copy) | `MAX_RECORD_SECONDS` 10 (its own copy) |
+| Start | tap: 3, 2, 1 (`mic.js COUNT_IN`, a beep each into `audio.master`), then listen until the next tap; hold: listen at once, the lift stops it (`pressKind`, `TAP_MS` 350) | tap: 3, 2, 1 (`mic.js COUNT_IN`, the same), then listen until Stop |
+| Limit | `mic.js MAX_RECORD_SECONDS` 10 (the recorder stops itself) | the same |
 | MIME list | `audio/webm;codecs=opus`, `audio/mp4`, `audio/webm`, `audio/ogg` | the same list, written again |
 | Meter | `meter.js levelOf` → `--kids-level` | `levelOf` → the grille, plus Too loud |
 | Rejects | under 0.3 s (`MIN_RECORD_SECONDS`) or silent (`audio.js trimBounds`): a wiggle | silent: a sentence; too long |
@@ -379,7 +379,7 @@ One open beat per person (ADR 0017), owned by `sequencer.js` (`pattern`, `doc`, 
 
 ### Count-ins
 
-Three: `sequencer.js play({ countIn })` blips (● Record into the beat, shown by `rhythm.js countAt`); `kids.js count` (the mic, `KIDS_COUNT`); `kids.js startTune` (3 beeps, `TUNE_COUNT`). The sound sheet has a fourth (`sheet.js COUNT_IN`).
+Three: `sequencer.js play({ countIn })` blips (● Record into the beat, shown by `rhythm.js countAt`); `kids.js count` (the mic, `mic.js COUNT_IN`); `kids.js startTune` (3 beeps, `TUNE_COUNT`). The sound sheet has a fourth (it counts `mic.js COUNT_IN` too).
 
 ### Instruments (ADR 0030)
 
@@ -413,7 +413,6 @@ Summed once, in `beat.js outputDelay`: Beats, Song, `app.js` `deps.latency` for 
 |---|---|
 | Beats and Kids play through the one engine `play` | Kids leaves out mute, solo, the mixer's effects and row speed on purpose (`mixer: false`, `mode: 'plain'`; row and Master volume are kept as a plain gain); accents, swing and a tune sound's `root` play as on Beats. A timing fix in `beat-engine.js play` or `beat.js hitsDue` reaches both. |
 | Two snap rules: `rhythm.js createSnapper` (keys) and `kids-logic.js pillAt` (Kids' tune) | Kids has no latency shift, no double-tap filter, no one-hit-per-pill, no tempo-change safety. |
-| Two recorders: `sheet.js` and `kids.js` | MIME list, 10 s cap and the 3-2-1 count are copied, not shared. |
 | Two keyboard mappings: `rhythm.js keyFor` (layout-aware) and `kids.js kidsKeydown` (`e.key` letters) | Kids' keys follow neither Dvorak nor the `djLayout` pick. |
 | The beat drawn twice: `sequencer.js render` (Beats' rows) and `dj.js renderGrid` (the keys' grid) | A pill's look or a row control must change in both (they share `beat-row.js`, `row-volume.js`, `pill-select.js`). |
 | Two ✏️ Layout editors: `dj-keys.js` and `dj-touch.js` | Save line, rename, delete-asks-twice and the undo stack are written twice. The press that drags (a mouse once it moves, a finger after a hold) is written once, `finger.js holdToDrag`, which both editors call (three presses: the keys', the bands' ⠿ and the carried groups). |

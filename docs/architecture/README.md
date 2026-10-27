@@ -65,7 +65,7 @@ The questions agents ask most. ✅ marks a claim `tests/architecture.test.mjs` c
 | Mixer | **One per beat ✅**, built only by `beat-engine.js`: `busFor` builds `mixer.js buildMix` (each row's effect and the master) for any destination, live or offline. A row's level is applied per hit; mute and solo stop hits being booked. 🧸 Kids bypasses it. | beats-song.md |
 | Offline renderer | **Four ✅**: `voices.js` (every voiced clip), `sequencer.js bounce`, `song.js` (Save as a sound), `share-render.js` (previews, See all, takes). `listen-input.js` makes one only to decode a song file. | sound.md |
 | WAV encoder | **One ✅**, `wav.js encodeWav`, imported by the sheet, chop, keys, song and share previews. | sound.md |
-| Microphone recorder | **Two ✅**: `sheet.js` and `kids.js`, each its own `getUserMedia` + `MediaRecorder`. 🎧 captures through an AudioWorklet ✅. | sound.md, keys-kids.md |
+| Microphone recorder | **One ✅**: `mic.js` (`getUserMedia(RAW_MIC)`, `MediaRecorder`, the meter, the 10 s cap, the count-in's numbers), used by `sheet.js` and `kids.js`. 🎧 captures through an AudioWorklet ✅. | sound.md, keys-kids.md |
 | Way to stop everything | **No.** `audio.stopAll` stops only what is in `audio.playing` (pads and keys). The beat engine owns its runs: one plays at a time, a new run takes over by stopping the old one through its owner (`onStop`: `seq.stop`, Kids' `stopBeat`, `song.stop`, a sample's `stopSample`; `engine.stop()` does so for whatever plays). The click and share previews each stop themselves (`app.js stopEverything` calls several). | sound.md, shell.md |
 | Database | **One**, `noodle-pads`, opened by `store.js` (and `old-backup.js` reads the old one ✅). | data.md |
 | Write path | **Mostly** `state.js persist`; `app.js`, `backup-ui.js storeLoaded` and `cloud.js` also write with `db` directly. | data.md |
@@ -84,7 +84,7 @@ The biggest ones. Each area file lists its own in full.
 - **One beat scheduler:** the engine's `play` (Beats, Kids, Song and a
   groove's sample). A timing fix there reaches all four; the loop and the
   list source differ only in where the next hit comes from.
-- **Two recorders:** `sheet.js` and `kids.js`.
+- **One recorder:** `mic.js`, used by `sheet.js` and `kids.js`.
 - **Sound helpers in the beat rules:** `noteRate` lives in `beat.js` (the
   WAV encoder and `normalize` are in `wav.js`). The semitone rate is worked out once
   (`instruments.js rateOf`, which `noteRate` is ✅).

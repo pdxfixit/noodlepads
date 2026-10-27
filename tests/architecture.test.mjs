@@ -72,8 +72,8 @@ const ONLY = [
   // sound.md
   ['one realtime AudioContext (listen-input.js only when handed none)', /new (?:window\.)?(?:webkit)?AudioContext\b|new Ctx\(/, ['audio.js', 'listen-input.js']],
   ['offline renders', /new OfflineAudioContext\b/, ['sequencer.js', 'share-render.js', 'song.js', 'voices.js']],
-  ['the microphone: two recorders', /new MediaRecorder\b/, ['kids.js', 'sheet.js']],
-  ['three microphone users', /getUserMedia/, ['kids.js', 'listen-input.js', 'sheet.js']],
+  ['the microphone: one recorder, used by the sound sheet and 🧸 Kids', /new MediaRecorder\b/, ['mic.js']],
+  ['two microphone users: the recorder and the 🎧 listener', /getUserMedia/, ['listen-input.js', 'mic.js']],
   ['one Worker: the stretch', /new Worker\(/, ['voices.js']],
   ['one AudioWorklet: 🎧 From a song', /\.addModule\(/, ['listen-input.js']],
   // beats-song.md

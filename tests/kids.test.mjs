@@ -665,8 +665,8 @@ test('Record: hold the mic, let go, and it is a new pad of the kid\'s own, in th
 // Ben, 2026-10-22: "Tapping the big microphone to record should give a 321
 // countdown… It can be held still if they want but both should be capable".
 test('Record: a tap counts 3, 2, 1 on the mic, then it listens until the next tap; the hold\'s first moments are thrown away', async () => {
-  const { KIDS_COUNT } = await import('../web/kids-logic.js');
-  KIDS_COUNT.ms = 40;
+  const { COUNT_IN } = await import('../web/mic.js');
+  COUNT_IN.ms = 40;
   fakeMicrophone();
   $('[data-kids-tab="record"]').dispatch('click');
   const face = () => $('#kids-mic-face').textContent;

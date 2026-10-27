@@ -385,16 +385,12 @@ export const voiceAfter = (now, tapped) => (now === tapped ? null : tapped);
 
 // ── Recording ──
 
-export const MAX_RECORD_SECONDS = 10;   // as the sound sheet's Record
 export const MIN_RECORD_SECONDS = 0.3;  // a recording shorter than this is nothing
 // A press on the mic shorter than this is a tap: 3, 2, 1 count, then it
 // listens until the next tap. A longer press is a hold: it listens at once
 // and the lift stops it (Ben, 2026-10-22: "both should be capable").
 export const TAP_MS = 350;
 export const pressKind = (ms) => (ms < TAP_MS ? 'tap' : 'hold');
-// The count before a tapped recording listens: 3, 2, 1, a number each
-// `ms`, as the sound sheet's Record counts. Tests shorten it.
-export const KIDS_COUNT = { from: 3, ms: 700 };
 // The big mic's face at rest: 🎤, because the Record tab is already 🎙️.
 export const KIDS_MIC_FACE = '🎤';
 
