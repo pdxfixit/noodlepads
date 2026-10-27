@@ -958,6 +958,7 @@ async function start() {
     loops: () => [...audio.playing.values()].filter((v) => v.loop).length,
   });
   seq = makeSequencer();
+  globalThis.noodleTestSeq?.(seq);   // a test's way in to the beat maker (tests/beat-ready.test.mjs); the page never sets it
   setBeatTempo(() => seq.beat()?.bpm);   // Echo's 🥁 On the beat follows the open beat
   song = makeSong();
   // Pads that loop while a beat plays start on its bars and keep its time.

@@ -3428,5 +3428,7 @@ export function createSequencer(deps) {
     toggleLock: () => setLock(!locked), endLock: () => setLock(false), locked: () => locked, lockChanged: () => showLock(),
     addPicker: (pick, shown) => pickers.push({ pick, shown }),
     // For the keys' grid's mouse pick (pill-select.js in dj.js).
-    putRows, paintRows, saveBeat: () => save() };
+    putRows, paintRows, saveBeat: () => save(),
+    // The sounds it holds decoded, by clip id (read only, for the tests).
+    held: () => [...ready.keys()] };
 }
