@@ -17,6 +17,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 ## Ben does
 
+- **The one beat engine keeps time in a background tab** (audio seat, 2026-10-27): a hidden tab's timers slow to about 1 s, so the engine's 25 ms tick with 0.1 s lookahead drops hits for 🥁 Beats, 🎼 Song and the groove sample (Kids stops when hidden). One fix in `web/beat-engine.js`: a longer lookahead while hidden, or a Worker or AudioWorklet clock. Also re-check `ctx.currentTime` per hit in the loop's tick on slow phones.
 - **Add the new cloud events to the telemetry runner** (2 min, on the Mac): in `../telemetry/events.toml` (the pdxfixit/telemetry repo beside this checkout) add `up` and `leave` under `noodlepads.cloud` (what `web/track-page.js` now sends in place of `put` and `offline`), then run `just test` in the main checkout, since `tests/telemetry.test.mjs` checks it only there.
 
 - **Let this repo tell the privacy site when the policy changes** (3 min), after the policy move lands: GitHub → Settings → Developer settings → Fine-grained tokens → new token, owner `pdxfixit`, only repository `pdxfixit/privacy`, repository permission **Contents: Read and write** (the one permission `repository_dispatch` asks for; "Actions: write" is not enough), 1 year. Add it as the secret `PRIVACY_DISPATCH_TOKEN` on `pdxfixit/noodlepads` (Settings → Secrets and variables → Actions). Until then `.github/workflows/privacy-policy.yml` only warns, and the privacy site picks up an edited `docs/privacy-policy.md` at its next deploy. Put a reminder to renew it in a year.
@@ -98,6 +99,8 @@ Other work:
 ### Offered, not approved
 
 Agents suggested these; nothing happens until Ben says yes.
+
+- **Song's "On the beat" Echo follows tempo marks** (audio seat, 2026-10-27): a Song mix is built at the song's tempo, so an Echo set to a note length keeps that gap after a tempo mark changes the speed.
 
 - **Test files that end by themselves** (offered 2026-10-19, about 60–90 min): the app's test files never exit without `--test-force-exit`, and that flag cuts a parallel run's last reports, here and on GitHub (`ℹ tests` drops below the full count; `just test` prints ⚠️ and runs a cut file again alone). Find what holds them open (`process.getActiveResourcesInfo()` after the last test; a first try at unref-ing the app's timers in `tests/fake-dom.mjs` was not enough), make `installPage` release it, then drop the flag. Saves: a test count you can trust, and no file run twice.
 - **Spoken prompts in 🧸 Kids** (a recorded "tap a pad!" for kids who can't read yet; the clip would be public). Ben, 2026-10-16: "Maybe… some of it should just be found by poking. I'm not closed to it."
