@@ -10,7 +10,7 @@
 // beat.js hitsDue.
 
 import { makeVoice, fadeStop, tooLate } from './audio.js';
-import { ACCENT_GAIN, RING_MS, hitGain, hitsDue, noteRate } from './beat.js';
+import { ACCENT_GAIN, RING_MS, hitGain, hitsDue, moveItem, noteRate } from './beat.js';
 import { rootShift } from './pitch.js';
 import { ringOver } from './rhythm.js';
 import { masterLevel, mixKey, buildMix } from './mixer.js';
@@ -258,6 +258,44 @@ export function createBeatEngine({ audio, clipById }) {
       run.voices = (first.rows ?? []).map(() => []);
       run.shown = (first.rows ?? []).map(() => -1);
       run.timer = setInterval(tick, TICK_MS);
+    };
+    // The run keeps its rows' clocks, voices and playhead in lists with one
+    // entry a row. The beat maker edits its rows while the beat plays; these
+    // keep the lists in step, so a row moved or removed carries on in time
+    // with its own sounds ringing, and one put in joins on the grid.
+    // `where` is moveItem's answer for the rows: where each row went.
+    run.moveRow = (from, to, where) => {
+      for (const list of [run.voices, run.clocks, run.shown]) moveItem(list, from, to);
+      run.queue = run.queue.map((q) => ({ ...q, row: where[q.row] }));
+    };
+    run.removeRow = (i) => {
+      for (const v of run.voices[i] || []) fadeStop(v, ctx.currentTime);
+      run.voices.splice(i, 1);
+      run.clocks.splice(i, 1);
+      run.shown.splice(i, 1);
+      run.queue = run.queue.filter((q) => q.row !== i).map((q) => (q.row > i ? { ...q, row: q.row - 1 } : q));
+    };
+    run.insertRow = (i) => {
+      run.voices.splice(i, 0, []);
+      run.clocks.splice(i, 0, undefined);   // joins on the next tick (hooks.join)
+      run.shown.splice(i, 0, -1);
+      run.queue = run.queue.map((q) => (q.row >= i ? { ...q, row: q.row + 1 } : q));
+    };
+    // A tempo change: every time not yet booked, mapped by `move` (beat.js retimeAt).
+    run.retime = (move) => {
+      run.t0 = move(run.t0);
+      for (const c of run.clocks) if (c) c.next = move(c.next);
+      if (run.pass) run.pass.next = move(run.pass.next);
+    };
+    // Another beat takes over from its first pill at `at`, on the same clock:
+    // `rows` clocks start there; the old beat's voices are the caller's to keep ringing.
+    run.restart = (rows, at) => {
+      run.t0 = at;
+      run.pass = { next: at, pill: 0 };
+      run.clocks = Array.from({ length: rows }, () => ({ next: at, step: 0 }));
+      run.voices = Array.from({ length: rows }, () => []);
+      run.shown = Array.from({ length: rows }, () => -1);
+      run.queue = [];
     };
     run.stop = () => {
       if (!run.on) return run.stats;

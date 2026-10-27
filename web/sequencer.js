@@ -143,9 +143,8 @@ export function createSequencer(deps) {
     if (!playing() || !(oldBpm > 0) || oldBpm === bpm) return;
     const anchor = Math.min(clickNext, ...run.clocks.filter(Boolean).map((c) => c.next));
     const move = retimeAt(anchor, oldBpm, bpm);
-    run.t0 = move(run.t0);
+    run.retime(move);
     clickNext = move(clickNext);
-    for (const c of run.clocks) if (c) c.next = move(c.next);
     for (const k of skips) if (k.at >= anchor) k.at = move(k.at);
     if (queued) queued.at = move(queued.at);   // still the next bar line, at the new tempo
   }
@@ -459,11 +458,7 @@ export function createSequencer(deps) {
     letGo((m) => m.p === before);   // rings out, then goes
     pattern = cleanPattern(saved, personId);
     save();
-    run.t0 = at;
-    run.clocks = pattern.rows.map(() => ({ next: at, step: 0 }));
-    run.voices = pattern.rows.map(() => []);
-    run.shown = pattern.rows.map(() => -1);
-    run.queue = [];
+    run.restart(pattern.rows.length, at);
     clickNext = at;
     clickBeat = 0;
     logEvent('beat', { action: 'switch', bpm: pattern.bpm, bars: pattern.bars, after });
@@ -1256,8 +1251,7 @@ export function createSequencer(deps) {
   function moveRow(from, to) {
     const where = moveItem(pattern.rows, from, to);
     if (playing()) {
-      for (const list of [run.voices, run.clocks, run.shown]) moveItem(list, from, to);
-      run.queue = run.queue.map((q) => ({ ...q, row: where[q.row] }));
+      run.moveRow(from, to, where);
     }
     cell.row = where[cell.row] ?? 0;
     save();
@@ -1344,11 +1338,7 @@ export function createSequencer(deps) {
   }
   function removeRow(i) {
     if (playing()) {
-      for (const v of run.voices[i] || []) fadeStop(v, audio.context().currentTime);
-      run.voices.splice(i, 1);
-      run.clocks.splice(i, 1);
-      run.shown.splice(i, 1);
-      run.queue = run.queue.filter((q) => q.row !== i).map((q) => (q.row > i ? { ...q, row: q.row - 1 } : q));
+      run.removeRow(i);
     }
     const [row] = pattern.rows.splice(i, 1);
     offerUndo({ row, at: i, pattern });
@@ -1414,10 +1404,7 @@ export function createSequencer(deps) {
     pattern.rows.splice(i, 0, row);
     if (playing()) {
       // It rejoins in time, like a row added while playing.
-      run.voices.splice(i, 0, []);
-      run.clocks.splice(i, 0, undefined);
-      run.shown.splice(i, 0, -1);
-      run.queue = run.queue.map((q) => (q.row >= i ? { ...q, row: q.row + 1 } : q));
+      run.insertRow(i);
       prepare(deps.clipById(row.clipId));
     }
     offerUndo(null);

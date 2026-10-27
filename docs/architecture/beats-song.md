@@ -140,14 +140,16 @@ The library is the truth. `patterns` only says which named beat is open; no reco
 
 ### Per-row clocks
 
-Each row has `run.clocks[i] = {next, step, dt}`: when its next pill sounds and which pill. `hitsDue` loops each row while `clock.next < until`, reading `stepSeconds(pattern, row, mode)` on every pill, so a tempo or rate change lands at once; it asks `skip` of every pill (a pill a live hit already played books none), and with `steps` it hands back each pill passed, `{row, step, time}`, for the playhead. The run (`beat-engine.js play`) owns the per-row arrays, which `sequencer.js` keeps in step with `pattern.rows`:
+Each row has `run.clocks[i] = {next, step, dt}`: when its next pill sounds and which pill. `hitsDue` loops each row while `clock.next < until`, reading `stepSeconds(pattern, row, mode)` on every pill, so a tempo or rate change lands at once; it asks `skip` of every pill (a pill a live hit already played books none), and with `steps` it hands back each pill passed, `{row, step, time}`, for the playhead. The run (`beat-engine.js play`) owns the per-row arrays and keeps them in step when `sequencer.js` edits `pattern.rows` while the beat plays (`run.moveRow`, `run.removeRow`, `run.insertRow`; `sequencer.js` never splices them itself, `tests/architecture.test.mjs`):
 
 | Array | Holds | Spliced by |
 |---|---|---|
-| `run.clocks` | `{next, step}` | `moveRow`, `removeRow`, `undoRemove` (inserts `undefined`), `switchNow` |
-| `run.voices` | the row's sounding voices `{src, gain, end, lift, level}` | same |
+| `run.clocks` | `{next, step}` | `run.moveRow`, `run.removeRow`, `run.insertRow` (inserts `undefined`), `run.restart` (a chip switch) |
+| `run.voices` | the row's sounding voices `{src, gain, end, lift, level}`; `removeRow` fades the removed row's | same |
 | `run.shown` | the pill each row's playhead is on | same |
-| `run.queue` | booked `{row, step, time}`, for the playhead | remapped by `moveRow`, `removeRow`, `undoRemove` |
+| `run.queue` | booked `{row, step, time}`, for the playhead | remapped by `run.moveRow`, `run.removeRow`, `run.insertRow`; emptied by `run.restart` |
+
+`moveRow`, `removeRow` and `undoRemove` in `sequencer.js` call them while playing; `tests/beats-engine.test.mjs` checks that a row moved, removed or put in keeps the others' clocks and voices, on the run and through Beats' own menu.
 | `pills` | `pills[row][step]`, the buttons | `render` |
 | `litPills` | the `.now` pill per row | `showSteps` |
 
@@ -161,7 +163,7 @@ A row with no clock (added while playing, or put back by Undo) gets one from `jo
 - **Swing.** `swingDelay(step, dt, swing, groups)` delays the "and" pill of each 4-pill beat by `swing/100` of an eighth and its odd pills by half that (a 6-pill group of 6/8 or 7/8 moves only its odd pills); `groups` is the signature's. A groove may carry `swing` (Lo-fi, Boom bap, Dusty), which `grooveBeat` copies to the beat. Only the sound and the playhead move; the clock does not. `swingNow()` is the beat's swing at every level (Regular and Advanced see the keys; a beat saved with swing plays it for everyone). A tune row's half-pill notes are not swung. The UI offers 0, 33 and 50 (`SWING_KEYS`); other stored values play as stored.
 - **Time signatures.** `sigOf()` is the beat's `signature`, 4/4 when it has none. A beat saved before each beat had its own was read by a guess (the person's old setting `timeSignature` with Advanced on, else 4/4); that answer is now written into the beat once, and nothing guesses ("Old beats are stamped" below). `groups()` is `SIGNATURES[sig]` (the beat groups in pills), `bar()` their sum. Choosing a signature needs Advanced (`el.shape.hidden = !advanced`); playing one does not. Pills always last a sixteenth; BPM always counts quarter notes.
 - **Swing.** `swingDelay(step, dt, swing)` delays odd pills by `swing/100` of a pill. Only the sound and the playhead move; the clock does not. `swingNow()` is 0 without Advanced. A tune row's half-pill notes are not swung. The UI offers 0, 33 and 50 (`SWING_KEYS`); other stored values play as stored.
-- **Tempo while playing.** `retime(oldBpm)` maps every not-yet-booked time with `retimeAt(anchor, old, new)`: `t0`, `clickNext`, every `clocks[i].next`, live-hit `skips`, and a `queued` chip switch. So `t0 + n × pill` stays pill n's time, and ⌨️ Keys' snapping stays right. The slider applies it on `input`, saves and calls `onTempo` on `change`.
+- **Tempo while playing.** `retime(oldBpm)` maps every not-yet-booked time with `retimeAt(anchor, old, new)`: `run.retime(move)` moves `run.t0`, every `run.clocks[i].next` (and the plain grid's), then `clickNext`, live-hit `skips` and a `queued` chip switch. So `t0 + n × pill` stays pill n's time, and ⌨️ Keys' snapping stays right. The slider applies it on `input`, saves and calls `onTempo` on `change`.
 
 ### What one hit does (`sound`)
 
@@ -191,7 +193,7 @@ Latency is worked out in two places with the same sum: `beat.js outputDelay` (Be
 
 ### Switching beats on the bar line (pattern chips)
 
-`chipBeats(beats)`: pinned beats first (in pin order), then the most recently `saved`, shown oldest-`created` first, 8 spots (`MAX_CHIPS`). A chip tap while stopped opens the beat. While playing, `pickChip` sets `queued = {id, at: nextBarLine()}` and loads its sounds. the run's `limit` hook stops booking at `queued.at`; when the lookahead reaches it (the `afterTick` hook), `switchNow` swaps `pattern` on the same clock (`run.t0 = at`, fresh `run.clocks`, `run.voices`, `run.shown`), moves the old voices to `ringing` so they ring out, saves, and calls `onBeatChange` and `onTempo`. `stop()` drops a waiting switch. ⌨️ Keys locks the chips while recording (`lockChips`).
+`chipBeats(beats)`: pinned beats first (in pin order), then the most recently `saved`, shown oldest-`created` first, 8 spots (`MAX_CHIPS`). A chip tap while stopped opens the beat. While playing, `pickChip` sets `queued = {id, at: nextBarLine()}` and loads its sounds. the run's `limit` hook stops booking at `queued.at`; when the lookahead reaches it (the `afterTick` hook), `switchNow` swaps `pattern` on the same clock (`run.restart(rows, at)`: `run.t0 = at`, fresh `run.clocks`, `run.voices`, `run.shown`, `run.queue`), moves the old voices to `ringing` so they ring out, saves, and calls `onBeatChange` and `onTempo`. `stop()` drops a waiting switch. ⌨️ Keys locks the chips while recording (`lockChips`).
 
 ### Live hits recorded into the beat (for ⌨️ Keys)
 

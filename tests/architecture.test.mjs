@@ -118,6 +118,9 @@ test('✅ hits are booked by two loops on the audio clock: the beat engine (🥁
   assert.match(src['sequencer.js'], /aloneTimer = setInterval\(/, FIX);
   assert.match(src['sequencer.js'], /engine\.play\(/, FIX);
   assert.doesNotMatch(src['sequencer.js'], /\bmakeVoice\b|\btooLate\b|\bhitsDue\b/, FIX);
+  // Its row edits while the beat plays go through the run, which keeps the per-row lists in step.
+  assert.doesNotMatch(src['sequencer.js'], /\brun\.(voices|clocks|shown)\.splice|\brun\.queue = /, FIX);
+  for (const m of ['moveRow', 'removeRow', 'insertRow', 'retime', 'restart']) assert.match(src['sequencer.js'], new RegExp(`run\\.${m}\\(`), `${m}: ${FIX}`);
 });
 
 test('✅ the beat engine, the beat maker (its click) and 🎼 Song share one tick and lookahead', () => {
