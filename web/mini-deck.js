@@ -1,21 +1,20 @@
 // The play bar tucked into the slim top band (Ben, 2026-10-19): on 🥁 Beats,
 // once the control bar has scrolled all the way under the slim band, single
 // buttons ride at the right of the slim band instead, apart from its round
-// button, ❓, ⚙️ and ⬆️ at the left: ▶ Play (■ Stop), then ✏️ Layout
-// (⌨️ Keys on), and ▾ at the very right, which drops the whole
-// bar down under the band (▴ puts it away). Scrolled back up to the bar, it shows in its place.
+// button, ❓, ⚙️ and ⬆️ at the left: ▶ Play (■ Stop), then ▾ at the very right,
+// which drops the whole bar down under the band (▴ puts it away). Scrolled
+// back up to the bar, it shows in its place.
 // The buttons are twins: each one clicks the bar's own, and copies its state.
-// ● Record stays on the bar, a ▾ away, so ⬆️ has room (Ben, 2026-10-25).
+// ● Record and ✏️ Layout stay on the bar, a ▾ away, so ⬆️ has room (Ben,
+// 2026-10-25 and -27).
 //
 // The band never grows, so as it runs out of room things give way in Ben's
 // order (STEPS): ❓ (back at the top of the screen; Ben, 2026-10-25), then
-// ⬆️, then ✏️ (Layout: its twin on
-// the bar is a ▾ away), then ⚙️. Each step is a class on <body>;
-// styles.css says what it hides.
+// ⬆️, then ⚙️. Each step is a class on <body>; styles.css says what it hides.
 
 import { fitStep } from './lines.js';
 
-export const STEPS = ['tuck-nohelp', 'tuck-notop', 'tuck-noedit', 'tuck-nosettings'];
+export const STEPS = ['tuck-nohelp', 'tuck-notop', 'tuck-nosettings'];
 
 // The bar is tucked when it has reached the place it sticks, on Beats, with
 // the header slim. Pure, for the tests: `top` is where the bar is on screen,
@@ -50,7 +49,7 @@ export function initMiniDeck({ doc = globalThis.document, win = globalThis.windo
   }
 
   // The first step at which the buttons at the left end at least 16 px before
-  // these at the right (▶ ✏️ ▾, from the screen's edge).
+  // these at the right (▶ ▾, from the screen's edge).
   function fit() {
     const apply = (n) => STEPS.forEach((c, i) => body.classList.toggle(c, i < n));
     if (!body.classList.contains('deck-tucked')) { apply(0); return; }

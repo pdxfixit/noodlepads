@@ -1666,6 +1666,13 @@ export function createSequencer(deps) {
     const ask = e.target.closest('[data-clear]') || e.target.closest('[data-remove]');
     const kind = ask && (ask.dataset.clear != null ? 'clear' : 'remove');
     if (ask) {
+      // A row with no hits has nothing to lose: ✕ takes it out at once (Undo is still there).
+      if (kind === 'remove' && row && !row.steps.some(Boolean)) {
+        arm(null);
+        removeRow(i);
+        undoBanner?.focus();
+        return;
+      }
       if (asking?.row !== i || asking.kind !== kind) {
         arm({ row: i, kind });
         render();

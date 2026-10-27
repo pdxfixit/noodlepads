@@ -14,11 +14,11 @@
 
 import { countAt, KEY_ROWS, KEY_CODES, keyboardOrder, defaultDeck, fallbackLabel, layoutLabel, detectLayout, LAYOUTS, LAYOUT_NAMES, keyFor, clockText, createSnapper, tapTempo, TAP_GAP_MAX } from './rhythm.js';
 import { SIGNATURES, COMMON_BPMS, tempoStops, stopFor, typedBpm } from './beat.js';
-import { recall, remember, onePressOneClick } from './util.js';
+import { recall, remember, onePressOneClick, showLooping, mayFlash } from './util.js';
 import { PICTURES, pictureTakenBy } from './model.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
 import { openDialog, setupDialog, openerOf } from './dialogs.js';
-import { setSetting, onSetting, deviceChoice } from './settings.js';
+import { SETTINGS, getSetting, setSetting, onSetting, deviceChoice } from './settings.js';
 import { createKeysEditor } from './dj-keys.js';
 import { fadeAway, showBanner } from './ui.js';
 import { drawSpeaker, speakerControls, percent } from './row-volume.js';
@@ -38,7 +38,9 @@ const STOPS = tempoStops();   // the click track slider's positions (see sequenc
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
 // How long a line with Undo (for the beat, or a take taken out) stays (held while touched).
 const LINE_MS = 10000;
-export const HOLD_TO_LOOP_MS = 350;   // as on the pads: hold this long and it keeps repeating
+export const HOLD_TO_LOOP_MS = SETTINGS.holdToLoop.default;   // as on the pads: hold this long and it keeps repeating
+// What the person chose (⚙️ holdToLoop), asked at each press.
+const holdTime = () => getSetting('holdToLoop');
 
 // One color per family, like the groups of the periodic table. Dark enough
 // for white text (tests/contrast.test.mjs). A person's own sounds use their color.
@@ -187,7 +189,7 @@ export function createDJ({ el, deps }) {
           name.textContent = 'No sound';
         }
         b.setAttribute('aria-label', `${letterFor(code)}: ${clip ? clip.label : 'no sound'}`);
-        if (clip && deps.isLooping?.(clip.id)) b.classList.add('looping');
+        if (clip && deps.isLooping?.(clip.id)) showLooping(b, true);
         b.append(sym, emoji, name, fam);
         return b;
       }));
@@ -237,6 +239,9 @@ export function createDJ({ el, deps }) {
   function light(code, { ripple = true } = {}) {
     const k = keyEl(code);
     if (!k) return;
+    // Past three flashes a second a key is not lit again (util.js mayFlash);
+    // the glow and ripples around it wait too.
+    if (!mayFlash(k)) return;
     k.classList.add('hit');
     setTimeout(() => k.classList.remove('hit'), 120);
     const color = k.style.getPropertyValue?.('--c')?.trim() || '#ffffff';  // set on the tile by render()
@@ -246,7 +251,8 @@ export function createDJ({ el, deps }) {
     for (const [c, [r, i]] of where) {
       const d = Math.max(Math.abs(r - r0), Math.abs(i - c0));
       if (d < 1 || d > 2) continue;
-      keyEl(c)?.animate?.([
+      const near = keyEl(c);
+      if (near && mayFlash(near)) near.animate?.([
         { boxShadow: `0 0 0 0 transparent`, filter: 'brightness(1)' },
         { boxShadow: `0 0 ${22 - d * 6}px ${6 - d * 2}px ${color}`, filter: `brightness(${1.5 - d * 0.15})` },
         { boxShadow: `0 0 0 0 transparent`, filter: 'brightness(1)' },
@@ -256,6 +262,7 @@ export function createDJ({ el, deps }) {
   // A tile's hit lights it and tints the panel's glow (no ripple: bands are not a keyboard).
   function lightTiles(clipId) {
     for (const t of tilesOf(clipId)) {
+      if (!mayFlash(t)) continue;
       t.classList.add('hit');
       setTimeout(() => t.classList.remove('hit'), 120);
       el.panel?.style.setProperty('--glow', t.style.getPropertyValue?.('--c')?.trim() || '#ffffff');
@@ -274,8 +281,8 @@ export function createDJ({ el, deps }) {
   }
   // A sound started or stopped looping: its keys and tiles glow while it loops.
   function looping(clipId, on) {
-    for (const [code, id] of Object.entries(deck())) if (id === clipId) keyEl(code)?.classList.toggle('looping', on);
-    for (const t of tilesOf(clipId)) t.classList.toggle('looping', on);
+    for (const [code, id] of Object.entries(deck())) if (id === clipId) { const k = keyEl(code); if (k) showLooping(k, on); }
+    for (const t of tilesOf(clipId)) showLooping(t, on);
   }
 
   // A key: its sound, and its tile lit with a ripple.
@@ -322,7 +329,7 @@ export function createDJ({ el, deps }) {
     const clip = playTarget(target);
     if (!clip || wasLooping) return;
     clearTimeout(holds.get(id));
-    holds.set(id, setTimeout(() => { holds.delete(id); loopIt(clip); }, HOLD_TO_LOOP_MS));
+    holds.set(id, setTimeout(() => { holds.delete(id); loopIt(clip); }, holdTime()));
   }
   function shiftPlay(target) {
     const wasLooping = deps.isLooping?.(soundOf(target));
@@ -352,7 +359,7 @@ export function createDJ({ el, deps }) {
     if (e.repeat) {
       // Still down: loop once it has been held long enough.
       const h = held.get(code);
-      if (h && !h.looped && now - h.at >= HOLD_TO_LOOP_MS) {
+      if (h && !h.looped && now - h.at >= holdTime()) {
         h.looped = true;
         const clip = deps.clipById(deck()[code]);
         if (clip) loopIt(clip);
@@ -385,7 +392,7 @@ export function createDJ({ el, deps }) {
   const fingers = fingerTaps({
     onTap: (t) => playTarget(t),
     onHold: (t) => { const clip = playTarget(t); if (clip) loopIt(clip); },
-    holdMs: HOLD_TO_LOOP_MS,
+    holdMs: holdTime,
   });
   // `sel` finds what was pressed in `box`; `targetOf` says which sound it is.
   function listen(box, sel, targetOf) {
@@ -1063,7 +1070,9 @@ export function createDJ({ el, deps }) {
       const attr = rm ? 'data-remove-row' : 'data-clear-row';
       const i = Number(rm ? rm.dataset.removeRow : sweep.dataset.clearRow);
       clearTimeout(askTimer);
-      if (rowAsked?.row !== i || rowAsked.kind !== kind) {
+      // A row with no hits has nothing to lose: ✕ takes it out at once (Undo is still there).
+      const bare = rm && !seq.beat()?.rows[i]?.steps.some(Boolean);
+      if (!bare && (rowAsked?.row !== i || rowAsked.kind !== kind)) {
         rowAsked = { row: i, kind };
         askTimer = setTimeout(() => { rowAsked = null; renderGrid(); }, ARM_MS);
         renderGrid();

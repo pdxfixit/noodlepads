@@ -18,7 +18,7 @@ import {
   splitBlock, joinBlock, cannotSplit,
 } from './touch-grid.js';
 import { openDialog, setupDialog } from './dialogs.js';
-import { newId } from './util.js';
+import { newId, showLooping } from './util.js';
 import { holdToDrag } from './finger.js';
 
 // A group's emoji and name: 🎤 Sounds, a kit group's own, or 🔊 Sounds.
@@ -99,7 +99,7 @@ function playBand(b, i, clips, deps) {
     t.dataset.clip = clip.id;
     t.style.setProperty('--c', deps.family(clip).color);
     t.setAttribute('aria-label', clip.label);
-    if (deps.isLooping?.(clip.id)) t.classList.add('looping');
+    if (deps.isLooping?.(clip.id)) showLooping(t, true);
     const emoji = document.createElement('span');
     emoji.className = 'touch-emoji';
     emoji.setAttribute('aria-hidden', 'true');

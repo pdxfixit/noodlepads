@@ -123,7 +123,7 @@ setProgress` ignores ids that are not a pad.
 ## From a tap to a sound
 
 1. `pads.js` pointer handlers: a tap calls `tapPad(clip, {ring})`; a hold of
-   `HOLD_TO_LOOP_MS` (or Shift) calls `audio.loop(clip)`. 🎤 Live and 👆 bands
+   the person's `holdToLoop` (350 ms to begin with; or Shift) calls `audio.loop(clip)`. 🎤 Live and 👆 bands
    reach the same `tapPad` through `dj.js hit` → `deps.tap` (with Live's 🔔
    Let it ring as `ring`), and loops through `deps.loop` → `audio.loop`.
 2. `tapPad`: a looping pad stops (`audio.stop`), else `audio.play(clip, {ring})`

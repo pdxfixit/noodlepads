@@ -372,7 +372,7 @@ One open beat per person (ADR 0017), owned by `sequencer.js` (`pattern`, `doc`, 
 
 ### Hold to loop, tap to stop
 
-`HOLD_TO_LOOP_MS` (350) in `dj.js`; the pads' own hold in `pads.js`; Kids has no loops. A tap on a looping sound stops it (`pads.js tapPad`), and a take records that as `'stop'`; held on, it stays stopped (`dj.js pointerDown`, `keydown`, and `finger.js`'s `hold: false`).
+The hold is the person's `holdToLoop` setting (`settings.js LOOP_HOLDS`, 350 ms to begin with), read at each press by `dj.js` and `pads.js` (`HOLD_TO_LOOP_MS` there is its default) and handed to `finger.js fingerTaps` as a function; ✏️ Layout's drag keeps its own `DRAG_HOLD_MS`; Kids has no loops. A tap on a looping sound stops it (`pads.js tapPad`), and a take records that as `'stop'`; held on, it stays stopped (`dj.js pointerDown`, `keydown`, and `finger.js`'s `hold: false`).
 
 ### Lift to play (`finger.js`)
 

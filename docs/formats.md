@@ -167,7 +167,7 @@ A loop that is never stopped ends at `duration`.
 ## settings and prefs
 
 - **settings**: `[{key, value}]`, the device's: `djLayout` (keyboard map), `sendLogs`, `sendUsage` (switches, both `true` or `false`). A device setting stays with the device; v2 does not need them.
-- **prefs**: `[{personId, values, changed?}]`, a person's own. `values` may hold `level` (`kids`, `regular`, `advanced`), `advancedBeats` (`true` exactly when the level is advanced), `timeSignature` (the choice before each beat had its own; read only to stamp an old beat), `padSize`, `padSkin`, `instNotes`, `instChords`, `instBass`, `kidsPadSize`, `kidsPadSkin`, `kidsInstNotes` (🧸 Kids' own copies of the first, second and fourth: the same values), `seen`, `reaches`. A value that is not allowed is dropped.
+- **prefs**: `[{personId, values, changed?}]`, a person's own. `values` may hold `level` (`kids`, `regular`, `advanced`), `advancedBeats` (`true` exactly when the level is advanced), `timeSignature` (the choice before each beat had its own; read only to stamp an old beat), `padSize`, `padSkin`, `instNotes`, `instChords`, `instBass`, `holdToLoop` (milliseconds a hold lasts before a pad or key keeps looping: 350, 500, 750, 1000 or 1500; 350 when missing), `kidsPadSize`, `kidsPadSkin`, `kidsInstNotes` (🧸 Kids' own copies of the first, second and fourth: the same values), `seen`, `reaches`. A value that is not allowed is dropped.
 
 ## What a reader should do
 

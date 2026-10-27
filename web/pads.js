@@ -9,16 +9,18 @@ import { people, person, clipsFor, findClip, padColor } from './board.js';
 import { voiceById, amountText, chainOf, chainText, stepLook } from './voices.js';
 import { announce } from './ui.js';
 import { isKitClip, ownSoundsTitle, groupKit, openKitGroups, withHidden } from './model.js';
-import { remember, recall, onePressOneClick } from './util.js';
+import { remember, recall, onePressOneClick, showLooping, mayFlash } from './util.js';
 import { countPlay } from './play-count.js';
 import { groupOwn, cleanGroups, UNGROUPED } from './groups.js';
-import { getSetting, setSetting, onSetting } from './settings.js';
+import { SETTINGS, getSetting, setSetting, onSetting } from './settings.js';
 import { padWidth, sliderAt } from './pad-size.js';
 import { fingerTaps, isFinger } from './finger.js';
 import { hasPicker, pickerButton, pickerList, instrumentBadge } from './inst-picker.js';
 import { PLAYED } from './instruments.js';
 
-export const HOLD_TO_LOOP_MS = 350;  // hold a pad this long and it keeps repeating; a tap stops it
+export const HOLD_TO_LOOP_MS = SETTINGS.holdToLoop.default;  // hold a pad this long and it keeps repeating; a tap stops it
+// What the person chose (⚙️ holdToLoop), asked at each press.
+const holdTime = () => getSetting('holdToLoop');
 
 const el = {};
 let openSheet = () => {};
@@ -39,7 +41,11 @@ export function setProgress(id, p) {
   const pad = padFor(id);
   if (!pad) return;
   pad.style.setProperty('--progress', p);
-  pad.classList.toggle('playing', p > 0 && p < 1);
+  const playing = p > 0 && p < 1;
+  // A short sound that loops would light and unlight its pad many times a
+  // second (Switch, Lit pads): past three a second it stays as it was.
+  if (playing && !pad.classList.contains('playing') && !mayFlash(pad)) return;
+  pad.classList.toggle('playing', playing);
 }
 
 // Whose sounds: a round button in the top right corner, like an account
@@ -231,7 +237,7 @@ export function renderPads() {
     const b = makePad(clip);
     b.dataset.id = clip.id;
     if (clip.hidden) b.classList.add('hidden-clip');
-    if (audio.isLooping(clip.id)) b.classList.add('looping');
+    if (audio.isLooping(clip.id)) showLoopingPad(b, true);
     if (i < 9 && !state.editing) {
       const key = document.createElement('span');
       key.className = 'pad-key';
@@ -565,6 +571,13 @@ async function cornerBadge(kind, clip) {
   renderPads();
 }
 
+// In ✏️ Edit sounds a pad's aria-pressed is its "chosen" state (editCell),
+// so a loop there is only lit.
+function showLoopingPad(pad, on) {
+  if (state.editing) pad.classList.toggle('looping', on);
+  else showLooping(pad, on);
+}
+
 // A tap on a looping pad stops it; on any other pad, plays it once. Returns
 // true when it stopped a loop.
 // `ring`: 🎤 Live's 🔔 Let it ring, the sound's earlier hits ring on under this
@@ -581,6 +594,7 @@ export function tapPad(clip, { ring = false, kind = 'pads' } = {}) {
 }
 
 export function flash(pad) {
+  if (!mayFlash(pad)) return;
   pad.classList.add('hit');
   setTimeout(() => pad.classList.remove('hit'), 90);
 }
@@ -832,7 +846,8 @@ export function initPads(hooks) {
 
   audio.on.progress = setProgress;
   audio.on.looping = (id, on) => {
-    padFor(id)?.classList.toggle('looping', on);
+    const pad = padFor(id);
+    if (pad) showLoopingPad(pad, on);
     onLooping(id, on);
   };
   audio.on.broken = (id, on = true) => padFor(id)?.classList.toggle('broken', on);
@@ -852,7 +867,7 @@ export function initPads(hooks) {
   const fingers = fingerTaps({
     onTap: (clip) => tapPad(clip),
     onHold: startLoop,
-    holdMs: HOLD_TO_LOOP_MS,
+    holdMs: holdTime,
   });
   el.pads.addEventListener('pointerdown', (e) => {
     if (state.editing || e.button !== 0) return;
@@ -863,7 +878,7 @@ export function initPads(hooks) {
     if (isFinger(e)) { fingers.down(e, clip, { hold: !audio.isLooping(clip.id) }); return; }
     if (e.shiftKey && !audio.isLooping(clip.id)) { startLoop(clip); return; }
     if (tapPad(clip)) return;
-    holds.set(e.pointerId, setTimeout(() => audio.loop(clip), HOLD_TO_LOOP_MS));
+    holds.set(e.pointerId, setTimeout(() => audio.loop(clip), holdTime()));
   });
   // A mouse let go before the hold time is just a click.
   const release = (e) => {

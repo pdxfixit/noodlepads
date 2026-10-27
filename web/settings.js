@@ -40,6 +40,12 @@ export function levelOf(values) {
   return level;
 }
 
+// How long a pad or key must be held before it keeps looping, in ms. A
+// slow tap must not turn into a loop by accident (accessibility seat, council
+// round 1): 350 is the quick hold the app began with, and slower holds suit
+// a hand that rests on the screen a little longer.
+export const LOOP_HOLDS = [350, 500, 750, 1000, 1500];
+
 export const SETTINGS = {
   // The person's level (ADR 0019, Ben 2026-10-12): 🧸 Kids, Regular or
   // Advanced, chosen in Settings. Read through levelOf, so a person stored
@@ -72,6 +78,11 @@ export const SETTINGS = {
   instNotes: { default: PLAYED.notes.default, values: instrumentIds('notes'), scope: 'person' },
   instChords: { default: PLAYED.chords.default, values: instrumentIds('chords'), scope: 'person' },
   instBass: { default: PLAYED.bass.default, values: instrumentIds('bass'), scope: 'person' },
+  // How long a hold must last before a pad (Pads) or a key (🎤 Live, ⌨️ Keys)
+  // keeps looping (pads.js, dj.js; accessibility seat, round 1). Read at each
+  // press, so a change counts at once. Each person their own, in backups.
+  // ✏️ Layout's drag has its own, shorter hold (finger.js DRAG_HOLD_MS).
+  holdToLoop: { default: LOOP_HOLDS[0], values: LOOP_HOLDS, scope: 'person' },
   // 🧸 Kids' own size, look and instrument (council round 1, 2026-10-26): the
   // same choices as `padSize`, `padSkin` and `instNotes`, kept apart so a
   // kid's visit never changes what a grown-up set on Pads and Notes.
