@@ -432,7 +432,6 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 | a clip's audio checked, then written | `worker/cloud.js push`: the 409 `sound` check reads before the write batch, not inside it | not atomic: another device's push can free that audio in between, and the record lands naming audio that is gone; the next pull's `fetchSound` 404s that sync, and the one after takes the newer record |
 | the second 409 resend | `cloud-sync.js syncProfile`: after a 409, one pull, then a second 409 drops the sound from `link.sounds` and sends this device's audio again | an edit made during that re-pull can send audio that the push then leaves unnamed (a stale record): it stays in D1, counting toward the profile's bytes, until a sound that names it is deleted |
 | audio freed while a pull fetches it | `worker/cloud.js push` frees a clip's old audio at once; `cloud-sync.js pullOnce` fetches audio named by the records it pulled | a pull that read a record just before another device replaced its audio gets 404 from `fetchSound`, and that whole sync fails (`trouble`); the next sync pulls the newer record and goes through |
-| the privacy policy link | `privacy.js PRIVACY_URL` and the literal URL in `index.html` `.privacy-link` | a new URL in one place leaves the other; `privacy.js` is in `sw.js MODULES` and cached, though the page never loads it |
 
 ## Invariants and gotchas
 

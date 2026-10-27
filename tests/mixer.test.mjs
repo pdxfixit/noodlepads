@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { MIX_FX, cleanFx, fxSteps, masterLevel, silencedBySolo, mixKey, buildMix } from '../web/mixer.js';
 import { gainAt } from '../web/row-volume.js';
 import { cleanRow, cleanPattern, planHits, audible, beatToFile, beatFromFile } from '../web/beat.js';
-import { samePattern } from './helpers.mjs';
+import { samePattern, on } from './helpers.mjs';
 import { readBackup, makeBackup } from '../web/backup.js';
 import { shareBundle, shareDoc } from '../web/cloud-sync.js';
 import { installPage } from './fake-dom.mjs';
@@ -19,7 +19,6 @@ import { newBeatWithRow, newBuilderBeatWithRow, keysOn, keysOff } from './new-be
 import { state } from '../web/state.js';
 import { createBeatEngine } from '../web/beat-engine.js';
 
-const on = (...at) => Array.from({ length: 16 }, (_, i) => at.includes(i));
 
 test('a row stores solo and its effect only when set; junk is dropped; an old beat has neither', () => {
   const plain = cleanRow({ clipId: 'x', steps: on(0) });

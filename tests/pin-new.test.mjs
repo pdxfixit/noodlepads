@@ -15,6 +15,7 @@ import { ORIGIN } from '../worker/http.js';
 import { FakeD1 } from './fake-d1.mjs';
 import { funName } from '../web/names.js';
 import { SCHEMA, DB_NAME, DB_VERSION } from '../web/store.js';
+import { pinKeys } from './helpers.mjs';
 
 let page;
 let $;
@@ -56,7 +57,7 @@ before(async () => {
 });
 
 const settle = () => page.settle();
-const typePin = (digits) => { for (const k of digits) $('#pin-keys').querySelector(`[data-key="${k}"]`).dispatch('click'); };
+const typePin = (digits) => pinKeys($, digits);
 const choose = (id) => $(`.person-list [data-person="${id}"]`).dispatch('click');
 const names = () => [...state.peopleEdits.values()].map((p) => p.name).filter(Boolean);
 // Something made, stored as the app stores it, so the sync has it to send.

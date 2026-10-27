@@ -18,7 +18,7 @@ import { FakeD1 } from './fake-d1.mjs';
 import { readFileSync } from 'node:fs';
 import { isFunName, funName } from '../web/names.js';
 import { PIN_RESET_EMAIL } from '../web/contact.js';
-import { FakeAudioBuffer, fakeBuffer } from './helpers.mjs';
+import { FakeAudioBuffer, fakeBuffer, pinKeys } from './helpers.mjs';
 import { fakeIndexedDB } from './fake-idb.mjs';
 
 let page;
@@ -77,7 +77,7 @@ const closeSheets = () => { $('#profile-dialog').close(); $('#people-dialog').cl
 // rounds, off the main thread: slow when every core is busy). page.settle()
 // counts both (tests/fake-dom.mjs, "Work in flight").
 const settle = () => page.settle();
-const typePin = (digits) => { for (const k of digits) $('#pin-keys').querySelector(`[data-key="${k}"]`).dispatch('click'); };
+const typePin = (digits) => pinKeys($, digits);
 // What the switch does after the sum and the pads: the person goes up with this PIN.
 const UP_PIN = '2468';
 const up = async (id) => { if (!cloud.inCloud(id)) await cloud.goUp(id, UP_PIN); };

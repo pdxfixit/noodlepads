@@ -6,10 +6,14 @@ sharp spike and plays about 8 dB under a made one at the same peak).
 """
 import math
 import sys
+import tempfile
 import unittest
+import wave
+from array import array
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import make_placeholders as mp  # noqa: E402
 import make_samples as ms  # noqa: E402
 
 
@@ -57,6 +61,38 @@ class Credits(unittest.TestCase):
         import make_placeholders as mp
         both = sorted({h[0] for h in ms.HITS} & set(mp.KIT))
         self.assertEqual(both, [], "make_placeholders.py would overwrite these recordings")
+
+
+def pcm_of(path):
+    with wave.open(str(path), "rb") as w:
+        assert (w.getnchannels(), w.getsampwidth(), w.getframerate()) == (1, 2, ms.RATE)
+        return array("h", w.readframes(w.getnframes()))
+
+
+class WriteWav(unittest.TestCase):
+    """One writer for both tools: the placeholders fade their first and last
+    5 ms, the recorded clips (cut with their own ends) do not. The bytes are
+    what each tool's own copy wrote before they were one."""
+
+    def test_the_recorded_clips_are_written_without_a_fade(self):
+        x = [0.0, 0.5, -1.0, 0.25, 1.0, -0.5] * 40
+        with tempfile.TemporaryDirectory() as d:
+            ms.write_wav(Path(d) / "a.wav", list(x))
+            got = pcm_of(Path(d) / "a.wav")
+        want = array("h", (int(max(-1.0, min(1.0, v * 0.85 / 1.0)) * 32767) for v in x))
+        self.assertEqual(got, want)
+
+    def test_the_placeholders_fade_the_ends(self):
+        x = [1.0] * 400
+        with tempfile.TemporaryDirectory() as d:
+            mp.write_wav(Path(d) / "a.wav", list(x))
+            got = pcm_of(Path(d) / "a.wav")
+        n = int(0.005 * mp.RATE)
+        self.assertEqual(got[0], 0)
+        self.assertEqual(got[-1], 0)
+        self.assertLess(got[1], got[n])
+        self.assertEqual(got[n], int(0.85 * 32767))
+        self.assertEqual(got[len(x) // 2], int(0.85 * 32767), "the middle is untouched")
 
 
 if __name__ == "__main__":

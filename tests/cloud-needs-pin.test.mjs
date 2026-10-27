@@ -17,6 +17,7 @@ import { ORIGIN } from '../worker/http.js';
 import { FakeD1 } from './fake-d1.mjs';
 import { funName } from '../web/names.js';
 import { WRONG_NOTE } from '../web/grown-up.js';
+import { pinKeys } from './helpers.mjs';
 
 let page;
 let $;
@@ -53,7 +54,7 @@ before(async () => {
 });
 
 const settle = () => page.settle();
-const typePin = (d) => { for (const k of d) $('#pin-keys').querySelector(`[data-key="${k}"]`).dispatch('click'); };
+const typePin = (digits) => pinKeys($, digits);
 const names = () => [...state.peopleEdits.values()].map((p) => p.name).filter(Boolean);
 const sumAnswer = () => Number($('#kids-sum-a').textContent) + Number($('#kids-sum-b').textContent);
 const answer = async (n) => {

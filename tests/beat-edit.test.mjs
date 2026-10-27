@@ -3,10 +3,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cleanPattern, pillTarget } from '../web/beat.js';
-import { samePattern } from './helpers.mjs';
+import { samePattern, on } from './helpers.mjs';
 
 const beat = (name, rows, bpm = 100) => cleanPattern({ name, bpm, rows }, 'pip');
-const on = (...steps) => Array.from({ length: 16 }, (_, i) => steps.includes(i));
 
 // ── comparing two beats (tests/helpers.mjs) ──
 

@@ -16,6 +16,7 @@ import { FakeD1 } from './fake-d1.mjs';
 import { SCHEMA, DB_NAME, DB_VERSION } from '../web/store.js';
 import { makeBackup, personBackupLists } from '../web/backup.js';
 import { unzip } from '../web/zip.js';
+import { pinKeys } from './helpers.mjs';
 
 let page;
 let $;
@@ -58,7 +59,7 @@ before(async () => {
 });
 
 const settle = () => page.settle();
-const typePin = (d) => { for (const k of d) $('#pin-keys').querySelector(`[data-key="${k}"]`).dispatch('click'); };
+const typePin = (digits) => pinKeys($, digits);
 const line = (id) => {
   if (!$('#people-dialog').open) $('#people-open').dispatch('click');
   return $('#people-edit').children.find((r) => r.dataset.person === id);

@@ -18,6 +18,7 @@ import { ORIGIN } from '../worker/http.js';
 import { FakeD1 } from './fake-d1.mjs';
 import { SCHEMA, DB_NAME, DB_VERSION } from '../web/store.js';
 import { PERSON_COLORS } from '../web/model.js';
+import { pinKeys } from './helpers.mjs';
 
 let page;
 let $;
@@ -67,7 +68,7 @@ before(async () => {
 });
 
 const settle = () => page.settle();
-const typePin = (d) => { for (const k of d) $('#pin-keys').querySelector(`[data-key="${k}"]`).dispatch('click'); };
+const typePin = (digits) => pinKeys($, digits);
 // The grown-up sum, answered right (a stand-in for the grown-up).
 const answerSum = async () => {
   const sum = Number($('#kids-sum-a').textContent) + Number($('#kids-sum-b').textContent);

@@ -11,6 +11,7 @@ import { testManifest } from './test-board.mjs';
 import worker from '../worker/index.js';
 import { ORIGIN } from '../worker/http.js';
 import { FakeD1 } from './fake-d1.mjs';
+import { pinKeys } from './helpers.mjs';
 
 let page;
 let $;
@@ -35,7 +36,7 @@ before(async () => {
   await page.settle();
 });
 
-const typePin = (digits) => { for (const k of digits) $('#pin-keys').querySelector(`[data-key="${k}"]`).dispatch('click'); };
+const typePin = (digits) => pinKeys($, digits);
 
 test('wrong tries count down, then the wait screen names a grown-up, the time, and one way back', async () => {
   await cloud.api.create({ id: 'p-far', name: 'Sir Squid', avatar: '🐙', color: '#0C5E4B', pin: '2468' });

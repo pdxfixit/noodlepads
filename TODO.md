@@ -67,8 +67,6 @@ Other work:
 
 - [ ] Move `skills/noodlepads-logs` to `~/src/skills/noodlepads-logs` and link it (the skills workspace convention); the recurrent routine's leg is now named `noodlepads-logs`, and its state file `~/.local/state/skills/noodlepads-logs.state.json`
 
-- [ ] **Deduplicate and simplify: the rest** (Ben, 2026-10-26; `docs/design/simplify.md`). One commit each. S2 dead code out, S3 exact copies made one, S8 test and tool tidy (the `.node-version` file included); C2's other half: `sheet-make.js`, `chop.js` and `kids.js` still build an own sound by hand (use `model.js newClip` and `board.js addClip`). The rest of the survey is done.
-
 - **One quiet rule for no storage** (the data seat's ask, 2026-10-27): with no storage at all, `persist`, `setOverride`, `setPersonEdit`, `deleteUserClip` and `deleteMyVoice` stay quiet as `removeRecord` does (one `noStorage()` helper in `web/state.js`), so a save can't push an ↩️ Undo off; `deleteUserClip` and `deleteMyVoice` go through `removeRecord`.
 - **Council round 1, fixes in flight** (2026-10-26): Kids keyboard/tune/mic/sum; Live take Undo and audio clock, iOS silent switch, context resume, late pills; sync re-uploads edited audio and splits pushes by bytes; Worker caps, the PIN race, keys, shares deleted with a profile; `just test` fails on cut tests, deploy.yml version checks, the no-names self-test, stale deploy docs. Delete this line when they land.
 - **Apple voices out** (Ben, 2026-10-26), once Ben's recordings or a CC0 set arrive ("Ben does"): they replace the 16 Apple-voice clips that `web/clips/kit/LICENSE-samples.txt` lists, `tools/make_placeholders.py` stops making them (`KIT_CALLOUTS`, `cackle`), and that file's Apple section goes.

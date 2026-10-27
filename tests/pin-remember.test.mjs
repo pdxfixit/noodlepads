@@ -15,6 +15,7 @@ import { ORIGIN } from '../worker/http.js';
 import { KEY_IDLE_MS } from '../worker/cloud.js';
 import { FakeD1 } from './fake-d1.mjs';
 import { SCHEMA, DB_NAME, DB_VERSION } from '../web/store.js';
+import { pinKeys } from './helpers.mjs';
 
 let page;
 let $;
@@ -98,7 +99,7 @@ before(async () => {
 });
 
 const settle = () => page.settle();
-const typePin = (digits) => { for (const k of digits) $('#pin-keys').querySelector(`[data-key="${k}"]`).dispatch('click'); };
+const typePin = (digits) => pinKeys($, digits);
 const choose = async (id) => { renderPeople(); $(`.person-list [data-person="${id}"]`).dispatch('click'); await settle(); };
 
 test('a device that remembers someone opens them without the PIN, and keeps their key', async () => {

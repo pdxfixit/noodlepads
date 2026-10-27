@@ -31,7 +31,7 @@ from array import array
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from make_placeholders import carry  # noqa: E402
+from make_placeholders import carry, write_wav as _write_wav  # noqa: E402
 
 RATE = 22050
 KIT_OUT = Path(__file__).resolve().parent.parent / "web" / "clips" / "kit"
@@ -225,15 +225,8 @@ def lift(samples, db, release=0.01):
 
 
 def write_wav(path, samples):
-    peak = max(abs(s) for s in samples) or 1.0
-    pcm = array("h", (int(max(-1.0, min(1.0, s * 0.85 / peak)) * 32767) for s in samples))
-    if sys.byteorder == "big":
-        pcm.byteswap()
-    with wave.open(str(path), "wb") as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(RATE)
-        w.writeframes(pcm.tobytes())
+    """The clips are cut with their own ends: no extra fade (make_placeholders.write_wav)."""
+    _write_wav(path, samples, faded=False)
 
 
 def main(args):

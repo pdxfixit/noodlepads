@@ -7,7 +7,7 @@ import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { cleanVolume, stepLevel, speakerIcon, speakerLabel, setRowLevel, rowLevel, gainAt, positionOf, percent } from '../web/row-volume.js';
 import { cleanRow, cleanPattern, planHits, hitGain, ACCENT_GAIN, beatToFile, beatFromFile } from '../web/beat.js';
-import { samePattern } from './helpers.mjs';
+import { samePattern, on } from './helpers.mjs';
 import { readBackup, makeBackup } from '../web/backup.js';
 import { shareBundle, shareDoc } from '../web/cloud-sync.js';
 import { installPage } from './fake-dom.mjs';
@@ -15,7 +15,6 @@ import { testManifest } from './test-board.mjs';
 import { hasUndo } from './banner.mjs';
 import { newBeatWithRow, newBuilderBeatWithRow, keysOn, keysOff } from './new-beat.mjs';
 
-const on = (...at) => Array.from({ length: 16 }, (_, i) => at.includes(i));
 
 test('a stored level is 0 to 1 in ten-thousandths; anything else plays at full', () => {
   assert.equal(cleanVolume(0.5), 0.5);

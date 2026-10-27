@@ -22,6 +22,7 @@ const NOT_LOADED = new Map([
   ['sw.js', 'the worker itself: the browser fetches it, past the worker'],
   ['version.json', 'written at deploy, and network only'],
   ['version.js', 'the release, read by the deploy (site.conf release=) and the tools, never by the page'],
+  ['privacy.js', 'the "What\'s private" lines, read by README and tests/privacy.test.mjs; the page links the shared policy instead'],
   ['fonts/OFL-anybody.txt', 'a license, beside the font'],
   ['fonts/OFL-atkinson-next.txt', 'a license, beside the font'],
   ['clips/kit/LICENSE-samples.txt', 'where the recorded instruments came from, beside them'],

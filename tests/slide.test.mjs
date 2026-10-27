@@ -5,8 +5,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { pillKey, pickAll, section, shiftPick, slideRows } from '../web/slide.js';
 import { cleanRow } from '../web/beat.js';
+import { on } from './helpers.mjs';
 
-const on = (...steps) => Array.from({ length: 16 }, (_, i) => steps.includes(i));
 const lit = (row) => row.steps.flatMap((x, i) => (x ? [i] : []));
 // The beat Ben described: right, but starting on pill 3.
 const late = () => [

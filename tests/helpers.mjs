@@ -201,3 +201,12 @@ export function samePattern(a, b) {
       && sameNotes(row.tune, o.tune);
   });
 }
+
+// The PIN pad: a tap on each digit key, as the tests of every PIN flow type
+// one in. `$` is the page's query (fake-dom.mjs installPage().$).
+export function pinKeys($, digits) {
+  for (const k of digits) $('#pin-keys').querySelector(`[data-key="${k}"]`).dispatch('click');
+}
+
+// A row of 16 pills with these on: the steps of a beat the tests build.
+export const on = (...steps) => Array.from({ length: 16 }, (_, i) => steps.includes(i));

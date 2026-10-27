@@ -140,6 +140,16 @@ test('site/wrangler.toml holds no ids: the public repo names them for the deploy
   assert.match(toml, /^directory = "\.\.\/web"$/m);
 });
 
+test('both workflows read the Node version from .node-version, one file', () => {
+  const node = readFileSync(join(root, '.node-version'), 'utf8').trim();
+  assert.match(node, /^\d+\.\d+\.\d+$/, 'a full version, so a bump is a decision');
+  for (const name of ['test.yml', 'deploy.yml']) {
+    const wf = readFileSync(join(root, '.github/workflows', name), 'utf8');
+    assert.match(wf, /^\s+node-version-file: \.node-version$/m, `${name} reads it`);
+    assert.doesNotMatch(wf, /^\s+node-version: /m, `${name} pins no Node of its own`);
+  }
+});
+
 test('GitHub deploys only after the tests', () => {
   const wf = readFileSync(join(root, '.github/workflows/deploy.yml'), 'utf8');
   const at = (s) => { const i = wf.indexOf(s); assert.ok(i >= 0, `deploy.yml runs ${s}`); return i; };

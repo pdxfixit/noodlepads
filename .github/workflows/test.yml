@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0  # the release checks count commits
       - uses: actions/setup-node@v7
         with:
-          node-version: 26.11.1
+          node-version-file: .node-version
       - name: Install just (pinned release; Ubuntu's is too old for [doc] and [positional-arguments])
         run: curl -sSfL https://github.com/casey/just/releases/download/1.58.0/just-1.58.0-x86_64-unknown-linux-musl.tar.gz | sudo tar xz -C /usr/local/bin just && just --version
       - name: just test

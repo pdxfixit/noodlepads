@@ -1,6 +1,6 @@
 # Deduplicate and simplify: a ranked survey
 
-**Status:** proposal for Ben (2026-10-26). Nothing here is built. Ben asked: "where can we deduplicate in code or otherwise simplify refactor?"
+**Status:** done (2026-10-27); every item built, or found already done or not true any more, as each heading says. Proposal for Ben (2026-10-26). Ben asked: "where can we deduplicate in code or otherwise simplify refactor?"
 
 **In short.** There are 23 places worth changing, in three groups. Eight are **safe now**: no behavior change, and tests already cover them (about 4½ hours). Fifteen **need care**: they touch a stored record, the cloud, the microphone, how a sound is made, or a big file split (about 16 hours). Eleven more are **not worth it**, with the reason for each. The first batch I recommend is five safe items, about 3¼ hours: one list of a person's stores, dead code out, exact copies made one, the beat maker's pure rules out of `sequencer.js`, and one writer for a person's saved lists. Together they remove about 250 lines, retire six lists kept in step by hand, and stop `backup.js`, `kids-logic.js` and the 🎧 listener from loading the 3,349-line beat maker.
 
@@ -67,7 +67,7 @@ No behavior change. The tests named under "Guards" already cover the code; each 
 | Risk | Cloud code changes shape, not values: the lists come out equal, item for item. No stored format, backup or kid-visible change. |
 | Guards | Today: `tests/architecture.test.mjs` "the record kinds that sync are one list, kept three times in one order", `tests/cloud-sync.test.mjs`, `tests/worker-cloud.test.mjs`, `tests/merge.test.mjs`. Proof: the architecture test checks that no file but `reid.js` writes the list out (a regex for `'clips', 'overrides'`). |
 
-### S2. Dead code out · 30 min
+### S2. Dead code out · 30 min (done, 2026-10-27; `dj.js`'s four return names, `el.tryingStop` and `state.beats` were already gone or in use)
 
 | | |
 |---|---|
@@ -77,7 +77,7 @@ No behavior change. The tests named under "Guards" already cover the code; each 
 | Risk | None a kid sees. `tools/look.mjs` and `look-cloud.mjs` call none of them (checked). `track-page.js`'s `more-tight` check never fires today, so usage events are unchanged. |
 | Guards | `just test`, `tests/overflow.test.mjs`, `tests/rhythm.test.mjs`, `tests/touch-grid.test.mjs`, `tests/track-page.test.mjs`. Proof: a deletion has no failing test of its own; `just test` green and `just look --wide` with no new console error show nothing used it. |
 
-### S3. Exact copies made one · 40 min
+### S3. Exact copies made one · 40 min (done, 2026-10-27; `slug` also splits accents first, so a sound's download name drops an accent instead of a letter)
 
 Each is a copy of code that already exists, so each becomes an import. One commit.
 
@@ -141,7 +141,7 @@ Each is a copy of code that already exists, so each becomes an import. One commi
 | Risk | None a kid sees. Best done before the one beat engine (row K) reshapes `song.js`, or folded into it. |
 | Guards | `tests/song.test.mjs`, `tests/playlist.test.mjs`, `tests/backup.test.mjs`. Proof: an architecture check that `backup.js` and `share-render.js` import neither `song.js` nor `sequencer.js`. |
 
-### S8. Test and tool tidy · 25 min
+### S8. Test and tool tidy · 25 min (done, 2026-10-27; `typePin` and the 16-pill `on` are shared; `makeBeat` and `sheetOf` differ between files, so they stay)
 
 | | |
 |---|---|
@@ -167,7 +167,7 @@ Each touches something a test here cannot fully check (a stored record, the clou
 | Risk | `deletePerson` is the delete path: a store it misses outlives its person, and `adoptStoredPeople` brings them back. No stored format change, but it is what deleting a kid's things does: data seats, privacy and parent included. |
 | Guards | `tests/architecture.test.mjs` (the stores), `tests/backup.test.mjs`, `tests/cloud-sync.test.mjs`, `tests/delete-*.test.mjs`, `tests/startup-remembered.test.mjs`. Proof: a test that loops over `STORE_NAMES` and finds no record of a deleted person in any store, and one that every builder's keys equal `STORE_NAMES` without `cloud` and `bases`. |
 
-### C2. One way to make an own sound · 45 min
+### C2. One way to make an own sound · 45 min (done, 2026-10-27)
 
 | | |
 |---|---|

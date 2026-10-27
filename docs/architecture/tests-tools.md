@@ -134,8 +134,8 @@ Three more IndexedDB stand-ins live inside test files: `store.test.mjs`
 `batch()` (one transaction) and `exec()`. It refuses `undefined` as a bound
 value (as D1 does), turns booleans into 0/1, and `fail = 'message'` makes
 every query throw (a used-up daily limit). `queries` lists every SQL run;
-`rows(sql)` reads one straight. It needs Node with `node:sqlite` (CI pins
-Node 26.11.1). `migrations.test.mjs` does not use it: it builds two raw
+`rows(sql)` reads one straight. It needs Node with `node:sqlite` (CI reads
+the Node version from `.node-version`). `migrations.test.mjs` does not use it: it builds two raw
 `DatabaseSync`s, one from `tests/schema-before-001.sql` plus every migration,
 one from `schema.sql`, and compares their shape.
 
@@ -399,7 +399,7 @@ Who reads the label after that:
 ## CI and deploy
 
 **On every push and pull request**, `.github/workflows/test.yml` (Ubuntu
-24.04, Node 26.11.1, just 1.58.0, full history): `just test`, then
+24.04, the Node in `.node-version`, just 1.58.0, full history): `just test`, then
 `tools/version_bumped.sh`, then `bump_version.py --check`. No secrets.
 
 **On every push to `main`**, `.github/workflows/deploy.yml`, one at a time
@@ -500,7 +500,7 @@ them, once older than `TEST_GRACE_MS`, for `cloud-prune --smoke`.
 | `colors.test.mjs` pairs | by hand | a new text/background pair is not checked |
 | The version label's shape (`v<release>-<sha>`) and its readers' rules | none | `feedback.js appVersion` and the Worker refuse `-` |
 | `test.yml` and `deploy.yml` each list `just test` and the two release checks | `justfile.test.mjs` (deploy.yml's order) | a new check added to one workflow only runs there |
-| `test.yml` and `deploy.yml` both pin Node 26.11.1 and just 1.58.0 | by hand | a bump in one runs the tests on another Node |
+| `test.yml` and `deploy.yml` both pin just 1.58.0 (Node is one file, `.node-version`, which both read) | `justfile.test.mjs` (the Node pin) | a bump of just in one runs the tests on another just |
 | `serve.py` and the stand-in page both fake version.json and `/api/cloud`, differently (`dev` vs 404; `ok:false` vs whatever a test routes) | none | — |
 | The 44 px exemptions live in `look.mjs MEASURE` `exempt`, the decisions behind them in docs/decisions.md | by hand | — |
 

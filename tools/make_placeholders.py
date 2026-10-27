@@ -690,9 +690,11 @@ KIT_CALLOUTS = [
 ]
 
 
-def write_wav(path, samples):
+def write_wav(path, samples, faded=True):
+    """A mono 16-bit WAV at RATE, turned to a peak of 0.85. `faded`: the first
+    and last 5 ms ramp in and out (make_samples.py clips have their own ends)."""
     peak = max(abs(s) for s in samples) or 1.0
-    pcm = array("h", (int(max(-1.0, min(1.0, s * 0.85 / peak)) * 32767) for s in fade(samples)))
+    pcm = array("h", (int(max(-1.0, min(1.0, s * 0.85 / peak)) * 32767) for s in (fade(samples) if faded else samples)))
     if sys.byteorder == "big":
         pcm.byteswap()
     with wave.open(str(path), "wb") as w:
