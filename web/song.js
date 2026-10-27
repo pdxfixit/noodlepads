@@ -33,7 +33,7 @@ import { createAudioSaver } from './download.js';
 import { showBanner } from './ui.js';
 import { countPlay } from './play-count.js';
 import { newId } from './util.js';
-import { isScratchSong, songScratchOf, songScratchId, SCRATCH_NAME } from './scratch.js';
+import { isScratchSong, songScratchOf, songScratchId, SCRATCH_NAME, hasHits, scratchLabel, isScratch as isScratchBeat } from './scratch.js';
 import { speakerControls, makeSpeaker, drawSpeaker, cleanVolume } from './row-volume.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
 import { getSetting, onSetting } from './settings.js';
@@ -57,7 +57,9 @@ const blockCount = (song) => song.lanes.reduce((n, l) => n + l.blocks.length, 0)
 // deps: el (the screen's elements), audio, meter, engine (the one beat engine,
 // beat-engine.js: Song's ▶ is a run of its `play` on the planned list), seq
 // (the beat maker: its beatPlan, prepareBeats, endMix and stop), beats(personId)
-// (saved beats a song can use), load(personId) -> the stored open song or
+// (saved beats a song can use), scratch(personId) (the person's scratch beat,
+// shown first in the strip once it has hits) and keepScratch(personId) (keeps
+// it in 🗂️ Beats as it goes on a lane: the kept beat's id, or null), load(personId) -> the stored open song or
 // undefined, save(song) (as the open song), close(personId) (nothing open),
 // songs: {list(personId), put(song), remove(id)} (every saved song),
 // songName(taken) (a fun name), soundLabel(name) (a label for the new pad),
@@ -92,7 +94,17 @@ export function createSong(deps) {
   const playing = () => !!run || starting;
   const beats = () => deps.beats(personId);
   const beatById = (id) => beats().find((b) => b.id === id);
-  const stepsOf = (id) => beatSteps(beatById(id));
+  // The person's scratch beat when it has hits (Mission keeper, 2026-10-27):
+  // it shows first in the strip, so a beat goofed on goes on a lane without
+  // a trip to 💾 Keep. It is kept as the block goes in (tapSpot), so no
+  // block ever holds the scratch's own id.
+  const scratchBeat = () => {
+    const s = deps.scratch?.(personId);
+    return s && hasHits(s) ? s : null;
+  };
+  const pickable = () => { const s = scratchBeat(); return s ? [s, ...beats()] : beats(); };
+  const pickableById = (id) => pickable().find((b) => b.id === id);
+  const stepsOf = (id) => beatSteps(pickableById(id));
   const allSongs = () => deps.songs.list(personId);
   const songs = () => allSongs().filter((s) => !isScratchSong(s));   // the ones in 🗂️ Songs
   const clean = (raw) => cleanSong(raw, () => deps.songName(songs().map((x) => x.name)), beatById);
@@ -253,7 +265,10 @@ export function createSong(deps) {
     if (label) b.setAttribute('aria-label', label);
     return b;
   };
-  const beatName = (id) => beatById(id)?.name ?? 'Deleted beat';
+  const beatName = (id) => {
+    const beat = pickableById(id);
+    return !beat ? 'Deleted beat' : isScratchBeat(beat) ? scratchLabel(beat) : beat.name;
+  };
   const timesWords = (n) => (n === 1 ? 'once' : `${n} times`);
   const laneLabel = (i) => `${song.lanes[i].emoji} ${song.lanes[i].name}`;
 
@@ -278,12 +293,12 @@ export function createSong(deps) {
     el.tempoSlider?.setAttribute('aria-valuetext', `${song.tempo} BPM`);
     renderTempoOpen();
     if (el.tempoSheet.open) renderTempoSheet();
-    if (picked && !beatById(picked)) picked = null;
+    if (picked && !pickableById(picked)) picked = null;
     renderStrip();
-    const list = beats();
+    const list = pickable();
     el.empty.hidden = count > 0 && !!list.length;
     el.empty.textContent = !list.length
-      ? 'No beats yet. Make one in 🥁 Beats and 💾 Keep it: it shows up here.'
+      ? 'No beats yet. Make one in 🥁 Beats: it shows up here.'
       : picked ? `Now tap a spot on a lane to put “${beatName(picked)}” there.` : 'Pick a beat above, then tap a spot on a lane.';
     renderLanes();
     renderSelection();
@@ -299,17 +314,21 @@ export function createSong(deps) {
   // The strip of the person's beats, as the pattern chips look: a tap picks
   // one (pressed), a second tap puts it down.
   function renderStrip() {
-    el.strip.replaceChildren(...beats().map((beat) => {
+    const list = pickable();
+    el.strip.replaceChildren(...list.map((beat) => {
       const b = button('beat-chip song-chip');
+      const name = beatName(beat.id);
       b.dataset.beat = beat.id;
       b.setAttribute('aria-pressed', String(picked === beat.id));
-      b.setAttribute('aria-label', picked === beat.id ? `${beat.name}, picked: tap a spot on a lane to put it there` : `Pick ${beat.name}`);
+      b.setAttribute('aria-label', picked === beat.id ? `${name}, picked: tap a spot on a lane to put it there`
+        : isScratchBeat(beat) ? `Pick ${name}: it is kept in 🗂️ Beats when it goes on a lane` : `Pick ${name}`);
+      b.classList.toggle('scratch', isScratchBeat(beat));
       const color = deps.beatColor?.(beat);
       if (color) b.style.setProperty('--chip', color);
-      b.append(make('span', 'chip-name', beat.name));
+      b.append(make('span', 'chip-name', name));
       return b;
     }));
-    el.strip.hidden = !beats().length;
+    el.strip.hidden = !list.length;
   }
 
   // The lanes: a ruler of bar numbers, then each lane's head (its picture
@@ -504,17 +523,27 @@ export function createSong(deps) {
     if (!picked) {
       sel = null;
       disarm(false);
-      note(beats().length ? 'Pick a beat above first, then tap the spot.' : 'Make a beat in 🥁 Beats and 💾 Keep it first.');
+      note(pickable().length ? 'Pick a beat above first, then tap the spot.' : 'Make a beat in 🥁 Beats first.');
       render();
       return;
     }
-    const placed = placeBlock(lane, bar, picked, stepsOf);
+    let placed = placeBlock(lane, bar, picked, stepsOf);
     if (placed.why) {
       note(placed.why === 'full' ? `${lane.name} is full. Try another lane.`
         : `No room there: “${beatName(picked)}” is longer than the gap. Try a spot further along.`);
       return;
     }
     stop();
+    let kept = '';
+    if (isScratchBeat(pickableById(picked))) {
+      // The scratch goes into 🗂️ Beats as the block goes in; the block holds
+      // the kept beat, which stays when the scratch is emptied or replaced.
+      const keptId = deps.keepScratch?.(personId);
+      if (!keptId || !beatById(keptId)) { note('Finish recording first, then put the scratch beat on a lane.'); render(); return; }
+      picked = keptId;
+      placed = placeBlock(lane, bar, picked, stepsOf);
+      kept = ` Kept in 🗂️ Beats as “${beatName(picked)}”.`;
+    }
     note('');
     countPlay('blocks');
     edit(() => {
@@ -523,7 +552,7 @@ export function createSong(deps) {
       song.lanes[li] = placed.lane;
     });
     select(li, placed.index);
-    deps.announce?.(`Put ${beatName(picked)} on ${lane.name} at bar ${bar + 1}.`);
+    deps.announce?.(`Put ${beatName(picked)} on ${lane.name} at bar ${bar + 1}.${kept}`);
   }
 
   function changeTimes(by) {

@@ -1319,6 +1319,7 @@ dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
    kept yet; a name typed here keeps it. 💾 Keep stands where ✏️ is (the
    same grid spot on a phone). */
 .beat-name.scratch { font-style: italic; }
+.song-chip.scratch .chip-name { font-style: italic; }
 /* Pattern chips under the beat bar (a music studio's pattern picker): 8
    numbered spots, pinned beats first, then the last used, in an order a tap
    never changes; one line that scrolls sideways inside itself when they

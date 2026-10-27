@@ -285,7 +285,7 @@ export function createSequencer(deps) {
     stop();   // first: a recording ending saves its hits into the beat it was in
     offerUndo(null);
     const old = scratchSaved();
-    const kept = hasHits(old) ? keepAside(old) : null;
+    const kept = hasHits(old) ? keepAside(old).name : null;
     if (old) deps.library.remove(old.id);
     openBeat(null, { resume: false });
     logEvent('beat', { action: 'new' });
@@ -293,14 +293,31 @@ export function createSequencer(deps) {
     else deps.announce?.('A blank scratch beat.');
   }
   // The stored scratch, put in 🗂️ Beats as a beat of its own, named
-  // after its groove or with a fun name. Its name.
+  // after its groove or with a fun name. Its id and name.
   function keepAside(scratch) {
     const groove = grooveOf(scratch);
     const name = groove && deps.keptName ? deps.keptName(groove.name, library().map((b) => b.name)) : freshName();
     const now = Date.now();
-    deps.library.put({ ...cleanPattern(scratch, personId), id: newId('beat'), name, created: now, saved: now });
+    const id = newId('beat');
+    deps.library.put({ ...cleanPattern(scratch, personId), id, name, created: now, saved: now });
     logEvent('beat', { action: 'keep', groove: !!groove });
-    return name;
+    return { id, name };
+  }
+
+  // 🎼 Song puts the scratch on a lane (Mission keeper, 2026-10-27: a beat
+  // goofed on goes into a song without a trip to 💾 Keep). The scratch is
+  // kept as 💾 Keep would keep it, and the kept beat's id is returned for
+  // the block, so a song never holds the scratch's own id (which 🆕 New and
+  // 💾 Keep both empty). Null when there is nothing to keep or ⌨️ Keys is
+  // recording. The beat open on Beats stays open: as the kept beat when the
+  // scratch was open, else as it was.
+  function keepScratch() {
+    const old = scratchSaved();
+    if (!old || !hasHits(old) || chipsLocked) return null;
+    if (onScratch()) { keep({ quiet: true }); return onScratch() ? null : pattern.id; }
+    const kept = keepAside(old);
+    deps.library.remove(old.id);
+    return kept.id;
   }
 
   // Saves the open beat into the library and keeps it as the open one (the
@@ -353,7 +370,7 @@ export function createSequencer(deps) {
   // a name typed into its title; else one from a groove is named after it
   // ("Sleepy Squid (Ska version)", names.js keptName), and a plain one gets
   // a fun name. A beat playing carries on.
-  function keep() {
+  function keep({ quiet = false } = {}) {
     if (!onScratch() || !pattern.rows.length || chipsLocked) return;
     const taken = library().map((b) => b.name);
     const groove = grooveOf(pattern);
@@ -368,7 +385,7 @@ export function createSequencer(deps) {
     logEvent('beat', { action: 'keep', groove: !!groove });
     render();
     deps.onBeatChange?.();
-    deps.announce?.(`Kept as “${name}” in 🗂️ Beats. Your scratch beat is empty again.`);
+    if (!quiet) deps.announce?.(`Kept as “${name}” in 🗂️ Beats. Your scratch beat is empty again.`);
   }
 
   // ── The beat bar (Beats and DJ): the open beat's name, 🆕 New, 🗂️ Beats ──
@@ -2812,7 +2829,7 @@ export function createSequencer(deps) {
   return { setPerson, show, tempo: () => shape().bpm, render, play, stop, playing, grid, beatClock, rowFor, addRowFor, addSnaps, snapshot, restore, setClick, beat,
     cyclePill, clearRow, dropRow, toggleRing, ringTool, openLibrary, metronome, clickAt, setGrow, setTempo, setBars, setSignature, signature: () => sigOf(), advanced: () => advanced,
     beatPlan, prepareBeats, soundHit, endMix, thumbnail, levelOf, setLevel, putLevel, toggleMute, levelState,
-    trying, putTrialAway, keep, onScratch, sampling: () => sample?.id ?? null, hearBeat, stopHearing: stopSample,
+    trying, putTrialAway, keep, keepScratch, onScratch, sampling: () => sample?.id ?? null, hearBeat, stopHearing: stopSample,
     // A beat in 🗂️ Beats opened by id (🎧 From a song's 🥁 Open part A); false when it is not there.
     openSaved: (id) => { const saved = library().find((b) => b.id === id); if (saved) openBeat(cleanPattern(saved, personId), { resume: false }); return !!saved; },
     lockChips, queuedBeat: () => (queued ? { ...queued } : null), openMixer, toggleSolo, setFx: setRowFx, setMaster, setMasterFx,

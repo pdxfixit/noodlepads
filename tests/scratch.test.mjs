@@ -194,10 +194,11 @@ test('a 🧸 Kids beat from before is adopted as the scratch: Beats opens it, an
   bar().querySelector('[data-beat-open]').dispatch('click');
   assert.deepEqual($('#lib-list').children.map((li) => li.dataset.id).sort(), ['beat-one', 'beat-two'], 'so does 🗂️ Beats');
   $('#library').close();
-  // So does the strip of beats on 🎼 Song.
+  // The strip of beats on 🎼 Song shows the scratch, first (it has hits), and no other hidden beat.
   $('#song-tab').dispatch('click');
-  assert.ok($('#song-beats').children.length > 0);
-  assert.ok(!$('#song-beats').children.some((c) => /Scratch/.test(c.querySelector('.chip-name').textContent) || c.dataset.beat.startsWith('beat-scratch-')));
+  const strip = $('#song-beats').children.map((c) => c.dataset.beat);
+  assert.ok(strip[0].startsWith('beat-scratch-'), 'the scratch is first in the strip');
+  assert.deepEqual(strip.slice(1).sort(), ['beat-one', 'beat-two']);
   $('#pads-tab').dispatch('click');
 });
 

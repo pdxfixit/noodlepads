@@ -64,7 +64,7 @@ import { initMiniDeck } from './mini-deck.js';
 import { db } from './store.js';
 import { newId, versionLabel, remember, recall, forget } from './util.js';
 import { beatName, remixName, songName, funName, keptName } from './names.js';
-import { adoptKidsBeats, isHiddenBeat } from './scratch.js';
+import { adoptKidsBeats, isHiddenBeat, scratchOf } from './scratch.js';
 import { onSetting, followPerson, getSetting } from './settings.js';
 import { fitLine, pickerFor, refitLines } from './lines.js';
 import { watchTips } from './tooltips.js';
@@ -732,8 +732,11 @@ function makeSong() {
     meter,
     engine,
     seq,
-    // Beats a song can use: not the scratch (ADR 0020: 💾 Keep it first).
+    // Beats a song can use: the kept ones. The scratch is offered apart
+    // (`scratch`) and kept as it goes on a lane (`keepScratch`).
     beats: (personId) => state.savedBeats.filter((b) => b.personId === personId && !isHiddenBeat(b)).sort((a, b) => b.saved - a.saved),
+    scratch: (personId) => scratchOf(state.savedBeats, personId),
+    keepScratch: () => seq.keepScratch(),
     load: (personId) => state.songs.get(personId),
     save: (record) => {
       state.songs.set(record.personId, record);
