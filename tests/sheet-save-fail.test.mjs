@@ -117,3 +117,36 @@ test('a Save while storage is closed for another tab keeps the sheet open', asyn
     $('#sheet').close();
   }
 });
+
+// A second tap on Save (or ➕ Make it a new sound) while the first is still
+// being written makes nothing twice.
+test('Save tapped twice makes one new sound; ➕ Make it a new sound tapped twice makes one mix', async () => {
+  const { setSetting } = await import('../web/settings.js');
+  if (document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+  const before = state.userClips.length;
+  $('#pads').children.find((p) => p.classList.contains('pad-add')).dispatch('click');
+  $('#make-btn').dispatch('click');
+  $('#make-starters').children[0].dispatch('click');
+  await page.settle();
+  $('#sheet-form').dispatch('submit');
+  $('#sheet-form').dispatch('submit');
+  await page.settle();
+  assert.equal(state.userClips.length, before + 1, 'one new sound');
+
+  await setSetting('advancedBeats', true);
+  const here = pads()[0].dataset.id;
+  audio.originals.set(here, Promise.resolve(plain));
+  await openPad(here);
+  $('#mix-btn').dispatch('click');
+  const other = $('#mix-with').children[1].value;
+  audio.forget(other);
+  audio.originals.set(other, Promise.resolve(plain));
+  $('#mix-with').value = other;
+  $('#mix-with').dispatch('change');
+  $('#mix-make').dispatch('click');
+  $('#mix-make').dispatch('click');
+  await page.settle();
+  assert.equal(state.userClips.length, before + 2, 'one mix');
+  if ($('#sheet').open) $('#sheet').close();
+  await setSetting('advancedBeats', false);
+});

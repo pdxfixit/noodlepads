@@ -1569,6 +1569,15 @@ async function acceptAudio(blob, origin) {
   }
 }
 
+// Save and ➕ Make it a new sound, one at a time: a second tap while the
+// first is still being written makes nothing twice.
+let saving = false;
+const oneSave = (fn) => async () => {
+  if (saving) return;
+  saving = true;
+  try { await fn(); } finally { saving = false; }
+};
+
 async function saveSheet() {
   const p = currentPerson();
   const label = el.label.value.trim();
@@ -1845,7 +1854,7 @@ export function initSheet() {
     input.addEventListener('change', hearMix);
   }
   el.mixPlay.addEventListener('click', hearMix);
-  el.mixMake.addEventListener('click', makeMix);
+  el.mixMake.addEventListener('click', oneSave(makeMix));
   el.tune.addEventListener('input', () => { setTune(Math.round(Number(el.tune.value))); showLink(); });
   el.tune.addEventListener('change', () => previewVoice());
   el.emojiGrid.addEventListener('click', (e) => {
@@ -1868,9 +1877,10 @@ export function initSheet() {
     for (const x of el.swatches.children) x.setAttribute('aria-pressed', String(x === b));
   });
   el.removeBtn.addEventListener('click', removeFromSheet);
+  const save = oneSave(saveSheet);
   el.form.addEventListener('submit', (e) => {
     e.preventDefault();
-    saveSheet();
+    save();
   });
 }
 
