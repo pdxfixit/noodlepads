@@ -198,3 +198,10 @@ test('🎼 Song has the same slider: the key reads it as it moves, and a drag is
   $('#song-step-undo').dispatch('click');
   assert.equal($('#song-tempo').value, before, 'one ↩️ Undo puts the whole drag back');
 });
+
+// Ben, 2026-10-27: tile option 3 with a little of 2: the number a touch
+// smaller, BPM a small spaced caption under it while open.
+test('the CSS: the tile\'s number a touch smaller, BPM a small caption under it while open', () => {
+  assert.match(css, /\.tempo-key-num \{ font: 800 1rem\/1 var\(--font-display\);/);
+  assert.match(css, /\.tempo-key\[aria-expanded="true"\] \.tempo-key-open \{ margin-top: 1px; font: 800 0\.62rem\/1 var\(--font-ui\); letter-spacing: 0\.08em; \}/);
+});

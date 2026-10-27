@@ -16,7 +16,7 @@ export function tempoKey(key, box, bpm) {
   function show() {
     const v = String(bpm());
     if (num && num.textContent !== v) num.textContent = v;
-    // Under it ▾, or BPM while its line is open, the two stacked alike (Ben,
+    // Under it ▾, or BPM while its line is open, as a small caption (Ben,
     // 2026-10-26: one of the few places those three letters show).
     const mark = isOpen() ? 'BPM' : '▾';
     if (under && under.textContent !== mark) under.textContent = mark;

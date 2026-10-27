@@ -722,11 +722,11 @@ body.keys-on .dj-bar { position: sticky; top: calc(var(--head-h, 0px) - var(--de
 @media (max-width: 600px) {
   .tempo-key { display: grid; flex: none; width: 48px; min-height: 52px; place-content: center; gap: 3px; padding: 0; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; color: #fff; }
   .tempo-key:has(+ [hidden]) { display: none; }   /* its tempo isn't on this bar now (Live's in the keys view, and back) */
-  .tempo-key-num { font: 800 1.1rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+  .tempo-key-num { font: 800 1rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
   .tempo-key-open { font-size: 0.8rem; line-height: 1; }
   .tempo-key[aria-expanded="true"] { background: var(--led); border-color: var(--led); color: var(--ink); }
-  /* Open, the number over BPM, the two the same size so they stack evenly (tempo-key.js). */
-  .tempo-key[aria-expanded="true"] .tempo-key-open { font: 800 1.1rem/1 var(--font-display); font-stretch: 87%; }   /* as wide as a three-digit tempo */
+  /* Open, the number over BPM as a small spaced caption, like a unit on a meter (Ben, 2026-10-27). */
+  .tempo-key[aria-expanded="true"] .tempo-key-open { margin-top: 1px; font: 800 0.62rem/1 var(--font-ui); letter-spacing: 0.08em; }
   .tempo-key + :is(.tempo-box, .song-tempo):not(.tempo-open) { display: none; }
   /* Open: one row, 🐢 the slider 🐇 (Ben, 2026-10-26). 🐢 and 🐇 are the
      tempo's own ⌄ ⌃ keys, nudging it to the next common tempo slower or
