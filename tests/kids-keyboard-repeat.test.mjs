@@ -57,6 +57,13 @@ test('Kids\' focus ring: an outline only, off the button, so its own shadows sta
   const rule = css.match(/\n\.kids :focus-visible \{([^}]*)\}/)?.[1] ?? '';
   assert.match(rule, /outline: 4px solid #fff; outline-offset: 4px;/);
   assert.doesNotMatch(rule, /box-shadow/, 'a button\'s own shadow (3D, pressed, recording) is never covered');
-  assert.match(css, /\.kids \.kids-square\.now:focus-visible \{[^}]*var\(--led\)/, 'the playhead\'s yellow on a focused square');
-  assert.match(css, /\.kids-beat \{[^}]*padding: 8px;/, 'room for the 8 px ring inside the scrolling grid');
+  const now = css.match(/\.kids \.kids-square\.now:focus-visible \{([^}]*)\}/)?.[1] ?? '';
+  assert.match(now, /var\(--led\)/, 'the playhead\'s yellow on a focused square');
+  // Its ring, plus a pressed square's 1.08 scale (up to about 3 px a side on
+  // a wide screen), stays inside the grid's 12 px: measured with `just look
+  // kids-beats --js-file` at 320, 375 and 1100 px.
+  const width = Number(now.match(/outline: (\d+)px/)?.[1]);
+  const offset = Number(now.match(/outline-offset: (\d+)/)?.[1] ?? 0);
+  assert.ok(width + offset + 3 <= 12, `ring ${width} + offset ${offset} + scale 3 within 12 px`);
+  assert.match(css, /\.kids-beat \{[^}]*padding: 12px;/, 'room for the ring inside the scrolling grid');
 });

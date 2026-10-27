@@ -5100,7 +5100,7 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
    the tabs): a square is 44 px at least, and where the room is shorter than
    the nine rows the grid scrolls inside its own box instead of spilling out
    of it. The padding keeps the playing square's outline inside the box. */
-.kids-beat { flex: 1 1 auto; min-height: 0; display: grid; gap: 8px; margin: 0 -8px; padding: 8px; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; }
+.kids-beat { flex: 1 1 auto; min-height: 0; display: grid; gap: 8px; margin: 0 -12px; padding: 12px; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; }
 .kids-beat[data-layout="across"] { grid-template-columns: minmax(56px, 90px) repeat(8, 1fr); grid-template-rows: repeat(4, minmax(48px, 1fr)); }
 .kids-beat[data-layout="down"] { grid-template-columns: repeat(4, 1fr); grid-template-rows: minmax(48px, 64px) repeat(8, minmax(44px, 1fr)); }
 /* A short screen (a phone with its browser bar showing): the bars and the
@@ -5216,8 +5216,8 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
 .kids-sum-keys button { min-height: 64px; border: 0; border-radius: 16px; background: var(--chalk); color: var(--ink); box-shadow: 0 5px 0 var(--chalk-edge); font: 900 2rem/1 var(--font-display); }
 .kids-sum-keys button:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--chalk-edge); }
 .kids-sum-zero { grid-column: 2; }
-/* The sum's card is light: its keys' focus ring is dark. */
-.kids-sum-keys :focus-visible { outline: 4px solid var(--ink); outline-offset: 3px; }
+/* The sum's card is light: its focus rings (the keys, ✕ Back) are dark. */
+dialog.kids-sum :focus-visible { outline: 4px solid var(--ink); outline-offset: 3px; }
 /* Feedback's sum: a wrong answer says so above the keys, and asks another (grown-up.js). */
 .kids-sum-note { margin: -4px 0 14px; text-align: center; font-weight: 800; }
 .kids-sum-note[hidden] { display: none; }
@@ -5253,7 +5253,7 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
    (its 3D edge, pressed, recording, playing) still shows. A square under the
    playhead keeps its yellow ring, doubled to say it has focus too. */
 .kids :focus-visible { outline: 4px solid #fff; outline-offset: 4px; }
-.kids .kids-square.now:focus-visible { outline: 8px double var(--led); outline-offset: 1px; }
+.kids .kids-square.now:focus-visible { outline: 6px double var(--led); outline-offset: 0; }   /* within .kids-beat's 12 px, scaled 1.08 too */
 .kids-hand {
   position: absolute;
   z-index: 3;

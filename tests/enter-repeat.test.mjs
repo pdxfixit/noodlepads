@@ -49,5 +49,5 @@ test('the grown-up sum\'s keypad: Enter types once, its repeats are taken; its k
   assert.equal(press(digit, true), true);
   $('#kids-sum').close();
   const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
-  assert.match(css, /\.kids-sum-keys :focus-visible \{[^}]*outline: 4px solid var\(--ink\)/);
+  assert.match(css, /dialog\.kids-sum :focus-visible \{[^}]*outline: 4px solid var\(--ink\)/, 'every button on its light card, ✕ Back too');
 });
