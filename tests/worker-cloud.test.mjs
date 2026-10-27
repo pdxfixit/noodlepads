@@ -960,6 +960,20 @@ test('the public list never shows a profile whose id is a plain name from an old
   assert.doesNotMatch(JSON.stringify(r.data), /"pip"/);
 });
 
+test("old plain-id profiles never push a kid out of the list's 300, and the list says only which day a look changed", async () => {
+  const c = cloud();
+  await made(c, 'p-kid', { edited: T0 - 54321 });
+  const add = c.env.DB.db.prepare("INSERT INTO profiles (id, name, color, edited, created) VALUES (?, 'Sir Squid', '#1F3FA8', 0, ?)");
+  for (let i = 0; i < LIMITS.listed; i++) add.run(`plain${i}`, T0 + 1 + i);   // newer than the kid, every one
+  add.run('p-UPPER', T0 + 5000);
+  const r = await c.call('GET', 'profiles', { origin: null });
+  assert.deepEqual(r.data.profiles.map((p) => p.id), ['p-kid']);
+  const day = 24 * 60 * 60 * 1000;
+  assert.equal(r.data.profiles[0].edited, Math.floor((T0 - 54321) / day) * day, 'the day, not the moment');
+  const key = await c.call('POST', 'profiles/p-kid/open', { body: {} });
+  assert.equal(key.data.edited, T0 - 54321, 'opening it (with its key) still gets the exact time, for the newer edit');
+});
+
 test('a profile is made only with a random id: a plain one (a name) is refused', async () => {
   const c = cloud();
   for (const id of ['zed', 'zed-2', 'me', 'p-', 'P-ABC']) {

@@ -217,10 +217,19 @@ const isCheck = (id) => TEST_PROFILE.test(id);
 const IS_CHECK = "(id LIKE 'p-smoke-%' OR id LIKE 'p-e2e-%')";
 const NOT_CHECK = `NOT ${IS_CHECK}`;
 
+// CLOUD_ID in SQL: "p-" and 1 to 60 of a-z, 0-9 and "-".
+const IS_CLOUD_ID = "(id GLOB 'p-?*' AND substr(id, 3) NOT GLOB '*[^0-9a-z-]*' AND length(id) <= 62)";
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 async function listProfiles(env) {
-  // Check profiles are left out in the SQL, so any number of them can't push kids out of the 300.
-  const rows = await env.DB.prepare(`SELECT * FROM profiles WHERE ${NOT_CHECK} ORDER BY created DESC LIMIT ?`).bind(LIMITS.listed).all();
-  return json(200, { profiles: rows.results.filter((r) => CLOUD_ID.test(r.id) && !isCheck(r.id)).map(looks) });
+  // Check profiles and old plain ids are left out in the SQL, before the
+  // LIMIT, so any number of them can't push kids out of the 300. Anyone can
+  // read the list, so it says only which day a look last changed.
+  const rows = await env.DB.prepare(`SELECT * FROM profiles WHERE ${NOT_CHECK} AND ${IS_CLOUD_ID} ORDER BY created DESC LIMIT ?`).bind(LIMITS.listed).all();
+  return json(200, {
+    profiles: rows.results.filter((r) => CLOUD_ID.test(r.id) && !isCheck(r.id))
+      .map((r) => ({ ...looks(r), edited: Math.floor((Number(r.edited) || 0) / DAY_MS) * DAY_MS })),
+  });
 }
 
 // Everything of a profile, gone: its shares and sounds, records, keys, the

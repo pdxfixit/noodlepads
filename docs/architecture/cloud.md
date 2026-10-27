@@ -247,7 +247,7 @@ After the stores: `deps.merge` always runs (even with nothing in it), and `store
 | Crosses | Shape |
 |---|---|
 | `GET /api/cloud` → | `{ok: true, chunk, maxSound}` (the app reads only `ok`) |
-| `GET /api/profiles` → | `{profiles: [{id, name, avatar, color, edited, pin}]}` (newest 300, `CLOUD_ID` ids only) |
+| `GET /api/profiles` → | `{profiles: [{id, name, avatar, color, edited, pin}]}` (newest 300; check profiles and ids that are not `CLOUD_ID` left out in the SQL, before the `LIMIT`; `edited` rounded down to its UTC day, while open and pull give the exact time) |
 | `POST /api/profiles` | `{id, name, avatar, color, edited?, pin?}` → 201 `{key, rev: 0}` |
 | `POST …/open` | `{pin?, remember?}` → `{key, rev, id, name, avatar, color, edited, pin}` |
 | pull → | `{records: [{kind, id, body} \| {kind, id, deleted: true}], rev, profile: {…looks, created}, more}` |
@@ -392,7 +392,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 |---|---|---|
 | everyone goes up once they make something, unless ☁️ is off | `wantsCloud`: added, not hidden, not Offline, `hasMade` (`MADE` kinds only) | true |
 | Cloudflare stores fun name, avatar, color, sounds, beats, songs, settings, the names given | records also hold takes, kit edits, pad order and groups, DJ keys, layouts, own voices; and `activity`/`devices` rows per profile (country, browser, OS, device type, width, app version) while `sendUsage` is on | incomplete; the metrics are left to the shared policy on purpose (`tests/privacy.test.mjs`: no usage words in the lines) |
-| the list shows the newest 300 profiles: fun names, avatars, colors, whether each has a PIN, and when its look last changed | the list also carries the id; `edited` is the look's last change (`LIMITS.listed` 300, `CLOUD_ID` ids only) | true |
+| the list shows the newest 300 profiles: fun names, avatars, colors, whether each has a PIN, and when its look last changed | the list also carries the id; `edited` is the day the look last changed, rounded down (`LIMITS.listed` 300, `CLOUD_ID` ids only, in the SQL) | true |
 | a sound's link plays for anyone | `getSound` needs no key | true |
 | a share code works until 🚫 Unshare or its profile is deleted | `deleteProfile` deletes its shares and sounds (`dropProfileData`); a remix's audio is its maker's own | true |
 | a PIN is not security | 4 digits, PBKDF2, waits; audio needs no PIN | true |
