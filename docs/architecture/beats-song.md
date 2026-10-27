@@ -111,7 +111,7 @@ The library is the truth. `patterns` only says which named beat is open; no reco
 
 | Action | Function | What happens |
 |---|---|---|
-| A person shows | `seq.setPerson(id)` from `app.js showPerson` | stops, reads `fromStore`, draws. The same person again while playing (a sync, a backup) sets `readAgain` and carries on; the read happens at `stop()` |
+| A person shows | `seq.setPerson(id)` from `app.js showPerson` | stops, reads `fromStore`, draws. The same person again while playing (a sync, a backup) sets `readAgain` and carries on; the read happens at `stop()`. A `save()` before then finds the library's copy changed behind `doc.seen` and merges the two (`merge3('beats', doc.seen, mine, stored)`, `mergedWithStored`), so a pill tap never undoes the sync; where they cannot merge, the stored copy is kept as a beat named "… (synced)" (`tests/sync-while-playing.test.mjs`) |
 | A view shows | `seq.show(which)` | re-reads the library copy if it changed; a deleted beat opens the scratch |
 | Any edit | `save()` | `library.put` with `created`/`saved`/`pinned`, `doc` updated, `setOpen(person, pattern)` (or `null` for the scratch). Clears `loaded` (the "groove just loaded" line) |
 | 🆕 New | `newScratch` | stops; a scratch with hits is kept first (`keepAside`, a fun name or `keptName`); the scratch record is removed; an empty scratch opens |

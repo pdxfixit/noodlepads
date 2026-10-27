@@ -49,6 +49,7 @@ import { edgeScroller } from './edge-scroll.js';
 import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
 import { cutName, MAX_LABEL } from './names.js';
 import { TICK_MS, LOOKAHEAD } from './beat-engine.js';
+import { merge3, sameContent } from './merge3.js';
 
 const ARM_MS = 3000;                   // how long a Clear? or Remove? waits for its second tap
 const UNDO_MS = 8000;                  // how long a removed row can be brought back
@@ -313,14 +314,34 @@ export function createSequencer(deps) {
     if (!pattern) return;
     loaded = null;
     const before = allBeats().find((b) => b.id === pattern.id);
-    const record = { ...structuredClone(pattern), created: before?.created ?? Date.now(), saved: Date.now() };
+    let record = { ...structuredClone(pattern), created: before?.created ?? Date.now(), saved: Date.now() };
     if (isPinned(before)) record.pinned = before.pinned;   // a 📌 stays as the beat changes
+    // A sync stored a change to this beat behind the screen (it plays, so the
+    // beat is read again only when it stops): this save must not undo it.
+    const behind = !!before && !!doc?.seen && doc.seen.id === before.id && !sameContent(before, doc.seen);
+    if (behind) record = mergedWithStored(record, before);
     deps.library.put(record);
-    doc = { pattern, seen: record };
+    // After a merge the screen still holds the beat as it was read, so the
+    // next save merges again, from the same base, rather than undoing it.
+    doc = { pattern, seen: behind ? doc.seen : record };
     deps.setOpen(personId, isScratch(pattern) ? null : pattern);
     // A named scratch keeps itself once it has a row: after the change that
     // gave it one has finished drawing.
     if (wantedName && isScratch(pattern) && pattern.rows.length) queueMicrotask(() => { if (wantedName) keep(); });
+  }
+
+  // The beat to save when the library's copy (`stored`) changed behind the
+  // screen: the screen's changes and the stored ones together (merge3.js,
+  // as the cloud sync merges). Where they cannot be told apart, the stored
+  // copy is kept as a beat of its own and the screen's goes under the id.
+  function mergedWithStored(mine, stored) {
+    const m = merge3('beats', doc.seen, mine, stored);
+    if (m.record) return { ...m.record, id: mine.id, personId: mine.personId, created: mine.created, saved: mine.saved };
+    const name = uniqueName(`${cutName(stored.name || SCRATCH_NAME, MAX_LABEL - 9)} (synced)`, null);
+    deps.library.put({ ...structuredClone(stored), id: newId('beat'), name, created: stored.created ?? Date.now(), saved: Date.now() });
+    logEvent('beat', { action: 'keep', groove: false });
+    showBanner(`Another device changed this beat too. Its version is kept as “${name}” in 🗂️ Beats.`);
+    return mine;
   }
 
   // 💾 Keep (ADR 0020): the scratch becomes a beat of its own in 🗂️ Beats,
