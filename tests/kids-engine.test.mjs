@@ -205,8 +205,8 @@ test('▶ wakes the audio first, before anything waits; a stop while the sounds 
   const run = engine.play({ beat: () => beat });
   assert.equal(t.woke, 1, 'woken in the same tap, before the first await');
   run.stop();
+  assert.equal(await run.ready, false, 'at once: it does not wait for a sound that may never load');
   release();
-  assert.equal(await run.ready, false);
   assert.equal(run.t0, null);
   assert.equal(t.started.length, 0);
 });
@@ -338,6 +338,13 @@ async function kidsWithClock(slow = false) {
     globalThis.setTimeout = (fn, ms) => { const h = { fn, ms, at: round(t.now + ms / 1000) }; t.timeouts.push(h); return h; };
     try { t.ticks.forEach((f) => f()); } finally { globalThis.setTimeout = plainTimeout; }
   };
+  // The frame loop (the squares): caught, run by hand with `frame()`.
+  const plainRaf = globalThis.requestAnimationFrame;
+  const plainCancel = globalThis.cancelAnimationFrame;
+  t.raf = null;
+  globalThis.requestAnimationFrame = (fn) => { t.raf = fn; return 1; };
+  globalThis.cancelAnimationFrame = () => { t.raf = null; };
+  t.frame = () => { const f = t.raf; t.raf = null; f?.(); };
   t.rawTick = () => t.ticks.forEach((f) => f());   // the tick, with the page's own timers
   // Settles the page with the same catch, for the first tick ▶ itself makes.
   t.settle = async () => {
@@ -350,6 +357,8 @@ async function kidsWithClock(slow = false) {
     ctx.createBufferSource = plainSource;
     ctx.createGain = plainGain;
     audio.load = plainLoad;
+    globalThis.requestAnimationFrame = plainRaf;
+    globalThis.cancelAnimationFrame = plainCancel;
     delete ctx.currentTime;
     ctx.currentTime = 0;
     await setSetting('level', 'regular');
@@ -438,7 +447,7 @@ test('🧸 Kids ▶ that waits too long for its sounds gives ▶ back, not a ⏹
 
 // The engine's tick calls onPill when a pill is booked; Kids lights a square
 // when its pill is heard (the booking time plus the output's delay).
-test('🧸 Kids\' squares light as their pill is heard, one moving per pair of pills, and go out on ⏹', async () => {
+test('🧸 Kids\' squares light as their pill is heard, one moving per pair of pills, from one frame loop, and go out on ⏹', async () => {
   const t = await kidsWithClock();
   const ctx = audio.context();
   ctx.outputLatency = 0.08;
@@ -449,27 +458,25 @@ test('🧸 Kids\' squares light as their pill is heard, one moving per pair of p
     await t.settle();
     for (let k = 0; k < 24; k++) { t.now += 0.025; t.tick(); }
     const lit = () => $('#kids-beat').querySelectorAll('.kids-square').filter((q) => q.classList.contains('now')).map((q) => Number(q.dataset.square)).filter((n, i, all) => all.indexOf(n) === i);   // one column of the four drums
-    const squares = t.timeouts.filter((h) => /showSquare/.test(String(h.fn)));
-    assert.ok(squares.length >= 3, `a timer a pair of pills: ${squares.length}`);
-    // Pill 0 sounds at 5.06 and is heard 0.08 s later; the next square is two pills (0.25 s) on.
-    assert.deepEqual(squares.slice(0, 3).map((h) => h.at), [5.14, 5.39, 5.64], 'each waits for the output');
+    const at = (now) => { t.now = now; t.frame(); return lit(); };
     assert.ok(t.booked.length > 0);
-    assert.deepEqual(lit(), [], 'nothing lit while it is only booked');
-    squares[0].fn();
-    assert.deepEqual(lit(), [0]);
-    squares[1].fn();
-    assert.deepEqual(lit(), [1], 'it moved on: one lit at a time');
-    squares[2].fn();
-    assert.deepEqual(lit(), [2]);
+    assert.equal(t.timeouts.filter((h) => /showSquare/.test(String(h.fn))).length, 0, 'no timer a pill: one frame loop');
+    // Pill 0 sounds at 5.06 and is heard 0.08 s later; the next square is two pills (0.25 s) on.
+    assert.deepEqual(at(5.13), [], 'nothing lit while it is only booked, or not yet heard');
+    assert.deepEqual(at(5.15), [0]);
+    assert.deepEqual(at(5.38), [0]);
+    assert.deepEqual(at(5.40), [1], 'it moved on: one lit at a time');
+    assert.deepEqual(at(5.65), [2]);
     $('#kids-play').dispatch('click');
     assert.deepEqual(lit(), [], '⏹ puts them out');
+    assert.equal(t.raf, null, 'and the frame loop is let go');
   } finally {
     delete ctx.outputLatency;
     await t.done();
   }
 });
 
-// The squares match the hits: a square waits for the very time its pill's
+// The squares match the hits: a square lights at the very time its pill's
 // hits were booked for (the stand-in has no output delay).
 test('🧸 Kids\' square for a pill lights at the time that pill\'s hit sounds', async () => {
   const t = await kidsWithClock();
@@ -483,7 +490,9 @@ test('🧸 Kids\' square for a pill lights at the time that pill\'s hit sounds',
     for (let k = 0; k < 24; k++) { t.now += 0.025; t.tick(); }
     const kicks = t.booked.filter((h) => h.clip === `${pid}-kick`).map((h) => h.at);
     assert.deepEqual(kicks.slice(0, 3), [5.06, 5.31, 5.56], 'the kick on pills 0, 2 and 4');
-    assert.deepEqual(t.timeouts.filter((h) => /showSquare/.test(String(h.fn))).slice(0, 3).map((h) => h.at), kicks.slice(0, 3), 'each square lights as its hit sounds');
+    const lit = () => $('#kids-beat').querySelectorAll('.kids-square').filter((q) => q.classList.contains('now')).map((q) => Number(q.dataset.square)).filter((n, i, all) => all.indexOf(n) === i);
+    const heard = (now) => { t.now = now; t.frame(); return lit(); };
+    assert.deepEqual([heard(5.059), heard(5.061), heard(5.309), heard(5.311)], [[], [0], [0], [1]], 'each square lights as its hit sounds');
     $('#kids-play').dispatch('click');
   } finally {
     await t.done();
@@ -575,7 +584,7 @@ test('● on a grown-up\'s 3/4 beat: a key lands on the 12-pill bar, and the rin
 // consistent": a tune plays at its found note, a loud pill plays loud and a
 // swung beat swings, as on Beats. The 🎚️ Mixer stays out (full level, straight
 // into the output). Each is proven on its own through kids.js.
-async function kidsPlays(beatRows, { bpm = 150, swing = 0, extra = () => {} } = {}) {
+async function kidsPlays(beatRows, { bpm = 150, swing = 0, volume, during = () => {} } = {}) {
   const t = await kidsWithClock();
   const pid = state.personId;
   const mine = await kidsBeatTab();
@@ -583,10 +592,11 @@ async function kidsPlays(beatRows, { bpm = 150, swing = 0, extra = () => {} } = 
   mine().bars = 1;
   mine().swing = swing;
   mine().rows = beatRows(pid);
-  extra(pid);
+  if (volume !== undefined) mine().volume = volume;
   $('#kids-play').dispatch('click');
   await t.settle();
   for (let k = 0; k < 14; k++) { t.now += 0.025; t.tick(); }
+  during(t);
   $('#kids-play').dispatch('click');
   return { t, pid };
 }
@@ -622,19 +632,114 @@ test('🧸 Kids ▶ plays a loud pill loud, at full level through the output\'s 
 
 test('🧸 Kids ▶ plays the beat\'s swing: the off-beat pills late, and their squares light as they sound', async () => {
   let t;
+  let squaresAt;
+  const lit = () => $('#kids-beat').querySelectorAll('.kids-square').filter((q) => q.classList.contains('now')).map((q) => Number(q.dataset.square)).filter((n, i, all) => all.indexOf(n) === i);
   try {
     // 150 BPM: a pill is 0.1 s; swing 50 moves pill 1 by half a pill and pill 2 (the "and") by one whole pill.
-    ({ t } = await kidsPlays((pid) => [cleanRow({ clipId: `${pid}-kick`, steps: [true, true, true, true] })], { swing: 50 }));
+    ({ t } = await kidsPlays((pid) => [cleanRow({ clipId: `${pid}-kick`, steps: [true, true, true, true] })], { swing: 50, during: (t) => { squaresAt = [5.07, 5.35, 5.37].map((now) => { t.now = now; t.frame(); return lit(); }); } }));
     const kicks = t.booked.filter((h) => h.clip.endsWith('-kick')).map((h) => h.at);
     assert.deepEqual(kicks.slice(0, 4), [5.06, 5.06 + 0.1 + 0.05, 5.06 + 0.2 + 0.1, 5.06 + 0.3 + 0.05].map(round), 'pills 1 and 3 half a pill late, pill 2 a pill late');
-    const squares = t.timeouts.filter((h) => /showSquare/.test(String(h.fn))).map((h) => h.at);
-    assert.deepEqual(squares.slice(0, 2), [5.06, round(5.06 + 0.2 + 0.1)], 'the square of pill 2 lights with its swung hit');
+    assert.deepEqual(squaresAt, [[0], [0], [1]], 'the square of pill 2 lights with its swung hit, not before');
   } finally {
     await t?.done();
   }
 });
 
+// Ben, 2026-10-27: Kids keeps each row's volume and the beat's Master volume
+// as a plain gain (no effects, mute, solo or mixer screen); a loud pill scales from it.
+test('🧸 Kids ▶ keeps a row\'s volume and the beat\'s Master volume as a plain gain; a loud pill is that times ACCENT_GAIN', async () => {
+  let t;
+  try {
+    ({ t } = await kidsPlays((pid) => [
+      cleanRow({ clipId: `${pid}-kick`, steps: [true, false], accents: [true, false], volume: 0.5 }),
+      cleanRow({ clipId: `${pid}-snare`, steps: [false, true], volume: 0.5, muted: true }),
+    ]));
+    const kick = t.booked.filter((h) => h.clip.endsWith('-kick'));
+    const snare = t.booked.filter((h) => h.clip.endsWith('-snare'));
+    assert.equal(kick[0].gain, 0.5 * ACCENT_GAIN, 'a loud pill at half volume: half of ACCENT_GAIN');
+    assert.equal(snare[0].gain, 0.5, 'a plain pill at half volume plays at half, and a muted row still sounds in Kids');
+  } finally {
+    await t?.done();
+  }
+  try {
+    ({ t } = await kidsPlays((pid) => [cleanRow({ clipId: `${pid}-kick`, steps: [true], volume: 0.5 })], { volume: 0.5 }));
+    assert.equal(t.booked.find((h) => h.clip.endsWith('-kick')).gain, 0.25, 'the beat\'s Master volume multiplies the row\'s');
+  } finally {
+    await t?.done();
+  }
+});
+
+// Every sound fails to decode: the run ticks on under ⏹ and says nothing.
+test('🧸 Kids ▶ whose sounds all fail gives ▶ back once nothing has sounded for KIDS_LOAD_WAIT, and logs it', async () => {
+  const t = await kidsWithClock();
+  const wait = KIDS_LOAD_WAIT.ms;
+  KIDS_LOAD_WAIT.ms = 30;
+  try {
+    await kidsBeatTab();
+    audio.load = () => Promise.reject(new Error('cannot decode'));
+    const play = $('#kids-play');
+    play.dispatch('click');
+    await page.settle();
+    assert.equal(play.getAttribute('aria-pressed'), 'true', 'it began: ⏹ for now');
+    for (let k = 0; k < 6; k++) { t.now += 0.025; t.tick(); }
+    await new Promise((r) => setTimeout(r, 80));
+    assert.equal(play.getAttribute('aria-pressed'), 'false', 'nothing sounded: ▶ again');
+    assert.equal(t.booked.length, 0);
+  } finally {
+    KIDS_LOAD_WAIT.ms = wait;
+    await t.done();
+  }
+});
+
+test('● whose sounds miss the wait is called off with a head shake, and ▶ is not left lit', async () => {
+  const { setSetting } = await import('../web/settings.js');
+  await setSetting('instNotes', 'piano');
+  const t = await kidsWithClock(true);
+  const wait = KIDS_LOAD_WAIT.ms;
+  KIDS_LOAD_WAIT.ms = 30;
+  try {
+    const mine = await kidsBeatTab();
+    mine().bpm = 600;
+    $('[data-kids-tab="keys"]').dispatch('click');
+    const rec = $('#kids-rec');
+    rec.dispatch('click');
+    await page.settle();
+    t.release();   // the key's own sound; the beat's sounds then hang
+    const t0 = Date.now();
+    while (!rec.classList.contains('wiggle') && Date.now() - t0 < 2000) await new Promise((r) => setTimeout(r, 5));
+    assert.equal(rec.classList.contains('wiggle'), true, 'a head shake: that did not work');
+    assert.equal(rec.classList.contains('recording'), false, 'not recording');
+    assert.equal(rec.classList.contains('counting'), false, 'and no longer counting');
+    assert.equal($('#kids-play').getAttribute('aria-pressed'), 'false');
+    t.release();
+  } finally {
+    KIDS_LOAD_WAIT.ms = wait;
+    await t.done();
+  }
+});
+
+test('🧸 Kids\' beat stops when the page is hidden, as the other screens do', async () => {
+  const t = await kidsWithClock();
+  try {
+    await kidsBeatTab();
+    $('#kids-play').dispatch('click');
+    await t.settle();
+    assert.equal($('#kids-play').getAttribute('aria-pressed'), 'true');
+    page.docEvent('visibilitychange');
+    assert.equal($('#kids-play').getAttribute('aria-pressed'), 'true', 'visible: it plays on');
+    document.visibilityState = 'hidden';
+    page.docEvent('visibilitychange');
+    assert.equal($('#kids-play').getAttribute('aria-pressed'), 'false', 'a hidden page stops it');
+    const n = t.booked.length;
+    for (let k = 0; k < 10; k++) { t.now += 0.025; t.tick(); }
+    assert.equal(t.booked.length, n, 'and books nothing more');
+  } finally {
+    delete document.visibilityState;
+    await t.done();
+  }
+});
+
 test('a Kids beat stopped logs how it went, and a problem report keeps only the numbers', () => {
-  const entry = cleanEntry({ kind: 'kids', data: { stopped: true, hits: 40, late: 2, silent: 1, label: 'Pip' } });
-  assert.deepEqual(entry.data, { stopped: true, hits: 40, late: 2, silent: 1 });
+  const entry = cleanEntry({ kind: 'kids', data: { stopped: true, hits: 40, late: 2, silent: 1, limiterDb: -3.4, label: 'Pip' } });
+  assert.deepEqual(entry.data, { stopped: true, hits: 40, late: 2, silent: 1, limiterDb: -3.4 });
 });

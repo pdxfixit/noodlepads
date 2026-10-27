@@ -170,8 +170,10 @@ export function createBeatEngine({ audio, clipById }) {
   //   ring(row)         true: its hits never cut each other (else its 🔔); at most MAX_RINGING sound
   //   rows(beat)        a Set of the row indexes that play (else every row);
   //                     only their sounds are waited for before the first pill
-  //   mixer             false: no 🎚️ Mixer, straight into the output: every
-  //                     row it plays sounds, at full level (a loud hit at ACCENT_GAIN)
+  //   mixer             false: no 🎚️ Mixer (no effects, mute or solo), straight into
+  //                     the output: every row it plays sounds, at its own volume
+  //                     times the beat's Master volume as a plain gain (a loud hit
+  //                     at ACCENT_GAIN times that)
   //   onPill(pill, at)  each pill of the beat's plain grid, as it is booked
   //   onPass(at)        each time round, as it is booked: `at` the next one's start
   //   onHit(clipId, at) each hit booked
@@ -181,6 +183,7 @@ export function createBeatEngine({ audio, clipById }) {
     const clipOf = hooks.clip ?? clipById;
     const mixed = hooks.mixer !== false;
     const run = { t0: null, on: true, timer: 0, clocks: [], pass: null, voices: [], sounds: new Map(), loads: [], stats: { hits: 0, late: 0, silent: 0 } };
+    const stopped = new Promise((resolve) => { run.cancel = resolve; });   // a stop ends the wait for sounds that never come
     // A row's sound as it is now: {clip, loaded}, or null while it loads or when it is gone.
     const soundOf = (id, found) => {
       if (!found.has(id)) found.set(id, id ? clipOf(id) ?? null : null);
@@ -211,7 +214,7 @@ export function createBeatEngine({ audio, clipById }) {
         if (!got) { run.stats.silent++; continue; }
         const list = run.voices[h.row] ??= [];
         const dest = mixed ? busFor(ctx, audio.master, p).input(h.row) : audio.master;
-        sound(ctx, dest, list, row, got.loaded, h.at, h.loud, h.note, h.len, { clipOf: () => got.clip, ring: hooks.ring?.(row), level: mixed ? null : h.loud ? ACCENT_GAIN : 1 });
+        sound(ctx, dest, list, row, got.loaded, h.at, h.loud, h.note, h.len, { clipOf: () => got.clip, ring: hooks.ring?.(row), level: mixed ? null : hitGain(row, h.loud) * masterLevel(p) });
         // A hit that has ended lets go of its gain, so a long play holds no nodes.
         const voice = list.at(-1);
         voice.src.onended = () => { try { voice.gain.disconnect(); } catch { /* gone */ } };
@@ -224,6 +227,7 @@ export function createBeatEngine({ audio, clipById }) {
     run.stop = () => {
       if (!run.on) return run.stats;
       run.on = false;
+      run.cancel();
       clearInterval(run.timer);
       run.timer = 0;
       const now = ctx.currentTime;
@@ -237,7 +241,7 @@ export function createBeatEngine({ audio, clipById }) {
       const plays = hooks.rows?.(first) ?? null;
       const found = new Map();
       (first.rows ?? []).forEach((r, i) => { if (r && (!plays || plays.has(i))) soundOf(r.clipId, found); });
-      await Promise.all(run.loads);
+      await Promise.race([Promise.all(run.loads), stopped]);
       run.loads = null;
       if (!run.on || hooks.go?.() === false) { run.on = false; return false; }
       run.t0 = hooks.from ?? ctx.currentTime + (hooks.startIn ?? START_IN);

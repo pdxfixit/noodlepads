@@ -15,9 +15,10 @@ Status: plan, revised after the council's first round (2026-10-26: child-psychol
 | plays the beat's swing | Ben: "I definitely want things consistent" | a beat sounds the same everywhere |
 | plays a grown-up's 3/4, 6/8 or 7/8 beat in its own bars | the lead | the same beat, the same bars |
 | lights a square when its pill is heard (`outputDelay`); iOS reports no `outputLatency`, so there it gains little | the lead | the light keeps with the sound on Bluetooth |
-| books 0.12 s ahead, as it always has (`lookahead` hook) | the lead | no new risk of a late hit on a slow phone |
+| books 0.2 s ahead (`lookahead` hook) | the audio-engineer, 2026-10-27 | a late hit on a slow phone matters more than 0.1 s of delay |
+| keeps each row's volume and the beat's Master volume, as a plain gain | Ben, 2026-10-27 | a quiet row stays quiet; no effects, mute, solo or mixer screen |
 | plays a tune row's notes only, even when its sound is also a drum's | the lead | a tune is a tune |
-| stays free of the 🎚️ Mixer (row level, mute, solo, effects, master) and row speed | Ben | Kids has none of those controls |
+| stays free of the 🎚️ Mixer's effects, mute and solo, and row speed | Ben | Kids has none of those controls; row and Master volume are kept (above) |
 | has no 🎵 Find its note of its own | the lead | out of this build |
 
 Rules v2 inherits (bars, which rows play, every hit rings, no mixer, a note is a rate change) go in docs/decisions.md and keys-kids.md in step 5, not only here. decisions.md's "One beat engine" row stays "(to build)" until step 5 lands.
@@ -39,12 +40,13 @@ child-psychologist ⛔ "overstimulation with no way to calm it": a double ▶ wh
 | Pills a bar | always 16 | the beat's signature | **changes**: its own bars (lead) |
 | Swing | none | `swingDelay` on the eighths, at every level | **changes**: its swing (Ben) |
 | Row speed | none | `'speed'` with Advanced (`playMode()`) | **same**, `mode: 'plain'` |
-| Row level, mute, solo, effects, master | none: straight into `audio.master` | `hitGain`, `audible`, `busFor` | **same**, `mixer: false` |
+| Mute, solo, effects | none: straight into `audio.master` | `audible`, `busFor` | **same**, `mixer: false` |
+| Row volume, Master volume | none | `hitGain`, the mix's master gain | **changes**: a plain gain, `hitGain × masterLevel` (Ben, 2026-10-27) |
 | Loud hits | full, like any hit | `ACCENT_GAIN` | **changes**: loud (Ben) |
 | A tune note's pitch | `noteRate(p)` | `+ rootShift(root)` | **changes**: its found note (Ben) |
 | A hit over the last | never cut | cut unless 🔔 or a tune row | **same**, `ring: () => true` (at most `MAX_RINGING`, 8, a row; Kids had no cap) |
 | A stall | late hits dropped (`tooLate`, 20 ms) | the same | **same**: hits only; the clocks, squares and ● go on |
-| Booked ahead | 0.12 s | 0.1 s | **same**, `lookahead: 0.12` |
+| Booked ahead | 0.12 s | 0.1 s | **changes**: `lookahead: 0.2` |
 | First pill | 60 ms after load, or `from` | 50 ms | **same**, `startIn: 0.06`, `from` |
 | A row's sound not loaded yet | loaded then | never, until the next ▶ | same as Kids |
 | A sound changed or deleted while away | its old sound (cached by clip id) | the same seam | **changes**: as it is now, or silent |
@@ -79,7 +81,7 @@ The click stays in `sequencer.js` (Beats' `beforeRows` hook in step 6).
 | `clip(id)` | `clipById` | default | any sound of the board, hidden ones too; null when gone |
 | `from` / `startIn` | now + 0.05 | count-in end | ● count end / 0.06 |
 | `go()` | — | the beat still open | Kids showing |
-| `lookahead` | 0.1 | default | 0.12 |
+| `lookahead` | 0.1 | default | 0.2 |
 | `mode()` | `'plain'` | `playMode()` | `'plain'` |
 | `swing(beat)` | 0 | `swingNow()` | the beat's swing, 0–50 |
 | `ring(row)` | the row's 🔔 | default | always |
@@ -98,7 +100,7 @@ The click stays in `sequencer.js` (Beats' `beforeRows` hook in step 6).
 | Stays the same | Changes |
 |---|---|
 | The four drums and the tune; a grown-up's extra rows stay silent | A tune on a sound whose note was found plays in tune |
-| Every row at full level, muted or not; no effects; no row speed | A loud pill plays loud |
+| Muted rows still sound; no effects; no row speed | A loud pill plays loud; a row's volume and the Master volume are kept |
 | Hits ring over each other | A swung beat swings |
 | ● counts 3 beeps and stops as it comes round | A 3/4 beat plays in 3/4 (Kids' grid still shows 8 squares over 16 pills: the squares a 3/4 bar has light, the rest never) |
 | A beat made in Kids: the same 60 hits at the same times, to the bit (`tests/kids-same-hits.test.mjs`) | Squares light as their pill is heard |
@@ -124,7 +126,7 @@ A beat made in Kids has no loud pills, no swing, 4/4 bars and its tune on a kit 
 | A beat not cleaned | `bpm: -1` gave a negative pill and a loop for ever; a row with no `steps` threw | `hitsDue` refuses a pill length that is not finite and above 0, and skips a row with no pills; test |
 | iOS | audio starts only inside the tap | `audio.wake()` is `play`'s first statement, before anything waits; test |
 | Per-row clocks | a row joining mid-play must land on the grid; on the first tick every row starts at `t0` | `hitsDue` joins a row from the clocks as they came in; tests |
-| Timing on a slow phone | the tick under load | Kids keeps 0.12 s. Steps 5, 6 and 8 each run `just look <view> --cpu 4 --height 680` (Kids' beat view is new in step 5) and put the `long-animation-frame` numbers in the commit |
+| Timing on a slow phone | the tick under load | Kids books 0.2 s ahead. Steps 5, 6 and 8 each run `just look <view> --cpu 4 --height 680` (Kids' beat view is new in step 5) and put the `long-animation-frame` numbers in the commit |
 | Memory | a hit's gain stays connected after it ends | `src.onended` disconnects it; test. Voice lists stay at 8 a row (`ringOver`); `stop()` fades and drops them |
 | Memory | `busFor` keeps a graph per beat object, disposed only when rebuilt for the same object | Kids builds none (`mixer: false`). Step 7 prunes (below) |
 | `ready` is shared | `prepareBeats` (Song, previews) clears it | Kids' runs keep their own sounds; Beats and Song move off it in steps 6 and 8 |

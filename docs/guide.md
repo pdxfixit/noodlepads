@@ -168,9 +168,11 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   (Kids shows no picture for it), the beat's swing swings, and a grown-up's
   3/4, 6/8 or 7/8 beat plays in its own bars (the squares past its bar stay
   dark and do nothing). Rows a grown-up added beyond the four drums and the
-  one tune stay silent here, and the 🎚️ Mixer (a row's level, mute, solo,
-  effects, the master) and a row's speed are left out: every hit plays at
-  full level. Hits ring over each other, at most eight of one sound at a
+  one tune stay silent here. A row's volume and the beat's Master volume
+  are kept (Ben, 2026-10-27), as a plain gain; the 🎚️ Mixer's effects,
+  mute and solo and a row's speed are left out. If every sound fails to
+  load, ▶️ comes back instead of a ⏹️ that stays silent, and the beat
+  stops when the page is hidden. Hits ring over each other, at most eight of one sound at a
   time (`beat-engine.js`, played by `kids.js` `playBeat`).
 - **🎹 Keys**: eight colored keys that play while held, several fingers at
   once (A S D F G H J K on a keyboard). They are pentatonic, always, so no

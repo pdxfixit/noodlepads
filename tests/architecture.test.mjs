@@ -127,7 +127,7 @@ test('✅ the keys never touch audio.js directly; they play through pads.js tapP
 
 test('✅ 🧸 Kids takes only pure rules from the beat rules, plays through the engine it is handed, and none of the regular screens', () => {
   const from = (m) => [...src['kids.js'].matchAll(new RegExp(`^import .* from '\\./${m}\\.js';$`, 'gm'))].map((x) => x[0]);
-  assert.deepEqual(from('beat'), ["import { STEPS, MAX_SWING, outputDelay } from './beat.js';"], FIX);
+  assert.deepEqual(from('beat'), ["import { STEPS, MAX_SWING, outputDelay, stepsHeard } from './beat.js';"], FIX);
   assert.match(src['kids.js'], /deps\.engine\.play\(/, FIX);
   assert.doesNotMatch(src['kids.js'], /\bmakeVoice\b|setInterval\(/, FIX);
   assert.deepEqual(from('sequencer'), [], FIX);

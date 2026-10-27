@@ -303,34 +303,34 @@ Kids writes it with `deps.saveBeat` (`state.savedBeats` + `persist('beats')`). I
 
 ### On the beat engine
 
-`kids.js playBeat` has no scheduler. It calls `deps.engine.play(hooks)` (`beat-engine.js`, made once by `app.js`), which hands back the run at once, before the sounds load; its 25 ms tick asks `beat.js hitsDue` what is due, books it 0.12 s ahead (Kids' `lookahead` hook) and drops a hit already past (`audio.js tooLate`, after a stall; the clocks, squares and ● go on). It reads `kidsBeat()` from `state` on every tick, so a square or a note lands while it plays. Each row's sound is found again every tick (`clip` hook: any sound of the board, hidden presets too) and kept by `audio.key(clip)`, so a voice changed while Kids was away plays as it is now and a deleted recording is silent.
+`kids.js playBeat` has no scheduler. It calls `deps.engine.play(hooks)` (`beat-engine.js`, made once by `app.js`), which hands back the run at once, before the sounds load; its 25 ms tick asks `beat.js hitsDue` what is due, books it 0.2 s ahead (Kids' `lookahead` hook) and drops a hit already past (`audio.js tooLate`, after a stall; the clocks, squares and ● go on). It reads `kidsBeat()` from `state` on every tick, so a square or a note lands while it plays. Each row's sound is found again every tick (`clip` hook: any sound of the board, hidden presets too) and kept by `audio.key(clip)`, so a voice changed while Kids was away plays as it is now and a deleted recording is silent.
 
 | Hook (`engine.play`) | 🧸 Kids |
 |---|---|
 | `beat()` | `kidsBeat`, read each tick |
 | `rows(beat)` | `kids-logic.js kidsPlayedRows`: the first plain row of each drum, and the first tune row (a tune row on a drum's sound is the tune); a grown-up's extra rows stay silent, and only these rows' sounds are waited for |
-| `mixer: false` | no row level, mute, solo or effects: straight into `audio.master`, every row it plays sounds at full level |
+| `mixer: false` | no effects, mute or solo: straight into `audio.master`; every row it plays sounds at its own `volume` times the beat's Master `volume`, as a plain gain (Ben, 2026-10-27) |
 | `mode()` | `'plain'`: no row speed |
 | `ring()` | always: a hit rings over the last, at most `MAX_RINGING` (8) a row, the oldest faded first (Kids had no cap) |
-| `startIn` / `from` | 0.06 s after the sounds load, or ● 's count end |
+| `startIn` / `from` / `lookahead` | 0.06 s after the sounds load, or ● 's count end; 0.2 s ahead |
 | `go()` | `showing` |
-| `onPill(pill, at)` | a square lights at `at + outputDelay` (`beat.js`): when its pill is heard, not when it is booked (`at` is swung like the pill's hits); the square counts in the beat's own bar (`barOf`) |
+| `onPill(pill, at)` | queues the square (`at` is swung like the pill's hits); one frame loop (`follow`, `beat.js stepsHeard` with `outputDelay`) lights it when its pill is heard, not when it is booked; the square counts in the beat's own bar (`barOf`) |
 | `swing(beat)` | the beat's own, 0–`MAX_SWING` |
 | `onPass(at)` | ● stops as the beat comes round |
 
-`playBeat` claims the run in the same tap (the child-psychologist's block): ▶ shows ⏹ at once, a second tap is ⏹, and ⏹ while the sounds load calls the start off (`run.ready` resolves false, nothing is booked), so three ▶ taps leave one run ticking. If the sounds take more than `KIDS_LOAD_WAIT` (2 s) ▶ is given back. A call with `from` or `onPass` (●) never takes an already-playing run: it ends that one and starts its own, so the recording always has an `onPass` to end it. `stopBeat` logs `{stopped, hits, late, silent}` once a play (`log-clean.js`, `run.stats`). Its beat sounds as the same beat does on Beats except: no 🎚️ Mixer, no row speed, only the rows Kids shows, 0.12 s ahead (Beats' 0.1).
+`playBeat` claims the run in the same tap (the child-psychologist's block): ▶ shows ⏹ at once, a second tap is ⏹, and ⏹ while the sounds load calls the start off (`run.ready` resolves false, nothing is booked), so three ▶ taps leave one run ticking. If the sounds take more than `KIDS_LOAD_WAIT` (2 s) ▶ is given back, and so is it for a beat that has sounded nothing that long while its sounds failed (`hits` 0, `silent` more: `giveUp`); a ● over it is called off with `wiggle(el.rec)`. A hidden page (`visibilitychange`) stops the beat. The board's sounds are read once a tick (the `beat` hook), not once a row. A call with `from` or `onPass` (●) never takes an already-playing run: it ends that one and starts its own, so the recording always has an `onPass` to end it. `stopBeat` logs `{stopped, hits, late, silent, limiterDb}` once a play (`log-clean.js`, `run.stats`; `limiterDb` the worst the limiter held the output down, read in `follow`). Its beat sounds as the same beat does on Beats except: no 🎚️ Mixer, no row speed, only the rows Kids shows, 0.12 s ahead (Beats' 0.1).
 
 | | `sequencer.js schedule` (Beats) | 🧸 Kids (`engine.play`) |
 |---|---|---|
 | Rows played | every row that is `audible` (mute, solo, level) | `kidsPlayedRows` |
 | Pills a bar | `barSteps(signature)` | the same |
-| Loudness | `hitGain` (row level, `ACCENT_GAIN` for loud) | full, and a loud pill at `ACCENT_GAIN`, into the output's limiter (Kids shows no picture for it) |
+| Loudness | `hitGain` (row level, `ACCENT_GAIN` for loud) × the Master level through the mix | the same product as a plain gain (`hitGain × masterLevel`, no effects), a loud pill at `ACCENT_GAIN` times it, into the output's limiter (Kids shows no picture for it) |
 | 🎚️ Mixer and effects | `busFor` | none |
 | Swing, row speed | `swingDelay`, `stepSeconds` | the beat's swing; no row speed |
 | A hit over the last | `ringOver` (cut unless the row rings) | `ringOver` with ring on |
 | Tune note pitch | `noteRate(note + rootShift(root))` | the same: a sound whose note was found plays its C as a C |
 | Count-in | `play({ countIn })`: one bar of blips | ● only: 3 beeps (`TUNE_COUNT`), `beep(at)` |
-| Playhead | `stepsHeard` with `outputDelay` | `setTimeout` per square at `at + outputDelay` |
+| Playhead | `stepsHeard` with `outputDelay` | the same, over the squares (`kids.js follow`) |
 | `onHit` to the keys, meter | yes | `audio.on.started()` once |
 
 ### The toy keys and ● tune
@@ -410,7 +410,7 @@ Worked out in four places: `beat.js outputDelay`; `app.js` `deps.latency` for th
 
 | Seam | What a fix in one place misses |
 |---|---|
-| Two beat loops: `sequencer.js schedule` and the engine's `play` (Kids) | Kids leaves out mute, solo, level, the mixer and row speed on purpose; accents, swing and a tune sound's `root` play as on Beats. A timing fix in `schedule` does not reach `play` until Beats moves onto it (step 6). |
+| Two beat loops: `sequencer.js schedule` and the engine's `play` (Kids) | Kids leaves out mute, solo, the mixer's effects and row speed on purpose (row and Master volume are kept as a plain gain); accents, swing and a tune sound's `root` play as on Beats. A timing fix in `schedule` does not reach `play` until Beats moves onto it (step 6). |
 | Two snap rules: `rhythm.js createSnapper` (keys) and `kids-logic.js pillAt` (Kids' tune) | Kids has no latency shift, no double-tap filter, no one-hit-per-pill, no tempo-change safety. |
 | Two recorders: `sheet.js` and `kids.js` | MIME list, 10 s cap and the 3-2-1 count are copied, not shared. |
 | Two keyboard mappings: `rhythm.js keyFor` (layout-aware) and `kids.js kidsKeydown` (`e.key` letters) | Kids' keys follow neither Dvorak nor the `djLayout` pick. |

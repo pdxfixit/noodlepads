@@ -139,7 +139,8 @@ export const RULES = {
     tab: oneOf(['pads', 'record', 'beats', 'keys']), recorded: num, how: oneOf(['tap', 'hold']), voice: oneOf(['normal', 'robot', 'tiny', 'spooky']),
     play: bool, bpm: num, sum: oneOf(['right', 'wrong']),
     // The beat stopped: hits booked, dropped as late after a stall, and silent (a sound gone or still loading).
-    stopped: bool, hits: num, late: num, silent: num,
+    // `limiterDb`: the most the limiter held the output down (dB, negative), as the beat's stop reports it.
+    stopped: bool, hits: num, late: num, silent: num, limiterDb: num,
     // ● on the Keys screen: a tune recording started and stopped (`tune`: notes landed).
     rec: oneOf(['start', 'stop']), tune: num,
   },
