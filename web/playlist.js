@@ -266,8 +266,8 @@ export function viewBars(lanes, stepsOf) {
 // The song in time: one part per pass of each block, every lane, in start
 // order. A pass is cut where the next block on its lane starts. `clock` is
 // songClock(song), or a plain tempo for one with no marks. Returns {parts:
-// [{lane, block, beatId, pass, times, start, end, from, to}], seconds,
-// barSeconds, clock}: start and end in seconds, from and to in pills from
+// [{lane, block, beatId, pass, times, start, end, from, to}], seconds (the
+// song's length, up to the next bar line), barSeconds, clock}: start and end in seconds, from and to in pills from
 // the song's start. Blocks of a gone beat are left out.
 export function playParts(lanes, stepsOf, clock) {
   const c = typeof clock?.at === 'function' ? clock : songClock({ tempo: clock });
@@ -290,6 +290,12 @@ export function playParts(lanes, stepsOf, clock) {
     });
   });
   parts.sort((a, b) => a.start - b.start || a.lane - b.lane);
+  // The song ends on a bar line (producer, council round 1, 2026-10-27): a
+  // beat that is not a whole number of 4/4 bars (3/4, 6/8, 5/4, 7/8) rests
+  // out the bar its last pass reaches into, so the playhead ends where its
+  // block does and a saved song is whole bars, as a studio would loop it.
+  // Nothing before the end moves: blocks already start on bar lines.
+  if (parts.length) seconds = c.barStart(Math.ceil(c.barAt(seconds) - 1e-9));
   return { parts, seconds, barSeconds: c.barSeconds, clock: c };
 }
 

@@ -310,6 +310,7 @@ A song from before lanes (only `slots`) becomes lane 1's blocks, back to back, a
 ### The song's clock
 
 - **Time is in song bars:** one bar of 4/4, 16 pills (`BAR_STEPS`), at the tempo of that bar. A beat plays at the **song's** tempo (`planSong` overrides each beat's `bpm` with `song.tempo`), pass after pass. A 2-bar beat takes 2 song bars a pass; a 3/4 beat takes ¾ of one (`beatSteps`). A beat with no signature is 4/4 (`barSteps` of nothing), here and in `sequencer.js barOf`; a beat from before signatures is stamped ("Old beats are stamped"), so its block length no longer follows anyone's settings.
+- The song's length (`playParts().seconds`) is rounded up to the next bar line (producer, council round 1, 2026-10-27): a 3/4, 6/8, 5/4 or 7/8 beat rests out the bar its last pass reaches into, so the playhead ends where its block does and ▶, 🔊 and ⬇️ are whole bars (`tests/playlist.test.mjs`, `tests/song-same-hits.test.mjs`'s ring-out times). No part moves.
 - `playlist.js songClock(song)`: `barStart`, `at(pill)`, `barAt(seconds)` and `tempoOf(bar)` with the marks; the plain arithmetic when there are none.
 - `playParts(lanes, stepsOf, clock)`: every pass of every block, cut where the next block on its lane starts.
 - `playEvents(parts, plans, {from, skipLanes, clock})`: every hit of the song in time order. With marks, a hit is placed by its pill on the clock, and a held note's length follows the bars.

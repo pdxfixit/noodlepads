@@ -140,7 +140,7 @@ Two beats per person have a reserved `id` and are hidden in the app, not listed 
 | `slots` | `[{beatId, times}]`: the same thing flattened for older copies. Ignore when `lanes` is there. |
 | `created`, `saved` | Saved songs only. |
 
-**Song time.** A song bar is 16 pills long, at the song's tempo (a 3/4 or 5/4 beat's pass does not fill a bar exactly). A beat plays at the song's tempo, not its own. A pass is as long as the beat's bars × its signature's pills, and is cut where the next block on the lane starts. Each lane plays through its own gain (`volume`, silent if `muted`).
+**Song time.** A song bar is 16 pills long, at the song's tempo (a 3/4, 6/8, 5/4 or 7/8 beat's pass does not fill a bar exactly; the song as a whole ends on the bar line after its last pass, so it is a whole number of bars long). A beat plays at the song's tempo, not its own. A pass is as long as the beat's bars × its signature's pills, and is cut where the next block on the lane starts. Each lane plays through its own gain (`volume`, silent if `muted`).
 
 A song from before 1.0's playlist (no `lanes`, only `slots`) is read as lane 1: its slots one after another, from bar 0.
 

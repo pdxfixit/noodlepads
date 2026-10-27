@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {
   BEAT_REF, MAX_LANES, MAX_SONG_BARS, MAX_TIMES, START_LANES, LANE_DEFAULTS,
   cleanTempo, cleanLane, cleanLanes, newLanes, blockBars, blockSpan, blockAt, placeBlock, setTimes, maxTimes, timesForEnd,
-  removeBlock, songBars, viewBars, playParts, playEvents, playingAt, slotsToLanes, legacySlots, songBeatIds, mapSongBeats, songHasBeats,
+  removeBlock, songBars, viewBars, playParts, songClock, playEvents, playingAt, slotsToLanes, legacySlots, songBeatIds, mapSongBeats, songHasBeats,
 } from '../web/playlist.js';
 import { BEAT_ID } from '../web/beat.js';
 
@@ -114,6 +114,37 @@ test('lanes play together at the song tempo; a pass is cut where the next block 
   assert.equal(seconds, 10);
   assert.deepEqual([...playingAt(parts, 6.5)].sort(), ['0:2', '1:0']);
   assert.deepEqual([...playingAt(parts, 11)], []);
+});
+
+// Producer, council round 1 (2026-10-27): a 3/4 or 6/8 beat (12 pills), 5/4
+// (20) or 7/8 (14) does not fill whole song bars. The song ends on a bar line
+// all the same, so the playhead ends where the block's bars do and a saved
+// song is whole bars. Nothing before the end moves.
+test('a song is whole bars long: a beat that is not a whole bar rests out the bar its last pass reaches into', () => {
+  const D = 'beat-d';   // 5/4: 20 pills
+  const E = 'beat-e';   // 7/8: 14 pills
+  const steps = (id) => ({ ...STEPS, [D]: 20, [E]: 14 })[id] ?? null;
+  const len = (...blocks) => playParts([lane(...blocks)], steps, 120);   // a bar is 2 s
+  assert.equal(len({ beatId: C, bar: 0, times: 1 }).seconds, 2, 'a 3/4 beat once: the whole bar, not 1.5 s');
+  assert.equal(len({ beatId: C, bar: 0, times: 2 }).seconds, 4, 'twice: 24 pills reach into the second bar');
+  assert.equal(len({ beatId: C, bar: 0, times: 4 }).seconds, 6, 'four passes are exactly three bars: nothing added');
+  assert.equal(len({ beatId: D, bar: 0, times: 1 }).seconds, 4, '5/4 once: 20 pills, two bars');
+  assert.equal(len({ beatId: E, bar: 2, times: 1 }).seconds, 6, '7/8 at bar 3: ends at the bar line after it');
+  assert.equal(len({ beatId: A, bar: 0, times: 3 }).seconds, 6, 'a 4/4 beat is as it was');
+  assert.equal(len({ beatId: B, bar: 1, times: 1 }).seconds, 6);
+  assert.equal(playParts([lane()], steps, 120).seconds, 0, 'an empty song has no length');
+  assert.equal(len({ beatId: 'beat-gone', bar: 0, times: 3 }).seconds, 0, 'a gone beat adds none');
+  // The parts themselves are not moved or lengthened: the pass still ends at pill 12.
+  const once = len({ beatId: C, bar: 0, times: 1 });
+  assert.deepEqual(once.parts.map((p) => [p.start, p.end]), [[0, 1.5]]);
+});
+
+test('a song with tempo marks ends on the bar line of its own clock', () => {
+  const song = { tempo: 120, tempos: [{ bar: 2, bpm: 60 }], lanes: [] };
+  const clock = songClock(song);   // bar 1 is 2 s, bar 2 on is 4 s
+  const { parts, seconds } = playParts([lane({ beatId: C, bar: 1, times: 1 })], stepsOf, clock);
+  assert.ok(Math.abs(parts[0].end - 2 - 3) < 1e-9, 'the pass ends at 3/4 of the second bar');
+  assert.ok(Math.abs(seconds - 6) < 1e-9, `ends at the end of bar 2, was ${seconds}`);
 });
 
 test('hits are each pass of a beat moved to its place, cut at the part end; playing from a bar starts the clock there', () => {
