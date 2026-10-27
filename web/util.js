@@ -11,17 +11,20 @@ export function onePressOneClick(box, sel = 'button') {
 
 // A file extension for an audio MIME type, for download names and zip entries.
 export function extensionFor(mime = '') {
-  if (mime.includes('webm')) return 'webm';
-  if (mime.includes('ogg')) return 'ogg';
-  if (mime.includes('mp4') || mime.includes('m4a') || mime.includes('aac')) return 'm4a';
-  if (mime.includes('mpeg') || mime.includes('mp3')) return 'mp3';
-  if (mime.includes('wav')) return 'wav';
+  const m = String(mime);
+  if (m.includes('webm')) return 'webm';
+  if (m.includes('ogg')) return 'ogg';
+  if (m.includes('mp4') || m.includes('m4a') || m.includes('aac')) return 'm4a';
+  if (m.includes('mpeg') || m.includes('mp3')) return 'mp3';
+  if (m.includes('wav')) return 'wav';
   return 'audio';
 }
 
 // A safe file-name piece from a label: "Ba dum tss!" -> "ba-dum-tss".
-export function slug(text) {
-  return (text || 'sound').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'sound';
+// Letters with accents split first, so "Café" gives "cafe"; `fallback` is
+// what a label with nothing left becomes.
+export function slug(text, fallback = 'sound') {
+  return String(text || fallback).normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || fallback;
 }
 
 // "Pip, Juno and Toby"; one name alone; nothing for none.

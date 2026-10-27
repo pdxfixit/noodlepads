@@ -11,7 +11,7 @@
 // kid taps ⤢ Turn into knobs (chainToKnobs). Pure: no Web Audio, no DOM.
 
 import { TWEAKS, NO_TWEAKS, cleanTweaks, fullTweaks, knobSay } from './tweaks.js';
-import { VOICES, amountFor } from './voices.js';
+import { VOICES, amountFor, SURPRISE_FAMILIES } from './voices.js';
 import { cutName, MAX_NAME } from './names.js';
 
 const log2 = (x) => Math.log2(x);
@@ -116,15 +116,14 @@ export const hasClassicVoice = (chain) => (chain ?? []).some((s) => s?.type === 
 
 // What 🎲 Surprise me picks from: one to three voices from different families,
 // so two never cancel out (Chipmunk then Monster) or pile up into mush.
-const FAMILIES = [['chipmunk', 'monster', 'alien'], ['fast', 'slow'], ['robot', 'walkie', 'underwater'],
-  ['clones', 'stutter', 'backwards'], ['loud'], ['stadium']];
+// (The families are voices.js's SURPRISE, the same ones 🎲 picks amounts from.)
 
 // A random stack of voices: their ids, in tap order. `random` is Math.random,
 // or a stand-in for tests.
 export function surpriseVoices(random = Math.random, max = 3) {
   const pick = (list) => list[Math.min(list.length - 1, Math.floor(random() * list.length))];
   const count = 1 + Math.min(max - 1, Math.floor(random() * max));
-  const left = [...FAMILIES];
+  const left = [...SURPRISE_FAMILIES];
   const out = [];
   while (out.length < count && left.length) {
     const f = pick(left);

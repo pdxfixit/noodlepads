@@ -13,7 +13,7 @@ import { notifyAllSettings } from './settings.js';
 import { downloadBlob } from './download.js';
 import { showNotice } from './ui.js';
 import { logEvent } from './log.js';
-import { localDate } from './util.js';
+import { localDate, slug } from './util.js';
 import { holdsWords, sizeWords } from './old-backup.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { avatarBadge, askEditPin } from './cloud-ui.js';
@@ -72,8 +72,7 @@ export async function savePersonBackup(personId, name, button) {
   try {
     const lists = personBackupLists(storedLists(), personId);
     const blob = await makeBackup(lists, state.version, { heardOf });
-    const slug = String(name).normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'person';
-    downloadBlob(blob, `noodlepads-${slug}-${localDate()}.zip`);
+    downloadBlob(blob, `noodlepads-${slug(name, 'person')}-${localDate()}.zip`);
     logEvent('backup', { saved: true, person: true, sounds: lists.clips.length, beats: lists.beats.length, bytes: blob.size });
     showNotice(`Saved a backup of ${name}: ${holdsWords(lists)}. The file is ${sizeWords(blob.size)}.`);
   } catch (err) {

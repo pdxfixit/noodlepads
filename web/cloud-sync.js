@@ -12,7 +12,7 @@
 
 import { sharedRemixName, cutName } from './names.js';
 import { groupName } from './groups.js';
-import { STAMP, resolve } from './merge3.js';
+import { STAMP, resolve, canon } from './merge3.js';
 import { songBeatIds, mapSongBeats } from './playlist.js';
 import { foreignOf, restoreForeign } from './foreign.js';
 import { SYNCED } from './reid.js';
@@ -89,22 +89,6 @@ export function recordsOf(lists, personId, kitIds = []) {
   return out;
 }
 
-// Fields that are not the record's content: the audio and where it is kept,
-// and when it was last edited (merge3.js STAMP).
-const NOT_CONTENT = new Set(['blob', 'sound', 'sha256', 'bytes', STAMP]);
-
-// A record as text with its keys in order, so two records compare by content.
-export function canonical(value) {
-  const walk = (v) => {
-    if (Array.isArray(v)) return v.map(walk);
-    if (v && typeof v === 'object' && !(typeof Blob !== 'undefined' && v instanceof Blob)) {
-      return Object.fromEntries(Object.keys(v).filter((k) => !NOT_CONTENT.has(k) && v[k] !== undefined).sort().map((k) => [k, walk(v[k])]));
-    }
-    return v;
-  };
-  return JSON.stringify(walk(value));
-}
-
 // cyrb53: a fast 53-bit hash of a string, for "has this changed".
 function cyrb53(str) {
   let h1 = 0xdeadbeef;
@@ -121,7 +105,7 @@ function cyrb53(str) {
 
 // A clip's audio is part of its content: two clips with the same settings and
 // different audio differ. `sha` is the audio's SHA-256, when known.
-export const hashOf = (record, sha = '') => cyrb53(canonical(record) + (sha ? `#${sha}` : ''));
+export const hashOf = (record, sha = '') => cyrb53(canon(record) + (sha ? `#${sha}` : ''));
 
 // What to push: records whose hash differs from what the cloud has (`sent`),
 // and deletes for those the cloud has that are gone here. `shaOf(key)` gives

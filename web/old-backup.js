@@ -20,17 +20,7 @@
 
 import { zip } from './zip.js';
 import { KIND_EMOJI } from './model.js';
-
-// The file name a sound's audio gets, by its type (as web/util.js extensionFor).
-export function extensionFor(mime = '') {
-  const m = String(mime);
-  if (m.includes('webm')) return 'webm';
-  if (m.includes('ogg')) return 'ogg';
-  if (m.includes('mp4') || m.includes('m4a') || m.includes('aac')) return 'm4a';
-  if (m.includes('mpeg') || m.includes('mp3')) return 'mp3';
-  if (m.includes('wav')) return 'wav';
-  return 'audio';
-}
+import { extensionFor } from './util.js';
 
 // ── What it holds, in words ─────────────────────────────────────────────
 

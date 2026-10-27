@@ -4,6 +4,7 @@
 // payload the app builds passes unchanged (tests/worker-clean.test.mjs).
 
 import { cleanPayload } from '../web/log-clean.js';
+import { ORIGIN } from './http.js';
 import boards from '../web/boards.json' with { type: 'json' };
 
 // Kit sound ids, read from web/boards.json (every instrument's own copy of
@@ -12,7 +13,7 @@ import boards from '../web/boards.json' with { type: 'json' };
 // Wrangler bundles the JSON into the Worker.
 export const KIT_IDS = boards.kit.map((k) => k.id);
 
-const KNOWN = { kitIds: new Set(KIT_IDS), origin: 'https://noodlepads.com' };
+const KNOWN = { kitIds: new Set(KIT_IDS), origin: ORIGIN };
 
 // { ok: true, upload } for a report from the app, else { ok: false, why }.
 export function cleanUpload(body) {

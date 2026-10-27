@@ -367,7 +367,7 @@ Several things are keyed by the `pattern` **object**, not its id: `undo.pattern`
 
 ### Names
 
-`names.js`, passed in by `app.js`: `beatName` (a new kept beat), `keptName` ("Sleepy Squid (Ska version)"), `remixName` (Save as a sound), `songName`, `partNames` (🎧 From a song). The sequencer's `uniqueName` and `song.js uniqueSongName` number a typed name that is taken.
+`names.js`, passed in by `app.js`: `beatName` (a new kept beat), `keptName` ("Sleepy Squid (Ska version)"), `remixName` (Save as a sound), `songName`, `partNames` (🎧 From a song). The sequencer's `uniqueName` and `playlist.js uniqueSongName` number a typed name that is taken, both through `names.js numbered` (🎧 From a song too).
 
 ## Every callback
 

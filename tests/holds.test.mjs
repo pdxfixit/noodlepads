@@ -6,17 +6,12 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extensionFor as oldExt, plural, sizeWords, holdings, holdsWords, otherCount, makeEverything, readEverything, everythingName } from '../web/old-backup.js';
+import { plural, sizeWords, holdings, holdsWords, otherCount, makeEverything, readEverything, everythingName } from '../web/old-backup.js';
 import { readBackup } from '../web/backup.js';
 import { unzip } from '../web/zip.js';
-import { extensionFor } from '../web/util.js';
 
 const bytes = (n, seed = 1) => Uint8Array.from({ length: n }, (_, i) => (i * 7 + seed) % 256);
 const blob = (n, type = 'audio/webm', seed = 1) => new Blob([bytes(n, seed)], { type });
-
-test('the export names audio files the way the app does', () => {
-  for (const m of ['audio/webm;codecs=opus', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav', '', 'x/y']) assert.equal(oldExt(m), extensionFor(m), m);
-});
 
 test('one, many, and people', () => {
   assert.equal(plural(1, 'sound'), '1 sound');

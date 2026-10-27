@@ -62,7 +62,9 @@ export const stampOf = (r) => cleanStamp(r?.[STAMP]) ?? time(r?.saved) ?? time(r
 // cloud-sync.js audioDecides compares the audio itself by its SHA.
 const NOT_CONTENT = new Set(['blob', 'sound', 'sha256', 'bytes', STAMP]);
 
-function canon(value) {
+// A record as text with its keys in order, so two records compare by content
+// (and cloud-sync.js hashOf hashes it).
+export function canon(value) {
   const walk = (v) => {
     if (Array.isArray(v)) return v.map(walk);
     if (v && typeof v === 'object' && !(typeof Blob !== 'undefined' && v instanceof Blob)) {

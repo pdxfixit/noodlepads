@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ADJECTIVES, BEAT_NOUNS, SOUND_NOUNS, TAKE_NOUNS, PERSON_NAMES, MAX_NAME, MAX_PERSON,
-  beatName, soundName, takeName, personName, FUN_TITLES, FUN_NOUNS, FUN_ADJECTIVES, FUN_ANIMALS, TITLE_NAMES, ANIMAL_NAMES, FUN_NAMES, FUN_AVOID, funName, isFunName, SPECIAL_NAMES, nameChoices,
+  beatName, soundName, takeName, personName, FUN_TITLES, FUN_NOUNS, FUN_ADJECTIVES, FUN_ANIMALS, TITLE_NAMES, ANIMAL_NAMES, FUN_NAMES, FUN_AVOID, funName, isFunName, SPECIAL_NAMES, nameChoices, numbered,
 } from '../web/names.js';
 
 test('the word lists are big enough, and have no repeats', () => {
@@ -163,4 +163,23 @@ test('a remix of something shared is "<title> remix", cut to fit', async () => {
   assert.equal(sharedRemixName('Wobbly Marshmallow'), 'Wobbly Marshmallow remix');
   assert.ok(sharedRemixName('Supercalifragilisticexpi').length <= MAX_NAME);
   assert.equal(sharedRemixName(''), 'Shared remix');
+});
+
+test('numbered: a name nobody has stays; a taken one gets 2, 3… and is cut so the number fits', () => {
+  assert.equal(numbered('Ditty', []), 'Ditty');
+  assert.equal(numbered('Ditty', ['Other']), 'Ditty');
+  assert.equal(numbered('Ditty', ['ditty']), 'Ditty 2', 'case is ignored');
+  assert.equal(numbered('Ditty', ['Ditty', 'DITTY 2']), 'Ditty 3');
+  assert.equal(numbered('Ditty', new Set(['ditty'])), 'Ditty 2', 'a set is as good as a list');
+  for (const length of [23, 24, 30]) {
+    const long = 'abcdefghij'.repeat(3).slice(0, length);
+    const first = numbered(long, [long]);
+    assert.equal(first, `${long.slice(0, Math.min(length, MAX_NAME - 2))} 2`, `${length} characters`);
+    assert.ok(first.length <= MAX_NAME, `${length} characters fit`);
+  }
+  const taken = [];
+  for (let n = 0; n < 12; n++) taken.push(numbered('x'.repeat(24), taken));
+  assert.equal(taken[10], `${'x'.repeat(21)} 11`, 'two digits take one more character');
+  assert.ok(taken.every((n) => n.length <= MAX_NAME) && new Set(taken).size === 12);
+  assert.equal(numbered('abcdefgh', ['abcdefgh'], 6), 'abcd 2', 'a shorter limit');
 });

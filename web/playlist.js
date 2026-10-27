@@ -18,7 +18,7 @@
 // starts.
 
 import { cleanVolume } from './row-volume.js';
-import { cutName, MAX_NAME } from './names.js';
+import { cutName, numbered } from './names.js';
 import { barSteps } from './old-beats.js';
 import { newId } from './util.js';
 
@@ -429,13 +429,7 @@ export function linkSong(song, list, makeId = () => newId('song')) {
 
 // A name no other song in `list` has (except the song `exceptId`): "Ditty 2".
 export function uniqueSongName(name, list, exceptId) {
-  const taken = new Set(list.filter((s) => s.id !== exceptId).map((s) => s.name.toLowerCase()));
-  if (!taken.has(name.toLowerCase())) return name;
-  for (let n = 2; ; n++) {
-    const tail = ` ${n}`;
-    const candidate = cutName(name, MAX_NAME - tail.length) + tail;
-    if (!taken.has(candidate.toLowerCase())) return candidate;
-  }
+  return numbered(name, list.filter((s) => s.id !== exceptId).map((s) => s.name));
 }
 
 // The song planned to play: each beat it uses planned once at the song's

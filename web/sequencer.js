@@ -46,7 +46,7 @@ import { createRoll } from './roll.js';
 import { createPillSelect } from './pill-select.js';
 import { edgeScroller } from './edge-scroll.js';
 import { pickerList, pickInstrument } from './inst-picker.js';
-import { cutName, MAX_NAME } from './names.js';
+import { cutName, MAX_NAME, numbered } from './names.js';
 import { TICK_MS, lookahead } from './beat-engine.js';
 import { merge3, sameContent } from './merge3.js';
 import { createChooser } from './beat-chooser.js';
@@ -549,13 +549,7 @@ export function createSequencer(deps) {
   }
   // A name no other beat of this person's has.
   function uniqueName(name, exceptId) {
-    const taken = new Set(library().filter((b) => b.id !== exceptId).map((b) => b.name.toLowerCase()));
-    if (!taken.has(name.toLowerCase())) return name;
-    for (let n = 2; ; n++) {
-      const tail = ` ${n}`;
-      const candidate = cutName(name, MAX_NAME - tail.length) + tail;
-      if (!taken.has(candidate.toLowerCase())) return candidate;
-    }
+    return numbered(name, library().filter((b) => b.id !== exceptId).map((b) => b.name));
   }
   // A name typed into the scratch's title: kept under it now if it has
   // rows; an empty scratch holds the name until its first row (save).

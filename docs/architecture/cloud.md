@@ -147,7 +147,7 @@ The 13 per-person stores that sync: `clips, overrides, orders, patterns, beats, 
 
 ### Bases and `sent` hashes
 
-- `sent` (in the link): the hash of each record as the cloud holds it. `cloud-sync.js hashOf(record, sha)` = cyrb53 of `canonical(record)` plus the clip's audio SHA-256. `canonical` drops `blob`, `sound`, `sha256`, `bytes` and `changed`.
+- `sent` (in the link): the hash of each record as the cloud holds it. `cloud-sync.js hashOf(record, sha)` = cyrb53 of `merge3.js canon(record)` plus the clip's audio SHA-256. `canon` drops `blob`, `sound`, `sha256`, `bytes` and `changed`.
 - `bases` (IndexedDB, since DB version 14, keyPath `id` = `"<person>|<kind>:<id>"`, value `{id, personId, body}`): each record as last synced, without audio. `cloud.js bases.load/save`; `dropBases` on `dropLink`, except `people.js deleteHere`, which keeps them (`keepBases`) until the person's delete has committed (`forgetBases`). `state.js readStorage` skips it.
 - A base is trusted only when `hashOf(base) === sent[k]` (`cloud-sync.js decideRecord`): a sync cut off between the two saves is not trusted.
 
@@ -418,7 +418,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 |---|---|---|
 | PIN hash, share code rules, code alphabet | one module, `web/codes.js` (✅ only it runs PBKDF2 and holds the alphabet) | none: a change of rounds still invalidates the device's stored `link.check`, since they are the same rounds as the Worker's stored hashes |
 | record kinds | `CLOUD_KINDS`, worker `KINDS`, `STAMPED`, schema comment | a new per-person store added to `reid.js PERSON_STORES` is in `CLOUD_KINDS`, `KINDS` and `STAMPED` at once (one list); only the schema comment is by hand |
-| record content and hash | `cloud-sync.js canonical` + `NOT_CONTENT`, `merge3.js canon` + `NOT_CONTENT` | a new non-content field added to one makes "changed" and "same" disagree |
+| record content and hash | `merge3.js canon` + `NOT_CONTENT`, which `cloud-sync.js hashOf` and `sameContent` both use | one list of what is not content |
 | the stores as lists | `state.js storedLists` (one function over `STORE_TABLE`); `cloud.js` and `backup-ui.js` call it | the cloud's maps `prefs` through `cleanPrefs` |
 | pieces and caps | `CHUNK_BYTES` (web and worker), `CLOUD_MAX_SOUND`/`MAX_SOUND_BYTES` (tested equal), `PER_PUSH`, `RECORD_BYTES`, `PUSH_BYTES`/`LIMITS.perPush`, `recordBytes`, `pushBytes` (tested equal) | the Worker's `GET /api/cloud` already returns `chunk` and `maxSound`; the app ignores them |
 | browser and OS families | `agent.js parseAgent` is the one reading; `track-page.js browserOf` and `environment` call it (lower-cased browser, for the events) | `tests/agent.test.mjs` keeps them equal |

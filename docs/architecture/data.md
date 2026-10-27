@@ -378,7 +378,7 @@ A sync that changes the open beat while it plays is merged into the next save (`
 2. **Writes bypass `persist`** (see the table above). A fix to failure reporting in `persist` misses `storeLoaded`, the app.js deletes, `adoptKidsBeat` and cloud.js. A refused delete is told by `removeRecord` (every app.js delete and close), or by its own copy of the same words (`deleteUserClip`, `deleteMyVoice`).
 3. **"Stores as lists" is one function** (above): `state.js storedLists`. A new store appears in it once it is in `STORE_TABLE`; `backup-ui.js` and `cloud.js` only choose the options.
 4. **Three counters of what is here** (above). A new kind a backup carries goes into `holdings` and `holdsWords` too (`tests/holds.test.mjs`), or "A backup now holds…" leaves it out.
-5. **`extensionFor` is defined twice:** `util.js extensionFor` and `old-backup.js extensionFor` (the second says it copies the first). Pluralizers are three: `util.js count`, `old-backup.js plural`, and `model.js`'s private `plural`.
+5. **Pluralizers are three:** `util.js count`, `old-backup.js plural`, and `model.js`'s private `plural`.
 6. **Making an own sound is done in five places; two use the one way so far.** `model.js newClip(fields)` builds the record (the defaults: `id`, `voice: 'normal'`, `mime`, `created`) and `board.js addClip(clip)` pushes it and stores it. `app.js addMadeSound` (beats, songs, takes made into sounds) and `app.js initKids` `saveClip` (a recording Kids built) use them. Still by hand, each with its own push: `sheet.js saveSheet`, `sheet.js makeMix`, `chop.js makePads`, and `kids.js` builds its record (`newId('user')`).
 6. **Making an own sound is done in five places, each building the record by hand:**
    - `sheet.js saveSheet`

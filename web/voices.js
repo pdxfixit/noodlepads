@@ -190,6 +190,9 @@ const SURPRISE = {
   room: [['stadium']],   // always last: the echo rings out after everything else
 };
 
+// The voice ids of each family, in order (voice-knobs.js 🎲 picks from them).
+export const SURPRISE_FAMILIES = Object.values(SURPRISE).map((family) => family.map(([voice]) => voice));
+
 // A random chain of 1 to `max` voices from SURPRISE. `random` is
 // Math.random, or a stand-in for tests.
 export function surpriseChain(random = Math.random, max = SIMPLE_CHAIN) {

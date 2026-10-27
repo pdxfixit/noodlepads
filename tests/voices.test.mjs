@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { VOICES, voiceById, amountFor, amountText, presetGain } from '../web/voices.js';
+import { VOICES, voiceById, amountFor, amountText, presetGain, SURPRISE_FAMILIES } from '../web/voices.js';
 
 test('every voice has a unique id, a name and an emoji', () => {
   const ids = VOICES.map((v) => v.id);
@@ -292,4 +292,10 @@ test('a chain of extreme speeds renders every step between 10 ms and 180 s, and 
     assert.ok(asked.every((s) => s >= 0.01 - 1e-9), `every render at least 10 ms: ${asked.map((s) => s.toFixed(4))}`);
     assert.ok(fast.buffer.length >= 1);
   } finally { globalThis.OfflineAudioContext = had; }
+});
+
+test('🎲 Surprise me\'s families: the voice ids of each, in order, every one a real voice', () => {
+  assert.deepEqual(SURPRISE_FAMILIES, [['chipmunk', 'monster', 'alien'], ['fast', 'slow'], ['robot', 'walkie', 'underwater'],
+    ['clones', 'stutter', 'backwards'], ['loud'], ['stadium']]);
+  for (const id of SURPRISE_FAMILIES.flat()) assert.notEqual(voiceById(id).id, 'normal', id);
 });

@@ -3,7 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { stampEdit, cleanStamp, STAMP, merge3, resolve, sameContent, stampOf } from '../web/merge3.js';
+import { stampEdit, cleanStamp, STAMP, merge3, resolve, sameContent, stampOf, canon } from '../web/merge3.js';
 import { cleanBackup } from '../web/backup.js';
 import { mergeLoaded } from '../web/merge.js';
 import { hashOf } from '../web/cloud-sync.js';
@@ -247,4 +247,15 @@ test('a row with and without the old collapsed flag is one row: two devices\' ed
   const old = beat({ name: 'Groove 2' }, true);
   const r2 = resolve('beats', base, local, old);
   assert.notEqual(r2.action, 'keepBoth');
+});
+
+// One text for a record's content, shared by "did it change" (here) and the
+// cloud's hash of it (cloud-sync.js hashOf): if it moved, every record would
+// look changed to the sync. The strings were taken before the two copies became one.
+test('canon: keys in order, no audio, stamp or undefined; and the hash of that text stays what it was', () => {
+  const r = { id: 'clip-1', label: 'Pop', z: [3, { b: 1, a: undefined, sound: 'x' }], blob: 'B', [STAMP]: 5, sha256: 'q', created: 1, voice: 'normal' };
+  assert.equal(canon(r), '{"created":1,"id":"clip-1","label":"Pop","voice":"normal","z":[3,{"b":1}]}');
+  assert.equal(hashOf(r), 'v45i86zvpr');
+  assert.equal(hashOf(r, 'abc'), '24fazbyerzd');
+  assert.ok(sameContent(r, { ...r, [STAMP]: 9, blob: null }));
 });

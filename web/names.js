@@ -43,6 +43,18 @@ export function cutName(text, max = MAX_NAME) {
   return out;
 }
 
+// A name no other in `taken` has, ignoring case: "Ditty", then "Ditty 2",
+// "Ditty 3"…, the base cut so the number fits `max`.
+export function numbered(name, taken, max = MAX_NAME) {
+  const used = new Set([...taken].map((n) => String(n).toLowerCase()));
+  if (!used.has(name.toLowerCase())) return name;
+  for (let n = 2; ; n++) {
+    const tail = ` ${n}`;
+    const candidate = cutName(name, max - tail.length) + tail;
+    if (!used.has(candidate.toLowerCase())) return candidate;
+  }
+}
+
 // Short words, so that the longest adjective and the longest noun still fit
 // together in 24 characters (names.test.mjs checks that).
 export const ADJECTIVES = [

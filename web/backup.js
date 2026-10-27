@@ -27,7 +27,6 @@ import { VOICES, storedFx } from './voices.js';
 import { cleanTweaks } from './tweaks.js';
 import { cleanPattern } from './beat.js';
 import { unsignedAs } from './old-beats.js';
-import { extensionFor } from './util.js';
 import { encodeWav } from './wav.js';
 import { whiteReadsOn } from './contrast.js';
 import { cleanTrim, cleanFrom, cleanEdits, cleanFade } from './cuts.js';
@@ -42,7 +41,7 @@ import { adoptPeople, nextPersonColor, freePicture, PERSON_ID, isEmptyOverride }
 import { isListedEmoji } from './emoji-check.js';
 import { funName, isFunName, MAX_PERSON, MAX_NAME, nameLength, cutName } from './names.js';
 import { dropNameSounds } from './starters.js';
-import { count } from './util.js';
+import { count, extensionFor } from './util.js';
 import { cleanGroups, groupIdOf } from './groups.js';
 import { cleanStamp, STAMP, STAMPED } from './merge3.js';
 import { reIdDoc, PERSON_STORES } from './reid.js';

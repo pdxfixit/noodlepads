@@ -10,6 +10,8 @@ test('extensionFor maps audio types and falls back to "audio"', () => {
   assert.equal(extensionFor('audio/aac'), 'm4a');
   assert.equal(extensionFor('audio/mpeg'), 'mp3');
   assert.equal(extensionFor('audio/wav'), 'wav');
+  assert.equal(extensionFor(undefined), 'audio');
+  assert.equal(extensionFor({ toString: () => 'audio/ogg' }), 'ogg', 'anything with a type name reads as text (the old backup passes a Blob\'s type)');
   assert.equal(extensionFor('audio/x-wav'), 'wav');
   assert.equal(extensionFor('application/octet-stream'), 'audio');
   assert.equal(extensionFor(), 'audio');
@@ -22,6 +24,10 @@ test('slug makes a file-name-safe piece', () => {
   assert.equal(slug(''), 'sound');
   assert.equal(slug(undefined), 'sound');
   assert.equal(slug('../../etc/passwd'), 'etc-passwd');
+  assert.equal(slug('Café'), 'cafe', 'a trailing accent is dropped, the letter stays');
+  assert.equal(slug('🥁', 'person'), 'person', 'the caller names the fallback');
+  assert.equal(slug(undefined, 'person'), 'person');
+  assert.equal(slug('Wren', 'person'), 'wren');
 });
 
 test('count pluralizes', () => {

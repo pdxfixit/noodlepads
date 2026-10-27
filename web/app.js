@@ -894,11 +894,7 @@ async function start() {
     render: (kind, id, personId, rate) => renderAudio(kind, id, {
       seq,
       rate,
-      clipById: (cid) => anyClip(cid),
-      beatById: (bid) => state.savedBeats.find((b) => b.id === bid),
-      songById: (sid) => state.songbook.find((s) => s.id === sid)
-        ?? [...state.songs.values()].find((s) => s.personId === personId && String(s.id ?? '') === sid),
-      takeById: (tid) => state.takes.find((t) => t.id === tid),
+      ...savedLookups(personId),
     }),
     backup: savePersonBackup,
   });
@@ -1131,11 +1127,22 @@ async function start() {
     renderShare: (kind, id, { leave } = {}) => renderPreview(kind, id, {
       seq,
       leave,
-      clipById: (cid) => anyClip(cid),
-      beatById: (bid) => state.savedBeats.find((b) => b.id === bid),
-      songById: (sid) => state.songbook.find((s) => s.id === sid),
+      ...savedLookups(),
     }),
   });
+}
+
+// How to find the saved things to play back, as 🗂️ See all and a share's
+// preview do: a sound, a beat, a song, a take by id. `personId`, when given,
+// also finds that person's song in another open list.
+function savedLookups(personId) {
+  return {
+    clipById: (cid) => anyClip(cid),
+    beatById: (bid) => state.savedBeats.find((b) => b.id === bid),
+    songById: (sid) => state.songbook.find((s) => s.id === sid)
+      ?? (personId ? [...state.songs.values()].find((s) => s.personId === personId && String(s.id ?? '') === sid) : undefined),
+    takeById: (tid) => state.takes.find((t) => t.id === tid),
+  };
 }
 
 // The sound chooser's sections: the shared kit once (this board's copies, so

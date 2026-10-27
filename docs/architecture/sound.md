@@ -638,7 +638,6 @@ by a load of its current version").
 | Seam | Where | What a fix in one place misses |
 |---|---|---|
 | One noise maker for the tails | `steps.js noiseBuffer` (stadium hall, walkie static, Room size) | seeded (`seededRandom`, `NOISE_SEEDS`, one seed per place, another per channel), so a room or hall is the same on every load; the stadium and static use the context's channel count, Room always 2 (`tests/steps.test.mjs`) |
-| Two 🎲 families | `voices.js SURPRISE` (used by `surpriseShape`) and `voice-knobs.js FAMILIES` (`surpriseVoices`) | a new voice must be added to both |
 | A voice is listed four times | `voices.js VOICES` + `RECIPES`, `voices.js OPENED`, `voice-knobs.js MADE`, `log-clean.js VOICE_IDS` | a new voice needs a recipe, an opened form, its knobs and its report id (the last is guarded: `tests/log-clean.test.mjs` checks the lists against `VOICES` and `KINDS`) |
 | Step kinds listed twice | `steps.js KINDS` and `log-clean.js STEP_KINDS` | a render of a new kind is blanked in problem reports until it is added (guarded by the same test) |
 | Two loudness measures | `tools/preset_loudness.py` (phone speaker: high-pass 180 Hz, lift above 1.5 kHz) for `level`; `loudness.js` (BS.1770) for `PRESET_LOUDNESS` and Even it out | presets are evened by one ear, kids' sounds to the other |
@@ -649,8 +648,7 @@ by a load of its current version").
 | A live tail changes the peak | `sheet.js startLive`: the head is evened out (peak 0.9, the preset `level`), then the live tail (Echo, Room, Tone, Muffled…) plays through nodes; the saved render re-evens after every step (`applyChain` → `finish`) | untrimmed, a sound whose echoes pile on it played louder while dragging than once let go: a held 220 Hz note peaked at 1.81 against the render's 0.9 with Echo 3 × 0.25 s (+6 dB), and 2.96 with 8 echoes (+10.4 dB), where the output limiter (−2 dB, 20:1, not a brickwall) held it near full scale and turned down everything else on the master (a playing beat) by up to about 10 dB. Now the loop is turned down by `steps.js liveTrim`: what its echoes could add in step with a sound that long (1 when none comes back while it plays), set again as a slider moves; both cases peak within 1.5 dB of the render. A sound that is not a steady note (a voice) is trimmed as much, so it may play a little softer while dragging. Room, Tone and Louder everywhere get no trim (`tests/live-peak.test.mjs`) |
 | Louder everywhere plays louder live | `steps.js squash` (`Louder everywhere`, the Loud and Loudest knobs): a compressor, then makeup gain up to ×5 (+14 dB) at amount 1; live it plays at that gain, while the saved render evens it out to peak 0.9 | dragging its slider (or a live loop with Loud on) is louder than letting go, and the limiter holds it as for Echo; unmeasured here, for an ear |
 | `listen.js` and `listen-make.js` import `beat.js` | for `SIGNATURES`, `barSteps`, `tempoStops`, `MAX_PILLS`, `cleanPattern` | `beat.js` imports `mixer.js`, `row-volume.js`, `model.js` and `instruments.js` for its rules, so the "pure" listener still loads those (not the beat maker screen) |
-| `ROWS` twice | `listen-dsp.js ROWS` and `listen-make.js ROWS` | kept equal by hand |
-| Name clashes | `KINDS` (`steps.js` vs `listen-input.js`), `FAMILIES` (`instruments.js` vs `voice-knobs.js`), `levelOf` (`meter.js`, `listen-input.js`, the sequencer's) | a wrong import still runs |
+| Name clashes | `KINDS` (`steps.js` vs `listen-input.js`), `levelOf` (`meter.js`, `listen-input.js`, the sequencer's) | a wrong import still runs |
 | Bare players outside `audio.playing` | the engine's runs (Beats, Song, `kids.js` beat, a groove sample), `kids.js` beeps, sequencer click | `audio.stopAll` does not stop them; a new engine run stops the one playing (`beat-engine.js stopCurrent`) |
 
 ## Invariants and gotchas
@@ -681,7 +679,7 @@ by a load of its current version").
 
 | Change | Touch |
 |---|---|
-| A new classic voice | `voices.js VOICES` + `RECIPES` (+ `OPENED`, `SURPRISE`), `voice-knobs.js MADE` (+ `FAMILIES`), `log-clean.js VOICE_IDS`, `help.js`, `tests/voices.test.mjs` |
+| A new classic voice | `voices.js VOICES` + `RECIPES` (+ `OPENED`, `SURPRISE`), `voice-knobs.js MADE`, `log-clean.js VOICE_IDS`, `help.js`, `tests/voices.test.mjs` |
 | A new building block (step kind) | `steps.js KINDS` (live: `build`, `tail`; else a `voices.js STEP_RENDERS` entry), `log-clean.js STEP_KINDS`, `voices.js SHAPE_SURPRISE` if 🎲 should pick it, `tests/steps.test.mjs`; `mixer.js` only if it should be a mixer effect |
 | A new knob | `tweaks.js TWEAKS` (a new `short` letter), `tweakSteps` (its place in the order), `LAYER_ORDER`, `ADDED_AT`; `voice-knobs.js MADE` if a voice uses it; `shape.js` draws it from `TWEAKS`; keep old `tweaksKey`s unchanged |
 | A new cut (edit kind) | `cuts.js EDIT_KINDS`, `cleanEdit`, `applyEdits`, `editsKey`; `chop.js editPart` and its buttons in `index.html`; `help.js` |

@@ -7,11 +7,11 @@
 // runs it.
 
 import { SIGNATURES, barSteps, cleanPattern } from './beat.js';
-import { closestSound } from './listen-dsp.js';
+import { closestSound, ROWS } from './listen-dsp.js';
 import { cleanTempos, cleanLanes, newLanes, legacySlots, blockBars, MAX_SONG_BARS, MAX_BLOCKS, MAX_TIMES, BAR_STEPS } from './playlist.js';
-import { partNames, cutName, MAX_NAME } from './names.js';
+import { partNames, numbered } from './names.js';
 
-export const ROWS = ['kick', 'snare', 'hat'];
+export { ROWS };   // the listener's three rows (listen-dsp.js), for the screens that draw them
 
 // Each row's name and picture on the screens.
 export const ROW_LOOK = {
@@ -198,18 +198,9 @@ export function makeSong(result, beats, { personId, name, songNames = [], newId,
   const first = beatOf.get(stretches[0]?.partId) ?? beats[0].beat;
   const tempos = cleanTempos((result.tempos ?? []).map((m) => ({ bar: at(m?.bar) + 1, bpm: m?.bpm })));
   return {
-    id: newId('song'), personId, name: uniqueName(name, songNames), tempo: first.bpm,
+    id: newId('song'), personId, name: numbered(name, songNames), tempo: first.bpm,
     ...(tempos.length ? { tempos } : {}), lanes, slots: legacySlots(lanes), created: now, saved: now,
   };
-}
-
-function uniqueName(name, list) {
-  const taken = new Set(list.map((n) => String(n).toLowerCase()));
-  if (!taken.has(name.toLowerCase())) return name;
-  for (let n = 2; ; n++) {
-    const candidate = `${cutName(name, MAX_NAME - String(n).length - 1)} ${n}`;
-    if (!taken.has(candidate.toLowerCase())) return candidate;
-  }
 }
 
 // ── "What I heard" ──
