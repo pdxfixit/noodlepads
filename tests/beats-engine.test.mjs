@@ -4,11 +4,19 @@
 // pills) and `skip` (a pill a live hit already played); a run whose sounds
 // are the caller's (`loaded`) going at once, with its first tick the
 // caller's; the hooks Beats uses (`limit`, `beforeRows`, `join`, `afterTick`);
-// the cuts and ringing counts its stop logs; and a row moved, removed or
-// put in while the beat plays keeps its clock and its voices (6b, which had
-// no test before). That Beats still books the same hits is tests/beats-same-hits.test.mjs. Not tested
-// here: how it sounds, and timing on a slow phone
-// (`just look beats --cpu 4 --height 680`).
+// the cuts and ringing counts its stop logs; a row moved, removed or put in
+// while the beat plays keeps its clock and its voices (6b, which had no test
+// before); and, through Beats itself, a chip switch at the bar line restarts
+// every row and ↩️ Undo of a removed row puts its voices back in step. That
+// Beats still books the same hits is tests/beats-same-hits.test.mjs.
+//
+// Not tested here: how it sounds; timing on a slow phone
+// (`just look beats --cpu 4 --height 680`); and the exact pill a row put in
+// while the beat plays first sounds on. It copies a same-speed row's clock
+// as the clocks came in (the old loop copied clocks that earlier rows had
+// already moved on in the same tick), so it may differ from before the
+// engine by one tick (up to 0.1 s of pills); the "put in" test's assertion
+// about where it starts is loose for that reason.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -193,6 +201,7 @@ test('a row put in while the beat plays has no clock and no voices yet, and join
   const d = t.started.filter((h) => h.clip === 'd');
   assert.ok(d.length > 3);
   for (const h of d) assert.ok(Math.abs((h.at - 0.05) / 0.1 - Math.round((h.at - 0.05) / 0.1)) < 1e-6, `on the grid: ${h.at}`);
+  // Loose on purpose (see the header): it joins a same-speed row's clock as it came in, so within one tick of it.
   assert.ok(d[0].at >= next - 1e-9 - 0.1, 'from about where the other rows are');
   run.stop();
 });
@@ -212,31 +221,47 @@ test('a tempo change maps the run\'s times; another beat taking over restarts ev
 
 // ── Through 🥁 Beats itself ──
 
-test('on 🥁 Beats: a row moved down from its menu and then removed, while it plays: the others keep their pills in time, and only the removed row\'s own voices fade', async () => {
+// The real app, once, with its test hook. Each test plays a beat of its own as
+// the scratch (rows named by kit sound) on a stand-in clock moved by hand,
+// the engine's 25 ms tick caught and called by hand, every source saying which
+// sound it plays and when it was stopped.
+let world = null;
+async function beatsWorld() {
+  if (world) return world;
   const { installPage } = await import('./fake-dom.mjs');
   const { testManifest } = await import('./test-board.mjs');
-  const { cleanPattern } = await import('../web/beat.js');
-  const { scratchId } = await import('../web/scratch.js');
   const page = installPage({ manifest: testManifest() });
-  const $ = page.$;
-  let seq = null;
-  globalThis.noodleTestSeq = (s) => { seq = s; };
+  const w = { page, $: page.$, seq: null };
+  globalThis.noodleTestSeq = (q) => { w.seq = q; };
   console.error = () => {};
   await (await import('../web/app.js')).ready;
   await page.settle();
-  const { state } = await import('../web/state.js');
-  const { audio } = await import('../web/audio.js');
-  const pid = state.personId;
-  const ids = ['kick', 'snare', 'shaker'].map((k) => `${pid}-${k}`);
-  const beat = cleanPattern({ id: scratchId(pid), name: 'Scratch', bpm: 120, rows: ids.map((clipId) => ({ clipId, ring: true, ...(() => { const steps = on(16, ...Array.from({ length: 16 }, (_, i) => i)); return { steps }; })() })) }, pid);
-  state.savedBeats = [...state.savedBeats.filter((b) => b.id !== beat.id), { ...beat, created: 1, saved: 1 }];
+  ({ state: w.state } = await import('../web/state.js'));
+  ({ audio: w.audio } = await import('../web/audio.js'));
+  w.pid = w.state.personId;
+  return (world = w);
+}
+const every = (n) => Array.from({ length: n }, (_, i) => i);
 
-  // The stand-in clock; every source says which sound it plays and when it was stopped.
+// Plays `rows` ([{sound, steps, ...}]) as the open beat, `others` ([{id, name, ...}]) saved beside it,
+// and hands `check` the clock, what started and what was stopped. It stops the beat afterwards.
+async function playOnBeats({ rows, bars = 1, others = [] }, check) {
+  const w = await beatsWorld();
+  const { $, page, seq, state, audio, pid } = w;
+  const { cleanPattern } = await import('../web/beat.js');
+  const { scratchId } = await import('../web/scratch.js');
+  const id = (sound) => `${pid}-${sound}`;
+  const own = cleanPattern({ id: scratchId(pid), name: 'Scratch', bpm: 120, bars, rows: rows.map(({ sound, ...row }) => ({ ...row, clipId: id(sound) })) }, pid);
+  const saved = others.map((o) => ({ ...cleanPattern({ ...o, rows: o.rows.map(({ sound, ...row }) => ({ ...row, clipId: id(sound) })) }, pid), created: 1, saved: 1 }));
+  state.savedBeats = [...state.savedBeats.filter((b) => b.id !== own.id && !saved.some((o) => o.id === b.id)), { ...own, created: 1, saved: 1 }, ...saved];
+
   const ctx = audio.context();
-  let now = 5;
-  Object.defineProperty(ctx, 'currentTime', { configurable: true, get: () => now });
+  const clock = { now: 5 };
+  Object.defineProperty(ctx, 'currentTime', { configurable: true, get: () => clock.now });
   const started = [];
   const stopped = [];
+  const plainSource = ctx.createBufferSource;
+  const plainLoad = audio.load;
   ctx.createBufferSource = () => {
     const src = { connect() {}, disconnect() {}, playbackRate: { value: 1 }, buffer: null, start(at) { started.push({ clip: src.buffer.clip, at: round(at) }); }, stop() { stopped.push(src.buffer.clip); } };
     return src;
@@ -246,42 +271,96 @@ test('on 🥁 Beats: a row moved down from its menu and then removed, while it p
   const ticks = [];
   globalThis.setInterval = (fn, ms) => (ms === 25 ? ticks.push(fn) : plainInterval(fn, ms));
   try {
-    $('#beats-toggle').dispatch('click');
+    $('#pads-tab').dispatch('click');
+    $('#beats-toggle').dispatch('click');   // Beats
     await page.settle();
+    seq.restore(own);   // the beat to play is the open one (an earlier test may have left another open)
     $('#seq-play').dispatch('click');
     await page.settle();
     globalThis.setInterval = plainInterval;
-    const t0 = now + 0.05;
-    const to = (until) => { while (now < until) { now = round(now + 0.025); ticks[0](); } };
+    assert.equal($('#seq-play').getAttribute('aria-pressed'), 'true', 'playing');
+    const to = (until) => { while (clock.now < until) { clock.now = round(clock.now + 0.025); ticks[0](); } };
+    await check({ $, page, seq, id, started, stopped, t0: clock.now + 0.05, to, now: () => clock.now });
+    if ($('#seq-play').getAttribute('aria-pressed') === 'true') $('#seq-play').dispatch('click');
+  } finally {
+    globalThis.setInterval = plainInterval;
+    ctx.createBufferSource = plainSource;
+    audio.load = plainLoad;
+    delete ctx.currentTime;
+    ctx.currentTime = 0;
+  }
+}
+const inTime = (started, clip, what) => {
+  const at = started.filter((h) => h.clip === clip).map((h) => h.at);
+  at.forEach((x, i) => { if (i) assert.ok(Math.abs(x - at[i - 1] - 0.125) < 1e-6, `${what}: every pill, in time (${at[i - 1]} → ${x})`); });
+  return at;
+};
+
+test('on 🥁 Beats: a row moved down from its menu and then removed, while it plays: the others keep their pills in time, and only the removed row\'s own voices fade', async () => {
+  const rows = ['kick', 'snare', 'shaker'].map((sound) => ({ sound, ring: true, steps: on(16, ...every(16)) }));
+  await playOnBeats({ rows }, async ({ $, seq, id, started, stopped, t0, to }) => {
     to(t0 + 1);
-    const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
-    const moveDown = (row) => {
-      rows()[row].querySelector('.seq-head [data-more]').dispatch('click');
-      document.body.children.find((c) => c.classList.contains('more-pop')).querySelectorAll('[data-more-item]').find((b) => b.textContent.includes('Move down')).dispatch('click');
-    };
+    const menuRows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
     stopped.length = 0;
-    moveDown(0);   // kick, snare, shaker -> snare, kick, shaker
-    assert.deepEqual(seq.beat().rows.map((r) => r.clipId), [ids[1], ids[0], ids[2]]);
+    menuRows()[0].querySelector('.seq-head [data-more]').dispatch('click');
+    document.body.children.find((c) => c.classList.contains('more-pop')).querySelectorAll('[data-more-item]').find((b) => b.textContent.includes('Move down')).dispatch('click');   // kick, snare, shaker -> snare, kick, shaker
+    assert.deepEqual(seq.beat().rows.map((r) => r.clipId), [id('snare'), id('kick'), id('shaker')]);
     assert.deepEqual(stopped, [], 'moving a row cuts nothing off');
     // At once, so the voices a row had still sound: the kick is the second row now.
     const removeAt = started.length;
     seq.dropRow(1);   // ✕ Remove, as the keys' Undo and the row's button reach it
-    assert.deepEqual(seq.beat().rows.map((r) => r.clipId), [ids[1], ids[2]]);
-    assert.ok(stopped.length > 0 && stopped.every((c) => c === ids[0]), `only the kick's own voices fade, not the row that took its place: ${[...new Set(stopped)]}`);
+    assert.deepEqual(seq.beat().rows.map((r) => r.clipId), [id('snare'), id('shaker')]);
+    assert.ok(stopped.length > 0 && stopped.every((c) => c === id('kick')), `only the kick's own voices fade, not the row that took its place: ${[...new Set(stopped)]}`);
     to(t0 + 2);
     const after = started.slice(removeAt);
-    assert.ok(!after.some((h) => h.clip === ids[0]), 'the removed row plays no more');
-    for (const id of [ids[1], ids[2]]) {
-      const mine = started.filter((h) => h.clip === id).map((h) => h.at);
-      assert.ok(mine.length > 14, `${id} plays on: ${mine.length}`);
-      mine.forEach((at, i) => { if (i) assert.ok(Math.abs(at - mine[i - 1] - 0.125) < 1e-6, `${id}: every pill, in time, across the move and the removal (${mine[i - 1]} → ${at})`); });
-      assert.ok(after.some((h) => h.clip === id), `${id} keeps being booked`);
+    assert.ok(!after.some((h) => h.clip === id('kick')), 'the removed row plays no more');
+    for (const sound of ['snare', 'shaker']) {
+      assert.ok(inTime(started, id(sound), sound).length > 14, `${sound} plays on`);
+      assert.ok(after.some((h) => h.clip === id(sound)), `${sound} keeps being booked`);
     }
-    const kick = started.filter((h) => h.clip === ids[0]).map((h) => h.at);
-    kick.forEach((at, i) => { if (i) assert.ok(Math.abs(at - kick[i - 1] - 0.125) < 1e-6, 'the kick was in time until it went'); });
-    $('#seq-play').dispatch('click');
-  } finally {
-    globalThis.setInterval = plainInterval;
-    delete ctx.currentTime;
-  }
+    inTime(started, id('kick'), 'the kick until it went');
+  });
+});
+
+test('on 🥁 Beats: a chip tapped while it plays takes over at the bar line from the new beat\'s first pill (the run restarts every row on that line)', async () => {
+  // Two bars of 4/4: a bar is 2 s at 120 BPM, so the first bar line is 5.05 + 2 = 7.05, 16 pills in.
+  const rows = ['kick', 'snare'].map((sound) => ({ sound, ring: true, steps: on(32, ...every(32)) }));
+  const other = { id: 'beat-chip-b', name: 'Chip B', bpm: 120, bars: 2, rows: [{ sound: 'clap', steps: on(32, 0, 8) }] };
+  await playOnBeats({ rows, bars: 2, others: [other] }, async ({ $, page, seq, id, started, t0, to }) => {
+    to(t0 + 0.55);
+    document.querySelector('[data-chip="beat-chip-b"]').dispatch('click');
+    await page.settle();   // its sounds are loaded by the bar line
+    to(t0 + 4);
+    assert.equal(seq.beat().name, 'Chip B', 'it took over');
+    const bar = round(t0 + 2);
+    // Its pills 0 and 8 (a second apart), counted from the bar line: not from where the old beat's clocks were (pill 16 of 32).
+    assert.deepEqual(started.filter((h) => h.clip === id('clap')).map((h) => h.at), [bar, round(bar + 1)]);
+    assert.ok(!started.some((h) => (h.clip === id('kick') || h.clip === id('snare')) && h.at >= bar - 1e-6), 'the old beat books nothing from the bar line on');
+    assert.ok(started.some((h) => h.clip === id('kick') && h.at > bar - 0.2), 'and it played right up to it');
+  });
+});
+
+test('on 🥁 Beats: ↩️ Undo of a removed row, while it plays, puts the row back with its own voices and the others untouched', async () => {
+  const rows = ['kick', 'snare', 'shaker'].map((sound) => ({ sound, ring: true, steps: on(16, ...every(16)) }));
+  await playOnBeats({ rows }, async ({ $, seq, id, started, stopped, t0, to }) => {
+    to(t0 + 1);
+    // ✕ Remove from the first row's menu: it asks first, then removes and offers Undo.
+    $('#seq-rows').children.find((c) => c.classList.contains('seq-row')).querySelector('.seq-head [data-more]').dispatch('click');
+    const remove = () => document.body.children.find((c) => c.classList.contains('more-pop')).querySelectorAll('[data-more-item]').find((b) => b.textContent.includes('Remove'));
+    remove().dispatch('click');
+    remove().dispatch('click');
+    assert.deepEqual(seq.beat().rows.map((r) => r.clipId), [id('snare'), id('shaker')]);
+    to(t0 + 1.3);
+    $('#banner-action').dispatch('click');   // ↩️ Undo
+    assert.deepEqual(seq.beat().rows.map((r) => r.clipId), [id('kick'), id('snare'), id('shaker')], 'back where it was');
+    const back = started.length;
+    to(t0 + 1.45);   // soon, while the voices the other rows had are still sounding
+    assert.ok(started.slice(back).some((h) => h.clip === id('kick')), 'it plays again');
+    // Muting it stops its own sounding voices, and only those: it did not take the list of the row that moved up into its place.
+    stopped.length = 0;
+    seq.toggleMute(0);
+    assert.ok(stopped.length > 0 && stopped.every((c) => c === id('kick')), `only the kick's voices: ${[...new Set(stopped)]}`);
+    to(t0 + 3);
+    for (const sound of ['snare', 'shaker']) assert.ok(inTime(started, id(sound), sound).length > 20, `${sound} played on through it all`);
+  });
 });

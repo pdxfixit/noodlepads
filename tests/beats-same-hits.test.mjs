@@ -56,6 +56,11 @@ const BEATS = {
     { sound: 'snare', ...pills(16, [4, 12]) },
     { sound: 'shaker', ...pills(16, [0, 2, 4, 6, 8, 10, 12, 14]) },
   ] }),
+  // A row stored at 2× on a beat with Advanced off: the simple beat maker ignores row speed, so it plays at 1×.
+  slow: () => ({ bpm: 120, bars: 1, rows: [
+    { sound: 'kick', rate: 2, ...pills(16, [0, 4, 8, 12]) },
+    { sound: 'shaker', ...pills(16, [0, 2, 4, 6, 8, 10, 12, 14]) },
+  ] }),
   swung: () => ({ bpm: 90, bars: 2, signature: '3/4', swing: 40, rows: [
     { sound: 'kick', ...pills(24, [0, 6, 12, 18], [12]) },
     { sound: 'shaker', rate: 2, ...pills(24, Array.from({ length: 24 }, (_, i) => i).filter((i) => i % 3 !== 2)) },   // two of every three pills
@@ -138,10 +143,11 @@ async function playIt(raw) {
 }
 
 const file = new URL('./fixtures/beats-hits.json', import.meta.url);
-const kept = process.env.UPDATE_FIXTURES ? { about: '', beats: {} } : JSON.parse(readFileSync(file, 'utf8'));
-const written = { about: 'Two beats made on 🥁 Beats and every hit each books: the kit sound, seconds after the first pill, the rate (a tune note faster for a higher note) and the hit\'s own gain (a loud pill louder). A plain bar of 4/4 at 120 BPM; two bars of 3/4 at 90 BPM with swing 40, a 2× row, a tune, a muted row and a loud pill. Written by the one-beat-engine work (docs/design/one-beat-engine.md); tests/beats-same-hits.test.mjs checks the app against it.', beats: {} };
+const kept = JSON.parse(readFileSync(file, 'utf8'));
+// UPDATE_FIXTURES=1 writes the cases that run (`--test-name-pattern`) into the file and leaves the others as they are.
+const written = { about: 'Beats made on 🥁 Beats and every hit each books: the kit sound, seconds after the first pill, the rate (a tune note faster for a higher note) and the hit\'s own gain (a loud pill louder). A plain bar of 4/4 at 120 BPM; the same with a row stored at 2× while Advanced is off (it plays at 1×); two bars of 3/4 at 90 BPM with swing 40, a 2× row (Advanced on), a tune, a muted row and a loud pill. Written by the one-beat-engine work (docs/design/one-beat-engine.md); tests/beats-same-hits.test.mjs checks the app against it.', beats: { ...kept.beats } };
 
-for (const [name, make, advanced, count] of [['plain', BEATS.plain, false, 'plain: a bar of 4/4'], ['swung', BEATS.swung, true, 'swung: two bars of 3/4']]) {
+for (const [name, make, advanced, count] of [['plain', BEATS.plain, false, 'plain: a bar of 4/4'], ['slow', BEATS.slow, false, 'slow: a row stored at 2× with Advanced off'], ['swung', BEATS.swung, true, 'swung: two bars of 3/4']]) {
   test(`🥁 Beats ▶ books every hit of ${count} at the time Beats always booked it, and goes round again`, async () => {
     await setSetting('advancedBeats', advanced);
     try {
@@ -150,6 +156,10 @@ for (const [name, make, advanced, count] of [['plain', BEATS.plain, false, 'plai
       const want = expected(beat, ids, t0, end, advanced).map((h) => ({ ...h, at: round(h.at), gain: round(h.gain) })).sort(byTime);
       assert.ok(want.length > 10, `a full beat: ${want.length} hits`);
       assert.deepEqual(got, want);
+      if (name === 'slow') {
+        const kicks = want.filter((h) => h.clip === ids[0]).map((h) => h.at - round(t0));
+        assert.deepEqual(kicks.slice(0, 4).map(round), [0, 0.5, 1, 1.5], 'the 2× row plays at 1×: a pill every 0.125 s, not every 0.0625 s');
+      }
       if (name === 'swung') {
         assert.ok(want.some((h) => h.gain === round(hitGain(beat.rows[0], true))), 'a loud pill is in it');
         assert.ok(hitGain(beat.rows[0], true) > hitGain(beat.rows[0], false) && ACCENT_GAIN > 1);
@@ -163,8 +173,8 @@ for (const [name, make, advanced, count] of [['plain', BEATS.plain, false, 'plai
         })) },
         hits: want.map((h) => ({ sound: sound(h.clip), at: round(h.at - t0), rate: round(h.rate), gain: h.gain })),
       };
-      if (!process.env.UPDATE_FIXTURES) assert.deepEqual(written.beats[name], kept.beats[name]);
-      else if (Object.keys(written.beats).length === 2) writeFileSync(file, `${JSON.stringify(written, null, 1)}\n`);
+      if (process.env.UPDATE_FIXTURES) writeFileSync(file, `${JSON.stringify(written, null, 1)}\n`);
+      else assert.deepEqual(written.beats[name], kept.beats[name]);
     } finally {
       await setSetting('advancedBeats', false);
       await page.settle();

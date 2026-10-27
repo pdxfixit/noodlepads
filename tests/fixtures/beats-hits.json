@@ -1,5 +1,5 @@
 {
- "about": "Two beats made on 🥁 Beats and every hit each books: the kit sound, seconds after the first pill, the rate (a tune note faster for a higher note) and the hit's own gain (a loud pill louder). A plain bar of 4/4 at 120 BPM; two bars of 3/4 at 90 BPM with swing 40, a 2× row, a tune, a muted row and a loud pill. Written by the one-beat-engine work (docs/design/one-beat-engine.md); tests/beats-same-hits.test.mjs checks the app against it.",
+ "about": "Beats made on 🥁 Beats and every hit each books: the kit sound, seconds after the first pill, the rate (a tune note faster for a higher note) and the hit's own gain (a loud pill louder). A plain bar of 4/4 at 120 BPM; the same with a row stored at 2× while Advanced is off (it plays at 1×); two bars of 3/4 at 90 BPM with swing 40, a 2× row (Advanced on), a tune, a muted row and a loud pill. Written by the one-beat-engine work (docs/design/one-beat-engine.md); tests/beats-same-hits.test.mjs checks the app against it.",
  "beats": {
   "plain": {
    "beat": {
@@ -481,6 +481,126 @@
     {
      "sound": "shaker",
      "at": 4.116666667,
+     "rate": 1,
+     "gain": 1
+    }
+   ]
+  },
+  "slow": {
+   "beat": {
+    "bpm": 120,
+    "bars": 1,
+    "signature": "4/4",
+    "swing": 0,
+    "advanced": false,
+    "rows": [
+     {
+      "sound": "kick",
+      "rate": 2,
+      "pills": [
+       0,
+       4,
+       8,
+       12
+      ]
+     },
+     {
+      "sound": "shaker",
+      "pills": [
+       0,
+       2,
+       4,
+       6,
+       8,
+       10,
+       12,
+       14
+      ]
+     }
+    ]
+   },
+   "hits": [
+    {
+     "sound": "kick",
+     "at": 0,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0.25,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "kick",
+     "at": 0.5,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0.5,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 0.75,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "kick",
+     "at": 1,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1.25,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "kick",
+     "at": 1.5,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1.5,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 1.75,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "kick",
+     "at": 2,
+     "rate": 1,
+     "gain": 1
+    },
+    {
+     "sound": "shaker",
+     "at": 2,
      "rate": 1,
      "gain": 1
     }
