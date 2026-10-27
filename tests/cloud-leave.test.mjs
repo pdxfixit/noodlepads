@@ -14,6 +14,7 @@ import { fakeIndexedDB } from './fake-idb.mjs';
 import { testManifest } from './test-board.mjs';
 import { SCHEMA, DB_NAME, DB_VERSION } from '../web/store.js';
 import { uploadAudio } from '../web/cloud-sync.js';
+import { pinKeys } from './helpers.mjs';
 
 let page;
 let state;
@@ -22,6 +23,9 @@ const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset
 const idb = fakeIndexedDB();
 const GOOD = 'p-leave-good';
 const BAD = 'p-leave-bad';
+const LOSS = 'p-leave-loss';
+// A beat id the Worker takes (64 characters) and this app's checks do not (48 after beat-).
+const FUTURE = `beat-${'f'.repeat(55)}`;
 const keys = {};
 let failPull = false;
 const deletes = [];   // DELETE /api/profiles/:id calls the page made
@@ -34,12 +38,13 @@ before(async () => {
   const call = async (path, body) => (await worker.fetch(new Request(`https://noodlepads.com/api/${path}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ORIGIN }, body: JSON.stringify(body),
   }), env)).json();
-  for (const [id, name] of [[GOOD, 'Admiral Acorn'], [BAD, 'Baron Bagel']]) keys[id] = (await call('profiles', { id, name, avatar: '', color: '#304A00', pin: '2468' })).key;
+  for (const [id, name] of [[GOOD, 'Admiral Acorn'], [BAD, 'Baron Bagel'], [LOSS, 'Duke Dumpling']]) keys[id] = (await call('profiles', { id, name, avatar: '', color: '#304A00', pin: '2468' })).key;
   idb.seed(DB_NAME, DB_VERSION, SCHEMA, {
-    people: [person(GOOD, 'Admiral Acorn', 1), person(BAD, 'Baron Bagel', 2)],
+    people: [person(GOOD, 'Admiral Acorn', 1), person(BAD, 'Baron Bagel', 2), person(LOSS, 'Duke Dumpling', 3)],
     cloud: [
       { id: GOOD, key: keys[GOOD], rev: 0, sent: {}, sounds: {}, pin: true, remembered: true },
       { id: BAD, key: keys[BAD], rev: 0, sent: {}, sounds: {}, pin: true, remembered: true },
+      { id: LOSS, key: keys[LOSS], rev: 0, sent: {}, sounds: {}, pin: true, remembered: true },
     ],
   });
   globalThis.indexedDB = idb;
@@ -89,4 +94,40 @@ test("when their latest can't be brought, nothing is deleted: the link, the key 
   await cloud.leaveCloud(BAD, '2468');
   assert.equal(hasSound(BAD), true, 'trying again brings it, then deletes');
   assert.equal(inD1(BAD), false);
+});
+
+// What this copy of the app can't hold (a record its checks drop) would be
+// deleted with the cloud copy, so leaving says so first and waits for a second go.
+test('leaving warns before it deletes records this app could not hold, and deletes nothing', async () => {
+  await cloud.api.push(LOSS, keys[LOSS], [{ kind: 'beats', id: FUTURE, body: { id: FUTURE, personId: LOSS, name: 'From the future', bpm: 100, bars: 1, rows: [], created: 1, saved: 1 } }], []);
+  const before = deletes.length;
+  await assert.rejects(() => cloud.leaveCloud(LOSS, '2468'), (err) => err.unheld === 1 && /1 thing .* newer Noodle Pads .* Leaving deletes it/.test(err.message));
+  assert.equal(deletes.length, before, 'no DELETE was sent');
+  assert.equal(inD1(LOSS), true, 'the cloud copy stays');
+  assert.equal(cloud.inCloud(LOSS), true, 'and the link');
+  assert.ok(!state.savedBeats.some((b) => b.id === FUTURE), 'it really is not held here');
+});
+
+test('the profile sheet says so, stays red, and the next tap and PIN leaves anyway', async () => {
+  const $ = page.$;
+  $('#people-open').dispatch('click');
+  $('#people-edit').children.find((r) => r.dataset.person === LOSS).querySelector('[data-profile]').dispatch('click');
+  await page.settle();
+  const tapSwitch = async () => { $('#profile-cloud').dispatch('click'); await page.settle(); };
+  await tapSwitch();
+  await tapSwitch();
+  pinKeys($, '2468');
+  await page.settle();
+  await page.settle();
+  assert.equal(inD1(LOSS), true, 'nothing deleted');
+  assert.match($('#profile-cloud-text').textContent, /^1 thing in their cloud copy came from a newer Noodle Pads than this one, so it can't be kept here\. Leaving deletes it\. Tap again to leave anyway\.$/);
+  assert.ok($('#profile-cloud').classList.contains('armed'), 'red again');
+  await tapSwitch();
+  pinKeys($, '2468');
+  await page.settle();
+  await page.settle();
+  assert.equal(inD1(LOSS), false, 'the next tap and the PIN leave anyway');
+  assert.equal($('#profile-cloud').getAttribute('aria-checked'), 'false');
+  $('#profile-dialog').close();
+  $('#people-dialog').close();
 });

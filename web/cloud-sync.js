@@ -328,7 +328,7 @@ export function shareDoc(bundle, toId, kitIds, newId, { kind, title } = {}) {
 //                            (a try cut short), used instead of fetching again
 // }
 // `link`: {id, key, rev, sent, sounds, foreign, release}. `deps.release`: this app's release (releaseOf). Returns what happened, for a notice
-// and the log: {pulled, pushed, deleted, sounds, merged, clashes, kept}.
+// and the log: {pulled, pushed, deleted, sounds, merged, clashes, kept, dropped}.
 export const SYNC_ROUNDS = 3;
 
 // How far a sync has got (☁️ Open from the cloud's bar, cloud-ui.js).
@@ -403,6 +403,9 @@ export async function syncProfile(link, deps) {
     link.rev = 0;
     link.release = deps.release;
   }
+  // `deps.full`: look at everything the cloud has this time (leaving counts
+  // what this copy cannot hold, cloud.js leaveCloud).
+  if (deps.full) link.rev = 0;
   link.sent ??= {};
   link.sounds ??= {};
   link.foreign ??= {};   // per record: what a newer app wrote that this copy's checks dropped (foreign.js)
@@ -466,6 +469,10 @@ export async function syncProfile(link, deps) {
   }
   await pushLook(link, deps, profile);
   tell({ phase: 'done' });
+  // How many of the cloud's records this copy's checks dropped (a newer
+  // app's, say): not held here, and gone if the cloud copy is deleted.
+  report.dropped = report.lost?.size ?? 0;
+  delete report.lost;
   return report;
 }
 
@@ -569,7 +576,10 @@ async function pullOnce(link, deps, { of: shaOf, here: shaHere, map: hereSha }, 
     if (p.skip) { fate.set(k, { k, p, action: 'keep' }); continue; }
     if (p.same) { fate.set(k, { k, p, action: 'same' }); continue; }
     const there = p.deleted ? null : remote.get(k);
-    if (there === undefined) continue;   // dropped by the checks, like a bad backup record
+    if (there === undefined) {   // dropped by the checks, like a bad backup record
+      (report.lost ??= new Set()).add(k);
+      continue;
+    }
     const sha = p.kind === 'clips' ? (remoteSha(p) || shaOf(k)) : '';
     let d = decideRecord(p.kind, {
       base: bases.get(k) ?? null, local: here, remote: there, sent: link.sent[k],

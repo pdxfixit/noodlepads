@@ -737,7 +737,12 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   working. This device keeps everything." under it), and the second asks the
   PIN: their latest is brought here first, then their cloud copy and shared
   links are deleted; if the latest can't be brought ("Couldn't bring their
-  latest here; try again.") nothing is deleted (`cloud.js leaveCloud`). A tap
+  latest here; try again.") nothing is deleted (`cloud.js leaveCloud`). That
+  sync looks at everything in the cloud copy. If it holds records a newer
+  Noodle Pads wrote that this one can't keep ("1 thing in their cloud copy
+  came from a newer Noodle Pads than this one, so it can't be kept here.
+  Leaving deletes it. Tap again to leave anyway."), nothing is deleted and the
+  switch stays red: the next tap and the PIN leave anyway. A tap
   anywhere else takes the first tap back. Another device with them hears it
   at its next sync: it drops the link, keeps everything, and says "Taken out
   of the cloud on another device; everything here stays here." Under it, when they are in the cloud, 🔄 Sync now and 🔗 Share… (both

@@ -447,7 +447,7 @@ function deps() {
 // kept as the person's status and said where the cloud is shown.
 // `onProgress` hears how far it has got (cloud-sync.js newProgress), joining
 // the sync already running for them if there is one.
-export function syncNow(personId, { onProgress } = {}) {
+export function syncNow(personId, { onProgress, full = false } = {}) {
   if (!inCloud(personId) || !db.handle) return Promise.resolve(null);
   if (!keyOf(personId)) {
     setStatus(personId, { state: 'waiting', text: '🔒 Syncs once they are opened with their PIN.' });
@@ -467,6 +467,7 @@ export function syncNow(personId, { onProgress } = {}) {
       const link = linkOf(id);
       const report = await syncProfile({ ...link, key: keyOf(id), sent: { ...link.sent }, sounds: { ...link.sounds }, foreign: { ...link.foreign } }, {
         ...deps(),
+        full,
         signal: stop.signal,
         fetched: fetchedFor.get(id),
         onProgress: (p) => { for (const fn of hearing.get(id) ?? []) fn(p); },
@@ -678,17 +679,31 @@ export async function removeProfile(personId, key, pin) {
 export const LATEST_TEXT = "Couldn't bring their latest here; try again.";
 async function bringLatest(personId, pin) {
   if (!keyOf(personId) && pin) await unlock(personId, pin);
-  if (!await syncNow(personId)) throw new Error(LATEST_TEXT);
+  await running.get(personId);   // one already going looks only at what is new; this looks at all
+  const report = await syncNow(personId, { full: true });
+  if (!report) throw new Error(LATEST_TEXT);
+  return report;
 }
+
+// Records of the cloud copy this app can't hold, which leaving would delete:
+// whole records its checks dropped in the sync just now, and records whose
+// newer fields it only passes along (`link.foreign`).
+const unheldAfter = (personId, report) => (report.dropped ?? 0) + Object.keys(linkOf(personId)?.foreign ?? {}).length;
+export const unheldText = (n) => `${n} ${n === 1 ? 'thing' : 'things'} in their cloud copy came from a newer Noodle Pads than this one, so ${n === 1 ? 'it' : 'they'} can't be kept here. Leaving deletes ${n === 1 ? 'it' : 'them'}.`;
 
 // ☁️ off, or Remove PIN (the same thing, with the same words), after the red
 // second tap and the PIN (cloud-ui.js): brings their latest here, then deletes
 // the cloud copy and every share code they made, and drops the link and the
 // merge bases. This device keeps every record and sound. A wrong PIN throws
 // the Worker's 401 (nothing is deleted); a sync that fails throws LATEST_TEXT.
-export async function leaveCloud(personId, pin) {
+// Records this app couldn't hold (a newer app's) would go with the cloud
+// copy, so it throws an error with `unheld` (their number) and deletes
+// nothing until it is called again with `knowing: true`.
+export async function leaveCloud(personId, pin, { knowing = false } = {}) {
   if (!inCloud(personId)) return;
-  await bringLatest(personId, pin);
+  const report = await bringLatest(personId, pin);
+  const unheld = unheldAfter(personId, report);
+  if (unheld && !knowing) throw Object.assign(new Error(unheldText(unheld)), { unheld });
   await removeProfile(personId, keyOf(personId), pin);
   await dropLink(personId);
   logEvent('cloud', { left: true });

@@ -4,4 +4,4 @@
 // section. The deploy labels version.json from this line (site/site.conf
 // release=) as v<release>-<short commit>. The page does not load this file:
 // About reads the release from that label (Ben, 2026-10-20).
-export const RELEASE = '1.0.760';
+export const RELEASE = '1.0.761';

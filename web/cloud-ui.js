@@ -503,12 +503,17 @@ async function currentPin(personId, hint) {
 // PIN) turns it red and says what leaving does; the second asks the PIN.
 // `leaveArmed`: which one asked, or null.
 let leaveArmed = null;
+// The person whose leaving just said that records a newer Noodle Pads wrote
+// can't be kept here and would be deleted (cloud.js leaveCloud): the next
+// leave, armed again, goes ahead knowing it.
+let leaveWarned = null;
 
 // Takes the switch and Remove PIN back to resting: a half-done "Tap again" is
 // dropped, and the line under the switch says what it said before. Any other
 // tap in the sheet does this (people.js), as a sheet's Delete is taken back.
 export function disarmCloud(personId) {
   leaveArmed = null;
+  leaveWarned = null;
   el.pinOffNote.hidden = true;
   disarm(el.pinOff);
   if (!el.cloudSwitch.classList.contains('armed')) return;
@@ -616,9 +621,25 @@ export async function pinClick(personId, t, note = () => {}) {
   // Leaving: ☁️ off and Remove PIN are the same thing, with the same words.
   if (t === el.cloudSwitch || t === el.pinOff) {
     if (leaveArmed !== t) { armLeave(t, personId); return true; }
+    const knowing = leaveWarned === personId;
     disarmCloud(personId);
-    const leave = (pin) => leaveCloud(personId, pin);
-    await run(() => withPin(leave, { title: '☁️ Leave the cloud', hint: 'Type the PIN. Their cloud copy is deleted for every device; this device keeps everything.' }));
+    const leave = (pin) => leaveCloud(personId, pin, { knowing });
+    let warning = '';
+    await run(async () => {
+      try {
+        await withPin(leave, { title: '☁️ Leave the cloud', hint: 'Type the PIN. Their cloud copy is deleted for every device; this device keeps everything.' });
+      } catch (err) {
+        if (!err?.unheld) throw err;
+        warning = `${err.message} Tap again to leave anyway.`;
+      }
+    });
+    if (warning) {
+      // Nothing was deleted. Red again, with the warning; the next tap asks the PIN and goes ahead.
+      armLeave(t, personId);
+      leaveWarned = personId;
+      (t === el.cloudSwitch ? el.cloudText : el.pinOffNote).textContent = warning;
+      announce(warning);
+    }
     return true;
   }
   // ⬇️ Back up: one file of just them, as 🗂️ See all's ⬇️ Export a backup
