@@ -17,7 +17,7 @@
 // live, in Save as a sound, in songs and in share previews (buildMix).
 
 import { cleanStep, kindById, buildLive, tailOf } from './steps.js';
-import { cleanVolume, rowLevel, percent } from './row-volume.js';
+import { cleanVolume, rowLevel, percent, gainAt } from './row-volume.js';
 
 // Each effect: its id (what is stored), emoji, name, and its steps at a tempo.
 export const MIX_FX = [
@@ -194,7 +194,7 @@ export function createMixer({ dialog, strips }, api) {
   // A fader moving: its number follows, and the beat hears it at once.
   function slide(f, done) {
     const key = f.dataset.fader;
-    const v = Number(f.value) / 100;
+    const v = gainAt(Number(f.value) / 100);   // the fader's position, on the taper
     f.setAttribute('aria-valuetext', `${f.value} %`);
     const pct = strips.querySelector(`[data-pct="${key}"]`);
     if (pct) pct.textContent = `${f.value} %`;

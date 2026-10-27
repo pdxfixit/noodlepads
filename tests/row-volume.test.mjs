@@ -5,7 +5,7 @@
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanVolume, stepLevel, speakerIcon, speakerLabel, setRowLevel, rowLevel } from '../web/row-volume.js';
+import { cleanVolume, stepLevel, speakerIcon, speakerLabel, setRowLevel, rowLevel, gainAt, positionOf, percent } from '../web/row-volume.js';
 import { cleanRow, cleanPattern, samePattern, planHits, hitGain, ACCENT_GAIN, beatToFile, beatFromFile } from '../web/beat.js';
 import { readBackup, makeBackup } from '../web/backup.js';
 import { shareBundle, shareDoc } from '../web/cloud-sync.js';
@@ -16,9 +16,10 @@ import { newBeatWithRow, newBuilderBeatWithRow, keysOn, keysOff } from './new-be
 
 const on = (...at) => Array.from({ length: 16 }, (_, i) => at.includes(i));
 
-test('a stored level is 0 to 1 in hundredths; anything else plays at full', () => {
+test('a stored level is 0 to 1 in ten-thousandths; anything else plays at full', () => {
   assert.equal(cleanVolume(0.5), 0.5);
-  assert.equal(cleanVolume(0.333), 0.33);
+  assert.equal(cleanVolume(0.33333), 0.3333);
+  assert.equal(cleanVolume(0.33), 0.33, 'a level stored in hundredths is unchanged');
   assert.equal(cleanVolume(-2), 0);
   assert.equal(cleanVolume(7), 1);
   for (const junk of [undefined, null, '0.5', NaN, Infinity, {}, true]) assert.equal(cleanVolume(junk), 1, String(junk));
@@ -61,17 +62,48 @@ test('a muted row and a row turned all the way down play no hits; the level come
   assert.deepEqual([...new Set(planHits(p, 'plain', 2).map((h) => h.row))], [0, 1]);
 });
 
-test('the speaker: arrows step by ten, its icon and spoken label follow the level', () => {
-  assert.equal(stepLevel(0.8, 1), 0.9);
-  assert.equal(stepLevel(0.73, 1), 0.8);
-  assert.equal(stepLevel(0.73, -1), 0.7);
+// The fader is dB-like (producer, council round 1, 2026-10-27): its position
+// is shown and moved, the stored level stays the gain a hit plays at, so no
+// stored level changes what it sounds like.
+test('the fader taper: full at the top, silent at the bottom, 40 dB down in between, and the slider\'s every step round-trips', () => {
+  assert.equal(gainAt(1), 1);
+  assert.equal(gainAt(0), 0);
+  const db = (p) => 20 * Math.log10(gainAt(p));
+  assert.ok(Math.abs(db(0.5) + 20) < 0.01, `half way is 20 dB down, was ${db(0.5)}`);
+  assert.ok(Math.abs(db(0.75) + 10) < 0.01);
+  assert.ok(Math.abs(db(0.9) + 4) < 0.01);
+  for (let p = 1; p <= 100; p++) assert.ok(gainAt(p / 100) > gainAt((p - 1) / 100), `each step is louder: ${p}`);
+  for (let p = 0; p <= 100; p++) assert.equal(percent(gainAt(p / 100)), p, `position ${p} comes back as ${p}`);
+  assert.equal(gainAt(NaN), 1);
+  assert.equal(gainAt(7), 1);
+  assert.equal(gainAt(-1), 0);
+});
+
+test('stored levels sound as they did: the gain is the stored level, shown at the position that is as loud', () => {
+  // A level stored before the taper (0.5 is 6 dB down) keeps playing at 0.5.
+  const row = cleanRow({ clipId: 'x', volume: 0.5 });
+  assert.equal(row.volume, 0.5);
+  assert.equal(hitGain(row, false), 0.5, 'the hit plays at the stored gain');
+  assert.equal(percent(0.5), 85, 'and the speaker shows where that sits on the taper');
+  assert.equal(percent(1), 100);
+  assert.equal(percent(0), 0);
+  assert.ok(Math.abs(positionOf(gainAt(0.3)) - 0.3) < 0.001);
+  // A level from this copy is read by an older one as the same gain (hundredths).
+  assert.equal(cleanVolume(gainAt(0.5)), 0.1);
+});
+
+test('the speaker: arrows step by ten on the taper, its icon and spoken label follow the position', () => {
+  assert.equal(stepLevel(1, -1), gainAt(0.9));
+  assert.equal(stepLevel(gainAt(0.8), 1), gainAt(0.9));
+  assert.equal(stepLevel(gainAt(0.73), 1), gainAt(0.8));
+  assert.equal(stepLevel(gainAt(0.73), -1), gainAt(0.7));
   assert.equal(stepLevel(1, 1), 1);
   assert.equal(stepLevel(0, -1), 0);
-  assert.equal(stepLevel(0.7, -1), 0.6);
-  assert.deepEqual([0, 0.2, 0.5, 0.8, 1].map((v) => speakerIcon(v, false)), ['🔇', '🔈', '🔉', '🔊', '🔊']);
+  assert.equal(stepLevel(gainAt(0.7), -1), gainAt(0.6));
+  assert.deepEqual([0, 0.2, 0.5, 0.8, 1].map((v) => speakerIcon(gainAt(v), false)), ['🔇', '🔈', '🔉', '🔊', '🔊']);
   assert.equal(speakerIcon(1, true), '🔇');
-  assert.equal(speakerLabel('Kick', 0.8, false), 'Kick loudness 80 %');
-  assert.equal(speakerLabel('Kick', 0.5, true), 'Kick loudness 50 %, muted');
+  assert.equal(speakerLabel('Kick', gainAt(0.8), false), 'Kick loudness 80 %');
+  assert.equal(speakerLabel('Kick', gainAt(0.5), true), 'Kick loudness 50 %, muted');
 });
 
 test('a beat file carries each row\'s level; a hostile level is clamped', () => {
@@ -151,7 +183,7 @@ test('a row\'s speaker: a tap mutes and unmutes and keeps the level; ↑ ↓ ste
   speaker().dispatch('keydown', { key: 'ArrowDown' });
   speaker().dispatch('keydown', { key: 'ArrowLeft' });
   assert.match(speaker().getAttribute('aria-label'), / loudness 70 %$/);
-  assert.equal(row().style.props['--vol'], '0.7', 'its pills draw fainter');
+  assert.equal(row().style.props['--vol'], String(gainAt(0.7)), 'its pills draw fainter, as the gain is');
   assert.equal(hasUndo(), true);
   assert.match($('#banner-text').textContent, /loudness 70 %\.$/);
   $('#banner-action').dispatch('click');
@@ -167,7 +199,7 @@ test('holding or dragging a speaker opens its slider; a drag sets the level, is 
   page.winEvent('pointerup', {});
   b.dispatch('click');   // the click that ends a drag
   assert.equal(speaker().getAttribute('aria-pressed'), 'false', 'a drag never mutes');
-  assert.match(speaker().getAttribute('aria-label'), / loudness 50 %$/);
+  assert.match(speaker().getAttribute('aria-label'), / loudness 50 %$/, 'the drag moves the position: 40 px of 160 is a quarter of the slider each way');
   assert.equal(pop().querySelector('.vol-slider').value, '50');
   // The popover's own slider sets it too.
   const slider = pop().querySelector('.vol-slider');
@@ -206,10 +238,22 @@ test('the keys view\'s grid (Beats with ⌨️ Keys): each row has a speaker; a 
   sp().dispatch('keydown', { key: 'ArrowDown' });
   sp().dispatch('keydown', { key: 'ArrowDown' });
   assert.match(sp().getAttribute('aria-label'), / loudness 80 %$/);
-  assert.equal(line().style.props['--vol'], '0.8');
+  assert.equal(line().style.props['--vol'], String(gainAt(0.8)));
   assert.match($('#banner-text').textContent, /loudness 80 %\.$/);
   $('#banner-action').dispatch('click');
   assert.match(sp().getAttribute('aria-label'), / loudness 100 %$/, 'one Undo for the run');
   keysOff(page);
+  $('#pads-tab').dispatch('click');
+});
+
+test('a song lane\'s speaker is on the same taper: ↓ is 90 %, stored as the gain there', async () => {
+  const { state } = await import('../web/state.js');
+  $('#song-tab').dispatch('click');
+  const sp = $('#song-lanes').querySelector('.song-lane [data-speaker]');
+  sp.dispatch('keydown', { key: 'ArrowDown' });
+  assert.match($('#song-lanes').querySelector('.song-lane [data-speaker]').getAttribute('aria-label'), / loudness 90 %$/);
+  const stored = state.songbook.find((x) => x.personId === state.personId && x.id.startsWith('song-scratch-'));
+  assert.equal(stored.lanes[0].volume, gainAt(0.9));
+  $('#song-lanes').querySelector('.song-lane [data-speaker]').dispatch('keydown', { key: 'ArrowUp' });
   $('#pads-tab').dispatch('click');
 });

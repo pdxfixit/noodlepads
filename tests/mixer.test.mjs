@@ -8,6 +8,7 @@
 import { test, before, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { MIX_FX, cleanFx, fxSteps, masterLevel, silencedBySolo, mixKey, buildMix } from '../web/mixer.js';
+import { gainAt } from '../web/row-volume.js';
 import { cleanRow, cleanPattern, samePattern, planHits, audible, beatToFile, beatFromFile } from '../web/beat.js';
 import { readBackup, makeBackup } from '../web/backup.js';
 import { shareBundle, shareDoc } from '../web/cloud-sync.js';
@@ -359,7 +360,7 @@ test('a fader sets its row\'s loudness, the same level the row\'s speaker shows'
   f.dispatch('input');
   f.dispatch('change');
   assert.match(rows()[0].querySelector('[data-speaker]').getAttribute('aria-label'), / loudness 40 %$/);
-  assert.equal(openBeat().rows[0].volume, 0.4, 'saved');
+  assert.equal(openBeat().rows[0].volume, gainAt(0.4), 'saved as the gain at that position of the taper');
   assert.equal(strips()[0].querySelector('[data-pct="0"]').textContent, '40 %');
 });
 
@@ -392,7 +393,7 @@ test('an effect per row and on the Master, and the Master\'s loudness, save with
   mf.value = '70';
   mf.dispatch('input');
   mf.dispatch('change');
-  assert.equal(openBeat().volume, 0.7);
+  assert.equal(openBeat().volume, gainAt(0.7), 'the Master\'s fader is on the taper too');
   fx.value = '';
   strips()[0].querySelector('[data-fx]').value = '';
   strips()[0].querySelector('[data-fx]').dispatch('change');

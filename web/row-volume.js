@@ -8,17 +8,46 @@
 //
 // A row stores `volume` (0 to 1) only when it is below full: an older copy
 // of the app ignores it and plays the row at full volume.
+//
+// The stored level is the gain every hit plays at, as it always was; the
+// speaker, the slider and the mixer's fader show and move a position on a
+// dB-like taper over it (producer, council round 1, 2026-10-27): a fader
+// that is linear in gain does nearly everything in its top third, and 50 %
+// is only 6 dB down. Here the top is 0 dB and the bottom 40 dB down, so each
+// step down sounds like a step. No stored level changes what it sounds like;
+// it shows at the position that sounds as loud (a stored 0.5 reads 85 %).
 
 export const VOLUME_STEP = 0.1;     // ↑ ↓ ← → on a focused speaker
 export const SPEAKER_HOLD_MS = 400;  // hold this long and the slider shows
 const DRAG_START = 8;                // px a finger moves before it is a drag, not a tap
 const DRAG_TRAVEL = 160;             // px of drag from silent to full
 
-// A stored level, made safe: 0 to 1 in hundredths, full when missing or wrong.
+// A stored level, made safe: 0 to 1 in ten-thousandths, full when missing or
+// wrong. (Hundredths were too coarse for the taper's quiet end; every level
+// stored in hundredths is still one.)
 export function cleanVolume(v) {
   const n = typeof v === 'number' ? v : Number.NaN;
   if (!Number.isFinite(n)) return 1;
-  return Math.round(Math.min(1, Math.max(0, n)) * 100) / 100;
+  return Math.round(Math.min(1, Math.max(0, n)) * 10000) / 10000;
+}
+
+// The taper between a fader's position (0 to 1) and the gain stored: dB
+// straight from 0 at the top down to FADER_RANGE_DB at FADER_FLOOR, then a
+// straight fall to silence at the bottom (a dB scale has no zero).
+export const FADER_RANGE_DB = 40;
+const FADER_FLOOR = 0.05;
+const FLOOR_GAIN = 10 ** (-FADER_RANGE_DB * (1 - FADER_FLOOR) / 20);
+export function gainAt(position) {
+  const p = Math.min(1, Math.max(0, typeof position === 'number' && Number.isFinite(position) ? position : 1));
+  if (p >= 1) return 1;
+  if (p <= 0) return 0;
+  return cleanVolume(p < FADER_FLOOR ? FLOOR_GAIN * p / FADER_FLOOR : 10 ** (-FADER_RANGE_DB * (1 - p) / 20));
+}
+export function positionOf(level) {
+  const g = cleanVolume(level);
+  if (g >= 1) return 1;
+  if (g <= 0) return 0;
+  return g < FLOOR_GAIN ? FADER_FLOOR * g / FLOOR_GAIN : 1 + 20 * Math.log10(g) / FADER_RANGE_DB;
 }
 export const rowLevel = (row) => cleanVolume(row?.volume);
 // Sets a row's level in place; full volume is stored as no `volume` at all.
@@ -27,16 +56,18 @@ export function setRowLevel(row, v) {
   if (level >= 1) delete row.volume; else row.volume = level;
   return level;
 }
-export const percent = (level) => Math.round(cleanVolume(level) * 100);
-// One step up or down from a level, landing on the tens (73 % ↑ is 80 %).
+// What the speaker, slider and fader say: the taper's position, 0 to 100.
+export const percent = (level) => Math.round(positionOf(level) * 100);
+// One step up or down from a level, landing on the tens of the position
+// shown (73 % ↑ is 80 %); returns the gain to store.
 export function stepLevel(level, dir) {
-  const tens = Math.round(cleanVolume(level) * 100) / 10;
+  const tens = percent(level) / 10;
   const next = dir > 0 ? Math.floor(tens + 1e-9) + 1 : Math.ceil(tens - 1e-9) - 1;
-  return cleanVolume(next / 10);
+  return gainAt(next / 10);
 }
 // The speaker's icon: 🔇 muted or silent, then 🔈 🔉 🔊 as it gets louder.
 export function speakerIcon(level, muted) {
-  const v = cleanVolume(level);
+  const v = positionOf(level);
   if (muted || v === 0) return '🔇';
   return v < 0.34 ? '🔈' : v < 0.67 ? '🔉' : '🔊';
 }
@@ -46,7 +77,7 @@ export const speakerLabel = (name, level, muted) => `${name} loudness ${percent(
 // brings one up to date. `name` is the row's sound, for its spoken label.
 export function drawSpeaker(b, { level, muted, name }) {
   b.textContent = speakerIcon(level, muted);
-  b.style.setProperty('--level', String(cleanVolume(level)));
+  b.style.setProperty('--level', String(positionOf(level)));
   b.setAttribute('aria-pressed', String(!!muted));
   b.setAttribute('aria-label', speakerLabel(name, level, muted));
   b.title = muted ? 'Muted: tap to hear it. Hold or drag for loudness.' : 'Tap to mute. Hold or drag for loudness.';
@@ -70,7 +101,7 @@ export function makeSpeaker(key, state, extraClass = '') {
 // own slider (a wide screen): a hold or drag then sets the level there, with
 // no popover.
 export function speakerControls(root, { state, toggle, change, inline = () => false }) {
-  let press = null;     // the pointer down on a speaker: {key, x, y, level, timer, dragging}
+  let press = null;     // the pointer down on a speaker: {key, x, y, position, timer, dragging}
   let swallow = false;  // the click that ends a hold or drag is not a tap
   let pop = null;       // the popover: {box, slider, num, key}
   const speakerOf = (t) => t?.closest?.('[data-speaker]');
@@ -89,8 +120,8 @@ export function speakerControls(root, { state, toggle, change, inline = () => fa
     const num = document.createElement('output');
     num.className = 'vol-num';
     box.append(slider, num);
-    slider.addEventListener('input', () => { if (pop) { change(pop.key, Number(slider.value) / 100, false); refresh(); } });
-    slider.addEventListener('change', () => { if (pop) { change(pop.key, Number(slider.value) / 100, true); refresh(); } });
+    slider.addEventListener('input', () => { if (pop) { change(pop.key, gainAt(Number(slider.value) / 100), false); refresh(); } });
+    slider.addEventListener('change', () => { if (pop) { change(pop.key, gainAt(Number(slider.value) / 100), true); refresh(); } });
     slider.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape' || !pop) return;
       e.preventDefault();
@@ -125,7 +156,7 @@ export function speakerControls(root, { state, toggle, change, inline = () => fa
     pop.slider.setAttribute('aria-label', `${s.name} loudness`);
     pop.slider.setAttribute('aria-valuetext', `${percent(s.level)} %`);
     pop.num.textContent = `${percent(s.level)} %`;
-    pop.box.style.setProperty('--level', String(s.level));
+    pop.box.style.setProperty('--level', String(positionOf(s.level)));
     const r = b.getBoundingClientRect();
     const w = pop.box.offsetWidth || 220;
     const h = pop.box.offsetHeight || 52;
@@ -153,7 +184,7 @@ export function speakerControls(root, { state, toggle, change, inline = () => fa
     const s = state(key);
     if (!s) return;
     clearTimeout(press?.timer);
-    press = { key, x: e.clientX, y: e.clientY, level: s.level, dragging: false,
+    press = { key, x: e.clientX, y: e.clientY, position: positionOf(s.level), dragging: false,
       timer: setTimeout(() => { if (press?.key === key) { swallow = true; open(key); } }, SPEAKER_HOLD_MS) };
   });
   window.addEventListener('pointermove', (e) => {
@@ -169,7 +200,7 @@ export function speakerControls(root, { state, toggle, change, inline = () => fa
     }
     // Right or up is louder, whichever way the finger went further.
     const by = Math.abs(dx) >= Math.abs(dy) ? dx : -dy;
-    change(press.key, cleanVolume(press.level + by / DRAG_TRAVEL), false);
+    change(press.key, gainAt(press.position + by / DRAG_TRAVEL), false);
     refresh();
   });
   const release = () => {

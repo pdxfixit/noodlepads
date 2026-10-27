@@ -212,6 +212,8 @@ Latency is worked out in two places with the same sum: `beat.js outputDelay` (Be
 | Master level | `pattern.volume` | the graph's `master` gain, set on every `busFor` call (ramped live, set offline) |
 | Master effect | `pattern.fx` | the graph: every row through it before `master` |
 
+The levels (row, master, a song lane's) are stored as the gain itself; every slider that sets one (`row-volume.js speakerControls`, `mixer.js` faders) works on a dB-like position and converts with `gainAt`/`positionOf`, so a stored level never changes what it sounds like (`tests/row-volume.test.mjs`).
+
 So the graph from `mixer.js buildMix` holds only the effects and the master level. Level, mute and solo are handled in the sequencer.
 
 **`beat-engine.js busFor(ctx, dest, p)`** keeps one graph per destination and beat id (`WeakMap(dest → {ids: Map(id → mix), objs: WeakMap(beat → mix)})`; a beat with no id (a groove sample, a share preview, 🎧's ▶ part) is in `objs`, keyed by its run's beat object), rebuilt when `mixer.js mixKey(p)` changes (the master and row effect ids, and `bpm`, which 🔁 Echo needs). Effects are `steps.js` kinds built live (`buildLive`); 〰️ Warble and 🤖 Robot start oscillators, which `dispose()` stops. If building fails, the bus falls back to the destination itself.

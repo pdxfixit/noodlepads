@@ -644,7 +644,11 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   Shift-click shows a loudness slider beside it. The row's
   `volume` (0 to 1, left out at full; an older copy plays it full) scales every
   hit, live, in Save as a sound, songs and share previews, and a quieter row's
-  pills draw fainter. ↑ ↓ on the speaker step it by 10 %; Undo takes back a run
+  pills draw fainter. The stored `volume` is the gain itself (in ten-thousandths),
+  but the speaker's slider, its %, the mixer's faders and a song lane's speaker
+  show a dB-like position (`row-volume.js gainAt`/`positionOf`: the top is
+  full, the bottom 40 dB down, so each step sounds like a step; a stored 0.5
+  reads 85 %). ↑ ↓ on the speaker step the position by 10 %; Undo takes back a run
   of changes. The keys view's grid has the same speaker, small. The beat maker is otherwise simple by default (4/4, no
   other row controls); ⚙️ Settings →
   Level → Advanced turns on each row's speed and each beat's time

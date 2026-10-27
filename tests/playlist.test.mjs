@@ -30,7 +30,7 @@ test('a lane is cleaned: a fun default name and picture by its place, mute, volu
   assert.equal(l.name, 'My very very lon', 'at most 16 letters');
   assert.equal(l.emoji, '🎹', 'not a picture: the default');
   assert.equal(l.muted, true);
-  assert.equal(l.volume, 0.46);
+  assert.equal(l.volume, 0.456, 'ten-thousandths are kept (the taper needs them)');
   assert.deepEqual(l.blocks, [{ beatId: A, bar: 0, times: MAX_TIMES }, { beatId: B, bar: 8, times: 2 }], 'one block a bar, the first kept; a bad bar goes to 0, which is taken');
   assert.equal(cleanLanes(undefined).length, START_LANES, 'a song starts with four lanes');
   assert.equal(cleanLanes(Array.from({ length: 12 }, () => ({}))).length, MAX_LANES, 'at most eight');

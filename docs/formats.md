@@ -102,7 +102,7 @@ Two beats per person have a reserved `id` and are hidden in the app, not listed 
 | `signature` | `4/4 3/4 5/4 6/8 7/8`. A missing one is `4/4`. A beat saved before beats had their own signature is stamped with the one it was heard in when it is loaded (ADR 0035), so a backup from this app has one on nearly every beat. |
 | `bars` | 1, 2 or 4. |
 | `swing` | 0 to 50. See below. |
-| `volume`, `fx` | The mixer's master: loudness 0 to 1 (full when missing) and one effect id (`room hall echo muffled bright crunch warble robot louder`). The effects are the app's own; v2 may skip them. |
+| `volume`, `fx` | The mixer's master: loudness 0 to 1, the gain itself (full when missing), and one effect id (`room hall echo muffled bright crunch warble robot louder`). The effects are the app's own; v2 may skip them. |
 | `rows` | Up to 16, below. |
 | `created`, `saved`, `pinned` | Saved beats only: when made and last saved; when pinned (only while pinned). |
 
@@ -117,7 +117,7 @@ Two beats per person have a reserved `id` and are hidden in the app, not listed 
 | `accents` | Booleans like `steps`. A hit with its accent plays 1.5 times as loud. |
 | `rate` | 1, 2 or 0.5: the row's pills last half as long (2) or twice as long (0.5), so a fast row goes round its pills more than once in a beat. **v1 honors it only for a person whose `level` is `advanced`**; otherwise every row runs at 1. |
 | `muted`, `solo` | A muted row does not play. When any row is `solo`, only those play. |
-| `volume` | 0 to 1, full when missing. The hit's gain is this times 1.5 for an accent. |
+| `volume` | 0 to 1 (up to 4 decimals), full when missing. It is the gain itself: the hit's gain is this times 1.5 for an accent. (The app's sliders show a dB-like position over it: gain = 10^(−40·(1−p)/20) for a position p from 0.05 to 1; v2 may show it as it likes.) |
 | `fx` | One effect id for the row (as for the beat). |
 | `ring` | `true`: a new hit of the sound lets earlier ones ring. Otherwise a new hit fades the row's earlier hits out as it starts. |
 | `collapsed` | How the row is drawn. Ignore. |
@@ -135,7 +135,7 @@ Two beats per person have a reserved `id` and are hidden in the app, not listed 
 | `id`, `personId`, `name` | `song-…`; the owner; up to 24 characters. |
 | `tempo` | 60 to 180 BPM, from bar 1. |
 | `tempos` | `[{bar, bpm}]`: from `bar` (counted from 1, so 2 or more) the song plays at `bpm`. Up to 32. Missing: one tempo. |
-| `lanes` | 1 to 8 lanes: `{name, emoji, muted, volume, blocks}`. `volume` is 0 to 1. |
+| `lanes` | 1 to 8 lanes: `{name, emoji, muted, volume, blocks}`. `volume` is the lane's gain, 0 to 1. |
 | `blocks` | Per lane, in bar order: `{beatId, bar, times}`: the saved beat `beatId` starts at song bar `bar` (from 0) and plays `times` passes, one after another. |
 | `slots` | `[{beatId, times}]`: the same thing flattened for older copies. Ignore when `lanes` is there. |
 | `created`, `saved` | Saved songs only. |
