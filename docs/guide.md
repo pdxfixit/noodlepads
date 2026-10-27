@@ -116,7 +116,9 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   then only the presets whose picture shows the sound they make, funniest
   first (`kids-logic.js` `KIDS_PADS`, 69 of them: the animals, the silly
   ones, effects, game and sci-fi sounds, spoken callouts with a face or sign
-  that says the word, then the drums that look like what they are). A 🍎 that
+  that says the word, then the drums that look like what they are, and last
+  the startles: 💥 explosion, siren, alarm, airhorn, 😈 evil laugh and buzzer,
+  which frighten some small kids). A 🍎 that
   plays a note, a 🌞 chord, a 🐘 bass note or a 🎩 hi-hat never shows: their
   pictures teach a grown-up something and a small kid the wrong thing (Ben,
   2026-10-22). A preset a grown-up hid in ✏️ Edit sounds stays hidden here

@@ -11,7 +11,7 @@ import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
 import {
   makeSum, typeDigit, sumWait, SUM_WAIT, kidsRange, kidsAutoPx, kidsPadPx, kidsShare, shareOf, kidsSliderAt, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder, KIDS_PADS,
-  newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds, KIDS_TEMPOS,
+  KIDS_STARTLES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds, KIDS_TEMPOS,
   TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote, keptTune,
   KIDS_DRUMS, drumPicture, kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS, keyPitch, keyRate, keyPlayId, isHighKey,
 } from '../web/kids-logic.js';
@@ -134,6 +134,19 @@ test('every Kids pad is a preset of the kit a kid can have without Advanced, eac
   }
   assert.deepEqual(KIDS_PADS.slice(0, 8).map((id) => kit.find((k) => k.id === id).group), Array(8).fill('animals'));
   assert.ok(KIDS_PADS.length >= 50 && KIDS_PADS.length <= 90, String(KIDS_PADS.length));
+});
+
+// Ben, 2026-10-26: startles frighten some 3-year-olds (the child psychologist).
+test('the startle sounds (explosion, siren, alarm, airhorn, evil laugh, buzzer) are the last pads in Kids', () => {
+  assert.deepEqual(KIDS_STARTLES, ['explosion', 'siren', 'alarm', 'airhorn', 'evil-laugh', 'buzzer']);
+  assert.deepEqual(KIDS_PADS.slice(-6), KIDS_STARTLES, 'the last page ends with them');
+  assert.equal(new Set(KIDS_PADS).size, KIDS_PADS.length, 'each once');
+  const clips = KIDS_PADS.map((id) => ({ id: `k-${id}`, source: 'bundled', kit: true, kitId: id }));
+  const own = [{ id: 'u1', source: 'user', created: 1 }];
+  const order = kidsPadOrder([...clips, ...own]).map((c) => c.id);
+  assert.equal(order[0], 'u1', 'the kid\'s own sounds still lead');
+  assert.deepEqual(order.slice(-6), KIDS_STARTLES.map((id) => `k-${id}`));
+  assert.ok(order.indexOf('k-woof') < order.indexOf('k-explosion'));
 });
 
 test('the kid\'s beat is a normal beat: square i is pill 2i of a 16-pill bar', () => {

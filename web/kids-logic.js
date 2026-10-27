@@ -118,6 +118,9 @@ export function pinchShare(start, startDist, dist, width, height, gap = KIDS_GAP
   return keep(from + Math.log(dist / startDist) / Math.log(ratio));
 }
 
+// The loud, sudden presets: they sit at the very end of Kids' Pads.
+export const KIDS_STARTLES = ['explosion', 'siren', 'alarm', 'airhorn', 'evil-laugh', 'buzzer'];
+
 // The presets on Kids' Pads, in this order: only sounds whose picture
 // shows what they are, the funniest first (Ben, 2026-10-22: the pads "have
 // to have matching sounds to the emoji pictures… engaging, interesting and
@@ -128,15 +131,19 @@ export const KIDS_PADS = [
   // Animals: each says what it is.
   'woof', 'meow', 'moo', 'quack', 'ribbit', 'roar', 'tweet', 'buzz',
   // Silly.
-  'toot', 'burp', 'raspberry', 'boing', 'honk', 'kazoo', 'slide-whistle', 'splat', 'bonk', 'squeak', 'zip', 'evil-laugh', 'sad-trombone',
+  'toot', 'burp', 'raspberry', 'boing', 'honk', 'kazoo', 'slide-whistle', 'splat', 'bonk', 'squeak', 'zip', 'sad-trombone',
   // Effects.
-  'pop', 'whoosh', 'explosion', 'siren', 'alarm', 'ding', 'buzzer', 'airhorn', 'tada', 'heartbeat', 'countdown',
+  'pop', 'whoosh', 'ding', 'tada', 'heartbeat', 'countdown',
   // Game and sci-fi.
   'coin', 'jump', 'zap', 'pew', 'power-up', 'teleport', 'game-over', 'robot', 'ufo', 'computer',
   // Spoken callouts whose face or sign says the word.
   'wow', 'no-way', 'oh-yeah', 'oof', 'nice', 'yes', 'go', 'ready', 'lets-go',
   // Drums and percussion that look like what they are.
   'snare', 'clap', 'kick', 'snap', 'shaker', 'tambourine', 'ride', 'crash', 'drumroll', 'rimshot', 'boom', 'clave', 'conga', 'djembe-slap', 'plink', 'bloop', 'horn-stab', 'rewind',
+  // The startles, last (Ben, 2026-10-26: the child psychologist, a sudden
+  // loud noise frightens some 3-year-olds), so a small kid swiping for fun
+  // meets them only at the end.
+  ...KIDS_STARTLES,
 ];
 
 // The pads in Kids: the kid's own sounds first, newest first (a new
