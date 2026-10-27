@@ -87,4 +87,8 @@ test('the ruler is as tall as its numbers: its empty head has no 44 px minimum',
   const head = rule('.seq-ruler .seq-head');
   assert.match(head, /min-height: 0;/, 'a row head is 44 px tall, the ruler\'s is not a tap target');
   assert.match(head, /padding-block: 0;/);
+  // ⌨️ Keys on draws its own copy of the ruler (dj.js drawRuler): the same rule.
+  const djHead = rule('.dj-grid-ruler .dj-grid-head');
+  assert.match(djHead, /min-height: 0;/, 'Keys\' ruler head too');
+  assert.match(djHead, /padding-block: 0;/);
 });
