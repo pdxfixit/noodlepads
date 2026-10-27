@@ -251,7 +251,7 @@ export const GROOVES = [
   // Once named after a record label (no product names, Ben 2026-10-26): a
   // scratch beat loaded from it is stored as "Motown", so `was` finds it.
   { id: 'motown', name: 'Detroit soul', was: ['Motown'], emoji: '🚗', group: 'soul', bpm: 120,
-    about: 'Soul from the 1960s: the snare and tambourine hit every beat.',
+    about: 'Soul from the 1960s: the snare hits every beat, the tambourine on 2 and 4.',
     rows: [
     ['snare', 'x...x...x...x... x...x...x...x...'],
     ['tambourine', '....x.......x... ....x.......x...'],
@@ -295,7 +295,7 @@ export const GROOVES = [
     ['bass-a', 'x...x...x...x... ................'],
     ['bass-f', '................ x...x...x...x...']] },
   { id: 'bossa', name: 'Bossa nova', emoji: '🏖️', group: 'latin', bpm: 70,
-    about: 'Gentle music from Rio de Janeiro. The rim clicks a secret pattern.',
+    about: 'Gentle music from Rio de Janeiro. The shaker never stops; the rim clicks five times.',
     rows: [
     ['kick', 'x..xx..xx..xx..x x..xx..xx..xx..x'],
     ['rim', 'x..x..x...x..x.. x..x..x...x..x..'],
@@ -319,7 +319,7 @@ export const GROOVES = [
     ['bass-g', '....x.......x... x.......x.......'],
     ['bass-d', '................ ....x.......x...']] },
   { id: 'salsa', name: 'Salsa', emoji: '🌶️', group: 'latin', bpm: 90,
-    about: 'From Cuba and New York. The clave plays 3 then 2, and everyone follows it.',
+    about: 'From Cuba and New York. The clave clicks 3 then 2, and the cowbell keeps the beat.',
     rows: [
     ['clave', 'x..x..x...x.x...'],
     ['cowbell', 'x.x.x.x.x.x.x.x.'],
@@ -476,7 +476,7 @@ export const GROOVES = [
     ['bass-a', 'x.......x...........'],
     ['bass-e', '............x...x...']] },
   { id: 'seven', name: 'Seven', emoji: '🎻', group: 'swing', bpm: 140, signature: '7/8',
-    about: 'Seven beats: count 1 2 3, 1 2, 1 2.',
+    about: 'Seven beats: count 1 2, 1 2, 1 2 3.',
     rows: [
     ['kick', 'X.......X.....'],
     ['rim', '....x.........'],

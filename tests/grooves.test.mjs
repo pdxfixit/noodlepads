@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { GROOVES, GROOVE_GROUPS } from '../web/grooves.js';
 import { grooveBeat, grooveShape, mergeGroove, cleanRow, barSteps, BAR_CHOICES, bassNote, groovePlayers } from '../web/beat.js';
 import { FAMILIES } from '../web/instruments.js';
+import { SIGNATURES } from '../web/old-beats.js';
 
 const kit = JSON.parse(readFileSync(new URL('../web/boards.json', import.meta.url), 'utf8')).kit;
 const kitIds = new Set(kit.map((s) => s.id));
@@ -58,6 +59,52 @@ test('every groove says where it comes from or what to listen for, in one short 
 // over them?") that a kid who only wants to play can fail.
 test('a groove\'s card asks no question and sets no task', () => {
   for (const g of GROOVES) assert.doesNotMatch(g.about, /\?|\bcan you\b|\btry to\b/i, `${g.id}: says what it is, asks nothing`);
+});
+
+// Producer, council round 1 (2026-10-27): the card of Seven, Detroit soul,
+// Bossa nova and Salsa said things their pattern did not do. Each claim is
+// read off the pattern here.
+const rowOf = (g, id) => g.rows.find(([sound]) => sound === id)[1].replaceAll(' ', '');
+const hitsOf = (g, id, from = 0, to = Infinity) => lit([...rowOf(g, id)].map((c) => c !== '.')).filter((i) => i >= from && i < to);
+
+test('Seven counts as its 7/8 groups do: 1 2, 1 2, 1 2 3, with the chord on each group', () => {
+  const g = groove('seven');
+  const groups = SIGNATURES[g.signature];
+  assert.deepEqual(groups, [4, 4, 6]);
+  const count = groups.map((pills) => Array.from({ length: pills / 2 }, (_, i) => i + 1).join(' ')).join(', ');
+  assert.equal(count, '1 2, 1 2, 1 2 3');
+  assert.ok(g.about.includes(count), g.about);
+  const starts = groups.map((_, i) => groups.slice(0, i).reduce((a, b) => a + b, 0));
+  assert.deepEqual(hitsOf(g, 'chord-dm'), starts, 'the chord lands on the start of each group');
+});
+
+test('Detroit soul: the snare hits every beat and the tambourine only on 2 and 4', () => {
+  const g = groove('motown');
+  for (const bar of [0, 16]) {
+    assert.deepEqual(hitsOf(g, 'snare', bar, bar + 16), [0, 4, 8, 12].map((i) => i + bar), 'snare on every beat');
+    assert.deepEqual(hitsOf(g, 'tambourine', bar, bar + 16), [4, 12].map((i) => i + bar), 'tambourine on beats 2 and 4');
+  }
+  assert.match(g.about, /snare hits every beat/);
+  assert.match(g.about, /tambourine on 2 and 4/);
+});
+
+test('Bossa nova: a shaker that never stops, and a rim that clicks five times a bar', () => {
+  const g = groove('bossa');
+  assert.equal(hitsOf(g, 'shaker').length, 32, 'the shaker plays every pill of both bars');
+  assert.equal(hitsOf(g, 'rim', 0, 16).length, 5);
+  assert.equal(hitsOf(g, 'rim', 16, 32).length, 5);
+  assert.match(g.about, /shaker never stops/);
+  assert.match(g.about, /rim clicks five times/);
+});
+
+test('Salsa: the clave clicks 3 then 2, and the cowbell keeps the beat on every eighth', () => {
+  const g = groove('salsa');
+  const clave = hitsOf(g, 'clave');
+  assert.equal(clave.filter((i) => i < 8).length, 3, '3 in the first half');
+  assert.equal(clave.filter((i) => i >= 8).length, 2, '2 in the second');
+  assert.deepEqual(hitsOf(g, 'cowbell'), [0, 2, 4, 6, 8, 10, 12, 14]);
+  assert.match(g.about, /clave clicks 3 then 2/);
+  assert.match(g.about, /cowbell keeps the beat/);
 });
 
 test('🪘 Hand drums are presets, and the new styles play them (Ben, 2026-10-17)', () => {
