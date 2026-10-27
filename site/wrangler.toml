@@ -83,8 +83,9 @@ name = "OPEN_LIMITER"
 namespace_id = "41514"
 simple = { limit = 10, period = 60 }
 
-# An open, all profiles together: 60 a minute for the whole site (one key), so
-# one client can't try the 5 PINs of every listed profile. A family opens a
+# An open, all profiles together: 60 a minute for one address (keyed by its
+# daily hash, never the address), so one client can't try the 5 PINs of every
+# listed profile, and can't shut everyone else out. A family opens a
 # few times a day; over it is 429 slow, "busy right now" in the app.
 [[ratelimits]]
 name = "OPEN_SITE_LIMITER"

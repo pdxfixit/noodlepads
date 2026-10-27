@@ -95,7 +95,7 @@ Read this cold. Each section gives the noodlepads commits and files, the threat 
 ## 7. Site-wide `/open` limiter
 
 - **Applies to:** cloud-profile apps where one client could try a PIN on every listed profile.
-- **What it does:** each open first takes a count from `OPEN_SITE_LIMITER`, under one key (`site`): 60 a minute for the whole site. Then it takes the per-profile `OPEN_LIMITER`: 10 a minute. Both come before the PIN is read.
+- **What it does:** each open first takes a count from `OPEN_SITE_LIMITER`, under the address's keyed daily hash: 60 a minute for one address (it was one key for the whole site until 2026-10-27, which let one client shut everyone out). Then it takes the per-profile `OPEN_LIMITER`: 10 a minute. Both come before the PIN is read.
 - **Threat:** trying 5 PINs on each of many profiles never trips a per-profile limit (council, 2026-10-27).
 - **Commits and files:** 28efd5e. `worker/cloud.js` (route, `LIMITERS.openSite`), `site/wrangler.toml` (namespace 41517).
 - **Carry to Isopix:** copy the pattern as one more binding in the block from section 2.

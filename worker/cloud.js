@@ -231,11 +231,18 @@ export function addressGroup(ip) {
   const groups = tail === undefined ? first : [...first, ...Array(Math.max(0, 8 - first.length - last.length)).fill('0'), ...last];
   return groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':');
 }
-async function ipCounterName(request, env, now) {
+// The address's keyed daily hash, without the "ip:" prefix; null when there is
+// no secret or no header. Never stored by itself: the daily counters keep it
+// under IP_COUNTER, and the open limiter holds it for a minute.
+async function addressHash(request, env, now) {
   const ip = request.headers.get('CF-Connecting-IP');
   if (!env.IP_HASH_KEY || !ip) return null;
   const todaysKey = await hmacHex(env.IP_HASH_KEY, utcDay(now));
-  return IP_COUNTER + await hmacHex(todaysKey, addressGroup(ip.trim()));
+  return hmacHex(todaysKey, addressGroup(ip.trim()));
+}
+async function ipCounterName(request, env, now) {
+  const hash = await addressHash(request, env, now);
+  return hash && IP_COUNTER + hash;
 }
 
 // The rows of days before today, by the primary key's range (no table scan):
@@ -933,12 +940,13 @@ async function takeUses(request, env, id, now) {
 export const LIMITERS = {
   records: 'PUSH_LIMITER', sounds: 'SOUND_LIMITER', shares: 'SHARE_LIMITER', open: 'OPEN_LIMITER',
   pull: 'PULL_LIMITER', download: 'DOWNLOAD_LIMITER',
-  // Every open on the site together, counted under one key: the per-profile
-  // count above can't stop one client trying 5 PINs on each listed profile
-  // (council, 2026-10-27). A family opens a few times a day.
+  // Every open from one address together, counted under its keyed daily hash
+  // (addressHash): the per-profile count above can't stop one client trying 5
+  // PINs on each listed profile (council, 2026-10-27). One key for the whole
+  // site would let any one client shut everyone out. A family opens a few
+  // times a day.
   openSite: 'OPEN_SITE_LIMITER',
 };
-const SITE = 'site';
 
 // Throws 429 'slow' when `profileId` is over the binding's limit: a minute's
 // wait, apart from the daily caps' 429 'busy' (the app says "busy right
@@ -1002,8 +1010,10 @@ async function route(request, env, now, seen) {
       } else if (typeof b === 'string' && PERSON_ID.test(b)) {
         needProvenCheck(request, env, b);
         if (parts.length === 3 && c === 'open' && m === 'POST') {
-          // The whole site's count first, then this profile's; both before the PIN is looked at.
-          await slowDown(env, LIMITERS.openSite, SITE);
+          // This address's count first, then this profile's; both before the PIN is looked at.
+          // Without the address (or the secret) only the profile's count runs.
+          const address = await addressHash(request, env, now);
+          if (address) await slowDown(env, LIMITERS.openSite, address);
           await slowDown(env, LIMITERS.open, b);
         }
         if (parts.length === 2 && m === 'PATCH') return await changeProfile(request, env, b, now, seen);

@@ -1174,7 +1174,7 @@ profile at most 1,000 of the pushes, 2,000 new sounds and 50 shares, so one
 profile can't use up a day for every family. Over its own share, the app says
 "This profile has done a lot in the cloud today", and it catches up the next
 day.
-Opening a profile is also limited a minute: 10 for one profile, and 60 for the whole site together (`OPEN_SITE_LIMITER`), checked before the PIN, so one client can't try the PINs of every listed profile. Over either, the app says the cloud is busy for a minute.
+Opening a profile is also limited a minute: 10 for one profile, and 60 for one address together (`OPEN_SITE_LIMITER`, counted under a keyed hash that changes daily, never the address itself), checked before the PIN, so one client can't try the PINs of every listed profile. Over either, the app says the cloud is busy for a minute.
 The deploy checks' throwaway profiles (`p-smoke-…`, `p-e2e-…`) hold only
 what a check needs (64 KB of records, one sound of 4 MB, one share), never
 show in the list, and are deleted 10 minutes after they were made.

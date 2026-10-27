@@ -33,8 +33,10 @@ function cloud(limit = 2) {
   const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') } };
   for (const name of Object.values(LIMITERS)) env[name] = fakeLimiter(limit);
   env.OPEN_SITE_LIMITER = fakeLimiter(1000);   // the whole site's count: its own test
-  const call = async (method, path, { body, key, raw } = {}) => {
+  env.IP_HASH_KEY = 'a1'.repeat(32);
+  const call = async (method, path, { body, key, raw, ip } = {}) => {
     const headers = { Origin: ORIGIN };
+    if (ip) headers['CF-Connecting-IP'] = ip;
     if (key) headers.Authorization = `Bearer ${key}`;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     const res = await worker.fetch(new Request(`https://noodlepads.com/api/${path}`, {
@@ -149,19 +151,29 @@ test('a limiter that fails lets the call through; no binding limits nothing', as
   for (let i = 0; i < 5; i++) assert.equal((await c.call('POST', 'profiles/p-one/open', { body: { pin: '2468' } })).status, 200);
 });
 
-test('opens are also counted for the whole site under one key, before the PIN is checked: over it, 429 slow and no try is spent', async () => {
+test('opens are also counted per address (a keyed daily hash, never the address), before the PIN is checked: over it, 429 slow and no try is spent, and another address is not slowed', async () => {
   const c = cloud(100);
   c.env.OPEN_SITE_LIMITER = fakeLimiter(3);
   for (const id of ['p-one', 'p-two', 'p-three', 'p-four']) await made(c, id);
-  const open = (id, pin = '1111') => c.call('POST', `profiles/${id}/open`, { body: { pin } });
+  const open = (id, pin = '1111', ip = '203.0.113.9') => c.call('POST', `profiles/${id}/open`, { body: { pin }, ip });
   // Wrong PINs on three different profiles are counted (and are 401s) ...
   for (const id of ['p-one', 'p-two', 'p-three']) assert.equal((await open(id)).status, 401);
-  // ... the fourth open, anywhere, is over the site's limit: slow, not a PIN answer.
+  // ... the fourth open from that address is over its limit: slow, not a PIN answer.
   const over = await open('p-four', '2468');
   assert.deepEqual([over.status, over.data.error], [429, 'slow']);
-  assert.deepEqual([...new Set(c.env.OPEN_SITE_LIMITER.keys)], ['site'], 'one key for everyone, never an address or a profile');
-  assert.equal(c.env.OPEN_LIMITER.keys.length, 3, 'the profile count is not reached once the site is over');
   assert.equal(c.env.DB.rows('SELECT fails FROM profiles WHERE id = ?', 'p-four')[0].fails, 0, 'the PIN was not looked at');
+  assert.equal(c.env.OPEN_LIMITER.keys.length, 3, 'the profile count is not reached once the address is over');
+  // Another address has its own count: one client no longer shuts everyone out.
+  assert.equal((await open('p-four', '2468', '198.51.100.4')).status, 200);
+  const keys = c.env.OPEN_SITE_LIMITER.keys;
+  assert.equal(new Set(keys).size, 2, 'one key per address');
+  assert.ok(keys.every((k) => /^[0-9a-f]{64}$/.test(k)), 'a hash: no address, no profile, no "ip:" prefix');
+  assert.ok(!keys.join().includes('203.0.113'), 'not the address');
+  assert.ok(!keys.includes('site'), 'not one key for the whole site');
+  // Without the address header or the secret nothing is keyed by the site; the profile's own count still is.
+  const before = keys.length;
+  assert.equal((await c.call('POST', 'profiles/p-one/open', { body: { pin: '2468' } })).status, 200);
+  assert.equal(c.env.OPEN_SITE_LIMITER.keys.length, before, 'no address, no site count');
 });
 
 test('site/wrangler.toml declares each limiter, a minute window, far above what a family meets', () => {
