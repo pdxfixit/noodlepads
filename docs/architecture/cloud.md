@@ -420,7 +420,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 | code alphabet | `log-send.js CODE_CHARS` and `worker/pin.js CODE_CHARS` | the same 32 characters, kept by hand |
 | record kinds | `CLOUD_KINDS`, worker `KINDS`, `STAMPED`, schema comment | a new per-person store added to `reid.js PERSON_STORES` is in `CLOUD_KINDS`, `KINDS` and `STAMPED` at once (one list); only the schema comment is by hand |
 | record content and hash | `cloud-sync.js canonical` + `NOT_CONTENT`, `merge3.js canon` + `NOT_CONTENT` | a new non-content field added to one makes "changed" and "same" disagree |
-| the stores as lists | `cloud.js storedLists`, `backup-ui.js storedLists`, `state.js storedLists` | the cloud's maps `prefs` through `cleanPrefs`; a new store must be added to all three |
+| the stores as lists | `state.js storedLists` (one function over `STORE_TABLE`); `cloud.js` and `backup-ui.js` call it | the cloud's maps `prefs` through `cleanPrefs` |
 | pieces and caps | `CHUNK_BYTES` (web and worker), `CLOUD_MAX_SOUND`/`MAX_SOUND_BYTES` (tested equal), `PER_PUSH`, `RECORD_BYTES`, `PUSH_BYTES`/`LIMITS.perPush`, `recordBytes`, `pushBytes` (tested equal) | the Worker's `GET /api/cloud` already returns `chunk` and `maxSound`; the app ignores them |
 | browser and OS families | `agent.js parseAgent` (reports, metrics), `track-page.js browserOf` and `environment` `os` (usage events) | different order of checks and different case (`'Chrome'` vs `'chrome'`; `OPT/` only in `browserOf`) |
 | the site's origin | `worker/http.js ORIGIN`, `worker/clean.js KNOWN.origin` (literal), `log-send.js LIVE_HOST`, `index.js EVENTS_OPTS`/`FEEDBACK_OPTS` (from `ORIGIN`) | a domain change must touch all of them |
@@ -476,7 +476,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 
 | Change | Touch |
 |---|---|
-| a new per-person store that syncs | `store.js SCHEMA`; `state.js` (`readStorage`, `storedLists`); `cloud.js storedLists`; `backup-ui.js storedLists`; `reid.js PERSON_STORES` (makes `SYNCED`, so `CLOUD_KINDS`, `STAMPED` and the Worker's `KINDS`); `cloud-sync.js` `ONE_EACH`, `MADE`, `recordsOf`; `merge3.js` `KEEP_BOTH`, `KIND_RULES`; the `schema.sql` comment; `backup.js cleanBackup` |
+| a new per-person store that syncs | `store.js SCHEMA`; `state.js STORE_TABLE`; `reid.js PERSON_STORES` (makes `SYNCED`, so `CLOUD_KINDS`, `STAMPED` and the Worker's `KINDS`); `cloud-sync.js` `ONE_EACH`, `MADE`, `recordsOf`; `merge3.js` `KEEP_BOTH`, `KIND_RULES`; the `schema.sql` comment; `backup.js cleanBackup` |
 | a new cloud route | `worker/cloud.js route` (+ Origin check, `seen` if it should count in metrics); `web/cloud-api.js`; `cloud.js`; `tests/worker-cloud.test.mjs`; `docs/design/cloud-profiles.md` §5; `privacy.js` if it stores or shows something new |
 | a D1 table or column | `worker/migrations/NNN-*.sql`, `worker/schema.sql` (and its `migrations` insert), `tests/migrations.test.mjs` passes; TODO "Ben does" for `just cloud-migrate --yes` |
 | a cloud limit | `worker/cloud.js LIMITS` (or `CHUNK_BYTES`, `MAX_SOUND_BYTES`), the web twin (`cloud-sync.js CHUNK_BYTES`, `CLOUD_MAX_SOUND`, `PER_PUSH`, `RECORD_BYTES`, `PUSH_BYTES`), `cloud-api.js cloudTrouble` for a new answer |

@@ -13,7 +13,7 @@
 // docs/architecture/shell.md "The composition root" says what each one gets
 // from here, and docs/layout.md has a line for every file.
 
-import { state, loadStorage, persist, setOverride, adoptStoredPeople, reIdStoredPeople, renamedId, removeRecord, shelf } from './state.js';
+import { state, loadStorage, persist, setOverride, adoptStoredPeople, reIdStoredPeople, renamedId, removeRecord, shelf, storedLists } from './state.js';
 import { audio, voicesMade, fadeStop } from './audio.js';
 import { meter, buildGrille } from './meter.js';
 import { createSequencer } from './sequencer.js';
@@ -33,7 +33,7 @@ import { initBulk } from './bulk.js';
 import { initSheet, openSheet, setBeatTempo, isRecording } from './sheet.js';
 import { initUpdate } from './update.js';
 import { registerOffline } from './offline.js';
-import { initPeople, refreshPeople, addPerson, deleteHere, beingDeleted, editLook, openPictures, storedLists } from './people.js';
+import { initPeople, refreshPeople, addPerson, deleteHere, beingDeleted, editLook, openPictures } from './people.js';
 import { initThings } from './things.js';
 import { initWelcome, markNew, offerWelcome } from './welcome.js';
 import { initWhoNow, openWhoNow, closeWhoNow, whoNowOpen } from './who-now.js';

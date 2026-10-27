@@ -5,7 +5,7 @@
 - There is **one database** (`noodle-pads`, `store.js`), **one in-memory copy** of it (`state.js` `state`), and **one rule set** for the board (`model.js`, pure), bound to that copy by `board.js`.
 - There is **no single write path.** `state.js persist` is the common one: it stamps the record and turns a failed write into a banner. App.js, backup-ui.js and cloud.js also write with `store.js db` directly. Their failures are reported in other ways, or only logged to the console.
 - There is **one gate for data that comes in as a whole** (a backup zip, Older sounds found, a cloud pull): `backup.js cleanBackup`, then `merge.js mergeLoaded` through `backup-ui.js storeLoaded`. A beat file does not use it. It is cleaned by `beat.js beatFromFile` (`cleanPattern`).
-- **"Which stores exist" is written out by hand in about eight places** (listed under [Seams](#seams)). Only `SCHEMA` order and the upgrades are tested. Adding a store means touching every one of those places.
+- **"Which stores exist" is one table in memory code** (`state.js STORE_TABLE`, checked against `SCHEMA` ✅) and still written by hand in about five other places (listed under [Seams](#seams)).
 - **Two kinds of sound:** presets (`source: 'bundled'`, from boards.json; `kit: true` for the shared kit, copied per person as `<personId>-<kitId>`) and own sounds (`source: 'user'`, IndexedDB `clips`, `user-…` ids). A preset is never stored. Only an edit of it is stored, as an `overrides` record.
 
 ## Files and what each owns
@@ -13,7 +13,7 @@
 | File | Owns | Pure? | Called by |
 |---|---|---|---|
 | `store.js` | `DB_NAME`, `SCHEMA`, `STAMP_SINCE`, `DB_VERSION`, `STORE_NAMES`, `upgradeStores`, the `db` handle (`open`, `run`, `all`, `put`, `remove`, `batch`, `onChange`) | no (IndexedDB) | state.js; direct writes in app.js, backup-ui.js, cloud.js; leftover.js reads `DB_NAME` |
-| `state.js` | `state`; `readStorage`, `loadStorage`, `persist`, `setOverride`, `removeRecord`, `shelf`, `setPersonEdit`, `deletePerson`, `deleteUserClip`, `saveMyVoice`, `deleteMyVoice`, `adoptStoredPeople`, `reIdStoredPeople`, `reIdIncoming`, `rememberRenames`, `renamedId` | no | nearly every screen |
+| `state.js` | `state`, `STORE_TABLE`, `storedLists`; `readStorage`, `loadStorage`, `persist`, `setOverride`, `removeRecord`, `shelf`, `setPersonEdit`, `deletePerson`, `deleteUserClip`, `saveMyVoice`, `deleteMyVoice`, `adoptStoredPeople`, `reIdStoredPeople`, `reIdIncoming`, `rememberRenames`, `renamedId` | no | nearly every screen |
 | `model.js` | person colors, `kitFor`, `mergePeople`, `clipsForPerson`, `orderClips`, `withNewPresets`, `overrideFor`, `withBulkChanges`, `withHidden`, `overrideWithEmoji`, `personEditRecord`, `validateManifest`, `soloPerson`, `isDefaultPerson`, `personIdsIn`, `kitIdOf`, `presetOwners`, `adoptPeople`, `groupKit`, `PICTURES`, `KIND_EMOJI`, `PERSON_KINDS`, `personThings`, `personCounts` | yes | state.js, board.js, backup.js, merge.js, screens |
 | `board.js` | `people`, `person`, `currentPerson`, `clipsFor`, `anyClip`, `findClip`, `instrumentPicks`, `colorName`, `padColor`, `nextClipColor` | reads `state` | every screen |
 | `settings.js` | `SETTINGS`, `LEVELS`, `levelOf`, `getSetting`, `setSetting`, `onSetting`, `followPerson`, `notifyAllSettings`, `cleanPrefs`, `allowedValue`, `inBackups`, `storedPair` | reads/writes `state.prefs`, `state.settings` | ~20 modules |
@@ -22,7 +22,7 @@
 | `pads.js` | the pad grid, the person menu, Edit sounds' choosing (`chosen`), drag order (`saveOrder`), kit/own group open state (localStorage) | no | app.js, bulk.js, sheet.js, backup-ui.js |
 | `bulk.js` | Edit sounds with sounds chosen: change, move to group, delete with Undo, a group's ✏️ sheet | no | pads.js hooks (`setPadHooks`) |
 | `sheet.js` | the sound sheet: makes, edits, hides and deletes one sound; ⭐ Save voice | no | pads.js (`openSheet` via app.js) |
-| `people.js` | 👥 People, the profile sheet, `addPerson`, `deleteHere`, `editLook`, its own `storedLists` | no | app.js, backup-ui.js, welcome.js |
+| `people.js` | 👥 People, the profile sheet, `addPerson`, `deleteHere`, `editLook` | no | app.js, backup-ui.js, welcome.js |
 | `things.js` | 🗂️ See all: lists `personThings`, plays rows | no | people.js (`openThings`), app.js deps |
 | `reid.js` | `CLOUD_ID`, `isCloudId`, `PERSON_STORES`, `remapId`, `remapText`, `remapRecord`, `reIdDoc` | yes | state.js, backup.js |
 | `starters.js` | `STARTERS`, `nameSoundOf`, `dropNameSounds` (pre-1.0 data only) | yes | backup.js |
@@ -30,7 +30,7 @@
 | `merge.js` | `mergeLoaded`, `mergeSummary`, `sameBytes` | yes | backup-ui.js |
 | `old-beats.js` | `SIGNATURES`, `barSteps`, `unsignedAs`, `stampBeats`: the time signatures, and the stamp for beats saved before each had its own | yes | store.js (the upgrade), beat.js, backup.js, settings.js |
 | `zip.js` | `zip`, `unzip`, `crc32` | yes | backup.js, old-backup.js |
-| `backup-ui.js` | 💾 / 📂 buttons, `storeLoaded`, `whatIsHere`, `savePersonBackup`, `pastPins`, its own `storedLists` | no | app.js, leftover.js, cloud.js |
+| `backup-ui.js` | 💾 / 📂 buttons, `storeLoaded`, `whatIsHere`, `savePersonBackup`, `pastPins` | no | app.js, leftover.js, cloud.js |
 | `old-backup.js` | `readEverything`, `makeEverything`, `holdings`, `holdsWords`, `sizeWords` | partly | leftover.js, backup-ui.js |
 | `leftover.js` | ⚙️ Settings → Older sounds found on this device | no | app.js (`initLeftover`) |
 | `download.js` | `downloadBlob`; `saveAudio`, `deliveryOf`, `createAudioSaver` (⬇️ Save as audio file: share sheet or download) | needs a page | backup-ui.js, leftover.js, sequencer.js, song.js, others |
@@ -261,14 +261,13 @@ An override holds only what differs from boards.json (`model.js overrideFor`; th
 
 ### The stores as lists
 
-Pure code (backups, merges, adoption, counts, sync) takes "the stores as lists", the shape of backup.json. Four modules build it from `state` by hand:
+Pure code (backups, merges, adoption, counts, sync) takes "the stores as lists", the shape of backup.json. One function builds it from `state.js STORE_TABLE`: `state.js storedLists({ settings, prefs })`. Every store of `SCHEMA` but `cloud` and `bases` is in it, and `settings` only when asked.
 
-| Builder | Holds |
+| Caller | Asks for |
 |---|---|
-| `state.js storedLists` | everything but `settings` |
-| `backup-ui.js storedLists` | everything with `settings`; `prefs` raw |
-| `cloud.js storedLists` | everything with `settings`; `prefs` through `cleanPrefs` |
-| `people.js storedLists` | only the kinds a person counts |
+| `state.js` (adoption, re-ids), `cloud-ui.js`, `people.js`, `app.js` (See all) | `storedLists()`: no `settings`, `prefs` raw |
+| `backup-ui.js storedLists` | `{ settings: true }`: `prefs` raw |
+| `cloud.js storedLists` | `{ settings: true, prefs: cleanPrefs }` |
 
 ### Counting what someone has
 
@@ -363,19 +362,17 @@ A sync that changes the open beat while it plays is merged into the next save (`
 
 ## Seams
 
-1. **The list of stores is written out by hand in about eight places, and only SCHEMA is tested:**
+1. **The list of stores is written out by hand in about six places; `SCHEMA` and `STORE_TABLE` are tested:**
    - `store.js SCHEMA`
-   - `state.js readStorage` (a positional destructuring: a new store must go in the same place as in `SCHEMA`)
-   - `state.js deletePerson`
-   - the four `storedLists`
+   - `state.js STORE_TABLE` (`readStorage`, `storedLists` and `deletePerson` loop over it; `tests/state-stores.test.mjs` checks it against `SCHEMA` and that a deleted person leaves nothing in any store)
    - `reid.js PERSON_STORES`
    - `backup.js` `MAX_RECORDS`, `makeBackup`, `personBackupLists`, `cleanBackup`'s return, `STORE_WORDS`
    - `model.js personIdsIn` (leaves out `prefs` on purpose: settings alone make no person)
    - `leftover.js` `STORES`
 
-   A new store missed in `deletePerson` outlives its person, and `adoptStoredPeople` then brings the person back. Missed in `PERSON_STORES`, the store keeps old plain ids. `merge.js STORES`, `merge3.js STAMPED`, `cloud-sync.js CLOUD_KINDS` and the Worker's `KINDS` are made from `STORE_NAMES` and `reid.js` (one list each), so a new store reaches them without an edit.
+   A new store missed in `STORE_TABLE` fails its test; one left out of `deletePerson`'s loop would outlive its person, and `adoptStoredPeople` would bring the person back. Missed in `PERSON_STORES`, the store keeps old plain ids. `merge.js STORES`, `merge3.js STAMPED`, `cloud-sync.js CLOUD_KINDS` and the Worker's `KINDS` are made from `STORE_NAMES` and `reid.js` (one list each), so a new store reaches them without an edit.
 2. **Writes bypass `persist`** (see the table above). A fix to failure reporting in `persist` misses `storeLoaded`, the app.js deletes, `adoptKidsBeat` and cloud.js. A refused delete is told by `removeRecord` (every app.js delete and close), or by its own copy of the same words (`deleteUserClip`, `deleteMyVoice`).
-3. **Four "stores as lists" builders** (above). A new store added to one is easy to miss in the others: `people.js storedLists` feeds 👥 counts and See all, `backup-ui.js` feeds backups, `cloud.js` feeds sync.
+3. **"Stores as lists" is one function** (above): `state.js storedLists`. A new store appears in it once it is in `STORE_TABLE`; `backup-ui.js` and `cloud.js` only choose the options.
 4. **Three counters of what is here** (above). A new kind a backup carries goes into `holdings` and `holdsWords` too (`tests/holds.test.mjs`), or "A backup now holds…" leaves it out.
 5. **`extensionFor` is defined twice:** `util.js extensionFor` and `old-backup.js extensionFor` (the second says it copies the first). Pluralizers are three: `util.js count`, `old-backup.js plural`, and `model.js`'s private `plural`.
 6. **Making an own sound is done in five places, each building the record by hand:**
@@ -396,7 +393,7 @@ A sync that changes the open beat while it plays is merged into the next save (`
 |---|---|---|
 | 1 | **A kit id may end another** (`go`, `lets-go`), so `p-t-lets-go` can read two ways. `model.js kitIdOf` settles it in any kit order: a person who exists (`known`) wins, then a person id shaped as `newId` makes it (`p-<time>-<random>`), then the longest kit id. Two people who exist and both fit stay ambiguous (the id can't tell): `state.js deletePerson` keeps such an edit (`model.js presetOwners` names everyone who fits). `personIdsIn`, `merge.js`, `adoptPeople` and `beatToFile` use `kitIdOf`; `setClipEmoji` reads the clip's `kitId`. The rest match the prefix `<id>-`: `cloud-sync.js recordsOf` (plus a kit id) and the pull filter, `backup.js personBackupLists`, `onePersonIn`, `namesPerson`, `withoutPeople`, `model.js personThings`, and `reid.js remapId`. They are exact for every id `util.js newId` makes: `p-<time>-<random>` has two dashes and no more, so `<A>-` never starts another such person's id, and an edit that starts with it is A's. Two people only both fit when one id has more dashes, which the app never makes (a hand-made backup could bring one: `reid.js CLOUD_ID` takes any `p-` id). Then those may count or carry the edit under both; `deletePerson` still keeps it. | `tests/model.test.mjs` (`kitIdOf`), `tests/sequencer.test.mjs`, `tests/override-empty.test.mjs`, `tests/emoji-kit-order.test.mjs` |
 | 2 | `SCHEMA` only grows: a new store gets a new `since`, never an edit of an old line | `tests/store.test.mjs` |
-| 3 | `readStorage`'s destructuring matches `STORE_NAMES` minus `bases`, by position | none (check 5 below) |
+| 3 | `STORE_TABLE` lists `STORE_NAMES` minus `bases`, in order | `tests/state-stores.test.mjs` |
 | 4 | Every per-person store is in `reid.js PERSON_STORES`, or a renamed person loses it | none (check 2 below) |
 | 5 | Ids from `newId` stay `[a-z0-9-]`; backups refuse others | `tests/backup.test.mjs` (id tests) |
 | 6 | A 1.x backup from 1.0 on must load in every newer copy (ADR 0011) | `tests/backup.test.mjs` ("any 1.x loads") |
@@ -418,7 +415,7 @@ A sync that changes the open beat while it plays is merged into the next save (`
 
 | Change | Touch |
 |---|---|
-| **A new IndexedDB store** | 1. `store.js SCHEMA` (new `since`) and its header comment; `tests/store.test.mjs`. 2. `state.js` `state`, `readStorage` (same position), `deletePerson` and `storedLists`. 3. The other storedLists (`backup-ui.js`, `cloud.js`, and `people.js` if it counts). 4. `reid.js PERSON_STORES`. 5. `model.js personIdsIn` (and `PERSON_KINDS`, `personThings` if 👥 counts it). 6. `backup.js`: `MAX_RECORDS`, `makeBackup`, `personBackupLists`, `cleanBackup` (a cleaner and the return), `STORE_WORDS`. 7. `merge.js`: a rule (its `STORES` follows `SCHEMA`). 8. If it syncs, `reid.js PERSON_STORES` already makes `STAMPED`, `CLOUD_KINDS` and the Worker's `KINDS` (cloud area). 9. The writer in `app.js` deps, or a helper in `state.js`. 10. The backup header comment, docs/guide.md, `web/privacy.js` if it goes to the cloud. |
+| **A new IndexedDB store** | 1. `store.js SCHEMA` (new `since`) and its header comment; `tests/store.test.mjs`. 2. `state.js` `state` and one row of `STORE_TABLE` (`readStorage`, `storedLists` and `deletePerson` follow). 3. (nothing: the builders in `backup-ui.js` and `cloud.js` only choose options). 4. `reid.js PERSON_STORES`. 5. `model.js personIdsIn` (and `PERSON_KINDS`, `personThings` if 👥 counts it). 6. `backup.js`: `MAX_RECORDS`, `makeBackup`, `personBackupLists`, `cleanBackup` (a cleaner and the return), `STORE_WORDS`. 7. `merge.js`: a rule (its `STORES` follows `SCHEMA`). 8. If it syncs, `reid.js PERSON_STORES` already makes `STAMPED`, `CLOUD_KINDS` and the Worker's `KINDS` (cloud area). 9. The writer in `app.js` deps, or a helper in `state.js`. 10. The backup header comment, docs/guide.md, `web/privacy.js` if it goes to the cloud. |
 | **A new field on an own sound** | the five places that make one (Seam 6); `sheet.js saveSheet`'s edit branch (it deletes fields before assigning); `backup.js cleanBackup` clips; `model.js overrideFor` and `cleanBackup` overrides if presets get it too; `model.js withBulkChanges` if bulk edits change it; `merge.js` skip list if it is not content |
 | **A new setting** | `settings.js SETTINGS` (scope; `values` or `clean`); a control in settings-ui.js; `onSetting` where it acts; `tests/startup-remembered.test.mjs` only if it uses localStorage. Backups carry it automatically. |
 | **A new person field** | people.js `addPerson`; `model.js soloPerson`, `mergePeople` (it copies named fields only), `adoptPeople`, `personEditRecord` (`edited` stamping); `backup.js cleanBackup` people; `merge.js` people rule (its field list); cloud (cloud area) |

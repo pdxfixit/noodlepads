@@ -12,7 +12,7 @@
 // 2026-10-24). Without one, anyone can. It is a gate on this device's
 // screens: a sync from another device changes them as before.
 
-import { state, persist, setPersonEdit, deletePerson } from './state.js';
+import { state, persist, setPersonEdit, deletePerson, storedLists } from './state.js';
 import { audio } from './audio.js';
 import { people, person } from './board.js';
 import { PERSON_COLORS, PERSON_COLOR_NAMES, nextPersonColor, freePicture, personCounts, countsText, countsWords, KIND_EMOJI } from './model.js';
@@ -35,16 +35,6 @@ let profileFor = null;   // the person whose profile sheet is open
 // Someone Delete just took off this device whose cloud copy is still there:
 // {id, name, avatar, color, key, pin}. Their sheet stays open for the cloud copy's Delete.
 let left = null;
-
-// What each person has on this device, as lists the way a backup holds them:
-// what 👥 People counts and 🗂️ See all lists (model.js personThings).
-// `voices` is ⭐ Voices (IndexedDB `voices`, state.myVoices).
-export const storedLists = () => ({
-  clips: state.userClips, beats: state.savedBeats, songs: [...state.songs.values()],
-  songbook: state.songbook, takes: state.takes, voices: state.myVoices,
-  overrides: [...state.overrides.values()], decks: [...state.decks.values()],
-  layouts: state.layouts, touchLayouts: state.touchLayouts,
-});
 
 const anyone = (id) => people({ includeHidden: true }).find((x) => x.id === id);
 

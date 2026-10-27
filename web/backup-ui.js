@@ -1,7 +1,7 @@
 // ⚙️ Settings → 💾 Save a backup / 📂 Load a backup. The zip format and its
 // checks are in backup.js; this is the buttons around it.
 
-import { state, readStorage, deletePerson, reIdIncoming, rememberRenames } from './state.js';
+import { state, readStorage, deletePerson, reIdIncoming, rememberRenames, storedLists as allStoredLists } from './state.js';
 import { db } from './store.js';
 import { audio } from './audio.js';
 import { makeBackup, readBackup, heardWav, leftOutNote, personBackupLists, onePersonIn, intoPerson, namesPerson, withoutPeople } from './backup.js';
@@ -103,14 +103,7 @@ export function whatIsHere() {
 }
 
 // The stores on this device as lists, the way a backup holds them.
-const storedLists = () => ({
-  people: [...state.peopleEdits.values()], clips: state.userClips, overrides: [...state.overrides.values()],
-  orders: [...state.orders.values()], patterns: [...state.patterns.values()], beats: state.savedBeats,
-  settings: [...state.settings].map(([key, value]) => ({ key, value })),
-  decks: [...state.decks.values()], takes: state.takes, songs: [...state.songs.values()], songbook: state.songbook,
-  prefs: [...state.prefs.values()],
-  layouts: state.layouts, voices: state.myVoices, touchLayouts: state.touchLayouts,
-});
+const storedLists = () => allStoredLists({ settings: true });
 
 // A sound's audio as bytes in this page's memory. Audio read from another
 // database (older sounds found on this device) may be backed by that

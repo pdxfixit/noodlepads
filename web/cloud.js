@@ -8,7 +8,7 @@
 // never waits on any of it: everything works on the device, and the cloud
 // catches up.
 
-import { state, readStorage, setPersonEdit } from './state.js';
+import { state, readStorage, setPersonEdit, storedLists as allStoredLists } from './state.js';
 import { db } from './store.js';
 import { audio } from './audio.js';
 import { cleanBackup } from './backup.js';
@@ -404,15 +404,8 @@ export const syncPending = () => timing.pending();
 // A sync the cloud's minute limit stopped says so, and goes again in a minute.
 export const SLOW_TEXT = 'Busy right now: trying again in a minute.';
 
-const storedLists = () => ({
-  people: [...state.peopleEdits.values()], clips: state.userClips, overrides: [...state.overrides.values()],
-  orders: [...state.orders.values()], patterns: [...state.patterns.values()], beats: state.savedBeats,
-  settings: [...state.settings].map(([key, value]) => ({ key, value })),
-  decks: [...state.decks.values()], takes: state.takes, songs: [...state.songs.values()], songbook: state.songbook,
-  // Only the settings that travel: a person's DJ keyboard from before stays behind.
-  prefs: [...state.prefs.values()].map(cleanPrefs),
-  layouts: state.layouts, voices: state.myVoices, touchLayouts: state.touchLayouts,
-});
+// Only the settings that travel: a person's DJ keyboard from before stays behind.
+const storedLists = () => allStoredLists({ settings: true, prefs: cleanPrefs });
 
 async function sha256(blob) {
   return hex(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()));

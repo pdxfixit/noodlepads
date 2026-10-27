@@ -190,7 +190,9 @@ test('✅ three Node tools: look.mjs and the two it loads', () => {
 // data.md, "The in-memory state": a field nobody reads is dead state, which
 // misleads (state.beats and state.selected were written and never read).
 test('✅ every field of state.js state is read somewhere in web/', async () => {
-  const { state } = await web('state.js');
+  const { state, STORE_TABLE } = await web('state.js');
+  // A field of STORE_TABLE is read by `readStorage`, `storedLists` and `deletePerson` as `state[field]`: always read.
+  const stored = new Set(STORE_TABLE.map((t) => t.field));
   // Only where `state` is this one (backup.js has a parameter of that name).
   // A heuristic, not a parser: comments are dropped first (a comment that
   // names `state.beats` reads nothing), then a read is `state.x` not
@@ -198,7 +200,7 @@ test('✅ every field of state.js state is read somewhere in web/', async () => 
   const code = (file) => src[file].replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`\\])\/\/.*$/gm, '$1');
   const users = WEB.filter((file) => /import\s*\{[^}]*\bstate\b[^}]*\}\s*from\s*'\.\/state\.js'/.test(src[file]) || file === 'state.js');
   const reads = (f) => users.some((file) => new RegExp(`\\bstate\\??\\.${f}\\b(?!\\s*=[^=])`).test(code(file)));
-  assert.deepEqual(Object.keys(state).filter((f) => !reads(f)), [], FIX);
+  assert.deepEqual(Object.keys(state).filter((f) => !stored.has(f) && !reads(f)), [], FIX);
 });
 
 // ── ✅ Lists kept in step by hand ──

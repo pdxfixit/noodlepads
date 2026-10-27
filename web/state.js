@@ -67,39 +67,64 @@ function movePersonColors() {
   }
 }
 
+// Every store and the `state` field that holds it, in the order of store.js
+// SCHEMA (`bases` is cloud sync's own, cloud.js, and is not in memory). The one
+// table `readStorage`, `storedLists` and `deletePerson` loop over, so a new
+// store is added here and nowhere else in this file. `shape`:
+//   list      an array of records, each naming its person (`personId`)
+//   byId      a Map by the record's `id` (people, kit edits, cloud links)
+//   byPerson  a Map by `personId`: one record a person
+//   settings  a Map of key -> value
+// tests/state.test.mjs checks the table against SCHEMA.
+export const STORE_TABLE = [
+  { store: 'clips', field: 'userClips', shape: 'list' },
+  { store: 'overrides', field: 'overrides', shape: 'byId' },
+  { store: 'orders', field: 'orders', shape: 'byPerson' },
+  { store: 'patterns', field: 'patterns', shape: 'byPerson' },
+  { store: 'beats', field: 'savedBeats', shape: 'list' },
+  { store: 'people', field: 'peopleEdits', shape: 'byId' },
+  { store: 'settings', field: 'settings', shape: 'settings' },
+  { store: 'decks', field: 'decks', shape: 'byPerson' },
+  { store: 'takes', field: 'takes', shape: 'list' },
+  { store: 'songs', field: 'songs', shape: 'byPerson' },
+  { store: 'songbook', field: 'songbook', shape: 'list' },
+  { store: 'cloud', field: 'cloud', shape: 'byId' },
+  { store: 'prefs', field: 'prefs', shape: 'byPerson' },
+  { store: 'layouts', field: 'layouts', shape: 'list' },
+  { store: 'voices', field: 'myVoices', shape: 'list' },
+  { store: 'touchLayouts', field: 'touchLayouts', shape: 'list' },
+];
+
 export async function readStorage() {
-  // `bases` is cloud sync's own (cloud.js), read only by the sync.
-  const [clips, overrides, orders, patterns, beats, peopleEdits, settings, decks, takes, songs, songbook, cloud, prefs, layouts, voices, touchLayouts] = await Promise.all(
-    STORE_NAMES.filter((s) => s !== 'bases').map((s) => db.all(s)));
-  state.userClips = clips;
-  // One that changes nothing (an older copy stored `{id, changed}`) is left out.
-  state.overrides = new Map(overrides.filter((o) => !isEmptyOverride(o)).map((o) => [o.id, o]));
-  state.orders = new Map(orders.map((o) => [o.personId, o]));
-  state.patterns = new Map(patterns.map((p) => [p.personId, p]));
-  state.savedBeats = beats;
-  state.peopleEdits = new Map(peopleEdits.map((p) => [p.id, p]));
+  const rows = await Promise.all(STORE_TABLE.map(({ store }) => db.all(store)));
+  STORE_TABLE.forEach(({ store, field, shape }, i) => {
+    const got = rows[i];
+    if (shape === 'list') state[field] = got;
+    else if (shape === 'settings') state[field] = new Map(got.map((s) => [s.key, s.value]));
+    // One that changes nothing (an older copy stored `{id, changed}`) is left out.
+    else if (store === 'overrides') state[field] = new Map(got.filter((o) => !isEmptyOverride(o)).map((o) => [o.id, o]));
+    else state[field] = new Map(got.map((r) => [shape === 'byId' ? r.id : r.personId, r]));
+  });
   movePersonColors();
-  state.settings = new Map(settings.map((s) => [s.key, s.value]));
-  state.decks = new Map(decks.map((d) => [d.personId, d]));
-  state.takes = takes;
-  state.songs = new Map(songs.map((s) => [s.personId, s]));
-  state.songbook = songbook;
-  state.cloud = new Map(cloud.map((c) => [c.id, c]));
-  state.prefs = new Map(prefs.map((p) => [p.personId, p]));
-  state.layouts = layouts;
-  state.myVoices = voices;
-  state.touchLayouts = touchLayouts;
 }
 
-// The stores as lists, the way a backup holds them (ids only matter here;
-// cloud-ui.js counts what came down from them).
-export function storedLists() {
-  return {
-    people: [...state.peopleEdits.values()], clips: state.userClips, overrides: [...state.overrides.values()],
-    orders: [...state.orders.values()], patterns: [...state.patterns.values()], beats: state.savedBeats,
-    decks: [...state.decks.values()], takes: state.takes, songs: [...state.songs.values()], songbook: state.songbook,
-    prefs: [...state.prefs.values()], layouts: state.layouts, voices: state.myVoices, touchLayouts: state.touchLayouts,
-  };
+// The stores as lists, the way a backup holds them (cloud-ui.js counts what
+// came down from them; people.js, backup-ui.js and cloud.js read them too).
+// The device's own links (`cloud`) are never in it. `settings`: the device's
+// settings as {key, value} too (a backup holds them). `prefs`: how each
+// person's settings are mapped (cloud.js sends only those that travel).
+export function storedLists({ settings = false, prefs = (p) => p } = {}) {
+  const lists = {};
+  for (const { store, field, shape } of STORE_TABLE) {
+    if (store === 'cloud') continue;
+    if (shape === 'settings') {
+      if (settings) lists[store] = [...state[field]].map(([key, value]) => ({ key, value }));
+    } else {
+      const got = shape === 'list' ? state[field] : [...state[field].values()];
+      lists[store] = store === 'prefs' ? got.map((r) => prefs(r)) : got;
+    }
+  }
+  return lists;
 }
 
 // People whose names came from an older boards.json, which lists no one now,
@@ -411,18 +436,19 @@ export async function deletePerson(id) {
     const owners = presetOwners(o, kit, known);
     return owners.length === 1 && owners[0] === id;
   });
-  const del = (store, keys) => keys.map((key) => ({ store, del: key }));
-  const ids = (list) => theirs(list).map((x) => x.id);
   const bundled = state.manifest.people.find((p) => p.id === id);
   // One from boards.json stays, hidden, with nothing else of theirs.
   const hidden = bundled ? personEditRecord(bundled, { id }, { hidden: true }) : null;
-  const ops = [
-    ...del('clips', goneClips), ...del('overrides', goneEdits), ...del('beats', ids(state.savedBeats)),
-    ...del('patterns', [id]), ...del('orders', [id]), ...del('decks', [id]), ...del('songs', [id]), ...del('prefs', [id]),
-    ...del('songbook', ids(state.songbook)), ...del('takes', ids(state.takes)), ...del('layouts', ids(state.layouts)),
-    ...del('voices', ids(state.myVoices)), ...del('touchLayouts', ids(state.touchLayouts)),
-    hidden ? { store: 'people', put: hidden } : { store: 'people', del: id },
-  ];
+  // Everything the table holds that is theirs: a list's records that name
+  // them, a one-a-person Map's record under their id, and the kit edits found
+  // above. The device's settings and cloud link stay; `people` is below.
+  const ops = [];
+  for (const { store, field, shape } of STORE_TABLE) {
+    if (shape === 'list') ops.push(...theirs(state[field]).map((r) => ({ store, del: r.id })));
+    else if (shape === 'byPerson') ops.push({ store, del: id });
+    else if (store === 'overrides') ops.push(...goneEdits.map((o) => ({ store, del: o })));
+  }
+  ops.push(hidden ? { store: 'people', put: hidden } : { store: 'people', del: id });
   // With no storage at all (a browser that gives none), there is nothing
   // stored to leave behind. Storage not open (still opening, or closed for
   // another tab's upgrade) is a refusal: what is stored would come back.
@@ -436,19 +462,11 @@ export async function deletePerson(id) {
       : `This browser wouldn't delete ${name} (${err.message || err.name}), so nothing of theirs is gone. Try again.`);
     return null;
   }
-  state.userClips = state.userClips.filter((c) => c.personId !== id);
-  for (const o of goneEdits) state.overrides.delete(o);
-  state.savedBeats = state.savedBeats.filter((b) => b.personId !== id);
-  state.patterns.delete(id);
-  state.orders.delete(id);
-  state.decks.delete(id);
-  state.songs.delete(id);
-  state.prefs.delete(id);
-  state.songbook = state.songbook.filter((s) => s.personId !== id);
-  state.takes = state.takes.filter((t) => t.personId !== id);
-  state.layouts = state.layouts.filter((l) => l.personId !== id);
-  state.myVoices = state.myVoices.filter((v) => v.personId !== id);
-  state.touchLayouts = state.touchLayouts.filter((l) => l.personId !== id);
+  for (const { store, field, shape } of STORE_TABLE) {
+    if (shape === 'list') state[field] = state[field].filter((r) => r.personId !== id);
+    else if (shape === 'byPerson') state[field].delete(id);
+    else if (store === 'overrides') for (const o of goneEdits) state[field].delete(o);
+  }
   if (hidden) state.peopleEdits.set(id, hidden); else state.peopleEdits.delete(id);
   return goneClips;
 }
