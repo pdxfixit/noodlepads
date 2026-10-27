@@ -470,10 +470,8 @@ More gotchas:
 |---|---|
 | A default key | `rhythm.js` `NUMBER_ROW`/`HOME_ROW`/`BOTTOM_ROW`/`VOICE_FILL`; `rhythm.test.mjs`. Stored decks keep only changed keys, so existing kids' keys move too. |
 | A new field on the deck | `rhythm.js cleanDeck`, `app.js` `deps.saveDeck` (keeps fields), `merge.js` `keepMine('decks')` (clip ids renamed), `store.js` comment, `state.js` comment, `backup.js` notes. |
-| A new take event kind | `rhythm.js TAKE_KINDS`, `takeFrom`, `planTake`, `cleanTake`; `dj.js playTake`; `merge.js` (takes' clip ids). |
 | A ready-made key layout | `keyset.js READY_LAYOUTS` (kit ids, 4 × 10); `keyset.test.mjs` checks every id is real. One with a `family` (instruments.js `FAMILIES`) names instrument presets exactly and resolves through `dj-keys.js exactClip`; the rest follow the pick (`kitClip`). |
 | A new take event kind | `rhythm.js TAKE_KINDS`, `takeFrom`, `planTake`, `cleanTake`; `dj-takes.js playTake`; `merge.js` (takes' clip ids). |
-| A ready-made key layout | `keyset.js READY_LAYOUTS` (kit ids, 4 × 10); `keyset.test.mjs` checks every id is real. |
 | A ready-made touch layout or grid | `touch.js READY_TOUCH` / `STARTERS`; `touch-grid.js READY_GRIDS`. |
 | The snap | `rhythm.js createSnapper` (and `snapHits` for tests); `beat-builder.test.mjs`, `rhythm.test.mjs`. Kids' tune snap is `kids-logic.js pillAt`, separate. |
 | How the beat grows | `dj.js growNow` (when), `sequencer.js scheduleClicks`/`grow` (how). |

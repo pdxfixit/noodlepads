@@ -116,9 +116,7 @@ Only `app.js` calls these (checked below). Each line is what it hands over.
 | `createDJ` | its elements, including the `keysEdit` and `touchEdit` dialogs' parts; ~35 deps: the person, clips, `tap` (`pads.js tapPad`), `loop`, `playOnce`, `stopClip`, the audio clock (`now`, `latency`, `sampleRate`), `seq`, the store writers for takes, key layouts, touch layouts and the deck (`saveDeck` drops an old `beatId`), `setEmoji: setClipEmoji`, `notice: showNotice`, `inputChanged: showHint`, `ownGroups` (`groups.js groupOwn`) |
 | `initListen` | `audio`, `seq`, `song`, `personId`, `clipById`, `library: beatLibrary`, `songs: songBook`, `showScreen: setScreen`, `stopAll: stopEverything`, `refresh`, `announce` |
 | `initKids` | `engine`, `personId`, `clips`, `colorOf`, `nextColor`, `saveClip` (pushes to `state.userClips`, `persist('clips')`), `ownClip`, `beats`, `saveBeat` (`beatLibrary.put`), `grownUp` (the right sum: lets a grown-up out, opens Settings) |
-| `initUpdate` | `#update-bar`, its buttons, `loaded: () => state.version`, `busy` (recording, any open dialog, beat, song, keys, Kids busy, or a looping pad) |
 | `initNudge()` | nothing (finds its own elements) |
-| `initKids` | `engine`, `personId`, `clips`, `colorOf`, `nextColor`, `saveClip` (pushes to `state.userClips`, `persist('clips')`), `ownClip`, `beats`, `saveBeat` (its own copy of `beatLibrary.put`), `grownUp` (the right sum: lets a grown-up out, opens Settings) |
 | `initUpdate` | `#update-bar`, its buttons, `loaded: () => state.version`, `busy: () => !quiet()` (recording, any open dialog, beat, song, keys, Kids busy, or a looping pad) |
 | `initNudge({ quiet })` | `quiet` (the same check `initUpdate`'s `busy` is the opposite of); it finds its own elements |
 | `initLeftover()` | nothing |

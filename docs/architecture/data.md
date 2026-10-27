@@ -27,7 +27,6 @@
 | `sheet-state.js` | the sheet's shared state (`el`, `sheet`, `live`, `parts`) and `hooks`, the few things the other two parts call back into `sheet.js` for | no | sheet.js, sheet-voices.js, sheet-make.js |
 | `sheet-voices.js` | the sheet's voice chips, ⭐ My voices (⭐ Save voice, rename, delete), tapping a voice, ⤢ Turn into knobs, the folds and the chain and Layers rows | no | sheet.js (imports nothing from it ✅) |
 | `sheet-make.js` | the sheet's ➕ Mix with another sound (`makeMix`) and ✨ Make one (`makeSound`, the starters) | no | sheet.js (imports nothing from it ✅) |
-| `people.js` | 👥 People, the profile sheet, `addPerson`, `deleteHere`, `editLook`, its own `storedLists` | no | app.js, backup-ui.js, welcome.js |
 | `things.js` | 🗂️ See all: lists `personThings`, plays rows | no | people.js (`openThings`), app.js deps |
 | `reid.js` | `CLOUD_ID`, `isCloudId`, `PERSON_STORES`, `remapId`, `remapText`, `remapRecord`, `reIdDoc` | yes | state.js, backup.js |
 | `starters.js` | `STARTERS`, `nameSoundOf`, `dropNameSounds` (pre-1.0 data only) | yes | backup.js |

@@ -1869,7 +1869,8 @@ export function createSequencer(deps) {
 
   // The beat maker's view of itself, for the three dialogs that work on the open
   // beat: the sound chooser (beat-chooser.js), 💃 Grooves (beat-grooves.js) and
-  // 🗂️ Beats (beat-library.js). What they change goes through the setters.
+  // 🗂️ Beats (beat-library.js). The setters (pattern, loaded, queued) are the only
+  // way they change the beat maker. Pass this object to nothing else.
   const shared = {
     el, deps, audio, engine, playing, prepare, prepareBeats, render, save, play, stop, snapshot: () => snapshot(), bar, library, offerUndo, onScratch, scratchSaved,
     beatPlan, letGo, openBeat, showChips, closeEverywhere, freshName, uniqueName, audioSaver, openRoll,

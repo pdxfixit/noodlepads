@@ -7,7 +7,7 @@
 import { takeFrom, planTake, clockText, MAX_TAKE_SECONDS } from './rhythm.js';
 import { encodeWav } from './wav.js';
 import { newId } from './util.js';
-import { takeName, soundName, cutName } from './names.js';
+import { takeName, soundName, cutName, MAX_NAME } from './names.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { showBanner } from './ui.js';
 import { logEvent } from './log.js';
@@ -230,7 +230,7 @@ export function createTakes({ el, deps, deck, light, lightTiles, showRec, lineMs
       const name = document.createElement('input');
       name.className = 'take-name';
       name.value = t.name;
-      name.maxLength = 24;
+      name.maxLength = MAX_NAME;
       name.dataset.rename = t.id;
       name.setAttribute('aria-label', 'Take name');
       const info = document.createElement('span');
