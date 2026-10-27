@@ -33,6 +33,7 @@ export function tempoKey(key, box, bpm) {
   // Esc closes it, unless the Esc was ending something inside it (typing a number).
   box.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || e.defaultPrevented || !isOpen()) return;
+    e.preventDefault();   // handled: the page's Esc (⏹️ Stop all, app.js) stands down
     setOpen(false);
     key.focus();
   });

@@ -1015,7 +1015,7 @@ a key does the same. Shift does what a hold does wherever there is one: a
 row's speaker opens its slider, a voice chip shows its recipe, 🎲 opens Pick a
 name, a pill turns loud. 1–9
 play the first nine pads on 🔊 Pads (where the keys show, the number row plays them), ← → change person, Space or Esc stops everything (⏹️ Stop all). The exact rules: Esc first lets go
-of picked pills or picked sounds, or closes a ⋯ menu, + Add a layer's palette or the slim bar's dropped beat bar (▾), and stops only when there is
+of picked pills or picked sounds, or closes a ⋯ menu, + Add a layer's palette, an open tempo on a phone or the slim bar's dropped beat bar (▾), and stops only when there is
 none of those; neither key does anything while typing (a text box, a select) or while a sheet is open, where Esc closes the
 sheet; Space on a focused button, link or slider presses it instead of stopping (Shift+Space is a pill's loud hit), so on a
 focused control Esc is the stop. In 🧸 Kids Esc stops at once. In Edit

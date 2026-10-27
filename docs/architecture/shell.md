@@ -532,7 +532,7 @@ scrolled and wires ⬆️ (`#to-top`, smooth unless reduced motion, focus to
 |---|---|---|
 | Any first key or pointer | page | `audio.wake()` (capture, once) |
 | Number row, letters | 🎤 Live, Beats with ⌨️ Keys | `dj.keydown` / `dj.keyup` (first in `bindEvents`' keydown) |
-| Esc | page | `dj.escape()` when the keys show; else clear chosen sounds (`pads.js clearChosen`); else `stopEverything`, as Space (`tests/stop-clicks.test.mjs`). A control that uses Esc first calls `preventDefault`, so the page stands down: picked pills (`pill-select.js`), a row's ⋯ menu (`overflow.js`), a speaker's level (`row-volume.js`), 🪄 Voice's + Add a layer palette (`bulk.js`), the dropped bar (`mini-deck.js`) (`tests/pill-select.test.mjs`) |
+| Esc | page | `dj.escape()` when the keys show; else clear chosen sounds (`pads.js clearChosen`); else `stopEverything`, as Space (`tests/stop-clicks.test.mjs`). A control that uses Esc first calls `preventDefault`, so the page stands down: picked pills (`pill-select.js`), a row's ⋯ menu (`overflow.js`), a speaker's level (`row-volume.js`), 🪄 Voice's + Add a layer palette (`bulk.js`), the dropped bar (`mini-deck.js`), an open tempo key (`tempo-key.js`) (`tests/pill-select.test.mjs`) |
 | Space | page, not on a control, not in a field, not repeated, not Shift | `stopEverything` (`app.js spaceStops`; `tests/space-stops.test.mjs`) |
 | ← → | page | `stepPerson` |
 | 1–9 | 🔊 Pads, not editing | `tapPad` on that pad, with `flash` |

@@ -57,8 +57,9 @@ test('🎤 Live: a tap opens the click\'s tempo as its own line, a tap again or 
   assert.equal($(k).querySelector('.tempo-key-num').textContent, '180', 'open, the key reads the tempo the slider set…');
   assert.equal($(k).querySelector('.tempo-key-open').textContent, 'BPM', '…over BPM (Ben, 2026-10-26)');
   assert.equal($(k).getAttribute('aria-label'), 'Tempo 180 BPM: tap to close it', 'and is named with the tempo the slider set');
-  box.dispatch('keydown', { key: 'Escape' });
+  const esc = box.dispatch('keydown', { key: 'Escape' });
   assert.equal(open(k), false, 'Esc closes it');
+  assert.equal(esc.defaultPrevented, true, 'and only that: the page\'s Esc (⏹️ Stop all) stands down, so a beat plays on');
   assert.equal($(k).querySelector('.tempo-key-open').textContent, '▾', 'closed, ▾ under the number again');
   assert.ok(!box.classList.contains('tempo-open'));
   assert.equal($(k).getAttribute('aria-label'), 'Tempo 180 BPM: tap to change it');
