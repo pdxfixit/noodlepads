@@ -115,10 +115,16 @@ test('tucked on Beats: ▶ plays and stops the beat, ▾ drops the whole bar dow
   $('#mini-play').dispatch('click');
   await page.settle();
   assert.equal($('#seq-play').getAttribute('aria-pressed'), 'true');
+  document.activeElement = document.body;
   page.key('Escape');
   assert.equal(document.body.classList.contains('deck-open'), false, 'Esc puts it away');
   assert.equal($('#mini-more').textContent, '▾');
   assert.equal($('#seq-play').getAttribute('aria-pressed'), 'true', 'the beat plays on');
+  assert.ok(document.activeElement !== $('#mini-more'), 'focus stays where it was, outside the bar');
+  $('#mini-more').dispatch('click');
+  $('#seq-play').focus();   // on the bar that hides: ▾ takes the focus
+  page.key('Escape');
+  assert.ok(document.activeElement === $('#mini-more'));
   $('#seq-play').dispatch('click');
   $('#mini-more').dispatch('click');
   assert.ok(document.body.classList.contains('deck-open'));
@@ -150,4 +156,35 @@ test('with ⌨️ Keys on, ▶ plays the beat from the slim bar; ● Record stay
   page.winEvent('scroll');
   assert.equal(document.body.classList.contains('deck-tucked'), false, 'the top of the screen');
   keysOff(page);
+});
+
+// The dropped bar's Esc runs before the page's (mini-deck.js is wired before
+// app.js bindEvents), so it stands down for what Esc does first there.
+test('Esc with the bar dropped: a take recording stops first; in a text field or in 🧸 Kids it leaves the bar alone', async () => {
+  const { audio } = await import('../web/audio.js');
+  keysOn(page);
+  stuck(document.querySelector('.dj-bar'));
+  window.scrollY = 600;
+  page.winEvent('scroll');
+  const open = () => document.body.classList.contains('deck-open');
+  if (!open()) $('#mini-more').dispatch('click');
+  assert.ok(open(), 'the bar is dropped');
+  $('#dj-record').dispatch('click');
+  await page.settle();
+  assert.equal($('#dj-record').getAttribute('aria-pressed'), 'true', 'a take into the beat runs');
+  page.key('Escape');
+  await page.settle();
+  assert.equal($('#dj-record').getAttribute('aria-pressed'), 'false', 'one Esc stops the take (dj.js escape)');
+  assert.ok(open(), 'and the bar waits for the next one');
+  page.key('Escape', { target: document.querySelector('input') });
+  assert.ok(open(), 'typing in a field: Esc is the field\'s');
+  let stops = 0;
+  const real = audio.stopAll.bind(audio);
+  audio.stopAll = (...a) => { stops++; return real(...a); };
+  $('#kids-open').dispatch('click');
+  assert.ok(document.body.classList.contains('kids'));
+  page.key('Escape');
+  assert.ok(stops > 0, '🧸 Kids\' Esc stops at once');
+  audio.stopAll = real;
+  window.scrollY = 0;
 });

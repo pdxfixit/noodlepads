@@ -87,12 +87,20 @@ export function initMiniDeck({ doc = globalThis.document, win = globalThis.windo
   mini.more.addEventListener('click', () => { body.classList.toggle('deck-open'); sync(); });
   // Esc puts the dropped bar away, back on ▾, and only that: a playing beat
   // plays on (app.js's Esc, ⏹️ Stop all, stands down on preventDefault).
+  // This runs before app.js's page keys (initMiniDeck is called before
+  // bindEvents), so it stands down for what Esc does first there: a take
+  // recording (dj.js escape stops and keeps it), typing in a field, an open
+  // sheet, and 🧸 Kids, whose Esc stops at once.
   doc.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || e.defaultPrevented || !body.classList.contains('deck-open') || doc.querySelector('dialog[open]')) return;
+    if (e.key !== 'Escape' || e.defaultPrevented || !body.classList.contains('deck-open')) return;
+    if (doc.querySelector('dialog[open]') || body.classList.contains('kids')) return;
+    if (e.target?.closest?.('input, textarea, select, [contenteditable]')) return;
+    if ($('#dj-record')?.getAttribute('aria-pressed') === 'true') return;
     e.preventDefault();
+    const inside = !!deck()?.contains?.(doc.activeElement);
     body.classList.toggle('deck-open', false);
     sync();
-    mini.more.focus?.();
+    if (inside) mini.more.focus?.();   // the bar it was on hides; ▾ takes it
   });
 
   win.addEventListener('scroll', update, { passive: true });

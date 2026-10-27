@@ -943,7 +943,7 @@ async function start() {
   document.querySelector('#people').addEventListener('click', (e) => { if (e.target.closest?.('[data-kids-open]')) enterKids(); });
   initFeedback();   // ⚙️ Settings → About → Feedback, behind the grown-up sum
   trackSlimHead();
-  initMiniDeck();   // 🥁 Beats' play bar tucks into the slim bar at the top
+  initMiniDeck();   // 🥁 Beats' play bar tucks into the slim bar at the top; its Esc listener runs before bindEvents' page keys (mini-deck.js)
   initHelp();
   initLogSend();
   // A finger tap that plays nothing goes in the log, for a problem report.
