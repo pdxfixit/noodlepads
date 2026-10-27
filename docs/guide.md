@@ -151,7 +151,10 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   👻 Spooky (Monster with Stadium's echo) light for the next recordings and
   change the last one at once; tap a lit one for Normal.
 - **🥁 Beats**: four drums (kick 🦶, snare 🪘, shaker 🪇, clap 👏) of eight squares, ▶️/⏹️,
-  🐢 80 and 🏃 140 BPM (neither lit: 110). One beat per person: their
+  🐢 80 and 🏃 140 BPM (neither lit: 110). A new beat starts with a simple
+  kick (1st and 3rd beat) and snare (2nd and 4th) lit, so the first ▶️
+  is not silence (`kids-logic.js` `newKidsBeat`; the regular app's scratch
+  beat stays empty). One beat per person: their
   scratch beat (ADR 0020), saved on every tap (a square is every other pill
   of a 16-pill bar), so the regular app's Beats opens it whenever nothing
   else is open. A kids beat from before (`beat-kids-…`) becomes the scratch,

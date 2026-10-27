@@ -155,12 +155,17 @@ test('the kid\'s beat is a normal beat: square i is pill 2i of a 16-pill bar', (
   assert.ok(BEAT_ID.test(beat.id) && isScratch(beat), 'the person\'s scratch beat (ADR 0020)');
   assert.equal(beat.bpm, KIDS_TEMPOS.mid);
   assert.equal(beat.rows.length, 4);
-  assert.deepEqual(squaresOf(beat, ids), ids.map(() => Array(8).fill(false)));
+  // A new Kids beat has a simple kick (1st and 3rd beat) and snare (2nd and 4th) lit; the others are off.
+  const at = (squares) => Array.from({ length: 8 }, (_, i) => squares.includes(i));
+  assert.deepEqual(squaresOf(beat, ids), [at([0, 4]), at([2, 6]), at([]), at([])]);
+  const sparse = newKidsBeat('p-a', [null, 'p-snare', null, null], scratchId('p-a'), 5);
+  assert.equal(sparse.rows.length, 1, 'a drum the board lacks gets no row');
+  assert.deepEqual(squaresOf(sparse, ids)[1], at([2, 6]), 'the snare is still lit');
   const on = withSquare(beat, ids, 1, 3, true, 9);
   assert.equal(on.rows[1].steps[6], true);
   assert.equal(on.saved, 9);
   assert.equal(beat.rows[1].steps[6], false, 'the old beat is left as it was');
-  assert.deepEqual(squaresOf(on, ids)[1], [false, false, false, true, false, false, false, false]);
+  assert.deepEqual(squaresOf(on, ids)[1], at([2, 3, 6]));
   // It stays itself through the regular app's cleaning.
   const clean = cleanPattern(on, 'p-a');
   assert.equal(clean.id, 'beat-scratch-p-a');
@@ -432,10 +437,14 @@ test('Beats: four drums of eight squares; a tap turns one on and saves the kid\'
   assert.deepEqual($('#kids-beat').querySelectorAll('.kids-drum').map((d) => d.textContent), ['🦶', '🪘', '🪇', '👏']);
   const mine = () => state.savedBeats.filter((b) => b.personId === state.personId && b.id.startsWith('beat-scratch-'));
   assert.equal(mine().length, 0, 'nothing saved just for looking');
-  squares[8 + 2].dispatch('click');   // the snare's third square
+  // The first beat has a simple kick and snare lit (Ben, 2026-10-26), so the first ▶️ is not silence.
+  const lit = () => squares.map((q, i) => (q.getAttribute('aria-pressed') === 'true' ? i : null)).filter((i) => i !== null);
+  assert.deepEqual(lit(), [0, 4, 8 + 2, 8 + 6], 'kick on the 1st and 3rd, snare on the 2nd and 4th');
+  squares[24 + 1].dispatch('click');   // the clap's second square
   assert.equal(mine().length, 1, 'saved once a square is on');
-  assert.equal(squares[10].getAttribute('aria-pressed'), 'true');
-  assert.equal(mine()[0].rows[1].steps[4], true);
+  assert.equal(squares[25].getAttribute('aria-pressed'), 'true');
+  assert.equal(mine()[0].rows[3].steps[2], true);
+  assert.equal(mine()[0].rows[1].steps[4], true, 'the starter snare saved with it');
   $('#kids-slow').dispatch('click');
   assert.equal(mine()[0].bpm, 80);
   assert.equal($('#kids-slow').getAttribute('aria-pressed'), 'true');
@@ -445,7 +454,7 @@ test('Beats: four drums of eight squares; a tap turns one on and saves the kid\'
   $('[data-kids-tab="pads"]').dispatch('click');
   $('[data-kids-tab="beats"]').dispatch('click');
   assert.equal(mine().length, 1);
-  assert.equal($('#kids-beat').querySelectorAll('.kids-square')[10].getAttribute('aria-pressed'), 'true');
+  assert.equal($('#kids-beat').querySelectorAll('.kids-square')[25].getAttribute('aria-pressed'), 'true');
 });
 
 test('Keys: eight colored keys; a held key plays', async () => {

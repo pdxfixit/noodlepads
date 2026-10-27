@@ -183,15 +183,24 @@ export const tempoName = (bpm) => (bpm <= KIDS_TEMPOS.slow ? 'slow' : bpm >= KID
 // How long one square lasts, in seconds.
 export const squareSeconds = (bpm) => 60 / bpm / 2;
 
-// A new scratch beat for Kids: empty, at the middle tempo, `id` the
-// person's scratch id. `clipIds` are the four drums' sounds on this board
-// (null when the board has none).
+// What a new Kids beat has lit (Ben, 2026-10-26: the first ▶️ played
+// silence): kick 🦶 on the 1st and 3rd beat, snare 🪘 on the 2nd and 4th, as
+// squares of the eight. Only Kids' own new beat has it; the regular app's
+// scratch beat stays empty until someone makes hits.
+export const KIDS_START = { 0: [0, 4], 1: [2, 6] };
+
+// A new scratch beat for Kids: at the middle tempo, with a simple kick and
+// snare lit, `id` the person's scratch id. `clipIds` are the four drums'
+// sounds on this board (null when the board has none).
 export function newKidsBeat(personId, clipIds, id, now = Date.now()) {
-  return {
+  const blank = {
     id, personId, name: SCRATCH_NAME, bpm: KIDS_TEMPOS.mid, bars: 1, swing: 0,
     rows: clipIds.filter(Boolean).map((clipId) => cleanRow({ clipId, steps: [] })),
     created: now, saved: now,
   };
+  return Object.entries(KIDS_START).reduce((beat, [drum, squares]) => (
+    squares.reduce((b, square) => withSquare(b, clipIds, Number(drum), square, true, now), beat)
+  ), blank);
 }
 
 // The squares on screen: one line of eight per drum, read from the beat's row
