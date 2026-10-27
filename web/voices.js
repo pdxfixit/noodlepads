@@ -4,7 +4,7 @@
 
 import { logEvent } from './log.js';
 import { stretchChannels } from './stretch.js';
-import { KINDS, kindById, cleanStep, stepKey, buildLive, tailOf, splitChain, isLive } from './steps.js';
+import { KINDS, kindById, cleanStep, stepKey, buildLive, tailOf, splitChain, isLive, noiseBuffer, NOISE_SEEDS } from './steps.js';
 import { tweakSteps, tweakGain, tweaksKey, cleanTweaks } from './tweaks.js';
 import { softLimit } from './loudness.js';
 
@@ -382,15 +382,6 @@ function shaper(ctx, drive) {
   return s;
 }
 
-function noiseBuffer(ctx, seconds, decay) {
-  const b = ctx.createBuffer(ctx.destination.channelCount, Math.ceil(seconds * ctx.sampleRate), ctx.sampleRate);
-  for (let c = 0; c < b.numberOfChannels; c++) {
-    const d = b.getChannelData(c);
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-decay * i / ctx.sampleRate);
-  }
-  return b;
-}
-
 function feedbackDelay(ctx, seconds, feedback) {
   const d = ctx.createDelay(2);
   d.delayTime.value = seconds;
@@ -545,7 +536,7 @@ const RECIPES = {
     const echo = feedbackDelay(ctx, 0.26, 0.42);
     src.connect(echo).connect(filter(ctx, 'lowpass', 2800)).connect(gain(ctx, 0.5)).connect(ctx.destination);
     const hall = ctx.createConvolver();
-    hall.buffer = noiseBuffer(ctx, 2.2, 2.6);
+    hall.buffer = noiseBuffer(ctx, 2.2, 2.6, NOISE_SEEDS.hall, ctx.destination.channelCount);
     src.connect(hall).connect(gain(ctx, 0.12)).connect(ctx.destination);
     return ctx.startRendering();
   },
@@ -554,13 +545,13 @@ const RECIPES = {
   async walkie(buffer) {
     const lead = 0.14;
     const ctx = offline(buffer, lead + buffer.duration + 0.45);
-    const staticBurst = (at, seconds) => {
+    const staticBurst = (at, seconds, seed) => {
       const n = ctx.createBufferSource();
-      n.buffer = noiseBuffer(ctx, seconds, 8);
+      n.buffer = noiseBuffer(ctx, seconds, 8, seed, ctx.destination.channelCount);
       n.connect(filter(ctx, 'bandpass', 2200, 0.7)).connect(gain(ctx, 0.35)).connect(ctx.destination);
       n.start(at);
     };
-    staticBurst(0, lead);
+    staticBurst(0, lead, NOISE_SEEDS.staticLead);
     play(ctx, buffer, { at: lead })
       .connect(filter(ctx, 'highpass', 650))
       .connect(filter(ctx, 'lowpass', 2600))
@@ -570,7 +561,7 @@ const RECIPES = {
       .connect(ctx.destination);
     const end = lead + buffer.duration;
     beep(ctx, 1250, end + 0.04, 0.13, 0.12);
-    staticBurst(end + 0.18, 0.2);
+    staticBurst(end + 0.18, 0.2, NOISE_SEEDS.staticTail);
     return ctx.startRendering();
   },
 
@@ -645,17 +636,17 @@ const SPECIAL_RENDERS = {
   async walkie(buffer) {
     const lead = 0.14;
     const ctx = offline(buffer, lead + buffer.duration + 0.45);
-    const staticBurst = (at, seconds) => {
+    const staticBurst = (at, seconds, seed) => {
       const n = ctx.createBufferSource();
-      n.buffer = noiseBuffer(ctx, seconds, 8);
+      n.buffer = noiseBuffer(ctx, seconds, 8, seed, ctx.destination.channelCount);
       n.connect(filter(ctx, 'bandpass', 2200, 0.7)).connect(gain(ctx, 0.35)).connect(ctx.destination);
       n.start(at);
     };
-    staticBurst(0, lead);
+    staticBurst(0, lead, NOISE_SEEDS.staticLead);
     play(ctx, buffer, { at: lead }).connect(ctx.destination);
     const end = lead + buffer.duration;
     beep(ctx, 1250, end + 0.04, 0.13, 0.12);
-    staticBurst(end + 0.18, 0.2);
+    staticBurst(end + 0.18, 0.2, NOISE_SEEDS.staticTail);
     return ctx.startRendering();
   },
 };

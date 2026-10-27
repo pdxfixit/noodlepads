@@ -5,7 +5,10 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { FakeAudioBuffer, FakeOfflineAudioContext, fakeBuffer } from './helpers.mjs';
-import { KINDS, kindById, cleanStep, newStep, stepKey, splitChain, isLive, buildLive, tailOf } from '../web/steps.js';
+import {
+  KINDS, kindById, cleanStep, newStep, stepKey, splitChain, isLive, buildLive, tailOf,
+  seededRandom, decayingNoise, noiseBuffer, NOISE_SEEDS,
+} from '../web/steps.js';
 import { numsOf } from '../web/shape.js';
 
 before(() => {
@@ -132,4 +135,56 @@ test('⤢ every voice but Normal and Clones opens into known steps, its amount c
   assert.deepEqual(openVoice(voiceStep('loud', 5)), [{ type: 'squash', amount: 0.5 }]);
   assert.deepEqual(openVoice(voiceStep('stadium')).map((s) => s.type), ['echo', 'room']);
   assert.equal(openVoice({ type: 'echo', repeats: 3, gap: 0.2 }), null, 'only voices open');
+});
+
+// The reverb's noise is seeded: the same on every load and device, so a sound
+// with a room or a stadium hall sounds the same each time (and can be tested).
+test('seededRandom: the same seed gives the same run in [0, 1), another seed another run', () => {
+  const run = (seed) => { const r = seededRandom(seed); return Array.from({ length: 50 }, r); };
+  assert.deepEqual(run(7), run(7));
+  assert.notDeepEqual(run(7), run(8));
+  assert.ok(run(7).every((v) => v >= 0 && v < 1));
+  assert.ok(new Set(run(7)).size > 45, 'not a stuck generator');
+  const mean = run(3).concat(run(4), run(5), run(6)).reduce((t, v) => t + v, 0) / 200;
+  assert.ok(Math.abs(mean - 0.5) < 0.1, `centered: ${mean}`);
+});
+
+test('decayingNoise: a fixed run that starts at full strength and dies away faster for a bigger decay', () => {
+  const a = decayingNoise(4000, 8000, 6, 1);
+  assert.deepEqual(Array.from(a), Array.from(decayingNoise(4000, 8000, 6, 1)));
+  assert.notDeepEqual(Array.from(a), Array.from(decayingNoise(4000, 8000, 6, 2)));
+  assert.ok(a.every((v) => v >= -1 && v <= 1));
+  const peak = (d, from, to) => Math.max(...Array.from(d.subarray(from, to), Math.abs));
+  assert.ok(peak(a, 0, 400) > 0.8, 'starts loud');
+  assert.ok(peak(a, 3600, 4000) < 0.15, 'dies away');
+  assert.ok(peak(decayingNoise(4000, 8000, 12, 1), 1000, 1400) < peak(a, 1000, 1400), 'a bigger decay is quieter sooner');
+});
+
+test('the reverb tails and the static are made without Math.random, and come out identical each time', async () => {
+  const random = Math.random;
+  Math.random = () => { throw new Error('the reverb noise must be seeded'); };
+  try {
+    const ctx = { sampleRate: 8000, createBuffer: (c, n, r) => new FakeAudioBuffer({ numberOfChannels: c, length: n, sampleRate: r }) };
+    const first = noiseBuffer(ctx, 0.5, 2.6, NOISE_SEEDS.hall, 2);
+    const again = noiseBuffer(ctx, 0.5, 2.6, NOISE_SEEDS.hall, 2);
+    assert.equal(first.numberOfChannels, 2);
+    assert.equal(first.length, 4000);
+    for (let c = 0; c < 2; c++) assert.deepEqual(Array.from(first.getChannelData(c)), Array.from(again.getChannelData(c)));
+    assert.notDeepEqual(Array.from(first.getChannelData(0)), Array.from(first.getChannelData(1)), 'the two ears are not the same noise');
+    assert.notDeepEqual(Array.from(first.getChannelData(0)), Array.from(noiseBuffer(ctx, 0.5, 2.6, NOISE_SEEDS.room, 2).getChannelData(0)), 'each place has its own noise');
+    assert.equal(noiseBuffer(ctx, 0, 2, 1, 1).length, 1, 'never an empty buffer');
+    assert.equal(new Set(Object.values(NOISE_SEEDS)).size, Object.keys(NOISE_SEEDS).length, 'one seed each');
+
+    // Room size: two builds make the same convolver tail.
+    const tails = [];
+    const node = (extra = {}) => ({ connect: (n) => n, disconnect() {}, gain: { value: 1, setTargetAtTime() {}, cancelScheduledValues() {} }, ...extra });
+    const roomCtx = { ...ctx, createGain: () => node(), createConvolver() { const c = node(); tails.push(c); return c; } };
+    for (let i = 0; i < 2; i++) buildLive(roomCtx, node(), [{ type: 'room', size: 0.5 }]);
+    assert.equal(tails.length, 2);
+    assert.deepEqual(Array.from(tails[0].buffer.getChannelData(1)), Array.from(tails[1].buffer.getChannelData(1)));
+    // The stadium voice and the walkie-talkie render with it, still.
+    const { applyVoice } = await import('../web/voices.js');
+    const src = fakeBuffer([new Array(800).fill(0.5)], 8000);
+    for (const id of ['stadium', 'walkie']) assert.ok((await applyVoice(src, id)).buffer, id);
+  } finally { Math.random = random; }
 });

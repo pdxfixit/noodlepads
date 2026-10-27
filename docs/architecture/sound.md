@@ -268,7 +268,7 @@ A chain is an array of steps. A step is `{type, …numbers, …flags, off?}`:
 | `stretch` Faster or slower | no | `speed` 0.05…8 (log) | `STEP_RENDERS.stretch` → `timeStretch` |
 | `tone` Muffled ↔ Bright | yes | `tone` −1…1 | its `build` (lowpass + highpass) |
 | `echo` Make it echo | yes | `repeats`, `gap`; with `beat`: `note`, `bpm` (the gap follows) | its `build` (delay with feedback and a dulling lowpass) |
-| `room` Room size | yes | `size` | its `build` (convolver on a noise tail; a new size cross-fades) |
+| `room` Room size | yes | `size` | its `build` (convolver on a seeded noise tail; a new size cross-fades) |
 | `crunch` | yes | `amount` | its `build` (waveshaper) |
 | `wobble` | yes | `speed`, `depth` | its `build` (LFO on a delay) |
 | `ring` Robot | yes | `metal` 20…600 (log) | its `build` (ring modulation) |
@@ -630,7 +630,7 @@ by a load of its current version").
 | The kept audio is built three times | `audio.js keptAudio`, `chop.js rebuild`, `chop.js evenOut` (all three take their range from `keptRange`: the automatic trim to the millisecond; `sheet.js acceptAudio` and `makeSound` use `keptAudio` itself) | a change to the cut order (edits → trim → fade → levelForGain → soft edges) in `keptAudio` leaves the trim editor drawing and playing something else |
 | Two fades | `cuts.js applyFade` (seconds, before voices) and `voices.js STEP_RENDERS.fade` (shares of the length, a step) | the same min-of-ramps loop is written twice |
 | Walkie and Monster written twice | `voices.js RECIPES.walkie` vs `SPECIAL_RENDERS.walkie`; `RECIPES.monster` vs `SPECIAL_RENDERS.boom` | a fix to the static burst or the bass shelf reaches old sounds or knob sounds, not both |
-| Two noise tails | `voices.js noiseBuffer` and `steps.js roomTail` | same formula; `noiseBuffer` uses the context's channel count, `roomTail` always 2 |
+| One noise maker for the tails | `steps.js noiseBuffer` (stadium hall, walkie static, Room size) | seeded (`seededRandom`, `NOISE_SEEDS`, one seed per place, another per channel), so a room or hall is the same on every load; the stadium and static use the context's channel count, Room always 2 (`tests/steps.test.mjs`) |
 | Two 🎲 families | `voices.js SURPRISE` (used by `surpriseShape`) and `voice-knobs.js FAMILIES` (`surpriseVoices`) | a new voice must be added to both |
 | A voice is listed four times | `voices.js VOICES` + `RECIPES`, `voices.js OPENED`, `voice-knobs.js MADE`, `log-clean.js VOICE_IDS` | a new voice needs a recipe, an opened form, its knobs and its report id (the last is guarded: `tests/log-clean.test.mjs` checks the lists against `VOICES` and `KINDS`) |
 | Step kinds listed twice | `steps.js KINDS` and `log-clean.js STEP_KINDS` | a render of a new kind is blanked in problem reports until it is added (guarded by the same test) |

@@ -267,15 +267,48 @@ function param(p, value, ctx, at) {
   else p.value = value;
 }
 
-// A room's echo tail: noise that dies away over `seconds`, faster for a bigger `decay`.
-function roomTail(ctx, seconds, decay) {
-  const b = ctx.createBuffer(2, Math.max(1, Math.ceil(seconds * ctx.sampleRate)), ctx.sampleRate);
+// A small seeded random generator (mulberry32): numbers in [0, 1), the same
+// run for the same seed on every device and every load.
+export function seededRandom(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Noise that dies away: `frames` samples at `rate`, starting at full volume
+// and falling off faster for a bigger `decay` (per second). Seeded, so a
+// reverb tail or a burst of static is the same every time it is made: a
+// sound sounds the same on every load and device, and a test can check it.
+export function decayingNoise(frames, rate, decay, seed) {
+  const random = seededRandom(seed);
+  const out = new Float32Array(frames);
+  for (let i = 0; i < frames; i++) out[i] = (random() * 2 - 1) * Math.exp(-decay * i / rate);
+  return out;
+}
+
+// The same noise as a buffer on `ctx`. Each channel gets its own run (a
+// different seed), so the two ears are not the same noise.
+export function noiseBuffer(ctx, seconds, decay, seed, channels = 2) {
+  const frames = Math.max(1, Math.ceil(seconds * ctx.sampleRate));
+  const b = ctx.createBuffer(channels, frames, ctx.sampleRate);
   for (let c = 0; c < b.numberOfChannels; c++) {
-    const d = b.getChannelData(c);
-    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-decay * i / ctx.sampleRate);
+    const noise = decayingNoise(frames, ctx.sampleRate, decay, seed ^ Math.imul(c + 1, 0x9E3779B1));
+    if (b.copyToChannel) b.copyToChannel(noise, c); else b.getChannelData(c).set(noise);
   }
   return b;
 }
+
+// Each place that makes noise has its own seed, so the room's tail and the
+// stadium's hall are not the same noise.
+export const NOISE_SEEDS = { room: 0x0ACE, hall: 0x5AD1, staticLead: 0x57A1, staticTail: 0x57A2 };
+
+// A room's echo tail: noise that dies away over `seconds`, faster for a bigger `decay`.
+const roomTail = (ctx, seconds, decay) => noiseBuffer(ctx, seconds, decay, NOISE_SEEDS.room, 2);
 
 // A stored step of kind `kind` cleaned: every number clamped to its range
 // and rounded to its step, its default where missing; flags true or false.
