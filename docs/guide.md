@@ -620,6 +620,9 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   Level → Advanced turns on each row's speed and each beat's time
   signature (4/4, 3/4, 5/4, 6/8, 7/8: a pill is always a sixteenth, BPM always
   counts quarter notes; rows keep 16 pills unless a longer bar used more).
+  A beat saved before beats had their own time signature is given the one it
+  played in (Advanced's old choice, else 4/4) once, when the app upgrades its
+  storage and when such a beat comes in from a backup, the cloud or a file.
   Each row also stores `rate` (½, 1 or 2: the row runs that much faster than
   the beat) and `ring`. (Per-row pill counts and BPM were tried and removed
   for simplicity on 2026-10-10; old values are ignored.) A row's sound still playing

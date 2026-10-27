@@ -12,7 +12,7 @@
 
 | File | Owns | Pure? | Called by |
 |---|---|---|---|
-| `store.js` | `DB_NAME`, `SCHEMA`, `DB_VERSION`, `STORE_NAMES`, `upgradeStores`, the `db` handle (`open`, `run`, `all`, `put`, `remove`, `batch`, `onChange`) | no (IndexedDB) | state.js; direct writes in app.js, backup-ui.js, cloud.js; leftover.js reads `DB_NAME` |
+| `store.js` | `DB_NAME`, `SCHEMA`, `STAMP_SINCE`, `DB_VERSION`, `STORE_NAMES`, `upgradeStores`, the `db` handle (`open`, `run`, `all`, `put`, `remove`, `batch`, `onChange`) | no (IndexedDB) | state.js; direct writes in app.js, backup-ui.js, cloud.js; leftover.js reads `DB_NAME` |
 | `state.js` | `state`; `readStorage`, `loadStorage`, `persist`, `setOverride`, `removeRecord`, `setPersonEdit`, `deletePerson`, `deleteUserClip`, `saveMyVoice`, `deleteMyVoice`, `adoptStoredPeople`, `reIdStoredPeople`, `reIdIncoming`, `rememberRenames`, `renamedId` | no | nearly every screen |
 | `model.js` | person colors, `kitFor`, `mergePeople`, `clipsForPerson`, `orderClips`, `withNewPresets`, `overrideFor`, `withBulkChanges`, `withHidden`, `overrideWithEmoji`, `personEditRecord`, `validateManifest`, `soloPerson`, `isDefaultPerson`, `personIdsIn`, `kitIdOf`, `presetOwners`, `adoptPeople`, `groupKit`, `PICTURES`, `KIND_EMOJI`, `PERSON_KINDS`, `personThings`, `personCounts` | yes | state.js, board.js, backup.js, merge.js, screens |
 | `board.js` | `people`, `person`, `currentPerson`, `clipsFor`, `anyClip`, `findClip`, `instrumentPicks`, `colorName`, `padColor`, `nextClipColor` | reads `state` | every screen |
@@ -28,6 +28,7 @@
 | `starters.js` | `STARTERS`, `nameSoundOf`, `dropNameSounds` (pre-1.0 data only) | yes | backup.js |
 | `backup.js` | backup format, `makeBackup`, `readBackup`, `cleanBackup`, `refusal`, `beforeOne`, one-person helpers, `leftOutNote` | yes (plus zip) | backup-ui.js, leftover.js, cloud.js |
 | `merge.js` | `mergeLoaded`, `mergeSummary`, `sameBytes` | yes | backup-ui.js |
+| `old-beats.js` | `SIGNATURES`, `barSteps`, `unsignedAs`, `stampBeats`: the time signatures, and the stamp for beats saved before each had its own | yes | store.js (the upgrade), sequencer.js, backup.js, settings.js |
 | `zip.js` | `zip`, `unzip`, `crc32` | yes | backup.js, old-backup.js |
 | `backup-ui.js` | 💾 / 📂 buttons, `storeLoaded`, `whatIsHere`, `savePersonBackup`, `pastPins`, its own `storedLists` | no | app.js, leftover.js, cloud.js |
 | `old-backup.js` | `readEverything`, `makeEverything`, `holdings`, `holdsWords`, `sizeWords` | partly | leftover.js, backup-ui.js |
@@ -38,7 +39,7 @@
 
 ## IndexedDB: every store
 
-`store.js` `SCHEMA` lists each store with its key and the database version that added it. `DB_VERSION` is the highest `since` (15 today). `upgradeStores(database, oldVersion)` only creates stores whose `since` is greater than `oldVersion`. It never changes an existing store or record. A field change needs no database upgrade. Every reader cleans old shapes instead (`cleanPattern`, `cleanSong`, `allowedValue`, `personColor`…).
+`store.js` `SCHEMA` lists each store with its key and the database version that added it. `DB_VERSION` is the highest `since` or `STAMP_SINCE` (16 today). `upgradeStores(database, oldVersion, transaction)` creates stores whose `since` is greater than `oldVersion`. The one change to existing records is version 16: `stampStored` writes the time signature into every `beats` and `patterns` record that has none (`old-beats.js`, see beats-song.md "Old beats are stamped"), reading `prefs` and `settings`, in callbacks inside the upgrade's transaction, and giving up quietly rather than stopping the database opening (each request handles its own error, since an unhandled one aborts the upgrade and `open()` rejects on every load; a failure at commit, such as a full disk, still can). Two devices that were offline with different prefs can stamp one cloud beat differently; the newer edit wins on `signature` (`merge3.js mergeFields`). Otherwise a field change needs no database upgrade. Every reader cleans old shapes instead (`cleanPattern`, `cleanSong`, `allowedValue`, `personColor`…).
 
 | Store | Key | Since | Record (as written today) | Written by | Backup | Cloud |
 |---|---|---|---|---|---|---|

@@ -21,6 +21,7 @@ import { SKIN_IDS } from './skins.js';
 import { cleanSeen, cleanReaches } from './firsts.js';
 import { PLAYED, instrumentIds } from './instruments.js';
 import { cleanStamp, STAMP } from './merge3.js';
+import { unsignedAs } from './old-beats.js';
 
 // A person's level (ADR 0019): 🧸 Kids, Regular or Advanced.
 export const LEVELS = ['kids', 'regular', 'advanced'];
@@ -51,7 +52,9 @@ export const SETTINGS = {
   // time signature.
   advancedBeats: { default: false, values: [false, true], scope: 'person', read: (v) => { const l = levelOf(v); return l === undefined ? undefined : l === 'advanced'; } },
   // Beats per bar over the note that gets the beat. A pill is always a
-  // sixteenth and BPM always counts quarter notes. Only used with advancedBeats.
+  // sixteenth and BPM always counts quarter notes. Each beat has its own now
+  // (pattern.signature); this old choice is read only to stamp a beat saved
+  // before that, with advancedBeats on (old-beats.js unsignedAs).
   timeSignature: { default: '4/4', values: ['4/4', '3/4', '5/4', '6/8', '7/8'], scope: 'person' },
   // How big the sound pads are on the Pads screen (pads.js, pad-size.js):
   // where the slider sits between this screen's smallest and biggest pads,
@@ -158,6 +161,11 @@ export function getSetting(key) {
   const here = spec.read ? spec.read(Object.fromEntries(state.settings ?? [])) : allowedValue(key, state.settings.get(key));
   return here ?? allowedValue(key, spec.legacy?.()) ?? spec.default;
 }
+
+// The signature to write into a beat of `personId`'s that comes in with none,
+// a beat saved before each had its own (old-beats.js): what it was read in,
+// by their settings here. A beat file is stamped this way.
+export const unsignedSignature = (personId) => unsignedAs(state.prefs?.get(personId)?.values, Object.fromEntries(state.settings ?? []));
 
 // What setting `key` to `value` stores: the level and the Advanced switch
 // always together (see levelOf); anything else alone.

@@ -87,3 +87,4 @@ Each one, and why not.
 What gets easier, what gets harder, and what would make us revisit this.
 ```
 | [0034](0034-agent-council.md) | An agent council of 22 seats reviews every change against the mission and can block a feature or a deploy; never a rollback; results live in the work | Accepted |
+| [0035](0035-old-beats-stamped.md) | Beats saved before time signatures get their signature stamped once, on the version 16 upgrade and as they come in; no guess left in the code | Accepted |

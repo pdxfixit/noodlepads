@@ -89,6 +89,8 @@ export function whatIsHere() {
     takenColors: people({ includeHidden: true }).map((p) => p.color),
     takenPictures: people({ includeHidden: true }).map((p) => p.avatar),
     colorOk: (name) => Object.hasOwn(state.manifest.palette, colorName(name)),
+    // This device's settings, for the signature an unsigned beat coming in is stamped with (old-beats.js).
+    settingsHere: { prefs: new Map([...state.prefs].map(([id, p]) => [id, p.values])), device: Object.fromEntries(state.settings) },
   };
 }
 

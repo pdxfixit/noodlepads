@@ -10,7 +10,7 @@ const fakeDatabase = () => {
 
 test('the database is noodle-pads (new at noodlepads.com), at the version older data upgrades to', () => {
   assert.equal(DB_NAME, 'noodle-pads');
-  assert.equal(DB_VERSION, 15);
+  assert.equal(DB_VERSION, 16, 'version 16 stamps old beats with their signature (tests/stamp-signatures.test.mjs); it adds no store');
   assert.deepEqual(STORE_NAMES, ['clips', 'overrides', 'orders', 'patterns', 'beats', 'people', 'settings', 'decks', 'takes', 'songs', 'songbook', 'cloud', 'prefs', 'layouts', 'voices', 'bases', 'touchLayouts']);
 });
 

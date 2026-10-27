@@ -19,7 +19,7 @@ import { openDialog, setupDialog } from './dialogs.js';
 import { tempoKey } from './tempo-key.js';
 import { newId, recall, remember, onePressOneClick } from './util.js';
 import { makeVoice, fadeStop, tooLate } from './audio.js';
-import { getSetting, onSetting } from './settings.js';
+import { getSetting, onSetting, unsignedSignature } from './settings.js';
 import { logEvent } from './log.js';
 import { showBanner } from './ui.js';
 import { countPlay } from './play-count.js';
@@ -43,6 +43,7 @@ import { edgeScroller } from './edge-scroll.js';
 import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
 import { cutName, MAX_LABEL } from './names.js';
 import { kitIdOf } from './model.js';
+import { SIGNATURES, barSteps } from './old-beats.js';
 
 export const STEPS = 16;         // a bar of 4/4, the simple beat maker
 export const MAX_STEPS = 20;     // the longest bar (5/4)
@@ -53,17 +54,8 @@ export const MAX_PILLS = MAX_STEPS * Math.max(...BAR_CHOICES);  // the most pill
 // under its emoji.
 export const BEAT_BAR_STEPS = ['fit-split', 'fit-tight', 'fit-stack'];
 
-// Time signatures, one per beat (pattern.signature; chosen with Advanced on):
-// the bar's pills, grouped by the beat. A pill is always a sixteenth and BPM
-// always counts quarter notes, so 6/8 is two groups of three eighths.
-export const SIGNATURES = {
-  '4/4': [4, 4, 4, 4],
-  '3/4': [4, 4, 4],
-  '5/4': [4, 4, 4, 4, 4],
-  '6/8': [6, 6],
-  '7/8': [4, 4, 6],
-};
-export const barSteps = (signature) => (SIGNATURES[signature] || SIGNATURES['4/4']).reduce((a, b) => a + b, 0);
+// Time signatures (old-beats.js), one per beat (pattern.signature).
+export { SIGNATURES, barSteps };
 const STEPS_PER_BEAT = 4;
 const MAX_ROWS = 16;   // Ben, 2026-10-11: room to grow; the keys view also reuses an empty row when full
 const DEFAULT_BPM = 100;
@@ -221,7 +213,10 @@ export function cleanRow(r) {
 }
 
 // A saved beat as stored, made safe to use: a known tempo, rows of 16 steps.
-export function cleanPattern(raw, personId) {
+// `unsigned` is the signature to write into a beat that has none (a beat from
+// before each had its own, coming in: old-beats.js); without it such a beat
+// stays unsigned and plays as 4/4, which is what a new beat is.
+export function cleanPattern(raw, personId, unsigned) {
   const bpm = Math.round(Math.min(MAX_BPM, Math.max(MIN_BPM, Number(raw?.bpm) || DEFAULT_BPM)));
   const rows = (Array.isArray(raw?.rows) ? raw.rows : []).slice(0, MAX_ROWS).map(cleanRow);
   const name = typeof raw?.name === 'string' ? cutName(raw.name) : '';
@@ -229,9 +224,8 @@ export function cleanPattern(raw, personId) {
   const swing = clampInt(raw?.swing, 0, MAX_SWING, 0);
   const id = BEAT_ID.test(raw?.id) ? raw.id : undefined;   // the saved beat this is (open-document model)
   const out = id ? { id, personId, name, bpm, bars, swing, rows } : { personId, name, bpm, bars, swing, rows };
-  // A beat from before signatures were per beat has none, and plays as the
-  // old Settings choice did (see sigOf in createSequencer).
   if (Object.hasOwn(SIGNATURES, raw?.signature)) out.signature = raw.signature;
+  else if (Object.hasOwn(SIGNATURES, unsigned)) out.signature = unsigned;
   // The 🎚️ Mixer's master: its loudness below full and its effect, only when set (ADR 0018).
   if (cleanVolume(raw?.volume) < 1) out.volume = cleanVolume(raw.volume);
   if (cleanFx(raw?.fx)) out.fx = cleanFx(raw.fx);
@@ -363,7 +357,7 @@ export function beatToFile(pattern, kitIds) {
 }
 // A beat file's text as a beat for `personId` (no id yet: the caller gives
 // one), or an Error saying, for a kid, what is wrong with the file.
-export function beatFromFile(text, personId, kitIds) {
+export function beatFromFile(text, personId, kitIds, unsigned) {
   if (typeof text !== 'string' || text.length > MAX_BEAT_FILE_BYTES) throw new Error('That file is too big to be a beat.');
   let raw;
   try { raw = JSON.parse(text); } catch { throw new Error('That isn’t a beat file.'); }
@@ -371,7 +365,7 @@ export function beatFromFile(text, personId, kitIds) {
   const rows = raw.rows
     .filter((r) => r?.sound === null || kitIds.includes(r?.sound))
     .map((r) => ({ ...r, clipId: r.sound === null ? null : `${personId}-${r.sound}` }));
-  return cleanPattern({ ...raw, rows }, personId);
+  return cleanPattern({ ...raw, rows }, personId, unsigned);
 }
 
 // A pill's two gestures (Ben, 2026-10-11): a tap switches it on or off, in
@@ -627,8 +621,6 @@ export function createSequencer(deps) {
   window.addEventListener('resize', () => drawPlayhead());
   let pattern = null;
   let advanced = getSetting('advancedBeats');
-  // The old Settings choice: only for beats saved before each beat had its own.
-  let oldSignature = getSetting('timeSignature');
   let timer = 0;
   let raf = 0;
   let t0 = 0;            // when the beat started, on the audio clock
@@ -657,7 +649,7 @@ export function createSequencer(deps) {
   // every level (Ben, 2026-10-12).
   const playMode = () => (advanced ? 'speed' : 'plain');
   // A beat plays in its own signature in either mode; only choosing one needs Advanced.
-  const sigOf = () => (pattern ? pattern.signature || (advanced ? oldSignature : '4/4') : '4/4');
+  const sigOf = () => (pattern ? pattern.signature || '4/4' : '4/4');
   const groups = () => SIGNATURES[sigOf()] || SIGNATURES['4/4'];
   const bar = () => groups().reduce((a, b) => a + b, 0);
   const rings = (row) => row.ring;
@@ -727,7 +719,6 @@ export function createSequencer(deps) {
   // in place (`deps.ready`): the beat is drawn again once they are.
   const drawable = () => personId && deps.ready?.() !== false;
   onSetting('advancedBeats', (value) => { advanced = value; if (drawable()) render(); });
-  onSetting('timeSignature', (value) => { oldSignature = value; if (drawable()) render(); });
 
   function prepare(clip) {
     if (!clip) return Promise.resolve();
@@ -3123,7 +3114,7 @@ export function createSequencer(deps) {
     if (!f) return;
     try {
       if (f.size > MAX_BEAT_FILE_BYTES) throw new Error('That file is too big to be a beat.');
-      const beat = beatFromFile(await f.text(), personId, deps.kitIds());
+      const beat = beatFromFile(await f.text(), personId, deps.kitIds(), unsignedSignature(personId));
       const now = Date.now();
       Object.assign(beat, { id: newId('beat'), name: uniqueName(beat.name || freshName()), created: now, saved: now });
       openBeat(beat);
@@ -3412,7 +3403,7 @@ export function createSequencer(deps) {
 
   // Pills in one bar of a saved beat: its own time signature, as sigOf()
   // reads the open beat's.
-  const sigFor = (raw) => (Object.hasOwn(SIGNATURES, raw?.signature) ? raw.signature : (advanced ? oldSignature : '4/4'));
+  const sigFor = (raw) => (Object.hasOwn(SIGNATURES, raw?.signature) ? raw.signature : '4/4');
   const barOf = (raw) => barSteps(sigFor(raw));
   // A saved beat once through: its length in seconds (its own tempo, bars and
   // bar length) and every hit in it, as bounce() renders them.

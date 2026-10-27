@@ -21,7 +21,7 @@
 
 ## The beat record
 
-One shape everywhere: the open beat in memory, a beat in 🗂️ My beats, the scratch, a groove made into a beat, a beat from 🎧 From a song. `sequencer.js cleanPattern(raw, personId)` makes any of them safe. Everything that brings a beat in uses it: `backup.js` (the `patterns` and `beats` lists), `listen-make.js`, `beatFromFile`, `grooveBeat`, and every read from the library.
+One shape everywhere: the open beat in memory, a beat in 🗂️ My beats, the scratch, a groove made into a beat, a beat from 🎧 From a song. `sequencer.js cleanPattern(raw, personId, unsigned?)` makes any of them safe. Everything that brings a beat in uses it: `backup.js` (the `patterns` and `beats` lists), `listen-make.js`, `beatFromFile`, `grooveBeat`, and every read from the library.
 
 ### The beat
 
@@ -34,6 +34,8 @@ One shape everywhere: the open beat in memory, a beat in 🗂️ My beats, the s
 | `bars` | 1, 2 or 4 (`BAR_CHOICES`) | else 1 |
 | `swing` | 0–50 (`MAX_SWING`): the off-beat eighths play late by `swing/100` of an eighth (the pills between move half as much) | clamped; plays at every level |
 | `signature` | `'4/4' '3/4' '5/4' '6/8' '7/8'` (`SIGNATURES`) | **left out** when missing or unknown; see "Time signatures" |
+| `swing` | 0–50 (`MAX_SWING`): every odd pill plays late by `swing/100` of a pill | clamped; plays only with Advanced |
+| `signature` | `'4/4' '3/4' '5/4' '6/8' '7/8'` (`old-beats.js SIGNATURES`, re-exported by `sequencer.js`) | kept when known. When missing or unknown it is the third argument `unsigned` when that is a known signature (an old beat coming in, stamped), else **left out** and plays as 4/4; see "Time signatures" |
 | `volume` | the 🎚️ master level, 0–1 | **left out** at full (ADR 0018) |
 | `fx` | the master effect id (`mixer.js MIX_FX`) | **left out** when none |
 | `rows` | up to 16 (`MAX_ROWS`), each `cleanRow` | sliced |
@@ -74,7 +76,19 @@ Library records add three fields that `cleanPattern` drops, so every write puts 
 
 ### A beat file (🗂️ My beats ⬇️ / 📥)
 
-`sequencer.js beatToFile` / `beatFromFile`: `{format: 'noodlepads-beat', version: 1, name, bpm, bars, swing, rows, signature?, volume?, fx?}`. A row's `clipId` becomes `sound`, the kit id (`'kick'`); rows of a kid's own sounds are dropped and counted. Reading also accepts the old format name `noodle-pads-beat`, caps the text at 64 KB, and maps `sound` back to `<personId>-<kit id>`. The beat-level fields are listed by hand in `beatToFile`: a new beat field must be added there too. A beat file does **not** go through `backup.js` or `merge.js`.
+`sequencer.js beatToFile` / `beatFromFile`: `{format: 'noodlepads-beat', version: 1, name, bpm, bars, swing, rows, signature?, volume?, fx?}`. A row's `clipId` becomes `sound`, the kit id (`'kick'`); rows of a kid's own sounds are dropped and counted. Reading also accepts the old format name `noodle-pads-beat`, caps the text at 64 KB, and maps `sound` back to `<personId>-<kit id>`. The beat-level fields are listed by hand in `beatToFile`: a new beat field must be added there too. A beat file does **not** go through `backup.js` or `merge.js`. A file without a `signature` (made before beats had their own) is stamped on loading with the loader's settings (`settings.js unsignedSignature`, passed as `beatFromFile`'s fourth argument).
+
+### Old beats are stamped
+
+A beat saved before each beat had its own `signature` has none. It used to be read by a guess: the person's old setting `timeSignature` when Advanced was on, else 4/4. Ben (2026-10-27) had that answer written into each such beat once, so no code guesses and a clean import into v2 needs no Settings. `old-beats.js` (no imports; `store.js` uses it mid-upgrade) holds the rule: `unsignedAs(...layers)` takes settings objects, the person's first and the device's after, as `settings.js getSetting` reads them, and `stampBeats` stamps a list of stored records.
+
+| Way in | Where it is stamped | Settings it reads |
+|---|---|---|
+| The database on this device | `store.js upgradeStores` (version 16, `STAMP_SINCE`) → `stampStored`, inside the upgrade's transaction: every record of `beats` and `patterns` without a signature | the beat's owner's `prefs`, then the device's `settings` |
+| A backup (1.0, 1.1), older sounds found, a cloud pull, a share remix | `backup.js cleanBackup`: `cleanPattern(…, unsignedFor(personId))` for `patterns` and `beats` | the document's own `prefs` and `settings`, then this device's (`backup-ui.js whatIsHere().settingsHere`) |
+| A beat file | `sequencer.js beatFromFile` (the 📥 handler) | the loader's, `settings.js unsignedSignature` |
+
+The owner's settings decide, not whoever is looking, so a beat sounds as it did for the person who made it. A beat made by current code with no signature is a new beat: 4/4. The backup format does not change (`signature` was already in it): a 1.x backup with an unsigned beat loads stamped. If the upgrade cannot read a store it leaves the beats as they were (the database must open), and they play as 4/4. After the upgrade each device syncs its stamped beats up like any edit. Why: [ADR 0035](../adr/0035-old-beats-stamped.md). Guard: `tests/stamp-signatures.test.mjs`, `tests/song-unsigned.test.mjs`.
 
 ## The open beat, the library and the scratch (ADR 0017, 0020)
 
@@ -144,6 +158,8 @@ A row with no clock (added while playing, or put back by Undo) gets one from `jo
 - **Bars.** `total() = bar() × pattern.bars`. Pills past `total()` are stored but hidden (`p.hidden = s >= count`) and never played.
 - **Time signatures.** `sigOf()` is the beat's `signature`; a beat with none plays as the old person setting `timeSignature` when Advanced is on, else 4/4. `groups()` is `SIGNATURES[sig]` (the beat groups in pills), `bar()` their sum. Choosing a signature needs Advanced (`el.shape.hidden = !advanced`); playing one does not. Pills always last a sixteenth; BPM always counts quarter notes.
 - **Swing.** `swingDelay(step, dt, swing, groups)` delays the "and" pill of each 4-pill beat by `swing/100` of an eighth and its odd pills by half that (a 6-pill group of 6/8 or 7/8 moves only its odd pills); `groups` is the signature's. A groove may carry `swing` (Lo-fi, Boom bap, Dusty), which `grooveBeat` copies to the beat. Only the sound and the playhead move; the clock does not. `swingNow()` is the beat's swing at every level (Regular and Advanced see the keys; a beat saved with swing plays it for everyone). A tune row's half-pill notes are not swung. The UI offers 0, 33 and 50 (`SWING_KEYS`); other stored values play as stored.
+- **Time signatures.** `sigOf()` is the beat's `signature`, 4/4 when it has none. A beat saved before each beat had its own was read by a guess (the person's old setting `timeSignature` with Advanced on, else 4/4); that answer is now written into the beat once, and nothing guesses ("Old beats are stamped" below). `groups()` is `SIGNATURES[sig]` (the beat groups in pills), `bar()` their sum. Choosing a signature needs Advanced (`el.shape.hidden = !advanced`); playing one does not. Pills always last a sixteenth; BPM always counts quarter notes.
+- **Swing.** `swingDelay(step, dt, swing)` delays odd pills by `swing/100` of a pill. Only the sound and the playhead move; the clock does not. `swingNow()` is 0 without Advanced. A tune row's half-pill notes are not swung. The UI offers 0, 33 and 50 (`SWING_KEYS`); other stored values play as stored.
 - **Tempo while playing.** `retime(oldBpm)` maps every not-yet-booked time with `retimeAt(anchor, old, new)`: `t0`, `clickNext`, every `clocks[i].next`, live-hit `skips`, and a `queued` chip switch. So `t0 + n × pill` stays pill n's time, and ⌨️ Keys' snapping stays right. The slider applies it on `input`, saves and calls `onTempo` on `change`.
 
 ### What one hit does (`sound`)
@@ -286,7 +302,7 @@ A song from before lanes (only `slots`) becomes lane 1's blocks, back to back, a
 
 ### The song's clock
 
-- **Time is in song bars:** one bar of 4/4, 16 pills (`BAR_STEPS`), at the tempo of that bar. A beat plays at the **song's** tempo (`planSong` overrides each beat's `bpm` with `song.tempo`), pass after pass. A 2-bar beat takes 2 song bars a pass; a 3/4 beat takes ¾ of one (`beatSteps`). A beat saved with no signature (a legacy beat, from before each beat had its own) counts as `beatPlan` plays it: the old `timeSignature` with Advanced on, else 4/4. So such a beat's block length in a song follows the playing person's Advanced and old-signature settings, and changes when they do (`song.js` redraws on `timeSignature`). Stamping a signature on such a beat when it opens would fix the length for good, but that is a stored-shape change, not made here.
+- **Time is in song bars:** one bar of 4/4, 16 pills (`BAR_STEPS`), at the tempo of that bar. A beat plays at the **song's** tempo (`planSong` overrides each beat's `bpm` with `song.tempo`), pass after pass. A 2-bar beat takes 2 song bars a pass; a 3/4 beat takes ¾ of one (`beatSteps`). A beat with no signature is 4/4 (`barSteps` of nothing), here and in `sequencer.js barOf`; a beat from before signatures is stamped ("Old beats are stamped"), so its block length no longer follows anyone's settings.
 - `playlist.js songClock(song)`: `barStart`, `at(pill)`, `barAt(seconds)` and `tempoOf(bar)` with the marks; the plain arithmetic when there are none.
 - `playParts(lanes, stepsOf, clock)`: every pass of every block, cut where the next block on its lane starts.
 - `playEvents(parts, plans, {from, skipLanes, clock})`: every hit of the song in time order. With marks, a hit is placed by its pill on the clock, and a held note's length follows the bars.
@@ -434,7 +450,8 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | `cleanPattern` sets `personId` from its argument | a beat moved between people must not keep the old owner | `tests/sequencer.test.mjs` (only for a missing `raw`) |
 | Stopping the beat ends a ⌨️ Keys recording (`onStop`) | anything that calls `seq.stop()` (a screen change, a sync, 🆕 New) ends the take | `tests/beat-rec-stop.test.mjs` |
 | `ready` is never emptied: `play` and `prepareBeats` load afresh over it (`refresh`). `play` then keeps only the open beat's sounds, unless a `prepareBeats` caller may still be booking (`preparing`) | a beat or song playing reads it while 🗂️ See all or a share renders another beat; a sound deleted or replaced (forgotten by `audio.forget` or `dropRendered`) must not stay decoded here all visit; any other sound `audio.js` keeps decoded anyway (`rendered`, `originals`), so letting go of it here saves nothing | `tests/beat-sounds-kept.test.mjs`; `tests/beat-ready.test.mjs` reads `ready` through `seq.held()`, reached by the tests' hook `globalThis.noodleTestSeq` (`app.js start`) |
-| `song.js beatSteps` and `sequencer.js barOf` read a missing `signature` the same way | a pass's length in a song must match its plan, or each pass leaves a gap | `tests/song.test.mjs`, `tests/song-unsigned.test.mjs` (through the real beat maker) |
+| `song.js beatSteps` and `sequencer.js barOf` read a missing `signature` the same way (4/4) | a pass's length in a song must match its plan, or each pass leaves a gap | `tests/song.test.mjs`, `tests/song-unsigned.test.mjs` (a beat that came in through a backup) |
+| Every way an old beat comes in stamps it (`old-beats.js`) | a missing signature is 4/4 now; an old 3/4 beat that came in unstamped would change what a kid hears | `tests/stamp-signatures.test.mjs` |
 | A song plays every beat at the song's tempo | a beat's own `bpm` is ignored in a song | `tests/song.test.mjs` |
 | Pills past `total()` stay stored | going back to more bars loses nothing | none found |
 | The click goes straight to `audio.master` | it is never in a render or a preview | none |

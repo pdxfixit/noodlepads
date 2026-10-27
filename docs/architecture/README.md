@@ -70,7 +70,7 @@ The questions agents ask most. ✅ marks a claim `tests/architecture.test.mjs` c
 | Database | **One**, `noodle-pads`, opened by `store.js` (and `old-backup.js` reads the old one ✅). | data.md |
 | Write path | **Mostly** `state.js persist`; `app.js`, `backup-ui.js storeLoaded` and `cloud.js` also write with `db` directly. | data.md |
 | List of stores | **No**: about ten hand-kept lists follow `store.js SCHEMA`. The person's, backup's and cloud's lists are checked ✅. | data.md |
-| Gate for what comes in | Backups and cloud pulls: `backup.js cleanBackup` (then `merge.js`; cloud records merge three ways first, `merge3.js`). A beat file: `sequencer.js beatFromFile` → `cleanPattern`. | data.md, cloud.md |
+| Gate for what comes in | Backups and cloud pulls: `backup.js cleanBackup` (then `merge.js`; cloud records merge three ways first, `merge3.js`). A beat file: `sequencer.js beatFromFile` → `cleanPattern`. Both stamp a beat saved before time signatures (`old-beats.js`); so does the database upgrade. | data.md, cloud.md |
 | Settings registry | **One**, `settings.js SETTINGS` (each with a scope and its allowed values ✅); `getSetting`, `setSetting`, `onSetting`. | data.md |
 | Dialog opener | **One ✅**, `dialogs.js openDialog` (the only `showModal`); `onDialogOpen` feeds tips, the nudge and telemetry. | shell.md |
 | Banner | **One ✅**, `ui.js showBanner` (`showNotice` and Undo go through it), and one screen-reader announcer. | shell.md |

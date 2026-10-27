@@ -26,6 +26,8 @@
 //   touchLayouts  a person's saved 👆 touch layouts: {id, personId,  key id
 //              name, created, bands} (touch.js, ADR 0029)
 
+import { stampBeats } from './old-beats.js';
+
 // Named when the app moved to noodlepads.com, where nothing was stored yet.
 // A database an older copy left under the old name is only read, by
 // ⚙️ Settings → Older sounds found on this device (leftover.js).
@@ -54,15 +56,58 @@ export const SCHEMA = [
   { name: 'touchLayouts', keyPath: 'id', since: 15 }, // a person's saved 👆 touch layouts (ADR 0029)
 ];
 
-export const DB_VERSION = Math.max(...SCHEMA.map((s) => s.since));
+// Version 16 changes no store: it writes the time signature into every beat
+// saved before each beat had its own (old-beats.js).
+export const STAMP_SINCE = 16;
+
+export const DB_VERSION = Math.max(STAMP_SINCE, ...SCHEMA.map((s) => s.since));
 export const STORE_NAMES = SCHEMA.map((s) => s.name);
 
 // Brings a database from `oldVersion` (0 for a new one) to DB_VERSION by
-// creating the stores it doesn't have yet. Never touches existing stores.
-export function upgradeStores(database, oldVersion) {
+// creating the stores it doesn't have yet, then, with the upgrade's
+// `transaction`, stamping old beats (stampStored). Never changes anything else.
+export function upgradeStores(database, oldVersion, transaction) {
   for (const { name, keyPath, since } of SCHEMA) {
     if (oldVersion < since) database.createObjectStore(name, { keyPath });
   }
+  if (transaction && oldVersion > 0 && oldVersion < STAMP_SINCE) stampStored(transaction);
+}
+
+// Writes each saved beat's time signature, and each open beat's, where it has
+// none: what the beat was read in until now, by its person's settings (the
+// old Settings signature with Advanced on, else 4/4), so nothing a kid hears
+// changes and nothing is guessed after this. It runs inside the upgrade's
+// transaction, in plain callbacks (a promise can let the transaction end
+// early). If anything goes wrong it stops without a word: the upgrade must
+// finish, or the app cannot open its database; a beat left unsigned plays as 4/4.
+// A request that fails aborts the whole upgrade unless its error is handled
+// (and then `open()` rejects on every load), so each request handles its own.
+// A failure at commit (a full disk) still aborts the upgrade; nothing here can catch that.
+function stampStored(transaction) {
+  const rows = {};
+  let unread = false;
+  const names = ['prefs', 'settings', 'beats', 'patterns'];
+  // Keeps a failed request from aborting the transaction.
+  const quiet = (req, then) => {
+    req.onerror = (e) => { e?.preventDefault?.(); e?.stopPropagation?.(); then?.(); };
+  };
+  const next = (i) => {
+    try {
+      if (i < names.length) {
+        const req = transaction.objectStore(names[i]).getAll();
+        req.onsuccess = () => { rows[names[i]] = req.result; next(i + 1); };
+        // A store that cannot be read: the rest still read, but nothing is stamped
+        // (a person's settings missing would stamp their beats wrongly; unsigned plays as 4/4).
+        quiet(req, () => { unread = true; next(i + 1); });
+        return;
+      }
+      if (unread) return;
+      for (const store of ['beats', 'patterns']) {
+        for (const record of stampBeats(rows[store], rows.prefs, rows.settings)) quiet(transaction.objectStore(store).put(record));
+      }
+    } catch { /* leave them unsigned */ }
+  };
+  next(0);
 }
 
 export const db = {
@@ -77,7 +122,7 @@ export const db = {
   open({ onBlocked = () => {}, onVersionChange = () => {} } = {}) {
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VERSION);
-      req.onupgradeneeded = (e) => upgradeStores(req.result, e.oldVersion);
+      req.onupgradeneeded = (e) => upgradeStores(req.result, e.oldVersion, req.transaction);
       req.onsuccess = () => {
         this.handle = req.result;
         this.handle.onversionchange = () => {

@@ -22,6 +22,7 @@ import { zip, unzip } from './zip.js';
 import { VOICES, storedFx } from './voices.js';
 import { cleanTweaks } from './tweaks.js';
 import { cleanPattern } from './sequencer.js';
+import { unsignedAs } from './old-beats.js';
 import { extensionFor } from './util.js';
 import { whiteReadsOn } from './contrast.js';
 import { cleanTrim, cleanFrom, cleanEdits, cleanFade } from './cuts.js';
@@ -419,11 +420,20 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
     })
     : null));
 
-  const patterns = clean('patterns', (p) => (knownPerson(p?.personId) ? cleanPattern(p, p.personId) : null));
+  // A beat saved before each had its own time signature has none: it is
+  // stamped with the one it was read in, by its person's settings (old-beats.js),
+  // from this document's own, else this device's, so a 1.0 or 1.1 backup
+  // loads with its beats sounding as they did, and none comes in unsigned.
+  const listOf = (name) => (Array.isArray(doc[name]) ? doc[name].slice(0, MAX_RECORDS[name]) : []);
+  const prefsIn = new Map(listOf('prefs').filter((p) => knownPerson(p?.personId)).map((p) => [p.personId, cleanPrefs(p).values]));
+  const deviceIn = Object.fromEntries(listOf('settings').filter((r) => inBackups(r?.key) && allowedValue(r.key, r.value) !== undefined).map((r) => [r.key, allowedValue(r.key, r.value)]));
+  const unsignedFor = (personId) => unsignedAs(prefsIn.get(personId), bundled.settingsHere?.prefs?.get(personId), deviceIn, bundled.settingsHere?.device);
+
+  const patterns = clean('patterns', (p) => (knownPerson(p?.personId) ? cleanPattern(p, p.personId, unsignedFor(p.personId)) : null));
 
   const beats = clean('beats', (b) => (BEAT_ID.test(b?.id) && knownPerson(b.personId)
     ? {
-      ...cleanPattern(b, b.personId),
+      ...cleanPattern(b, b.personId, unsignedFor(b.personId)),
       id: b.id,
       name: title(b.name, 24) || 'Beat',
       created: num(b.created) ?? Date.now(),

@@ -53,19 +53,16 @@ test("a beat's pass in pills: its bar times its bars", () => {
   assert.equal(beatSteps(undefined), null);
 });
 
-// A beat saved before beats had their own signature plays on Beats in the
-// person's old Settings signature when Advanced is on (sequencer.js barOf).
-// A song counted it as 4/4, so in 3/4 it left a gap of 4 pills each pass.
-test('a beat with no signature takes, in a song, the bar it plays on Beats', async () => {
+// A beat saved before beats had their own signature is stamped with the one it
+// was read in as it is stored or comes in (old-beats.js), so a beat with none
+// here is a new one: 4/4, whatever the old Settings say. Nothing guesses.
+test('a beat with no signature is 4/4 in a song, whatever the old Settings say', async () => {
   const { state } = await import('../web/state.js');
-  assert.equal(beatSteps({ bars: 1 }, '3/4'), 12);
   state.settings.set('advancedBeats', true);
   state.settings.set('timeSignature', '3/4');
   try {
-    assert.equal(beatSteps({ bars: 2 }), 24, 'Advanced on: the old 3/4 setting');
+    assert.equal(beatSteps({ bars: 2 }), 32, 'Advanced on with an old 3/4: still 4/4');
     assert.equal(beatSteps({ bars: 1, signature: '5/4' }), 20, 'a beat with its own keeps it');
-    state.settings.set('advancedBeats', false);
-    assert.equal(beatSteps({ bars: 2 }), 32, 'Advanced off: 4/4, as on Beats');
   } finally {
     state.settings.delete('advancedBeats');
     state.settings.delete('timeSignature');
