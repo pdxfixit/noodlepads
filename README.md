@@ -91,7 +91,7 @@ the cloud database show what they would do, or ask, before they do it.
 | Has a council seat stopped finding things? | `just council-tripwire` (a seat whose last 10 reviews were all a plain pass; `docs/council.md`) |
 | Make sounds and emoji lists | `just placeholders`, `just emoji`, `just preset-loudness` (how loud each preset plays on a phone; `--fix` evens them out) |
 
-Agents use the rest: `just setup` (the git hooks, once per clone), `just ship`, `just land`, `just land-continue`, `just policy` (copies
+Agents use the rest: `just setup` (the git hooks, once per clone), `just ship`, `just land`, `just land-continue`, `just ci-wait` (waits for a commit's GitHub runs), `just policy` (copies
 `docs/privacy-policy.md` to the privacy site's repo once a change to it is on main; `--dry-run` stops before landing),
 `just archive-agent`, `just prove`, `just version` (the release in
 `web/version.js`, bumped with every change to `web/`), and the steps a deploy runs itself

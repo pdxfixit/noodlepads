@@ -328,6 +328,12 @@ land *args:
 land-continue worktree:
     @just land --continue {{worktree}}
 
+# (tools/ci_wait.sh resolves a short SHA to the full one gh needs, and keeps waiting through a failed read)
+[doc("Wait for GitHub Actions on a commit (default: main on GitHub) and say how each run ended, test and deploy; fails if one failed: just ci-wait [<sha>] [--timeout MIN]")]
+[positional-arguments]
+ci-wait *args:
+    @bash tools/ci_wait.sh "$@"
+
 # docs/privacy-policy.md is this app's policy; the privacy site (pdxfixit/privacy) keeps a copy of it.
 # Run this once a change to it is on main. It finds the privacy checkout ($PRIVACY, else ../privacy beside
 # the main checkout, else a clone in ~/.cache/privacy) and runs its tools/send.sh, which takes the file in
