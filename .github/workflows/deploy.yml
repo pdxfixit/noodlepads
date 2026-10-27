@@ -78,6 +78,10 @@ jobs:
           CHECKS_KEY: ${{ secrets.CHECKS_KEY }}
         run: |
           set -euo pipefail
+          # Trimmed at both ends, as tools/look-cloud.mjs trims what the checks
+          # send: a stray newline pasted with the secret never splits the two.
+          CHECKS_KEY="${CHECKS_KEY#"${CHECKS_KEY%%[![:space:]]*}"}"
+          CHECKS_KEY="${CHECKS_KEY%"${CHECKS_KEY##*[![:space:]]}"}"
           if [ -z "$CHECKS_KEY" ]; then
             echo "::notice title=CHECKS_KEY not set::The GitHub secret CHECKS_KEY is empty, so the Worker's is left as it is. Until the Worker holds one, the deploy checks' ids pass on the id alone (TODO.md, Ben does: Give the deploy checks a secret)."
             exit 0

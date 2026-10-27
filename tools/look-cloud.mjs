@@ -48,11 +48,16 @@ const testId = (kind) => `p-${kind}-${Date.now().toString(36)}-${crypto.randomBy
 const secs = (ms) => `${(ms / 1000).toFixed(1)} s`;
 const must = (ok, why) => { if (!ok) throw new Error(why); };
 
-// The checks' proof, as headers: none while CHECKS_KEY is unset.
-export const checksHeaders = (key = process.env.CHECKS_KEY ?? '') => (key ? { [CHECKS_HEADER]: key } : {});
+// The checks' proof, as headers: none while CHECKS_KEY is unset. Trimmed at
+// both ends, as deploy.yml trims what it puts into the Worker, so a stray
+// newline pasted with the secret never splits the two.
+export const checksHeaders = (key = process.env.CHECKS_KEY ?? '') => {
+  const proof = key.trim();
+  return proof ? { [CHECKS_HEADER]: proof } : {};
+};
 
 function sayProof() {
-  if (!process.env.CHECKS_KEY) {
+  if (!process.env.CHECKS_KEY?.trim()) {
     console.log('ℹ️  CHECKS_KEY is not set: the check sends no proof. A Worker that holds the secret refuses its profile (400 id); set CHECKS_KEY to the GitHub secret\'s value.');
   }
 }

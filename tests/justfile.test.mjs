@@ -181,6 +181,10 @@ test("GitHub puts the checks' secret into the Worker before the upload, and the 
   assert.match(step, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
   assert.match(step, /CHECKS_KEY: \$\{\{ secrets\.CHECKS_KEY \}\}/);
   assert.match(step, /if \[ -z "\$CHECKS_KEY" \]; then\n\s+echo "::notice[^\n]*CHECKS_KEY[^\n]*"\n\s+exit 0/, 'empty: says so and goes on');
+  // Trimmed before anything reads it, as look-cloud.mjs checksHeaders trims what it sends.
+  const run = step.slice(step.indexOf('set -euo pipefail'));
+  assert.ok(run.indexOf('CHECKS_KEY="${CHECKS_KEY#"${CHECKS_KEY%%[![:space:]]*}"}"') > 0, 'leading space trimmed');
+  assert.ok(run.indexOf('CHECKS_KEY="${CHECKS_KEY%"${CHECKS_KEY##*[![:space:]]}"}"') < run.indexOf('if [ -z "$CHECKS_KEY" ]'), 'trailing too, first');
   assert.match(step, /printf '%s' "\$CHECKS_KEY" \| "\$FLAREPRESS\/tools\/wrangler\.sh" "\$GITHUB_WORKSPACE\/site" secret put CHECKS_KEY/, 'the value from stdin, never on the command line');
   // A failed put stops the deploy before the upload, so the live checks never meet a Worker without the secret.
   const failed = wf.slice(put, wf.indexOf('- uses:', put));

@@ -46,7 +46,8 @@ Only this step, the checks' secret and the upload hold the token, which has D1 e
 
 Then, still before step 3, the deploy puts the GitHub secret `CHECKS_KEY` into
 the Worker (`wrangler secret put CHECKS_KEY` through flarepress's
-`tools/wrangler.sh`, the value from stdin), every deploy, so a new value takes
+`tools/wrangler.sh`, the value from stdin, trimmed at both ends as
+`tools/look-cloud.mjs` trims what it sends), every deploy, so a new value takes
 at once. While the GitHub secret is empty the step prints a notice and goes on.
 If wrangler fails, the step fails and the deploy stops there, before the
 upload: the live Worker keeps its old code and secret, so the live checks are

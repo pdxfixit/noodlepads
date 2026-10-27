@@ -82,4 +82,7 @@ test('until the Worker holds the secret, a check runs as before', async () => {
 test('the checks send the secret from the environment, in the header the Worker reads', () => {
   assert.deepEqual(checksHeaders(SECRET), { [CHECKS_HEADER]: SECRET });
   assert.deepEqual(checksHeaders(''), {}, 'no secret: no header');
+  // Trimmed, as deploy.yml trims what it puts into the Worker: a pasted newline never splits the two.
+  assert.deepEqual(checksHeaders(` ${SECRET}\n`), { [CHECKS_HEADER]: SECRET });
+  assert.deepEqual(checksHeaders(' \n'), {}, 'only spaces: no secret');
 });
