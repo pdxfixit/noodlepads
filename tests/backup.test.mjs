@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeBackup, readBackup, heardWav, MAX_HEARD_BYTES, cleanBackup, personBackupLists, onePersonIn, intoPerson, namesPerson, withoutPeople, BACKUP_APP, BACKUP_FORMAT, MAX_SOUND_BYTES, refusal, beforeOne } from '../web/backup.js';
+import { makeBackup, readBackup, heardWav, MAX_HEARD_BYTES, cleanBackup, personBackupLists, onePersonIn, intoPerson, namesPerson, withoutPeople, BACKUP_APP, BACKUP_FORMAT, MAX_SOUND_BYTES, refusal } from '../web/backup.js';
 import { buildZip, blobOf, bytes, utf8, failure, fakeBuffer } from './helpers.mjs';
 import { unzip } from '../web/zip.js';
 import { isFunName } from '../web/names.js';
@@ -277,7 +277,7 @@ test('clips of a person already added on this device are kept, and that person i
   assert.deepEqual(here.people, [], 'no new person for someone already here');
 });
 
-test('a backup says noodlepads, format 1.2; any 1.x loads, and so does one from before 1.0', async () => {
+test('a backup says noodlepads, format 1.2; any 1.x loads', async () => {
   assert.equal(BACKUP_APP, 'noodlepads');
   assert.equal(BACKUP_FORMAT, '1.2');
   const saved = JSON.parse(new TextDecoder().decode((await unzip(await makeBackup({ people: [], clips: [], overrides: [], orders: [], patterns: [], beats: [] }))).get('backup.json')));
@@ -286,28 +286,25 @@ test('a backup says noodlepads, format 1.2; any 1.x loads, and so does one from 
   assert.equal(refusal({ app: 'noodlepads', format: '1.0' }), null);
   assert.equal(refusal({ app: 'noodlepads', format: '1.7' }), null, 'a later 1.x only adds what this copy can skip');
   assert.equal(refusal({ app: 'noodle-pads', format: '1.1' }), null, 'a backup saved before the 1.0 rename still loads');
-  assert.equal(beforeOne({ app: 'noodle-pads', format: 1 }), true, 'and so does an older-sounds backup made before it');
   assert.equal((await read({ format: '1.3', clips: [goodClip()] })).clips.length, 1);
-  // Before 1.0: an app id ending in -soundboard, or this id with format 1 as a
-  // number. The testing copies' backups load once more (Ben, 2026-10-11).
-  for (const doc of [{ app: 'family-soundboard', format: 1 }, { app: 'family-soundboard', format: '1.0' }, { app: BACKUP_APP, format: 1 }]) {
-    assert.equal(beforeOne(doc), true, JSON.stringify(doc));
-    assert.equal((await read({ ...doc, clips: [goodClip()] })).clips.length, 1, JSON.stringify(doc));
-  }
-  assert.equal(beforeOne({ app: BACKUP_APP, format: '1.0' }), false);
   for (const app of ['soundboard', '-soundboard', 'Family-Soundboard', 'evil/-soundboard', null, 7]) {
     assert.match(refusal({ app, format: '1.0' }), /isn't a Noodle Pads backup/, String(app));
   }
 });
 
-test('a backup from before 1.0 keeps its people: ones an older boards.json named become added people', async () => {
-  const out = await read({
-    app: 'family-soundboard', format: 1,
-    people: [{ id: 'old-a', name: 'Rocket', color: '#0B5C7A' }],
-    clips: [goodClip({ personId: 'old-a' })],
-  }, undefined, bundled({ peopleIds: new Set(), kitIds: new Set(['kick']) }));
-  assert.deepEqual(out.people.map((p) => [p.id, p.name, p.added]), [['old-a', 'Rocket', true]]);
-  assert.equal(out.clips.length, 1, 'their sound comes too');
+test('a backup from before 1.0 is refused, with the plain message, and nothing comes of it (ADR 0011)', async () => {
+  const cases = [
+    [{ app: 'family-soundboard', format: 1 }, /isn't a Noodle Pads backup/],
+    [{ app: 'family-soundboard', format: '1.0' }, /isn't a Noodle Pads backup/],
+    [{ app: BACKUP_APP, format: 1 }, /doesn't say which format/],
+    [{ app: 'noodle-pads', format: 1 }, /doesn't say which format/],
+  ];
+  for (const [doc, why] of cases) {
+    assert.match(refusal(doc), why, JSON.stringify(doc));
+    // Its people and sounds are not read at all: the load throws before any record is cleaned.
+    const old = { ...doc, people: [{ id: 'old-a', name: 'Rocket', color: '#0B5C7A' }], clips: [goodClip({ personId: 'old-a' })] };
+    assert.match(await failure(read(old)), why, JSON.stringify(doc));
+  }
 });
 
 test('a 1.0 backup never turns unknown people into added ones: that is for data from before 1.0', async () => {

@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { installPage } from './fake-dom.mjs';
 import { pickOldDatabase, hasData } from '../web/leftover.js';
 import { makeOldBackup } from '../web/old-backup.js';
-import { readBackup } from '../web/backup.js';
+import { readBackup, cleanBackup } from '../web/backup.js';
 import { unzip } from '../web/zip.js';
 
 const audio = (n, type = 'audio/webm') => new Blob([Uint8Array.from({ length: n }, (_, i) => (i * 13 + n) % 256)], { type });
@@ -42,7 +42,7 @@ test('the older database is found by its stores, whatever its version; never the
   assert.equal(hasData(null), false);
 });
 
-test('the backup of them holds every store and every sound byte for byte, and loads back', async () => {
+test('the backup of them holds every store and every sound byte for byte; 📂 Load a backup refuses it, the older-sounds path reads it', async () => {
   const stores = oldStores();
   const zip = await makeOldBackup(stores);
   const entries = await unzip(zip);
@@ -54,7 +54,10 @@ test('the backup of them holds every store and every sound byte for byte, and lo
     assert.deepEqual(entries.get(meta.file), new Uint8Array(await c.blob.arrayBuffer()), `${c.label}'s audio`);
   }
   const here = { peopleIds: new Set(), clipIds: new Set(), kitIds: new Set(['kick']), addedPeopleIds: new Set() };
-  const out = await readBackup(zip, here);
+  // A file from before 1.0 is no backup to 📂 Load a backup (ADR 0011); the
+  // same checks with the old-store conversions are what Bring them in runs.
+  assert.match(await readBackup(zip, here).then(() => '', (e) => e.message), /doesn't say which format/);
+  const out = cleanBackup(doc, (c) => new Blob([entries.get(c.file)]), here, { oldStores: true });
   assert.deepEqual(out.clips.map((c) => c.id), stores.clips.map((c) => c.id), 'every sound loads');
   assert.equal(out.clips[2].mime, 'audio/x-unknown', 'a sound saved with no type keeps its audio');
   assert.deepEqual(out.people.map((p) => p.id).sort(), ['p-x1-ab12', 'zed']);

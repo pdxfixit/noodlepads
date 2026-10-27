@@ -14,7 +14,7 @@ The zip stores its entries uncompressed; deflated entries are read too. No ZIP64
 
 ## Versions
 
-`app` is `"noodlepads"` (or `"noodle-pads"` before the 1.0 rename; read the same). `format` is `"1.<minor>"`. A reader takes any `1.x`: skip fields it does not know, and treat a field a backup lacks as its default. A minor version only adds fields and files; it never changes or removes one. A different major version is refused. A backup written before 1.0 (`format` is the number `1`, or `app` ends in `-soundboard`) is a different, one-time path and is not covered here.
+`app` is `"noodlepads"` (or `"noodle-pads"` before the 1.0 rename; read the same). `format` is `"1.<minor>"`. A reader takes any `1.x`: skip fields it does not know, and treat a field a backup lacks as its default. A minor version only adds fields and files; it never changes or removes one. A different major version is refused. A backup written before 1.0 (`format` is the number `1`, or `app` ends in `-soundboard`) is refused, and is not covered here.
 
 | Format | Adds |
 |---|---|

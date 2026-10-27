@@ -14,10 +14,7 @@
 //                    docs/formats.md writes the whole format down.
 //
 // Format 1.0 is Noodle Pads 1.0's; from 1.0 on, a newer copy of the app must
-// still load every 1.x backup. A backup from before it (the testing copies,
-// a handful of devices) loads once more through the same old-store
-// conversions as older sounds found on this device (cleanBackup's
-// `oldStores`). That path goes after launch (TODO.md).
+// still load every 1.x backup. A backup from before it is refused (ADR 0011).
 //
 // A backup file is untrusted input: readBackup keeps only fields it knows,
 // of the right type and size, and drops anything else.
@@ -56,19 +53,10 @@ const OUR_APPS = new Set([BACKUP_APP, 'noodle-pads']);
 // original): a 1.1 copy skips it, and a 1.0 or 1.1 backup simply has none.
 export const BACKUP_FORMAT = '1.2';
 
-// A backup from the app before 1.0: an app id ending in "-soundboard" (not
-// written out here: it named a person), or this app id with format 1 as a
-// number. It loads with the old-store conversions.
-export function beforeOne(doc) {
-  const app = doc?.app;
-  return (typeof app === 'string' && /^[a-z]+-soundboard$/.test(app) && (doc.format === 1 || doc.format === '1.0'))
-    || (OUR_APPS.has(app) && doc.format === 1);
-}
-
 // Why a backup.json can't be loaded, or null when it can: Noodle Pads,
-// format 1.x, or a backup from before 1.0 (beforeOne).
+// format 1.x. One from before 1.0 (an app id ending in -soundboard, or format
+// 1 as a number) says it isn't ours or has no format "1.x", and is refused.
 export function refusal(doc) {
-  if (beforeOne(doc)) return null;
   const app = doc?.app;
   if (!OUR_APPS.has(app)) return "it isn't a Noodle Pads backup";
   const major = typeof doc.format === 'string' ? /^(\d{1,4})\.\d{1,4}$/.exec(doc.format)?.[1] : null;
@@ -279,7 +267,7 @@ export async function readBackup(file, bundled) {
     const data = typeof c?.file === 'string' ? entries.get(c.file) : undefined;
     return data && data.length <= MAX_SOUND_BYTES ? new Blob([data]) : null;
   };
-  return cleanBackup(doc, audioOf, bundled, { oldStores: beforeOne(doc) });
+  return cleanBackup(doc, audioOf, bundled);
 }
 
 // A sound's type. Audio types are kept. A file chosen in the old app could be
@@ -303,8 +291,9 @@ export function audioMime(mime, blobType) {
 // lists, the way backup.json does, and `audioOf(clip)` gives that clip's
 // audio as a Blob, or null when it has none or it is too big. Anything it
 // does not know, or of the wrong type or size, is dropped and counted.
-// `oldStores` is for older sounds found and backups from before 1.0: data from before 1.0, where people an
-// older boards.json named become added people, and an open song may have no id.
+// `oldStores` is for older sounds found on this device (leftover.js): data from
+// before 1.0, where people an older boards.json named become added people, and
+// an open song may have no id. A backup file never sets it.
 export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
   let skipped = 0;
   // Why each dropped record was dropped, for the notice (leftOutNote): a

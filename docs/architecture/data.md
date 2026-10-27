@@ -30,7 +30,7 @@
 | `things.js` | 🗂️ See all: lists `personThings`, plays rows | no | people.js (`openThings`), app.js deps |
 | `reid.js` | `CLOUD_ID`, `isCloudId`, `PERSON_STORES`, `remapId`, `remapText`, `remapRecord`, `reIdDoc` | yes | state.js, backup.js |
 | `starters.js` | `STARTERS`, `nameSoundOf`, `dropNameSounds` (pre-1.0 data only) | yes | backup.js |
-| `backup.js` | backup format, `makeBackup`, `readBackup`, `cleanBackup`, `refusal`, `beforeOne`, one-person helpers, `leftOutNote` | yes (plus zip) | backup-ui.js, leftover.js, cloud.js |
+| `backup.js` | backup format, `makeBackup`, `readBackup`, `cleanBackup`, `refusal`, one-person helpers, `leftOutNote` | yes (plus zip) | backup-ui.js, leftover.js, cloud.js |
 | `merge.js` | `mergeLoaded`, `mergeSummary`, `sameBytes` | yes | backup-ui.js |
 | `old-beats.js` | `SIGNATURES`, `barSteps`, `unsignedAs`, `stampBeats`: the time signatures, and the stamp for beats saved before each had its own | yes | store.js (the upgrade), beat.js, backup.js, settings.js |
 | `zip.js` | `zip`, `unzip`, `crc32` | yes | backup.js, old-backup.js |
@@ -289,7 +289,7 @@ The format, field by field, for a reader with no JavaScript: [docs/formats.md](.
 
 **backup.json**: `{app: 'noodlepads', format: '1.2', exported, version, people, clips (without blob, with file, and heard from 1.2), overrides, orders, patterns, beats, settings, decks, takes, songs, songbook, prefs, layouts, voices, touchLayouts}`. The audio is under `sounds/<id>.<ext>`; from 1.2 each own sound also has `sounds/<id>.heard.wav`, the sound as it plays (`backup.js heardWav`, rendered by `backup-ui.js heardOf` through `audio.load`; `makeBackup`'s `heardOf` option, capped at `MAX_HEARD_BYTES`), which loading reads past. Never in a backup: `cloud`, `bases`, `renamedPeople`, localStorage.
 
-**Accepted** (`backup.js refusal`): app `noodlepads` or `noodle-pads`, any `1.x`. A pre-1.0 file (`beforeOne`: format `1` as a number, or an app id ending `-soundboard`) loads with `oldStores`.
+**Accepted** (`backup.js refusal`): app `noodlepads` or `noodle-pads`, any `1.x`. A pre-1.0 file (format `1` as a number, or an app id ending `-soundboard`) is refused: "it isn't a Noodle Pads backup" or "its backup.json doesn't say which format it is". `oldStores` is only for Older sounds found on this device (`leftover.js`).
 
 **Saving:**
 - 💾 Save a backup (`backup-ui.js` `saveBackup`): the whole device, past PINs.
@@ -342,7 +342,7 @@ A cloud pull also ends in `storeLoaded` for some records. Others are put directl
 `initLeftover` runs once after start. `readLeftover` lists every database at this address but `noodle-pads` (`old-backup.js readEverything`, read only). `pickOldDatabase` picks one with `clips` and `overrides` or `people`. The section shows only if `hasData`.
 
 - 📥 **Bring them in:** `readOldStores` → `cleanBackup` with `oldStores` (adopts people, drops name sounds, `starters.js dropNameSounds`) → `storeLoaded`. It reads only 11 named stores (`leftover.js` `STORES`). Whether any older copy had more is unverified.
-- 💾 **Save everything it left:** `old-backup.js makeEverything`, a zip with a pre-1.0 backup.json (format `1` as a number) plus every other database and localStorage under `everything/`. 📂 Load a backup reads it.
+- 💾 **Save everything it left:** `old-backup.js makeEverything`, a zip with a pre-1.0 backup.json (format `1` as a number) plus every other database and localStorage under `everything/`. It is a keepsake: 📂 Load a backup refuses it.
 
 Nothing found is changed or deleted.
 

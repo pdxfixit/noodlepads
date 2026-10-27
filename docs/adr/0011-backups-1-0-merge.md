@@ -1,10 +1,10 @@
 # 0011. Backups start over at format 1.0, and loading one merges
 
-- **Status:** Accepted
+- **Status:** Accepted. The one-time path for pre-1.0 backups was removed 2026-10-27 (Ben: "ready"); they are refused.
 - **Date:** 2026-10-11; format 1.2 added 2026-10-27
 - **Decided by:** Ben, 2026-10-11: "drop default users"; "old backups go away: this is 1.0"; importing a backup must merge, never replace or duplicate, so he can gather detail from several devices into one
 
-**In short.** A backup says `app: 'noodle-pads'`, `format: '1.0'`, and only 1.x backups load. Loading one merges into the device by id: nothing there is replaced or deleted, nothing is doubled, and loading it twice changes nothing. Data from before 1.0 comes through the one-tap move ([ADR 0010](0010-move-to-noodlepads-com.md)), or, until launch, a backup file from the testing copies.
+**In short.** A backup says `app: 'noodle-pads'`, `format: '1.0'`, and only 1.x backups load. Loading one merges into the device by id: nothing there is replaced or deleted, nothing is doubled, and loading it twice changes nothing. Data from before 1.0 comes through the one-tap move ([ADR 0010](0010-move-to-noodlepads-com.md)); a backup file from before 1.0 is refused.
 
 ## Context
 
@@ -14,8 +14,8 @@
 
 ## Decision
 
-- **Format.** `backup.json` says `app: 'noodle-pads'`, `format: '1.0'`. Any `1.x` loads; a later minor version only adds what an older copy can skip. A newer major is "made by a newer version". An old app id, or `format: 1` as a number, is a backup from before 1.0: it loads through the move's old-store conversions. Ben, 2026-10-11: "we do want to allow pre-1.0 backups from the testing instances … it will only be this once" (about three Android Chrome devices). That path is removed after launch. From 1.0 on, a backup must still load in every newer copy. **1.2** (Ben, 2026-10-26, [ADR 0001](0001-web-prototype-then-native.md)) adds each own sound **as heard**: a clip's `heard` names `sounds/<id>.heard.wav`, the sound rendered as its pad plays it, beside the original, for v2's importer. It is optional (a sound that won't render goes without; together they stop at 120 MB), a 1.0 or 1.1 backup has none, and loading reads past it. The format is written out in [docs/formats.md](../formats.md); the golden backups of 1.0, 1.1 and 1.2 in `tests/fixtures/` must always load with nothing dropped.
-- **Old shapes only for data from before 1.0.** `cleanBackup(…, { oldStores: true })` turns people an older `boards.json` named into added people and keeps an open song with no id. Only older sounds found on this device (`web/leftover.js`) and backups from before 1.0 get it.
+- **Format.** `backup.json` says `app: 'noodle-pads'`, `format: '1.0'`. Any `1.x` loads; a later minor version only adds what an older copy can skip. A newer major is "made by a newer version". An old app id, or `format: 1` as a number, is a backup from before 1.0 and is refused. Ben, 2026-10-11: "we do want to allow pre-1.0 backups from the testing instances … it will only be this once" (about three Android Chrome devices); that path loaded them until 2026-10-27, when it was removed. From 1.0 on, a backup must still load in every newer copy. **1.2** (Ben, 2026-10-26, [ADR 0001](0001-web-prototype-then-native.md)) adds each own sound **as heard**: a clip's `heard` names `sounds/<id>.heard.wav`, the sound rendered as its pad plays it, beside the original, for v2's importer. It is optional (a sound that won't render goes without; together they stop at 120 MB), a 1.0 or 1.1 backup has none, and loading reads past it. The format is written out in [docs/formats.md](../formats.md); the golden backups of 1.0, 1.1 and 1.2 in `tests/fixtures/` must always load with nothing dropped.
+- **Old shapes only for data from before 1.0.** `cleanBackup(…, { oldStores: true })` turns people an older `boards.json` named into added people and keeps an open song with no id. Only older sounds found on this device (`web/leftover.js`) get it; a backup file never does.
 - **Merge** (`web/merge.js` `mergeLoaded`, pure and tested):
   - People by id. A person both sides have keeps the newer name and color by `edited` (stamped on every rename or recolor); with no newer edit, the device's.
   - A default person (the automatic "Me", never renamed or recolored, with nothing of theirs stored: `model.js` `isDefaultPerson`) is never imported, and the device's own goes once someone real arrives. Each device's "Me" has its own random id (`newId('p')`), so two devices' people never collide.
@@ -33,6 +33,6 @@
 
 ## Consequences
 
-- Until launch, a backup file saved before 1.0 still loads, through the old-store conversions. After launch it is refused.
+- A backup file saved before 1.0 is refused (since 2026-10-27).
 - A sound edited on one device and loaded from the other shows twice (the same id, different content keeps both). The kid can delete either.
 - The device's settings always win, so a backup never changes how this device behaves, except for settings it never set.

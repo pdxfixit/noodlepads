@@ -1,13 +1,12 @@
-// Everything an older copy of the app left in this browser, as one zip that
-// today's Noodle Pads loads (⚙️ Settings → Load a backup), and what it holds,
-// in words. ⚙️ Settings → "Older sounds found on this device" (leftover.js)
+// Everything an older copy of the app left in this browser, as one zip to keep
+// (today's ⚙️ Settings → Load a backup refuses its app part: it is from before
+// 1.0, ADR 0011), and what it holds, in words. ⚙️ Settings → "Older sounds found on this device" (leftover.js)
 // makes it.
 //
 //   backup.json            the older copy's database, every store raw, in the
 //                          old app's own backup format: app "noodlepads",
-//                          format 1 (a number), which the app reads as "from
-//                          before 1.0" and converts with the old-store
-//                          conversions (web/backup.js beforeOne);
+//                          format 1 (a number), which today's loader
+//                          (web/backup.js refusal) does not take;
 //   sounds/<id>.<ext>      every sound's audio, byte for byte;
 //   everything/…           the rest of what this address saved, which the app's
 //                          loader ignores: every other database's stores

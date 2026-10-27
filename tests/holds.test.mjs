@@ -74,7 +74,7 @@ const everything = () => ({
   localStorage: { 'noodle.mode': 'dj', theme: 'dark' },
 });
 
-test('the full export: the app\'s part loads as a backup, and everything else comes along byte for byte', async () => {
+test('the full export: the app\'s part is a keepsake today\'s loader refuses, and everything else comes along byte for byte', async () => {
   const all = everything();
   assert.equal(otherCount(all, 'some-app'), 4, '2 records in the other database, 2 localStorage keys');
   assert.equal(holdsWords(all.databases[0].stores, otherCount(all, 'some-app')), '🔊 1 sound · 🥁 1 beat · ✏️ 1 sound edit · 1 KB of audio · 4 other saved things');
@@ -99,9 +99,8 @@ test('the full export: the app\'s part loads as a backup, and everything else co
   assert.deepEqual(read('everything/localStorage.json'), { 'noodle.mode': 'dj', theme: 'dark' });
 
   const here = { peopleIds: new Set(), clipIds: new Set(), kitIds: new Set(['airhorn']), addedPeopleIds: new Set() };
-  const out = await readBackup(zipBlob, here);
-  assert.deepEqual(out.clips.map((c) => c.id), ['user-a1-aaaa'], 'today\'s app loads it, and ignores everything/');
-  assert.deepEqual(out.beats.map((b) => b.id), ['beat-1']);
+  // Its backup.json is from before 1.0, which 📂 Load a backup refuses (ADR 0011).
+  assert.match(await readBackup(zipBlob, here).then(() => '', (e) => e.message), /doesn't say which format/);
   assert.equal(everythingName(new Date(2026, 9, 1)), 'noodlepads-everything-2026-10-01.zip');
 });
 
