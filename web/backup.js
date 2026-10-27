@@ -54,10 +54,13 @@ const OUR_APPS = new Set([BACKUP_APP, 'noodle-pads']);
 export const BACKUP_FORMAT = '1.2';
 
 // Why a backup.json can't be loaded, or null when it can: Noodle Pads,
-// format 1.x. One from before 1.0 (an app id ending in -soundboard, or format
-// 1 as a number) says it isn't ours or has no format "1.x", and is refused.
+// format 1.x. One from before 1.0 is refused: an app id ending in
+// -soundboard says it is from a testing copy this app no longer loads, and
+// format 1 as a number says it has no format "1.x".
 export function refusal(doc) {
   const app = doc?.app;
+  const before = "it's from a testing copy before 1.0, which this app no longer loads";
+  if (typeof app === 'string' && /soundboard$/i.test(app)) return before;
   if (!OUR_APPS.has(app)) return "it isn't a Noodle Pads backup";
   const major = typeof doc.format === 'string' ? /^(\d{1,4})\.\d{1,4}$/.exec(doc.format)?.[1] : null;
   if (major === '1') return null;

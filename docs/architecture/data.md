@@ -289,7 +289,7 @@ The format, field by field, for a reader with no JavaScript: [docs/formats.md](.
 
 **backup.json**: `{app: 'noodlepads', format: '1.2', exported, version, people, clips (without blob, with file, and heard from 1.2), overrides, orders, patterns, beats, settings, decks, takes, songs, songbook, prefs, layouts, voices, touchLayouts}`. The audio is under `sounds/<id>.<ext>`; from 1.2 each own sound also has `sounds/<id>.heard.wav`, the sound as it plays (`backup.js heardWav`, rendered by `backup-ui.js heardOf` through `audio.load`; `makeBackup`'s `heardOf` option, capped at `MAX_HEARD_BYTES`), which loading reads past. Never in a backup: `cloud`, `bases`, `renamedPeople`, localStorage.
 
-**Accepted** (`backup.js refusal`): app `noodlepads` or `noodle-pads`, any `1.x`. A pre-1.0 file (format `1` as a number, or an app id ending `-soundboard`) is refused: "it isn't a Noodle Pads backup" or "its backup.json doesn't say which format it is". `oldStores` is only for Older sounds found on this device (`leftover.js`).
+**Accepted** (`backup.js refusal`): app `noodlepads` or `noodle-pads`, any `1.x`. A pre-1.0 file is refused: an app id ending `-soundboard` says "it's from a testing copy before 1.0, which this app no longer loads"; format `1` as a number says "its backup.json doesn't say which format it is". `oldStores` is only for Older sounds found on this device (`leftover.js`).
 
 **Saving:**
 - 💾 Save a backup (`backup-ui.js` `saveBackup`): the whole device, past PINs.

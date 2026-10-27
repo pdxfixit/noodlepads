@@ -287,18 +287,23 @@ test('a backup says noodlepads, format 1.2; any 1.x loads', async () => {
   assert.equal(refusal({ app: 'noodlepads', format: '1.7' }), null, 'a later 1.x only adds what this copy can skip');
   assert.equal(refusal({ app: 'noodle-pads', format: '1.1' }), null, 'a backup saved before the 1.0 rename still loads');
   assert.equal((await read({ format: '1.3', clips: [goodClip()] })).clips.length, 1);
-  for (const app of ['soundboard', '-soundboard', 'Family-Soundboard', 'evil/-soundboard', null, 7]) {
+  for (const app of ['other-app', 'evil/notes', null, 7]) {
     assert.match(refusal({ app, format: '1.0' }), /isn't a Noodle Pads backup/, String(app));
   }
 });
 
 test('a backup from before 1.0 is refused, with the plain message, and nothing comes of it (ADR 0011)', async () => {
   const cases = [
-    [{ app: 'family-soundboard', format: 1 }, /isn't a Noodle Pads backup/],
-    [{ app: 'family-soundboard', format: '1.0' }, /isn't a Noodle Pads backup/],
+    [{ app: 'family-soundboard', format: 1 }, /from a testing copy before 1\.0, which this app no longer loads/],
+    [{ app: 'family-soundboard', format: '1.0' }, /from a testing copy before 1\.0/],
+    [{ app: 'soundboard', format: '1.0' }, /from a testing copy before 1\.0/],
+    [{ app: 'Family-Soundboard', format: '1.0' }, /from a testing copy before 1\.0/],
     [{ app: BACKUP_APP, format: 1 }, /doesn't say which format/],
     [{ app: 'noodle-pads', format: 1 }, /doesn't say which format/],
   ];
+  // The other reasons keep their words.
+  assert.match(refusal({ app: BACKUP_APP }), /doesn't say which format/);
+  assert.match(refusal({ app: BACKUP_APP, format: '2.0' }), /newer version/);
   for (const [doc, why] of cases) {
     assert.match(refusal(doc), why, JSON.stringify(doc));
     // Its people and sounds are not read at all: the load throws before any record is cleaned.

@@ -854,9 +854,10 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   - **Format 1.2** ([ADR 0011](adr/0011-backups-1-0-merge.md)): a backup
     says `app: 'noodlepads'` (`'noodle-pads'` before the 1.0 rename, still read), `format: '1.2'` (1.1 added groups, ADR 0013, and key layouts, ADR 0014; touch layouts came later and additively, ADR 0029; 1.2 adds each own sound as heard, below), and any `1.x` loads. **As heard** (ADR 0001): 💾 Save a backup and ⬇️ Export put each own sound in twice, the original as recorded and `sounds/<id>.heard.wav`, the audio as its pad plays it (voice, knobs, trim, edits, fade, rendered), named by the clip's `heard`, so v2 plays it with no voice engine. A sound that won't render goes without one, and heard copies together stop at 120 MB or at what is left under the 300 MB a backup may unpack to, after the originals and 1 MB for `backup.json`, whichever is less (so a backup that saves also loads). Originals alone over that, and the save says so and makes no file. The file is about twice the audio the Save sheet counts. Loading reads past `heard`: this app plays a sound from its original and its settings. The format, field by field: [docs/formats.md](formats.md). A backup
     from before Noodle Pads 1.0 (an app id ending in `-soundboard`, or
-    `format: 1` as a number) is refused (ADR 0011): "That backup didn't
-    load: it isn't a Noodle Pads backup." or "…its backup.json doesn't say
-    which format it is."; nothing is changed.
+    `format: 1` as a number) is refused (ADR 0011): an app id ending in `-soundboard` says "That backup
+    didn't load: it's from a testing copy before 1.0, which this app no longer
+    loads."; `format: 1` as a number says "…its backup.json doesn't say which
+    format it is."; nothing is changed.
   - **Older sounds found on this device** (⚙️ Settings, shown only when
     there are some; `web/leftover.js`): sounds an older copy of the app saved
     on the same address, under the database's old name (Ben's dev server at
