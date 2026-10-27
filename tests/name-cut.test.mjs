@@ -12,7 +12,7 @@ import { layoutName } from '../web/keyset.js';
 import { touchName } from '../web/touch.js';
 import { cleanMyVoice } from '../web/voice-knobs.js';
 import { cleanTake, cleanDeck } from '../web/rhythm.js';
-import { cleanPattern } from '../web/sequencer.js';
+import { cleanPattern } from '../web/beat.js';
 import { cleanSong, uniqueSongName } from '../web/song.js';
 import { cleanLane } from '../web/playlist.js';
 import { cleanBackup } from '../web/backup.js';

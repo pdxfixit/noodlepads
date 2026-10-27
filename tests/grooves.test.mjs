@@ -6,7 +6,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { GROOVES, GROOVE_GROUPS, grooveBeat, grooveShape, mergeGroove, cleanRow, barSteps, BAR_CHOICES, bassNote, groovePlayers } from '../web/sequencer.js';
+import { GROOVES, GROOVE_GROUPS } from '../web/grooves.js';
+import { grooveBeat, grooveShape, mergeGroove, cleanRow, barSteps, BAR_CHOICES, bassNote, groovePlayers } from '../web/beat.js';
 import { FAMILIES } from '../web/instruments.js';
 
 const kit = JSON.parse(readFileSync(new URL('../web/boards.json', import.meta.url), 'utf8')).kit;

@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { pillKey, pickAll, section, shiftPick, slideRows } from '../web/slide.js';
-import { cleanRow } from '../web/sequencer.js';
+import { cleanRow } from '../web/beat.js';
 
 const on = (...steps) => Array.from({ length: 16 }, (_, i) => steps.includes(i));
 const lit = (row) => row.steps.flatMap((x, i) => (x ? [i] : []));

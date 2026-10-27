@@ -159,7 +159,7 @@ test('with ⌨️ Keys on, ▶ Play plays the open beat round and round, recordi
 });
 
 test('each groove in the chooser has ▶: a short sample, without opening it; ■ or closing ends it', async () => {
-  const { SAMPLE_SECONDS, sampleSeconds } = await import('../web/sequencer.js');
+  const { SAMPLE_SECONDS, sampleSeconds } = await import('../web/beat.js');
   assert.equal(SAMPLE_SECONDS, 4);
   assert.equal(sampleSeconds(2), 2, 'a short groove: one pass');
   assert.equal(sampleSeconds(9.6), 4, 'a long one: cut at 4 s');

@@ -6,7 +6,7 @@
 // words of "What I heard". No DOM, no Web Audio, no storage, so node --test
 // runs it.
 
-import { SIGNATURES, barSteps, cleanPattern } from './sequencer.js';
+import { SIGNATURES, barSteps, cleanPattern } from './beat.js';
 import { closestSound } from './listen-dsp.js';
 import { cleanTempos, cleanLanes, newLanes, legacySlots, blockBars, MAX_SONG_BARS, MAX_BLOCKS, MAX_TIMES, BAR_STEPS } from './playlist.js';
 import { partNames, cutName, MAX_LABEL } from './names.js';

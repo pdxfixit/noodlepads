@@ -20,7 +20,7 @@ import { state, persist } from './state.js';
 import { audio, slice, keptRange } from './audio.js';
 import { currentPerson, clipsFor, nextClipColor } from './board.js';
 import { renderPads } from './pads.js';
-import { encodeWav } from './sequencer.js';
+import { encodeWav } from './wav.js';
 import { getSetting, onSetting } from './settings.js';
 import { showNotice, showBanner } from './ui.js';
 import { newId } from './util.js';

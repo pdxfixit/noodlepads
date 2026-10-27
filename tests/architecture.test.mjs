@@ -80,7 +80,7 @@ const ONLY = [
   ['the mix bus is built only by the beat maker', /import \{[^}]*\bbuildMix\b[^}]*\} from '\.\/mixer\.js'/, ['sequencer.js']],
   ['the shared "play a saved beat" path', /soundHit\(/, ['sequencer.js', 'share-render.js', 'song.js']],
   ['prepareBeats callers', /\.prepareBeats\(/, ['share-render.js', 'song.js']],
-  ['the WAV encoder', /function encodeWav\b/, ['sequencer.js']],
+  ['the WAV encoder', /function encodeWav\b/, ['wav.js']],
   // keys-kids.md
   ['🔔 Let it ring: one rule, three players', /\bringOver\b/, ['audio.js', 'rhythm.js', 'sequencer.js']],
   ['the ✏️ Layout editors are built by the keys panel', /createKeysEditor|createTouchEditor/, ['dj-keys.js', 'dj-touch.js', 'dj.js']],
@@ -124,11 +124,21 @@ test('✅ the keys never touch audio.js directly; they play through pads.js tapP
   assert.deepEqual(['dj.js', 'dj-keys.js', 'dj-touch.js'].filter((f) => src[f].includes("from './audio.js'")), [], FIX);
 });
 
-test('✅ 🧸 Kids takes only STEPS and noteRate from the beat maker, and none of the regular screens', () => {
+test('✅ 🧸 Kids takes only STEPS and noteRate from the beat rules, and none of the regular screens', () => {
   const from = (m) => [...src['kids.js'].matchAll(new RegExp(`^import .* from '\\./${m}\\.js';$`, 'gm'))].map((x) => x[0]);
-  assert.deepEqual(from('sequencer'), ["import { STEPS, noteRate } from './sequencer.js';"], FIX);
+  assert.deepEqual(from('beat'), ["import { STEPS, noteRate } from './beat.js';"], FIX);
+  assert.deepEqual(from('sequencer'), [], FIX);
   for (const m of ['dj', 'pads', 'sheet', 'song']) assert.deepEqual(from(m), [], FIX);
   assert.doesNotMatch(src['kids.js'], /createSequencer|soundHit|busFor|beatPlan/, FIX);
+});
+
+test('✅ beat.js and wav.js have no screen, DOM, storage or audio (the S5 split)', () => {
+  const impure = /\b(document|window|localStorage|sessionStorage|indexedDB|AudioContext|OfflineAudioContext|navigator)\b|from '\.\/(audio|store|state|ui|dialogs|log|sequencer|song|kids|app)\.js'/;
+  for (const f of ['beat.js', 'wav.js']) assert.doesNotMatch(src[f].replace(/\/\/.*$/gm, ''), impure, `${f}: ${FIX}`);
+});
+
+test('✅ only app.js imports the beat maker screen; its rules are in beat.js', () => {
+  assert.deepEqual(webWith(/from '\.\/sequencer\.js'/), ['app.js'], FIX);
 });
 
 test('✅ the pure modules import nothing', () => {
@@ -214,7 +224,7 @@ test('✅ every voice but Normal is a knob preset', async () => {
 
 test('✅ the semitone rate agrees between instruments and the beat maker', async () => {
   const { rateOf } = await web('instruments.js');
-  const { noteRate } = await web('sequencer.js');
+  const { noteRate } = await web('beat.js');
   for (const n of [-12, -5, 0, 3, 7, 12]) assert.equal(rateOf(n), noteRate(n), FIX);
 });
 

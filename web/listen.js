@@ -72,7 +72,7 @@
 // A bar is settled (its part decided) 1.5 bars after it ends, so a tempo
 // change found late never leaves a bar in the wrong part.
 
-import { SIGNATURES, barSteps, tempoStops, MAX_PILLS } from './sequencer.js';
+import { SIGNATURES, barSteps, tempoStops, MAX_PILLS } from './beat.js';
 import { createHitFinder, fingerprint, closestSound, averagePrint, ROWS } from './listen-dsp.js';
 
 export { fingerprint, closestSound };

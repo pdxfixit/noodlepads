@@ -3,7 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanRow, cleanPattern, stepSeconds, planHits, samePattern, pillTarget, ROW_RATES, STEPS, MAX_STEPS, MAX_PILLS, BAR_CHOICES, SIGNATURES, barSteps } from '../web/sequencer.js';
+import { cleanRow, cleanPattern, stepSeconds, planHits, samePattern, pillTarget, ROW_RATES, STEPS, MAX_STEPS, MAX_PILLS, BAR_CHOICES, SIGNATURES, barSteps } from '../web/beat.js';
 
 const on = (...steps) => Array.from({ length: STEPS }, (_, i) => steps.includes(i));
 const beat = (rows, bpm = 120) => cleanPattern({ bpm, rows }, 'pip');
@@ -131,7 +131,7 @@ test('loud hits: only a pill that is on can be loud, they play loud, and they co
 });
 
 test('swing plays the off-beat eighths late, by swing/100 of an eighth; the pills between move half as much', async () => {
-  const { swingDelay, MAX_SWING } = await import('../web/sequencer.js');
+  const { swingDelay, MAX_SWING } = await import('../web/beat.js');
   const dt = 0.125;   // 120 BPM: a pill (a sixteenth) is 0.125 s, an eighth 0.25 s
   const at = (n, swing, groups) => [...Array(n).keys()].map((step) => swingDelay(step, dt, swing, groups));
   assert.deepEqual(at(8, 0), [0, 0, 0, 0, 0, 0, 0, 0], 'straight');
@@ -157,7 +157,8 @@ test('planHits swings eighth-note hats and sixteenth-note hats, and only when as
 });
 
 test('an old melody row (a note per pill from the five-note scale) is read as notes a pill long, played at that pitch', async () => {
-  const { MELODY_NOTES, noteRate } = await import('../web/sequencer.js');
+  const { MELODY_NOTES } = await import('../web/notes.js');
+const { noteRate } = await import('../web/beat.js');
   const r = cleanRow({ clipId: 'a', melody: true, steps: on(0, 4, 8), notes: [7, null, 3, null, 12, null, null, null, 99] });
   assert.equal(r.melody, true);
   assert.deepEqual(r.tune, [{ p: 7, s: 0, l: 1 }, { p: 12, s: 4, l: 1 }, { p: 0, s: 8, l: 1 }], 'an off-scale note played the sound as itself, and still does');

@@ -26,7 +26,8 @@
 
 import { openDialog, setupDialog } from './dialogs.js';
 import { tempoKey } from './tempo-key.js';
-import { encodeWav, normalize, barSteps, COMMON_BPMS, tempoStops, stopFor, outputDelay } from './sequencer.js';
+import { encodeWav, normalize } from './wav.js';
+import { barSteps, COMMON_BPMS, tempoStops, stopFor, outputDelay } from './beat.js';
 import { fadeStop, tooLate } from './audio.js';
 import { logEvent } from './log.js';
 import { showBanner } from './ui.js';

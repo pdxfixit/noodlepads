@@ -21,7 +21,7 @@
 import { zip, unzip } from './zip.js';
 import { VOICES, storedFx } from './voices.js';
 import { cleanTweaks } from './tweaks.js';
-import { cleanPattern } from './sequencer.js';
+import { cleanPattern } from './beat.js';
 import { unsignedAs } from './old-beats.js';
 import { extensionFor } from './util.js';
 import { whiteReadsOn } from './contrast.js';

@@ -12,7 +12,7 @@ import {
 import { VOICES } from '../web/voices.js';
 import { KINDS } from '../web/steps.js';
 import { SETTINGS } from '../web/settings.js';
-import { SIGNATURES } from '../web/sequencer.js';
+import { SIGNATURES } from '../web/beat.js';
 
 const webDir = new URL('../web/', import.meta.url);
 

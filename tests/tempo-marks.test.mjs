@@ -9,7 +9,7 @@ import {
   cleanTempos, tempoAt, putTempo, removeTempo, songClock, playParts, playEvents,
 } from '../web/playlist.js';
 import { cleanSong, planSong } from '../web/song.js';
-import { cleanPattern, planHits } from '../web/sequencer.js';
+import { cleanPattern, planHits } from '../web/beat.js';
 import { merge3, resolve } from '../web/merge3.js';
 import { makeBackup, readBackup, BACKUP_APP } from '../web/backup.js';
 import { buildZip, blobOf, utf8 } from './helpers.mjs';

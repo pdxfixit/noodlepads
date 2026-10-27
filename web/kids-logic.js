@@ -4,7 +4,7 @@
 // (four drums, eight squares) and its three tempos, and the three voices.
 // kids.js draws all of it.
 
-import { cleanRow, cleanPattern, STEPS, multiplyRows } from './sequencer.js';
+import { cleanRow, cleanPattern, STEPS, multiplyRows } from './beat.js';
 import { addNote } from './notes.js';
 import { chainFields, voiceStep } from './voices.js';
 import { SCRATCH_NAME } from './scratch.js';

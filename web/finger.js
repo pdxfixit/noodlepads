@@ -68,3 +68,29 @@ export function fingerTaps({ onTap, onHold = null, holdMs = 0 }) {
     get size() { return down.size; },
   };
 }
+
+// Holding a pill (Beats' rows, the keys' grid): how long a press must stay
+// put to be a hold, and the watcher that tells a hold from a tap.
+export const HOLD_MS = 450;
+
+// Holding a pill: calls `onHold(pill)` after HOLD_MS unless the finger lifts
+// or moves first. `match` finds the pill under an event. Returns
+// afterHold(), which the click handler asks first: true once for the click
+// that ends a hold, so that click isn't also a tap. Used by the Beats rows
+// and the keys' grid.
+export function pillHolds(root, match, onHold) {
+  let timer = 0, start = null, held = false;
+  const cancel = () => { clearTimeout(timer); timer = 0; start = null; };
+  root.addEventListener('pointerdown', (e) => {
+    const pill = match(e.target);
+    if (!pill || e.button !== 0) return;
+    held = false;
+    start = { x: e.clientX, y: e.clientY };
+    timer = setTimeout(() => { timer = 0; held = true; onHold(pill); }, HOLD_MS);
+  });
+  root.addEventListener('pointermove', (e) => { if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) cancel(); });
+  for (const type of ['pointerup', 'pointercancel', 'pointerleave']) root.addEventListener(type, cancel);
+  // A phone's long-press menu would cover the grid.
+  root.addEventListener('contextmenu', (e) => { if (match(e.target)) e.preventDefault(); });
+  return () => { const was = held; held = false; return was; };
+}

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanPattern, encodeWav, STEPS, mergeGroove, cleanRow, SIGNATURES, beatToFile, beatFromFile, BEAT_FILE, rowSlot, nextSound } from '../web/sequencer.js';
+import { cleanPattern, STEPS, mergeGroove, cleanRow, SIGNATURES, beatToFile, beatFromFile, BEAT_FILE, rowSlot, nextSound } from '../web/beat.js';
+import { encodeWav } from '../web/wav.js';
 import { fakeBuffer } from './helpers.mjs';
 
 test('cleanPattern: defaults for nothing at all', () => {

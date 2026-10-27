@@ -111,6 +111,8 @@ Each is a copy of code that already exists, so each becomes an import. One commi
 
 ### S5. The beat maker's pure rules and the WAV encoder out of `sequencer.js` · 75 min
 
+**Done** (step 1 of the one beat engine, [one-beat-engine.md](one-beat-engine.md)): `web/beat.js`, `web/wav.js`, and `pillHolds` in `finger.js`. The text below is the plan as written.
+
 | | |
 |---|---|
 | Today | `sequencer.js` is 3,349 lines: 550 lines of pure rules (`cleanPattern`, `cleanRow`, `planHits`, `SIGNATURES`, `barSteps`, `beatToFile`, `beatFromFile`, `mergeGroove`, `tempoStops`, `BEAT_ID`, `noteRate`…), then `createSequencer`. Ten modules import only the pure part or the WAV code, so they load the whole screen and its imports: `backup.js` (the gate for what comes in), `kids-logic.js` (pure rules), `listen.js` and `listen-make.js` (the "pure" listener, a seam in sound.md), `dj.js`, `kids.js`, `song.js`, `share-render.js`, `sheet.js`, `chop.js`. `encodeWav` and `normalize` live there too, so a sound module depends on the beat maker for its WAV (sound.md). The beat id pattern is written four times: `sequencer.js BEAT_ID`, `playlist.js BEAT_REF`, a local `BEAT_ID` in `backup.js`, and inline in `rhythm.js`. |

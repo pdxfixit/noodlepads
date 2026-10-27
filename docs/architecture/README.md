@@ -64,13 +64,13 @@ The questions agents ask most. ✅ marks a claim `tests/architecture.test.mjs` c
 | Way to play a saved beat | **One shared path ✅**: `seq.beatPlan` + `prepareBeats` + `soundHit`, used by 🎼 Song, share previews, 🗂️ See all, 💃 Grooves' ▶ and 🎧's ▶ part. Beats' own play, bounce and the roll's preview call the inner `sound()` + `busFor()`. | beats-song.md |
 | Mixer | **One per beat ✅**: `sequencer.js busFor` builds `mixer.js buildMix` (each row's effect and the master) for any destination, live or offline. A row's level is applied per hit; mute and solo stop hits being booked. 🧸 Kids bypasses it. | beats-song.md |
 | Offline renderer | **Four ✅**: `voices.js` (every voiced clip), `sequencer.js bounce`, `song.js` (Save as a sound), `share-render.js` (previews, See all, takes). `listen-input.js` makes one only to decode a song file. | sound.md |
-| WAV encoder | **One ✅**, `sequencer.js encodeWav`, imported by the sheet, chop, keys, song and share previews. | sound.md |
+| WAV encoder | **One ✅**, `wav.js encodeWav`, imported by the sheet, chop, keys, song and share previews. | sound.md |
 | Microphone recorder | **Two ✅**: `sheet.js` and `kids.js`, each its own `getUserMedia` + `MediaRecorder`. 🎧 captures through an AudioWorklet ✅. | sound.md, keys-kids.md |
 | Way to stop everything | **No.** `audio.stopAll` stops only what is in `audio.playing`; the beat, the song, 🧸 Kids' beat, the click and share previews each stop themselves (`app.js stopEverything` calls several). | sound.md, shell.md |
 | Database | **One**, `noodle-pads`, opened by `store.js` (and `old-backup.js` reads the old one ✅). | data.md |
 | Write path | **Mostly** `state.js persist`; `app.js`, `backup-ui.js storeLoaded` and `cloud.js` also write with `db` directly. | data.md |
 | List of stores | **No**: about ten hand-kept lists follow `store.js SCHEMA`. The person's, backup's and cloud's lists are checked ✅. | data.md |
-| Gate for what comes in | Backups and cloud pulls: `backup.js cleanBackup` (then `merge.js`; cloud records merge three ways first, `merge3.js`). A beat file: `sequencer.js beatFromFile` → `cleanPattern`. Both stamp a beat saved before time signatures (`old-beats.js`); so does the database upgrade. | data.md, cloud.md |
+| Gate for what comes in | Backups and cloud pulls: `backup.js cleanBackup` (then `merge.js`; cloud records merge three ways first, `merge3.js`). A beat file: `beat.js beatFromFile` → `cleanPattern`. Both stamp a beat saved before time signatures (`old-beats.js`); so does the database upgrade. | data.md, cloud.md |
 | Settings registry | **One**, `settings.js SETTINGS` (each with a scope and its allowed values ✅); `getSetting`, `setSetting`, `onSetting`. | data.md |
 | Dialog opener | **One ✅**, `dialogs.js openDialog` (the only `showModal`); `onDialogOpen` feeds tips, the nudge and telemetry. | shell.md |
 | Banner | **One ✅**, `ui.js showBanner` (`showNotice` and Undo go through it), and one screen-reader announcer. | shell.md |
@@ -84,8 +84,8 @@ The biggest ones. Each area file lists its own in full.
 - **Two beat players:** `sequencer.js` and `kids.js`. A timing or sound fix
   in one does not reach the other.
 - **Two recorders:** `sheet.js` and `kids.js`.
-- **Sound helpers in the beat maker:** `encodeWav`, `normalize` and
-  `noteRate` live in `sequencer.js`. The semitone rate is worked out in six
+- **Sound helpers in the beat rules:** `noteRate` lives in `beat.js` (the
+  WAV encoder and `normalize` are in `wav.js`). The semitone rate is worked out in six
   places (`instruments.js rateOf` and `noteRate` are checked to agree ✅).
 - **The kept audio is built three times:** `audio.js keptAudio`,
   `chop.js rebuild`, `chop.js evenOut`.

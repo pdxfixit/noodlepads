@@ -20,9 +20,9 @@
 | `dj-touch.js` | `dj.js` (`drawBands` every render; `createTouchEditor` once) | `touch.js`, `touch-grid.js`, `inst-picker.js`, `instruments.js` | the ✏️ Layout (👆 Pads) dialog's picker, undo stack, three drags |
 | `touch.js` | `dj.js`, `dj-touch.js`, `rhythm.js`, `backup.js` | `touch-grid.js` | nothing (pure) |
 | `touch-grid.js` | `touch.js`, `dj-touch.js` | none | nothing (pure) |
-| `finger.js` | `dj.js`, `kids.js`, `pads.js` | none | one follower per caller |
-| `kids.js` | `app.js` (`initKids`, `showKids`, `refreshKids`, `kidsPersonLeaving`, `kidsShowing`, `kidsBusy`, `askGrownUp`, `kidsKeydown`, `kidsKeyup`) | `audio.js`, `kids-logic.js`, `grown-up.js`, `scratch.js`, `settings.js`, `skins.js`, `tips.js`, `finger.js`, `meter.js levelOf`, `notes.js startsIn`, `sequencer.js` (`STEPS`, `noteRate`), `instruments.js` | the tab, the page, the recorder, the beat player, held toy keys, the tune recording |
-| `kids-logic.js` | `kids.js`, `grown-up.js` (`makeSum`, `typeDigit`) | `sequencer.js` (`cleanRow`, `STEPS`, `multiplyRows`), `notes.js addNote`, `voices.js` (`chainFields`, `voiceStep`), `scratch.js SCRATCH_NAME`, `instruments.js versionFor` | nothing (pure) |
+| `finger.js` | `dj.js`, `kids.js`, `pads.js`, `sequencer.js` (`pillHolds`) | none | one follower per caller |
+| `kids.js` | `app.js` (`initKids`, `showKids`, `refreshKids`, `kidsPersonLeaving`, `kidsShowing`, `kidsBusy`, `askGrownUp`, `kidsKeydown`, `kidsKeyup`) | `audio.js`, `kids-logic.js`, `grown-up.js`, `scratch.js`, `settings.js`, `skins.js`, `tips.js`, `finger.js`, `meter.js levelOf`, `notes.js startsIn`, `beat.js` (`STEPS`, `noteRate`), `instruments.js` | the tab, the page, the recorder, the beat player, held toy keys, the tune recording |
+| `kids-logic.js` | `kids.js`, `grown-up.js` (`makeSum`, `typeDigit`) | `beat.js` (`cleanRow`, `STEPS`, `multiplyRows`), `notes.js addNote`, `voices.js` (`chainFields`, `voiceStep`), `scratch.js SCRATCH_NAME`, `instruments.js versionFor` | nothing (pure) |
 | `grown-up.js` | `kids.js askGrownUp`, `feedback.js`, `cloud-ui.js` (Forget this device) | `kids-logic.js`, `dialogs.js` | the one `#kids-sum` dialog and who asked it (`ask`) |
 
 `dj.js` imports no `audio.js`. Every sound it makes goes through `deps`: `tap`, `loop`, `playOnce`, `stopClip`, `loadSound`, `isLooping`, `now`, `latency`, `sampleRate`.
@@ -158,7 +158,7 @@ The footer's how-to (`app.js showHint`, `screenHint`) uses the same `pointer: fi
 
 **Play back.** `dj.js playTake` loads every sound of the take (`deps.loadSound`), then books the take as it was heard, `rhythm.js planTake` (each hit, a loop's passes up to its stop or the take's end, a hit cut where the next cut it: what 🔊 Make a sound renders), on the audio clock at once, `t0 + at` (`t0` is `REPLAY_LEAD`, 50 ms, from now), each through `deps.bookPlay` = `audio.book`, a voice of its own outside `audio.playing` (`booked`). So a pad tapped meanwhile and the take never take each other's place. Only the keys' lighting and the end run on `setTimeout`. `stopReplay` clears the timers and cuts every booked voice (`deps.cutVoice`, so a play still to come never sounds); a take stopped while loading books nothing (`replayRun`). ⏹️ Stop all and 🧸 Kids call `stopReplay`, since `audio.stopAll` cannot reach booked voices outside `audio.playing`. A take's ▶ shows ■ Stop while it plays (`showPlaying`); its pads show no progress. Test: `tests/take-replay.test.mjs`.
 
-**Make a sound.** `dj.js makeSound` → `share-render.js renderTake` (offline, `rhythm.js planTake`: hits cut their sound's earlier hits unless `ring`; loops repeat until stopped) → `sequencer.js encodeWav` → `deps.addSound` = `app.js addMadeSound` (🎛️). A second press on the same take asks "Make another?" (`askThenMake`, `ARM_MS`).
+**Make a sound.** `dj.js makeSound` → `share-render.js renderTake` (offline, `rhythm.js planTake`: hits cut their sound's earlier hits unless `ring`; loops repeat until stopped) → `wav.js encodeWav` → `deps.addSound` = `app.js addMadeSound` (🎛️). A second press on the same take asks "Make another?" (`askThenMake`, `ARM_MS`).
 
 **Where takes show:** the take card `#dj-done` (rename, ▶, 🔊, ↩️ Undo deletes the take, ✕; `app.js` fades it after 10 s), the Takes dialog `#takes`, 🗂️ See all (`things.js`), cloud share previews (`share-render.js`).
 
@@ -334,7 +334,7 @@ Kids writes it with `deps.saveBeat` (`state.savedBeats` + `persist('beats')`). I
 | Settings (person scope) | `padSize` (with 🔊 Pads), `padSkin` (with ⚙️ 🎨 Look), `instNotes` (with 🎹 Who plays), `seen` (`tips.js kidsHint`, `markSeen`) |
 | Sound | `audio.js` (`play`, `stop`, `stopAll`, `load`, `decode`, `wake`, `master`, `makeVoice`, `fadeStop`, `trimBounds`, `dropRendered`) |
 | Helpers | `finger.js`, `grown-up.js`, `names.js soundName`, `log.js`, `play-count.js` (`'kids'`), `skins.js` |
-| Pure beat rules | `sequencer.js` (`STEPS`, `noteRate`, `cleanRow`, `multiplyRows`), `notes.js` (`addNote`, `startsIn`), `voices.js`, `instruments.js` |
+| Pure beat rules | `beat.js` (`STEPS`, `noteRate`, `cleanRow`, `multiplyRows`), `notes.js` (`addNote`, `startsIn`), `voices.js`, `instruments.js` |
 
 It shares none of `dj.js`, `pads.js`, `sheet.js`, `song.js` or the sequencer's object.
 
@@ -384,7 +384,7 @@ Defaults on the keys and the default touch layout use the groups' own sounds (`c
 
 ### Latency
 
-Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` for the keys (the same sum, written again); `app.js startUsage` (in ms, uncapped); `rhythm.js hitTime` (unused by the app).
+Worked out in four places: `beat.js outputDelay`; `app.js` `deps.latency` for the keys (the same sum, written again); `app.js startUsage` (in ms, uncapped); `rhythm.js hitTime` (unused by the app).
 
 ### Names that collide
 
@@ -438,7 +438,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | A held Enter on a Kids button clicks it once; a finger's tap and its click play a pad once | `kids-keyboard-repeat.test.mjs` |
 | Kids' square *i* is pill 2*i* of a 16-pill bar, in every bar | `kids.test.mjs` |
 | Kids' keys mean `instNotes` changes for the whole person | `kids.test.mjs` (🎹 instrument button) |
-| `kids-logic.js` stays importable in Node; it imports `sequencer.js`, so that module must stay importable too | every Kids unit test |
+| `kids-logic.js` stays importable in Node; it imports `beat.js`, so that module must stay importable too | every Kids unit test |
 | `kidsHint` shows only at level Kids: a Regular person on a 🧸 visit gets no 👆 hand or mic wiggle | `kids-hints.test.mjs` ("Regular and Advanced never get the hand") |
 | The page's keydown stands down behind any open dialog, so the grown-up sum gets no toy-key presses | no test found |
 

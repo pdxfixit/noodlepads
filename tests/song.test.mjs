@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cleanSong, beatSteps, planSong, linkSong, uniqueSongName, SONG_ID } from '../web/song.js';
-import { cleanPattern, planHits } from '../web/sequencer.js';
+import { cleanPattern, planHits } from '../web/beat.js';
 import { START_LANES } from '../web/playlist.js';
 
 const A = 'beat-a';

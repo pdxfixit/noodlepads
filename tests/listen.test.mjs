@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createListener, fingerprint, closestSound, barLikeness, fillHats, bpmFor, MIN_BPM, MAX_BPM } from '../web/listen.js';
 import { fftSize } from '../web/listen-dsp.js';
-import { barSteps } from '../web/sequencer.js';
+import { barSteps } from '../web/beat.js';
 import { render, feedAll, drumSounds, rng, GROOVE } from './listen-synth.mjs';
 
 // Renders a song, listens to all of it, taking a snapshot every half second.

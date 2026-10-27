@@ -4,7 +4,7 @@
 
 - There is **one database** (`noodle-pads`, `store.js`), **one in-memory copy** of it (`state.js` `state`), and **one rule set** for the board (`model.js`, pure), bound to that copy by `board.js`.
 - There is **no single write path.** `state.js persist` is the common one: it stamps the record and turns a failed write into a banner. App.js, backup-ui.js and cloud.js also write with `store.js db` directly. Their failures are reported in other ways, or only logged to the console.
-- There is **one gate for data that comes in as a whole** (a backup zip, Older sounds found, a cloud pull): `backup.js cleanBackup`, then `merge.js mergeLoaded` through `backup-ui.js storeLoaded`. A beat file does not use it. It is cleaned by `sequencer.js beatFromFile` (`cleanPattern`).
+- There is **one gate for data that comes in as a whole** (a backup zip, Older sounds found, a cloud pull): `backup.js cleanBackup`, then `merge.js mergeLoaded` through `backup-ui.js storeLoaded`. A beat file does not use it. It is cleaned by `beat.js beatFromFile` (`cleanPattern`).
 - **"Which stores exist" is written out by hand in about ten places** (listed under [Seams](#seams)). Only `SCHEMA` order and the upgrades are tested. Adding a store means touching every one of those places.
 - **Two kinds of sound:** presets (`source: 'bundled'`, from boards.json; `kit: true` for the shared kit, copied per person as `<personId>-<kitId>`) and own sounds (`source: 'user'`, IndexedDB `clips`, `user-…` ids). A preset is never stored. Only an edit of it is stored, as an `overrides` record.
 
@@ -28,7 +28,7 @@
 | `starters.js` | `STARTERS`, `nameSoundOf`, `dropNameSounds` (pre-1.0 data only) | yes | backup.js |
 | `backup.js` | backup format, `makeBackup`, `readBackup`, `cleanBackup`, `refusal`, `beforeOne`, one-person helpers, `leftOutNote` | yes (plus zip) | backup-ui.js, leftover.js, cloud.js |
 | `merge.js` | `mergeLoaded`, `mergeSummary`, `sameBytes` | yes | backup-ui.js |
-| `old-beats.js` | `SIGNATURES`, `barSteps`, `unsignedAs`, `stampBeats`: the time signatures, and the stamp for beats saved before each had its own | yes | store.js (the upgrade), sequencer.js, backup.js, settings.js |
+| `old-beats.js` | `SIGNATURES`, `barSteps`, `unsignedAs`, `stampBeats`: the time signatures, and the stamp for beats saved before each had its own | yes | store.js (the upgrade), beat.js, backup.js, settings.js |
 | `zip.js` | `zip`, `unzip`, `crc32` | yes | backup.js, old-backup.js |
 | `backup-ui.js` | 💾 / 📂 buttons, `storeLoaded`, `whatIsHere`, `savePersonBackup`, `pastPins`, its own `storedLists` | no | app.js, leftover.js, cloud.js |
 | `old-backup.js` | `readEverything`, `makeEverything`, `holdings`, `holdsWords`, `sizeWords` | partly | leftover.js, backup-ui.js |

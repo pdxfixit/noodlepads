@@ -89,7 +89,7 @@ test('keys in the count-in: two new sounds take two empty rows, never the same o
 });
 
 test('rowSlot: recording puts the first free empty row before a new one; a full beat reuses one either way', async () => {
-  const { rowSlot } = await import('../web/sequencer.js');
+  const { rowSlot } = await import('../web/beat.js');
   const row = (hit) => ({ steps: [hit] });
   assert.equal(rowSlot([row(false), row(true)], 16, new Set(), true), 0, 'recording: the empty row first');
   assert.equal(rowSlot([row(false), row(true)], 16), 2, 'not recording: a new row');

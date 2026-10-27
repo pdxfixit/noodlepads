@@ -1,6 +1,6 @@
 # 🥁 Beats and 🎼 Song
 
-**In one paragraph.** `sequencer.js createSequencer` is the one beat engine. It owns the open beat, its scheduler on the audio clock, the beat's mix bus, the sound chooser, 💃 Grooves, 🗂️ My beats, the pattern chips, the click, 🎚️ Mixer's wiring and 🎹 the roll's wiring. Everything else that plays a saved beat goes through three of its methods (`beatPlan`, `prepareBeats`, `soundHit`), which share its private `sound()` and `busFor()`. `song.js createSong` is 🎼 Song: its own record, its own 25 ms scheduler, and no sound code of its own (every hit is `seq.soundHit`). `playlist.js` and `notes.js` are the pure rules under them. 🧸 Kids plays beats with a separate scheduler (`kids.js playBeat`), and ⌨️ Keys (`dj.js`) drives the sequencer through about 40 methods of its API.
+**In one paragraph.** `sequencer.js createSequencer` is the one beat engine. The beat maker's pure rules are in `beat.js` (a beat made safe, the hits it plans, swing, grooves as beats, beat files, tempo stops; imported by the backup gate, Kids' rules, the listener, Song and the share preview, so none of them loads the screen), and the WAV encoder in `wav.js`. It owns the open beat, its scheduler on the audio clock, the beat's mix bus, the sound chooser, 💃 Grooves, 🗂️ My beats, the pattern chips, the click, 🎚️ Mixer's wiring and 🎹 the roll's wiring. Everything else that plays a saved beat goes through three of its methods (`beatPlan`, `prepareBeats`, `soundHit`), which share its private `sound()` and `busFor()`. `song.js createSong` is 🎼 Song: its own record, its own 25 ms scheduler, and no sound code of its own (every hit is `seq.soundHit`). `playlist.js` and `notes.js` are the pure rules under them. 🧸 Kids plays beats with a separate scheduler (`kids.js playBeat`), and ⌨️ Keys (`dj.js`) drives the sequencer through about 40 methods of its API.
 
 ## Who is built where
 
@@ -21,7 +21,7 @@
 
 ## The beat record
 
-One shape everywhere: the open beat in memory, a beat in 🗂️ My beats, the scratch, a groove made into a beat, a beat from 🎧 From a song. `sequencer.js cleanPattern(raw, personId, unsigned?)` makes any of them safe. Everything that brings a beat in uses it: `backup.js` (the `patterns` and `beats` lists), `listen-make.js`, `beatFromFile`, `grooveBeat`, and every read from the library.
+One shape everywhere: the open beat in memory, a beat in 🗂️ My beats, the scratch, a groove made into a beat, a beat from 🎧 From a song. `beat.js cleanPattern(raw, personId, unsigned?)` makes any of them safe. Everything that brings a beat in uses it: `backup.js` (the `patterns` and `beats` lists), `listen-make.js`, `beatFromFile`, `grooveBeat`, and every read from the library.
 
 ### The beat
 
@@ -76,7 +76,7 @@ Library records add three fields that `cleanPattern` drops, so every write puts 
 
 ### A beat file (🗂️ My beats ⬇️ / 📥)
 
-`sequencer.js beatToFile` / `beatFromFile`: `{format: 'noodlepads-beat', version: 1, name, bpm, bars, swing, rows, signature?, volume?, fx?}`. A row's `clipId` becomes `sound`, the kit id (`'kick'`); rows of a kid's own sounds are dropped and counted. Reading also accepts the old format name `noodle-pads-beat`, caps the text at 64 KB, and maps `sound` back to `<personId>-<kit id>`. The beat-level fields are listed by hand in `beatToFile`: a new beat field must be added there too. A beat file does **not** go through `backup.js` or `merge.js`. A file without a `signature` (made before beats had their own) is stamped on loading with the loader's settings (`settings.js unsignedSignature`, passed as `beatFromFile`'s fourth argument).
+`beat.js beatToFile` / `beatFromFile`: `{format: 'noodlepads-beat', version: 1, name, bpm, bars, swing, rows, signature?, volume?, fx?}`. A row's `clipId` becomes `sound`, the kit id (`'kick'`); rows of a kid's own sounds are dropped and counted. Reading also accepts the old format name `noodle-pads-beat`, caps the text at 64 KB, and maps `sound` back to `<personId>-<kit id>`. The beat-level fields are listed by hand in `beatToFile`: a new beat field must be added there too. A beat file does **not** go through `backup.js` or `merge.js`. A file without a `signature` (made before beats had their own) is stamped on loading with the loader's settings (`settings.js unsignedSignature`, passed as `beatFromFile`'s fourth argument).
 
 ### Old beats are stamped
 
@@ -86,7 +86,7 @@ A beat saved before each beat had its own `signature` has none. It used to be re
 |---|---|---|
 | The database on this device | `store.js upgradeStores` (version 16, `STAMP_SINCE`) → `stampStored`, inside the upgrade's transaction: every record of `beats` and `patterns` without a signature | the beat's owner's `prefs`, then the device's `settings` |
 | A backup (1.0, 1.1), older sounds found, a cloud pull, a share remix | `backup.js cleanBackup`: `cleanPattern(…, unsignedFor(personId))` for `patterns` and `beats` | the document's own `prefs` and `settings`, then this device's (`backup-ui.js whatIsHere().settingsHere`) |
-| A beat file | `sequencer.js beatFromFile` (the 📥 handler) | the loader's, `settings.js unsignedSignature` |
+| A beat file | `beat.js beatFromFile` (the 📥 handler) | the loader's, `settings.js unsignedSignature` |
 
 The owner's settings decide, not whoever is looking, so a beat sounds as it did for the person who made it. A beat made by current code with no signature is a new beat: 4/4. The backup format does not change (`signature` was already in it): a 1.x backup with an unsigned beat loads stamped. If the upgrade cannot read a store it leaves the beats as they were (the database must open), and they play as 4/4. After the upgrade each device syncs its stamped beats up like any edit. Why: [ADR 0035](../adr/0035-old-beats-stamped.md). Guard: `tests/stamp-signatures.test.mjs`, `tests/song-unsigned.test.mjs`.
 
@@ -186,7 +186,7 @@ A row with no clock (added while playing, or put back by Undo) gets one from `jo
 
 `follow()` runs every frame: `stepsHeard(queue, shown, currentTime, outputDelay(ctx))` moves each row's playhead only once its pill has **come out of the speaker** (`outputDelay` = `outputLatency + baseLatency`, at most 0.2 s). Then `showSteps` (only the pills that change), `drawPlayhead` (one bar when rows line up, else a short bar per row), `keepInSight` (follow.js), `roll.step(shown)`, and `deps.onSteps(shown)` (⌨️ Keys' grid).
 
-Latency is worked out in two places with the same sum: `sequencer.js outputDelay` (Beats, and 🎼 Song's line and lit blocks through `song.js heardAt`) and `app.js`'s `deps.latency` for `dj.js`. 🧸 Kids' squares do not take it off at all.
+Latency is worked out in two places with the same sum: `beat.js outputDelay` (Beats, and 🎼 Song's line and lit blocks through `song.js heardAt`) and `app.js`'s `deps.latency` for `dj.js`. 🧸 Kids' squares do not take it off at all.
 
 ### Switching beats on the bar line (pattern chips)
 
@@ -424,8 +424,8 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 |---|---|
 | **Four beat schedulers.** `sequencer.js schedule` (live), `song.js tick`, `kids.js playBeat`, and `hearBeat` (all at once). Kids' looks 0.12 s ahead; the others 0.1 s | Kids ignores accents, swing, signatures (always 16 pills a bar), rates, row level, mute, solo, the 🎚️ Mixer, and a tune row's `rootShift` (`noteRate(n.p)` only). A timing fix in one reaches none of the others |
 | **`TICK_MS` and `LOOKAHEAD`** are separate constants in `sequencer.js` and `song.js` | change one, the beat and the song drift apart in feel |
-| **Output latency** is summed in `sequencer.js outputDelay` and again in `app.js`'s `deps.latency` for `dj.js` | a change to the cap (0.2 s) or the sum must be made twice; Kids ignores latency |
-| **The beat id pattern** `/^beat-[a-z0-9-]{1,48}$/` is written in `sequencer.js BEAT_ID`, `playlist.js BEAT_REF`, `backup.js` (a local `BEAT_ID`) and inline in `rhythm.js` | only `playlist.js` vs `sequencer.js` is tested (`tests/playlist.test.mjs`) |
+| **Output latency** is summed in `beat.js outputDelay` and again in `app.js`'s `deps.latency` for `dj.js` | a change to the cap (0.2 s) or the sum must be made twice; Kids ignores latency |
+| **The beat id pattern** `/^beat-[a-z0-9-]{1,48}$/` is written in `beat.js BEAT_ID`, `playlist.js BEAT_REF`, `backup.js` (a local `BEAT_ID`) and inline in `rhythm.js` | only `playlist.js` vs `sequencer.js` is tested (`tests/playlist.test.mjs`) |
 | **Listing a person's beats** happens three ways: `sequencer.js library()` (via `beatLibrary.list`, minus hidden), `makeSong`'s `deps.beats` (its own filter and sort), `kids.js`'s `deps.beats` | a new hidden kind of beat must be filtered in each |
 | **Saving a beat record** has two writers in `app.js`: `beatLibrary.put` and Kids' `deps.saveBeat` (the same code) | a change to how beats persist (a stamp, a hook) must be made in both |
 | **Scratch flows are written twice**: beats (`newScratch`, `keepAside`, `keep`, `nameScratch`, `uniqueName`) and songs (`newScratch`, `keep`, `nameScratch`, `uniqueSongName`) | a rule change (what counts as empty, the banner text, naming) must be made in both |
@@ -461,10 +461,10 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 
 | Change | Touch |
 |---|---|
-| A new field on a beat row | `sequencer.js cleanPlainRow` (left out at default), `samePattern`, `multiplyRows` and `slide.js slideRows` if it is per pill; `pill-select.js turnOff` if per pill; `kids-logic.js` (uses `cleanRow`); docs/guide.md. Beat files carry row fields as they are. Add a backup round-trip test (ADR 0011) |
+| A new field on a beat row | `beat.js cleanPlainRow` (left out at default), `samePattern`, `multiplyRows` and `slide.js slideRows` if it is per pill; `pill-select.js turnOff` if per pill; `kids-logic.js` (uses `cleanRow`); docs/guide.md. Beat files carry row fields as they are. Add a backup round-trip test (ADR 0011) |
 | A new field on the beat | `cleanPattern`, `samePattern`, `beatToFile` (the list is by hand), `mixKey` if it changes the sound graph, `listen-make.js` if 🎧 should set it, `grooveBeat` if grooves have it; `backup.js` gets it through `cleanPattern` |
 | A new 🎚️ effect | `mixer.js MIX_FX` (only `steps.js` kinds that run live); stored ids are checked by `cleanFx`; `tests/mixer.test.mjs` |
-| A new time signature | `sequencer.js SIGNATURES`; `settings.js timeSignature` values; the `[data-sig]` buttons in `index.html` (Beats and ⌨️ Keys); `song.js beatSteps` follows by itself; check `listen.js` and grooves |
+| A new time signature | `beat.js SIGNATURES`; `settings.js timeSignature` values; the `[data-sig]` buttons in `index.html` (Beats and ⌨️ Keys); `song.js beatSteps` follows by itself; check `listen.js` and grooves |
 | Scheduler timing (lookahead, tick) | `sequencer.js` `TICK_MS`/`LOOKAHEAD`, `song.js` the same, `kids.js playBeat` (inline 25 ms and 0.12 s), and `hearBeat` (books at once); how late a hit may be booked is `audio.js LATE_SECONDS`, shared by all three (`tests/late-hits.test.mjs`) |
 | How a hit sounds everywhere | `sequencer.js sound`, `hitGain`, `noteRate`, `rhythm.js ringOver`, `busFor`, `mixer.js buildMix`; then `kids.js playBeat`, which has its own |
 | A new place that plays a saved beat | `seq.beatPlan` + `seq.prepareBeats` + `seq.soundHit`; stop the live beat first; call `deps.onPlay`-style stops so one thing plays |

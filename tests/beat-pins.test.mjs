@@ -6,7 +6,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chipBeats, isPinned, MAX_CHIPS, MAX_PINS } from '../web/sequencer.js';
+import { chipBeats, isPinned, MAX_CHIPS, MAX_PINS } from '../web/beat.js';
 import { makeBackup, readBackup } from '../web/backup.js';
 import { shareBundle, shareDoc } from '../web/cloud-sync.js';
 import { newId } from '../web/util.js';

@@ -323,7 +323,7 @@ async function e2e({ url }) {
       const r = await a.run(`${MODULES}
         const { funName, beatName, soundName } = await import('/names.js');
         const { PICTURES, PERSON_COLORS } = await import('/model.js');
-        const { cleanPattern } = await import('/sequencer.js');
+        const { cleanPattern } = await import('/beat.js');
         const { nextClipColor } = await import('/board.js');
         const { newId } = await import('/util.js');
         const id = ${JSON.stringify(pid)};

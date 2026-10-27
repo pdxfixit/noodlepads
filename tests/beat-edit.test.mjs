@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanPattern, samePattern, isUnsaved, pillTarget } from '../web/sequencer.js';
+import { cleanPattern, samePattern, isUnsaved, pillTarget } from '../web/beat.js';
 
 const beat = (name, rows, bpm = 100) => cleanPattern({ name, bpm, rows }, 'pip');
 const on = (...steps) => Array.from({ length: 16 }, (_, i) => steps.includes(i));
@@ -62,7 +62,7 @@ test('pillTarget: Home and End go to the ends of the row, other keys are ignored
 });
 
 test('moveItem moves one item and reports where every old index went', async () => {
-  const { moveItem } = await import('../web/sequencer.js');
+  const { moveItem } = await import('../web/beat.js');
   const list = ['a', 'b', 'c', 'd'];
   assert.deepEqual(moveItem(list, 0, 2), [2, 0, 1, 3]);
   assert.deepEqual(list, ['b', 'c', 'a', 'd']);
@@ -73,7 +73,7 @@ test('moveItem moves one item and reports where every old index went', async () 
 });
 
 test('the tempo slider pulls toward common tempos, yet every tempo has a stop', async () => {
-  const { tempoStops, stopFor, COMMON_BPMS } = await import('../web/sequencer.js');
+  const { tempoStops, stopFor, COMMON_BPMS } = await import('../web/beat.js');
   const stops = tempoStops();
   for (let bpm = 60; bpm <= 180; bpm++) assert.ok(stops.includes(bpm), `${bpm} is reachable`);
   const width = (bpm) => stops.filter((b) => b === bpm).length;
@@ -87,7 +87,7 @@ test('the tempo slider pulls toward common tempos, yet every tempo has a stop', 
 });
 
 test('a typed tempo is a whole number in range, and junk is ignored', async () => {
-  const { typedBpm } = await import('../web/sequencer.js');
+  const { typedBpm } = await import('../web/beat.js');
   assert.equal(typedBpm('159'), 159);
   assert.equal(typedBpm(' 120.6 '), 121);
   assert.equal(typedBpm('20'), 60);
@@ -97,7 +97,8 @@ test('a typed tempo is a whole number in range, and junk is ignored', async () =
 });
 
 test('a groove becomes a beat on the person\'s own kit copies, leaving out sounds the board lacks', async () => {
-  const { GROOVES, grooveBeat } = await import('../web/sequencer.js');
+  const { GROOVES } = await import('../web/grooves.js');
+const { grooveBeat } = await import('../web/beat.js');
   assert.ok(GROOVES.length >= 5);
   const four = GROOVES.find((g) => g.id === 'four');
   const beat = grooveBeat(four, 'juno');

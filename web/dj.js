@@ -13,7 +13,8 @@
 // above the keys, ● Record into it). app.js picks the mode with setMode.
 
 import { countAt, KEY_ROWS, KEY_CODES, keyboardOrder, defaultDeck, fallbackLabel, layoutLabel, detectLayout, LAYOUTS, LAYOUT_NAMES, keyFor, takeFrom, planTake, clockText, MAX_TAKE_SECONDS, createSnapper, tapTempo, TAP_GAP_MAX } from './rhythm.js';
-import { encodeWav, SIGNATURES, COMMON_BPMS, tempoStops, stopFor, pillHolds, typedBpm } from './sequencer.js';
+import { encodeWav } from './wav.js';
+import { SIGNATURES, COMMON_BPMS, tempoStops, stopFor, typedBpm } from './beat.js';
 import { recall, remember, newId, onePressOneClick } from './util.js';
 import { PICTURES, pictureTakenBy } from './model.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
@@ -26,7 +27,7 @@ import { drawSpeaker, speakerControls, percent } from './row-volume.js';
 import { rowParts, rowSpeaker, rowEmoji, twinRows } from './beat-row.js';
 import { logEvent } from './log.js';
 import { renderTake } from './share-render.js';
-import { fingerTaps, isFinger } from './finger.js';
+import { fingerTaps, isFinger, pillHolds } from './finger.js';
 import { soundsOf, defaultTouch, touchOrder, touchSounds } from './touch.js';
 import { drawBands, createTouchEditor } from './dj-touch.js';
 import { createPillSelect } from './pill-select.js';

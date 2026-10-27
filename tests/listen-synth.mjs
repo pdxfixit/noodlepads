@@ -13,7 +13,7 @@
 //   pattern longer than a bar, an array of such arrays, one per bar.
 // → { samples, hits: [{ t, row, bar, step }], barStarts: [seconds] }
 
-import { barSteps } from '../web/sequencer.js';
+import { barSteps } from '../web/beat.js';
 
 export function rng(seed = 1) {
   let a = seed >>> 0;

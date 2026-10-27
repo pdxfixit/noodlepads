@@ -13,7 +13,7 @@ import {
   adoptKidsBeats, grooveOf, scratchLabel, hasHits, SCRATCH_NAME,
 } from '../web/scratch.js';
 import { keptName, MAX_LABEL } from '../web/names.js';
-import { BEAT_ID } from '../web/sequencer.js';
+import { BEAT_ID } from '../web/beat.js';
 import { SONG_ID } from '../web/song.js';
 import { makeBackup, readBackup } from '../web/backup.js';
 import { recordsOf } from '../web/cloud-sync.js';

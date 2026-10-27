@@ -8,7 +8,7 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { MIX_FX, cleanFx, fxSteps, masterLevel, silencedBySolo, mixKey, buildMix } from '../web/mixer.js';
-import { cleanRow, cleanPattern, samePattern, planHits, audible, beatToFile, beatFromFile } from '../web/sequencer.js';
+import { cleanRow, cleanPattern, samePattern, planHits, audible, beatToFile, beatFromFile } from '../web/beat.js';
 import { readBackup, makeBackup } from '../web/backup.js';
 import { shareBundle, shareDoc } from '../web/cloud-sync.js';
 import { installPage } from './fake-dom.mjs';

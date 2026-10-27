@@ -16,7 +16,7 @@ import {
   KIDS_DRUMS, drumPicture, kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS, keyPitch, keyRate, keyPlayId, isHighKey,
 } from '../web/kids-logic.js';
 import { MELODY_NOTES } from '../web/notes.js';
-import { BEAT_ID, cleanPattern, STEPS } from '../web/sequencer.js';
+import { BEAT_ID, cleanPattern, STEPS } from '../web/beat.js';
 import { isScratch, scratchId } from '../web/scratch.js';
 import { cutName } from '../web/names.js';
 

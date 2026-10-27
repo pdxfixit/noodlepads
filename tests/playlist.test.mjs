@@ -9,7 +9,7 @@ import {
   cleanTempo, cleanLane, cleanLanes, newLanes, blockBars, blockSpan, blockAt, placeBlock, setTimes, maxTimes, timesForEnd,
   removeBlock, songBars, viewBars, playParts, playEvents, playingAt, slotsToLanes, legacySlots, songBeatIds, mapSongBeats, songHasBeats,
 } from '../web/playlist.js';
-import { BEAT_ID } from '../web/sequencer.js';
+import { BEAT_ID } from '../web/beat.js';
 
 const A = 'beat-a';   // 1 bar of 4/4: 16 pills
 const B = 'beat-b';   // 2 bars of 4/4: 32 pills

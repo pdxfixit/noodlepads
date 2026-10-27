@@ -55,7 +55,7 @@ const BG = [
   'zigzag',
 ];
 const MODULES = [
-  'agent', 'app', 'audio', 'backdrop', 'backup-ui', 'backup', 'beat-row', 'board', 'bulk', 'chop', 'cloud-api',
+  'agent', 'app', 'audio', 'backdrop', 'backup-ui', 'backup', 'beat', 'beat-row', 'board', 'bulk', 'chop', 'cloud-api',
   'cloud-sync', 'cloud-ui', 'cloud', 'contact', 'contrast', 'cuts', 'device-meta', 'dialogs', 'dj-keys', 'dj-touch', 'dj',
   'download', 'edge-scroll', 'emoji-all', 'emoji-check', 'emoji-more', 'events-client', 'feedback', 'finger', 'firsts', 'follow', 'grooves', 'groups', 'grown-up', 'help', 'inst-picker', 'instruments',
   'keyset', 'kids-logic', 'kids', 'leftover', 'lines', 'listen-dsp', 'listen-input', 'listen-make', 'listen-ui', 'listen-worklet', 'listen', 'log-clean', 'log-send', 'log', 'loudness', 'merge', 'merge3', 'meter', 'mini-deck',
@@ -63,7 +63,7 @@ const MODULES = [
   'pill-select', 'pitch', 'play-count', 'playlist', 'privacy', 'reid', 'rhythm', 'roll', 'row-volume', 'scratch', 'sequencer',
   'settings-ui', 'settings', 'shape', 'share-render', 'sheet', 'skins', 'slide', 'song', 'starters', 'state', 'steps',
   'store', 'stretch-worker', 'stretch', 'sync-timing', 'synth', 'tap-watch', 'telemetry', 'tempo-key', 'things', 'tips', 'tooltips', 'touch-grid', 'touch', 'track-page', 'tweaks',
-  'ui', 'update', 'usage', 'util', 'voice-knobs', 'voices', 'wave', 'welcome', 'who-now', 'zip',
+  'ui', 'update', 'usage', 'util', 'voice-knobs', 'voices', 'wav', 'wave', 'welcome', 'who-now', 'zip',
 ];
 
 // Every file the app can load, relative to this worker. './' is the page

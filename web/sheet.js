@@ -27,7 +27,7 @@ import { MIX, cleanMix, mixSounds } from './mix.js';
 import { showNotice } from './ui.js';
 import { track } from './telemetry.js';
 import { STARTERS, TONES, LIMITS, RATE, renderSynth, cleanSynth, surpriseSynth } from './synth.js';
-import { encodeWav } from './sequencer.js';
+import { encodeWav } from './wav.js';
 import { findNote, noteName } from './pitch.js';
 import { cutKey, cleanEdits, cleanFade } from './cuts.js';
 import { createWave } from './wave.js';

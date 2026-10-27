@@ -21,10 +21,11 @@ beats and a song) that only ends in the app's normal beat and song saving.
 | Knobs | `tweaks.js` | yes | `voices.js`, `sheet.js`, `shape.js`, `bulk.js`, `voice-knobs.js`, `backup.js`, `model.js` |
 | Voices as knobs, own voices | `voice-knobs.js` | yes | `sheet.js` |
 | Trim, edits, fades, onsets | `cuts.js` | yes | `audio.js`, `chop.js`, `backup.js`, `model.js` |
-| Even it out | `loudness.js` | yes | `chop.js`, `voices.js` (softLimit) |
+| Even it out | `loudness.js` | yes | `chop.js`, `voices.js` (softLimit), `wav.js normalize` (`peakOf`) |
+| The WAV file | `wav.js` (`encodeWav`, `normalize`) | yes, no DOM, storage or audio ✅ | `sheet.js`, `chop.js`, `dj.js`, `song.js`, `share-render.js`, `sequencer.js` |
 | Mix, Find its note, Make one | `mix.js`, `pitch.js`, `synth.js` | yes | `sheet.js`; `pitch.js rootShift` also by `sequencer.js` |
 | Sheet drawing | `wave.js`, `chop.js`, `shape.js` | no (DOM) | `sheet.js` |
-| Instruments | `instruments.js`, `inst-picker.js` | `instruments.js` yes, no imports | `audio.js`, `model.js`, `board.js`, `settings.js`, `sequencer.js`, `dj-*.js`, `kids*.js`, `worker/clean.js` |
+| Instruments | `instruments.js`, `inst-picker.js` | `instruments.js` yes, no imports | `audio.js`, `model.js`, `board.js`, `settings.js`, `beat.js`, `sequencer.js`, `dj-*.js`, `kids*.js`, `worker/clean.js` |
 | 🎧 From a song | `listen-input.js`, `listen-worklet.js`, `listen-dsp.js`, `listen.js`, `listen-make.js`, `listen-ui.js` | all but `listen-ui.js` and the capture half of `listen-input.js` | `app.js initListen`; `app.js` passes `showCard` to the sequencer as `deps.onGroovesOpen` |
 
 ## The AudioContext and the output graph
@@ -379,7 +380,7 @@ The chain of gains from a file to the speaker:
 | A beat's hit | `sequencer.js sound` | `hitGain(row, loud)`; an accent is `ACCENT_GAIN` 1.5 |
 | A beat's mix | `mixer.js buildMix` via `sequencer.js busFor` | row levels, mute, solo, effects, master level |
 | Output | `audio.limiter` | holds a pile-up under full scale |
-| Offline renders | `sequencer.js normalize` | peak 0.9 (bounce, song, share previews) |
+| Offline renders | `wav.js normalize` | peak 0.9 (bounce, song, share previews) |
 
 - **Preset levels.** `tools/preset_loudness.py` measures every preset as a
   phone plays it (it re-implements `instruments.js voice` and the 0.9 peak in
@@ -477,11 +478,11 @@ What I heard: ▶ deps.seq.hearBeat · 🎼 deps.song.openSaved · 🥁 deps.seq
   2.5%; the grid line refits through recent hits; the time signature from 64
   sixteenths; a bar settles 1.5 bars after it ends; hits off the grid for a
   bar end the segment (a tempo change). BPM is kept inside
-  `sequencer.js tempoStops()`, steps per bar follow `sequencer.js barSteps`,
+  `beat.js tempoStops()`, steps per bar follow `beat.js barSteps`,
   and a part's beat is at most `MAX_PILLS`.
 - **The live screen** draws at most once an animation frame, and only the
   cells whose class changed (`listen-ui.js paint`).
-- **Made records.** A beat is `sequencer.js cleanPattern({name, bpm, bars,
+- **Made records.** A beat is `beat.js cleanPattern({name, bpm, bars,
   signature, swing, rows: [{clipId, steps}]}, personId)` plus `id`
   (`newId('beat')`), `created`, `saved`. A row's `clipId` is
   `` `${personId}-${kit}` ``, or the row's plain sound when the board lacks
@@ -558,14 +559,14 @@ knobs and 🔊 Even it out.
 ### Peak 0.9, the house level
 
 Every made or rendered sound is scaled so its loudest sample is 0.9:
-`voices.js finish`, `cuts.js levelForGain`, `sequencer.js normalize`,
+`voices.js finish`, `cuts.js levelForGain`, `wav.js normalize`,
 `mix.js mixSounds`, `synth.js renderSynth`, and the measure in `chop.js
 evenOut`. `loudness.js softLimit` bends above 0.9. `tools/preset_loudness.py
 PEAK` and `loudness.js PRESET_LOUDNESS` assume it.
 
 ### The semitone rate
 
-2^(n/12) is computed in `instruments.js rateOf`, `sequencer.js noteRate`,
+2^(n/12) is computed in `instruments.js rateOf`, `beat.js noteRate`,
 `kids-logic.js keyRate`, `voices.js STEP_RENDERS.pitch`, `tweaks.js
 tweakSteps`, and Python's `tools/preset_loudness.py voiced`. The live paths
 use `playbackRate`; the presets resample in JavaScript (`instruments.js
@@ -627,11 +628,10 @@ by a load of its current version").
 | Kids voices are classic | `kids-logic.js KIDS_VOICES` stores `voice`/`fx` steps; the sheet now stores knobs | a change to how knobs sound never reaches 🧸 Kids' voices |
 | A live tail changes the peak | `sheet.js startLive`: the head is evened out (peak 0.9, the preset `level`), then the live tail (Echo, Room, Tone, Muffled…) plays through nodes; the saved render re-evens after every step (`applyChain` → `finish`) | untrimmed, a sound whose echoes pile on it played louder while dragging than once let go: a held 220 Hz note peaked at 1.81 against the render's 0.9 with Echo 3 × 0.25 s (+6 dB), and 2.96 with 8 echoes (+10.4 dB), where the output limiter (−2 dB, 20:1, not a brickwall) held it near full scale and turned down everything else on the master (a playing beat) by up to about 10 dB. Now the loop is turned down by `steps.js liveTrim`: what its echoes could add in step with a sound that long (1 when none comes back while it plays), set again as a slider moves; both cases peak within 1.5 dB of the render. A sound that is not a steady note (a voice) is trimmed as much, so it may play a little softer while dragging. Room, Tone and Louder everywhere get no trim (`tests/live-peak.test.mjs`) |
 | Louder everywhere plays louder live | `steps.js squash` (`Louder everywhere`, the Loud and Loudest knobs): a compressor, then makeup gain up to ×5 (+14 dB) at amount 1; live it plays at that gain, while the saved render evens it out to peak 0.9 | dragging its slider (or a live loop with Loud on) is louder than letting go, and the limiter holds it as for Echo; unmeasured here, for an ear |
-| `listen.js` and `listen-make.js` import `sequencer.js` | for `SIGNATURES`, `barSteps`, `tempoStops`, `MAX_PILLS`, `cleanPattern` | the "pure" listener loads the beat maker's whole import graph (it works in Node today) |
+| `listen.js` and `listen-make.js` import `beat.js` | for `SIGNATURES`, `barSteps`, `tempoStops`, `MAX_PILLS`, `cleanPattern` | `beat.js` imports `mixer.js`, `row-volume.js`, `model.js` and `instruments.js` for its rules, so the "pure" listener still loads those (not the beat maker screen) |
 | `ROWS` twice | `listen-dsp.js ROWS` and `listen-make.js ROWS` | kept equal by hand |
 | Name clashes | `KINDS` (`steps.js` vs `listen-input.js`), `FAMILIES` (`instruments.js` vs `voice-knobs.js`), `levelOf` (`meter.js`, `listen-input.js`, the sequencer's) | a wrong import still runs |
 | Bare players outside `audio.playing` | `kids.js` beat and beeps, sequencer click | `audio.stopAll` does not stop them |
-| `encodeWav` and `normalize` live in `sequencer.js` | used by `sheet.js`, `chop.js`, `dj.js`, `song.js`, `share-render.js` | a sound module depends on the beat maker for its WAV |
 
 ## Invariants and gotchas
 
@@ -666,7 +666,7 @@ by a load of its current version").
 | A new knob | `tweaks.js TWEAKS` (a new `short` letter), `tweakSteps` (its place in the order), `LAYER_ORDER`, `ADDED_AT`; `voice-knobs.js MADE` if a voice uses it; `shape.js` draws it from `TWEAKS`; keep old `tweaksKey`s unchanged |
 | A new cut (edit kind) | `cuts.js EDIT_KINDS`, `cleanEdit`, `applyEdits`, `editsKey`; `chop.js editPart` and its buttons in `index.html`; `help.js` |
 | The order cuts apply in | `audio.js keptAudio` and `chop.js rebuild` and `chop.js evenOut` together |
-| The house peak (0.9) | `voices.js finish`, `cuts.js levelForGain`, `sequencer.js normalize`, `mix.js`, `synth.js`, `chop.js evenOut`, `loudness.js softLimit`, `tools/preset_loudness.py PEAK`; then `just preset-loudness --fix` and `PRESET_LOUDNESS` |
+| The house peak (0.9) | `voices.js finish`, `cuts.js levelForGain`, `wav.js normalize`, `mix.js`, `synth.js`, `chop.js evenOut`, `loudness.js softLimit`, `tools/preset_loudness.py PEAK`; then `just preset-loudness --fix` and `PRESET_LOUDNESS` |
 | A new preset, or a kit WAV | `web/clips/kit/`, boards.json, then `just preset-loudness --fix`; an instrument note: `tools/kit_instruments.py` |
 | A new instrument | `instruments.js INSTRUMENTS` (and `FAMILIES`), its recordings (`tools/make_samples.py` or `make_placeholders.py`), `tools/kit_instruments.py`, `just preset-loudness --fix`; `settings.js` takes the ids from `instrumentIds` |
 | Who plays a group by default | `instruments.js PLAYED` |

@@ -4,7 +4,7 @@
 // song near 8 MB, under the 25 MB a sound may be.
 
 import { audio, makeVoice, fadeStop } from './audio.js';
-import { encodeWav, normalize } from './sequencer.js';
+import { encodeWav, normalize } from './wav.js';
 import { cleanSong, planSong, soundSong, MAX_SONG_SECONDS } from './song.js';
 import { planTake, MAX_TAKE_SECONDS } from './rhythm.js';
 

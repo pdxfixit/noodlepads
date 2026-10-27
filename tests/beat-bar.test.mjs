@@ -31,7 +31,7 @@ before(async () => {
 });
 
 test('both beat bars are measured: a narrow one splits, a wide one stays on one line', async () => {
-  const { BEAT_BAR_STEPS } = await import('../web/sequencer.js');
+  const { BEAT_BAR_STEPS } = await import('../web/beat.js');
   assert.deepEqual(BEAT_BAR_STEPS, ['fit-split', 'fit-tight', 'fit-stack']);
   assert.equal(bars.length, 2, 'Beats and ⌨️ Keys each have the bar');
   assert.equal(bars[0].classList.contains('fit-split'), true, 'the phone bar puts the tools on their own row');

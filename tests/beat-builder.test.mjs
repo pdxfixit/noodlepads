@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createSnapper, snapHits, tapTempo } from '../web/rhythm.js';
-import { retimeAt, multiplyRows, COMMON_BPMS } from '../web/sequencer.js';
+import { retimeAt, multiplyRows, COMMON_BPMS } from '../web/beat.js';
 
 // 100 BPM, one bar of 4/4: a pill is 0.15 s, 16 pills, recording from t0 = 10.
 const clock = { t0: 10, step: 0.15, total: 16 };

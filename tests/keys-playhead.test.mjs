@@ -9,7 +9,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { stepsHeard, outputDelay } from '../web/sequencer.js';
+import { stepsHeard, outputDelay } from '../web/beat.js';
 import { keysOn, keysOff } from './new-beat.mjs';
 import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';

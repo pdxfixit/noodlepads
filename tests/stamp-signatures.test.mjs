@@ -13,7 +13,7 @@ import { unsignedAs, stampBeats, SIGNATURES } from '../web/old-beats.js';
 import { db, DB_NAME, DB_VERSION, SCHEMA } from '../web/store.js';
 import { levelOf } from '../web/settings.js';
 import { cleanBackup, readBackup, BACKUP_APP } from '../web/backup.js';
-import { beatFromFile, cleanPattern } from '../web/sequencer.js';
+import { beatFromFile, cleanPattern } from '../web/beat.js';
 import { buildZip, blobOf, utf8 } from './helpers.mjs';
 
 const row = { clipId: 'pip-kick', steps: [true, ...Array(15).fill(false)] };

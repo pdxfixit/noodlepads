@@ -38,7 +38,7 @@ import {
   nextKidsInstrument, keyKitId,
   TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote, keptTune,
 } from './kids-logic.js';
-import { STEPS, noteRate } from './sequencer.js';
+import { STEPS, noteRate } from './beat.js';
 import { startsIn } from './notes.js';
 import { instrumentById, PLAYED } from './instruments.js';
 

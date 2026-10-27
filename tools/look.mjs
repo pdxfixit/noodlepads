@@ -110,7 +110,7 @@ const OWN_SOUND = (advanced) => `const { state } = await import('/state.js'); co
   const rate = 22050; const b = new AudioBuffer({ length: 2 * rate, numberOfChannels: 1, sampleRate: rate }); const d = b.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = 0.06 * Math.sin(2 * Math.PI * 300 * i / rate);
   for (let i = 0; i < 0.03 * rate; i++) d[rate + i] += 0.87 * Math.sin(2 * Math.PI * 1500 * i / rate) * Math.exp(-i / (0.003 * rate));
-  const blob = (await import('/sequencer.js')).encodeWav(b);
+  const blob = (await import('/wav.js')).encodeWav(b);
   state.userClips.push({ id: 'user-look-wave', personId: pid, label: 'Hum', emoji: '🐝', color: 'red', voice: 'normal', blob, mime: blob.type, created: 1 });
   (await import('/pads.js')).renderPads();
   ${q('#edit-toggle')} ${q('#pads .pad-cell:has([data-id="user-look-wave"]) [data-edit]')}
