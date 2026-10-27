@@ -965,6 +965,9 @@ dialog .lib-empty { border-color: rgb(20 19 24 / 0.25); background: var(--chalk)
 .seq-playhead { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
 .seq-bar {
   position: absolute;
+  left: 0;   /* playhead.js moves it with a transform, which lays nothing out again */
+  top: 0;
+  will-change: transform;
   width: 4px;
   margin-left: -2px;
   border-radius: 2px;

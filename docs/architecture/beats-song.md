@@ -189,7 +189,7 @@ The run's tick is the live caller: it sends the voice to `busFor(ctx, audio.mast
 
 ### The playhead and output latency
 
-`follow()` runs every frame: `stepsHeard(run.queue, run.shown, currentTime, outputDelay(ctx))` moves each row's playhead only once its pill has **come out of the speaker** (`outputDelay` = `outputLatency + baseLatency`, at most 0.2 s). Then `showSteps` (only the pills that change), `drawPlayhead` (one bar when rows line up, else a short bar per row), `keepInSight` (follow.js), `roll.step(run.shown)`, and `deps.onSteps(run.shown)` (⌨️ Keys' grid).
+`follow()` runs every frame: `stepsHeard(run.queue, run.shown, currentTime, outputDelay(ctx))` moves each row's playhead only once its pill has **come out of the speaker** (`outputDelay` = `outputLatency + baseLatency`, at most 0.2 s). Then `showSteps`: it reads first (`measurePlayhead`: the boxes of the pills reached, turned into bars by `playhead.js playheadSpans` — one bar when rows line up, else a short bar per row; `sightTurn`: `follow.js viewTurn`, where the rows should scroll), and only then writes (the `.now` class on the pills that change, `createBars().paint`: the bars are kept and moved with a transform, a height written only when it changed, and `rowFollow.to`), so a step does not make the browser lay the page out twice; then `roll.step(run.shown)`, and `deps.onSteps(run.shown)` (⌨️ Keys' grid). `drawPlayhead` is the same paint for a redraw or a resize. `tests/playhead.test.mjs` keeps the order.
 
 Latency is summed in one place, `beat.js outputDelay` (Beats, 🎼 Song's line and lit blocks through `song.js heardAt`, `app.js`'s `deps.latency` for `dj.js`, and the usage events' uncapped figure) ✅. 🧸 Kids' squares do not take it off at all.
 
@@ -359,7 +359,7 @@ Several things are keyed by the `pattern` **object**, not its id: `undo.pattern`
 
 ### Playhead following
 
-`follow.js follower(box)` + `keepInView`: Beats' rows (`rowFollow`), 🎹 the roll (`gridFollow`) and ⌨️ Keys' grid turn a page when the playhead leaves the view, until the kid scrolls. 🎼 Song also uses `follower` but works out its own page turn from `offsetLeft` in `song.js follow`.
+`follow.js follower(box)` + `keepInView` (`viewTurn` is its read half, which Beats' rows call before they write): Beats' rows (`rowFollow`), 🎹 the roll (`gridFollow`) and ⌨️ Keys' grid turn a page when the playhead leaves the view, until the kid scrolls. 🎼 Song also uses `follower` but works out its own page turn from `offsetLeft` in `song.js follow`.
 
 ### Lines that give way
 

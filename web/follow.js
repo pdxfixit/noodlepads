@@ -38,11 +38,18 @@ export function follower(box) {
   };
 }
 
-// Keeps `target` (the pill being heard) in sight in `box`, beside `head` px
-// of stuck heads; a page turn puts `from` (its beat's first pill) at the left.
-export function keepInView(follow, box, target, head, from = target) {
-  if (!follow.on || !box?.clientWidth || !target) return;
+// Where the box should scroll to keep `target` (the pill being heard) in
+// sight, beside `head` px of stuck heads, or null: it reads the page and
+// writes nothing, so a caller can read first and scroll after its own writes.
+// A page turn puts `from` (its beat's first pill) at the left.
+export function viewTurn(follow, box, target, head, from = target) {
+  if (!follow.on || !box?.clientWidth || !target) return null;
   const b = box.getBoundingClientRect(), t = target.getBoundingClientRect();
   const start = (from ?? target).getBoundingClientRect().left - b.left;
-  follow.to(pageTurn({ left: t.left - b.left, right: t.right - b.left, view: b.width || box.clientWidth, head, scroll: box.scrollLeft, start }));
+  return pageTurn({ left: t.left - b.left, right: t.right - b.left, view: b.width || box.clientWidth, head, scroll: box.scrollLeft, start });
+}
+
+// Keeps `target` in sight in `box` (viewTurn, then the scroll).
+export function keepInView(follow, box, target, head, from = target) {
+  follow.to(viewTurn(follow, box, target, head, from));
 }

@@ -35,7 +35,8 @@ import { isScratch, isHiddenBeat, scratchOf, scratchId, scratchLabel, grooveOf, 
 import { cleanVolume, rowLevel, setRowLevel, drawSpeaker, speakerControls, percent } from './row-volume.js';
 import { rowParts, rowSpeaker, rowEmoji, twinRows } from './beat-row.js';
 import { moreMenu } from './overflow.js';
-import { follower, keepInView } from './follow.js';
+import { follower, viewTurn } from './follow.js';
+import { playheadSpans, createBars } from './playhead.js';
 import { fitLine } from './lines.js';
 import { pillHolds } from './finger.js';
 import { encodeWav, normalize, audioPasses, audioFileFrames, audioView, audioFileName, AUDIO_RING_SECONDS } from './wav.js';
@@ -796,19 +797,25 @@ export function createSequencer(deps) {
   }
 
   // Only the pills that change: the one each row leaves and the one it reaches
-  // (16 rows of 4 bars are over a thousand pills).
+  // (16 rows of 4 bars are over a thousand pills). Everything this step needs
+  // from the page's layout is read first (the playhead's boxes, where the rows
+  // scroll to), then the classes, the bars and the scroll are written: a read
+  // after a write makes the browser lay the page out again, twice a step.
   function showSteps() {
     const shown = run?.shown ?? [];   // nothing is lit once the beat has stopped
+    const reached = pills.map((row, i) => row[shown[i]] ?? null);
+    const spans = measurePlayhead(reached);
+    const turn = sightTurn(reached.find(Boolean));
     pills.forEach((row, i) => {
-      const p = row[shown[i]] ?? null;
+      const p = reached[i];
       if (litPills[i] === p) return;
       litPills[i]?.classList.remove('now');
       p?.classList.add('now');
       litPills[i] = p;
     });
     litPills.length = pills.length;
-    drawPlayhead();
-    keepInSight();
+    bars.paint(spans);
+    rowFollow.to(turn);
     roll?.step(run?.shown ?? []);
   }
 
@@ -818,39 +825,30 @@ export function createSequencer(deps) {
   // page turns. A scroll by the kid stops it until the next ▶ Play.
   const rowBox = el.rows.closest?.('.seq-scroll') ?? null;
   const rowFollow = follower(rowBox);   // follow.js
-  function keepInSight() {
-    const pill = litPills.find(Boolean);
-    if (!pill) return;
-    keepInView(rowFollow, rowBox, pill, el.rows.querySelector('.seq-head')?.offsetWidth ?? 0, pill.closest('.seq-beat') ?? pill);
+  function sightTurn(pill) {
+    if (!pill) return null;
+    return viewTurn(rowFollow, rowBox, pill, el.rows.querySelector('.seq-head')?.offsetWidth ?? 0, pill.closest('.seq-beat') ?? pill);
   }
 
-  // The playhead: a bar down through every row at the step being played.
-  // When the rows are in step and each fits on one line, it is one bar from
-  // the first row to the last. When rows run at different tempos, or a phone
-  // wraps each row onto two lines of 8, it is a short bar on each row's
-  // playing pill instead.
-  function drawPlayhead() {
+  // The playhead (playhead.js): a bar down through every row at the step being
+  // played, or a short bar on each row's playing pill. Reads the boxes of the
+  // pills `reached` (one per row, or null) and gives the bars; writes nothing.
+  const bars = createBars(el.playhead);
+  function measurePlayhead(reached) {
     // Collapsed rows have no pills on screen, so the bar skips them.
-    const shown = run?.shown ?? [];
-    const current = pills.map((row, i) => (shown[i] >= 0 && row.length ? row[shown[i]] : null)).filter(Boolean);
-    if (!current.length) { el.playhead.replaceChildren(); return; }
+    const current = reached.filter((p, i) => p && pills[i].length);
+    const row = pills.find((r) => r.length)?.filter((p) => !p.hidden) ?? [];
+    if (!current.length || !row.length) return [];
     const box = el.rows.getBoundingClientRect();
-    const rects = current.map((p) => p.getBoundingClientRect());
-    const first = pills.find((row) => row.length).filter((p) => !p.hidden);
-    const wrapped = first[0].getBoundingClientRect().top !== first[first.length - 1].getBoundingClientRect().top;
-    const centre = (r) => r.left + r.width / 2;
-    const aligned = rects.every((r) => Math.abs(centre(r) - centre(rects[0])) < 1);
-    const spans = wrapped || !aligned
-      ? rects.map((r) => [centre(r), r.top - 6, r.bottom + 6])
-      : [[centre(rects[0]), rects[0].top - 6, rects[rects.length - 1].bottom + 6]];
-    el.playhead.replaceChildren(...spans.map(([x, top, bottom]) => {
-      const bar = document.createElement('div');
-      bar.className = 'seq-bar';
-      bar.style.left = `${x - box.left}px`;
-      bar.style.top = `${top - box.top}px`;
-      bar.style.height = `${bottom - top}px`;
-      return bar;
-    }));
+    const rel = (p) => {
+      const r = p.getBoundingClientRect();
+      return { left: r.left - box.left, width: r.width, top: r.top - box.top, bottom: r.bottom - box.top };
+    };
+    return playheadSpans(current.map(rel), { start: rel(row[0]), end: rel(row[row.length - 1]) });
+  }
+  function drawPlayhead() {
+    const shown = run?.shown ?? [];
+    bars.paint(measurePlayhead(pills.map((row, i) => (shown[i] >= 0 && row.length ? row[shown[i]] : null))));
   }
 
   // A row in one line, for the event log.
