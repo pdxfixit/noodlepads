@@ -142,3 +142,46 @@ test("a song's Robot beat stops running once its lane's last block of it ends, w
   $('#song-play').dispatch('click');
   ctx.currentTime = 0;
 });
+
+// The same with the roll left open: the mix goes RING_MS (6 s) after the
+// last note heard, and is disposed 6 s later. A note heard meanwhile starts
+// the 6 s again. The timers are mocked before the note's tap, so the timer
+// the preview sets is the mock's; the preview's load is awaited as
+// microtasks (settle() would wait on the mocked timers).
+test('a 🎹 note heard with the roll left open: its Robot stops 6 s after the last note, once rung out', async () => {
+  const flush = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
+  $('#beats-toggle').dispatch('click');
+  document.querySelectorAll('[data-mixer]')[0].dispatch('click');
+  const master = $('#mixer-strips').children.find((c) => c.dataset.strip === 'master').querySelector('[data-fx]');
+  master.value = 'robot';
+  master.dispatch('change');
+  $('#mixer').close();
+  $('#seq-add-tune').dispatch('click');
+  $('#tune-who-list').querySelectorAll('[data-inst]').find((b) => b.dataset.inst === 'pluck').dispatch('click');
+  assert.equal($('#roll').open, true);
+  await stopAndRingOut(() => {});   // what came before is gone
+  assert.equal(running(), 0);
+  const cells = () => $('#roll').querySelectorAll('.note-cell');
+  // A mocked tick moves its clock to the end first, so a timer set inside
+  // it counts from there: step 100 ms at a time to keep the times true.
+  const advance = (ms) => { for (let t = 0; t < ms; t += 100) mock.timers.tick(100); };
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try {
+    cells()[0].dispatch('click');
+    await flush();
+    assert.ok(running() > 0, 'the note plays through the Master Robot');
+    advance(5000);
+    cells()[3].dispatch('click');   // a second note at 5 s
+    await flush();
+    // From the first note alone it would go at 6 s and be disposed at 12 s;
+    // the second note's 6 s run to 11 s, then 6 s of ringing out to 17 s.
+    advance(7500);                  // 12.5 s
+    assert.ok(running() > 0, 'the second note started the 6 s again');
+    advance(5000);                  // 17.5 s
+    assert.equal(running(), 0, 'none left running, the roll still open');
+    assert.equal($('#roll').open, true);
+  } finally {
+    mock.timers.reset();
+  }
+  $('#roll').close();
+});
