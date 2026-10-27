@@ -80,13 +80,12 @@ Other work:
   1. Sound designer ⛔: about 20 real-world presets are still synthesized (Quack, Roar, Airhorn, Burp, Heartbeat, Djembe, Dhol…, `tools/make_placeholders.py` KIT) against decisions.md's recordings rule. Source CC0 recordings (Freesound, Kenney, VCSL), animals first; add a loudness floor to `tools/test_preset_loudness.py` (8 presets sit 8–10 dB under the middle).
   2. Mission keeper: show the scratch beat in 🎼 Song's strip so a goofed-on beat goes on a lane without 💾 Keep; drop the groove card's creative prompt ("Can you hum a tune over them?").
   3. Storage and sync: a sync's change to the open beat is undone by the next pill tap while it plays (web/sequencer.js ~734); `cleanPrefs` drops `changed`; an older copy of the app strips newer fields from the cloud (keep unknown fields, or refuse pushes from an older app); `navigator.storage.persist()`.
-  5. Reliability and browser compat: a classic boot script that reloads once when modules from two versions meet; the service worker installs the app first and the clips after; the daily live check reaches D1; deploy checks call /api/log, /api/events, /api/feedback.
-  6. Performance: load the open groups' sounds first and the rest when idle; keep one decoded copy; `drawPlayhead` and `meter.run` without layout thrash; looping pulses on opacity/transform.
-  7. Pre-reader and child psychologist: no picture used twice on a Kids screen (a test across tabs, pads, drums, voices, skins); ▶️ page arrows become 👉/👈; ⏹️ set apart from the tabs; a Kids visit no longer changes the grown-up's pad size, skin, instrument or scratch beat.
-  8. Accessibility: a slow tap no longer turns into a loop by accident (hold time as a setting); a Loop action without a hold; `aria-pressed` on looping pads; flash rate capped.
-  9. Audio engineer and sound designer: a soft clip after the limiter; 2–3 ms edge fades on recordings; seed the reverb noise; voice extremes that a phone can play.
-  10. Producer: Seven, Motown, Bossa and Salsa texts match their patterns; dB-like fader taper; a 6/8 or 3/4 beat in Song rounds to whole song bars.
-  11. Kids UX: 🧸 Kids fits a phone held sideways; `just look --landscape`; the tap-size check covers links, text fields and `[tabindex]`.
+  4. Performance: load the open groups' sounds first and the rest when idle; keep one decoded copy; `drawPlayhead` and `meter.run` without layout thrash; looping pulses on opacity/transform.
+  5. Pre-reader and child psychologist: no picture used twice on a Kids screen (a test across tabs, pads, drums, voices, skins); ▶️ page arrows become 👉/👈; ⏹️ set apart from the tabs; a Kids visit no longer changes the grown-up's pad size, skin, instrument or scratch beat.
+  6. Accessibility: a slow tap no longer turns into a loop by accident (hold time as a setting); a Loop action without a hold; `aria-pressed` on looping pads; flash rate capped.
+  7. Audio engineer and sound designer: a soft clip after the limiter; 2–3 ms edge fades on recordings; seed the reverb noise; voice extremes that a phone can play.
+  8. Producer: Seven, Motown, Bossa and Salsa texts match their patterns; dB-like fader taper; a 6/8 or 3/4 beat in Song rounds to whole song bars.
+  9. Kids UX: 🧸 Kids fits a phone held sideways; `just look --landscape`; the tap-size check covers links, text fields and `[tabindex]`.
 
 ### Offered, not approved
 
