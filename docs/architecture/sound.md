@@ -55,7 +55,7 @@ threshold -2 dB, knee 0, ratio 20, attack 2 ms, release 150 ms) ─► audio.ana
 - `audio.decode(arrayBuffer)` is `decodeAudioData` on this context. So every
   decoded clip is at the context's sample rate, whatever the file's.
 - Who connects to `audio.master` directly, outside `audio.playing`:
-  `sequencer.js` (each beat's mix bus, built by `busFor`; and `blip`, the
+  `beat-engine.js` (each beat's mix bus, built by `busFor`), `sequencer.js` (`blip`, the
   click), `song.js` (`laneGainsFor(ctx, audio.master, …)`), `kids.js`
   (`playBeat`'s voices and the count-in `beep`). `audio.stopAll()` does not reach
   any of these; each screen stops its own (`app.js stopEverything` calls
@@ -157,7 +157,7 @@ presets again. So most taps hit the `rendered` cache.
 | `audio.originals` | clip id, checked against `originalTrims` = `cuts.js cutKey(clip)` | `original` (lazily remade when `cutKey` changes), `keepOriginal` | `forget(id)` | the blob and `file`: a replaced recording must call `forget` (`sheet.js`, `bulk.js`, `backup-ui.js`, `cloud.js`, `people.js` do) |
 | `audio.rendered` | `audio.key(clip)` = `` `${id}:${recipeKey(clip)}${cutKey(clip)}` `` | `load` | `dropRendered(id, keep)` (every key of the id but `keep`), `forget(id)`, a failed load (its own key, and the kept audio it used) | `level`, `shift`, `chord`, `exact`, the blob: fixed per id, or `forget` is called |
 | `sheet.js sheet.previews` | `recipeKey({fx, tweaks})`, `head:…` for the live head, `plain` for 👂 Plain | `previewOf` (from `rendered`, `liveHead`, `plainSound`, Find its note) | the oldest past `KEEP_PREVIEWS` (6 tries) and, apart, `KEEP_HEADS` (2 `head:` keys); the one asked for now always stays; `resetPreviews()` when the sound, trim or recording changes, and on open | the trim: the whole map is of one trim |
-| `sequencer.js ready` | clip id → loaded | `prepare` (on play, per row) | `prepareBeats` clears it | a voice change: `prepare` re-reads `audio.load` each play |
+| `beat-engine.js ready` | clip id → loaded | `prepare` (on play, per row) | `prepareBeats` reloads it (it is never emptied) | a voice change: `prepare` re-reads `audio.load` each play |
 | `listen-ui.js prints` | `audio.key(clip)` of `` `${personId}-${kit}` `` → fingerprint | `printFor` | never (one per sound as it plays, per visit) | the blob: a kit sound's file never changes |
 | `wave.js` `cache` | the buffer drawn and the column count | `draw` | `clear`, a new buffer | — |
 
@@ -191,7 +191,7 @@ calls `audio.dropRendered(last.id)` (all of them) after a voice change.
   sounding (and not looping) moves to `audio.ringing` and rings on;
   `rhythm.js ringOver` cuts the oldest past `MAX_RINGING` (8). Without it the
   earlier hit is cut with `fadeStop`. The beat maker uses the same
-  `ringOver` per row (`sequencer.js sound`).
+  `ringOver` per row (`beat-engine.js sound`).
 - **Rate.** `rate` sets `playbackRate`; a pass lasts `duration / rate`.
   🧸 Kids' keys use it (`kids-logic.js keyRate`, 2 is an octave up).
 - **`fadeStop(voice, at)`** ramps the voice's gain from `voice.level ?? 1` to
@@ -377,8 +377,8 @@ The chain of gains from a file to the speaker:
 | Each render step | `voices.js finish` | peak 0.9, or `softLimit` for `keepLevel` audio |
 | Quiet / Quietest | `tweaks.js tweakGain` | ×0.5, ×0.25 |
 | Preset level | `voices.js presetGain(clip.level)` | 10^(dB/20), dB in −24…0 |
-| A beat's hit | `sequencer.js sound` | `hitGain(row, loud)`; an accent is `ACCENT_GAIN` 1.5 |
-| A beat's mix | `mixer.js buildMix` via `sequencer.js busFor` | row levels, mute, solo, effects, master level |
+| A beat's hit | `beat-engine.js sound` | `hitGain(row, loud)`; an accent is `ACCENT_GAIN` 1.5 |
+| A beat's mix | `mixer.js buildMix` via `beat-engine.js busFor` | row levels, mute, solo, effects, master level |
 | Output | `audio.limiter` | holds a pile-up under full scale |
 | Offline renders | `wav.js normalize` | peak 0.9 (bounce, song, share previews) |
 
@@ -526,7 +526,7 @@ the capture's sample rate is the app's.
 |---|---|---|
 | the `level` setting | `settings.js`; read by `listen-ui.js showCard`, Kids | the person's level: Kids, Regular, Advanced |
 | `clip.level` | boards.json | a preset's dB turn-down |
-| `voice.level` | `sequencer.js sound`, read by `audio.js fadeStop` | the hit's gain to fade from |
+| `voice.level` | `beat-engine.js sound`, read by `audio.js fadeStop` | the hit's gain to fade from |
 | `meter.js levelOf`, `meter.level` | the grille | RMS of the output |
 | `listen-input.js levelOf` | 🎧 | a frame in dB, 0…1 |
 

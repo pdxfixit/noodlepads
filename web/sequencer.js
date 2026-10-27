@@ -21,13 +21,13 @@
 import { openDialog, setupDialog } from './dialogs.js';
 import { tempoKey } from './tempo-key.js';
 import { newId, recall, remember, onePressOneClick } from './util.js';
-import { makeVoice, fadeStop, tooLate } from './audio.js';
+import { fadeStop, tooLate } from './audio.js';
+import { RING_MS } from './beat-engine.js';
 import { getSetting, onSetting, unsignedSignature } from './settings.js';
 import { logEvent } from './log.js';
 import { showBanner } from './ui.js';
 import { countPlay } from './play-count.js';
 import { soundKind } from './log-clean.js';
-import { rootShift } from './pitch.js';
 import { downloadBlob } from './download.js';
 import { instrumentById, presetInstrument, versionFor, ownIdOf } from './instruments.js';
 import { isScratch, isHiddenBeat, scratchOf, scratchId, scratchLabel, grooveOf, hasHits, SCRATCH_NAME } from './scratch.js';
@@ -38,10 +38,9 @@ import { follower, keepInView } from './follow.js';
 import { fitLine } from './lines.js';
 import { pillHolds } from './finger.js';
 import { encodeWav, normalize } from './wav.js';
-import { ACCENT_GAIN, BAR_CHOICES, BEAT_BAR_STEPS, COMMON_BPMS, DEFAULT_BPM, MAX_BEAT_FILE_BYTES, MAX_BPM, MAX_PINS, MAX_ROWS, MAX_SWING, MIN_BPM, ROW_RATES, SAMPLE_SECONDS, STEPS_PER_BEAT, SIGNATURES, audible, barSteps, beatFromFile, beatToFile, chipBeats, cleanPattern, cleanRow, grooveBeat, groovePlayers, grooveShape, hitGain, holdPill, isPinned, mergeGroove, moveItem, multiplyRows, nextSound, noteRate, outputDelay, pillHits, pillTarget, planHits, retimeAt, rowSlot, stepSeconds, stepsHeard, stopFor, swingDelay, tapPill, tempoStops, typedBpm } from './beat.js';
+import { BAR_CHOICES, BEAT_BAR_STEPS, COMMON_BPMS, DEFAULT_BPM, MAX_BEAT_FILE_BYTES, MAX_BPM, MAX_PINS, MAX_ROWS, MAX_SWING, MIN_BPM, ROW_RATES, SAMPLE_SECONDS, STEPS_PER_BEAT, SIGNATURES, audible, barSteps, beatFromFile, beatToFile, chipBeats, cleanPattern, cleanRow, grooveBeat, groovePlayers, grooveShape, holdPill, isPinned, mergeGroove, moveItem, multiplyRows, nextSound, outputDelay, pillHits, pillTarget, planHits, retimeAt, rowSlot, stepSeconds, stepsHeard, stopFor, swingDelay, tapPill, tempoStops, typedBpm } from './beat.js';
 import { GROOVES, GROOVE_GROUPS } from './grooves.js';
-import { ringOver } from './rhythm.js';
-import { cleanFx, masterLevel, silencedBySolo, mixKey, buildMix, createMixer } from './mixer.js';
+import { cleanFx, silencedBySolo, createMixer } from './mixer.js';
 import { addNote } from './notes.js';
 import { createRoll } from './roll.js';
 import { createPillSelect } from './pill-select.js';
@@ -54,7 +53,8 @@ const LOOKAHEAD = 0.1;
 const ARM_MS = 3000;                   // how long a Clear? or Remove? waits for its second tap
 const UNDO_MS = 8000;                  // how long a removed row can be brought back
 
-// deps: el (the sequencer's elements), audio and meter (from app.js),
+// deps: el (the sequencer's elements), audio and meter (from app.js), engine
+// (the one beat engine, beat-engine.js, made by app.js),
 // clips() (the current board's playable clips), groups() (every person's
 // clips, [{id, name, color, clips}], current board first), clipById(id) (any
 // board), colorOf(clip),
@@ -84,8 +84,10 @@ export function createSequencer(deps) {
   let voices = [];       // per row: its sounding voices ({src, gain, end})
   let ringing = [];      // a beat's voices after a chip switched away from it, still ringing out
   let stats = null;      // this play's numbers, logged when it stops
-  const ready = new Map();   // clip id -> {buffer, duration}, for scheduling without awaiting
-  let preparing = 0;         // prepareBeats calls whose callers may still be booking from `ready`
+  // The one beat engine (beat-engine.js, made by app.js and shared with 🎼 Song and 🧸 Kids): the sounds
+  // loaded for scheduling (`ready`), one hit (`sound`), the mix graphs (`busFor`) and the "play a saved beat" path.
+  const { engine } = deps;
+  const { ready, prepare, refresh, sound, busFor, letGo, prepareBeats, soundHit } = engine;
   const pills = [];          // pills[row][step]
   const cell = { row: 0, step: 0 };  // the one pill in the Tab order; arrow keys move it
   let speakers = null;       // the rows' speakers and their loudness popover (set once the rows listen)
@@ -172,22 +174,6 @@ export function createSequencer(deps) {
   // in place (`deps.ready`): the beat is drawn again once they are.
   const drawable = () => personId && deps.ready?.() !== false;
   onSetting('advancedBeats', (value) => { advanced = value; if (drawable()) render(); });
-
-  function prepare(clip) {
-    if (!clip) return Promise.resolve();
-    return audio.load(clip).then((loaded) => { ready.set(clip.id, loaded); }, () => {});
-  }
-  // These rows' sounds, loaded afresh (a voice may have changed since the
-  // last play) without emptying `ready`: a beat or a song still playing
-  // reads it. A sound that is gone is taken out, so its row stays quiet; one
-  // that fails to load this time keeps the copy it had.
-  function refresh(rows) {
-    return Promise.all(rows.map((r) => {
-      const clip = deps.clipById(r.clipId);
-      if (!clip) { ready.delete(r.clipId); return undefined; }
-      return audio.load(clip).then((loaded) => { ready.set(clip.id, loaded); }, () => {});
-    }));
-  }
 
   // One open beat per person (ADR 0017, replacing ADR 0008's one per
   // screen for beats). `slot` is the view showing it: 'beats' (Beats),
@@ -576,7 +562,7 @@ export function createSequencer(deps) {
     if (playing() || pattern !== asked || ask !== playAsk) return;
     // Only the open beat's sounds stay (a song playing stopped as this began),
     // so a sound deleted or taken off every row is not kept decoded all visit.
-    if (!preparing) {
+    if (!engine.preparing()) {
       const used = new Set(pattern.rows.map((r) => r.clipId));
       for (const id of [...ready.keys()]) if (!used.has(id)) ready.delete(id);
     }
@@ -772,76 +758,6 @@ export function createSequencer(deps) {
     queue.sort((a, b) => a.time - b.time);
     meter.run();  // the speaker grille follows the beat
     if (queued && ctx.currentTime + LOOKAHEAD >= queued.at) { switchNow(); schedule(); }
-  }
-
-  // Plays row i's sound at `time` into `dest`. Its earlier hits still sounding
-  // fade out at `time`, unless the row rings, when they overlap (up to
-  // MAX_RINGING, oldest faded first). Returns how many it cut off.
-  // A tune row's note (ADR 0023) plays the sound faster or slower, as a
-  // sampler does, so higher notes are also shorter; a sound whose note was
-  // found (🎵 Find its note, its `root`) is moved so its C plays a C. The
-  // note lasts `len` seconds, then fades out (a sound shorter than that
-  // ends sooner). A tune row's notes overlap, so it can play chords.
-  function sound(ctx, dest, list, row, loaded, time, loud = false, note = 0, len = 0) {
-    const voice = makeVoice(ctx, loaded.buffer, dest);
-    voice.lift = loud ? ACCENT_GAIN : 1;   // kept, so a level change can reach a hit still ringing
-    voice.level = hitGain(row, loud);
-    voice.gain.gain.value = voice.level;
-    const rate = noteRate(note + (row.melody ? rootShift(deps.clipById(row.clipId)?.root) : 0));
-    if (rate !== 1) voice.src.playbackRate.value = rate;
-    voice.src.start(time, 0, loaded.duration);
-    voice.end = time + loaded.duration / rate;
-    if (len > 0 && time + len < voice.end) {
-      fadeStop(voice, time + len);
-      voice.end = time + len;
-    }
-    const { keep, cut } = ringOver(list, time, rings(row) || row.melody);
-    for (const v of cut) fadeStop(v, time);
-    list.splice(0, list.length, ...keep, voice);
-    return cut.length;
-  }
-
-  // ── The mix (mixer.js): each beat plays through its rows' effects and the
-  // master's, one graph per beat and destination, built again when its
-  // effects change. The master's level is set on every use, so a fader moved
-  // while playing is heard at once. A graph put aside rings out first.
-  const buses = new WeakMap();   // dest -> WeakMap(beat -> graph)
-  // The graphs on the live context, {dest, p, bus}: 〰️ Warble and 🤖 Robot
-  // run oscillators until their graph is disposed, so each is let go
-  // (letGo) once what played through it stops.
-  const liveMixes = new Set();
-  const RING_MS = 6000;          // a graph let go is disposed after its tails ring out
-  function busFor(ctx, dest, p) {
-    let made = buses.get(dest);
-    if (!made) buses.set(dest, (made = new WeakMap()));
-    let bus = made.get(p);
-    if (!bus || bus.key !== mixKey(p)) {
-      const old = bus;
-      try { bus = buildMix(ctx, dest, p); } catch { bus = { key: mixKey(p), master: null, input: () => dest, dispose() {} }; }
-      made.set(p, bus);
-      if (ctx === audio.context()) {
-        for (const m of liveMixes) if (m.bus === old) liveMixes.delete(m);
-        liveMixes.add({ dest, p, bus });
-        if (old) setTimeout(() => old.dispose(), RING_MS);
-      }
-    }
-    const gain = bus.master?.gain;
-    if (gain) {
-      if (ctx === audio.context() && gain.setTargetAtTime) gain.setTargetAtTime(masterLevel(p), ctx.currentTime, 0.02);
-      else gain.value = masterLevel(p);
-    }
-    return bus;
-  }
-
-  // Lets go of the live graphs `which({dest, p})` picks: forgotten now,
-  // disposed once their tails have rung. A later hit builds a fresh one.
-  function letGo(which) {
-    for (const m of [...liveMixes]) {
-      if (!which(m)) continue;
-      liveMixes.delete(m);
-      if (buses.get(m.dest)?.get(m.p) === m.bus) buses.get(m.dest).delete(m.p);
-      setTimeout(() => m.bus.dispose(), RING_MS);
-    }
   }
 
   function hit(i, time, loud, note = 0, len = 0) {
@@ -2867,29 +2783,9 @@ export function createSequencer(deps) {
     const hits = planHits(p, playMode(), seconds, steps, p.swing || 0, SIGNATURES[sigFor(raw)]);
     return { pattern: p, seconds, hits };
   }
-  // Loads every sound the beats use (fresh: a voice may have changed),
-  // keeping the ones a beat or song playing now still needs. play() leaves
-  // `ready` whole until a task after this settles (`preparing`), so a
-  // caller must book its hits as soon as it resolves, in the same turn.
-  function prepareBeats(patterns) {
-    preparing++;
-    let done;
-    try { done = refresh(patterns.flatMap((p) => p.rows)); } catch (err) { done = Promise.reject(err); }
-    done.finally(() => setTimeout(() => { preparing--; }, 0)).catch(() => {});   // whatever happened
-    return done;
-  }
   // 🎼 Song is done with these graphs: those into its lanes' gains `dests`
   // (only beat `p`'s, when given). They go once they ring out.
   const endMix = (dests, p) => letGo((m) => dests.includes(m.dest) && (!p || m.p === p));
-  // Sounds row i of beat `p` at `time` into `dest`, cutting off or
-  // overlapping the row's earlier hits in `list`. False if its sound is gone.
-  function soundHit(ctx, dest, list, p, i, time, loud, note, len = 0) {
-    const loaded = ready.get(p.rows[i]?.clipId);
-    if (!loaded) return false;
-    sound(ctx, busFor(ctx, dest, p).input(i), list, p.rows[i], loaded, time, loud, note, len);
-    return true;
-  }
-
   return { setPerson, show, tempo: () => shape().bpm, render, play, stop, playing, grid, beatClock, rowFor, addRowFor, addSnaps, snapshot, restore, setClick, beat,
     cyclePill, clearRow, dropRow, toggleRing, ringTool, openLibrary, metronome, clickAt, setGrow, setTempo, setBars, setSignature, signature: () => sigOf(), advanced: () => advanced,
     beatPlan, prepareBeats, soundHit, endMix, thumbnail, levelOf, setLevel, putLevel, toggleMute, levelState,

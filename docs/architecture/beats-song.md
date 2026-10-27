@@ -1,11 +1,12 @@
 # 🥁 Beats and 🎼 Song
 
-**In one paragraph.** `sequencer.js createSequencer` is the one beat engine. The beat maker's pure rules are in `beat.js` (a beat made safe, the hits it plans, swing, grooves as beats, beat files, tempo stops; imported by the backup gate, Kids' rules, the listener, Song and the share preview, so none of them loads the screen), and the WAV encoder in `wav.js`. It owns the open beat, its scheduler on the audio clock, the beat's mix bus, the sound chooser, 💃 Grooves, 🗂️ My beats, the pattern chips, the click, 🎚️ Mixer's wiring and 🎹 the roll's wiring. Everything else that plays a saved beat goes through three of its methods (`beatPlan`, `prepareBeats`, `soundHit`), which share its private `sound()` and `busFor()`. `song.js createSong` is 🎼 Song: its own record, its own 25 ms scheduler, and no sound code of its own (every hit is `seq.soundHit`). `playlist.js` and `notes.js` are the pure rules under them. 🧸 Kids plays beats with a separate scheduler (`kids.js playBeat`), and ⌨️ Keys (`dj.js`) drives the sequencer through about 40 methods of its API.
+**In one paragraph.** `sequencer.js createSequencer` is the beat maker, and `beat-engine.js createBeatEngine` is the engine under it: the sounds loaded for scheduling (`ready`), one hit (`sound`), the mix graphs (`busFor`, `letGo`) and the "play a saved beat" path (`prepareBeats`, `soundHit`), with no screen, DOM or storage. `app.js` makes the one engine and hands it to the beat maker, `createSong` and `initKids` (`deps.engine`); no player lives in it yet (the loops are still in `sequencer.js`, `song.js` and `kids.js`, [one-beat-engine.md](../design/one-beat-engine.md)). The beat maker's pure rules are in `beat.js` (a beat made safe, the hits it plans, swing, grooves as beats, beat files, tempo stops; imported by the backup gate, Kids' rules, the listener, Song and the share preview, so none of them loads the screen), and the WAV encoder in `wav.js`. The beat maker owns the open beat, its scheduler on the audio clock, the beat's mix bus, the sound chooser, 💃 Grooves, 🗂️ My beats, the pattern chips, the click, 🎚️ Mixer's wiring and 🎹 the roll's wiring. Everything else that plays a saved beat goes through three of its methods (`beatPlan`, `prepareBeats`, `soundHit`), which share the engine's `sound()` and `busFor()`. `song.js createSong` is 🎼 Song: its own record, its own 25 ms scheduler, and no sound code of its own (every hit is `seq.soundHit`). `playlist.js` and `notes.js` are the pure rules under them. 🧸 Kids plays beats with a separate scheduler (`kids.js playBeat`), and ⌨️ Keys (`dj.js`) drives the sequencer through about 40 methods of its API.
 
 ## Who is built where
 
 | Object | Made by | Made in | Lives |
 |---|---|---|---|
+| The beat engine (`engine`) | `beat-engine.js createBeatEngine({audio, clipById})` | `app.js start()`, before `seq` | the whole visit |
 | The beat maker (`seq`) | `sequencer.js createSequencer(deps)` | `app.js makeSequencer`, once in `start()` | the whole visit |
 | 🎼 Song (`song`) | `song.js createSong(deps)` | `app.js makeSong`, right after `seq` | the whole visit |
 | 🎹 The piano roll | `roll.js createRoll(dialog, deps)` | inside `createSequencer`, when `el.roll` exists | the whole visit |
@@ -15,7 +16,7 @@
 | Row menus | `overflow.js moreMenu(root)` | `createSequencer` (on `el.rows`), `dj.js` | the whole visit |
 | Beat bar fitting | `lines.js fitLine(bar, BEAT_BAR_STEPS)` | `createSequencer`, one per `.beat-bar` | the whole visit |
 | The tucked play bar | `mini-deck.js initMiniDeck()` | `app.js start()` | the whole visit |
-| A mix graph | `mixer.js buildMix(ctx, dest, p)` | `sequencer.js busFor`, cached per destination and beat object | on the live context, until what played through it stops (`letGo`) or `mixKey` changes; then disposed after 6 s (`RING_MS`) |
+| A mix graph | `mixer.js buildMix(ctx, dest, p)` | `beat-engine.js busFor`, cached per destination and beat object | on the live context, until what played through it stops (`letGo`) or `mixKey` changes; then disposed after 6 s (`RING_MS`) |
 
 `sequencer.js` and `song.js` never import `app.js`. `app.js` reaches them only through the returned objects; they reach the board only through `deps`.
 
@@ -164,7 +165,7 @@ A row with no clock (added while playing, or put back by Undo) gets one from `jo
 
 ### What one hit does (`sound`)
 
-`sequencer.js sound(ctx, dest, list, row, loaded, time, loud, note, len)`:
+`beat-engine.js sound(ctx, dest, list, row, loaded, time, loud, note, len)`:
 
 1. `audio.js makeVoice(ctx, buffer, dest)`; its gain is `hitGain(row, loud)` = (1.5 if loud) × the row's level. `voice.lift` is kept, so a level change can reach a hit still ringing (`applyLevel`).
 2. A tune row's note plays faster or slower (`noteRate(note + rootShift(clip.root))`, so a sound whose note 🎵 Find its note found plays its C as a C). A plain row plays at rate 1.
@@ -211,7 +212,7 @@ Latency is worked out in two places with the same sum: `beat.js outputDelay` (Be
 
 So the graph from `mixer.js buildMix` holds only the effects and the master level. Level, mute and solo are handled in the sequencer.
 
-**`sequencer.js busFor(ctx, dest, p)`** keeps one graph per destination and beat object (`WeakMap(dest → WeakMap(beat → graph))`), rebuilt when `mixer.js mixKey(p)` changes (the master and row effect ids, and `bpm`, which 🔁 Echo needs). Effects are `steps.js` kinds built live (`buildLive`); 〰️ Warble and 🤖 Robot start oscillators, which `dispose()` stops. If building fails, the bus falls back to the destination itself.
+**`beat-engine.js busFor(ctx, dest, p)`** keeps one graph per destination and beat object (`WeakMap(dest → WeakMap(beat → graph))`), rebuilt when `mixer.js mixKey(p)` changes (the master and row effect ids, and `bpm`, which 🔁 Echo needs). Effects are `steps.js` kinds built live (`buildLive`); 〰️ Warble and 🤖 Robot start oscillators, which `dispose()` stops. If building fails, the bus falls back to the destination itself.
 
 **Letting go of live graphs.** `liveMixes` lists every graph on the live context. `letGo(which)` forgets the ones it picks and disposes them after 6 s (`RING_MS`), once their tails have rung; the next hit builds a fresh one. It runs on every `stop()` (the graphs into `audio.master`, except a groove sample's), on a chip switch (the old beat's), at the end of a sample (`stopSample`), after a 🎹 note preview with the beat stopped (`endPreviews`: when the roll closes, or `RING_MS` after the last note), and in 🎼 Song as each lane plays its last block of a beat (`song.js tick`, `mixEnds` → `seq.endMix([laneGain], pattern)`) and when the song stops (`seq.endMix(laneGains)`). Offline renders are never listed. Guard: `tests/mix-let-go.test.mjs`.
 
@@ -399,7 +400,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | `app.js` | `setPerson`, `show`, `stop`, `playing`, `render`, `beat`, `grid`, `clickOff`, `toggleLock`, `endLock` |
 | `dj.js` (⌨️ Keys) | `play`, `stop`, `playing`, `beat`, `tempo`, `setTempo`, `setBars`, `setSignature`, `signature`, `advanced`, `grid`, `beatClock`, `metronome`, `clickAt`, `setClick`, `setGrow`, `rowFor`, `addRowFor`, `addSnaps`, `snapshot`, `restore`, `cyclePill`, `clearRow`, `dropRow`, `toggleRing`, `ringTool`, `levelOf`, `levelState`, `setLevel`, `putLevel`, `toggleMute`, `trying`, `putTrialAway`, `onScratch`, `lockChips`, `locked`, `lockChanged`, `addPicker`, `putRows`, `paintRows`, `saveBeat` |
 | `song.js` | `stop`, `beatPlan`, `prepareBeats`, `soundHit`, `endMix` |
-| `share-render.js` | `beatPlan`, `prepareBeats`, `soundHit` |
+| `share-render.js` | `beatPlan`, `prepareBeats`, `soundHit` (the last two are the engine's, handed out by `seq`; `share-render.js` renders the public share preview and 🗂️ See all offline through them) |
 | `listen-ui.js` | `hearBeat`, `stopHearing`, `openSaved` |
 | nobody (grep of `web/` and `tests/`) | `keep`, `openLibrary`, `openMixer`, `toggleSolo`, `setFx`, `setMaster`, `setMasterFx`, `openRoll`, `rollRow`, `sampling`, `queuedBeat`, `thumbnail` |
 
@@ -407,6 +408,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 
 | deps | Filled with |
 |---|---|
+| `engine` | the one beat engine; Song does not call it yet (it books through `seq.soundHit`) |
 | `el`, `audio`, `meter`, `seq` | the Song elements; the shared audio and meter; the sequencer (`stop`, `beatPlan`, `prepareBeats`, `soundHit`, `endMix`) |
 | `beats(personId)` | `state.savedBeats` of that person minus hidden beats, newest `saved` first |
 | `load`, `save`, `close` | `state.songs` + IndexedDB `songs` (the open song) |
@@ -466,7 +468,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | A new 🎚️ effect | `mixer.js MIX_FX` (only `steps.js` kinds that run live); stored ids are checked by `cleanFx`; `tests/mixer.test.mjs` |
 | A new time signature | `beat.js SIGNATURES`; `settings.js timeSignature` values; the `[data-sig]` buttons in `index.html` (Beats and ⌨️ Keys); `song.js beatSteps` follows by itself; check `listen.js` and grooves |
 | Scheduler timing (lookahead, tick) | `sequencer.js` `TICK_MS`/`LOOKAHEAD`, `song.js` the same, `kids.js playBeat` (inline 25 ms and 0.12 s), and `hearBeat` (books at once); how late a hit may be booked is `audio.js LATE_SECONDS`, shared by all three (`tests/late-hits.test.mjs`) |
-| How a hit sounds everywhere | `sequencer.js sound`, `hitGain`, `noteRate`, `rhythm.js ringOver`, `busFor`, `mixer.js buildMix`; then `kids.js playBeat`, which has its own |
+| How a hit sounds everywhere | `beat-engine.js sound`, `hitGain`, `noteRate`, `rhythm.js ringOver`, `busFor`, `mixer.js buildMix`; then `kids.js playBeat`, which has its own |
 | A new place that plays a saved beat | `seq.beatPlan` + `seq.prepareBeats` + `seq.soundHit`; stop the live beat first; call `deps.onPlay`-style stops so one thing plays |
 | A new groove | `grooves.js GROOVES` (a kit id that exists in `boards.json`; bass rows of one instrument); `tests/grooves.test.mjs` |
 | A new song or lane field | `playlist.js cleanLane`/`cleanBlock`, `song.js cleanSong`, `legacySlots` if older copies should see it, `listen-make.js` (builds songs), `cloud-sync.js` / `merge.js` `mapSongBeats` if it names beats; the snapshot in `song.js snapshot` if it should undo |

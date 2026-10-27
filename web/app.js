@@ -17,6 +17,7 @@ import { state, loadStorage, persist, setOverride, adoptStoredPeople, reIdStored
 import { audio, voicesMade, fadeStop } from './audio.js';
 import { meter, buildGrille } from './meter.js';
 import { createSequencer } from './sequencer.js';
+import { createBeatEngine } from './beat-engine.js';
 import { people, person, currentPerson, clipsFor, anyClip, padColor, nextClipColor } from './board.js';
 import { PLAYED } from './instruments.js';
 import { groupOwn, UNGROUPED } from './groups.js';
@@ -75,6 +76,7 @@ const GRILLE_DOTS_LG = 24;
 
 const el = {};
 let seq = null;
+let engine = null;  // the one beat engine (beat-engine.js): shared by Beats, 🎼 Song and 🧸 Kids
 let song = null;  // 🎼 Song's screen
 let dj = null;   // The keys: 🎤 Live's screen, and Beats' ⌨️ Keys (dj.js)
 
@@ -631,6 +633,7 @@ function makeSequencer() {
     },
     audio,
     meter,
+    engine,
     clips: () => clipsFor(state.personId),
     ready: () => !!currentPerson(),   // a restore may be mid-way
     onTempo: () => { audio.syncLoops(); if (keysShow()) dj?.showSetup(); },
@@ -957,6 +960,7 @@ async function start() {
     isLooping: (id) => audio.isLooping(id),
     loops: () => [...audio.playing.values()].filter((v) => v.loop).length,
   });
+  engine = createBeatEngine({ audio, clipById: (id) => anyClip(id) });
   seq = makeSequencer();
   globalThis.noodleTestSeq?.(seq);   // a test's way in to the beat maker (tests/beat-ready.test.mjs); the page never sets it
   setBeatTempo(() => seq.beat()?.bpm);   // Echo's 🥁 On the beat follows the open beat
@@ -1059,12 +1063,14 @@ async function start() {
     clipById: (id) => anyClip(id),
     library: beatLibrary,
     songs: songBook,
+    engine,
     showScreen: (name) => setScreen(name),
     stopAll: () => stopEverything(),
     refresh: () => { seq.render(); song.render(); },
     announce: (text) => announce(text),
   });
   initKids({
+    engine,
     personId: () => state.personId,
     stopAll: () => stopEverything({ keepClicks: true }),   // Kids' ⏹️: the whole app quiet, the grown-up's ⏲️ choices kept
     clips: (opts, pid = state.personId) => clipsFor(pid, opts),

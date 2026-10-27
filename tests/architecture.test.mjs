@@ -77,12 +77,13 @@ const ONLY = [
   ['one Worker: the stretch', /new Worker\(/, ['voices.js']],
   ['one AudioWorklet: 🎧 From a song', /\.addModule\(/, ['listen-input.js']],
   // beats-song.md
-  ['the mix bus is built only by the beat maker', /import \{[^}]*\bbuildMix\b[^}]*\} from '\.\/mixer\.js'/, ['sequencer.js']],
-  ['the shared "play a saved beat" path', /soundHit\(/, ['sequencer.js', 'share-render.js', 'song.js']],
+  ['the mix bus is built only by the beat engine', /import \{[^}]*\bbuildMix\b[^}]*\} from '\.\/mixer\.js'/, ['beat-engine.js']],
+  ['the shared "play a saved beat" path', /soundHit\(/, ['beat-engine.js', 'sequencer.js', 'share-render.js', 'song.js']],
   ['prepareBeats callers', /\.prepareBeats\(/, ['share-render.js', 'song.js']],
   ['the WAV encoder', /function encodeWav\b/, ['wav.js']],
   // keys-kids.md
-  ['🔔 Let it ring: one rule, three players', /\bringOver\b/, ['audio.js', 'rhythm.js', 'sequencer.js']],
+  ['🔔 Let it ring: one rule, three players', /\bringOver\b/, ['audio.js', 'beat-engine.js', 'rhythm.js']],
+  ['one beat engine, made by the composition root', /(?<!function )\bcreateBeatEngine\(/, ['app.js']],
   ['the ✏️ Layout editors are built by the keys panel', /createKeysEditor|createTouchEditor/, ['dj-keys.js', 'dj-touch.js', 'dj.js']],
   ['the grown-up sum', /askSum\(/, ['cloud-ui.js', 'feedback.js', 'grown-up.js', 'kids.js']],
   ['lift to play', /fingerTaps\(/, ['dj.js', 'finger.js', 'kids.js', 'pads.js']],

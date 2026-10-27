@@ -144,7 +144,9 @@ export function soundSong(ctx, laneGains, planned, seq, t0 = 0) {
   return hits;
 }
 
-// deps: el (the screen's elements), audio, meter, seq (the beat maker: its
+// deps: el (the screen's elements), audio, meter, engine (the one beat engine,
+// beat-engine.js; Song books through seq.soundHit, which is the engine's, until
+// its loop moves onto it), seq (the beat maker: its
 // beatPlan, prepareBeats, soundHit, endMix and stop), beats(personId)
 // (saved beats a song can use), load(personId) -> the stored open song or
 // undefined, save(song) (as the open song), close(personId) (nothing open),

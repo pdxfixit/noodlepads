@@ -43,6 +43,7 @@ import { startsIn } from './notes.js';
 import { instrumentById, PLAYED } from './instruments.js';
 
 const el = {};
+// deps: engine (the one beat engine, beat-engine.js; Kids' own loop moves onto it later), and what app.js initKids passes.
 let deps = null;
 let showing = false;
 let tab = cleanTab(recall('kids-tab'));

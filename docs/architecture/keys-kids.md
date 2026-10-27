@@ -14,7 +14,7 @@
 | File | Made or called by | Calls | Owns |
 |---|---|---|---|
 | `dj.js` | `app.js start` (`createDJ({ el, deps })`) | `rhythm.js`, `touch.js`, `dj-keys.js createKeysEditor`, `dj-touch.js drawBands`/`createTouchEditor`, `finger.js fingerTaps`, `beat-row.js`, `row-volume.js`, `pill-select.js`, `overflow.js moreMenu`, `follow.js`, `share-render.js renderTake`, `deps.seq.*` | mode, input, layout, takes in progress, the beat recording, the click wish, 🔔 Let it ring, the grid |
-| `rhythm.js` | `dj.js`, `dj-keys.js`, `keyset.js`, `audio.js` and `sequencer.js` (`ringOver`), `backup.js` (`cleanDeck`, `cleanTake`), `share-render.js` (`planTake`), `settings.js` (`LAYOUT_NAMES`) | `touch.js cleanTouch` | nothing (pure) |
+| `rhythm.js` | `dj.js`, `dj-keys.js`, `keyset.js`, `audio.js` and `beat-engine.js` (`ringOver`), `backup.js` (`cleanDeck`, `cleanTake`), `share-render.js` (`planTake`), `settings.js` (`LAYOUT_NAMES`) | `touch.js cleanTouch` | nothing (pure) |
 | `dj-keys.js` | `dj.js` (once) | `keyset.js`, `rhythm.js`, `inst-picker.js`, `dialogs.js` | the ✏️ Layout (⌨️ Keys) dialog's picks, undo stack, drag |
 | `keyset.js` | `dj-keys.js`, `backup.js` (`cleanLayout`) | `rhythm.js` | nothing (pure) |
 | `dj-touch.js` | `dj.js` (`drawBands` every render; `createTouchEditor` once) | `touch.js`, `touch-grid.js`, `inst-picker.js`, `instruments.js` | the ✏️ Layout (👆 Pads) dialog's picker, undo stack, three drags |
@@ -350,7 +350,7 @@ One open beat per person (ADR 0017), owned by `sequencer.js` (`pattern`, `doc`, 
 
 ### 🔔 Let it ring: one rule, three players
 
-`rhythm.js ringOver` decides which earlier hits a new hit cuts. Users: `audio.js start` (Live keys, `ring`), `sequencer.js sound` (a row's `ring`; tune rows always ring), `rhythm.js planTake` (a take rendered). Kids' player does not use it.
+`rhythm.js ringOver` decides which earlier hits a new hit cuts. Users: `audio.js start` (Live keys, `ring`), `beat-engine.js sound` (a row's `ring`; tune rows always ring), `rhythm.js planTake` (a take rendered). Kids' player does not use it.
 
 ### Hold to loop, tap to stop
 
