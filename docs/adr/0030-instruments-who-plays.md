@@ -1,6 +1,6 @@
 # 0030. 🎹 Instruments: who plays Notes, Chords and Bass
 
-- **Status:** Accepted, phases 1 and 2 built (the picker on Pads; then the sound chooser, 🎹 Add a tune and the roll, ✏️ Edit keys, 👆 bands, 🧸 Kids' instrument button)
+- **Status:** Accepted, all three phases built (the picker on Pads; then the sound chooser, 🎹 Add a tune and the roll, ✏️ Edit keys, 👆 bands, 🧸 Kids' instrument button; then the grooves' instruments and chips, Soca and Chiptune, and a ready-made key layout for each family)
 - **Date:** 2026-10-17
 - **Decided by:** Ben, 2026-10-17, accepting the design review (`docs/design/more-kinds-of-music.md`, section 1, option C) with his answers: instruments are a picker, remembered per person and synced; presets under 6 MB in all, 5 MB shown with Advanced off, one clip under 160 KB; a note keeps its fruit on every instrument, with a badge. Rows in [decisions.md](../decisions.md) (People and boards).
 
@@ -38,4 +38,4 @@
 - boards.json grows by 220 entries, all written by the tool; a test fails when it and the table disagree.
 - A recording moved far sounds stretched (a chipmunk up, a growl down). Piano and strings have two recordings each; the struck and plucked ones are generated and move cleanly. How each sounds is still to be heard on a phone.
 - The roll's swap needs no `root`: each instrument's preset plays exactly the note its `plays` preset plays, octave and all, so a tune row moved to the same note's preset sounds every note where it was. A `root` on the instrument presets alone would move a tune off a group's own note when swapped; on the groups' own presets too, it would move old tune rows on D to B.
-- Still to do (TODO.md): one ready-made key layout per family, the groove cards' "who plays" chips, grooves with real instruments, Soca and Chiptune.
+- **Family key layouts (phase 3):** ✏️ Layout's keys offers one ready-made layout per family beside the four by kind of playing (`keyset.js` `READY_LAYOUTS`, `family`): Keyboard band, Mallet band, String band, Wind band. Each names its family's instruments' presets exactly (`piano-e`), so it plays them whoever is picked and changes no pick; each note row is C to high C, the highest voice on the number row, then chords and bass where the family has them, the rest drums and small hits. They are code, never stored: a person's own saved layout and ⭐ Keys are never touched, and a layout saved from one stores plain clip ids as any layout does.

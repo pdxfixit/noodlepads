@@ -127,7 +127,8 @@ export function changedKeys(full, base) {
 // The ready-made layouts: kit ids (boards.json `kit`), row by row from the
 // top (the number row first), ten keys each; null is No sound. Each lays out
 // the presets for one kind of playing. A kit sound a person has hidden or
-// lacks is No sound.
+// lacks is No sound. A layout with a `family` names its instruments' presets
+// exactly; the others' notes, chords and bass are whoever is picked.
 export const READY_LAYOUTS = [
   {
     id: 'beat-lab', emoji: '🥁', name: 'Beat lab',
@@ -163,6 +164,47 @@ export const READY_LAYOUTS = [
       ['chord-c', 'chord-dm', 'chord-em', 'chord-f', 'chord-g', 'chord-am', 'chord-g7', 'ding', 'tada', 'drumroll'],
       ['note-c', 'note-d', 'note-e', 'note-f', 'note-g', 'note-a', 'note-b', 'note-c-high', 'crash', 'ride'],
       ['bass-c', 'bass-d', 'bass-e', 'bass-f', 'bass-g', 'bass-a', 'kick', 'snare', 'hihat', 'clap'],
+    ],
+  },
+  // One for each instrument family (ADR 0030, phase 3): the family's own
+  // instruments by name (`piano-e`, never "whoever is picked"), the highest
+  // voice on the top row like a score, then chords, then bass, with a few
+  // drums to fill the rest. A note row is C to high C; the other two keys
+  // are small hits. `family` is instruments.js FAMILIES' id.
+  {
+    id: 'keyboard-band', emoji: '🎹', name: 'Keyboard band', family: 'keys',
+    rows: [
+      ['chip-c', 'chip-d', 'chip-e', 'chip-f', 'chip-g', 'chip-a', 'chip-b', 'chip-c-high', 'ding', 'tada'],
+      ['piano-c', 'piano-d', 'piano-e', 'piano-f', 'piano-g', 'piano-a', 'piano-b', 'piano-c-high', 'crash', 'ride'],
+      ['organ-c-chord', 'organ-dm-chord', 'organ-em-chord', 'organ-f-chord', 'organ-g-chord', 'organ-am-chord', 'organ-g7-chord', 'shaker', 'tambourine', 'snap'],
+      ['808-c', '808-d', '808-e', '808-f', '808-g', '808-a', 'kick', 'snare', 'hihat', 'clap'],
+    ],
+  },
+  {
+    id: 'mallet-band', emoji: '🪵', name: 'Mallet band', family: 'mallets',
+    rows: [
+      ['kalimba-c', 'kalimba-d', 'kalimba-e', 'kalimba-f', 'kalimba-g', 'kalimba-a', 'kalimba-b', 'kalimba-c-high', 'ding', 'tada'],
+      ['steel-c', 'steel-d', 'steel-e', 'steel-f', 'steel-g', 'steel-a', 'steel-b', 'steel-c-high', 'clave', 'cowbell'],
+      ['marimba-c', 'marimba-d', 'marimba-e', 'marimba-f', 'marimba-g', 'marimba-a', 'marimba-b', 'marimba-c-high', 'conga', 'rim'],
+      ['kick', 'snare', 'hihat', 'clap', 'shaker', 'tambourine', 'snap', 'tom-low', 'tom-high', 'crash'],
+    ],
+  },
+  {
+    id: 'string-band', emoji: '🎻', name: 'String band', family: 'strings',
+    rows: [
+      ['strings-c', 'strings-d', 'strings-e', 'strings-f', 'strings-g', 'strings-a', 'strings-b', 'strings-c-high', 'ding', 'tada'],
+      ['guitar-c', 'guitar-d', 'guitar-e', 'guitar-f', 'guitar-g', 'guitar-a', 'guitar-b', 'guitar-c-high', 'shaker', 'snap'],
+      ['guitar-c-chord', 'guitar-dm-chord', 'guitar-em-chord', 'guitar-f-chord', 'guitar-g-chord', 'guitar-am-chord', 'guitar-g7-chord', 'tambourine', 'rim', 'clave'],
+      ['upright-c', 'upright-d', 'upright-e', 'upright-f', 'upright-g', 'upright-a', 'kick', 'snare', 'hihat', 'clap'],
+    ],
+  },
+  {
+    id: 'wind-band', emoji: '🌬️', name: 'Wind band', family: 'wind',
+    rows: [
+      ['flute-c', 'flute-d', 'flute-e', 'flute-f', 'flute-g', 'flute-a', 'flute-b', 'flute-c-high', 'ding', 'tada'],
+      ['brass-c', 'brass-d', 'brass-e', 'brass-f', 'brass-g', 'brass-a', 'brass-b', 'brass-c-high', 'airhorn', 'whoosh'],
+      ['toot', 'honk', 'kazoo', 'slide-whistle', 'sad-trombone', 'boing', 'burp', 'raspberry', 'splat', 'bonk'],
+      ['kick', 'snare', 'hihat', 'clap', 'crash', 'ride', 'tom-high', 'tom-low', 'drumroll', 'open-hat'],
     ],
   },
 ];

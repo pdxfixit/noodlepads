@@ -197,6 +197,35 @@ test('✏️ Edit keys: the keys nobody changed keep Pluck; an open Notes group 
   $('#keys-edit').close();
 });
 
+test('✏️ Edit keys: each family\'s ready-made layout puts that family on the keys, whoever is picked', async () => {
+  const { setSetting } = await import('../web/settings.js');
+  await setSetting('instNotes', 'pluck');
+  await page.settle();
+  $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');
+  $('#dj-change').dispatch('click');
+  const label = (code) => $('#ke-keys').querySelector(`[data-code="${code}"]`).getAttribute('aria-label');
+  const layout = (id) => $('#ke-layouts').querySelector(`[data-layout="${id}"]`);
+  for (const [id, top, second, name] of [
+    ['keyboard-band', 'chip', 'piano', 'Keyboard band'], ['mallet-band', 'kalimba', 'steel', 'Mallet band'],
+    ['string-band', 'strings', 'guitar', 'String band'], ['wind-band', 'flute', 'brass', 'Wind band'],
+  ]) {
+    assert.ok(layout(`ready-${id}`), `${name} is offered`);
+    layout(`ready-${id}`).dispatch('click');
+    assert.equal(layout(`ready-${id}`).getAttribute('aria-pressed'), 'true', `${name} is the one on the keys`);
+    assert.match($('#ke-note').textContent, new RegExp(`${name} is on the keys`));
+    const keys = state.decks.get(pid())?.keys;
+    assert.equal(keys.Digit1, `${pid()}-${top}-c`, `${name}: its highest voice on the number row`);
+    assert.equal(keys.KeyQ, `${pid()}-${second}-c`, `${name}: its next voice below`);
+    assert.match(label('Digit1'), /^1: /);
+  }
+  assert.equal(pick('instNotes'), 'pluck', 'loading a layout does not change who plays Notes');
+  played.length = 0;
+  $('#ke-keys').querySelector('[data-code="KeyQ"]').dispatch('click');
+  assert.deepEqual(played, [`${pid()}-brass-c`], 'a tap on the key plays the family\'s instrument');
+  $('#ke-undo').dispatch('click');
+  $('#keys-edit').close();
+});
+
 test('👆 a band of Chords says who plays it; a pick plays every tile\'s chord on that instrument, and ↩️ Undo puts them back', async () => {
   const { setSetting } = await import('../web/settings.js');
   await setSetting('instChords', 'guitar');

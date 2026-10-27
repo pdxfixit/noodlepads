@@ -24,7 +24,8 @@ computer, at https://noodlepads.com/.
   and silly ones. The drums and most animals are real recordings, and they
   nearly all play about as loud as each other.
 - 🎹 Who plays: pick the instrument for Notes, Chords and Bass, from piano,
-  strings, marimba, steel drum, guitar and more (11 for Notes).
+  strings, marimba, steel drum, guitar and more (11 for Notes). ✏️ Layout has a
+  ready-made keyboard for each family: keyboards, mallets, strings and winds.
 - 🎨 Pad skins: every pad as Tiles, Slam buttons, Lit pads, Switch, Spinner,
   Jelly or Googly eyes.
 

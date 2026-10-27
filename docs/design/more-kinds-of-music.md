@@ -19,7 +19,7 @@ How C works:
 - **Pads:** the group header shows the picker. On a phone a tap opens it, sorted by family. From 900 px the choices sit in one line instead (the give-way rule: more than 5 stops becomes a picker). Remembered per device, like the group folds (`kit-inst`, plus a line in startup-remembered).
 - **Beats rows / sound chooser:** each section has the same picker. A row stores the exact id, as today.
 - **🎹 Tune rows:** this is where instruments pay off most. The roll already plays one sound at any pitch, so a tune row's sound *is* its instrument. 🎹 Add a tune asks "Who plays it?", and the roll's top line can swap the instrument and keep every note.
-- **⌨️ Keys / ✏️ Edit keys:** "a group onto a row" puts the picked instrument's notes on it. Add one ready-made layout per family.
+- **⌨️ Keys / ✏️ Edit keys:** "a group onto a row" puts the picked instrument's notes on it. Add one ready-made layout per family (built: Keyboard, Mallet, String and Wind band).
 - **👆 Bands:** a band's header gets the picker, and changing it rewrites the band's `sounds`. A band with no sounds listed means the group's default instrument, never all of them.
 - **Group count:** 12 (Drums, 🪘 Hand drums, Hip hop, Notes, Chords, Bass | Game, Effects, Animals, Sci-fi, Voices, Silly). Under "Presets" they split into two labels, 🎵 Music and 🤪 Fun.
 - **Instruments:** Notes gets Pluck, Piano, 🎮 Chip, Marimba, Steel drum, Kalimba, Guitar, Strings, Brass, Flute. Chords gets Synth, Piano, Guitar, Strings. Bass gets Synth, Upright, 808.

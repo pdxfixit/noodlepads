@@ -57,9 +57,6 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 - **🎤 Live's control bar: move 🔔 Let it ring into a ⋯ menu, and "almost everything else" with it** (Ben, 2026-10-27, from the Overlap council round: "2, as should almost everything else"). Mockup first (new layout; it replaces `docs/decisions.md` rows 206 and 277, which put 🔔 and ✏️ Layout on the bar), and ask which controls stay (▶ Record and tempo, surely; ⏲️ Click track, ✏️ Layout, 🎬 Takes?). On a phone the bar shows a bare 🔔 today, the one place it has no word. Settled the same day: Let it ring stays off for new rows, no drawn pile icon, no demo sound on tap.
 
 
-- **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (`docs/design/more-kinds-of-music.md`; decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups, the emoji rule's exceptions). The grooves, 🧸 Kids' pentatonic toy keys and instruments' phase 1 are built; next:
-  1. Instruments, phase 3 (ADR 0030; the pickers everywhere, 🧸 Kids' instrument button, the grooves' instruments and chips, Soca and Chiptune are built): one ready-made key layout per family in ✏️ Layout's keys.
-
 - **Toward a kid-sized music studio** (Ben, 2026-10-12; north star: ADR 0022). Done: pattern chips, mixer, four tabs, the piano roll, the playlist (ADR 0024). Next: Ben's call.
 
 - **After launch: stop loading backups from before 1.0** (Ben, 2026-10-11, "it will only be this once"): once the testing copies' backups are in, remove `beforeOne` in `web/backup.js` so they are refused again (ADR 0011).

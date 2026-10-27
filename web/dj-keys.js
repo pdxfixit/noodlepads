@@ -64,15 +64,22 @@ export function createKeysEditor({ el, deps }) {
     for (const c of kit) ids.set(c.id.slice(p.length + 1), c.id);
     return (kitId) => ids.get(kitId) ?? null;
   };
+  // A family layout names its instruments' presets as they are, whoever is
+  // picked, so it looks among every instrument's.
+  const exactClip = () => {
+    const p = pid();
+    return new Map(deps.clipsFor(p, { allPresets: true }).filter((c) => c.kit).map((c) => [c.id.slice(p.length + 1), c.id]));
+  };
   const own = () => deps.layouts(pid()).slice().sort((a, b) => a.created - b.created);
   const mine = () => deps.savedDeck(pid())?.mine ?? null;
   // Every layout a kid can load: ⭐ Keys, their own, then the ready-made.
   function allLayouts() {
     const find = kitClip();
+    const exact = exactClip();
     const out = [];
     if (mine()) out.push({ id: 'mine', label: '⭐ Keys', keys: fullKeys(mine()), mine: true });
     for (const l of own()) out.push({ id: l.id, label: `⭐ ${l.name}`, keys: fullKeys(l.keys), own: l });
-    for (const r of READY_LAYOUTS) out.push({ id: `ready-${r.id}`, label: `${r.emoji} ${r.name}`, keys: readyKeys(r, find), ready: true });
+    for (const r of READY_LAYOUTS) out.push({ id: `ready-${r.id}`, label: `${r.emoji} ${r.name}`, keys: readyKeys(r, r.family ? (id) => exact.get(id) ?? null : find), ready: true });
     return out;
   }
 

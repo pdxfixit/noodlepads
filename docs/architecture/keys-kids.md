@@ -105,7 +105,7 @@ part   {size: 1…12, band?: index}            a block (no band: empty)
 |---|---|---|
 | Saved record | IndexedDB `layouts`: `{id: 'layout-…', personId, name ≤24, created, keys: all 40}` | IndexedDB `touchLayouts`: `{id: 'touch-…', personId, name ≤24, created, bands, grid?}` |
 | Cleaned by | `keyset.js cleanLayout` | `touch.js cleanTouchLayout` |
-| Ready-made (code, never stored) | `keyset.js READY_LAYOUTS` (kit ids), made the person's by `readyKeys` | `touch.js READY_TOUCH`, made the person's by `readyTouch`; grids `touch-grid.js READY_GRIDS` |
+| Ready-made (code, never stored) | `keyset.js READY_LAYOUTS` (kit ids; four by kind of playing, four by instrument family), made the person's by `readyKeys` | `touch.js READY_TOUCH`, made the person's by `readyTouch`; grids `touch-grid.js READY_GRIDS` |
 | Kept on replace | `keyset.js keepAsMine` → deck `mine` | `touch.js keepAsMine` → deck `touchMine` |
 | Store helpers in `app.js` | `deps.layouts` / `saveLayout` / `deleteLayout` | `deps.touchLayouts` / `saveTouchLayout` / `deleteTouchLayout` |
 
@@ -471,7 +471,7 @@ More gotchas:
 | A default key | `rhythm.js` `NUMBER_ROW`/`HOME_ROW`/`BOTTOM_ROW`/`VOICE_FILL`; `rhythm.test.mjs`. Stored decks keep only changed keys, so existing kids' keys move too. |
 | A new field on the deck | `rhythm.js cleanDeck`, `app.js` `deps.saveDeck` (keeps fields), `merge.js` `keepMine('decks')` (clip ids renamed), `store.js` comment, `state.js` comment, `backup.js` notes. |
 | A new take event kind | `rhythm.js TAKE_KINDS`, `takeFrom`, `planTake`, `cleanTake`; `dj.js playTake`; `merge.js` (takes' clip ids). |
-| A ready-made key layout | `keyset.js READY_LAYOUTS` (kit ids, 4 × 10); `keyset.test.mjs` checks every id is real. |
+| A ready-made key layout | `keyset.js READY_LAYOUTS` (kit ids, 4 × 10); `keyset.test.mjs` checks every id is real. One with a `family` (instruments.js `FAMILIES`) names instrument presets exactly and resolves through `dj-keys.js exactClip`; the rest follow the pick (`kitClip`). |
 | A ready-made touch layout or grid | `touch.js READY_TOUCH` / `STARTERS`; `touch-grid.js READY_GRIDS`. |
 | The snap | `rhythm.js createSnapper` (and `snapHits` for tests); `beat-builder.test.mjs`, `rhythm.test.mjs`. Kids' tune snap is `kids-logic.js pillAt`, separate. |
 | How the beat grows | `dj.js growNow` (when), `sequencer.js scheduleClicks`/`grow` (how). |

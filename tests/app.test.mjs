@@ -1211,7 +1211,7 @@ test('✏️ Edit keys: a focused view; layouts load and are saved, sounds go on
     if (!$('#ke-picks').children.length) assert.match($('#ke-picks-hint').textContent, /No sounds of your own yet/);
   }
   // Layouts: the ready-made ones, then Save; no ⭐ Keys until a layout replaces the keys.
-  assert.deepEqual(chips(), ['🥁 Beat lab', '🚀 Space band', '🐾 Zoo party', '🎹 Piano-ish', '⭐ Save this layout']);
+  assert.deepEqual(chips(), ['🥁 Beat lab', '🚀 Space band', '🐾 Zoo party', '🎹 Piano-ish', '🎹 Keyboard band', '🪵 Mallet band', '🎻 String band', '🌬️ Wind band', '⭐ Save this layout']);
 
   // Pick two animals, then tap A: they go on A and S. The keys are full, so Kick and Snare have no room.
   $('#ke-groups').querySelector('[data-group="kit-animals"]').dispatch('click');

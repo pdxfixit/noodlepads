@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { KEY_ROWS, KEY_CODES } from '../web/rhythm.js';
+import { FAMILIES, INSTRUMENTS, presetInstrument } from '../web/instruments.js';
 import {
   fullKeys, placeSounds, loadRow, nextFreeRow, swapKeys, clearKey, sameKeys, changedKeys,
   READY_LAYOUTS, readyKeys, keepAsMine, cleanLayout, layoutName, rowOf,
@@ -113,10 +114,10 @@ test('changedKeys: only what differs from the defaults is stored', () => {
   assert.deepEqual(changedKeys(full, base), { KeyS: null, KeyD: 'moo' });
 });
 
-test('every ready-made layout is four rows of ten real kit sounds, the number row too, each name and id its own', () => {
+test('every ready-made layout is four rows of ten kit sounds, the number row too, each name and id its own', () => {
   // Only presets everyone sees: an Advanced-only one (the sharps and flats) would be No sound with Advanced off.
   const kit = new Set(JSON.parse(readFileSync(new URL('../web/boards.json', import.meta.url), 'utf8')).kit.filter((k) => !k.advanced).map((k) => k.id));
-  assert.ok(READY_LAYOUTS.length >= 3 && READY_LAYOUTS.length <= 4);
+  assert.equal(READY_LAYOUTS.length, 4 + FAMILIES.length, 'four for kinds of playing, one for each instrument family');
   assert.equal(new Set(READY_LAYOUTS.map((l) => l.id)).size, READY_LAYOUTS.length);
   assert.equal(new Set(READY_LAYOUTS.map((l) => l.name)).size, READY_LAYOUTS.length);
   for (const l of READY_LAYOUTS) {
@@ -131,6 +132,55 @@ test('every ready-made layout is four rows of ten real kit sounds, the number ro
   // Beat lab: drums along the bottom (Ben, 2026-10-11).
   const lab = READY_LAYOUTS.find((l) => l.id === 'beat-lab');
   assert.ok(lab.rows[3].includes('kick') && lab.rows[3].includes('snare'));
+});
+
+const KIT = JSON.parse(readFileSync(new URL('../web/boards.json', import.meta.url), 'utf8')).kit;
+
+test('each instrument family has its own ready-made layout (ADR 0030, phase 3), offered beside the others', () => {
+  for (const f of FAMILIES) {
+    assert.equal(READY_LAYOUTS.filter((l) => l.family === f.id).length, 1, `${f.name} has one layout`);
+  }
+  assert.ok(READY_LAYOUTS.filter((l) => !l.family).length >= 4, 'the layouts for kinds of playing are still there');
+});
+
+test('every pitched key of a family layout is played by that family, and the whole range of its notes is there', () => {
+  const byId = new Map(KIT.map((k) => [k.id, k]));
+  for (const l of READY_LAYOUTS.filter((x) => x.family)) {
+    const family = new Set(INSTRUMENTS.filter((i) => i.family === l.family).map((i) => i.id));
+    const used = new Set();
+    for (const id of l.rows.flat()) {
+      const clip = byId.get(id);
+      const inst = presetInstrument(clip);
+      if (!inst) continue;                                  // a drum or a silly sound
+      assert.ok(family.has(inst), `${l.name}: ${id} is played by ${inst}, not by the ${l.family} family`);
+      used.add(inst);
+    }
+    // Each note row is C up to high C, in order, on one instrument.
+    const noteRows = l.rows.filter((row) => byId.get(row[0])?.group === 'notes');
+    assert.ok(noteRows.length >= 2, `${l.name}: at least two note rows`);
+    for (const row of noteRows) {
+      assert.deepEqual(row.slice(0, 8).map((id) => byId.get(id).group), Array(8).fill('notes'), l.name);
+      const inst = byId.get(row[0]).inst;
+      assert.deepEqual(row.slice(0, 8), ['c', 'd', 'e', 'f', 'g', 'a', 'b', 'c-high'].map((n) => `${inst}-${n}`), `${l.name}: ${inst} from C up to high C`);
+    }
+    // Every instrument of the family that plays Notes is on its layout (Pluck has no row of its own beside Synth).
+    for (const i of INSTRUMENTS.filter((x) => x.family === l.family && x.groups.includes('notes') && x.id !== 'pluck' && x.id !== 'organ')) {
+      assert.ok(used.has(i.id), `${l.name}: ${i.name} is on it`);
+    }
+  }
+});
+
+test('a family layout names its presets as they are, so it is the same whoever is picked; a stored layout of them still loads', () => {
+  const band = READY_LAYOUTS.find((l) => l.id === 'keyboard-band');
+  const keys = readyKeys(band, (kitId) => `p-x-${kitId}`);
+  assert.equal(keys.Digit1, 'p-x-chip-c');
+  assert.equal(keys.KeyQ, 'p-x-piano-c');
+  assert.equal(keys.KeyA, 'p-x-organ-c-chord');
+  assert.equal(keys.KeyZ, 'p-x-808-c');
+  // Picked as a layout, saved by a person, stored: it reads back whole.
+  const saved = cleanLayout({ id: 'layout-abc', personId: 'p-x', name: 'Mine', created: 1, keys });
+  assert.ok(sameKeys(saved.keys, keys));
+  assert.equal(saved.keys.KeyQ, 'p-x-piano-c');
 });
 
 test('readyKeys: a layout as one person\'s keys; a kit sound they lack is No sound', () => {
