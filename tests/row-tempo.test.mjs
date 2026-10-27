@@ -10,7 +10,7 @@ const beat = (rows, bpm = 120) => cleanPattern({ bpm, rows }, 'pip');
 const times = (hits, row) => hits.filter((h) => h.row === row).map((h) => +h.time.toFixed(4));
 
 test('cleanRow keeps known tempo fields and replaces anything else with the default', () => {
-  assert.deepEqual(cleanRow({ clipId: 'x' }), { clipId: 'x', steps: on(), accents: on(), rate: 1, ring: false, muted: false, collapsed: false, melody: false, notes: Array(16).fill(null) });
+  assert.deepEqual(cleanRow({ clipId: 'x' }), { clipId: 'x', steps: on(), accents: on(), rate: 1, ring: false, muted: false, melody: false, notes: Array(16).fill(null) });
   const r = cleanRow({ clipId: 'x', rate: 2, ring: true, length: 12, bpm: 140 });
   assert.deepEqual([r.rate, r.ring], [2, true]);
   assert.equal('length' in r || 'bpm' in r, false);    // pill count and BPM per row are gone
@@ -21,7 +21,7 @@ test('cleanRow keeps known tempo fields and replaces anything else with the defa
 
 test('a beat saved before per-row tempo loads with every row at the defaults', () => {
   const old = cleanPattern({ bpm: 100, rows: [{ clipId: 'x', steps: on(0, 4) }] }, 'juno');
-  assert.deepEqual(old.rows[0], { clipId: 'x', steps: on(0, 4), accents: on(), rate: 1, ring: false, muted: false, collapsed: false, melody: false, notes: Array(16).fill(null) });
+  assert.deepEqual(old.rows[0], { clipId: 'x', steps: on(0, 4), accents: on(), rate: 1, ring: false, muted: false, melody: false, notes: Array(16).fill(null) });
   assert.equal(old.bars, 1);
 });
 
@@ -115,10 +115,14 @@ test('End goes to the last pill of a long row', () => {
   assert.deepEqual(pillTarget('End', 0, 0, 1, () => 64), [0, 63]);
 });
 
-test('a collapsed row is kept, and collapsing is not an unsaved change', () => {
-  assert.equal(cleanRow({ clipId: 'x', collapsed: true }).collapsed, true);
-  assert.equal(cleanRow({ clipId: 'x', collapsed: 'yes' }).collapsed, false);
-  assert.ok(samePattern(beat([{ clipId: 'a', steps: on(0) }]), beat([{ clipId: 'a', steps: on(0), collapsed: true }])));
+test('an old row\'s collapsed flag is dropped on the next clean, and it plays and compares the same', () => {
+  assert.equal('collapsed' in cleanRow({ clipId: 'x', collapsed: true }), false);
+  assert.equal('collapsed' in cleanRow({ clipId: 'x', collapsed: false }), false);
+  assert.deepEqual(cleanRow({ clipId: 'x', collapsed: true }), cleanRow({ clipId: 'x' }));
+  const old = beat([{ clipId: 'a', steps: on(0, 4), collapsed: true }]);
+  const fresh = beat([{ clipId: 'a', steps: on(0, 4) }]);
+  assert.ok(samePattern(old, fresh));
+  assert.deepEqual(times(planHits(old, 'plain', 2), 0), times(planHits(fresh, 'plain', 2), 0), 'it plays the same');
 });
 
 test('loud hits: only a pill that is on can be loud, they play loud, and they count as a change', () => {

@@ -64,7 +64,6 @@ Library records add three fields that `cleanPattern` drops, so every write puts 
 | `solo` | 🎚️ Solo | **left out** unless true |
 | `fx` | the row's 🎚️ effect id | **left out** when none |
 | `volume` | the speaker's level 0–1 (`row-volume.js`) | **left out** at full |
-| `collapsed` | an old "slim row" look | kept and cleaned, but nothing reads it any more |
 | `melody` | a tune row (🎹, ADR 0023) | |
 | `notes[]` | the old melody rows' note per pill (semitones from `MELODY_NOTES`) | for older copies of the app |
 | `tune[]` | a tune row's notes, `{p, s, l}` (`notes.js`) | only on a tune row |
@@ -442,7 +441,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | **Two `buildMix` functions**: `mixer.js buildMix` (the beat's graph) and `sheet.js buildMix` (➕ Mix with another sound) | same name, unrelated jobs |
 | **The roll's `commit(i, tune, {quiet})`**: `roll.js` passes a third argument the sequencer ignores | a drag re-renders the whole Beats screen on every move |
 | **Page turning**: `follow.js keepInView/pageTurn` for Beats, the roll and ⌨️ Keys; `song.js follow` has its own sum | a change to how far a page turns must be made twice |
-| **Dead code kept in step**: `isUnsaved` and `samePattern` are used only by tests; `row.collapsed` is cleaned and stored but never read; `overflow.js fitMore` and the `more-tight` class are used by no screen or stylesheet | edits keep them working for nothing |
+| **Dead code kept in step**: `isUnsaved` and `samePattern` are used only by tests; `overflow.js fitMore` and the `more-tight` class are used by no screen or stylesheet | edits keep them working for nothing |
 
 ## Invariants and gotchas
 

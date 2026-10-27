@@ -161,7 +161,6 @@
      "rate": 1,
      "ring": false,
      "muted": false,
-     "collapsed": false,
      "melody": false,
      "notes": [
       null,
@@ -236,7 +235,6 @@
      "rate": 1,
      "ring": false,
      "muted": false,
-     "collapsed": false,
      "melody": false,
      "notes": [
       null,
@@ -298,7 +296,6 @@
      "rate": 1,
      "ring": false,
      "muted": true,
-     "collapsed": false,
      "melody": false,
      "notes": [
       null,
@@ -373,7 +370,6 @@
      "rate": 1,
      "ring": false,
      "muted": false,
-     "collapsed": false,
      "melody": false,
      "notes": [
       null,

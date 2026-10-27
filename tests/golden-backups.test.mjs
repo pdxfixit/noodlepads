@@ -73,6 +73,8 @@ for (const name of goldens) {
       if (want && typeof want === 'object') {
         for (const k of Object.keys(want)) {
           if ((k === 'file' || k === 'heard') && path.startsWith('clips[')) continue;   // the audio file becomes the sound's blob; the heard copy is read past (the app renders its own)
+          // A row's old `collapsed` (the slim-row look no screen reads any more) is read past, not kept (simplify C11).
+          if (k === 'collapsed' && /\.rows\.\d+$/.test(path)) continue;
           assert.ok(got && k in got, `${path}.${k} was lost`);
           kept(want[k], got[k], `${path}.${k}`);
         }

@@ -137,7 +137,6 @@ function cleanPlainRow(r) {
     ...(cleanFx(r?.fx) ? { fx: cleanFx(r.fx) } : {}),
     // Its loudness (0–1), only when below full: an older app plays it full.
     ...(cleanVolume(r?.volume) < 1 ? { volume: cleanVolume(r.volume) } : {}),
-    collapsed: r?.collapsed === true,  // shown as one slim line; how it looks, not how it plays
     melody: r?.melody === true,
     // The old melody rows' note per pill (semitones, from MELODY_NOTES), or null.
     notes: steps.map((on, i) => (on && MELODY_NOTES.includes(r?.notes?.[i]) ? r.notes[i] : null)),

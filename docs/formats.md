@@ -120,7 +120,7 @@ Two beats per person have a reserved `id` and are hidden in the app, not listed 
 | `volume` | 0 to 1 (up to 4 decimals), full when missing. It is the gain itself: the hit's gain is this times 1.5 for an accent. (The app's sliders show a dB-like position over it: gain = 10^(−40·(1−p)/20) for a position p from 0.05 to 1; v2 may show it as it likes.) |
 | `fx` | One effect id for the row (as for the beat). |
 | `ring` | `true`: a new hit of the sound lets earlier ones ring. Otherwise a new hit fades the row's earlier hits out as it starts. |
-| `collapsed` | How the row is drawn. Ignore. |
+| `collapsed` | How the row was drawn in older copies (a slim row). Ignore it; copies from 2026-10-27 no longer write it. |
 | `melody` | `true` for a tune row. Its notes are in `tune`; `steps` and `notes` are an older shorthand and may be ignored when `tune` is there. |
 | `tune` | `[{p, s, l}]`: pitch `p` in semitones from the sound's C (-24 to 36; 0 plays the sound as it is), start `s` and length `l` in pills (halves allowed). A note plays the sound at speed `2^(p/12)` (so higher is shorter), moved by the sound's `root` so its C is a C, and fades out after `l` pills. Notes may overlap. |
 

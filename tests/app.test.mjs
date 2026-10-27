@@ -466,7 +466,7 @@ test('Beats shows the beat maker in place of the pads; 🆕 New starts with no r
 });
 
 test('the grid shows its count: the first pill of each bar is the "1", and each beat starts a shade brighter', () => {
-  const pills = $('#seq-rows').children.filter((c) => c.classList.contains('seq-row') && !c.classList.contains('collapsed'))[0].querySelectorAll('.pill').filter((p) => !p.hidden);
+  const pills = $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'))[0].querySelectorAll('.pill').filter((p) => !p.hidden);
   const kind = (p) => (p.classList.contains('one') ? '1' : p.classList.contains('beat-start') ? 'b' : '.');
   assert.equal(pills.map(kind).join('').slice(0, 16), '1...b...b...b...');
 });
@@ -1031,7 +1031,7 @@ test('a row’s speed (Advanced) is three keys in its sound picker: ½× 1× 2×
 });
 
 test('beats are open documents: they save themselves; the beat bar renames, starts new and opens; Open duplicates and deletes', () => {
-  const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row') && !c.classList.contains('collapsed'));
+  const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
   const bar = () => document.querySelectorAll('.beat-bar')[0];
   const name = () => bar().querySelector('[data-beat-name]');
   const list = () => $('#lib-list').children;
@@ -2395,7 +2395,7 @@ test('one open beat: ⌨️ Keys on and off show the same beat and its edits; Ne
   const beatsBar = () => document.querySelectorAll('.beat-bar')[0];
   const djBar = () => $('#dj-beatbar');
   const nameOf = (bar) => bar.querySelector('[data-beat-name]').value;
-  const pills = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row') && !c.classList.contains('collapsed'))[0].querySelectorAll('.pill');
+  const pills = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'))[0].querySelectorAll('.pill');
   const lit = () => pills().map((p, i) => (p.getAttribute('aria-pressed') === 'true' ? i : -1)).filter((i) => i >= 0);
   const djLit = () => $('#dj-grid').children[0].querySelectorAll('[data-step]').map((p, i) => (p.classList.contains('on') ? i : -1)).filter((i) => i >= 0);
   const library = () => $('#lib-list').children;
