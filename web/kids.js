@@ -29,7 +29,7 @@ import { fingerTaps, isFinger } from './finger.js';
 import { remember, recall, newId, onePressOneClick } from './util.js';
 import { soundName, beatName } from './names.js';
 import { askSum, closeSum } from './grown-up.js';
-import { kidsBeatOf, kidsBeatId } from './scratch.js';
+import { kidsBeatOf, kidsBeatId, isHiddenBeat } from './scratch.js';
 import { getSetting, setSetting, onSetting } from './settings.js';
 import { SKINS, nextSkin } from './skins.js';
 import { kidsHint, markSeen } from './tips.js';
@@ -39,7 +39,7 @@ import {
   kidsVoiceFields, voiceAfter, MAX_RECORD_SECONDS, MIN_RECORD_SECONDS, pressKind, KIDS_COUNT, pictureFor, KIDS_KEYS, keyRate, keyPlayId, keyPitch, isHighKey, beatLayout, cleanTab,
   nextKidsInstrument, keyKitId, kidsPlayedRows, squareFits, barOf, totalOf, KIDS_LOAD_WAIT,
   padPicture, instPicture, KIDS_PLAY_FACES, KIDS_MIC_FACE,
-  TUNE_BARS, TUNE_COUNT, pillSeconds, withBars, pillAt, withTuneNote, keptTune,
+  TUNE_BARS, TUNE_COUNT, pillSeconds, withBars, pillAt, withTuneNote, keptTune, sameTune,
 } from './kids-logic.js';
 import { STEPS, MAX_SWING, outputDelay, stepsHeard } from './beat.js';
 import { instrumentById, PLAYED } from './instruments.js';
@@ -932,18 +932,22 @@ function landNote(id) {
   if (got.at < tuneRec.t0 - 2 * dt) return;   // long before the beat started: not meant for it
   const s = pillAt(got.at - tuneRec.t0, dt, total);
   const l = Math.min(STEPS, Math.max(1, Math.round((audio.context().currentTime - got.at) / dt)));
-  if (tuneRec.fresh) keepOldTune(beat);
+  if (tuneRec.fresh) keepTune(tuneRec.pid);
   deps.saveBeat(withTuneNote(beat, { clipId: tuneRec.clipId, pitch: got.pitch, s, l, fresh: tuneRec.fresh }));
   tuneRec.fresh = false;
   tuneRec.notes += 1;
 }
 
-// A new recording's first note starts the tune again: the beat with the
-// tune it replaces goes into 🗂️ Beats first, under a fun name, as 🆕 New
-// keeps a beat (kids-logic.js keptTune), so a kid's earlier tune is never lost.
-function keepOldTune(beat) {
-  const kept = keptTune(beat, { id: newId('beat'), name: beatName(deps.beats(deps.personId()).map((b) => b.name)) });
-  if (kept) deps.saveBeat(kept);
+// The kid's tune goes into 🗂️ Beats under a fun name, as 🆕 New keeps a
+// beat (kids-logic.js keptTune), when the recording stops (Ben, 2026-10-27:
+// a grown-up finds the latest tune at once) and, for one from before that,
+// when a new recording's first note is about to replace it. A tune already
+// there (the same notes on the same sound) is not kept twice.
+function keepTune(pid) {
+  const mine = deps.beats(pid);
+  const kept = keptTune(kidsBeat(pid), { id: newId('beat'), name: beatName(mine.map((b) => b.name)) });
+  if (!kept || mine.some((b) => !isHiddenBeat(b) && sameTune(b, kept))) return;
+  deps.saveBeat(kept);
 }
 
 // Done: as the beat comes round, at the next tap, with ⏹️, or on leaving.
@@ -957,6 +961,7 @@ function stopTune() {
   cancelAnimationFrame(run.raf);
   tuneRec = null;
   if (run.mode === 'on') logEvent('kids', { rec: 'stop', tune: run.notes });
+  if (run.notes > 0) keepTune(run.pid);   // this recording's tune, for a grown-up to find
   showRec();
 }
 

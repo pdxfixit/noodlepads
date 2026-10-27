@@ -216,13 +216,14 @@ ten keys go five across (`just look kids-pads --landscape`).
   next tap, ⏹️, or leaving the screen), and the beat plays on with the tune:
   Kids' ▶️ plays it too, on the Beats screen and here. The first note of a
   new recording starts the tune again, so a kid can do it over (an empty
-  take changes nothing); the beat with the tune it replaces is kept first,
-  a beat of its own in 🗂️ Beats under a fun name with 🧸 in front (so a
-  grown-up can find it), as 🆕 New keeps a beat (`kids-logic.js` `keptTune`). Nothing shows on the kid's screen: Kids has
-  no Undo, and a kid can't read a "Kept as …" line. A grown-up finds a kept
-  tune in 🗂️ Beats, where it is a beat with a tune row and opens in 🎹 the
-  piano roll. The tune the kid has now stays in Kids' beat until the next
-  recording replaces it (and keeps it).
+  take changes nothing). The tune is kept as the recording stops (Ben,
+  2026-10-27): the beat with it, a beat of its own in 🗂️ Beats under a fun
+  name with 🧸 in front (so a grown-up can find it), as 🆕 New keeps a beat
+  (`kids-logic.js` `keptTune`); a tune already kept (the same notes on the
+  same sound, `sameTune`) is not kept twice when the next recording replaces
+  it. Nothing shows on the kid's screen: Kids has no Undo, and a kid can't
+  read a "Kept as …" line. A grown-up finds the latest tune at once in
+  🗂️ Beats, where it is a beat with a tune row and opens in 🎹 the piano roll.
 
 ⏹️ (or Esc, or Space) stops everything, the whole app's sounds too: every
 sound, the beat, a ● tune and a mic recording, which is kept as its pad

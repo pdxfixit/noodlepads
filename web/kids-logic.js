@@ -293,9 +293,9 @@ export const KIDS_LOAD_WAIT = { ms: 2000 };
 // through its bars while the keys land on the nearest pill; it stops by
 // itself as the beat comes round, or at the next tap, and the beat plays on
 // with the tune. The first note of a new recording starts the tune again
-// (an empty take changes nothing); the beat with the tune it replaces is
-// kept first in 🗂️ Beats (keptTune). A grown-up sees the tune row on
-// 🥁 Beats, in 🎹 the piano roll, and keeps the beat with 💾 Keep.
+// (an empty take changes nothing). Each tune is kept in 🗂️ Beats (keptTune)
+// when the recording stops, where a grown-up sees its tune row and opens it
+// in 🎹 the piano roll.
 export const TUNE_BARS = 4;
 export const TUNE_COUNT = 3;   // beats of 3, 2, 1 before the beat starts
 export const pillSeconds = (bpm) => 60 / bpm / (STEPS / 4);
@@ -339,12 +339,13 @@ export function withTuneNote(beat, { clipId, pitch, s, l = 1, fresh = false }, n
   return { ...beat, rows, saved: now };
 }
 
-// A tune about to be replaced by a new ● recording is kept first, the way
+// A ● tune is kept when the kid stops recording (Ben, 2026-10-27), so a
+// grown-up finds the latest at once, and the next recording that replaces it
+// keeps nothing again when that tune is already kept (`sameTune`): the way
 // 🆕 New keeps a scratch with hits: the whole beat, its drums and that tune,
-// a beat of its own in 🗂️ Beats under `name` (a fun name), so a grown-up
-// can find the earlier one. Kids has no Undo and a kid can't read a "Kept
-// as …" line, so nothing shows; the kid just plays again. Null when the beat
-// has no tune to lose. Its name wears 🧸 in front (Ben, 2026-10-26: the
+// a beat of its own in 🗂️ Beats under `name` (a fun name). Kids has no Undo
+// and a kid can't read a "Kept as …" line, so nothing shows; the kid just
+// plays again. Null when the beat has no tune to keep. Its name wears 🧸 in front (Ben, 2026-10-26: the
 // child psychologist's ask), so a grown-up can tell a kid's tune in
 // 🗂️ Beats from their own; a long name is cut to leave room for it.
 export const KIDS_TUNE_MARK = '🧸 ';
@@ -352,6 +353,14 @@ export const kidsTuneName = (name) => KIDS_TUNE_MARK + cutName(String(name ?? ''
 export function keptTune(beat, { id, name }, now = Date.now()) {
   if (!tuneRowOf(beat)?.tune?.length) return null;
   return { ...cleanPattern(beat, beat.personId), id, name: kidsTuneName(name), created: now, saved: now };
+}
+
+// Do two beats hold the same tune (the same notes on the same sound)? Their
+// drums and the rest may differ.
+export function sameTune(a, b) {
+  const x = tuneRowOf(a);
+  const y = tuneRowOf(b);
+  return !!x?.tune?.length && !!y && x.clipId === y.clipId && JSON.stringify(x.tune) === JSON.stringify(y.tune);
 }
 
 // ── Voices ──

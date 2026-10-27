@@ -12,7 +12,7 @@ import { testManifest } from './test-board.mjs';
 import {
   makeSum, typeDigit, sumWait, SUM_WAIT, kidsRange, kidsAutoPx, kidsPadPx, kidsShare, shareOf, kidsSliderAt, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder, KIDS_PADS,
   KIDS_STARTLES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds, KIDS_TEMPOS,
-  TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote, keptTune,
+  TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote, keptTune, sameTune,
   KIDS_DRUMS, drumPicture, kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS, keyPitch, keyRate, keyPlayId, isHighKey, instPicture,
 } from '../web/kids-logic.js';
 import { MELODY_NOTES } from '../web/notes.js';
@@ -281,6 +281,12 @@ test('● a tune: a new recording keeps the beat with the tune it replaces, as a
   assert.deepEqual(tuneRowOf(kept).tune, [{ p: 4, s: 2, l: 1 }]);
   assert.deepEqual(squaresOf(kept, ids), squaresOf(tuned, ids), 'its drums too');
   assert.equal(kept.saved, 9);
+  // The tune just recorded is kept as it stops, so the next recording over it keeps nothing again.
+  assert.ok(sameTune(kept, tuned) && sameTune(tuned, kept), 'the same tune');
+  assert.ok(!sameTune(kept, beat), 'a beat with no tune is not');
+  assert.ok(!sameTune(kept, withTuneNote(tuned, { clipId: 'p-a-piano-c', pitch: 7, s: 5, l: 1 })), 'one more note is another tune');
+  assert.ok(!sameTune(kept, withTuneNote(tuned, { clipId: 'p-a-marimba-c', pitch: 4, s: 2, l: 1, fresh: true })), 'the same notes on another sound are another tune');
+  assert.ok(sameTune(kept, { ...tuned, rows: tuned.rows.filter((r) => r.melody) }), 'its drums do not matter');
 });
 
 test('the voices: 🤖 Robot, 🐭 Tiny (Chipmunk), 👻 Spooky (Monster with an echo); tap again for Normal', () => {
@@ -1144,11 +1150,13 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   await until(() => !rec.classList.contains('recording'), 'the beat came round', 6000);
   assert.equal($('#kids-play').getAttribute('aria-pressed'), 'true', 'the beat plays on, with the tune');
   assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [0, 9], 'the tune stays');
-  // A new recording: its first note starts the tune again; a tap on ● stops it early.
-  // The tune it replaces is kept first, a beat of its own in 🗂️ Beats,
-  // as 🆕 New keeps a beat: Kids has no Undo, and a kid can't read a line.
+  // The tune is kept when the recording stops (Ben, 2026-10-27), a beat of
+  // its own in 🗂️ Beats, as 🆕 New keeps a beat: Kids has no Undo, and a kid
+  // can't read a line. A new recording then replaces it without keeping it twice.
   const kept = () => state.savedBeats.filter((b) => b.personId === state.personId && !isHiddenBeat(b) && tuneOf(b));
   const keptBefore = kept().length;
+  assert.equal(keptBefore, 1, 'kept as the recording stopped, at once');
+  assert.deepEqual(tuneOf(kept()[0]).tune.map((n) => n.p), [0, 9]);
   rec.dispatch('click');
   await page.settle();
   await until(() => rec.classList.contains('recording'), 'recording again');
@@ -1158,8 +1166,8 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   keys[2].dispatch('pointerdown', { pointerId: 13 });
   keys[2].dispatch('pointerup', { pointerId: 13 });
   assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [4], 'started again, with the E');
-  assert.equal(kept().length, keptBefore + 1, 'the earlier tune is kept');
-  const earlier = kept().at(-1);
+  assert.equal(kept().length, keptBefore, 'the earlier tune is already kept: no second copy');
+  const earlier = kept()[0];
   assert.deepEqual(tuneOf(earlier).tune.map((n) => n.p), [0, 9], 'C then A, as it was');
   assert.equal(earlier.rows.length, 5, 'with the drums');
   assert.ok(earlier.name && earlier.name !== 'Scratch beat', `a fun name: ${earlier.name}`);
@@ -1167,6 +1175,8 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   rec.dispatch('click');
   assert.equal(rec.classList.contains('recording'), false, 'stopped early');
   assert.equal(rec.getAttribute('aria-pressed'), 'false');
+  assert.equal(kept().length, keptBefore + 1, 'the new tune is kept as it stops');
+  assert.deepEqual(tuneOf(kept().find((b) => b !== earlier && b.id !== earlier.id)).tune.map((n) => n.p), [4]);
   // A tap during the count calls it off, its beeps still to come go quiet,
   // and the tune and the beat are left as they were.
   $('#kids-stop').dispatch('click');
