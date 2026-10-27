@@ -599,6 +599,7 @@ const beatLibrary = {
   },
   remove: async (id) => {
     state.savedBeats = state.savedBeats.filter((b) => b.id !== id);
+    engine?.letGo((m) => m.id === id);   // its mix graphs go once their last voice and tail have ended
     await removeRecord('beats', id, 'That beat');
   },
 };

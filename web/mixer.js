@@ -16,7 +16,7 @@
 // Warble, Robot and Louder. Every beat plays through a small graph of them,
 // live, in Save as a sound, in songs and in share previews (buildMix).
 
-import { cleanStep, kindById, buildLive } from './steps.js';
+import { cleanStep, kindById, buildLive, tailOf } from './steps.js';
 import { cleanVolume, rowLevel, percent } from './row-volume.js';
 
 // Each effect: its id (what is stored), emoji, name, and its steps at a tempo.
@@ -50,8 +50,11 @@ export const mixKey = (p) => [p.fx ?? '', p.bpm, ...p.rows.map((r) => r.fx ?? ''
 
 // The graph for beat `p` on `ctx`, into `dest`: each row with an effect goes
 // through it, every row then through the master's effect (if any) and its
-// level. `input(i)` is where row i's hits go. `dispose()` stops what it
-// started (Warble and Robot run oscillators) once its tails have rung out.
+// level. `input(i)` is where row i's hits go. `tail` is how many seconds the
+// effects ring on after the last hit through it ends: the master's, plus the
+// longest row's. `dispose()` stops what it started (Warble and Robot run
+// oscillators) and is for after that: the caller waits out the last hit and
+// the tail first (beat-engine.js).
 export function buildMix(ctx, dest, p) {
   const oscillators = [];
   // The steps start oscillators of their own: kept, so dispose() can stop them.
@@ -76,8 +79,11 @@ export function buildMix(ctx, dest, p) {
     buildLive(tracked, input, fxSteps(r.fx, p.bpm)).output.connect(head);
     return input;
   });
+  const tail = (p.fx ? tailOf(fxSteps(p.fx, p.bpm)) : 0)
+    + Math.max(0, ...p.rows.map((r) => (r.fx ? tailOf(fxSteps(r.fx, p.bpm)) : 0)));
   return {
     key: mixKey(p),
+    tail,
     master,
     input: (i) => inputs[i] ?? head,
     dispose() {

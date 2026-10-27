@@ -5,7 +5,7 @@
 // through, then the sheet in the real app on Beats and in Beat Builder.
 // Sound itself needs a browser.
 
-import { test, before } from 'node:test';
+import { test, before, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { MIX_FX, cleanFx, fxSteps, masterLevel, silencedBySolo, mixKey, buildMix } from '../web/mixer.js';
 import { cleanRow, cleanPattern, samePattern, planHits, audible, beatToFile, beatFromFile } from '../web/beat.js';
@@ -15,6 +15,7 @@ import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
 import { newBeatWithRow, newBuilderBeatWithRow, keysOn, keysOff } from './new-beat.mjs';
 import { state } from '../web/state.js';
+import { createBeatEngine } from '../web/beat-engine.js';
 
 const on = (...at) => Array.from({ length: 16 }, (_, i) => at.includes(i));
 
@@ -139,6 +140,122 @@ test('every effect is the sound sheet\'s own, live, and Echo keeps the beat\'s t
   assert.equal(fxSteps('echo', 100)[0].gap, 0.3, 'an eighth note at 100 BPM');
   assert.equal(fxSteps('echo', 150)[0].gap, 0.2);
   assert.deepEqual(fxSteps('nope'), []);
+});
+
+// ── One graph per beat, let go when its last voice has ended ──
+// The engine's busFor (beat-engine.js): a graph belongs to a beat's id (a beat
+// with no id, to the beat of its run), at most 8 stand on the live context,
+// and one let go (a stop, a delete, a ninth) is disposed only once the last
+// voice through it has ended and its effects' tail has rung.
+
+function mixEngine() {
+  const ctx = recordingContext();
+  ctx.createBufferSource = () => ({ connect() {}, start() {}, stop() {}, playbackRate: { value: 1 } });
+  const dest = { kind: 'dest', out: [] };
+  const audio = { master: dest, context: () => ctx, wake: () => ctx, load: async () => ({ buffer: {}, duration: 1 }), key: (c) => c.id };
+  const engine = createBeatEngine({ audio, clipById: () => null });
+  const beat = (id, extra = {}) => cleanPattern({ id, bpm: 100, rows: [{ clipId: 'x', steps: on(0), ...extra.row }], ...extra.beat }, 'p');
+  // One hit of `seconds` through row 0 of `p`'s graph at the clock now.
+  const hit = (p, seconds, to = dest) => {
+    const list = [];
+    engine.sound(ctx, engine.busFor(ctx, to, p).input(0), list, p.rows[0], { buffer: {}, duration: seconds }, ctx.currentTime);
+    return list[0];
+  };
+  // Moves the clock and the held timers on together.
+  const pass = (seconds) => { ctx.currentTime += seconds; mock.timers.tick(seconds * 1000); };
+  const watch = (bus) => { const seen = { disposed: 0 }; const was = bus.dispose; bus.dispose = () => { seen.disposed++; was(); }; return seen; };
+  return { ctx, dest, engine, beat, hit, pass, watch };
+}
+const held = async (fn) => {
+  mock.timers.enable({ apis: ['setTimeout'] });
+  try { return await fn(); } finally { mock.timers.reset(); }
+};
+
+test('one graph per beat id: a beat opened again uses its own; a beat with no id is its own, per run', () => {
+  const { ctx, dest, engine, beat } = mixEngine();
+  const a = engine.busFor(ctx, dest, beat('beat-a'));
+  const made = ctx.nodes.length;
+  assert.equal(engine.busFor(ctx, dest, beat('beat-a')), a, 'a copy of the same beat: the same graph');
+  assert.equal(ctx.nodes.length, made, 'nothing built again');
+  assert.notEqual(engine.busFor(ctx, dest, beat('beat-b')), a, 'another beat: its own');
+  assert.notEqual(engine.busFor(ctx, { kind: 'lane', out: [] }, beat('beat-a')), a, 'another destination (a song lane): its own');
+  const run1 = beat(undefined);
+  const first = engine.busFor(ctx, dest, run1);
+  assert.equal(engine.busFor(ctx, dest, run1), first, 'a run keeps its graph');
+  assert.notEqual(engine.busFor(ctx, dest, beat(undefined)), first, 'the next run has its own');
+  assert.equal(engine.mixes(), 5);
+  assert.equal(engine.busFor(ctx, dest, beat('beat-a', { beat: { fx: 'room' } })).key, mixKey(beat('beat-a', { beat: { fx: 'room' } })), 'a new effect builds a new one');
+  assert.equal(engine.mixes(), 5, 'in the old one\'s place');
+});
+
+test('a beat deleted: its graph is forgotten at once and disposed after its last voice and the Echo tail, not after a fixed 6 s', async () => {
+  const { ctx, dest, engine, beat, hit, pass, watch } = mixEngine();
+  await held(() => {
+    const p = beat('beat-gone', { row: { fx: 'echo' } });
+    const bus = engine.busFor(ctx, dest, p);
+    const seen = watch(bus);
+    assert.ok(bus.tail >= 1.2, 'Echo at 100 BPM rings three eighths and a bit on');
+    hit(p, 10);                                  // a long sound, over at 10 s
+    pass(1);
+    engine.letGo((m) => m.id === 'beat-gone');   // the delete
+    assert.equal(engine.mixes(), 0, 'no longer listed');
+    assert.notEqual(engine.busFor(ctx, dest, p), bus, 'a later hit builds a fresh graph');
+    pass(7);                                     // 8 s: the old fixed 6 s are over, the voice is not
+    assert.equal(seen.disposed, 0, 'its voice still sounds');
+    pass(2.5);                                   // 10.5 s: the voice has ended, the tail rings
+    assert.equal(seen.disposed, 0, 'the Echo tail is not chopped');
+    pass(1);                                     // 11.5 s: past 10 s + the tail
+    assert.equal(seen.disposed, 1, 'then it is disposed');
+  });
+});
+
+test('a voice that ends early (a stop fades it) lets its graph go then, once; a graph with no voice goes at once', async () => {
+  const { ctx, dest, engine, beat, hit, pass, watch } = mixEngine();
+  await held(() => {
+    const p = beat('beat-early');
+    const bus = engine.busFor(ctx, dest, p);
+    const seen = watch(bus);
+    const voice = hit(p, 30);
+    pass(2);
+    engine.letGo((m) => m.dest === dest);
+    pass(1);
+    assert.equal(seen.disposed, 0, 'its voice has 27 s to go');
+    voice.src.onended();                          // the stop's fade is over
+    pass(0.1);
+    assert.equal(seen.disposed, 1, 'the end of the voice is enough (no effect: no tail)');
+    pass(40);
+    assert.equal(seen.disposed, 1, 'once');
+    const idle = watch(engine.busFor(ctx, dest, beat('beat-idle')));
+    engine.letGo(() => true);
+    pass(0.1);
+    assert.equal(idle.disposed, 1);
+  });
+});
+
+test('at most 8 graphs stand on the live context; the one used longest ago is let go', async () => {
+  const { ctx, dest, engine, beat, pass, watch } = mixEngine();
+  await held(() => {
+    const seen = [];
+    for (let i = 0; i < 8; i++) seen.push(watch(engine.busFor(ctx, dest, beat(`beat-${i}`))));
+    assert.equal(engine.mixes(), 8);
+    engine.busFor(ctx, dest, beat('beat-0'));   // used again: not the oldest now
+    engine.busFor(ctx, dest, beat('beat-8'));
+    assert.equal(engine.mixes(), 8, 'a ninth let one go');
+    pass(0.1);
+    assert.deepEqual(seen.map((s) => s.disposed), [0, 1, 0, 0, 0, 0, 0, 0], 'beat-1, used longest ago');
+    for (let i = 9; i < 40; i++) engine.busFor(ctx, dest, beat(`beat-${i}`));
+    assert.equal(engine.mixes(), 8, 'however many beats play through it');
+  });
+});
+
+test('an offline render keeps its graphs off the live list', () => {
+  const { ctx, engine, beat } = mixEngine();
+  const offline = recordingContext();
+  const out = { kind: 'dest', out: [] };
+  const bus = engine.busFor(offline, out, beat('beat-a'));
+  assert.equal(engine.busFor(offline, out, beat('beat-a')), bus, 'still one graph per beat');
+  assert.equal(engine.mixes(), 0);
+  assert.ok(ctx);
 });
 
 // ── The sheet in the real app ──

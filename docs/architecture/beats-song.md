@@ -16,7 +16,7 @@
 | Row menus | `overflow.js moreMenu(root)` | `createSequencer` (on `el.rows`), `dj.js` | the whole visit |
 | Beat bar fitting | `lines.js fitLine(bar, BEAT_BAR_STEPS)` | `createSequencer`, one per `.beat-bar` | the whole visit |
 | The tucked play bar | `mini-deck.js initMiniDeck()` | `app.js start()` | the whole visit |
-| A mix graph | `mixer.js buildMix(ctx, dest, p)` | `beat-engine.js busFor`, cached per destination and beat object | on the live context, until what played through it stops (`letGo`) or `mixKey` changes; then disposed after 6 s (`RING_MS`) |
+| A mix graph | `mixer.js buildMix(ctx, dest, p)` | `beat-engine.js busFor`, one per destination and beat id (a beat with no id: per beat object, i.e. per run) | on the live context, until what played through it stops, its beat is deleted, `mixKey` changes or a ninth is listed (`letGo`); then disposed once its last voice has ended and its effects' tail has rung (`ringOut`) |
 
 `sequencer.js` and `song.js` never import `app.js`. `app.js` reaches them only through the returned objects; they reach the board only through `deps`.
 
@@ -214,9 +214,9 @@ Latency is worked out in two places with the same sum: `beat.js outputDelay` (Be
 
 So the graph from `mixer.js buildMix` holds only the effects and the master level. Level, mute and solo are handled in the sequencer.
 
-**`beat-engine.js busFor(ctx, dest, p)`** keeps one graph per destination and beat object (`WeakMap(dest → WeakMap(beat → graph))`), rebuilt when `mixer.js mixKey(p)` changes (the master and row effect ids, and `bpm`, which 🔁 Echo needs). Effects are `steps.js` kinds built live (`buildLive`); 〰️ Warble and 🤖 Robot start oscillators, which `dispose()` stops. If building fails, the bus falls back to the destination itself.
+**`beat-engine.js busFor(ctx, dest, p)`** keeps one graph per destination and beat id (`WeakMap(dest → {ids: Map(id → mix), objs: WeakMap(beat → mix)})`; a beat with no id (a groove sample, a share preview, 🎧's ▶ part) is in `objs`, keyed by its run's beat object), rebuilt when `mixer.js mixKey(p)` changes (the master and row effect ids, and `bpm`, which 🔁 Echo needs). Effects are `steps.js` kinds built live (`buildLive`); 〰️ Warble and 🤖 Robot start oscillators, which `dispose()` stops. If building fails, the bus falls back to the destination itself.
 
-**Letting go of live graphs.** `liveMixes` lists every graph on the live context. `letGo(which)` forgets the ones it picks and disposes them after 6 s (`RING_MS`), once their tails have rung; the next hit builds a fresh one. It runs on every `stop()` (the graphs into `audio.master`, except a groove sample's), on a chip switch (the old beat's), at the end of a sample (`stopSample`), after a 🎹 note preview with the beat stopped (`endPreviews`: when the roll closes, or `RING_MS` after the last note), and in 🎼 Song as each lane plays its last block of a beat (`song.js tick`, `mixEnds` → `seq.endMix([laneGain], pattern)`) and when the song stops (`seq.endMix(laneGains)`). Offline renders are never listed. Guard: `tests/mix-let-go.test.mjs`.
+**Letting go of live graphs.** `liveMixes` lists every graph on the live context, at most 8 (`MAX_MIXES`: a ninth lets go of the one `busFor` used longest ago). `letGo(which)` forgets the ones it picks (`m.id`, `m.dest`, `m.p`; a later hit builds a fresh one) and `ringOut` disposes each once the last voice through it has ended (`sound` keeps them in the mix's `voices` and drops one at its `onended`, or by its `end` on the clock) and its effects' tail has rung (`mixer.js buildMix` `tail`: the master's plus the longest row's, from `steps.js tailOf`). Nothing is cut at a fixed time, so a long sound or a 🔁 Echo tail rings out. It runs on every `stop()` (the graphs into `audio.master`, except a groove sample's), on a chip switch (the old beat's), at the end of a sample (`stopSample`), after a 🎹 note preview with the beat stopped (`endPreviews`: when the roll closes, or `RING_MS` after the last note), in 🎼 Song as each lane plays its last block of a beat (`song.js tick`, `mixEnds` → `seq.endMix([laneGain], pattern)`) and when the song stops (`seq.endMix(laneGains)`), and when a beat is deleted (`app.js beatLibrary.remove`, by `m.id`). Offline renders are never listed. Guard: `tests/mix-let-go.test.mjs`, `tests/mixer.test.mjs`.
 
 **The 🎚️ Mixer sheet** (`mixer.js createMixer`) only draws and listens. Every change goes back through the sequencer (`setLevel`, `toggleMute`, `toggleSolo`, `setRowFx`, `setMaster`, `setMasterFx`, `allOn`), each of which saves and redraws (`mixChanged` also calls `onBeatChange`). It is opened by any `[data-mixer]` button (Beats and ⌨️ Keys).
 
@@ -340,7 +340,7 @@ The person setting `advancedBeats` (true only at the Advanced level; `settings.j
 
 ### Identity of the beat object
 
-Several things are keyed by the `pattern` **object**, not its id: `undo.pattern`, `levelBefore.pattern`, the picker's `beat` (`pill-select.js keep`), and the `busFor` cache. Code that replaces `pattern` with a fresh `cleanPattern(...)` (opening, switching, `restore`) forgets them all, on purpose. Code that edits rows in place (`putRows`, `paintRows`, `setLevel`) keeps them.
+Several things are keyed by the `pattern` **object**, not its id: `undo.pattern`, `levelBefore.pattern`, and the picker's `beat` (`pill-select.js keep`); the `busFor` cache is keyed by the beat's id. Code that replaces `pattern` with a fresh `cleanPattern(...)` (opening, switching, `restore`) forgets those three, on purpose. Code that edits rows in place (`putRows`, `paintRows`, `setLevel`) keeps them.
 
 ### ⇆ Lock and picking pills
 

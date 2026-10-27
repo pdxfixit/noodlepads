@@ -10,7 +10,7 @@
 // beat.js hitsDue.
 
 import { makeVoice, fadeStop, tooLate } from './audio.js';
-import { ACCENT_GAIN, RING_MS, hitGain, hitsDue, moveItem, noteRate } from './beat.js';
+import { ACCENT_GAIN, hitGain, hitsDue, moveItem, noteRate } from './beat.js';
 import { rootShift } from './pitch.js';
 import { ringOver } from './rhythm.js';
 import { masterLevel, mixKey, buildMix } from './mixer.js';
@@ -21,6 +21,9 @@ const TICK_MS = 25;
 const LOOKAHEAD = 0.1;
 // ▶ to the first pill, in seconds, once the sounds are loaded.
 const START_IN = 0.05;
+// Mix graphs on the live context at once (busFor); past this the one used
+// longest ago is let go.
+const MAX_MIXES = 8;
 
 // deps: audio (audio.js's), clipById(id) (any board's sound, or null).
 export function createBeatEngine({ audio, clipById }) {
@@ -78,6 +81,7 @@ export function createBeatEngine({ audio, clipById }) {
       fadeStop(voice, time + len);
       voice.end = time + len;
     }
+    if (ctx === audio.context()) track(voice, inputs.get(dest));
     const { keep: kept, cut } = ringOver(list, time, ring || row.ring || row.melody);
     for (const v of cut) fadeStop(v, time);
     list.splice(0, list.length, ...kept, voice);
@@ -87,43 +91,104 @@ export function createBeatEngine({ audio, clipById }) {
   // ── The mix (mixer.js): each beat plays through its rows' effects and the
   // master's, one graph per beat and destination, built again when its
   // effects change. The master's level is set on every use, so a fader moved
-  // while playing is heard at once. A graph put aside rings out first.
-  const buses = new WeakMap();   // dest -> WeakMap(beat -> graph)
-  // The graphs on the live context, {dest, p, bus}: 〰️ Warble and 🤖 Robot
-  // run oscillators until their graph is disposed, so each is let go
-  // (letGo) once what played through it stops.
-  const liveMixes = new Set();
+  // while playing is heard at once.
+  //
+  // A graph belongs to a beat's id, so a beat opened, switched to or played
+  // again uses the one it has; a beat with no id (a groove sample, a share
+  // preview, 🎧's ▶ part) belongs to the beat object of its run. On the live
+  // context a graph is listed (`liveMixes`) and let go (`letGo`) when what
+  // played through it stops, or its beat is deleted, or more than MAX_MIXES
+  // are listed. A graph let go is forgotten at once, so a later hit builds a
+  // fresh one, and is disposed only after the last voice through it has
+  // ended and its effects' tail (🔁 Echo, ⛪ Hall) has rung: 〰️ Warble and
+  // 🤖 Robot run oscillators until then.
+  const buses = new WeakMap();   // dest -> {ids: Map(beat id -> mix), objs: WeakMap(beat -> mix)}
+  const liveMixes = new Set();   // the mixes on the live context: {id, dest, p, bus, voices, ...}
+  const inputs = new WeakMap();  // a mix's input node -> its live mix, for the voices through it
+  let used = 0;                  // counts busFor calls, to find the mix used longest ago
+  const keyOf = (p) => (typeof p.id === 'string' && p.id ? p.id : null);
+  function mixesOn(dest) {
+    let held = buses.get(dest);
+    if (!held) buses.set(dest, (held = { ids: new Map(), objs: new WeakMap() }));
+    return held;
+  }
+
+  // A voice through a live mix is kept until it ends, and lets go of its gain
+  // then. (`done` is its real end: a stopped voice ends sooner than `end`.)
+  function track(voice, mix) {
+    voice.src.onended = () => {
+      voice.done = true;
+      try { voice.gain.disconnect(); } catch { /* gone */ }
+      if (mix) {
+        mix.voices.delete(voice);
+        mix.over = Math.max(mix.over, audio.context()?.currentTime ?? 0);
+        if (mix.released) ringOut(mix);
+      }
+    };
+    mix?.voices.add(voice);
+  }
+  // Disposes a mix let go once its last voice has ended and its tail rung;
+  // until then looks again when the next voice ends (by its clock or its
+  // own `onended`).
+  function ringOut(mix) {
+    clearTimeout(mix.timer);
+    mix.timer = 0;
+    const now = audio.context()?.currentTime ?? 0;
+    let pending = -1;
+    for (const v of [...mix.voices]) {
+      if (v.done) mix.voices.delete(v);
+      else if (v.end <= now) { mix.over = Math.max(mix.over, v.end); mix.voices.delete(v); }
+      else pending = Math.max(pending, v.end);
+    }
+    const at = pending >= 0 ? pending : mix.over + mix.tail;
+    if (pending < 0 && now >= at) { mix.bus.dispose(); return; }
+    mix.timer = setTimeout(() => ringOut(mix), Math.max(0.05, at - now) * 1000);
+  }
+  function release(mix) {
+    if (mix.released) return;
+    mix.released = true;
+    liveMixes.delete(mix);
+    const held = buses.get(mix.dest);
+    if (held && mix.id !== null && held.ids.get(mix.id) === mix) held.ids.delete(mix.id);
+    else if (held && held.objs.get(mix.p) === mix) held.objs.delete(mix.p);
+    ringOut(mix);
+  }
   function busFor(ctx, dest, p) {
-    let made = buses.get(dest);
-    if (!made) buses.set(dest, (made = new WeakMap()));
-    let bus = made.get(p);
-    if (!bus || bus.key !== mixKey(p)) {
-      const old = bus;
-      try { bus = buildMix(ctx, dest, p); } catch { bus = { key: mixKey(p), master: null, input: () => dest, dispose() {} }; }
-      made.set(p, bus);
+    const id = keyOf(p);
+    const held = mixesOn(dest);
+    let mix = id !== null ? held.ids.get(id) : held.objs.get(p);
+    if (!mix || mix.bus.key !== mixKey(p)) {
+      if (mix) release(mix);
+      let bus;
+      let made = true;
+      try { bus = buildMix(ctx, dest, p); } catch { made = false; bus = { key: mixKey(p), master: null, tail: 0, input: () => dest, dispose() {} }; }
+      mix = { id, dest, p, bus, voices: new Set(), over: 0, tail: bus.tail ?? 0, timer: 0, released: false, used: 0 };
+      if (id !== null) held.ids.set(id, mix); else held.objs.set(p, mix);
       if (ctx === audio.context()) {
-        for (const m of liveMixes) if (m.bus === old) liveMixes.delete(m);
-        liveMixes.add({ dest, p, bus });
-        if (old) setTimeout(() => old.dispose(), RING_MS);
+        if (made) {
+          const own = bus.input;
+          bus.input = (i) => { const node = own(i); inputs.set(node, mix); return node; };
+        }
+        liveMixes.add(mix);
+        while (liveMixes.size > MAX_MIXES) {
+          release([...liveMixes].filter((m) => m !== mix).reduce((a, b) => (b.used < a.used ? b : a)));
+        }
       }
     }
-    const gain = bus.master?.gain;
+    mix.p = p;
+    mix.used = ++used;
+    const gain = mix.bus.master?.gain;
     if (gain) {
       if (ctx === audio.context() && gain.setTargetAtTime) gain.setTargetAtTime(masterLevel(p), ctx.currentTime, 0.02);
       else gain.value = masterLevel(p);
     }
-    return bus;
+    return mix.bus;
   }
 
-  // Lets go of the live graphs `which({dest, p})` picks: forgotten now,
-  // disposed once their tails have rung. A later hit builds a fresh one.
+  // Lets go of the live graphs `which({id, dest, p})` picks: forgotten now,
+  // disposed once their voices have ended and their tails rung.
   function letGo(which) {
-    for (const m of [...liveMixes]) {
-      if (!which(m)) continue;
-      liveMixes.delete(m);
-      if (buses.get(m.dest)?.get(m.p) === m.bus) buses.get(m.dest).delete(m.p);
-      setTimeout(() => m.bus.dispose(), RING_MS);
-    }
+    for (const mix of [...liveMixes]) if (which(mix)) release(mix);
   }
 
   // Loads every sound the beats use (fresh: a voice may have changed),
@@ -233,9 +298,6 @@ export function createBeatEngine({ audio, clipById }) {
         const list = run.voices[h.row] ??= [];
         const dest = mixed ? busFor(ctx, audio.master, p).input(h.row) : audio.master;
         const cuts = sound(ctx, dest, list, row, got.loaded, h.at, h.loud, h.note, h.len, { clipOf: () => got.clip, ring: hooks.ring?.(row), level: mixed ? null : hitGain(row, h.loud) * masterLevel(p) });
-        // A hit that has ended lets go of its gain, so a long play holds no nodes.
-        const voice = list.at(-1);
-        voice.src.onended = () => { try { voice.gain.disconnect(); } catch { /* gone */ } };
         run.stats.hits++;
         run.stats.cuts += cuts;
         run.stats.maxRinging = Math.max(run.stats.maxRinging, list.length);
@@ -334,7 +396,7 @@ export function createBeatEngine({ audio, clipById }) {
   }
 
   return {
-    preparing: () => preparing, has, get, drop, keep, held,
+    preparing: () => preparing, mixes: () => liveMixes.size, has, get, drop, keep, held,
     prepare, refresh, sound, busFor, letGo, prepareBeats, soundHit, play,
   };
 }
