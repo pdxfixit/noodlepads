@@ -266,6 +266,24 @@ test('✅ the semitone rate agrees between instruments and the beat maker', asyn
   for (const n of [-12, -5, 0, 3, 7, 12]) assert.equal(rateOf(n), noteRate(n), FIX);
 });
 
+test('✅ a semitone is turned into a rate in instruments.js only, and latency is summed in beat.js only', async () => {
+  const { readdirSync, readFileSync } = await import('node:fs');
+  const dir = new URL('../web/', import.meta.url);
+  const semitone = /\*\* *\(.*\/ *12\)/;
+  const latency = /outputLatency[^\n]*baseLatency|baseLatency[^\n]*outputLatency/;
+  const rate = [], sum = [];
+  for (const f of readdirSync(dir).filter((n) => n.endsWith('.js'))) {
+    for (const line of readFileSync(new URL(f, dir), 'utf8').split('\n')) {
+      if (/^\s*(\/\/|\*)/.test(line)) continue;
+      if (semitone.test(line)) rate.push(f);
+      if (latency.test(line)) sum.push(f);
+    }
+  }
+  // pitch.js turns a note into Hz: a different sum. log-send.js only reports the base latency.
+  assert.deepEqual([...new Set(rate)].sort(), ['instruments.js', 'pitch.js'], FIX);
+  assert.deepEqual([...new Set(sum)].sort(), ['beat.js'], FIX);
+});
+
 test('✅ the live step kinds are exactly the kinds with a build()', async () => {
   const { KINDS } = await web('steps.js');
   assert.deepEqual(KINDS.filter((k) => k.live({})).map((k) => k.id), KINDS.filter((k) => typeof k.build === 'function').map((k) => k.id), FIX);

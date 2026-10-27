@@ -86,8 +86,8 @@ The biggest ones. Each area file lists its own in full.
   list source differ only in where the next hit comes from.
 - **Two recorders:** `sheet.js` and `kids.js`.
 - **Sound helpers in the beat rules:** `noteRate` lives in `beat.js` (the
-  WAV encoder and `normalize` are in `wav.js`). The semitone rate is worked out in six
-  places (`instruments.js rateOf` and `noteRate` are checked to agree ✅).
+  WAV encoder and `normalize` are in `wav.js`). The semitone rate is worked out once
+  (`instruments.js rateOf`, which `noteRate` is ✅).
 - **The kept audio is built three times:** `audio.js keptAudio`,
   `chop.js rebuild`, `chop.js evenOut`.
 - **Hand-kept lists:** the stores (data.md), the cloud record kinds (one

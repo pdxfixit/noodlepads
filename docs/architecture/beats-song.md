@@ -188,7 +188,7 @@ The run's tick is the live caller: it sends the voice to `busFor(ctx, audio.mast
 
 `follow()` runs every frame: `stepsHeard(run.queue, run.shown, currentTime, outputDelay(ctx))` moves each row's playhead only once its pill has **come out of the speaker** (`outputDelay` = `outputLatency + baseLatency`, at most 0.2 s). Then `showSteps` (only the pills that change), `drawPlayhead` (one bar when rows line up, else a short bar per row), `keepInSight` (follow.js), `roll.step(run.shown)`, and `deps.onSteps(run.shown)` (⌨️ Keys' grid).
 
-Latency is worked out in two places with the same sum: `beat.js outputDelay` (Beats, and 🎼 Song's line and lit blocks through `song.js heardAt`) and `app.js`'s `deps.latency` for `dj.js`. 🧸 Kids' squares do not take it off at all.
+Latency is summed in one place, `beat.js outputDelay` (Beats, 🎼 Song's line and lit blocks through `song.js heardAt`, `app.js`'s `deps.latency` for `dj.js`, and the usage events' uncapped figure) ✅. 🧸 Kids' squares do not take it off at all.
 
 ### Switching beats on the bar line (pattern chips)
 
@@ -432,7 +432,6 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 |---|---|
 | **One scheduler, two sources.** `beat-engine.js play` books a loop (`hitsDue`: 🥁 Beats and 🧸 Kids) or a planned list (🎼 Song, `hearBeat`). Kids looks 0.2 s ahead, a groove sample the whole pass, the others 0.1 s | Beats and Kids share `hitsDue`, `sound` and the tick, so a fix there reaches both: Kids plays in the beat's own bars, with its accents, swing and a tune row's `rootShift`; it leaves out rates, mute, solo and the 🎚️ Mixer's effects for good (row and Master volume are kept as a plain gain). A fix in the tick, the late-hit rule or `stop` reaches the list source too |
 | **`TICK_MS`, `LOOKAHEAD`, `HIDDEN_LOOKAHEAD` and `lookahead()`** are declared once, in `beat-engine.js`; `sequencer.js` imports `TICK_MS` and `lookahead` for the click, the bar-line switch and the next bar line (`tests/architecture.test.mjs`) | the click books its own pulses on the same pair |
-| **Output latency** is summed in `beat.js outputDelay` and again in `app.js`'s `deps.latency` for `dj.js` | a change to the cap (0.2 s) or the sum must be made twice; Kids ignores latency |
 | **The beat id pattern** `/^beat-[a-z0-9-]{1,48}$/` is written in `beat.js BEAT_ID`, `playlist.js BEAT_REF`, `backup.js` (a local `BEAT_ID`) and inline in `rhythm.js` | only `playlist.js` vs `sequencer.js` is tested (`tests/playlist.test.mjs`) |
 | **Listing a person's beats** happens three ways: `sequencer.js library()` (via `beatLibrary.list`, minus hidden), `makeSong`'s `deps.beats` (its own filter and sort), `kids.js`'s `deps.beats` | a new hidden kind of beat must be filtered in each |
 | **Saving a beat record** has one writer for the library, `beatLibrary.put` (`state.js shelf`); Kids' `deps.saveBeat` is that function. `adoptKidsBeat` writes with `db.batch` | a change to how beats persist is made in `shelf` |

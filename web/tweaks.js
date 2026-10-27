@@ -20,6 +20,7 @@
 // on the finished sound (tweakGain). Pure: no Web Audio, no DOM.
 
 import { cleanStep, kindById } from './steps.js';
+import { rateOf } from './instruments.js';
 
 const notes = (n) => `${Math.abs(n)} note${Math.abs(n) === 1 ? '' : 's'}`;
 const times = (v) => `${+v.toFixed(2)}×`;
@@ -196,7 +197,7 @@ export function tweakSteps(raw) {
   const t = playingTweaks(raw);
   if (!t) return [];
   const steps = [];
-  const rate = 2 ** ((t.pitch ?? 0) / 12);
+  const rate = rateOf(t.pitch);
   // Higher or lower keeping its length is a stretch then a tape speed: the
   // stretch also takes the speed knob, so the sound is stretched only once.
   const stretch = cleanStep(kindById('stretch'), { speed: 2 ** (t.speed ?? 0) / rate });

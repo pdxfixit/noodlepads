@@ -587,9 +587,11 @@ PEAK` and `loudness.js PRESET_LOUDNESS` assume it.
 
 ### The semitone rate
 
-2^(n/12) is computed in `instruments.js rateOf`, `beat.js noteRate`,
-`kids-logic.js keyRate`, `voices.js STEP_RENDERS.pitch`, `tweaks.js
-tweakSteps`, and Python's `tools/preset_loudness.py voiced`. The live paths
+2^(n/12) is computed in `instruments.js rateOf` and nowhere else in
+JavaScript (`beat.js noteRate` is `rateOf`; `kids-logic.js keyRate`,
+`voices.js STEP_RENDERS.pitch` and `tweaks.js tweakSteps` call it; `pitch.js`
+turns a note into Hz, a different sum ✅), and Python's
+`tools/preset_loudness.py voiced`. The live paths
 use `playbackRate`; the presets resample in JavaScript (`instruments.js
 voice`).
 

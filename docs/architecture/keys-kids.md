@@ -401,7 +401,7 @@ Defaults on the keys and the default touch layout use the groups' own sounds (`c
 
 ### Latency
 
-Worked out in four places: `beat.js outputDelay`; `app.js` `deps.latency` for the keys (the same sum, written again); `app.js startUsage` (in ms, uncapped); `rhythm.js hitTime` (unused by the app).
+Summed once, in `beat.js outputDelay`: Beats, Song, `app.js` `deps.latency` for the keys, and `app.js startUsage` (in ms, uncapped, `outputDelay(ctx, Infinity)`). `rhythm.js hitTime` takes a latency as its argument and is unused by the app.
 
 ### Names that collide
 

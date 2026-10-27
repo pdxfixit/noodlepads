@@ -7,6 +7,7 @@ import { stretchChannels } from './stretch.js';
 import { KINDS, kindById, cleanStep, stepKey, buildLive, tailOf, splitChain, isLive, noiseBuffer, NOISE_SEEDS } from './steps.js';
 import { tweakSteps, tweakGain, tweaksKey, cleanTweaks } from './tweaks.js';
 import { softLimit } from './loudness.js';
+import { rateOf } from './instruments.js';
 
 export const VOICES = [
   { id: 'normal', name: 'Normal', emoji: '🙂' },
@@ -700,7 +701,7 @@ const STEP_RENDERS = {
   // Higher or lower. Tape: pitch and length change together. Keep length:
   // stretched first, by as much as the tape will shorten it, then the tape.
   async pitch(buffer, s) {
-    const rate = playableRate(2 ** (s.notes / 12), buffer.duration);
+    const rate = playableRate(rateOf(s.notes), buffer.duration);
     if (!s.keep) return renderLive(await antiAlias(buffer, rate), [], rate);
     return renderLive(await antiAlias(await timeStretch(buffer, 1 / rate), rate), [], rate);
   },

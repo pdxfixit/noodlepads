@@ -20,6 +20,7 @@ import { createSequencer } from './sequencer.js';
 import { createBeatEngine } from './beat-engine.js';
 import { people, person, currentPerson, clipsFor, anyClip, padColor, nextClipColor, addClip } from './board.js';
 import { PLAYED } from './instruments.js';
+import { outputDelay } from './beat.js';
 import { groupOwn, UNGROUPED } from './groups.js';
 import { validateManifest, isKitClip, boardTitle, soloPerson, SOLO_NAME, groupKit, overrideWithEmoji, newClip } from './model.js';
 
@@ -804,7 +805,7 @@ function startUsage() {
   page = trackPage({
     telemetry, onLog, onDialogOpen, root: document.body, doc: document, win: globalThis,
     // The sound's delay in ms, or null before any sound has played.
-    latency: () => (audio.ctx ? ((audio.ctx.outputLatency || 0) + (audio.ctx.baseLatency || 0)) * 1000 : null),
+    latency: () => (audio.ctx ? outputDelay(audio.ctx, Infinity) * 1000 : null),
   });
   // Counts and visits that older copies of the app left in this device's
   // storage (ADR 0027): nothing sends them any more.
@@ -977,7 +978,7 @@ async function start() {
       isLooping: (id) => audio.isLooping(id),
       now: () => audio.context().currentTime,
       // How late what a kid hears comes out of the speaker (kids play to it).
-      latency: () => Math.min(0.2, (audio.context().outputLatency || 0) + (audio.context().baseLatency || 0)),
+      latency: () => outputDelay(audio.context()),
       seq,
       colorOf: (clip) => padColor(clip.color),
       sampleRate: () => audio.context().sampleRate,

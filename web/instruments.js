@@ -111,7 +111,7 @@ export function kitIdsOf(ownIds) {
 // ── One recording, any note ──
 
 // How much faster a sound plays to sound `semitones` higher: the tune row's
-// rate (sequencer.js noteRate), the way a sampler moves a sound.
+// rate (beat.js noteRate is this), the way a sampler moves a sound.
 export const rateOf = (semitones) => 2 ** ((semitones || 0) / 12);
 
 // The most a preset may move its recording: past this a sound turns into a

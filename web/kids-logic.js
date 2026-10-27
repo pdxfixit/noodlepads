@@ -8,7 +8,7 @@ import { cleanRow, cleanPattern, STEPS, barSteps, multiplyRows } from './beat.js
 import { addNote } from './notes.js';
 import { chainFields, voiceStep } from './voices.js';
 import { KIDS_BEAT_NAME } from './scratch.js';
-import { versionFor } from './instruments.js';
+import { versionFor, rateOf } from './instruments.js';
 import { cutName, MAX_NAME } from './names.js';
 
 // ── The grown-up sum ──
@@ -430,7 +430,7 @@ const NOTE_PITCH = { 'note-c': 0, 'note-d': 2, 'note-e': 4, 'note-f': 5, 'note-g
 // The pitch a key plays, in semitones above the low C.
 export const keyPitch = (k) => NOTE_PITCH[k.note] + (k.up || 0);
 // How fast its sound plays: 2 for an octave up.
-export const keyRate = (k) => 2 ** ((k.up || 0) / 12);
+export const keyRate = (k) => rateOf(k.up);
 // A high key plays under a name of its own, so it and its low key can sound at once.
 export const keyPlayId = (k, clipId) => (k.up ? `${clipId}+${k.up}` : clipId);
 export const isHighKey = (k) => (k.up || 0) >= 12;

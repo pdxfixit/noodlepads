@@ -7,7 +7,7 @@
 // 🎼 Song and the share preview load it without loading the beat maker
 // (docs/design/simplify.md S5). sequencer.js is the screen on top of it.
 
-import { instrumentsFor, instrumentById, presetInstrument, PLAYED, FAMILIES } from './instruments.js';
+import { instrumentsFor, instrumentById, presetInstrument, PLAYED, FAMILIES, rateOf } from './instruments.js';
 import { cleanVolume, rowLevel } from './row-volume.js';
 import { cleanFx, masterLevel, silencedBySolo } from './mixer.js';
 import { MELODY_NOTES, cleanNotes, fromLegacy, legacy, startsIn, addNote, lineOf, sameNotes, multiplyNotes } from './notes.js';
@@ -63,9 +63,10 @@ export function swingDelay(step, dt, swing, groups) {
   return (swing / 100) * pills * dt;
 }
 // The output's delay: how long after the audio clock's time a sound comes
-// out of the speaker (outputLatency + baseLatency), at most 0.2 s, as app.js
-// takes it off a kid's hits.
-export const outputDelay = (ctx) => Math.min(0.2, Math.max(0, (ctx?.outputLatency || 0) + (ctx?.baseLatency || 0)));
+// out of the speaker (outputLatency + baseLatency), at most `cap` seconds
+// (0.2). The one place that sums them: Beats, Song, the keys' hits and the
+// usage events (which take it uncapped, in ms) all call it.
+export const outputDelay = (ctx, cap = 0.2) => Math.min(cap, Math.max(0, (ctx?.outputLatency || 0) + (ctx?.baseLatency || 0)));
 // The playhead: takes every booked pill ({row, step, time}, `queue` sorted by
 // time) heard by audio time `now` from the front of the queue, and puts its
 // step in `shown` (per row). Sounds are booked ahead and heard `late` seconds
@@ -82,7 +83,7 @@ export function stepsHeard(queue, shown, now, late = 0) {
 export const ROW_RATES = [1, 2, 0.5];   // a row's speeds (its keys in the sound picker: ½× 1× 2×)
 // Tune rows (🎹 the piano roll, ADR 0023): the row's sound plays notes of
 // any pitch and length (notes.js).
-export const noteRate = (semitones) => 2 ** ((semitones || 0) / 12);
+export const noteRate = rateOf;
 export const ACCENT_GAIN = 1.5;        // a loud hit: about 3.5 dB up (the limiter keeps a pile-up from clipping)
 // How loud one of a row's hits plays: a loud hit's lift times the row's
 // loudness (its speaker, row-volume.js). Live play, Save as a sound, songs
