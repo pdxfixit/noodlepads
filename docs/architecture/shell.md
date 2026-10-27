@@ -118,6 +118,9 @@ Only `app.js` calls these (checked below). Each line is what it hands over.
 | `initKids` | `engine`, `personId`, `clips`, `colorOf`, `nextColor`, `saveClip` (pushes to `state.userClips`, `persist('clips')`), `ownClip`, `beats`, `saveBeat` (`beatLibrary.put`), `grownUp` (the right sum: lets a grown-up out, opens Settings) |
 | `initUpdate` | `#update-bar`, its buttons, `loaded: () => state.version`, `busy` (recording, any open dialog, beat, song, keys, Kids busy, or a looping pad) |
 | `initNudge()` | nothing (finds its own elements) |
+| `initKids` | `engine`, `personId`, `clips`, `colorOf`, `nextColor`, `saveClip` (pushes to `state.userClips`, `persist('clips')`), `ownClip`, `beats`, `saveBeat` (its own copy of `beatLibrary.put`), `grownUp` (the right sum: lets a grown-up out, opens Settings) |
+| `initUpdate` | `#update-bar`, its buttons, `loaded: () => state.version`, `busy: () => !quiet()` (recording, any open dialog, beat, song, keys, Kids busy, or a looping pad) |
+| `initNudge({ quiet })` | `quiet` (the same check `initUpdate`'s `busy` is the opposite of); it finds its own elements |
 | `initLeftover()` | nothing |
 | `initCloud` | `storeLoaded`, `whatIsHere` (backup-ui.js), `renderShare` (`share-render.js renderPreview` with `seq` and a lookup bag) |
 
@@ -331,7 +334,7 @@ default, and both poll every 2 s for a quiet moment:
 |---|---|---|
 | Element | `#update-bar` | `#nudge-bar` (class `update-bar nudge-bar`) |
 | Shows when | version.json names a newer version than `state.version` | `firsts.js nudgeDue` (Regular, 3 reaches over 2 visits, not seen) |
-| Waits while | `busy()` from app.js: recording, any dialog open, beat, song, keys or Kids busy, a looping pad | the update bar shows, or any dialog is open |
+| Waits while | `busy()` from app.js (`!quiet()`): recording, any dialog open, beat, song, keys or Kids busy, a looping pad | the same `quiet()`, and the update bar shows |
 | Ends | Reload; ✕ until the next check | ✕, Try Advanced, or a 12 s fade (`NUDGE_MS`): `markSeen('nudge')` for good |
 
 `state.version` is `'dev'` until `app.js loadVersion` resolves; a dev copy
@@ -596,7 +599,7 @@ blocks beside each animation. Pads size by container queries (`@container`,
 
 | Seam | Where | What a fix in one place misses |
 |---|---|---|
-| Two "a quiet moment" checks, two 2 s polls | `app.js` `busy` for `initUpdate`; `nudge.js quiet` | a new busy state (a new recorder, a new player) must go into `busy`; the nudge only checks dialogs and the update bar |
+| One "a quiet moment" check, two 2 s polls | `app.js quiet`, handed to `initUpdate` (as `busy: () => !quiet()`) and `initNudge` | a new busy state (a new recorder, a new player) goes into `quiet`; both bars wait for it. Each has its own 2 s poll |
 | Kids showing vs the Kids level | `app.js applyKids` uses `kidsVisit`/`grownUp`; `tips.js guided`, `kidsHint` and `nudge.js` read only `level` | on a 🧸 visit by a Regular person, tips count as "guided" and no 👆 hand shows; a fix to "is Kids on" must touch all of them |
 | Saving a beat, two writers | `beatLibrary.put` (also Kids' `saveBeat`), `adoptKidsBeat` (`db.batch`) | a change to how a beat is stored (cloning, a new index) |
 | A new clip enters `state.userClips` four ways | `board.js addClip` (`app.js addMadeSound`, `initKids` `saveClip`), the sound sheet's own save (twice), `chop.js makePads` | the redraw (`renderPads`) and any new field |

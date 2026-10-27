@@ -110,3 +110,21 @@ test('✕ answers it for good, and 🧸 Kids never counts a reach', async () => 
   assert.equal(getSetting('reaches'), '');
   await setSetting('level', 'regular');
 });
+
+// The moment is the update bar's too (app.js quiet): a loop playing, a take
+// or a beat, a recording or an open sheet holds it back.
+test('the offer waits while a loop plays, and comes when it stops', async () => {
+  const { nudgeTick } = await import('../web/nudge.js');
+  const { audio } = await import('../web/audio.js');
+  audio.playing.set('loop-test', { loop: true });   // first: a setting change below looks for a moment at once
+  await setSetting('seen', '');
+  await setSetting('reaches', 'a,b,c');
+  await setSetting('level', 'regular');
+  assert.equal(nudgeTick(), false, 'a loop is playing');
+  assert.equal(bar().hidden, true);
+  audio.playing.delete('loop-test');
+  assert.equal(nudgeTick(), true, 'quiet again');
+  assert.equal(bar().hidden, false);
+  $('#nudge-close').dispatch('click');
+  await page.settle();
+});

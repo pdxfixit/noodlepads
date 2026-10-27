@@ -319,8 +319,8 @@ page load), "🎛️ Want more knobs?" with Try Advanced and ✕ shows once, in 
 bar where 🆕 update shows and in its look. A thin line along its foot runs
 down, then after about 12 s it fades; a finger, the mouse or focus holds it.
 Try Advanced sets the level and offers ↩️ Undo in the banner. ✕, a fade or Try
-Advanced mean never again (`nudge` in `seen`). It waits while a dialog is open
-or the update bar shows, and hides, unanswered, when an update comes. 🧸 Kids
+Advanced mean never again (`nudge` in `seen`). It waits while anything records,
+plays or is open (the moment 🆕 update waits for) or the update bar shows, and hides, unanswered, when an update comes. 🧸 Kids
 never gets it (a kid can't read it; leaving Kids is the grown-up sum).
 
 Only the two places that make a person from nothing mark them as new, in

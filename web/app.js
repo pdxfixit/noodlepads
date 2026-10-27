@@ -1075,17 +1075,19 @@ async function start() {
   started = true;
   loadVersion();
   registerOffline();   // opens with no network after one visit, and installs as an app (sw.js)
-  // "🆕 An update for Noodle Pads is ready.": waits while anything records, plays or
-  // is open, so a reload never loses an unsaved sheet or a take (update.js).
+  // A quiet moment: nothing records, plays or is open. "🆕 An update for Noodle
+  // Pads is ready." waits for one, so a reload never loses an unsaved sheet or
+  // a take (update.js), and so does 🎛️ Want more knobs? (nudge.js).
+  const quiet = () => !(isRecording() || document.querySelector('dialog[open]') || seq.playing() || song.playing() || dj.busy() || kidsBusy()
+    || [...audio.playing.values()].some((v) => v.loop));
   initUpdate({
     bar: $('#update-bar'),
     reloadBtn: $('#update-reload'),
     closeBtn: $('#update-close'),
     loaded: () => state.version,
-    busy: () => isRecording() || !!document.querySelector('dialog[open]') || seq.playing() || song.playing() || dj.busy() || kidsBusy()
-      || [...audio.playing.values()].some((v) => v.loop),
+    busy: () => !quiet(),
   });
-  initNudge();   // 🎛️ Want more knobs? in the update bar's place (ADR 0028)
+  initNudge({ quiet });   // 🎛️ Want more knobs? in the update bar's place (ADR 0028)
   onSetting('advancedBeats', () => {
     if (currentPerson()) renderPads();   // the sharps and flats come and go with Advanced (a restore may be mid-way)
     if (keysShow()) dj?.render();

@@ -13,7 +13,8 @@
 // as the banner is held. Try Advanced sets the level and offers ↩️ Undo in
 // the banner. ✕, a fade or Try Advanced: never again ('nudge' in `seen`).
 // The update bar wins: while it shows, the nudge hides and waits, and so it
-// does while a dialog is open.
+// does until the moment is quiet: nothing recording, playing or open, as for
+// the update bar (a kid is mid-song or mid-sound, and a tip would land on it).
 
 import { getSetting, setSetting, onSetting } from './settings.js';
 import { showBanner, fadeAway, stopFade } from './ui.js';
@@ -26,12 +27,13 @@ export const TICK_MS = 2000;     // how often a waiting offer looks for a quiet 
 const VISIT = Date.now().toString(36);   // this page load: a visit
 
 const el = {};
+let momentIsQuiet = () => !document.querySelector('dialog[open]');   // app.js hands in the real one
 let showing = false;
 let waiting = null;   // the timer looking for a moment to show it
 
 const due = () => firstStepsOn() && nudgeDue({ level: getSetting('level'), seen: getSetting('seen'), reaches: getSetting('reaches') });
 const updateShows = () => el.update && !el.update.hidden;
-const quiet = () => !updateShows() && !document.querySelector('dialog[open]');
+const quiet = () => !updateShows() && momentIsQuiet();
 
 // One reach for more: kept, then the offer if it is due.
 export async function reach() {
@@ -93,7 +95,10 @@ async function tryAdvanced() {
   });
 }
 
-export function initNudge() {
+// `quiet()`: no recording, playing or open dialog (the same moment the
+// update bar waits for, app.js).
+export function initNudge({ quiet: isQuiet } = {}) {
+  if (isQuiet) momentIsQuiet = isQuiet;
   Object.assign(el, {
     bar: document.querySelector('#nudge-bar'),
     update: document.querySelector('#update-bar'),
