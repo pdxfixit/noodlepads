@@ -63,8 +63,7 @@ const BG = [
   'zigzag',
 ];
 const MODULES = [
-  'agent', 'app', 'audio', 'backdrop', 'backup-ui', 'backup', 'beat', 'beat-engine', 'beat-row', 'board', 'bulk', 'chop', 'cloud-api',
-  'cloud', 'cloud-sync', 'cloud-ui', 'codes', 'contact', 'contrast', 'cuts', 'device-meta', 'dialogs', 'dj', 'dj-keys', 'dj-takes', 'dj-touch',
+  'agent', 'app', 'audio', 'backdrop', 'backup', 'backup-ui', 'beat', 'beat-chooser', 'beat-engine', 'beat-grooves', 'beat-library', 'beat-row', 'board', 'bulk', 'chop', 'cloud', 'cloud-api', 'cloud-sync', 'cloud-ui', 'codes', 'contact', 'contrast', 'cuts', 'device-meta', 'dialogs', 'dj', 'dj-keys', 'dj-takes', 'dj-touch',
   'download', 'edge-scroll', 'emoji-all', 'emoji-check', 'emoji-more', 'events-client', 'feedback', 'finger', 'firsts', 'follow', 'foreign', 'grooves', 'groups', 'grown-up', 'help', 'inst-picker', 'instruments',
   'keyset', 'kids-logic', 'kids', 'leftover', 'lines', 'listen-dsp', 'listen-input', 'listen-make', 'listen-ui', 'listen-worklet', 'listen', 'log-clean', 'log-send', 'log', 'loudness', 'merge', 'merge3', 'meter', 'mic', 'mini-deck',
   'mix', 'mixer', 'model', 'names', 'notes', 'nudge', 'offline', 'old-backup', 'old-beats', 'overflow', 'pad-size', 'pads', 'people',

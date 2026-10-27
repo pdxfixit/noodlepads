@@ -24,12 +24,12 @@ import { openDialog, setupDialog } from './dialogs.js';
 import { tempoKey } from './tempo-key.js';
 import { newId, recall, remember, onePressOneClick } from './util.js';
 import { fadeStop } from './audio.js';
-import { getSetting, onSetting, unsignedSignature } from './settings.js';
+import { getSetting, onSetting } from './settings.js';
 import { logEvent } from './log.js';
 import { showBanner } from './ui.js';
 import { countPlay } from './play-count.js';
 import { soundKind } from './log-clean.js';
-import { downloadBlob, createAudioSaver } from './download.js';
+import { createAudioSaver } from './download.js';
 import { instrumentById, presetInstrument, versionFor, ownIdOf } from './instruments.js';
 import { isScratch, isHiddenBeat, scratchOf, scratchId, scratchLabel, grooveOf, hasHits, SCRATCH_NAME } from './scratch.js';
 import { cleanVolume, rowLevel, setRowLevel, drawSpeaker, speakerControls, percent } from './row-volume.js';
@@ -39,17 +39,19 @@ import { follower, keepInView } from './follow.js';
 import { fitLine } from './lines.js';
 import { pillHolds } from './finger.js';
 import { encodeWav, normalize, audioPasses, audioFileFrames, audioView, audioFileName, AUDIO_RING_SECONDS } from './wav.js';
-import { BAR_CHOICES, BEAT_BAR_STEPS, COMMON_BPMS, DEFAULT_BPM, MAX_BEAT_FILE_BYTES, MAX_BPM, MAX_PINS, MAX_ROWS, MAX_SWING, MIN_BPM, RING_MS, ROW_RATES, SAMPLE_SECONDS, STEPS_PER_BEAT, SIGNATURES, audible, barSteps, beatFromFile, beatToFile, chipBeats, cleanPattern, cleanRow, grooveBeat, groovePlayers, grooveShape, holdPill, isPinned, mergeGroove, moveItem, multiplyRows, nextSound, outputDelay, pillTarget, planHits, retimeAt, rowSlot, stepSeconds, stepsHeard, stopFor, tapPill, tempoStops, typedBpm } from './beat.js';
-import { GROOVES, GROOVE_GROUPS } from './grooves.js';
+import { BAR_CHOICES, BEAT_BAR_STEPS, COMMON_BPMS, DEFAULT_BPM, MAX_BPM, MAX_ROWS, MAX_SWING, MIN_BPM, RING_MS, STEPS_PER_BEAT, SIGNATURES, audible, barSteps, chipBeats, cleanPattern, cleanRow, holdPill, isPinned, moveItem, multiplyRows, outputDelay, pillTarget, planHits, retimeAt, rowSlot, stepSeconds, stepsHeard, stopFor, tapPill, tempoStops, typedBpm } from './beat.js';
 import { cleanFx, silencedBySolo, createMixer } from './mixer.js';
 import { addNote } from './notes.js';
 import { createRoll } from './roll.js';
 import { createPillSelect } from './pill-select.js';
 import { edgeScroller } from './edge-scroll.js';
-import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
-import { cutName, MAX_NAME as MAX_LABEL } from './names.js';   // (the old name here: sequencer.js is being edited elsewhere)
+import { pickerList, pickInstrument } from './inst-picker.js';
+import { cutName, MAX_NAME } from './names.js';
 import { TICK_MS, lookahead } from './beat-engine.js';
 import { merge3, sameContent } from './merge3.js';
+import { createChooser } from './beat-chooser.js';
+import { createGrooves } from './beat-grooves.js';
+import { createLibrary } from './beat-library.js';
 
 const ARM_MS = 3000;                   // how long a Clear? or Remove? waits for its second tap
 const UNDO_MS = 8000;                  // how long a removed row can be brought back
@@ -196,9 +198,9 @@ export function createSequencer(deps) {
   // into it with it, and the open beats are read again when it stops. A
   // sync used to stop the beat mid-recording (Ben, 2026-10-12).
   let readAgain = false;
-  // A groove just loaded into the scratch (pickGroove, below), until the
+  // A groove just loaded into the scratch (beat-grooves.js pickGroove), until the
   // beat changes: {groove, replaced, before, scratchBefore}, or null. The
-  // keys view shows a line for it with ↩️ Beat (undoLoad).
+  // keys view shows a line for it with ↩️ Beat (beat-grooves.js undoLoad).
   let loaded = null;
   // A name typed into the scratch's title (Ben, 2026-10-16): the scratch
   // keeps itself under it, at once if it has rows, else the moment it gets
@@ -358,7 +360,7 @@ export function createSequencer(deps) {
   function mergedWithStored(mine, stored) {
     const m = merge3('beats', doc.seen, mine, stored);
     if (m.record) return { record: { ...m.record, id: mine.id, personId: mine.personId, created: mine.created, saved: mine.saved }, merged: true };
-    const name = uniqueName(`${cutName(stored.name || SCRATCH_NAME, MAX_LABEL - 9)} (synced)`, null);
+    const name = uniqueName(`${cutName(stored.name || SCRATCH_NAME, MAX_NAME - 9)} (synced)`, null);
     deps.library.put({ ...structuredClone(stored), id: newId('beat'), name, created: stored.created ?? Date.now(), saved: Date.now() });
     logEvent('beat', { action: 'keep', groove: false });
     showBanner(`Another device changed this beat too. Its version is kept as “${name}” in 🗂️ Beats.`);
@@ -551,7 +553,7 @@ export function createSequencer(deps) {
     if (!taken.has(name.toLowerCase())) return name;
     for (let n = 2; ; n++) {
       const tail = ` ${n}`;
-      const candidate = cutName(name, MAX_LABEL - tail.length) + tail;
+      const candidate = cutName(name, MAX_NAME - tail.length) + tail;
       if (!taken.has(candidate.toLowerCase())) return candidate;
     }
   }
@@ -578,7 +580,7 @@ export function createSequencer(deps) {
     name.addEventListener('focus', () => { if (onScratch() && !wantedName) name.select?.(); });
     bar.querySelector('[data-beat-rename]').addEventListener('click', () => { name.focus(); name.select?.(); });
     bar.querySelector('[data-beat-new]').addEventListener('click', newScratch);
-    bar.querySelector('[data-beat-open]').addEventListener('click', () => openLibrary(bar.querySelector('[data-beat-open]')));
+    bar.querySelector('[data-beat-open]').addEventListener('click', () => lib.openLibrary(bar.querySelector('[data-beat-open]')));
     bar.querySelector('[data-beat-keep]')?.addEventListener('click', () => keep());
   }
   // On a phone the five tools with their words don't fit beside the name:
@@ -664,7 +666,7 @@ export function createSequencer(deps) {
     // A chip waiting for the bar line is taken back: a tap on it now opens it at once.
     if (queued) { queued = null; showChips(); }
     // The beat's graphs (and a 🎹 note preview's) go once they ring out; a groove sample keeps its own.
-    letGo((m) => m.dest === audio.master && m.p !== sample?.pattern);
+    letGo((m) => m.dest === audio.master && m.p !== grooves.sample()?.pattern);
     if (!playing()) return;
     const was = run;
     run = null;
@@ -1124,175 +1126,6 @@ export function createSequencer(deps) {
     if (next) askTimer = setTimeout(() => { asking = null; render(); }, ARM_MS);
   }
 
-  // ── Chooser: the row's dialog. Tapping a sound plays it and marks it;
-  // "Use" sets the row. With advanced beats on, also the row's speed (its
-  // 🔔 Let it ring is on the row's header line). ──
-
-  // What the chooser is choosing for: a beat row ({row: i, title}), or new
-  // rows ({adding: true, title}).
-  let target = null;
-  let choosing = -1;   // the row, when the target is a row
-  let picked = null;   // the sound marked in it, not used until "Use"
-  let ticks = [];      // new rows: the sounds ticked, in the order tapped
-  let opened = new Map();  // group id -> open, set in this dialog (it wins over the shared state)
-  let instOpen = null;     // the group whose instrument list is open (one at a time), or null
-
-  function openFor(next, current, returnTo) {
-    target = next;
-    choosing = next.row ?? -1;
-    picked = current ?? null;
-    ticks = next.adding && current ? [current] : [];
-    // The group holding the current sound starts open, but can still be closed.
-    const home = deps.groups().find((g) => g.collapsible && g.clips.some((c) => c.id === picked));
-    opened = new Map(home ? [[home.groupId, true]] : []);
-    instOpen = null;
-    renderChooser();
-    openDialog(el.chooser, {
-      focus: el.chooserGrid.querySelector('[aria-pressed="true"]') || el.chooserGrid.querySelector('[data-choose], [data-toggle-group]'),
-      returnTo,
-    });
-  }
-  function openChooser(i) {
-    openFor({ row: i, title: `Row ${i + 1}` }, pattern.rows[i]?.clipId, () => el.rows.querySelector(`[data-pick="${i}"]`) || el.add);
-  }
-
-  // The chooser's sections: the kit's groups (each opens and closes, like on
-  // the pads screen; the one holding the row's sound starts open),
-  // then every person's own sounds, each under their name in their color.
-  const isOpen = (id) => (opened.has(id) ? opened.get(id) : Boolean(deps.isGroupOpen?.(id)));
-
-  function renderChooser() {
-    el.chooserTitle.textContent = target?.title ?? 'Pick a sound';
-    el.chooserGrid.replaceChildren(...deps.groups().map((g) => {
-      const section = document.createElement('section');
-      section.className = 'chooser-group';
-      section.style.setProperty('--c', g.color);
-      const open = !g.collapsible || isOpen(g.groupId);
-      let heading;
-      let list = null;
-      if (g.collapsible) {
-        heading = document.createElement('button');
-        heading.type = 'button';
-        heading.className = 'chooser-toggle';
-        heading.dataset.toggleGroup = g.groupId;
-        heading.setAttribute('aria-expanded', String(open));
-        heading.textContent = `${open ? '▾' : '▸'} ${g.name} (${g.clips.length})`;
-        // Notes, Chords and Bass: who plays them beside the name, as on
-        // 🔊 Pads (inst-picker.js, ADR 0030), its list under it while open.
-        if (hasPicker(g.groupId)) {
-          const kit = { id: g.groupId, name: g.plain ?? g.name };
-          const line = document.createElement('div');
-          line.className = 'chooser-inst-row';
-          line.append(heading, pickerButton(kit, instOpen === g.groupId, { where: 'chooser' }));
-          heading = line;
-          if (instOpen === g.groupId) list = pickerList(kit, { where: 'chooser' });
-        }
-      } else {
-        heading = document.createElement('h3');
-        heading.textContent = g.name;
-      }
-      const grid = document.createElement('div');
-      grid.className = 'chooser-grid';
-      grid.append(...g.clips.map((c) => {
-        const b = deps.makePad(c);
-        b.classList.add('pad-mini');
-        b.dataset.choose = c.id;
-        showTick(b);
-        return b;
-      }));
-      grid.hidden = !open;
-      section.append(...[heading, list, grid].filter(Boolean));
-      return section;
-    }));
-    renderChooserTools();
-  }
-
-  // The bottom bar: the Use button names the marked sound; the row buttons
-  // show the row as it is now.
-  function renderChooserTools() {
-    if (target?.adding) {
-      const n = ticks.length;
-      el.chooserOk.textContent = n ? `Add ${n} row${n === 1 ? '' : 's'}` : 'Tick a sound';
-      el.chooserOk.disabled = !n;
-      el.chooserTitle.textContent = n && n >= room() ? 'New rows · beat full' : 'New rows';
-      el.chooserTools.hidden = true;
-      return;
-    }
-    const clip = deps.clipById(picked);
-    el.chooserOk.textContent = clip ? `Use ${clip.label}` : 'Pick a sound';
-    el.chooserOk.disabled = !clip;
-    const row = pattern?.rows[choosing];
-    // 🎹 Tune for everyone; speed with Advanced.
-    el.chooserTools.hidden = !row;
-    const rates = el.chooserRate.closest('.chooser-rate');
-    if (rates) rates.hidden = !advanced;
-    if (!row) return;
-    showTuneKey(row);
-    for (const b of el.chooserRate.querySelectorAll('[data-rate]')) b.setAttribute('aria-pressed', String(Number(b.dataset.rate) === row.rate));
-  }
-
-  // A sound in the chooser shows whether it is marked; for new rows, ticked,
-  // with its place in the order tapped (the rows go in that order).
-  function showTick(b) {
-    const id = b.dataset.choose;
-    const at = target?.adding ? ticks.indexOf(id) : -1;
-    b.setAttribute('aria-pressed', String(target?.adding ? at >= 0 : id === picked));
-    if (at >= 0) b.dataset.tick = String(at + 1);
-    else delete b.dataset.tick;
-  }
-  const room = () => MAX_ROWS - (pattern?.rows.length ?? MAX_ROWS);
-
-  // Marks a sound and plays it, so it can be heard before it is used. For new
-  // rows a tap ticks it (and plays it), or unticks it; a full beat ticks no more.
-  function mark(clipId) {
-    let hear = true;
-    if (target?.adding) {
-      const at = ticks.indexOf(clipId);
-      if (at >= 0) { ticks.splice(at, 1); hear = false; }
-      else if (ticks.length < room()) ticks.push(clipId);
-    } else picked = clipId;
-    for (const b of el.chooserGrid.querySelectorAll('[data-choose]')) showTick(b);
-    const clip = deps.clipById(clipId);
-    if (clip && hear) audio.play(clip);
-    renderChooserTools();
-  }
-
-  // The new rows' Add: a row for each ticked sound, in the order tapped.
-  function addTicked() {
-    const clips = ticks.map((id) => deps.clipById(id)).filter(Boolean).slice(0, room());
-    for (const clip of clips) {
-      pattern.rows.push(cleanRow({ clipId: clip.id }));
-      if (playing()) prepare(clip);
-    }
-    el.chooser.close();
-    if (!clips.length) return;
-    save();
-    render();
-  }
-
-  // `then`: what happens once the chooser has closed (🎹 Tune opens the roll).
-  function useMarked({ then, changed = false } = {}) {
-    const clip = deps.clipById(picked);
-    const row = pattern?.rows[choosing];
-    if (!row) return;
-    if (clip && row.clipId !== picked) {
-      row.clipId = picked;
-      if (playing()) prepare(clip);
-      changed = true;
-    }
-    if (changed) save();
-    el.chooser.close();
-    render();
-    then?.();
-  }
-
-  // A row setting changed from the dialog: save, redraw the rows behind it.
-  function rowChanged() {
-    save();
-    render();
-    renderChooserTools();
-  }
-
   // Moves a row; while playing, its clock, voices and playhead go with it.
   function moveRow(from, to) {
     const where = moveItem(pattern.rows, from, to);
@@ -1436,7 +1269,7 @@ export function createSequencer(deps) {
     if (undo && 'scratchBefore' in undo && undo.pattern === pattern) {
       const was = undo;
       offerUndo(null);
-      undoLoad(was);
+      grooves.undoLoad(was);
       return;
     }
     if (undo && 'before' in undo && undo.pattern === pattern) {
@@ -1608,7 +1441,7 @@ export function createSequencer(deps) {
     // Every mix into the master but a groove sample's is the beat's (or a
     // preview's) while the beat is stopped: nothing else plays into the
     // master through busFor. A new player there must be left out here too.
-    if (!playing()) letGo((m) => m.dest === audio.master && m.p !== sample?.pattern);
+    if (!playing()) letGo((m) => m.dest === audio.master && m.p !== grooves.sample()?.pattern);
   }
   async function previewNote(i, p, l) {
     const row = pattern?.rows[i];
@@ -1637,7 +1470,7 @@ export function createSequencer(deps) {
       preview: previewNote, playing,
       // The keys view's ▶ Play also runs its click track (dj.js), so it is pressed for it.
       togglePlay: () => (slot === 'dj' && el.djPlay ? el.djPlay : el.play).click(),
-      openSound: (i, returnTo) => openFor({ row: i, title: `Row ${i + 1}` }, pattern.rows[i]?.clipId, returnTo),
+      openSound: (i, returnTo) => chooser.openFor({ row: i, title: `Row ${i + 1}` }, pattern.rows[i]?.clipId, returnTo),
       clipById: deps.clipById, colorOf: deps.colorOf,
       placed: () => countPlay('notes'),
       instrument: rowInstrument, swapInstrument,
@@ -1807,16 +1640,6 @@ export function createSequencer(deps) {
   el.bpmType.addEventListener('blur', () => endTyping(true));
 
 
-  // + Add a row opens the chooser for new rows (Ben, 2026-10-16: adding eight
-  // chords one at a time meant closing Drums eight times). The sound after
-  // the last row's comes ticked, its group open, so one tap on Add still adds
-  // the next one.
-  el.add.addEventListener('click', () => {
-    if (!pattern || pattern.rows.length >= MAX_ROWS) return;
-    const order = deps.groups().flatMap((g) => g.clips);
-    const next = nextSound(order, pattern.rows.map((r) => r.clipId), [...deps.clips(), ...order]);
-    openFor({ adding: true, title: 'New rows' }, next?.id, () => el.add);
-  });
 
   let afterHold = () => false;   // set below, once the hold listener is on
   onePressOneClick(el.rows, '.pill');   // a held Enter would toggle a pill on and off
@@ -1838,7 +1661,7 @@ export function createSequencer(deps) {
       return;
     }
     // A tune row's emoji opens 🎹 the roll (its sound changes from there).
-    if (e.target.closest('[data-pick]')) { if (row?.melody) openRoll(i); else openChooser(i); return; }
+    if (e.target.closest('[data-pick]')) { if (row?.melody) openRoll(i); else chooser.openChooser(i); return; }
     if (e.target.closest('[data-ring]')) {
       if (asking) arm(null);
       toggleRing(i);
@@ -1942,569 +1765,6 @@ export function createSequencer(deps) {
     pill.tabIndex = 0;
   });
 
-  el.chooser.addEventListener('click', (e) => {
-    const toggle = e.target.closest('[data-toggle-group]');
-    if (toggle) {
-      const id = toggle.dataset.toggleGroup;
-      const open = !isOpen(id);
-      opened.set(id, open);
-      if (Boolean(deps.isGroupOpen?.(id)) !== open) deps.toggleGroup?.(id);  // the pads screen follows
-      renderChooser();
-      el.chooserGrid.querySelector(`[data-toggle-group="${CSS.escape(toggle.dataset.toggleGroup)}"]`)?.focus();
-      return;
-    }
-    // Who plays Notes, Chords or Bass: the button opens or closes its list;
-    // a tap on an instrument picks it (the person's, as on 🔊 Pads), closes
-    // the list and opens the group on that instrument's sounds.
-    const who = e.target.closest('[data-inst-pick]');
-    if (who) {
-      instOpen = instOpen === who.dataset.instPick ? null : who.dataset.instPick;
-      renderChooser();
-      el.chooserGrid.querySelector(`[data-inst-pick="${CSS.escape(who.dataset.instPick)}"]`)?.focus();
-      return;
-    }
-    const inst = e.target.closest('[data-inst]');
-    if (inst) { chooseInstrument(inst.dataset.instGroup, inst.dataset.inst); return; }
-    const pick = e.target.closest('[data-choose]');
-    if (pick) mark(pick.dataset.choose);
-  });
-  async function chooseInstrument(group, inst) {
-    instOpen = null;
-    opened.set(group, true);
-    if (!deps.isGroupOpen?.(group)) deps.toggleGroup?.(group);   // the pads screen follows, as a header tap does
-    await pickInstrument(group, inst);
-    if (!el.chooser.open) return;
-    renderChooser();
-    el.chooserGrid.querySelector(`[data-inst-pick="${CSS.escape(group)}"]`)?.focus();
-  }
-  // Esc in an open instrument list closes the list, not the chooser.
-  el.chooser.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || !instOpen || !e.target.closest?.('.inst-list, [data-inst-pick]')) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const group = instOpen;
-    instOpen = null;
-    renderChooser();
-    el.chooserGrid.querySelector(`[data-inst-pick="${CSS.escape(group)}"]`)?.focus();
-  });
-  el.chooserOk.addEventListener('click', () => (target?.adding ? addTicked() : useMarked()));
-  // 🎹 Tune: the row plays notes from 🎹 the piano roll (ADR 0023). On, its
-  // pills become notes a pill long, at the sound's own note, and the roll
-  // opens (after Use, if a sound is marked). Off, its notes become pills
-  // where they start: one with another pitch or length asks first, since
-  // those are lost ("Off?" in red, then a second tap).
-  let tuneAsked = false;
-  function showTuneKey(row) {
-    const b = el.chooserMelody;
-    if (!b) return;
-    b.setAttribute('aria-pressed', String(!!row.melody));
-    b.classList.toggle('armed', tuneAsked);
-    b.textContent = tuneAsked ? '🎹 Off? Notes lose their pitch' : '🎹 Tune';
-    b.setAttribute('aria-label', tuneAsked ? 'Tap again to turn the tune off: its notes become plain pills' : '🎹 Tune: the row plays notes you place in the piano roll');
-  }
-  el.chooserMelody?.addEventListener('click', () => {
-    const i = choosing;
-    const row = pattern?.rows[i];
-    if (!row) return;
-    if (!row.melody) {
-      pattern.rows[i] = cleanRow({ ...row, melody: true, tune: undefined });
-      tuneAsked = false;
-      useMarked({ then: () => openRoll(i), changed: true });
-      return;
-    }
-    const plain = (row.tune ?? []).every((n) => n.p === 0 && n.l === 1 && Number.isInteger(n.s));
-    if (!plain && !tuneAsked) { tuneAsked = true; showTuneKey(row); return; }
-    tuneAsked = false;
-    const { tune: _notes, ...rest } = row;
-    pattern.rows[i] = cleanRow({ ...rest, melody: false, notes: [] });
-    rowChanged();
-  });
-  el.chooser.addEventListener('close', () => { tuneAsked = false; });
-  el.chooserRate.addEventListener('click', (e) => {
-    const row = pattern?.rows[choosing];
-    const rate = Number(e.target.closest('[data-rate]')?.dataset.rate);
-    if (!row || !ROW_RATES.includes(rate) || rate === row.rate) return;
-    row.rate = rate;
-    rowChanged();
-  });
-
-  // ── Starter grooves ──
-
-  // The dialog lists the grooves by style (GROOVE_GROUPS), each group a
-  // heading that opens and shuts like the groups in the emoji list. The
-  // groups open now are remembered until the page reloads; at first they
-  // are all shut, a short menu of styles.
-  const grooveFolds = new Set();
-  const hasClip = (id) => !!deps.clipById(id);
-  // What a groove's card says under its name: its drums, then "bass" and
-  // "chords" if it has them, its length if over a bar, its time signature
-  // if not 4/4, and its tempo.
-  function grooveInfo(g, beat) {
-    const groups = beat.rows.map((r) => deps.clipById(r.clipId)?.group);
-    const drums = beat.rows.filter((_, i) => !['bass', 'chords'].includes(groups[i])).map((r) => deps.clipById(r.clipId)?.label).filter(Boolean);
-    const parts = [drums.join(', ')];
-    if (groups.includes('bass')) parts.push('bass');
-    if (groups.includes('chords')) parts.push('chords');
-    const { signature, bars } = grooveShape(g);
-    return [parts.filter(Boolean).join(' + '), bars > 1 ? `${bars} bars` : '', signature === '4/4' ? '' : signature, `${g.bpm} BPM`]
-      .filter(Boolean).join(' · ');
-  }
-  function grooveCard(g) {
-    const beat = grooveBeat(g, personId, hasClip);
-    const li = document.createElement('li');
-    li.className = 'groove-item';
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'lib-beat groove';
-    b.dataset.groove = g.id;
-    const text = document.createElement('span');
-    text.className = 'lib-text';
-    const name = document.createElement('span');
-    name.className = 'lib-name';
-    name.textContent = `${g.emoji} ${g.name}`;
-    // Under the name, where it comes from and what to listen for; the
-    // sounds, bars and tempo only with Advanced (Ben, 2026-10-17).
-    const about = document.createElement('span');
-    about.className = 'lib-info groove-about';
-    about.textContent = g.about;
-    text.append(name, about);
-    // Who plays it, beyond the drums: a chip per instrument in its family's
-    // color, as in the picker (ADR 0030).
-    const players = groovePlayers(g, (kit) => deps.clipById(`${personId}-${kit}`) ?? null);
-    if (players.length) {
-      const who = document.createElement('span');
-      who.className = 'groove-who';
-      for (const i of players) {
-        const chip = document.createElement('span');
-        chip.className = 'groove-player';
-        chip.dataset.inst = i.id;
-        chip.dataset.family = i.family.id;
-        chip.style.setProperty('--fam', i.family.color);
-        chip.textContent = `${i.emoji} ${i.name}`;
-        who.append(chip);
-      }
-      text.append(who);
-    }
-    if (advanced) {
-      const info = document.createElement('span');
-      info.className = 'lib-info groove-parts';
-      info.textContent = grooveInfo(g, beat);
-      text.append(info);
-    }
-    b.append(thumbnail(beat), text);
-    // ▶ beside the card plays a short sample without opening it (Ben, 2026-10-12).
-    const hear = document.createElement('button');
-    hear.type = 'button';
-    hear.className = 'chip-dark groove-hear';
-    hear.dataset.hear = g.id;
-    showHearKey(hear);
-    li.append(b, hear);
-    return li;
-  }
-  // ── A groove's sample in the chooser: one pass, at most SAMPLE_SECONDS ──
-  // Played as Song mode plays a beat (beatPlan, soundHit), so there is no
-  // second player. One thing plays at a time: the beat stops (a groove tried
-  // in the keys view stays on screen) and a song stops. ■, another ▶, picking
-  // a groove or closing the dialog ends it.
-  // 🎧 From a song's ▶ on each part plays a beat of its own the same way
-  // (hearBeat): one thing at a time, and its `onEnd` hears when it stops.
-  let sample = null;   // {id, run (the engine's, on a planned list), timer, onEnd, pattern (the beat heard)}
-  function showHearKey(b) {
-    const g = GROOVES.find((x) => x.id === b.dataset.hear);
-    const on = sample?.id === b.dataset.hear;
-    b.textContent = on ? '■' : '▶';
-    b.setAttribute('aria-pressed', String(on));
-    b.setAttribute('aria-label', on ? `Stop the ${g?.name ?? ''} sample` : `Hear a bit of ${g?.name ?? 'this groove'}`);
-  }
-  const showHearKeys = () => { for (const b of el.grooveList.querySelectorAll('[data-hear]')) showHearKey(b); };
-  function stopSample() {
-    if (!sample) return;
-    clearTimeout(sample.timer);
-    sample.run?.stop();   // its voices fade
-    const { onEnd, pattern: heard } = sample;
-    if (heard) letGo((m) => m.p === heard);
-    sample = null;
-    showHearKeys();
-    onEnd?.();
-  }
-  // Plays one pass of a beat (`raw`, as stored), at most `seconds` of it,
-  // as `id`; the same id again stops it.
-  async function hearBeat(id, raw, { seconds: most = SAMPLE_SECONDS, onEnd } = {}) {
-    const again = sample?.id === id;
-    stopSample();
-    if (again) return;   // ■: the same ▶ again stops it
-    stop();              // the beat, or a ▶ still loading its sounds
-    deps.onPlay?.();     // a song playing stops
-    const mine = { id, run: null, timer: 0, onEnd };
-    sample = mine;
-    showHearKeys();
-    const plan = beatPlan(raw);
-    mine.pattern = plan.pattern;
-    await prepareBeats([plan.pattern]);
-    if (sample !== mine) return;   // stopped while its sounds loaded
-    const ctx = audio.wake();
-    const t0 = ctx.currentTime + 0.05;
-    const seconds = Math.min(plan.seconds, most);
-    // The whole pass is booked on the first tick, as one list.
-    const events = plan.hits.filter((h) => h.time < seconds)
-      .map((h) => ({ at: t0 + h.time, pattern: plan.pattern, row: h.row, loud: h.loud, note: h.note, len: h.len, dest: audio.master, key: h.row }));
-    mine.run = engine.play({ list: { events }, lookahead: seconds + 1, onStop: () => { if (sample === mine) stopSample(); } });
-    mine.run.tick();
-    logEvent('beat', { action: 'sample', bpm: plan.pattern.bpm, bars: plan.pattern.bars, seconds: Math.round(seconds * 10) / 10 });
-    mine.timer = setTimeout(() => { if (sample === mine) stopSample(); }, (seconds + 0.4) * 1000);
-  }
-  const playSample = (g) => hearBeat(g.id, grooveBeat(g, personId, hasClip));
-  function showFold(sec, open) {
-    sec.head.setAttribute('aria-expanded', String(open));
-    sec.head.querySelector('.emoji-all-caret').textContent = open ? '▾' : '▸';
-    sec.box.classList.toggle('open', open);
-    sec.list.hidden = !open;
-  }
-  function renderGrooves() {
-    el.grooveList.replaceChildren(...GROOVE_GROUPS.map((group) => {
-      const grooves = GROOVES.filter((g) => g.group === group.id);
-      const box = document.createElement('section');
-      box.className = 'emoji-all-sec groove-sec';
-      const h = document.createElement('h3');
-      h.className = 'emoji-all-h';
-      const head = document.createElement('button');
-      head.type = 'button';
-      head.className = 'emoji-all-group';
-      head.dataset.grooveGroup = group.id;
-      const list = document.createElement('ul');
-      list.className = 'lib-list';
-      list.id = `groove-group-${group.id}`;
-      head.setAttribute('aria-controls', list.id);
-      const caret = document.createElement('span');
-      caret.className = 'emoji-all-caret';
-      caret.setAttribute('aria-hidden', 'true');
-      const label = document.createElement('span');
-      label.className = 'emoji-all-name';
-      label.textContent = `${group.emoji} ${group.name}`;
-      const count = document.createElement('span');
-      count.className = 'emoji-all-count';
-      count.textContent = String(grooves.length);
-      count.setAttribute('aria-label', `${grooves.length} grooves`);
-      head.append(caret, label, count);
-      h.append(head);
-      list.append(...grooves.map(grooveCard));
-      box.append(h, list);
-      showFold({ box, head, list }, grooveFolds.has(group.id));
-      return box;
-    }));
-  }
-  // `from`: the button that opened it, which gets the focus back.
-  function openGrooves(from) {
-    el.grooveNote.textContent = '';
-    showGrooveHow();
-    renderGrooves();
-    deps.onGroovesOpen?.();   // 🎧 From a song's card shows for this person's level
-    openDialog(el.grooves, from ? { returnTo: () => from } : undefined);
-  }
-
-  // A groove loads into the scratch (ADR 0020), so nothing in 🗂️ Beats is
-  // copied or overwritten, and the scratch opens; or, with ➕, its hits join
-  // the open beat. Undo puts back the beat that was open and the scratch as
-  // it was.
-  let grooveAdds = false;   // the dialog's choice: into the scratch (off) or add to this one
-  // In the keys a groove always loads into the scratch.
-  const adding = () => grooveAdds && !!pattern && slot !== 'dj';
-  function showGrooveHow() {
-    // In the keys a groove plays behind you: there is nothing to choose.
-    el.grooveHow.hidden = slot === 'dj';
-    for (const b of el.grooveHow.querySelectorAll('[data-how]')) {
-      b.setAttribute('aria-pressed', String((b.dataset.how === 'add') === adding()));
-      if (b.dataset.how === 'add') b.disabled = !pattern;
-    }
-    const kept = onScratch() ? '' : ' Yours stays in 🗂️ Beats.';
-    el.grooveHint.textContent = slot === 'dj'
-      ? `Tap one to load it into your scratch beat and play along: ▶ Play plays it behind you, ● Record adds your hits, and 💾 Keep saves it.${kept}`
-      : adding()
-      ? 'Adds the groove’s hits to the beat on screen. Nothing is turned off, and Undo takes them back out.'
-      : `Loads the groove into your scratch beat to play with. 💾 Keep saves it in 🗂️ Beats.${kept}`;
-  }
-  el.grooveHow.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-how]');
-    if (!b) return;
-    grooveAdds = b.dataset.how === 'add';
-    showGrooveHow();
-  });
-  function pickGroove(button) {
-    const g = GROOVES.find((x) => x.id === button.dataset.groove);
-    if (!g) return;
-    if (adding()) {
-      const before = snapshot();
-      const { rows, added } = mergeGroove(pattern.rows, grooveBeat(g, personId, hasClip).rows, bar(), pattern.bars, grooveShape(g));
-      el.grooves.close();
-      const had = pattern.rows.length;
-      pattern.rows = rows;
-      if (playing()) for (const r of rows.slice(had)) prepare(deps.clipById(r.clipId));   // new rows join from their next pill
-      save();
-      render();
-      deps.onBeatChange?.();
-      offerUndo({ before, pattern, groove: g.name, added });
-      undoBanner?.focus();
-      return;
-    }
-    el.grooves.close();
-    loadGroove(g);
-    if (slot !== 'dj') undoBanner?.focus();
-  }
-
-  // The groove into the scratch, which opens. With ⌨️ Keys on it opens
-  // stopped ("opening a groove in the beat builder should open stopped"),
-  // and ▶ Play plays it behind the keys; on Beats a beat playing carries on.
-  // A scratch with hits is replaced, so the line says so, with Undo (Keys
-  // off) or ↩️ Beat (Keys on).
-  function loadGroove(g) {
-    const old = scratchSaved();
-    const was = {
-      before: structuredClone(pattern),
-      scratchBefore: old ? structuredClone(old) : null,
-      groove: g.name,
-      replaced: hasHits(old),
-    };
-    const resume = slot !== 'dj' && playing();
-    queued = null;
-    stop();
-    pattern = { ...grooveBeat(g, personId, hasClip), id: old?.id ?? scratchId(personId), name: g.name };
-    save();
-    loaded = was;
-    render();
-    deps.onBeatChange?.();
-    if (resume) play();
-    logEvent('beat', { action: 'groove', replaced: was.replaced });
-    if (slot !== 'dj') offerUndo({ ...was, pattern });
-  }
-  // Undo of a groove loaded: the scratch as it was, and the beat that was
-  // open before (the scratch, or a beat in 🗂️ Beats).
-  function undoLoad(was) {
-    loaded = null;
-    if (was.scratchBefore) deps.library.put(was.scratchBefore);
-    else if (scratchSaved()) deps.library.remove(scratchSaved().id);
-    const back = was.before && !isScratch(was.before) && library().find((b) => b.id === was.before.id);
-    openBeat(back ? cleanPattern(back, personId) : null, { resume: slot !== 'dj' });
-  }
-
-  el.grooveList.addEventListener('click', (e) => {
-    const head = e.target.closest('[data-groove-group]');
-    if (head) {
-      const id = head.dataset.grooveGroup;
-      const open = !grooveFolds.has(id);
-      if (open) grooveFolds.add(id); else grooveFolds.delete(id);
-      showFold({ box: head.closest('section'), head, list: el.grooveList.querySelector(`#groove-group-${id}`) }, open);
-      return;
-    }
-    const hear = e.target.closest('[data-hear]');
-    if (hear) { const g = GROOVES.find((x) => x.id === hear.dataset.hear); if (g) playSample(g); return; }
-    const b = e.target.closest('[data-groove]');
-    if (b) { stopSample(); pickGroove(b); }
-  });
-
-  // ── The keys: a groove just loaded (Ben, 2026-10-12; ADR 0020) ──
-  // The keys view shows a line while the scratch holds a groove just loaded
-  // and nothing has changed it yet: `trying()`. ↩️ Beat there is the
-  // groove's Undo (putTrialAway). Recording onto it or changing it ends the
-  // line; the groove stays in the scratch.
-  const trying = () => (loaded && onScratch() ? { groove: loaded.groove, replaced: loaded.replaced } : null);
-  function putTrialAway() {
-    if (!loaded) return;
-    stop();
-    undoLoad(loaded);
-  }
-  // 💃 Grooves sits in the beat bar on both screens (Ben, 2026-10-12).
-  for (const bar of el.beatBars ?? []) {
-    const b = bar.querySelector('[data-beat-grooves]');
-    b?.addEventListener('click', () => openGrooves(b));
-  }
-  // ── 🗂️ Beats: every saved beat, to open, 📌 pin, duplicate or delete ──
-
-  let deleteAsked = null;
-  function openLibrary(from) {
-    el.libNote.textContent = '';
-    deleteAsked = null;
-    audioSaver.reset();   // a file made for another beat, waiting to be sent, is forgotten
-    renderLibrary();
-    openDialog(el.library, { returnTo: () => from });
-  }
-
-  function renderLibrary() {
-    const beats = library();
-    el.libSound.disabled = !pattern;   // 🔊 makes the open beat a sound: with none open, nothing to make
-    el.libAudio.disabled = !pattern;   // ⬇️ saves it as an audio file: likewise
-    el.libEmpty.hidden = beats.length > 0;
-    el.libList.replaceChildren(...beats.map((beat) => {
-      const item = document.createElement('li');
-      item.className = 'lib-beat';
-      item.dataset.id = beat.id;
-      const open = beat.id === pattern?.id;
-      item.classList.toggle('current', open);
-
-      // The whole card opens it.
-      const openBtn = document.createElement('button');
-      openBtn.type = 'button';
-      openBtn.className = 'lib-open';
-      openBtn.dataset.load = beat.id;
-      const name = document.createElement('span');
-      name.className = 'lib-name';
-      name.textContent = beat.name;
-      const info = document.createElement('span');
-      info.className = 'lib-info';
-      const bars = beat.bars || 1;
-      info.textContent = open ? 'Open now' : `${beat.rows.length} ${beat.rows.length === 1 ? 'sound' : 'sounds'} · ${beat.bpm} BPM${bars > 1 ? ` · ${bars} bars` : ''}`;
-      const text = document.createElement('span');
-      text.className = 'lib-text';
-      text.append(name, info);
-      openBtn.append(thumbnail(beat), text);
-      openBtn.setAttribute('aria-label', open ? `${beat.name}, open now` : `Open ${beat.name}`);
-
-      // 📌 pins the beat to the pattern chips (up to MAX_PINS), and unpins it.
-      const pin = document.createElement('button');
-      pin.type = 'button';
-      pin.className = 'chip-dark lib-pin';
-      pin.dataset.pin = beat.id;
-      pin.textContent = '📌';
-      pin.setAttribute('aria-pressed', String(isPinned(beat)));
-      pin.setAttribute('aria-label', isPinned(beat) ? `Unpin ${beat.name} from the chips` : `Pin ${beat.name} to the chips`);
-      const dup = document.createElement('button');
-      dup.type = 'button';
-      dup.className = 'chip-dark';
-      dup.dataset.dup = beat.id;
-      dup.textContent = '⧉';
-      dup.setAttribute('aria-label', `Duplicate ${beat.name}`);
-      const del = document.createElement('button');
-      del.type = 'button';
-      del.className = 'chip-dark';
-      del.dataset.delete = beat.id;
-      const asking = deleteAsked === beat.id;
-      del.textContent = asking ? 'Delete?' : '🗑️';
-      del.classList.toggle('armed', asking);
-      del.setAttribute('aria-label', asking ? `Tap again to delete ${beat.name}` : `Delete ${beat.name}`);
-      const save = document.createElement('button');
-      save.type = 'button';
-      save.className = 'chip-dark';
-      save.dataset.export = beat.id;
-      save.textContent = '📄';
-      save.setAttribute('aria-label', `Save ${beat.name} as a beat file`);
-
-      item.append(openBtn, pin, dup, save, del);
-      return item;
-    }));
-  }
-
-  // A beat's rows as lines of 16 dots in each sound's color, so a saved beat
-  // can be recognised at a glance.
-  function thumbnail(beat) {
-    const t = document.createElement('div');
-    t.className = 'lib-thumb';
-    t.setAttribute('aria-hidden', 'true');
-    for (const row of beat.rows.slice(0, 4)) {
-      const line = document.createElement('div');
-      const clip = deps.clipById(row.clipId);
-      if (clip) line.style.setProperty('--pill', deps.colorOf(clip));
-      line.style.setProperty('--vol', String(row.muted ? 0 : rowLevel(row)));   // a quieter row draws fainter
-      for (const on of row.steps.slice(0, 16)) {
-        const dot = document.createElement('span');
-        if (on) dot.className = 'on';
-        line.append(dot);
-      }
-      t.append(line);
-    }
-    return t;
-  }
-
-  el.library.addEventListener('click', (e) => {
-    const load = e.target.closest('[data-load]');
-    if (load) {
-      const beat = library().find((b) => b.id === load.dataset.load);
-      if (beat && beat.id !== pattern?.id) openBeat(cleanPattern(beat, personId));
-      el.library.close();
-      return;
-    }
-    const exp = e.target.closest('[data-export]');
-    if (exp) {
-      const beat = library().find((b) => b.id === exp.dataset.export);
-      if (!beat) return;
-      const { file, dropped } = beatToFile(cleanPattern(beat, beat.personId), deps.kitIds());
-      const safe = (beat.name || 'beat').replace(/[^\p{L}\p{N} _-]+/gu, '').trim() || 'beat';
-      downloadBlob(new Blob([JSON.stringify(file, null, 1)], { type: 'application/json' }), `${safe}.beat.json`);
-      el.libNote.textContent = dropped
-        ? `Saved “${beat.name}” as a file. ${dropped} recorded ${dropped === 1 ? 'sound stays' : 'sounds stay'} behind: only presets go in a beat file.`
-        : `Saved “${beat.name}” as a file.`;
-      return;
-    }
-    const pin = e.target.closest('[data-pin]');
-    if (pin) {
-      togglePin(pin.dataset.pin);
-      return;
-    }
-    const dup = e.target.closest('[data-dup]');
-    if (dup) {
-      const beat = library().find((b) => b.id === dup.dataset.dup);
-      if (!beat) return;
-      const copy = { ...structuredClone(beat), id: newId('beat'), name: uniqueName(beat.name), created: Date.now(), saved: Date.now() };
-      delete copy.pinned;   // a copy is a new beat: not pinned
-      deps.library.put(copy);
-      el.libNote.textContent = `Made a copy: “${copy.name}”.`;
-      renderLibrary();
-      return;
-    }
-    const del = e.target.closest('[data-delete]');
-    if (del) {
-      // Tap once to ask, again to delete, as with deleting a sound.
-      if (deleteAsked !== del.dataset.delete) { deleteAsked = del.dataset.delete; renderLibrary(); return; }
-      deleteAsked = null;
-      const beat = library().find((b) => b.id === del.dataset.delete);
-      deps.library.remove(del.dataset.delete);
-      el.libNote.textContent = beat ? `Deleted “${beat.name}”.` : '';
-      // Deleting the open beat opens the scratch.
-      if (beat) closeEverywhere(beat.id);
-      renderLibrary();
-      (el.libList.querySelector('[data-load]') || el.libSound).focus();
-    }
-  });
-
-  // 📌 in 🗂️ Beats: pins a beat to the chips' first spots, in the order pinned,
-  // or unpins it. Pinning is not using it: its `saved` stamp stays. With
-  // MAX_PINS pinned, another waits until one is unpinned.
-  function togglePin(id) {
-    const beat = library().find((b) => b.id === id);
-    if (!beat) return;
-    const record = structuredClone(beat);
-    if (isPinned(beat)) {
-      delete record.pinned;
-      el.libNote.textContent = `Unpinned “${beat.name}”.`;
-    } else if (library().filter(isPinned).length >= MAX_PINS) {
-      el.libNote.textContent = `${MAX_PINS} beats are pinned already: unpin one first.`;
-      return;
-    } else {
-      record.pinned = Date.now();
-      el.libNote.textContent = `Pinned “${beat.name}” to the chips.`;
-    }
-    deps.library.put(record);
-    renderLibrary();
-    showChips();
-    el.libList.querySelector(`[data-pin="${CSS.escape(id)}"]`)?.focus();
-  }
-
-  // 📥 Load a beat file: it joins the list under a name no other beat has,
-  // and opens on this screen.
-  el.libFile?.addEventListener('change', async () => {
-    const f = el.libFile.files?.[0];
-    el.libFile.value = '';
-    if (!f) return;
-    try {
-      if (f.size > MAX_BEAT_FILE_BYTES) throw new Error('That file is too big to be a beat.');
-      const beat = beatFromFile(await f.text(), personId, deps.kitIds(), unsignedSignature(personId));
-      const now = Date.now();
-      Object.assign(beat, { id: newId('beat'), name: uniqueName(beat.name || freshName()), created: now, saved: now });
-      openBeat(beat);
-      el.library.close();
-      deps.announce?.(`Loaded “${beat.name}”.`);
-    } catch (err) {
-      el.libNote.textContent = err.message;
-    }
-  });
 
   // ── Save as a sound: render the beat to audio and add it as a pad ──
 
@@ -2550,7 +1810,7 @@ export function createSequencer(deps) {
 
   async function saveAsSound() {
     if (!pattern) return;
-    const beat = cutName(((onScratch() ? grooveOf(pattern)?.name : pattern.name) || freshName()), MAX_LABEL);
+    const beat = cutName(((onScratch() ? grooveOf(pattern)?.name : pattern.name) || freshName()), MAX_NAME);
     // The new pad is a remix of the beat: "Wobbly Thunder (🌀 Wonky Remix)".
     const name = deps.remixName ? deps.remixName(beat) : beat;
     el.libSound.disabled = true;
@@ -2607,10 +1867,28 @@ export function createSequencer(deps) {
     el.sigs.querySelector(`[data-sig="${CSS.escape(pattern.signature)}"]`)?.focus();
   });
 
+  // The beat maker's view of itself, for the three dialogs that work on the open
+  // beat: the sound chooser (beat-chooser.js), 💃 Grooves (beat-grooves.js) and
+  // 🗂️ Beats (beat-library.js). What they change goes through the setters.
+  const shared = {
+    el, deps, audio, engine, playing, prepare, prepareBeats, render, save, play, stop, snapshot: () => snapshot(), bar, library, offerUndo, onScratch, scratchSaved,
+    beatPlan, letGo, openBeat, showChips, closeEverywhere, freshName, uniqueName, audioSaver, openRoll,
+    get pattern() { return pattern; }, set pattern(v) { pattern = v; },
+    get loaded() { return loaded; }, set loaded(v) { loaded = v; },
+    set queued(v) { queued = v; },
+    get advanced() { return advanced; },
+    get personId() { return personId; },
+    get slot() { return slot; },
+    get undoBanner() { return undoBanner; },
+  };
+  const chooser = createChooser(shared);
+  const lib = createLibrary(shared);
+  const grooves = createGrooves(shared, { thumbnail: lib.thumbnail });
+
   setupDialog(el.chooser);
   setupDialog(el.library);
   setupDialog(el.grooves);
-  el.grooves.addEventListener('close', stopSample);
+  el.grooves.addEventListener('close', grooves.stopSample);
 
   // ── Recording into the beat, for the keys ──
 
@@ -2827,9 +2105,9 @@ export function createSequencer(deps) {
   // (only beat `p`'s, when given). They go once they ring out.
   const endMix = (dests, p) => letGo((m) => dests.includes(m.dest) && (!p || m.p === p));
   return { setPerson, show, tempo: () => shape().bpm, render, play, stop, playing, grid, beatClock, rowFor, addRowFor, addSnaps, snapshot, restore, setClick, beat,
-    cyclePill, clearRow, dropRow, toggleRing, ringTool, openLibrary, metronome, clickAt, setGrow, setTempo, setBars, setSignature, signature: () => sigOf(), advanced: () => advanced,
-    beatPlan, prepareBeats, soundHit, endMix, thumbnail, levelOf, setLevel, putLevel, toggleMute, levelState,
-    trying, putTrialAway, keep, keepScratch, onScratch, sampling: () => sample?.id ?? null, hearBeat, stopHearing: stopSample,
+    cyclePill, clearRow, dropRow, toggleRing, ringTool, openLibrary: lib.openLibrary, metronome, clickAt, setGrow, setTempo, setBars, setSignature, signature: () => sigOf(), advanced: () => advanced,
+    beatPlan, prepareBeats, soundHit, endMix, thumbnail: lib.thumbnail, levelOf, setLevel, putLevel, toggleMute, levelState,
+    trying: grooves.trying, putTrialAway: grooves.putTrialAway, keep, keepScratch, onScratch, sampling: () => grooves.sample()?.id ?? null, hearBeat: grooves.hearBeat, stopHearing: grooves.stopSample,
     // A beat in 🗂️ Beats opened by id (🎧 From a song's 🥁 Open part A); false when it is not there.
     openSaved: (id) => { const saved = library().find((b) => b.id === id); if (saved) openBeat(cleanPattern(saved, personId), { resume: false }); return !!saved; },
     lockChips, queuedBeat: () => (queued ? { ...queued } : null), openMixer, toggleSolo, setFx: setRowFx, setMaster, setMasterFx,

@@ -84,6 +84,7 @@ const ONLY = [
   ['the WAV encoder', /function encodeWav\b/, ['wav.js']],
   // keys-kids.md
   ['🔔 Let it ring: one rule, three players', /\bringOver\b/, ['audio.js', 'beat-engine.js', 'rhythm.js']],
+  ['the beat maker\'s dialogs are made by the beat maker', /(?<!function )\b(createChooser|createGrooves|createLibrary)\(/, ['sequencer.js']],
   ['one beat engine, made by the composition root', /(?<!function )\bcreateBeatEngine\(/, ['app.js']],
   ['Live takes are made by the keys panel', /\bcreateTakes\(/, ['dj-takes.js', 'dj.js']],
   ['the ✏️ Layout editors are built by the keys panel', /createKeysEditor|createTouchEditor/, ['dj-keys.js', 'dj-touch.js', 'dj.js']],

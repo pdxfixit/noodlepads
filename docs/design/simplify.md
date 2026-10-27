@@ -287,7 +287,7 @@ Each touches something a test here cannot fully check (a stored record, the clou
 | Risk | Module-level state shared across files, and an import cycle to avoid (`sheet.js` ↔ `sheet-voices.js`). No behavior change. Do C4 first. |
 | Guards | `tests/sound-sheet.test.mjs` (1,202 lines), `tests/layers.test.mjs`, `tests/voice-knobs.test.mjs`, `just look sheet-edit`, `sheet-own`, `wave-own`. Proof: an architecture check that `sheet-voices.js` and `sheet-make.js` import nothing from `sheet.js`. |
 
-### C14. Split `dj.js`: Live takes · 90 min
+### C14. Split `dj.js`: Live takes · 90 min (done, 2026-10-27)
 
 | | |
 |---|---|
@@ -297,7 +297,7 @@ Each touches something a test here cannot fully check (a stored record, the clou
 | Risk | Closures over `createDJ`'s state; replay is on the audio clock since the council round's fix (2026-10-26, `audio.book`), so move it as is. |
 | Guards | `tests/app.test.mjs` Live, `tests/rhythm.test.mjs` (`planTake`), `just look live`. Proof: an architecture check that only `dj.js` calls `createTakes`. |
 
-### C15. Split `sequencer.js`'s factory · 210 min
+### C15. Split `sequencer.js`'s factory · 210 min (done, 2026-10-27: `beat-chooser.js`, `beat-grooves.js`, `beat-library.js`; recording into the beat stays in `sequencer.js`)
 
 | | |
 |---|---|
