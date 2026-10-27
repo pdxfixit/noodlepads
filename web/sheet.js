@@ -881,7 +881,7 @@ export function openSheet(mode, clip = null, { returnToPad = null } = {}) {
   sheet.clip = clip;
   sheet.pending = null;
   sheet.original = mode === 'edit' ? audio.original(clip) : null;
-  sheet.previews = new Map();
+  resetPreviews();
   sheet.chain = chainOf(clip).map(editable);
   sheet.tweaks = fullTweaks(clip?.tweaks);
   litFromKnobs();
@@ -1044,7 +1044,7 @@ function cleanupSheet() {
   sheet.pending = null;
   sheet.made = null;
   sheet.original = null;
-  sheet.previews = new Map();
+  resetPreviews();
 }
 
 // ── ✨ Make one ───────────────────────────────────────────────────────
@@ -1093,7 +1093,7 @@ function makeSound() {
   sheet.trim = sheet.edits = sheet.fade = null;
   cut.recorded(buffer);
   sheet.original = Promise.resolve(original);
-  sheet.previews = new Map();
+  resetPreviews();
   live.on = false;
   el.sheetPlay.disabled = false;
   sheetError('');
@@ -1164,19 +1164,27 @@ async function previewVoice({ play = true } = {}) {
 const storedTweaks = () => cleanTweaks({ ...sheet.tweaks, muted: [...sheet.muted], first: sheet.knobsFirst && !plainChain() });
 
 // A render of this sheet's sound, kept by `key` (made by `make` the first
-// time). Only the last KEEP_PREVIEWS used are kept, so trying setting after
-// setting on a long recording does not fill a phone's memory; the one asked
-// for now is always kept.
+// time). Only the last KEEP_PREVIEWS tries used are kept, and apart from
+// them the last KEEP_HEADS live-loop heads (`head:` keys), so trying setting
+// after setting on a long recording does not fill a phone's memory; the one
+// asked for now is always kept.
 const KEEP_PREVIEWS = 6;
+const KEEP_HEADS = 2;
 function previewOf(key, make) {
   const job = sheet.previews.get(key) ?? make();
   sheet.previews.delete(key);
   sheet.previews.set(key, job);   // the newest last
-  for (const old of sheet.previews.keys()) {
-    if (sheet.previews.size <= KEEP_PREVIEWS) break;
-    sheet.previews.delete(old);
+  const isHead = (k) => k.startsWith('head:');
+  for (const [kind, most] of [[isHead, KEEP_HEADS], [(k) => !isHead(k), KEEP_PREVIEWS]]) {
+    const keys = [...sheet.previews.keys()].filter(kind);
+    for (const old of keys.slice(0, Math.max(0, keys.length - most))) sheet.previews.delete(old);
   }
   return job;
+}
+
+// A new sound, trim or recording: every render of the old one goes.
+function resetPreviews() {
+  sheet.previews = new Map();
 }
 
 // The render of the sound as it is now, if one was started.
@@ -1547,7 +1555,7 @@ async function acceptAudio(blob, origin) {
     sheet.made = null;
     renderMake();
     sheet.original = Promise.resolve(original);
-    sheet.previews = new Map();
+    resetPreviews();
     el.sheetPlay.disabled = false;
     setVoicesReady(true);
     renderAmount();
@@ -1769,7 +1777,7 @@ export function initSheet() {
     setCut({ trim, edits, fade }, buffer) {
       Object.assign(sheet, { trim, edits, fade });
       sheet.original = Promise.resolve(buffer);
-      sheet.previews = new Map();
+      resetPreviews();
       live.on = false;
       if (advanced()) renderNote();   // a note found before the trim is now stale
     },

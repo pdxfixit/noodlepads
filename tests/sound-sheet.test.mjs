@@ -1455,3 +1455,37 @@ test('a knob moved, then a live slider\'s first drag: its loop is rendered alrea
     await advanced(false);
   }
 });
+
+// The live loop's head renders (one after each try, on a sound with live
+// steps) are kept apart from the tries themselves, so six tries back is
+// still instant: the very render heard then plays again.
+test('six tries back is still instant on a sound with live steps: its render is the one heard then', async () => {
+  const { state } = await import('../web/state.js');
+  const { currentPerson } = await import('../web/board.js');
+  const { renderPads } = await import('../web/pads.js');
+  await advanced(true);
+  const clip = { id: 'user-tries-2', personId: currentPerson().id, label: 'Hum', emoji: '🐝', color: 'red', created: 1, blob: new Blob(['x']), mime: 'audio/webm', voice: 'normal', fx: [{ type: 'echo', repeats: 3, gap: 0.25 }] };
+  state.userClips.push(clip);
+  renderPads();
+  const heard = [];
+  const realStart = audio.start;
+  audio.start = (id, sound) => { if (id === 'preview') heard.push(sound.buffer); audio.playing.set(id, { fake: true }); };
+  try {
+    if (!document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+    audio.forget(clip.id);
+    audio.originals.set(clip.id, Promise.resolve(plain));
+    audio.originalTrims.set(clip.id, '');
+    pads().find((p) => p.dataset.id === clip.id).parent.querySelector('[data-edit]').dispatch('click');
+    await page.settle();
+    const tryPitch = async (v) => { const pitch = knob('pitch'); pitch.value = String(v); pitch.dispatch('input'); pitch.dispatch('change'); await page.settle(); return heard.at(-1); };
+    const first = await tryPitch(1);
+    for (let v = 2; v <= 6; v++) await tryPitch(v);
+    assert.ok(await tryPitch(1) === first, 'the render heard six tries ago plays again');
+  } finally {
+    audio.start = realStart;
+    $('#sheet').close();
+    state.userClips = state.userClips.filter((c) => c.id !== clip.id);
+    renderPads();
+    await advanced(false);
+  }
+});
