@@ -643,15 +643,27 @@ export async function removeProfile(personId, key, pin) {
   logEvent('cloud', { removed: true });
 }
 
+// Leaving never loses work: a sound pushed only from another device is in the
+// cloud copy and nowhere here until a sync brings it. So their latest comes
+// here first, and the cloud copy is deleted only after that sync came back ok;
+// otherwise nothing is deleted. With no key on this device the PIN opens one.
+export const LATEST_TEXT = "Couldn't bring their latest here; try again.";
+async function bringLatest(personId, pin) {
+  if (!keyOf(personId) && pin) await unlock(personId, pin);
+  if (!await syncNow(personId)) throw new Error(LATEST_TEXT);
+}
+
 // Deletes the profile from the cloud (its key, and its PIN if it has one).
-// This device keeps everything.
+// This device keeps everything, and has their latest first (bringLatest).
 export async function deleteFromCloud(personId, pin) {
+  await bringLatest(personId, pin);
   await removeProfile(personId, keyOf(personId), pin);
   await dropLink(personId);
 }
 
 // 📴 Offline (this device only). On: the cloud copy is deleted first (it asks
-// twice, and wants the PIN), and the person is never put back by itself.
+// twice, and wants the PIN), after their latest is brought here, and the
+// person is never put back by itself.
 // Off: they go to the cloud on the next sync, which starts now.
 export async function setOffline(personId, on, pin) {
   if (on) {

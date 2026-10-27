@@ -677,8 +677,10 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   person stored with one of the ten before 2026-10-19 takes the nearest as
   it is read, `OLD_PERSON_COLORS`), ☁️ In the cloud, 🔒 PIN and Delete.
   ☁️ In the cloud is a switch: on puts them in the cloud now, even with
-  nothing made; off asks twice (and for the PIN), deletes the cloud copy and
-  keeps them here only (📴 Offline); a tap anywhere else takes the first tap
+  nothing made; off asks twice (and for the PIN), brings their latest here first, then
+  deletes the cloud copy and keeps them here only (📴 Offline); if their
+  latest can't be brought ("Couldn't bring their latest here; try again.")
+  nothing is deleted; a tap anywhere else takes the first tap
   back. Under it, when they are in the cloud, 🔄 Sync now and 🔗 Share… (both
   ask for the PIN first on a visit that hasn't had it), and for everyone ⬇️
   Back up: one tap saves the file 🗂️ See all's ⬇️ Export a backup makes

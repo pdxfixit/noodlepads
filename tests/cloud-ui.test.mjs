@@ -17,6 +17,7 @@ import { readFileSync } from 'node:fs';
 import { isFunName, funName } from '../web/names.js';
 import { PIN_RESET_EMAIL } from '../web/contact.js';
 import { FakeAudioBuffer, fakeBuffer } from './helpers.mjs';
+import { fakeIndexedDB } from './fake-idb.mjs';
 
 let page;
 let $;
@@ -372,8 +373,17 @@ test('☁️ In the cloud switched off asks twice, deletes the cloud copy, keeps
   sw.dispatch('click');
   assert.match($('#profile-cloud-text').textContent, /Tap again to take them out of the cloud/);
   assert.ok(cloud.inCloud(id), 'one tap does nothing yet');
+  // Leaving brings their latest here first, and a sync needs storage, which this page has not got until now.
+  const { db } = await import('../web/store.js');
+  globalThis.indexedDB = fakeIndexedDB();
+  await db.open();
+  for (const r of state.peopleEdits.values()) await db.put('people', r);
+  for (const l of state.cloud.values()) await db.put('cloud', l);
+  for (const r of state.savedBeats) await db.put('beats', r);
   sw.dispatch('click');
   await settle();
+  db.handle = null;
+  delete globalThis.indexedDB;
   assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM profiles WHERE id = ?', id)[0].n, 0, `gone from the cloud: ${$('#profile-cloud-text').textContent}`);
   assert.ok(state.savedBeats.some((b) => b.personId === id), 'still here');
   assert.equal(state.peopleEdits.get(id).offline, true);

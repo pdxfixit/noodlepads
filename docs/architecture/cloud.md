@@ -166,7 +166,7 @@ The 13 per-person stores that sync: `clips, overrides, orders, patterns, beats, 
 
 | Word | Where | What it does |
 |---|---|---|
-| 📴 Offline (this device only) | `peopleEdits` record `offline: true`; `cloud.js isOffline`, `setOffline` | the person never goes up; switching it on deletes the cloud copy |
+| 📴 Offline (this device only) | `peopleEdits` record `offline: true`; `cloud.js isOffline`, `setOffline` | the person never goes up; switching it on syncs first (`bringLatest`), then deletes the cloud copy; a failed sync deletes nothing |
 | no network | `CloudError` status 0 (`cloud-api.js`) | syncs wait; `unlock` checks the PIN on the device; `cloudThere` re-asks after 60 s |
 | the offline copy | `sw.js`, `offline.js` | the app opens with no network after one visit |
 
