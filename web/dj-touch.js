@@ -97,14 +97,14 @@ function playBand(b, i, clips, deps) {
   head.id = `touch-head-${i}`;
   const name = groupLabel(b.group, deps.kitGroups());
   head.textContent = name;
-  // Notes, Chords and Bass say who plays them, as a small picture after the
-  // name (Ben, 2026-10-27); the words are in the heading's label and tooltip.
+  // Notes, Chords and Bass say who plays them, in parentheses after the
+  // name (Ben, 2026-10-27), "Chords (Synth)"; the heading's label says it in full.
   if (hasPicker(b.group)) {
     const who = bandInstrument(b, deps.clipById);
     const pic = document.createElement('span');
     pic.className = 'touch-head-inst';
     pic.setAttribute('aria-hidden', 'true');
-    pic.textContent = who.emoji;
+    pic.textContent = `(${who.name})`;
     head.append(' ', pic);
     head.title = `${name.replace(/^\S+ /, '')}: played by ${who.name}`;
     head.setAttribute('aria-label', head.title);

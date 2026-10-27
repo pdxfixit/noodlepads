@@ -2952,7 +2952,8 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 .dj-touch[hidden], .dj-keys[hidden] { display: none; }
 .touch-band { display: grid; gap: 6px; min-width: 0; }
 .touch-head { margin: 0; font: 800 0.8rem/1 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: rgb(255 255 255 / 0.8); }
-.touch-head-inst { letter-spacing: 0; }
+.touch-head { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.touch-head-inst { letter-spacing: 0; text-transform: none; font-weight: 700; }
 .touch-tiles { --across: 4; display: grid; grid-template-columns: repeat(var(--across), minmax(0, 1fr)); gap: 8px; }
 .touch-band[data-size="s"] .touch-tiles { --across: 5; }
 .touch-band[data-size="l"] .touch-tiles { --across: 2; }
