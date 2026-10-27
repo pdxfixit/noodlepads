@@ -102,3 +102,26 @@ test('▶ Play on Beats, then a song started while its sounds load: the beat sta
   assert.ok(seq.held().includes(y), "the song's other beat keeps its sound");
   $('#song-play').dispatch('click');
 });
+
+// prepareBeats holds the prune back only while its caller books: whatever
+// happens to the load (a sound that throws as it is asked for), the hold
+// ends, and a later ▶ Play tidies up again.
+test('a load that throws still lets ▶ Play tidy up afterwards', async () => {
+  const { audio } = await import('../web/audio.js');
+  const load = audio.load;
+  audio.load = () => { throw new Error('a broken sound'); };
+  try {
+    await seq.prepareBeats([other]).catch(() => {});
+  } catch { /* thrown at once */ } finally {
+    audio.load = load;
+  }
+  await seq.prepareBeats([other]);   // Y held again
+  await page.settle();
+  $('#beats-toggle').dispatch('click');
+  if (playing()) $('#seq-play').dispatch('click');
+  $('#seq-play').dispatch('click');
+  await page.settle();
+  assert.ok(playing());
+  assert.deepEqual(seq.held(), [mine.rows[0].clipId], 'only the open beat\'s sound');
+  $('#seq-play').dispatch('click');
+});

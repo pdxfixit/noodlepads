@@ -3400,13 +3400,14 @@ export function createSequencer(deps) {
     return { pattern: p, seconds, hits };
   }
   // Loads every sound the beats use (fresh: a voice may have changed),
-  // keeping the ones a beat or song playing now still needs. Its caller
-  // books hits from `ready` right after, so play() leaves `ready` whole
-  // until then (`preparing`).
+  // keeping the ones a beat or song playing now still needs. play() leaves
+  // `ready` whole until a task after this settles (`preparing`), so a
+  // caller must book its hits as soon as it resolves, in the same turn.
   function prepareBeats(patterns) {
     preparing++;
-    const done = refresh(patterns.flatMap((p) => p.rows));
-    done.then(() => setTimeout(() => { preparing--; }, 0));
+    let done;
+    try { done = refresh(patterns.flatMap((p) => p.rows)); } catch (err) { done = Promise.reject(err); }
+    done.finally(() => setTimeout(() => { preparing--; }, 0)).catch(() => {});   // whatever happened
     return done;
   }
   // 🎼 Song is done with these graphs: those into its lanes' gains `dests`
