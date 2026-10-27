@@ -122,13 +122,6 @@ export function defaultDeck(own, kit) {
   return deck;
 }
 
-// A key or touch event's time on the audio clock, in seconds, moved earlier
-// by the output latency: kids play to what they hear, which comes out late.
-// `stamp` is ctx.getOutputTimestamp() (or now on both clocks).
-export function hitTime(eventMs, stamp, latency = 0) {
-  return stamp.contextTime + (eventMs - stamp.performanceTime) / 1000 - Math.min(0.2, Math.max(0, latency));
-}
-
 // The forgiving snap. A hit {t, row} (audio-clock seconds) becomes a pill
 // {row, step, n}, where step is the pill index in the beat and n counts
 // pills since t0 (so n / total is the pass). Rules, in time order:
@@ -194,17 +187,6 @@ export function tapTempo(times, groupPills = 4, { common = [], min = 60, max = 1
   const near = common.reduce((best, c) => (Math.abs(c - bpm) < Math.abs(best - bpm) ? c : best), Infinity);
   return Math.abs(near - bpm) <= 2 ? near : bpm;
 }
-
-// New rows with each snapped pill turned on. Never turns a pill off and
-// never touches loud hits (accents).
-export function applySnaps(rows, snaps) {
-  const next = rows.map((r) => ({ ...r, steps: [...r.steps] }));
-  for (const { row, step } of snaps) if (next[row]) next[row].steps[step] = true;
-  return next;
-}
-
-// The count-in: one bar's beats for a time signature's beat groups.
-export const countInBeats = (groups) => groups.length;
 
 // ── Stored records, cleaned (the app's own and anything from a backup) ──
 

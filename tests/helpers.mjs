@@ -3,6 +3,9 @@
 
 import { deflateRawSync } from 'node:zlib';
 import { crc32 } from '../web/zip.js';
+import { rowLevel } from '../web/row-volume.js';
+import { masterLevel } from '../web/mixer.js';
+import { sameNotes } from '../web/notes.js';
 
 const enc = new TextEncoder();
 
@@ -180,4 +183,21 @@ export class SimContext {
     }
     return Promise.resolve(out);
   }
+}
+
+// Do two beats sound the same: same tempo, same sounds, same pills on, same
+// row settings? The tests' way to say a change touched a beat (the app asks
+// the stored record, not this).
+export function samePattern(a, b) {
+  if (a.bpm !== b.bpm || (a.bars || 1) !== (b.bars || 1) || (a.swing || 0) !== (b.swing || 0) || a.rows.length !== b.rows.length) return false;
+  if (masterLevel(a) !== masterLevel(b) || (a.fx ?? null) !== (b.fx ?? null)) return false;
+  return a.rows.every((row, i) => {
+    const o = b.rows[i];
+    return row.clipId === o.clipId && row.rate === o.rate && row.ring === o.ring && row.muted === o.muted && rowLevel(row) === rowLevel(o)
+      && !!row.solo === !!o.solo && (row.fx ?? null) === (o.fx ?? null)
+      && row.steps.length === o.steps.length && row.steps.every((on, s) => on === o.steps[s])
+      && row.steps.every((_, s) => !!row.accents?.[s] === !!o.accents?.[s])
+      && !!row.melody === !!o.melody && row.steps.every((_, s) => (row.notes?.[s] ?? null) === (o.notes?.[s] ?? null))
+      && sameNotes(row.tune, o.tune);
+  });
 }

@@ -11,7 +11,7 @@
 import { instrumentsFor, instrumentById, presetInstrument, PLAYED, FAMILIES, rateOf } from './instruments.js';
 import { cleanVolume, rowLevel } from './row-volume.js';
 import { cleanFx, masterLevel, silencedBySolo } from './mixer.js';
-import { MELODY_NOTES, cleanNotes, fromLegacy, legacy, startsIn, addNote, lineOf, sameNotes, multiplyNotes } from './notes.js';
+import { MELODY_NOTES, cleanNotes, fromLegacy, legacy, startsIn, addNote, lineOf, multiplyNotes } from './notes.js';
 import { cutName } from './names.js';
 import { kitIdOf } from './model.js';
 import { SIGNATURES, barSteps } from './old-beats.js';
@@ -507,30 +507,6 @@ export function multiplyRows(rows, from, to) {
     };
     return r.melody ? cleanRow({ ...out, tune: multiplyNotes(r.tune ?? [], from, to) }) : out;
   });
-}
-
-// Do two beats sound the same: same tempo, same sounds, same pills on, same
-// row settings?
-export function samePattern(a, b) {
-  if (a.bpm !== b.bpm || (a.bars || 1) !== (b.bars || 1) || (a.swing || 0) !== (b.swing || 0) || a.rows.length !== b.rows.length) return false;
-  if (masterLevel(a) !== masterLevel(b) || (a.fx ?? null) !== (b.fx ?? null)) return false;
-  return a.rows.every((row, i) => {
-    const o = b.rows[i];
-    return row.clipId === o.clipId && row.rate === o.rate && row.ring === o.ring && row.muted === o.muted && rowLevel(row) === rowLevel(o)
-      && !!row.solo === !!o.solo && (row.fx ?? null) === (o.fx ?? null)
-      && row.steps.length === o.steps.length && row.steps.every((on, s) => on === o.steps[s])
-      && row.steps.every((_, s) => !!row.accents?.[s] === !!o.accents?.[s])
-      && !!row.melody === !!o.melody && row.steps.every((_, s) => (row.notes?.[s] ?? null) === (o.notes?.[s] ?? null))
-      && sameNotes(row.tune, o.tune);
-  });
-}
-
-// Would replacing the beat on screen lose work? Only if it has pills on and
-// is not already in the library under its name (as saved, unchanged).
-export function isUnsaved(pattern, library) {
-  if (!pattern.rows.some((r) => r.steps.some(Boolean))) return false;
-  const saved = pattern.name ? library.find((b) => b.name === pattern.name) : null;
-  return !saved || !samePattern(pattern, cleanPattern(saved, pattern.personId));
 }
 
 // Which pill an arrow key moves to from (row, step), in a grid of `rows` rows.

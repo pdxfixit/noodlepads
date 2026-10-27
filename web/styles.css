@@ -5367,13 +5367,10 @@ dialog.kids-sum :focus-visible { outline: 4px solid var(--ink); outline-offset: 
 @media (prefers-reduced-motion: reduce) { .kids-hand, .kids-mic.kids-nudge:not(.recording, .counting) { animation: none; } }
 
 /* ── ⋯ menus (overflow.js; Ben, 2026-10-12: "allow the buttons to move into a
-   sub menu where space requires it"). A line short of room gets .more-tight
-   on its box: its buttons marked data-more-word hide and ⋯ shows, 44 px like
-   the rest. The menu lists them as icon + word; a tap in it taps the real one. */
+   sub menu where space requires it"). The menu lists the buttons marked
+   data-more-word as icon + word; a tap in it taps the real one. */
 .more-btn { display: none; font-size: 1.5rem; }   /* an .icon-btn, like the buttons it holds; ⋯ is a thin glyph, drawn larger to weigh as much as an emoji */
 .more-btn[aria-expanded="true"] { background: rgb(255 255 255 / 0.14); }
-.more-tight .more-btn { display: inline-grid; }
-.more-tight [data-more-word] { display: none; }
 .more-pop {
   position: fixed;
   z-index: 60;

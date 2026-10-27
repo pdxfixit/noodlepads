@@ -1,13 +1,14 @@
-// The beat maker's pure rules for replacing a beat and moving between pills.
+// The beat maker's pure rule for moving between pills, and the helper that compares two beats.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanPattern, samePattern, isUnsaved, pillTarget } from '../web/beat.js';
+import { cleanPattern, pillTarget } from '../web/beat.js';
+import { samePattern } from './helpers.mjs';
 
 const beat = (name, rows, bpm = 100) => cleanPattern({ name, bpm, rows }, 'pip');
 const on = (...steps) => Array.from({ length: 16 }, (_, i) => steps.includes(i));
 
-// ── replacing the beat on screen ──
+// ── comparing two beats (tests/helpers.mjs) ──
 
 test('samePattern compares tempo, sounds and pills', () => {
   const a = beat('A', [{ clipId: 'x', steps: on(0, 4) }]);
@@ -16,30 +17,6 @@ test('samePattern compares tempo, sounds and pills', () => {
   assert.ok(!samePattern(a, beat('A', [{ clipId: 'y', steps: on(0, 4) }])));
   assert.ok(!samePattern(a, beat('A', [{ clipId: 'x', steps: on(0, 5) }])));
   assert.ok(!samePattern(a, beat('A', [])));
-});
-
-test('isUnsaved: an empty beat has nothing to lose', () => {
-  assert.equal(isUnsaved(beat('', []), []), false);
-  assert.equal(isUnsaved(beat('', [{ clipId: 'x', steps: [] }]), []), false);
-  assert.equal(isUnsaved(beat('Named but empty', [{ clipId: 'x', steps: [] }]), []), false);
-});
-
-test('isUnsaved: a beat with pills on that is not in the library would be lost', () => {
-  const pattern = beat('', [{ clipId: 'x', steps: on(0) }]);
-  assert.equal(isUnsaved(pattern, []), true);
-  assert.equal(isUnsaved(beat('Groove', pattern.rows), []), true);                       // named, but never saved
-  assert.equal(isUnsaved(beat('Groove', pattern.rows), [beat('Other', pattern.rows)]), true);
-});
-
-test('isUnsaved: a beat saved under its name and unchanged is safe to replace', () => {
-  const rows = [{ clipId: 'x', steps: on(0, 8) }];
-  assert.equal(isUnsaved(beat('Groove', rows), [{ ...beat('Groove', rows), id: 'beat-1' }]), false);
-});
-
-test('isUnsaved: a saved beat edited since is not safe to replace', () => {
-  const saved = { ...beat('Groove', [{ clipId: 'x', steps: on(0, 8) }]), id: 'beat-1' };
-  assert.equal(isUnsaved(beat('Groove', [{ clipId: 'x', steps: on(0, 8, 12) }]), [saved]), true);
-  assert.equal(isUnsaved(beat('Groove', [{ clipId: 'x', steps: on(0, 8) }], 140), [saved]), true);
 });
 
 // ── arrow keys between pills ──

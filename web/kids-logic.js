@@ -197,8 +197,6 @@ export function tempoAfter(bpm, tapped) {
 }
 // Which tempo button is lit for a beat's tempo, if any.
 export const tempoName = (bpm) => (bpm <= KIDS_TEMPOS.slow ? 'slow' : bpm >= KIDS_TEMPOS.fast ? 'fast' : 'mid');
-// How long one square lasts, in seconds.
-export const squareSeconds = (bpm) => 60 / bpm / 2;
 
 // What a new Kids beat has lit (Ben, 2026-10-26: the first ▶️ played
 // silence): kick 🦶 on the 1st and 3rd beat, snare 🪘 on the 2nd and 4th, as

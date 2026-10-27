@@ -171,27 +171,6 @@ export function fillBlock(t, path, band) {
   return settle({ bands, grid });
 }
 
-// The block at `path` empty again; its band goes.
-export function emptyBlock(t, path) {
-  const grid = clone(t?.grid);
-  const f = find(grid, path);
-  if (!f || isSplit(f.part)) return t;
-  delete f.part.band;
-  return settle({ bands: t.bands, grid });
-}
-
-// The blocks at `a` and `b` trade what they hold.
-export function swapBlocks(t, a, b) {
-  const grid = clone(t?.grid);
-  const fa = find(grid, a);
-  const fb = find(grid, b);
-  if (!fa || !fb || isSplit(fa.part) || isSplit(fb.part) || pathKey(a) === pathKey(b)) return t;
-  const was = fa.part.band;
-  if (fb.part.band == null) delete fa.part.band; else fa.part.band = fb.part.band;
-  if (was == null) delete fb.part.band; else fb.part.band = was;
-  return settle({ bands: t.bands, grid });
-}
-
 // After band `i` is taken out of `bands`: no block holds it, and the
 // blocks after it count one less.
 export function dropBand(grid, i) {

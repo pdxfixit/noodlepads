@@ -402,7 +402,7 @@ Defaults on the keys and the default touch layout use the groups' own sounds (`c
 
 ### Latency
 
-Summed once, in `beat.js outputDelay`: Beats, Song, `app.js` `deps.latency` for the keys, and `app.js startUsage` (in ms, uncapped, `outputDelay(ctx, Infinity)`). `rhythm.js hitTime` takes a latency as its argument and is unused by the app.
+Summed once, in `beat.js outputDelay`: Beats, Song, `app.js` `deps.latency` for the keys, and `app.js startUsage` (in ms, uncapped, `outputDelay(ctx, Infinity)`).
 
 ### Names that collide
 
@@ -420,8 +420,7 @@ Summed once, in `beat.js outputDelay`: Beats, Song, `app.js` `deps.latency` for 
 | Two ⏲️ wishes: `dj-click` and `beat-click`, joined by `seq.setClick` | A click change must keep the override rule. `stop-clicks.test.mjs` guards Stop all. |
 | `keyset.js keepAsMine` and `touch.js keepAsMine` | The same idea, two modules. |
 | Loop glow goes through `pads.js` | `audio.on.looping` is owned by `pads.js initPads`, which forwards to `dj.looping` through a hook `app.js` passes in. |
-| Latency in four places (above) | A change to one leaves the others. |
-| Dead exports kept for tests | `rhythm.js hitTime`, `applySnaps`, `countInBeats`, `snapHits`; `kids-logic.js squareSeconds`; `touch-grid.js emptyBlock`, `swapBlocks`. The app uses none of them. |
+| Dead export kept for tests | `rhythm.js snapHits`: the app uses `createSnapper`; the tests drive it through `snapHits`. |
 | Deletes skip `persist` | `app.js` `deleteTake`, `deleteLayout`, `deleteTouchLayout` and `beatLibrary.remove` are `state.js shelf` removes: each tells a refusal in a notice (`removeRecord`). `adoptKidsBeat` writes with `db.batch`. |
 
 ## Invariants and gotchas

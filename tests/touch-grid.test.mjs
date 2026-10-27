@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  READY_GRIDS, cleanGrid, blocks, settle, useGrid, fillBlock, emptyBlock, swapBlocks, dropBand, setEdge, nudgeEdge,
+  READY_GRIDS, cleanGrid, blocks, settle, useGrid, fillBlock, dropBand, setEdge, nudgeEdge,
   splitBlock, joinBlock, cannotSplit, gridShape, bestColumns, fraction, pathKey, pathOf, MAX_BLOCKS,
 } from '../web/touch-grid.js';
 import { cleanTouch, cleanTouchLayout, removeBand, sameTouch, touchSounds, touchOrder, addSounds } from '../web/touch.js';
@@ -47,7 +47,7 @@ test('settle: bands follow the blocks\' reading order, and a band no block holds
   assert.equal(settle(stack), stack, 'no grid: as it was');
 });
 
-test('filling, emptying and swapping blocks', () => {
+test('filling blocks', () => {
   let t = useGrid(twoOne());
   assert.deepEqual(t.bands, []);
   t = fillBlock(t, [1], band('bass', 'b1'));
@@ -56,11 +56,6 @@ test('filling, emptying and swapping blocks', () => {
   assert.deepEqual(blocks(t.grid).map((b) => b.band), [0, null, 1]);
   t = fillBlock(t, [0, 0], band('animals', 'moo'));
   assert.deepEqual(t.bands.map((b) => b.group), ['animals', 'bass'], 'a filled block takes the new group in place of its old one');
-  t = swapBlocks(t, [0, 0], [0, 1]);
-  assert.deepEqual(blocks(t.grid).map((b) => b.band), [null, 0, 1]);
-  t = emptyBlock(t, [0, 1]);
-  assert.deepEqual(t.bands.map((b) => b.group), ['bass']);
-  assert.deepEqual(blocks(t.grid).map((b) => b.band), [null, null, 0]);
   assert.equal(fillBlock(t, [5], band('drums')), t, 'no block there: unchanged');
   assert.equal(fillBlock(t, [0], band('drums')), t, 'a split is no block');
 });

@@ -95,7 +95,7 @@ export function layoutOf(el, vw) {
   for (let e = el; e; e = e.parentElement) {
     const cs = classes(e);
     fit ??= cs.filter((c) => c.startsWith('fit-')).at(-1) ?? null;
-    if (cs.includes('more-tight') || e.getAttribute?.('role') === 'menu') more = true;
+    if (e.getAttribute?.('role') === 'menu') more = true;
   }
   if (fit) parts.push(fit);
   if (more) parts.push('more');

@@ -11,7 +11,7 @@ import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
 import {
   makeSum, typeDigit, sumWait, SUM_WAIT, kidsRange, kidsAutoPx, kidsPadPx, kidsShare, shareOf, kidsSliderAt, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder, KIDS_PADS,
-  KIDS_STARTLES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, squareSeconds, KIDS_TEMPOS,
+  KIDS_STARTLES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, KIDS_TEMPOS,
   TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote, keptTune, sameTune,
   KIDS_DRUMS, drumPicture, kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS, keyPitch, keyRate, keyPlayId, isHighKey, instPicture,
 } from '../web/kids-logic.js';
@@ -203,7 +203,6 @@ test('🐢 and 🏃: tap one for slow or fast, tap it again for the middle', () 
   assert.equal(tempoName(80), 'slow');
   assert.equal(tempoName(110), 'mid');
   assert.equal(tempoName(140), 'fast');
-  assert.equal(squareSeconds(120), 0.25);
 });
 
 // Ben, 2026-10-22: "there should be a record button… compose a little tune

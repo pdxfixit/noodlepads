@@ -3,7 +3,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanRow, cleanPattern, stepSeconds, planHits, samePattern, pillTarget, ROW_RATES, STEPS, MAX_STEPS, MAX_PILLS, BAR_CHOICES, SIGNATURES, barSteps } from '../web/beat.js';
+import { cleanRow, cleanPattern, stepSeconds, planHits, pillTarget, ROW_RATES, STEPS, MAX_STEPS, MAX_PILLS, BAR_CHOICES, SIGNATURES, barSteps } from '../web/beat.js';
+import { samePattern } from './helpers.mjs';
 
 const on = (...steps) => Array.from({ length: STEPS }, (_, i) => steps.includes(i));
 const beat = (rows, bpm = 120) => cleanPattern({ bpm, rows }, 'pip');

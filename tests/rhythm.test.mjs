@@ -3,7 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { KEY_ROWS, KEY_CODES, fallbackLabel, defaultDeck, hitTime, snapHits, applySnaps, countInBeats } from '../web/rhythm.js';
+import { KEY_ROWS, KEY_CODES, fallbackLabel, defaultDeck, snapHits } from '../web/rhythm.js';
 import { countAt, keyboardOrder } from '../web/rhythm.js';
 
 test('40 keys in four rows of ten, the number row on top, by physical position, with US labels to fall back on', () => {
@@ -54,13 +54,6 @@ test('an Advanced-only preset is never a default key, even standing in for a hid
   assert.equal(deck.KeyZ, 'juno-bass-f', 'the next natural stands in');
 });
 
-test('a hit\'s time moves earlier by the output latency, capped at 0.2 s', () => {
-  const stamp = { contextTime: 10, performanceTime: 5000 };
-  assert.equal(hitTime(5500, stamp, 0), 10.5);
-  assert.equal(+hitTime(5500, stamp, 0.05).toFixed(3), 10.45);
-  assert.equal(+hitTime(5500, stamp, 3).toFixed(3), 10.3);
-});
-
 // 100 BPM, one bar of 4/4: a pill is 0.15 s, 16 pills, recording from t0 = 10.
 const base = { t0: 10, from: 10, step: 0.15, total: 16 };
 const snap = (hits, extra = {}) => snapHits({ ...base, ...extra, hits }).map(({ row, step }) => [row, step]);
@@ -86,19 +79,6 @@ test('more snapping: out of order, empty, a second pass, a fast roll, joining a 
   assert.deepEqual(fast.map((h) => h.step), [0, 1, 2]);
   // Recording joined at bar 2 of a playing beat (from = t0 + 2.4 s).
   assert.deepEqual(snap([{ t: 12.3, row: 0 }], { from: 12.4 }), [[0, 0]], 'just before the join lands on its "1"');
-});
-
-test('applying snaps turns pills on, never off, and leaves loud hits alone', () => {
-  const rows = [{ steps: [true, false, false], accents: [true, false, false] }, { steps: [false, false, true], accents: [false, false, false] }];
-  const next = applySnaps(rows, [{ row: 0, step: 0 }, { row: 0, step: 2 }, { row: 1, step: 1 }, { row: 9, step: 0 }]);
-  assert.deepEqual(next.map((r) => r.steps), [[true, false, true], [false, true, true]]);
-  assert.deepEqual(next[0].accents, [true, false, false]);
-  assert.deepEqual(rows[0].steps, [true, false, false], 'the old rows are untouched (for Undo)');
-});
-
-test('a count-in is one bar of beats', () => {
-  assert.equal(countInBeats([4, 4, 4, 4]), 4);
-  assert.equal(countInBeats([6, 6]), 2);
 });
 
 test('layouts label the same 30 physical keys: Dvorak\'s home row is AOEUIDHTNS', async () => {

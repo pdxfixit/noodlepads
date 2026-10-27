@@ -5,13 +5,11 @@
 //
 // The buttons never leave their line. A screen marks the ones that may move
 // with `data-more-word` (the word the menu shows after the button's icon)
-// and puts a ⋯ (moreButton) after them. fitMore() watches the box holding
-// such lines and gives it the class `more-tight` while any of them would
-// overflow without it; the CSS then hides the marked buttons and shows ⋯
-// (styles.css, "⋯ menus"). The menu (moreMenu) lists the ⋯'s marked
-// siblings as icon + word and a tap in it taps the real button, so each
-// keeps its own behavior: a toggle shows its on state, Clear and Remove still
-// ask first in red and keep their Undo.
+// and opens the menu (moreMenu) from a ⋯ (moreButton) or the row's emoji. The
+// menu lists the marked siblings as icon + word and a tap in it taps the real
+// button, so each keeps its own behavior: a toggle shows its on state, Clear
+// and Remove still ask first in red and keep their Undo. (No screen hides the
+// buttons for lack of room today; the ⋯ stays hidden, styles.css "⋯ menus".)
 
 // A ⋯ button for one line. `key` names the line among its box's lines (a row
 // number), so the menu finds the line again after the screen redraws it.
@@ -32,29 +30,6 @@ export function moreButton(key, label) {
 export function movable(b, word) {
   if (b) b.setAttribute('data-more-word', word);
   return b;
-}
-
-// Does any of these lines overflow? Pure, given each line's widths.
-export const anyOver = (lines) => lines.some((l) => l.scrollWidth > l.clientWidth + 1);
-
-// Keeps `box`'s class `more-tight` true while any of its lines (lineSel)
-// would overflow without it: measured on the lines' real widths, so it holds
-// on any screen, font or emoji. Call refit() after redrawing the lines.
-// Returns {refit, now}: refit waits a frame (never inside a resize
-// callback), now() measures at once.
-export function fitMore(box, lineSel) {
-  const now = () => {
-    if (!box.clientWidth) return;   // not on screen: fitted when it shows
-    box.classList.remove('more-tight');
-    box.classList.toggle('more-tight', anyOver([...box.querySelectorAll(lineSel)]));
-  };
-  let queued = 0;
-  const refit = () => {
-    if (queued) return;
-    queued = requestAnimationFrame(() => { queued = 0; now(); }) || 0;
-  };
-  if (typeof ResizeObserver === 'function') new ResizeObserver(refit).observe(box);
-  return { refit, now };
 }
 
 // What the menu shows for a line: its ⋯'s siblings marked data-more-word that

@@ -6,7 +6,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanRow, cleanPattern, planHits, pillHits, samePattern, multiplyRows, mergeGroove, grooveBeat, grooveShape, beatToFile, beatFromFile, BASS_NOTES, bassNote } from '../web/beat.js';
+import { cleanRow, cleanPattern, planHits, pillHits, multiplyRows, mergeGroove, grooveBeat, grooveShape, beatToFile, beatFromFile, BASS_NOTES, bassNote } from '../web/beat.js';
+import { samePattern } from './helpers.mjs';
 import { GROOVES } from '../web/grooves.js';
 import { readBackup, makeBackup } from '../web/backup.js';
 import { shareBundle, shareDoc } from '../web/cloud-sync.js';

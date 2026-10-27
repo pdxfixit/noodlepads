@@ -6,7 +6,8 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { cleanVolume, stepLevel, speakerIcon, speakerLabel, setRowLevel, rowLevel, gainAt, positionOf, percent } from '../web/row-volume.js';
-import { cleanRow, cleanPattern, samePattern, planHits, hitGain, ACCENT_GAIN, beatToFile, beatFromFile } from '../web/beat.js';
+import { cleanRow, cleanPattern, planHits, hitGain, ACCENT_GAIN, beatToFile, beatFromFile } from '../web/beat.js';
+import { samePattern } from './helpers.mjs';
 import { readBackup, makeBackup } from '../web/backup.js';
 import { shareBundle, shareDoc } from '../web/cloud-sync.js';
 import { installPage } from './fake-dom.mjs';

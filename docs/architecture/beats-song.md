@@ -439,11 +439,10 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | **Listing a person's beats** happens three ways: `sequencer.js library()` (via `beatLibrary.list`, minus hidden), `makeSong`'s `deps.beats` (its own filter and sort), `kids.js`'s `deps.beats` | a new hidden kind of beat must be filtered in each |
 | **Saving a beat record** has one writer for the library, `beatLibrary.put` (`state.js shelf`); Kids' `deps.saveBeat` is that function. `adoptKidsBeat` writes with `db.batch` | a change to how beats persist is made in `shelf` |
 | **Scratch flows are written twice**: beats (`newScratch`, `keepAside`, `keep`, `nameScratch`, `uniqueName`) and songs (`newScratch`, `keep`, `nameScratch`, `uniqueSongName`) | a rule change (what counts as empty, the banner text, naming) must be made in both |
-| **Beat-level fields are listed by hand** in `cleanPattern`, `samePattern`, `beatToFile` and `mixKey` | a new field cleaned but not added to `beatToFile` is lost in a beat file; `samePattern` already ignores `signature` |
+| **Beat-level fields are listed by hand** in `cleanPattern`, `beatToFile` and `mixKey` (and in the tests' `samePattern`, `tests/helpers.mjs`) | a new field cleaned but not added to `beatToFile` is lost in a beat file; `samePattern` already ignores `signature` |
 | **Two `buildMix` functions**: `mixer.js buildMix` (the beat's graph) and `sheet-make.js buildMix` (➕ Mix with another sound) | same name, unrelated jobs |
 | **The roll's `commit(i, tune, {quiet})`**: `roll.js` passes a third argument the sequencer ignores | a drag re-renders the whole Beats screen on every move |
 | **Page turning**: `follow.js keepInView/pageTurn` for Beats, the roll and ⌨️ Keys; `song.js follow` has its own sum | a change to how far a page turns must be made twice |
-| **Dead code kept in step**: `isUnsaved` and `samePattern` are used only by tests; `overflow.js fitMore` and the `more-tight` class are used by no screen or stylesheet | edits keep them working for nothing |
 
 ## Invariants and gotchas
 

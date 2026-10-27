@@ -65,7 +65,7 @@ test('a control from the page is named by its first label; anything drawn later 
 test('layout says which arrangement showed a control: split on wide screens, the line\'s give-way step, a ⋯ menu', () => {
   const b = el('button', { id: 'x' });
   const line = el('div', { cls: 'seq-shape fit-tight fit-short' }, el('div', {}, b));
-  el('div', { cls: 'more-tight' }, line);
+  el('div', { attrs: { role: 'menu' } }, line);
   assert.equal(layoutOf(b, 390), 'fit-short more');
   assert.equal(layoutOf(b, 1920), 'split fit-short more');
   assert.equal(layoutOf(el('button'), 800), 'base');
