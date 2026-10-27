@@ -19,6 +19,13 @@ export function createWave(canvas) {
   let raf = 0;
   let kept = null;       // {start, end} seconds: the bars outside it are cut off (trim), drawn grey
   let picked = null;     // {start, end} seconds: the part picked in the wave editor, banded
+  let colors = null;     // {lit, cut, head}: read from the page once per sound shown or followed, not per frame
+
+  function readColors() {
+    const style = getComputedStyle(canvas);
+    const lit = style.color;
+    colors = { lit, cut: style.getPropertyValue('--wave-cut').trim() || lit, head: style.getPropertyValue('--wave-head').trim() || lit };
+  }
 
   function draw(progress = 0) {
     const g = canvas.getContext?.('2d');
@@ -43,9 +50,8 @@ export function createWave(canvas) {
       const top = Math.max(...values) || 1;   // the loudest part reaches the top
       cache = { buffer, columns, values: values.map((v) => v / top) };
     }
-    const style = getComputedStyle(canvas);
-    const lit = style.color;
-    const cut = style.getPropertyValue('--wave-cut').trim() || lit;
+    if (!colors) readColors();
+    const { lit, cut } = colors;
     const head = pad + progress * used * inner;
     // The part picked in the wave editor: a band behind its bars.
     if (picked) {
@@ -66,7 +72,7 @@ export function createWave(canvas) {
     });
     g.globalAlpha = 1;
     if (progress > 0 && progress < 1) {
-      g.fillStyle = style.getPropertyValue('--wave-head').trim() || lit;
+      g.fillStyle = colors.head;
       g.fillRect(Math.round(head - dpr), 0, Math.max(2, Math.round(2 * dpr)), h);
     }
   }
@@ -77,6 +83,7 @@ export function createWave(canvas) {
     show(next, longest = next.duration) {
       buffer = next;
       span = Math.max(longest, next.duration);
+      colors = null;
       canvas.setAttribute('aria-label', `The sound's wave: ${next.duration.toFixed(1)} seconds`);
       draw(0);
     },
@@ -84,7 +91,10 @@ export function createWave(canvas) {
     // `from` and `to` (0 to 1) are the part of the wave it is playing.
     follow(id, from = 0, to = 1) {
       cancelAnimationFrame(raf);
+      colors = null;   // read again on the first frame drawn
+      const still = stillWanted();
       let looped = false;
+      let held = false;   // drawn lit once; then only watched
       const frame = () => {
         const entry = audio.playing.get(id);
         if (!entry || !audio.ctx) { draw(0); return; }
@@ -92,7 +102,13 @@ export function createWave(canvas) {
         // ends: let go (audio.unloop), it finishes its pass sweeping. With
         // reduced motion, or too short to follow (a strobe), it is held lit.
         looped ||= entry.loop;
-        if (looped && (entry.duration < MIN_SWEEP || stillWanted())) { draw(1); raf = requestAnimationFrame(frame); return; }
+        if (looped && (entry.duration < MIN_SWEEP || still)) {
+          if (!held) draw(1);
+          held = true;
+          raf = requestAnimationFrame(frame);
+          return;
+        }
+        held = false;
         const t = Math.max(0, (audio.ctx.currentTime - entry.t0) / entry.duration);
         const p = looped ? t % 1 : Math.min(1, t);
         draw(from + p * (to - from));

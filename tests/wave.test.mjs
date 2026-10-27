@@ -83,3 +83,21 @@ test('a loop under half a second holds its wave lit instead of strobing', () => 
   const once = following({ loop: false }, 0.3);
   assert.ok(once.at(0.1) > 0, 'played once, a short sound still sweeps');
 }));
+
+// A wave held lit is drawn once, not every frame; reduced motion is asked
+// once per sound followed, and the colors once, not every frame.
+test('a held-lit wave draws once; the colors and reduced motion are read once per follow', () => restoring(() => {
+  let media = 0, styles = 0;
+  globalThis.matchMedia = (q) => { media++; return { matches: q === '(prefers-reduced-motion: reduce)' }; };
+  globalThis.getComputedStyle = () => { styles++; return { color: '#fff', getPropertyValue: () => '' }; };
+  const { at, canvas } = following({});
+  const g = canvas.getContext();
+  let clears = 0;
+  const clear = g.clearRect;
+  g.clearRect = (...a) => { clears++; clear(...a); };
+  styles = 0;
+  for (const t of [0.1, 0.2, 0.3, 0.4]) at(t);
+  assert.equal(clears, 1, 'drawn once, then left alone');
+  assert.equal(media, 1, 'reduced motion asked once');
+  assert.equal(styles, 1, 'the colors read once, on the first frame drawn');
+}));
