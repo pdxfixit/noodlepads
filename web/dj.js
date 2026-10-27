@@ -1070,7 +1070,9 @@ export function createDJ({ el, deps }) {
       const attr = rm ? 'data-remove-row' : 'data-clear-row';
       const i = Number(rm ? rm.dataset.removeRow : sweep.dataset.clearRow);
       clearTimeout(askTimer);
-      if (rowAsked?.row !== i || rowAsked.kind !== kind) {
+      // A row with no hits has nothing to lose: ✕ takes it out at once (Undo is still there).
+      const bare = rm && !seq.beat()?.rows[i]?.steps.some(Boolean);
+      if (!bare && (rowAsked?.row !== i || rowAsked.kind !== kind)) {
         rowAsked = { row: i, kind };
         askTimer = setTimeout(() => { rowAsked = null; renderGrid(); }, ARM_MS);
         renderGrid();

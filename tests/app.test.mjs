@@ -860,7 +860,24 @@ test('Undo brings a removed row back where it was, pills and all', () => {
   assert.equal(rows()[1].querySelectorAll('.pill')[6].getAttribute('aria-pressed'), 'true');
   // Tidy up for the tests after: back to one row, pills off (one tap).
   rows()[1].querySelectorAll('.pill')[6].dispatch('click');
-  while (rows().length > 2) { rows()[2].querySelector('[data-remove]').dispatch('click'); rows()[2].querySelector('[data-remove]').dispatch('click'); }
+  while (rows().length > 2) rows()[2].querySelector('[data-remove]').dispatch('click');   // empty rows go on one tap
+});
+
+test('✕ on a row with no hits removes it at once; a row with hits still asks first', () => {
+  const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
+  $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
+  const n = rows().length;
+  rows()[n - 1].querySelector('[data-remove]').dispatch('click');
+  assert.equal(rows().length, n - 1, 'an empty row has nothing to lose: one tap');
+  assert.equal(hasUndo(), true, 'and Undo still brings it back');
+  $('#banner-action').dispatch('click');
+  assert.equal(rows().length, n);
+  rows()[n - 1].querySelectorAll('.pill')[3].dispatch('click');
+  rows()[n - 1].querySelector('[data-remove]').dispatch('click');
+  assert.equal(rows().length, n, 'with a hit on it, the first tap only asks');
+  assert.equal(rows()[n - 1].querySelector('[data-remove]').textContent, '✕?');
+  rows()[n - 1].querySelectorAll('.pill')[3].dispatch('click');   // any other tap takes it back; pill off again
+  rows()[n - 1].querySelector('[data-remove]').dispatch('click');   // tidy up: empty again, one tap
 });
 
 test('a row\'s 🧹 and ✕ ask first: the second tap does it, any other tap takes it back', () => {
@@ -882,11 +899,16 @@ test('a row\'s 🧹 and ✕ ask first: the second tap does it, any other tap tak
 
   $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
   const count = rows().length;
+  rows()[count - 1].querySelectorAll('.pill')[1].dispatch('click');   // a hit on it, so ✕ asks
   tool(count - 1, 'remove').dispatch('click');
   assert.equal(rows().length, count, 'the first tap only asks');
   assert.equal(tool(count - 1, 'remove').textContent, '✕?');
   tool(count - 1, 'remove').dispatch('click');
   assert.equal(rows().length, count - 1);
+  $('#banner-action').dispatch('click');   // Undo, then the hit goes off and the row is empty again
+  rows()[count - 1].querySelectorAll('.pill')[1].dispatch('click');
+  tool(count - 1, 'remove').dispatch('click');
+  assert.equal(rows().length, count - 1, 'no hits left: one tap');
   // The row's head at its left (Ben, 2026-10-25): ⠿ · emoji · name · 🔊, its
   // pills on one line after it; the menu's buttons wait in the head, unseen.
   assert.deepEqual(rows()[0].children.map((c) => c.className.split(' ')[0]), ['seq-head', 'seq-steps']);
@@ -977,7 +999,8 @@ test('a Beats row\'s menu: 🔄 🔔 🧹 ✕ ↑ ↓ from its emoji, and they s
   items()[2].dispatch('click');
   assert.ok(!beat().rows[0].steps.some(Boolean), 'the second tap clears');
   assert.equal(pop().hidden, true, 'done: the menu closes');
-  // ✕ Remove asks first, then removes, and ↩️ Undo brings the row back.
+  // ✕ Remove asks first (the row has a hit), then removes, and ↩️ Undo brings the row back.
+  rows()[0].querySelectorAll('.pill')[1].dispatch('click');
   const count = rows().length;
   more().dispatch('click');
   items()[3].dispatch('click');
@@ -988,6 +1011,7 @@ test('a Beats row\'s menu: 🔄 🔔 🧹 ✕ ↑ ↓ from its emoji, and they s
   assert.equal(pop().hidden, true);
   $('#banner-action').dispatch('click');
   assert.equal(rows().length, count, 'Undo puts it back');
+  rows()[0].querySelectorAll('.pill')[1].dispatch('click');   // tidy up: pill off again
   // Esc closes it, the focus back on the emoji; a tap outside closes it too.
   more().dispatch('click');
   pop().dispatch('keydown', { key: 'Escape' });
@@ -1636,10 +1660,9 @@ test('Beats with ⌨️ Keys: a key played makes its sound\'s row at once, witho
   assert.deepEqual(shown(), [z], 'the row is there at once');
   assert.equal(lines()[0].querySelectorAll('[data-step].on').length, 0, 'empty: nothing was recorded');
   assert.equal($('#dj-done').hidden, true, 'no notice and no Undo line');
-  // Its ✕ takes it out (two taps).
+  // Its ✕ takes it out (one tap: it has no hits).
   lines()[0].querySelector('[data-remove-row]').dispatch('click');
-  lines()[0].querySelector('[data-remove-row]').dispatch('click');
-  assert.equal(lines().length, 0, 'the row\'s ✕ takes it out');
+  assert.equal(lines().length, 0, 'the row\'s ✕ takes an empty row out at once');
   $('#dj-done-close').dispatch('click');
   // Played again: one row per sound, never two.
   page.key('z', { code: 'KeyZ' });
@@ -1664,13 +1687,15 @@ test('Beats with ⌨️ Keys: a key played makes its sound\'s row at once, witho
   assert.equal(line(z).querySelector('[data-speaker]').getAttribute('aria-pressed'), 'true', 'Z\'s row muted');
   assert.equal(line(a).querySelector('[data-speaker]').getAttribute('aria-pressed'), 'false');
   line(z).querySelector('[data-speaker]').dispatch('click');
+  line(a).querySelector('[data-remove-row]').dispatch('click');
+  assert.ok(line(a), 'a row with a hit: ✕ only asks the first time');
+  assert.equal(line(a).querySelector('[data-remove-row]').textContent, '✕?');
   line(a).querySelector('[data-clear-row]').dispatch('click');
   line(a).querySelector('[data-clear-row]').dispatch('click');
   assert.equal(line(a).querySelectorAll('[data-step].on').length, 0, '🧹 cleared Kick');
   assert.match($('#banner-text').textContent, /^Cleared the Kick row\.$/);
   // ✕ on the first line shown removes that sound's row (stored last).
-  line(q).querySelector('[data-remove-row]').dispatch('click');
-  line(q).querySelector('[data-remove-row]').dispatch('click');
+  line(q).querySelector('[data-remove-row]').dispatch('click');   // no hits on it: one tap
   assert.deepEqual(shown(), [a, z]);
   $('#banner-action').dispatch('click');
   assert.deepEqual(shown(), [q, a, z]);
@@ -1694,7 +1719,6 @@ test('Beats with ⌨️ Keys: a key played makes its sound\'s row at once, witho
   const one = soundOn('Digit1');
   page.key('1', { code: 'Digit1' });
   assert.deepEqual(shown(), [one, q, a, z], 'the number row, then the letter rows');
-  line(one).querySelector('[data-remove-row]').dispatch('click');
   line(one).querySelector('[data-remove-row]').dispatch('click');
   assert.deepEqual(shown(), [q, a, z]);
   $('#live-tab').dispatch('click');
