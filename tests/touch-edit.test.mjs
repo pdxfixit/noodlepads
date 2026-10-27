@@ -228,3 +228,20 @@ test('+ more offers only what is not on the board: a group\'s count, the empty l
   assert.deepEqual([touch().bands[1].size, touch().bands[1].sounds.length], ['m', 4], '↩️ Undo takes back the filled line');
   q('[data-close]').dispatch('click');
 });
+
+test('Layouts and grids fold shut, and + Add a group sits right under them, above the groups', () => {
+  const fold = q('#te-fold');
+  const body = q('#te-fold-body');
+  assert.equal(fold.getAttribute('aria-expanded'), 'true');
+  assert.ok(!body.hidden, 'open to begin with');
+  fold.dispatch('click');
+  assert.equal(fold.getAttribute('aria-expanded'), 'false');
+  assert.equal(body.hidden, true);
+  assert.ok(body.querySelector('#te-layouts') && body.querySelector('#te-grids'), 'the layouts and the grids are what folds');
+  assert.ok(!body.querySelector('#te-add') && !body.querySelector('#te-bands'), 'the pills and the groups stay');
+  fold.dispatch('click');
+  assert.equal(body.hidden, false);
+  const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
+  const at = (id) => html.indexOf(`id="${id}"`, html.indexOf('id="touch-edit"'));
+  assert.ok(at('te-fold-body') < at('te-add') && at('te-add') < at('te-bands'), 'layouts, then the pills, then the groups last');
+});

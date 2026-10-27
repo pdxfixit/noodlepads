@@ -1146,7 +1146,8 @@
         <button type="button" class="seq-tool ke-done" data-close>✅ Done</button>
       </div>
       <section class="ke-layouts" aria-labelledby="te-layouts-title">
-        <h3 class="ke-title" id="te-layouts-title">Layouts</h3>
+        <h3 class="ke-title"><button type="button" class="te-fold" id="te-fold" aria-expanded="true" aria-controls="te-fold-body"><span class="te-fold-caret" aria-hidden="true">▾</span><span id="te-layouts-title">Layouts and grids</span></button></h3>
+        <div class="te-fold-body" id="te-fold-body">
         <div class="ke-layout-list" id="te-layouts" role="group" aria-labelledby="te-layouts-title"></div>
         <div class="ke-line" id="te-save-line" hidden>
           <input class="beat-name" id="te-save-name" maxlength="24" autocomplete="off" placeholder="Name this layout" aria-label="Name this layout">
@@ -1160,6 +1161,12 @@
         <!-- ☰ Stacked, or a grid of blocks side by side to drop groups onto (ADR 0032, Ben 2026-10-19). -->
         <h3 class="ke-title" id="te-grids-title">Grids</h3>
         <div class="te-grids" id="te-grids" role="group" aria-labelledby="te-grids-title"></div>
+        </div>
+      </section>
+      <section class="te-adding" aria-labelledby="te-add-title">
+        <h3 class="ke-title" id="te-add-title">+ Add a group</h3>
+        <p class="ke-hint" id="te-add-hint"></p>
+        <div class="ke-groups" id="te-add" role="group" aria-labelledby="te-add-title"></div>
       </section>
       <section class="te-groups" aria-labelledby="te-bands-title">
         <h3 class="ke-title" id="te-bands-title">Groups, top to bottom</h3>
@@ -1170,11 +1177,6 @@
             <button type="button" class="seq-tool" id="te-undo" disabled>↩️ Undo</button>
           </span>
         </div>
-      </section>
-      <section class="te-adding" aria-labelledby="te-add-title">
-        <h3 class="ke-title" id="te-add-title">+ Add a group</h3>
-        <p class="ke-hint" id="te-add-hint"></p>
-        <div class="ke-groups" id="te-add" role="group" aria-labelledby="te-add-title"></div>
       </section>
     </div>
   </dialog>

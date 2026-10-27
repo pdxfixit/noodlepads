@@ -4330,6 +4330,12 @@ dialog#keys-edit::backdrop, dialog#touch-edit::backdrop { background: var(--bed)
 .te-pick-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .te-pick-actions .seq-tool { flex: 1 1 auto; }
 .te-adding .ke-hint { margin: 0 0 8px; }
+/* ✏️ Layout's Layouts and grids fold shut, so the pills to add a group and
+   the groups themselves come up the page and nothing sits under the list. */
+.te-fold { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; margin: -8px 0 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; cursor: pointer; }
+.te-fold-caret { width: 1.2em; text-align: center; }
+.te-fold-body { margin-top: 8px; }
+.te-fold-body[hidden] { display: none; }
 .te-dragging, .te-dragging * { cursor: grabbing; }
 /* ✏️ Layout's Grids: ☰ Stacked and the ready-made grids, each a small
    picture of its blocks; and a grid's blocks, to drop groups onto. */

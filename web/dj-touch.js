@@ -688,6 +688,14 @@ export function createTouchEditor({ el, deps }) {
     if (justDragged) { justDragged = false; return; }
     const t = e.target;
     const at = (attr) => t.closest(`[data-${attr}]`);
+    const fold = t.closest('#te-fold');
+    if (fold) {
+      const open = fold.getAttribute('aria-expanded') !== 'true';
+      fold.setAttribute('aria-expanded', String(open));
+      fold.querySelector('.te-fold-caret').textContent = open ? '▾' : '▸';
+      el.dialog.querySelector('#te-fold-body').hidden = !open;
+      return;
+    }
     const layout = at('layout');
     if (layout) { asking = null; loadLayout(layout.dataset.layout); return; }
     if (t.closest('#te-save')) {
