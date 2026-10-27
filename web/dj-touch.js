@@ -19,6 +19,7 @@ import {
 } from './touch-grid.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { newId } from './util.js';
+import { holdToDrag } from './finger.js';
 
 // A group's emoji and name: 🎤 Sounds, a kit group's own, or 🔊 Sounds.
 function groupParts(group, kitGroups = []) {
@@ -151,9 +152,6 @@ function fitPads(box) {
 
 const UNDO_MAX = 30;
 const ARM_MS = 3000;        // how long a red ✕? or Delete? waits for its second tap
-const DRAG_PX = 6;          // a mouse or pen moved this far is dragging, not tapping
-const HOLD_MS = 280;        // a finger held this long without moving starts a drag (as in ✏️ Layout (⌨️ Keys))
-const SLOP_PX = 10;         // a finger moving further first is a scroll
 
 const button = (cls, text, data = {}, label = null) => {
   const b = document.createElement('button');
@@ -942,54 +940,38 @@ export function createTouchEditor({ el, deps }) {
   // A mouse or pen drags once it moves; a finger holds still first, so a
   // swipe still scrolls the dialog.
 
-  let press = null;   // {id, x, y, from, touch, timer, dragging, over}
+  // The press (finger.js holdToDrag) is {id, x, y, from, touch, timer, dragging, over}.
 
-  function startDrag() {
-    press.dragging = true;
+  function startDrag(p, x, y, moved) {
     el.dialog.classList.add('te-dragging');
-    el.bands.querySelector(`.te-band[data-band="${press.from}"]`)?.classList.add('ke-lifted');
+    el.bands.querySelector(`.te-band[data-band="${p.from}"]`)?.classList.add('ke-lifted');
+    if (moved) overAt(p, x, y);
   }
-  function overAt(x, y) {
+  function overAt(press, x, y) {
     const band = document.elementFromPoint?.(x, y)?.closest?.('.te-band');
     const to = band && el.bands.contains(band) ? Number(band.dataset.band) : null;
     for (const b of el.bands.querySelectorAll('.te-over')) if (b !== band) b.classList.remove('te-over');
     if (to != null && to !== press.from) band.classList.add('te-over');
     press.over = to;
   }
-  function endDrag(drop) {
-    const p = press;
-    press = null;
-    if (!p?.dragging) return;
+  function endDrag(p, drop) {
     justDragged = true;
     setTimeout(() => { justDragged = false; }, 0);
     el.dialog.classList.remove('te-dragging');
     for (const b of el.bands.querySelectorAll('.te-over, .ke-lifted')) b.classList.remove('te-over', 'ke-lifted');
     if (drop && p.over != null) move(p.from, p.over);
   }
-  el.bands.addEventListener('pointerdown', (e) => {
-    const h = e.target.closest?.('[data-handle]');
-    if (!h || e.button > 0 || press) return;
-    const touch = e.pointerType === 'touch';
-    press = { id: e.pointerId, x: e.clientX, y: e.clientY, from: Number(h.dataset.handle), touch, dragging: false, over: null };
-    try { h.setPointerCapture?.(e.pointerId); } catch { /* the pointer is gone */ }
-    if (touch) press.timer = setTimeout(() => { if (press && !press.dragging) startDrag(); }, HOLD_MS);
+  const drag = holdToDrag(el.bands, el.dialog, {
+    match: (e) => {
+      const h = e.target.closest?.('[data-handle]');
+      return h && { from: Number(h.dataset.handle), handle: h, over: null };
+    },
+    down: (p, e) => { try { p.handle.setPointerCapture?.(e.pointerId); } catch { /* the pointer is gone */ } },
+    start: startDrag,
+    move: overAt,
+    end: endDrag,
+    menu: '[data-handle]',
   });
-  el.dialog.addEventListener('pointermove', (e) => {
-    if (!press || e.pointerId !== press.id) return;
-    if (press.dragging) { overAt(e.clientX, e.clientY); return; }
-    const far = Math.hypot(e.clientX - press.x, e.clientY - press.y);
-    if (press.touch) { if (far > SLOP_PX) { clearTimeout(press.timer); press = null; } return; }
-    if (far > DRAG_PX) { startDrag(); overAt(e.clientX, e.clientY); }
-  });
-  el.dialog.addEventListener('pointerup', (e) => {
-    if (!press || e.pointerId !== press.id) return;
-    clearTimeout(press.timer);
-    endDrag(true);
-  });
-  el.dialog.addEventListener('pointercancel', () => { if (press) { clearTimeout(press.timer); endDrag(false); } });
-  // While a finger drags, the dialog must not scroll under it.
-  el.dialog.addEventListener('touchmove', (e) => { if (press?.dragging) e.preventDefault(); }, { passive: false });
-  el.dialog.addEventListener('contextmenu', (e) => { if (e.target.closest?.('[data-handle]')) e.preventDefault(); });
 
   // ── Drag an edge ──
   // At once, a finger too: the edge is a handle, never a place to scroll.
@@ -1043,58 +1025,44 @@ export function createTouchEditor({ el, deps }) {
   // ── Drag a group onto a block (a grid) ──
   // As ⠿ above: a mouse or pen once it moves, a finger after holding still.
 
-  let carry = null;   // {id, x, y, group, touch, timer, dragging, over}
+  // The press (finger.js holdToDrag) is {id, x, y, group, touch, timer, dragging, over}.
 
-  function carryOver(x, y) {
+  function carryOver(carry, x, y) {
     const cell = document.elementFromPoint?.(x, y)?.closest?.('.te-cell');
     const to = cell && el.bands.contains(cell) ? cell.dataset.cell : null;
     for (const c of el.bands.querySelectorAll('.te-over')) if (c !== cell) c.classList.remove('te-over');
     if (to) cell.classList.add('te-over');
     carry.over = to;
   }
-  function startCarry() {
-    carry.dragging = true;
+  function startCarry(c, x, y, moved) {
     el.dialog.classList.add('te-dragging');
-    el.add.querySelector(`[data-add-group="${carry.group}"]`)?.classList.add('ke-lifted');
+    el.add.querySelector(`[data-add-group="${c.group}"]`)?.classList.add('ke-lifted');
+    if (moved) carryOver(c, x, y);
   }
-  function endCarry(drop) {
-    const c = carry;
-    carry = null;
-    if (!c?.dragging) return;
+  function endCarry(c, drop) {
     justDragged = true;
     setTimeout(() => { justDragged = false; }, 0);
     el.dialog.classList.remove('te-dragging');
     for (const x of el.dialog.querySelectorAll('.te-over, .ke-lifted')) x.classList.remove('te-over', 'ke-lifted');
     if (drop && c.over) putInBlock(c.group, c.over);
   }
-  el.add.addEventListener('pointerdown', (e) => {
-    const g = e.target.closest?.('[data-add-group]');
-    if (!g || e.button > 0 || carry || !now().grid) return;
-    const touch = e.pointerType === 'touch';
-    carry = { id: e.pointerId, x: e.clientX, y: e.clientY, group: g.dataset.addGroup, touch, dragging: false, over: null };
-    try { g.setPointerCapture?.(e.pointerId); } catch { /* the pointer is gone */ }
-    if (touch) carry.timer = setTimeout(() => { if (carry && !carry.dragging) startCarry(); }, HOLD_MS);
+  const carrying = holdToDrag(el.add, el.dialog, {
+    match: (e) => {
+      const g = e.target.closest?.('[data-add-group]');
+      return g && now().grid && { group: g.dataset.addGroup, handle: g, over: null };
+    },
+    down: (c, e) => { try { c.handle.setPointerCapture?.(e.pointerId); } catch { /* the pointer is gone */ } },
+    start: startCarry,
+    move: carryOver,
+    end: endCarry,
+    menu: '[data-add-group]',
+    menuOnlyWhilePressed: true,
   });
-  el.dialog.addEventListener('pointermove', (e) => {
-    if (!carry || e.pointerId !== carry.id) return;
-    if (carry.dragging) { carryOver(e.clientX, e.clientY); return; }
-    const far = Math.hypot(e.clientX - carry.x, e.clientY - carry.y);
-    if (carry.touch) { if (far > SLOP_PX) { clearTimeout(carry.timer); carry = null; } return; }
-    if (far > DRAG_PX) { startCarry(); carryOver(e.clientX, e.clientY); }
-  });
-  el.dialog.addEventListener('pointerup', (e) => {
-    if (!carry || e.pointerId !== carry.id) return;
-    clearTimeout(carry.timer);
-    endCarry(true);
-  });
-  el.dialog.addEventListener('pointercancel', () => { if (carry) { clearTimeout(carry.timer); endCarry(false); } });
-  el.dialog.addEventListener('touchmove', (e) => { if (carry?.dragging) e.preventDefault(); }, { passive: false });
-  el.dialog.addEventListener('contextmenu', (e) => { if (carry && e.target.closest?.('[data-add-group]')) e.preventDefault(); });
 
   setupDialog(el.dialog);
   el.dialog.addEventListener('close', () => {
-    if (press) endDrag(false);
-    if (carry) endCarry(false);
+    drag.cancel();
+    carrying.cancel();
     if (edging) endEdge(false);
     picking = null;
     asking = null;

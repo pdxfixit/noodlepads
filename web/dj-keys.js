@@ -19,12 +19,10 @@ import { MAX_NAME } from './names.js';
 import { groupKit } from './model.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { newId } from './util.js';
+import { holdToDrag } from './finger.js';
 import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
 import { instrumentById } from './instruments.js';
 
-const DRAG_PX = 6;          // a mouse or pen moved this far is dragging, not tapping
-const HOLD_MS = 280;        // a finger held this long without moving starts a drag
-const SLOP_PX = 10;         // a finger moving further first is a scroll
 const UNDO_MAX = 30;
 const ROW_NAMES = ['number row', 'top letter row', 'middle row', 'bottom row'];   // rhythm.js KEY_ROWS, top to bottom
 
@@ -456,7 +454,7 @@ export function createKeysEditor({ el, deps }) {
   // One drag at a time. A mouse or pen drags once it moves; a finger holds
   // still for a moment first, so a swipe still scrolls the sounds.
 
-  let press = null;   // {id, x, y, from, kind, touch, timer, dragging, ghost, ids, over}
+  // The press (finger.js holdToDrag) is {id, x, y, from, kind, touch, timer, dragging, ghost, ids, over}.
 
   function dragIds(from) {
     if (from.dataset.drag === 'sound') {
@@ -467,11 +465,9 @@ export function createKeysEditor({ el, deps }) {
     return groups().find((g) => g.id === from.dataset.group)?.clips.map((c) => c.id) ?? [];
   }
 
-  function startDrag(e) {
-    const p = press;
+  function startDrag(p, x, y) {
     const ids = dragIds(p.from);
-    if (!ids.length) { press = null; return; }
-    p.dragging = true;
+    if (!ids.length) return false;
     p.ids = ids;
     const ghost = document.createElement('div');
     ghost.className = 'ke-ghost';
@@ -488,11 +484,10 @@ export function createKeysEditor({ el, deps }) {
     el.dialog.classList.add('ke-dragging', `ke-dragging-${p.kind}`);
     p.from.classList.add('ke-lifted');
     try { p.from.setPointerCapture(p.id); } catch { /* the pointer is gone */ }
-    moveGhost(e.clientX, e.clientY);
+    moveGhost(p, x, y);
   }
 
-  function moveGhost(x, y) {
-    const p = press;
+  function moveGhost(p, x, y) {
     p.ghost.style.transform = `translate(${x}px, ${y}px)`;
     const under = document.elementFromPoint(x, y);
     const key = under?.closest?.('[data-code]');
@@ -505,10 +500,7 @@ export function createKeysEditor({ el, deps }) {
     p.over = { key: key && el.keys.contains(key) ? key.dataset.code : null, row: row && el.keys.contains(row) ? Number(row.dataset.row) : null, board: !!under?.closest?.('#ke-keys') };
   }
 
-  function endDrag(drop) {
-    const p = press;
-    press = null;
-    if (!p?.dragging) return;
+  function endDrag(p, drop) {
     justDragged = true;
     setTimeout(() => { justDragged = false; }, 0);
     for (const o of el.keys.querySelectorAll('.ke-over')) o.classList.remove('ke-over');
@@ -529,34 +521,20 @@ export function createKeysEditor({ el, deps }) {
     } else p.ghost.remove();
   }
 
-  el.dialog.addEventListener('pointerdown', (e) => {
-    const from = e.target.closest?.('[data-drag]');
-    if (!from || e.button > 0 || press) return;
-    const touch = e.pointerType === 'touch';
-    press = { id: e.pointerId, x: e.clientX, y: e.clientY, from, kind: from.dataset.drag, touch, dragging: false };
-    if (touch) press.timer = setTimeout(() => { if (press && !press.dragging) startDrag({ clientX: press.x, clientY: press.y }); }, HOLD_MS);
+  const drag = holdToDrag(el.dialog, el.dialog, {
+    match: (e) => {
+      const from = e.target.closest?.('[data-drag]');
+      return from && { from, kind: from.dataset.drag };
+    },
+    start: startDrag,
+    move: moveGhost,
+    end: endDrag,
+    menu: '[data-drag]',
   });
-  el.dialog.addEventListener('pointermove', (e) => {
-    if (!press || e.pointerId !== press.id) return;
-    if (press.dragging) { moveGhost(e.clientX, e.clientY); return; }
-    const far = Math.hypot(e.clientX - press.x, e.clientY - press.y);
-    if (press.touch) { if (far > SLOP_PX) { clearTimeout(press.timer); press = null; } return; }
-    if (far > DRAG_PX) startDrag(e);
-  });
-  el.dialog.addEventListener('pointerup', (e) => {
-    if (!press || e.pointerId !== press.id) return;
-    clearTimeout(press.timer);
-    endDrag(true);
-  });
-  el.dialog.addEventListener('pointercancel', () => { if (press) { clearTimeout(press.timer); endDrag(false); } });
-  // While a finger drags, the page must not scroll under it.
-  el.dialog.addEventListener('touchmove', (e) => { if (press?.dragging) e.preventDefault(); }, { passive: false });
-  // A held finger brings up no menu of its own.
-  el.dialog.addEventListener('contextmenu', (e) => { if (e.target.closest?.('[data-drag]')) e.preventDefault(); });
 
   setupDialog(el.dialog);
   el.dialog.addEventListener('close', () => {
-    if (press) endDrag(false);
+    drag.cancel();
     picks = [];
     asking = null;
     deps.closed?.();

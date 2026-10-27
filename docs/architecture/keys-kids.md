@@ -20,7 +20,7 @@
 | `dj-touch.js` | `dj.js` (`drawBands` every render; `createTouchEditor` once) | `touch.js`, `touch-grid.js`, `inst-picker.js`, `instruments.js` | the ✏️ Layout (👆 Pads) dialog's picker, undo stack, three drags |
 | `touch.js` | `dj.js`, `dj-touch.js`, `rhythm.js`, `backup.js` | `touch-grid.js` | nothing (pure) |
 | `touch-grid.js` | `touch.js`, `dj-touch.js` | none | nothing (pure) |
-| `finger.js` | `dj.js`, `kids.js`, `pads.js`, `sequencer.js` (`pillHolds`) | none | one follower per caller |
+| `finger.js` | `dj.js`, `dj-keys.js`, `dj-touch.js` (`holdToDrag`), `kids.js`, `pads.js`, `sequencer.js` (`pillHolds`) | none | one follower per caller; one drag press per ✏️ Layout drag (`pads.js` has its own for Edit sounds) |
 | `kids.js` | `app.js` (`initKids`, `showKids`, `refreshKids`, `kidsPersonLeaving`, `kidsShowing`, `kidsBusy`, `askGrownUp`, `kidsKeydown`, `kidsKeyup`) | `audio.js`, `kids-logic.js`, `grown-up.js`, `scratch.js`, `settings.js`, `skins.js`, `tips.js`, `finger.js`, `meter.js levelOf`, `notes.js startsIn`, `beat.js` (`STEPS`, `noteRate`), `instruments.js` | the tab, the page, the recorder, the beat player, held toy keys, the tune recording |
 | `kids-logic.js` | `kids.js`, `grown-up.js` (`makeSum`, `typeDigit`) | `beat.js` (`cleanRow`, `STEPS`, `multiplyRows`), `notes.js addNote`, `voices.js` (`chainFields`, `voiceStep`), `scratch.js SCRATCH_NAME`, `instruments.js versionFor` | nothing (pure) |
 | `grown-up.js` | `kids.js askGrownUp`, `feedback.js`, `cloud-ui.js` (Forget this device) | `kids-logic.js`, `dialogs.js` | the one `#kids-sum` dialog and who asked it (`ask`) |
@@ -416,7 +416,7 @@ Summed once, in `beat.js outputDelay`: Beats, Song, `app.js` `deps.latency` for 
 | Two recorders: `sheet.js` and `kids.js` | MIME list, 10 s cap and the 3-2-1 count are copied, not shared. |
 | Two keyboard mappings: `rhythm.js keyFor` (layout-aware) and `kids.js kidsKeydown` (`e.key` letters) | Kids' keys follow neither Dvorak nor the `djLayout` pick. |
 | The beat drawn twice: `sequencer.js render` (Beats' rows) and `dj.js renderGrid` (the keys' grid) | A pill's look or a row control must change in both (they share `beat-row.js`, `row-volume.js`, `pill-select.js`). |
-| Two ✏️ Layout editors: `dj-keys.js` and `dj-touch.js` | Save line, rename, delete-asks-twice, undo stack, drag-with-hold (`DRAG_PX`, `HOLD_MS`, `SLOP_PX`) are written twice. |
+| Two ✏️ Layout editors: `dj-keys.js` and `dj-touch.js` | Save line, rename, delete-asks-twice and the undo stack are written twice. The press that drags (a mouse once it moves, a finger after a hold) is written once, `finger.js holdToDrag`, which both editors call (three presses: the keys', the bands' ⠿ and the carried groups). |
 | Two ⏲️ wishes: `dj-click` and `beat-click`, joined by `seq.setClick` | A click change must keep the override rule. `stop-clicks.test.mjs` guards Stop all. |
 | `keyset.js keepAsMine` and `touch.js keepAsMine` | The same idea, two modules. |
 | Loop glow goes through `pads.js` | `audio.on.looping` is owned by `pads.js initPads`, which forwards to `dj.looping` through a hook `app.js` passes in. |

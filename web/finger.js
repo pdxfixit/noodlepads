@@ -94,3 +94,58 @@ export function pillHolds(root, match, onHold) {
   root.addEventListener('contextmenu', (e) => { if (match(e.target)) e.preventDefault(); });
   return () => { const was = held; held = false; return was; };
 }
+
+// Dragging a thing in ✏️ Layout (the keys' sounds, keys and groups; the
+// bands' ⠿ handles and the groups carried onto a block). A mouse or a pen
+// drags once it has moved `dragPx`; a finger holds still `holdMs` first, so
+// a swipe still scrolls the dialog, and a finger that moves past `slopPx`
+// before the hold is a scroll and drops the press.
+export const DRAG_PX = 6;
+export const DRAG_HOLD_MS = 280;
+export const DRAG_SLOP_PX = 10;
+
+// `downOn` hears the press begin; `root` hears it move, lift and cancel.
+// `match(e)` says whether a pointerdown starts one: it returns an object
+// (what the press carries, such as what is held) or nothing. `start(press,
+// x, y, moved)` runs when the drag starts (`moved` is true for a mouse that
+// just moved there); returning false refuses it. `move(press, x, y)` runs
+// while it drags, and `end(press, drop)` when it lets go (`drop` is false
+// for a cancel). `menu`: the selector whose long-press menu is kept off;
+// `menuOnlyWhilePressed` keeps it off only during a press. Returns
+// {press, cancel()}: the press now, and a way to end it as a cancel.
+export function holdToDrag(downOn, root, { match, down, start, move, end, menu = null, menuOnlyWhilePressed = false, holdMs = DRAG_HOLD_MS, dragPx = DRAG_PX, slopPx = DRAG_SLOP_PX }) {
+  let press = null;   // {...match's, id, x, y, touch, timer, dragging}
+  const begin = (x, y, moved) => {
+    press.dragging = true;
+    if (start(press, x, y, moved) === false) press = null;
+  };
+  const finish = (drop) => {
+    const p = press;
+    press = null;
+    clearTimeout(p.timer);
+    if (p.dragging) end(p, drop);
+  };
+  downOn.addEventListener('pointerdown', (e) => {
+    if (e.button > 0 || press) return;
+    const data = match(e);
+    if (!data) return;
+    const touch = e.pointerType === 'touch';
+    press = { ...data, id: e.pointerId, x: e.clientX, y: e.clientY, touch, dragging: false };
+    down?.(press, e);
+    if (touch) press.timer = setTimeout(() => { if (press && !press.dragging) begin(press.x, press.y, false); }, holdMs);
+  });
+  root.addEventListener('pointermove', (e) => {
+    if (!press || e.pointerId !== press.id) return;
+    if (press.dragging) { move(press, e.clientX, e.clientY); return; }
+    const far = Math.hypot(e.clientX - press.x, e.clientY - press.y);
+    if (press.touch) { if (far > slopPx) { clearTimeout(press.timer); press = null; } return; }
+    if (far > dragPx) begin(e.clientX, e.clientY, true);
+  });
+  root.addEventListener('pointerup', (e) => { if (press && e.pointerId === press.id) finish(true); });
+  root.addEventListener('pointercancel', () => { if (press) finish(false); });
+  // While a finger drags, the page must not scroll under it.
+  root.addEventListener('touchmove', (e) => { if (press?.dragging) e.preventDefault(); }, { passive: false });
+  // A held finger brings up no menu of its own.
+  if (menu) root.addEventListener('contextmenu', (e) => { if ((press || !menuOnlyWhilePressed) && e.target.closest?.(menu)) e.preventDefault(); });
+  return { get press() { return press; }, cancel() { if (press) finish(false); } };
+}
