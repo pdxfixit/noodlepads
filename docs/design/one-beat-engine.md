@@ -1,6 +1,6 @@
 # One beat engine for Beats, ⌨️ Keys, 🧸 Kids and 🎼 Song
 
-Status: plan, revised after the council's first round (2026-10-26: child-psychologist ⛔, 19 seats ✏️, amateur and pre-reader ✅), and brought up to main on 2026-10-27. Ben approved the build. Steps 0–4 are on main (no behavior change in any of them); steps 5a (🧸 Kids on the engine, today's sound) and 5b (Ben's sound changes) are done on branch `engine-5`. A spike proves the seam (see "The spike"); it is not for landing as it is.
+Status: plan, revised after the council's first round (2026-10-26: child-psychologist ⛔, 19 seats ✏️, amateur and pre-reader ✅), and brought up to main on 2026-10-27. Ben approved the build. Steps 0–5 are on main (no behavior change except 5b, Ben's sound changes for 🧸 Kids); step 6a (🥁 Beats' loop on the engine) is done on branch `engine-6`. A spike proves the seam (see "The spike"); it is not for landing as it is.
 
 **What main changed since the plan was written** (2026-10-26/27): 🎷 Swing is for every level and swings the eighths (`swingNow()` has no Advanced test); Kids' drums are kick, snare, shaker, clap (`KIDS_DRUMS`); a beat's time signature is stamped (`old-beats.js`, ADR 0035), so nothing guesses it from Settings and `sigOf()` is the beat's own; the scratch re-read on leaving Kids is on main (7405e2c).
 
@@ -91,9 +91,11 @@ The click stays in `sequencer.js` (Beats' `beforeRows` hook in step 6).
 | `onPass(at)` | — | — | ● stops |
 | `onHit(clipId, at)` | — | keys flash | — |
 | `onStop()` (step 9) | — | `seq.stop` | `stopBeat` |
-| Beats only (step 6): `limit()`, `skip(row, at, dt)`, `beforeRows(until)`, `afterTick()`, `onSteps(shown)` | — | the chip switch, live hits not played twice, the click and growing, `switchNow`, the playhead | — |
+| Beats only (step 6, as built): `loaded(id)`, `steps`, `limit()`, `join(i)`, `skip(row, next, dt)`, `beforeRows(until)`, `afterTick()` | — | the engine's own sounds, the playhead's pills, the chip switch's bar line, a new row's clock, live hits not played twice, the click and growing, `switchNow` and the speaker grille | — |
 
-`run.stats` counts hits booked, dropped as late, and silent (a sound gone or still loading). Kids logs them once on stop (`kids` `{stopped, hits, late, silent}`, a `log-clean.js` rule, tested).
+`run.stats` counts hits booked, dropped as late, and silent (a sound gone or still loading); Beats' run also counts the hits it cut off and the most voices ringing in a row, which its stop logs as before. Kids logs them once on stop (`kids` `{stopped, hits, late, silent}`, a `log-clean.js` rule, tested).
+
+**As built for Beats (step 6a).** Beats' sounds stay in the engine's `ready` (the `loaded` hook; ▶ refreshes them as before and a chip switch's `prepare` lands there), so the run keeps `hitsDue` and the tick but not yet Kids' "sounds by `audio.key`": that waits for `prepareBeats` to go in step 8. A run with `loaded` goes at once (`from` is the first pill's time) and its first tick is the caller's (`run.tick()`), so ▶ still tells the pads (`onTempo`) before the first hit is booked. The run owns `clocks`, `voices`, `shown`, `queue`, `t0` and `pass`; the click, the skips, `queued` and the stop log stay in `sequencer.js`. The plain-grid `pass` clock runs for Beats but nothing reads it. One small difference from the old loop: a row new since the last tick (added while playing, or put back by Undo) copies a same-speed row's clock as the clocks came in, where the old loop read clocks the rows before it had already moved on in the same tick.
 
 ## What a kid hears and sees differently
 

@@ -505,8 +505,8 @@ What I heard: ▶ deps.seq.hearBeat · 🎼 deps.song.openSaved · 🥁 deps.seq
 ### The one context and the audio clock
 
 `audio.context().currentTime` is the clock every scheduler books on
-(`sequencer.js`, `song.js` and `beat-engine.js play`, which 🧸 Kids plays through; each a 25 ms `setInterval` with
-lookahead). Each drops a hit whose moment passed more than `LATE_SECONDS`
+(`beat-engine.js play`, which 🥁 Beats and 🧸 Kids play through, and `song.js`; each a 25 ms `setInterval` with
+lookahead; the click in `sequencer.js` rides on Beats' tick). Each drops a hit whose moment passed more than `LATE_SECONDS`
 (20 ms) ago (`audio.js tooLate`): after a stall, or a clock that ran on
 while the timers slept, the beat goes on in time with no burst of missed
 hits (`tests/late-hits.test.mjs`). Pads read it for `t0`; `meter.js` and `wave.js` turn it into

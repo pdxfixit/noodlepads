@@ -410,7 +410,7 @@ Worked out in four places: `beat.js outputDelay`; `app.js` `deps.latency` for th
 
 | Seam | What a fix in one place misses |
 |---|---|
-| Two beat loops: `sequencer.js schedule` and the engine's `play` (Kids) | Kids leaves out mute, solo, the mixer's effects and row speed on purpose (row and Master volume are kept as a plain gain); accents, swing and a tune sound's `root` play as on Beats. A timing fix in `schedule` does not reach `play` until Beats moves onto it (step 6). |
+| Beats and Kids play through the one engine `play` | Kids leaves out mute, solo, the mixer's effects and row speed on purpose (`mixer: false`, `mode: 'plain'`; row and Master volume are kept as a plain gain); accents, swing and a tune sound's `root` play as on Beats. A timing fix in `beat-engine.js play` or `beat.js hitsDue` reaches both. |
 | Two snap rules: `rhythm.js createSnapper` (keys) and `kids-logic.js pillAt` (Kids' tune) | Kids has no latency shift, no double-tap filter, no one-hit-per-pill, no tempo-change safety. |
 | Two recorders: `sheet.js` and `kids.js` | MIME list, 10 s cap and the 3-2-1 count are copied, not shared. |
 | Two keyboard mappings: `rhythm.js keyFor` (layout-aware) and `kids.js kidsKeydown` (`e.key` letters) | Kids' keys follow neither Dvorak nor the `djLayout` pick. |

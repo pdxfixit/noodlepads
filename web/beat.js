@@ -223,8 +223,11 @@ export function pillHits(row, step) {
 // signature's pills a bar, its bars, its swing (`swing`, 0-50). `rows`: the
 // row indexes that play (null: all); `mixer` false plays a muted or
 // turned-down row too. A row with no pills, or a tempo that gives no pill
-// length, books nothing.
-export function hitsDue(p, at, until, { mode = 'plain', swing = 0, rows = null, mixer = true } = {}) {
+// length, books nothing. Beats also asks for `steps` (true): every pill each
+// row passes, {row, step, time}, `time` the swung moment it sounds, for the
+// playhead; and `skip(row, next, dt)`, which says a pill was already played
+// live (🎹 a key tapped into the recording), so its hits are not booked.
+export function hitsDue(p, at, until, { mode = 'plain', swing = 0, rows = null, mixer = true, steps = false, skip = null } = {}) {
   const bars = Number.isInteger(p?.bars) && p.bars > 0 ? p.bars : 1;
   const groups = SIGNATURES[p?.signature] || SIGNATURES['4/4'];
   const total = barSteps(p?.signature) * bars;
@@ -232,9 +235,10 @@ export function hitsDue(p, at, until, { mode = 'plain', swing = 0, rows = null, 
   const hits = [];
   const pills = [];
   const passes = [];
+  const passed = [];
   const pass = { ...at.pass };
   const clocks = at.clocks.map((c) => (c ? { ...c } : c));
-  if (!(base > 0 && Number.isFinite(base))) return { hits, pills, passes, clocks, pass };
+  if (!(base > 0 && Number.isFinite(base))) return { hits, pills, passes, clocks, pass, steps: passed };
   const solo = (p.rows ?? []).some((r) => r?.solo);   // as audible() reads it, safe for a missing row
   (p.rows ?? []).forEach((row, i) => {
     const dt = stepSeconds(p, row ?? {}, mode);
@@ -245,12 +249,15 @@ export function hitsDue(p, at, until, { mode = 'plain', swing = 0, rows = null, 
     const playable = row && (row.melody || Array.isArray(row.steps)) && (!rows || rows.has(i)) && (!mixer || (!row.muted && rowLevel(row) > 0 && !(solo && !row.solo)));
     while (clock.next < until) {
       if (clock.step >= total) clock.step = 0;   // the beat got shorter while playing
+      const heard = clock.next + swingDelay(clock.step, dt, swing, groups);
+      const played = skip?.(i, clock.next, dt);   // asked of every pill, so a skip is used up where it fell
       // A tune row's notes start on the pill or half a pill after it (notes.js); swing moves only the pill.
-      if (playable) {
+      if (playable && !played) {
         for (const h of pillHits(row, clock.step)) {
-          hits.push({ row: i, at: h.at ? clock.next + h.at * dt : clock.next + swingDelay(clock.step, dt, swing, groups), loud: h.loud, note: h.note, len: h.len * dt });
+          hits.push({ row: i, at: h.at ? clock.next + h.at * dt : heard, loud: h.loud, note: h.note, len: h.len * dt });
         }
       }
+      if (steps) passed.push({ row: i, step: clock.step, time: heard });
       clock.next += dt;
       clock.step = (clock.step + 1) % total;
     }
@@ -261,7 +268,7 @@ export function hitsDue(p, at, until, { mode = 'plain', swing = 0, rows = null, 
     pass.pill = (pass.pill + 1) % total;
     if (pass.pill === 0) passes.push(pass.next);
   }
-  return { hits, pills, passes, clocks, pass };
+  return { hits, pills, passes, clocks, pass, steps: passed };
 }
 
 // Every hit in the first `seconds` of a beat: [{row, step, time, loud,

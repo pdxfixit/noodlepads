@@ -59,7 +59,7 @@ The questions agents ask most. ✅ marks a claim `tests/architecture.test.mjs` c
 | Is there one…? | Answer | Read |
 |---|---|---|
 | AudioContext | **One ✅**, `audio.js audio.context()`. Everything audible goes `audio.master` → limiter → analyser → speakers. 🎧 From a song captures on the same one. | sound.md |
-| Beat scheduler | **Three loops ✅**, each a 25 ms tick on the audio clock with one lookahead: `beat-engine.js play` (🧸 Kids' beat, with hooks for what Kids leaves out; `kids.js` has no scheduler of its own any more), `sequencer.js` (the beat, the click) and `song.js` (sounds each hit with `seq.soundHit`). They are two once Beats moves onto `play` (step 6) and one once Song does (step 8). | beats-song.md, keys-kids.md |
+| Beat scheduler | **Two loops ✅**, each a 25 ms tick on the audio clock with one lookahead: `beat-engine.js play` (🥁 Beats' beat, with hooks for its click, its chip switch at the bar line and the pills a live hit already played; 🧸 Kids' beat, with hooks for what Kids leaves out; neither `sequencer.js` nor `kids.js` has a hit loop of its own) and `song.js` (sounds each hit with `seq.soundHit`). The click track stays in `sequencer.js` (`scheduleClicks`, asked by the beat's tick; its own timer runs when the beat is stopped). One loop once Song moves onto `play` (step 8). | beats-song.md, keys-kids.md |
 | Path from a tap to a sound | Pads, 🎤 Live keys and 👆 bands all go through `pads.js tapPad` → `audio.play` (the keys reach it by `deps.tap`; they never import `audio.js` ✅). 🧸 Kids calls `audio.play` itself. The sound sheet, chop and bulk use `audio.start` on their own buffers. | sound.md, keys-kids.md |
 | Way to play a saved beat | **One shared path ✅**, in `beat-engine.js`: `seq.beatPlan` + `prepareBeats` + `soundHit` (the beat maker hands the engine's through `seq`), used by 🎼 Song, share previews, 🗂️ See all, 💃 Grooves' ▶ and 🎧's ▶ part. Beats' own play, bounce and the roll's preview call the engine's `sound()` + `busFor()` (`beat-engine.js`). | beats-song.md |
 | Mixer | **One per beat ✅**, built only by `beat-engine.js`: `busFor` builds `mixer.js buildMix` (each row's effect and the master) for any destination, live or offline. A row's level is applied per hit; mute and solo stop hits being booked. 🧸 Kids bypasses it. | beats-song.md |
@@ -81,9 +81,9 @@ The questions agents ask most. ✅ marks a claim `tests/architecture.test.mjs` c
 
 The biggest ones. Each area file lists its own in full.
 
-- **Three beat loops:** `sequencer.js`, `song.js` and the engine's `play`
-  (Kids). A timing fix in one of the first two does not reach the others
-  until steps 6 and 8 of [one-beat-engine.md](../design/one-beat-engine.md).
+- **Two beat loops:** `song.js` and the engine's `play` (Beats and Kids).
+  A timing fix in the engine reaches both screens, and does not reach Song
+  until step 8 of [one-beat-engine.md](../design/one-beat-engine.md).
 - **Two recorders:** `sheet.js` and `kids.js`.
 - **Sound helpers in the beat rules:** `noteRate` lives in `beat.js` (the
   WAV encoder and `normalize` are in `wav.js`). The semitone rate is worked out in six

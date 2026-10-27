@@ -78,6 +78,7 @@ const ONLY = [
   ['one AudioWorklet: 🎧 From a song', /\.addModule\(/, ['listen-input.js']],
   // beats-song.md
   ['the mix bus is built only by the beat engine', /import \{[^}]*\bbuildMix\b[^}]*\} from '\.\/mixer\.js'/, ['beat-engine.js']],
+  ['what is due is worked out by the engine alone', /import \{[^}]*\bhitsDue\b[^}]*\} from '\.\/beat\.js'/, ['beat-engine.js']],
   ['the shared "play a saved beat" path', /soundHit\(/, ['beat-engine.js', 'sequencer.js', 'share-render.js', 'song.js']],
   ['prepareBeats callers', /\.prepareBeats\(/, ['share-render.js', 'song.js']],
   ['the WAV encoder', /function encodeWav\b/, ['wav.js']],
@@ -109,12 +110,17 @@ for (const [what, pattern, files] of ONLY) {
   test(`✅ ${what}: ${files.join(', ')}`, () => assert.deepEqual(webWith(pattern), files, FIX));
 }
 
-test('✅ schedulers on the audio clock: the beat engine (🧸 Kids), the beat maker and 🎼 Song; Kids has none of its own', () => {
+test('✅ hits are booked by two loops on the audio clock: the beat engine (🥁 Beats, 🧸 Kids) and 🎼 Song; the beat maker keeps only the click\'s own timer', () => {
   // sheet.js reads the clock too, but its interval is a 150 ms play watch, not a scheduler.
   assert.deepEqual(webWith(/setInterval\(/).filter((f) => f !== 'sheet.js' && /\.currentTime\b/.test(src[f])), ['beat-engine.js', 'sequencer.js', 'song.js'], FIX);
+  // sequencer.js: its one interval is the click while the beat is stopped; the beat is the engine's run.
+  assert.equal(src['sequencer.js'].match(/setInterval\(/g).length, 1, FIX);
+  assert.match(src['sequencer.js'], /aloneTimer = setInterval\(/, FIX);
+  assert.match(src['sequencer.js'], /engine\.play\(/, FIX);
+  assert.doesNotMatch(src['sequencer.js'], /\bmakeVoice\b|\btooLate\b|\bhitsDue\b/, FIX);
 });
 
-test('✅ the beat engine, the beat maker and 🎼 Song share one tick and lookahead', () => {
+test('✅ the beat engine, the beat maker (its click) and 🎼 Song share one tick and lookahead', () => {
   for (const f of ['beat-engine.js', 'sequencer.js', 'song.js']) {
     assert.match(src[f], /^const TICK_MS = 25;$/m, `${f}: ${FIX}`);
     assert.match(src[f], /^const LOOKAHEAD = 0\.1;$/m, `${f}: ${FIX}`);

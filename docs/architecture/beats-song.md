@@ -1,6 +1,6 @@
 # 🥁 Beats and 🎼 Song
 
-**In one paragraph.** `sequencer.js createSequencer` is the beat maker, and `beat-engine.js createBeatEngine` is the engine under it: the sounds loaded for scheduling (`ready`), one hit (`sound`), the mix graphs (`busFor`, `letGo`) and the "play a saved beat" path (`prepareBeats`, `soundHit`), with no screen, DOM or storage. `app.js` makes the one engine and hands it to the beat maker, `createSong` and `initKids` (`deps.engine`). Its `play(hooks)` is a loop on the audio clock: 🧸 Kids plays through it today; the loops of `sequencer.js` and `song.js` move onto it in steps 6 and 8 of [one-beat-engine.md](../design/one-beat-engine.md). The sounds it holds are read through `has`/`get`/`drop`/`keep(ids)`/`held`, never as a map. The beat maker's pure rules are in `beat.js` (a beat made safe, the hits it plans, swing, grooves as beats, beat files, tempo stops; imported by the backup gate, Kids' rules, the listener, Song and the share preview, so none of them loads the screen), and the WAV encoder in `wav.js`. The beat maker owns the open beat, its scheduler on the audio clock, the beat's mix bus, the sound chooser, 💃 Grooves, 🗂️ My beats, the pattern chips, the click, 🎚️ Mixer's wiring and 🎹 the roll's wiring. Everything else that plays a saved beat goes through three of its methods (`beatPlan`, `prepareBeats`, `soundHit`), which share the engine's `sound()` and `busFor()`. `song.js createSong` is 🎼 Song: its own record, its own 25 ms scheduler, and no sound code of its own (every hit is `seq.soundHit`). `playlist.js` and `notes.js` are the pure rules under them. 🧸 Kids plays its beat through the engine's `play` (`kids.js playBeat`), and ⌨️ Keys (`dj.js`) drives the sequencer through about 40 methods of its API.
+**In one paragraph.** `sequencer.js createSequencer` is the beat maker, and `beat-engine.js createBeatEngine` is the engine under it: the sounds loaded for scheduling (`ready`), one hit (`sound`), the mix graphs (`busFor`, `letGo`) and the "play a saved beat" path (`prepareBeats`, `soundHit`), with no screen, DOM or storage. `app.js` makes the one engine and hands it to the beat maker, `createSong` and `initKids` (`deps.engine`). Its `play(hooks)` is the loop on the audio clock that 🥁 Beats and 🧸 Kids play through (`beat.js hitsDue` says what is due, the tick books it); the loop of `song.js` moves onto it in step 8 of [one-beat-engine.md](../design/one-beat-engine.md). The sounds it holds are read through `has`/`get`/`drop`/`keep(ids)`/`held`, never as a map. The beat maker's pure rules are in `beat.js` (a beat made safe, the hits it plans, swing, grooves as beats, beat files, tempo stops; imported by the backup gate, Kids' rules, the listener, Song and the share preview, so none of them loads the screen), and the WAV encoder in `wav.js`. The beat maker owns the open beat, the hooks it gives the engine's loop (the click before the rows, the chip switch at the bar line, live hits not played twice, the playhead), the beat's mix bus, the sound chooser, 💃 Grooves, 🗂️ My beats, the pattern chips, the click, 🎚️ Mixer's wiring and 🎹 the roll's wiring. Everything else that plays a saved beat goes through three of its methods (`beatPlan`, `prepareBeats`, `soundHit`), which share the engine's `sound()` and `busFor()`. `song.js createSong` is 🎼 Song: its own record, its own 25 ms scheduler, and no sound code of its own (every hit is `seq.soundHit`). `playlist.js` and `notes.js` are the pure rules under them. 🧸 Kids plays its beat through the engine's `play` (`kids.js playBeat`), and ⌨️ Keys (`dj.js`) drives the sequencer through about 40 methods of its API.
 
 ## Who is built where
 
@@ -127,31 +127,31 @@ The library is the truth. `patterns` only says which named beat is open; no reco
 
 | Timer | Owner | Period | What it books |
 |---|---|---|---|
-| `timer` | `sequencer.js play` → `schedule` | 25 ms (`TICK_MS`) | every hit due before `currentTime + 0.1` (`LOOKAHEAD`), and the click; a hit already more than 20 ms past (`audio.js tooLate`, after a stall) is dropped, its pill still counted |
+| Beats' `run.timer` | `sequencer.js play` → `beat-engine.js play` | 25 ms (the engine's `TICK_MS`) | every hit `beat.js hitsDue` says is due before `currentTime + 0.1` (`LOOKAHEAD`), after the click (the `beforeRows` hook); a hit already more than 20 ms past (`audio.js tooLate`, after a stall) is dropped, its pill still counted |
 | `aloneTimer` | `seq.metronome(on)` | 25 ms | the click alone while the beat is stopped (⌨️ Keys / 🎤 Live's ⏲️) |
 | `raf` | `sequencer.js follow` | every frame | the playhead: pills heard so far |
 | `askTimer` | `arm` | 3 s (`ARM_MS`) | a Clear? or Remove? forgets its first tap |
 | `sample.timer` | `hearBeat` | one `setTimeout` | ends a groove sample |
 | Song's `timer` | `song.js play` → `tick` | 25 ms | the next planned events before `currentTime + 0.1` |
 | Song's `raf` | `song.js follow` | every frame | the playhead line and the lit blocks |
-| The engine's `run.timer` | `beat-engine.js play` (🧸 Kids' beat) | 25 ms (its own `TICK_MS`) | what `beat.js hitsDue` says is due before `currentTime + lookahead` (Kids: 0.12 s), dropping a hit already past; the squares, ● 's pass |
+| Kids' `run.timer` | `beat-engine.js play` (🧸 Kids' beat) | 25 ms (the same) | what `beat.js hitsDue` says is due before `currentTime + lookahead` (Kids: 0.12 s), dropping a hit already past; the squares, ● 's pass |
 
-`play()` waits for every row's sound (`refresh` → `audio.load`, into the `ready` map); a `stop()` meanwhile (a song or sample begins, the screen changes) makes it stand down (`playAsk`, `tests/beat-ready.test.mjs`). Then it sets `t0 = currentTime + 0.05` (plus one bar with a count-in).
+`play()` waits for every row's sound (`refresh` → `audio.load`, into the `ready` map); a `stop()` meanwhile (a song or sample begins, the screen changes) makes it stand down (`playAsk`, `tests/beat-ready.test.mjs`). Then it gives `engine.play` the first pill's time (`from`: `currentTime + 0.05`, plus one bar with a count-in); the run starts at once, because the sounds are Beats' own (the `loaded` hook, read from the engine's `ready`), and `sequencer.js` books its first tick itself (`run.tick()`) after telling the pads (`onTempo`).
 
 ### Per-row clocks
 
-Each row has `clocks[i] = {next, step}`: when its next pill sounds and which pill. `schedule` loops each row while `clock.next < until`, reading `stepSeconds(pattern, row, playMode())` on every pill, so a tempo or rate change lands at once. Per-row arrays kept in step with `pattern.rows`:
+Each row has `run.clocks[i] = {next, step, dt}`: when its next pill sounds and which pill. `hitsDue` loops each row while `clock.next < until`, reading `stepSeconds(pattern, row, mode)` on every pill, so a tempo or rate change lands at once; it asks `skip` of every pill (a pill a live hit already played books none), and with `steps` it hands back each pill passed, `{row, step, time}`, for the playhead. The run (`beat-engine.js play`) owns the per-row arrays, which `sequencer.js` keeps in step with `pattern.rows`:
 
 | Array | Holds | Spliced by |
 |---|---|---|
-| `clocks` | `{next, step}` | `moveRow`, `removeRow`, `undoRemove` (inserts `undefined`), `switchNow`, `play` |
-| `voices` | the row's sounding voices `{src, gain, end, lift, level}` | same |
-| `shown` | the pill each row's playhead is on | same |
-| `queue` | booked `{row, step, time}`, for the playhead | remapped by `moveRow`, `removeRow`, `undoRemove` |
+| `run.clocks` | `{next, step}` | `moveRow`, `removeRow`, `undoRemove` (inserts `undefined`), `switchNow` |
+| `run.voices` | the row's sounding voices `{src, gain, end, lift, level}` | same |
+| `run.shown` | the pill each row's playhead is on | same |
+| `run.queue` | booked `{row, step, time}`, for the playhead | remapped by `moveRow`, `removeRow`, `undoRemove` |
 | `pills` | `pills[row][step]`, the buttons | `render` |
 | `litPills` | the `.now` pill per row | `showSteps` |
 
-A row with no clock (added while playing, or put back by Undo) gets one from `joinClock`: it copies a row already playing at the same speed, so it lands on the same pill; with none, it counts from `t0`.
+A row with no clock (added while playing, or put back by Undo) gets one from `joinClock` (the run's `join` hook, asked before `hitsDue` moves any clock on): it copies a row already playing at the same speed, so it lands on the same pill; with none, it counts from `run.t0`.
 
 ### Rates, bars and signatures
 
@@ -172,7 +172,7 @@ A row with no clock (added while playing, or put back by Undo) gets one from `jo
 3. `len > 0` (a note's length) fades it out there (`fadeStop`).
 4. `rhythm.js ringOver(list, time, ring || row.ring || melody)` decides which earlier voices of the row are cut at `time` with a short fade; Let-it-ring rows and tune rows keep up to `MAX_RINGING`.
 
-`hit(i, time, …)` is the live caller: it sends the voice to `busFor(ctx, audio.master, pattern).input(i)`, tells `deps.onHit(clipId, ms)`, and counts `stats` (logged at `stop`).
+The run's tick is the live caller: it sends the voice to `busFor(ctx, audio.master, pattern).input(i)`, tells the `onHit` hook (`deps.onHit(clipId, ms)`), and counts `run.stats` (hits, cuts, maxRinging; `sequencer.js stop` logs them with the limiter's worst).
 
 ### The click and the count-in
 
@@ -185,17 +185,17 @@ A row with no clock (added while playing, or put back by Undo) gets one from `jo
 
 ### The playhead and output latency
 
-`follow()` runs every frame: `stepsHeard(queue, shown, currentTime, outputDelay(ctx))` moves each row's playhead only once its pill has **come out of the speaker** (`outputDelay` = `outputLatency + baseLatency`, at most 0.2 s). Then `showSteps` (only the pills that change), `drawPlayhead` (one bar when rows line up, else a short bar per row), `keepInSight` (follow.js), `roll.step(shown)`, and `deps.onSteps(shown)` (⌨️ Keys' grid).
+`follow()` runs every frame: `stepsHeard(run.queue, run.shown, currentTime, outputDelay(ctx))` moves each row's playhead only once its pill has **come out of the speaker** (`outputDelay` = `outputLatency + baseLatency`, at most 0.2 s). Then `showSteps` (only the pills that change), `drawPlayhead` (one bar when rows line up, else a short bar per row), `keepInSight` (follow.js), `roll.step(run.shown)`, and `deps.onSteps(run.shown)` (⌨️ Keys' grid).
 
 Latency is worked out in two places with the same sum: `beat.js outputDelay` (Beats, and 🎼 Song's line and lit blocks through `song.js heardAt`) and `app.js`'s `deps.latency` for `dj.js`. 🧸 Kids' squares do not take it off at all.
 
 ### Switching beats on the bar line (pattern chips)
 
-`chipBeats(beats)`: pinned beats first (in pin order), then the most recently `saved`, shown oldest-`created` first, 8 spots (`MAX_CHIPS`). A chip tap while stopped opens the beat. While playing, `pickChip` sets `queued = {id, at: nextBarLine()}` and loads its sounds. `schedule` books nothing at or past `queued.at`; when the lookahead reaches it, `switchNow` swaps `pattern` on the same clock (`t0 = at`, fresh `clocks`, `voices`, `shown`), moves the old voices to `ringing` so they ring out, saves, and calls `onBeatChange` and `onTempo`. `stop()` drops a waiting switch. ⌨️ Keys locks the chips while recording (`lockChips`).
+`chipBeats(beats)`: pinned beats first (in pin order), then the most recently `saved`, shown oldest-`created` first, 8 spots (`MAX_CHIPS`). A chip tap while stopped opens the beat. While playing, `pickChip` sets `queued = {id, at: nextBarLine()}` and loads its sounds. the run's `limit` hook stops booking at `queued.at`; when the lookahead reaches it (the `afterTick` hook), `switchNow` swaps `pattern` on the same clock (`run.t0 = at`, fresh `run.clocks`, `run.voices`, `run.shown`), moves the old voices to `ringing` so they ring out, saves, and calls `onBeatChange` and `onTempo`. `stop()` drops a waiting switch. ⌨️ Keys locks the chips while recording (`lockChips`).
 
 ### Live hits recorded into the beat (for ⌨️ Keys)
 
-`beatClock()` gives `{t0, step, total, rates}` for snapping. `rowFor` / `addRowFor` find or make the row for a sound (`rowSlot` reuses an empty row; while recording, before adding one). `addSnaps(snaps, {skipAfter, draw})` turns pills on (never off), adds a one-pill note on a tune row, and pushes `skips` so the beat does not play again a pill the kid just played live. `snapshot()` / `restore(copy)` are ⌨️ Keys' own Undo.
+`beatClock()` gives `{t0, step, total, rates}` (`t0` the run's) for snapping. `rowFor` / `addRowFor` find or make the row for a sound (`rowSlot` reuses an empty row; while recording, before adding one). `addSnaps(snaps, {skipAfter, draw})` turns pills on (never off), adds a one-pill note on a tune row, and pushes `skips` so the beat does not play again a pill the kid just played live. `snapshot()` / `restore(copy)` are ⌨️ Keys' own Undo.
 
 ## The mix bus (ADR 0015, 0018)
 
@@ -204,7 +204,7 @@ Latency is worked out in two places with the same sum: `beat.js outputDelay` (Be
 | Control | Stored on | Applied where |
 |---|---|---|
 | Row level | `row.volume` | per voice: `hitGain` in `sound()`; a change while playing ramps the ringing voices (`applyLevel`) |
-| Mute | `row.muted` | `audible(row, p)`: the row's hits are never booked (`schedule`, `planHits`) |
+| Mute | `row.muted` | `audible(row, p)`: the row's hits are never booked (`hitsDue`, `planHits`) |
 | Solo | `row.solo` | `audible` → `mixer.js silencedBySolo`: only soloed rows are booked |
 | Row effect | `row.fx` | the mix graph: the row's own input runs through it |
 | Master level | `pattern.volume` | the graph's `master` gain, set on every `busFor` call (ramped live, set offline) |
@@ -232,7 +232,7 @@ Who uses what:
 
 | Caller | Plans with | Sounds with | Booking |
 |---|---|---|---|
-| Beats ▶ (live) | per-row clocks in `schedule` | `hit` → `sound` + `busFor` | lookahead |
+| Beats ▶ (live) | per-row clocks in `hitsDue` (the engine's tick) | `sound` + `busFor` | lookahead |
 | Beats 🔊 Save as a sound (`bounce`) | `planHits` on the open beat | `sound` + `busFor` on an `OfflineAudioContext` | offline |
 | 🎹 roll's note preview (`previewNote`) | — | `sound` + `busFor` | at once |
 | 💃 Grooves' ▶ sample, 🎧 From a song's ▶ part (`hearBeat`) | `beatPlan` | `soundHit` into `audio.master` | **every hit of the pass booked at once** (≤ 4 s, or 12 s for 🎧) |
@@ -367,7 +367,7 @@ Several things are keyed by the `pattern` **object**, not its id: `undo.pattern`
 | deps | Filled with | Called when |
 |---|---|---|
 | `el` | the Beats, chooser, library, grooves, mixer, roll elements | — |
-| `audio`, `meter` | `audio.js audio`, `meter.js meter` | `meter.run()` on every `schedule` |
+| `audio`, `meter` | `audio.js audio`, `meter.js meter` | `meter.run()` on every tick of the run (`afterTick`) |
 | `clips()` | `clipsFor(state.personId)` | `nextSound`, `addTune` |
 | `groups()` | `app.js groupsForChooser` (`{id, groupId, name, plain, color, clips, collapsible}`) | chooser, `render`, `rowInstrument` |
 | `clipById(id)` | `anyClip` (any board) | everywhere |
@@ -424,8 +424,8 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 
 | Seam | What a fix in one place misses |
 |---|---|
-| **Four beat loops.** `sequencer.js schedule` (live), `song.js tick`, `beat-engine.js play` (🧸 Kids), and `hearBeat` (all at once). Kids' looks 0.2 s ahead; the others 0.1 s | Kids plays in the beat's own bars, with its accents, swing and a tune row's `rootShift` (`hitsDue`, `sound`); it leaves out rates, mute, solo and the 🎚️ Mixer's effects for good (row and Master volume are kept as a plain gain). A timing fix in `schedule` or `tick` does not reach the others until steps 6 and 8 |
-| **`TICK_MS` and `LOOKAHEAD`** are separate constants in `beat-engine.js`, `sequencer.js` and `song.js` (`tests/architecture.test.mjs` checks all three agree) | change one, the beat and the song drift apart in feel; step 8 makes them one pair |
+| **Three beat loops.** `beat-engine.js play` (🥁 Beats and 🧸 Kids), `song.js tick`, and `hearBeat` (all at once). Kids' looks 0.2 s ahead; the others 0.1 s | Beats and Kids share `hitsDue`, `sound` and the tick, so a fix there reaches both: Kids plays in the beat's own bars, with its accents, swing and a tune row's `rootShift`; it leaves out rates, mute, solo and the 🎚️ Mixer's effects for good (row and Master volume are kept as a plain gain). A timing fix does not reach `song.js tick` until step 8 |
+| **`TICK_MS` and `LOOKAHEAD`** are separate constants in `beat-engine.js`, `sequencer.js` (the click's) and `song.js` (`tests/architecture.test.mjs` checks all three agree) | change one, the beat and the song drift apart in feel; step 8 makes them one pair |
 | **Output latency** is summed in `beat.js outputDelay` and again in `app.js`'s `deps.latency` for `dj.js` | a change to the cap (0.2 s) or the sum must be made twice; Kids ignores latency |
 | **The beat id pattern** `/^beat-[a-z0-9-]{1,48}$/` is written in `beat.js BEAT_ID`, `playlist.js BEAT_REF`, `backup.js` (a local `BEAT_ID`) and inline in `rhythm.js` | only `playlist.js` vs `sequencer.js` is tested (`tests/playlist.test.mjs`) |
 | **Listing a person's beats** happens three ways: `sequencer.js library()` (via `beatLibrary.list`, minus hidden), `makeSong`'s `deps.beats` (its own filter and sort), `kids.js`'s `deps.beats` | a new hidden kind of beat must be filtered in each |
@@ -444,8 +444,8 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | New beat, row and song fields are **left out at their default** (`volume`, `solo`, `fx`, `tempos`, `signature`) | an older copy plays them as before (ADR 0011, 0018, 0031) | `tests/mixer.test.mjs`, `tests/row-volume.test.mjs`, `tests/tempo-marks.test.mjs` |
 | A tune row always goes through `cleanRow` after an edit | its `steps` and `notes` must follow `tune` for older copies and previews | `tests/tune-rows.test.mjs` |
 | `song.save` rewrites `slots` with `legacySlots` | older copies read only `slots` | `tests/playlist.test.mjs`, `tests/merge3.test.mjs` |
-| Per-row arrays (`clocks`, `voices`, `shown`, `queue`, `pills`) follow every row insert, move and remove while playing | the playhead and hit cutting go to the wrong row | none found that moves rows while playing |
-| `schedule` reads `stepSeconds` on every pill; `retime` moves `t0`, `clickNext`, clocks, `skips` and `queued` together | a tempo change mid-beat keeps hits and ⌨️ Keys snapping on their pills | `tests/beat-builder.test.mjs` (`retimeAt`) |
+| Per-row arrays (the run's `clocks`, `voices`, `shown`, `queue`, and `pills`) follow every row insert, move and remove while playing | the playhead and hit cutting go to the wrong row | none found that moves rows while playing |
+| `hitsDue` reads `stepSeconds` on every pill; `retime` moves `run.t0`, `clickNext`, `run.clocks`, `skips` and `queued` together | a tempo change mid-beat keeps hits and ⌨️ Keys snapping on their pills | `tests/beat-builder.test.mjs` (`retimeAt`) |
 | A hit is lit only once heard (`stepsHeard` with `outputDelay`) | the playhead must match the sound a kid hears | `tests/keys-playhead.test.mjs` |
 | `save()` after every change to `pattern` | the library is the truth; `show()` re-reads it and would undo an unsaved change | many app tests |
 | The scratch's id is made from the person's id | two devices make the same record, and the cloud merges it | `tests/scratch.test.mjs` |
@@ -467,7 +467,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | A new field on the beat | `cleanPattern`, `samePattern`, `beatToFile` (the list is by hand), `mixKey` if it changes the sound graph, `listen-make.js` if 🎧 should set it, `grooveBeat` if grooves have it; `backup.js` gets it through `cleanPattern` |
 | A new 🎚️ effect | `mixer.js MIX_FX` (only `steps.js` kinds that run live); stored ids are checked by `cleanFx`; `tests/mixer.test.mjs` |
 | A new time signature | `beat.js SIGNATURES`; `settings.js timeSignature` values; the `[data-sig]` buttons in `index.html` (Beats and ⌨️ Keys); `song.js beatSteps` follows by itself; check `listen.js` and grooves |
-| Scheduler timing (lookahead, tick) | `sequencer.js` `TICK_MS`/`LOOKAHEAD`, `song.js` and `beat-engine.js` the same (Kids passes its `lookahead` 0.2 s), and `hearBeat` (books at once); how late a hit may be booked is `audio.js LATE_SECONDS`, shared by all three (`tests/late-hits.test.mjs`) |
+| Scheduler timing (lookahead, tick) | `beat-engine.js` `TICK_MS`/`LOOKAHEAD` (Beats' and Kids' loop; Kids passes its `lookahead` 0.2 s), `sequencer.js` the same for the click, `song.js` the same, and `hearBeat` (books at once); how late a hit may be booked is `audio.js LATE_SECONDS`, shared by all three (`tests/late-hits.test.mjs`) |
 | How a hit sounds everywhere | `beat-engine.js sound`, `hitGain`, `noteRate`, `rhythm.js ringOver`, `busFor`, `mixer.js buildMix`; `beat-engine.js play` for 🧸 Kids (the same `sound`, with `mixer: false`) |
 | A new place that plays a saved beat | `seq.beatPlan` + `seq.prepareBeats` + `seq.soundHit`; stop the live beat first; call `deps.onPlay`-style stops so one thing plays |
 | A new groove | `grooves.js GROOVES` (a kit id that exists in `boards.json`; bass rows of one instrument); `tests/grooves.test.mjs` |

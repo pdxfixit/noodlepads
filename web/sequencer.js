@@ -10,9 +10,11 @@
 // The beat maker's pure rules (a beat made safe, the hits it plans, swing,
 // grooves, beat files) are in beat.js; the WAV encoder is in wav.js.
 //
-// Timing uses the Web Audio clock, not timers: a 25 ms tick schedules every
-// hit due in the next 100 ms at its exact time (the usual lookahead pattern),
-// so a busy page can delay the tick without making the beat drag.
+// Timing uses the Web Audio clock, not timers: the beat engine's run (this
+// file gives it the beat and its hooks, see play) ticks every 25 ms and
+// schedules every hit due in the next 100 ms at its exact time (the usual
+// lookahead pattern), so a busy page can delay the tick without making the
+// beat drag. The click is booked from that tick, by this file.
 //
 // When a row's sound is still playing at its next hit, it is cut off with a
 // short fade (a hard cut clicks), unless the row's 🔔 Let it ring is on (`ring`,
@@ -21,7 +23,7 @@
 import { openDialog, setupDialog } from './dialogs.js';
 import { tempoKey } from './tempo-key.js';
 import { newId, recall, remember, onePressOneClick } from './util.js';
-import { fadeStop, tooLate } from './audio.js';
+import { fadeStop } from './audio.js';
 import { getSetting, onSetting, unsignedSignature } from './settings.js';
 import { logEvent } from './log.js';
 import { showBanner } from './ui.js';
@@ -37,7 +39,7 @@ import { follower, keepInView } from './follow.js';
 import { fitLine } from './lines.js';
 import { pillHolds } from './finger.js';
 import { encodeWav, normalize } from './wav.js';
-import { BAR_CHOICES, BEAT_BAR_STEPS, COMMON_BPMS, DEFAULT_BPM, MAX_BEAT_FILE_BYTES, MAX_BPM, MAX_PINS, MAX_ROWS, MAX_SWING, MIN_BPM, RING_MS, ROW_RATES, SAMPLE_SECONDS, STEPS_PER_BEAT, SIGNATURES, audible, barSteps, beatFromFile, beatToFile, chipBeats, cleanPattern, cleanRow, grooveBeat, groovePlayers, grooveShape, holdPill, isPinned, mergeGroove, moveItem, multiplyRows, nextSound, outputDelay, pillHits, pillTarget, planHits, retimeAt, rowSlot, stepSeconds, stepsHeard, stopFor, swingDelay, tapPill, tempoStops, typedBpm } from './beat.js';
+import { BAR_CHOICES, BEAT_BAR_STEPS, COMMON_BPMS, DEFAULT_BPM, MAX_BEAT_FILE_BYTES, MAX_BPM, MAX_PINS, MAX_ROWS, MAX_SWING, MIN_BPM, RING_MS, ROW_RATES, SAMPLE_SECONDS, STEPS_PER_BEAT, SIGNATURES, audible, barSteps, beatFromFile, beatToFile, chipBeats, cleanPattern, cleanRow, grooveBeat, groovePlayers, grooveShape, holdPill, isPinned, mergeGroove, moveItem, multiplyRows, nextSound, outputDelay, pillTarget, planHits, retimeAt, rowSlot, stepSeconds, stepsHeard, stopFor, tapPill, tempoStops, typedBpm } from './beat.js';
 import { GROOVES, GROOVE_GROUPS } from './grooves.js';
 import { cleanFx, silencedBySolo, createMixer } from './mixer.js';
 import { addNote } from './notes.js';
@@ -73,16 +75,16 @@ export function createSequencer(deps) {
   window.addEventListener('resize', () => drawPlayhead());
   let pattern = null;
   let advanced = getSetting('advancedBeats');
-  let timer = 0;
   let raf = 0;
-  let t0 = 0;            // when the beat started, on the audio clock
-  let clocks = [];       // per row: {next, step}, the row's next step and when it plays
-  let queue = [];        // scheduled {row, step, time}, for moving the playhead
-  let shown = [];        // per row: the step its playhead is on, or -1
+  // The beat playing, or null: the engine's run (beat-engine.js play). It keeps
+  // t0 (when the beat started, on the audio clock), clocks (per row {next,
+  // step}: the row's next step and when it plays), queue (booked {row, step,
+  // time}, for moving the playhead), shown (per row the step its playhead is
+  // on, or -1) and voices (per row, those sounding: {src, gain, end}).
+  let run = null;
   let litPills = [];     // per row: the pill marked .now for it (showSteps)
-  let voices = [];       // per row: its sounding voices ({src, gain, end})
   let ringing = [];      // a beat's voices after a chip switched away from it, still ringing out
-  let stats = null;      // this play's numbers, logged when it stops
+  let stats = null;      // this play's start and the limiter's worst, logged with the run's counts when it stops
   // The one beat engine (beat-engine.js, made by app.js and shared with 🎼 Song and 🧸 Kids): the sounds
   // loaded for scheduling (`ready`), one hit (`sound`), the mix graphs (`busFor`) and the "play a saved beat" path.
   const { engine } = deps;
@@ -96,7 +98,7 @@ export function createSequencer(deps) {
   const pickers = [];        // the views' pickers, {pick, shown}: these rows', the keys' grid's
   let select = null;         // pills picked and dragged with a mouse (pill-select.js)
 
-  const playing = () => timer !== 0;
+  const playing = () => run !== null;
   const baseStep = () => 60 / shape().bpm / STEPS_PER_BEAT;
   // With advanced beats off the beat maker is the simple one: 4/4, every row
   // on the beat, whatever the rows have stored for later. 🔔 Let it ring plays at
@@ -139,11 +141,11 @@ export function createSequencer(deps) {
   function retime(oldBpm) {
     const bpm = shape().bpm;
     if (!playing() || !(oldBpm > 0) || oldBpm === bpm) return;
-    const anchor = Math.min(clickNext, ...clocks.filter(Boolean).map((c) => c.next));
+    const anchor = Math.min(clickNext, ...run.clocks.filter(Boolean).map((c) => c.next));
     const move = retimeAt(anchor, oldBpm, bpm);
-    t0 = move(t0);
+    run.t0 = move(run.t0);
     clickNext = move(clickNext);
-    for (const c of clocks) if (c) c.next = move(c.next);
+    for (const c of run.clocks) if (c) c.next = move(c.next);
     for (const k of skips) if (k.at >= anchor) k.at = move(k.at);
     if (queued) queued.at = move(queued.at);   // still the next bar line, at the new tempo
   }
@@ -158,12 +160,12 @@ export function createSequencer(deps) {
     const base = baseStep();
     const barLen = bar();
     const i = pattern.rows.findIndex((r) => stepSeconds(pattern, r, playMode()) === base);
-    const clock = clocks[i];
+    const clock = run.clocks[i];
     let next;
     if (clock) {
       next = clock.next + ((barLen - (clock.step % barLen)) % barLen) * base;
     } else {
-      next = t0 + Math.ceil(Math.max(0, now - t0) / (barLen * base)) * barLen * base;
+      next = run.t0 + Math.ceil(Math.max(0, now - run.t0) / (barLen * base)) * barLen * base;
     }
     while (next < now) next += barLen * base;
     return { next, beat: base * STEPS_PER_BEAT };
@@ -451,17 +453,17 @@ export function createSequencer(deps) {
     const saved = library().find((b) => b.id === id);
     if (!saved) { showChips(); return; }
     const now = audio.context().currentTime;
-    const after = Math.round((at - t0) / (bar() * baseStep()));   // bars the old beat played
-    ringing = [...ringing, ...voices.flat()].filter((v) => !(v.end <= now));
+    const after = Math.round((at - run.t0) / (bar() * baseStep()));   // bars the old beat played
+    ringing = [...ringing, ...run.voices.flat()].filter((v) => !(v.end <= now));
     const before = pattern;
     letGo((m) => m.p === before);   // rings out, then goes
     pattern = cleanPattern(saved, personId);
     save();
-    t0 = at;
-    clocks = pattern.rows.map(() => ({ next: at, step: 0 }));
-    voices = pattern.rows.map(() => []);
-    shown = pattern.rows.map(() => -1);
-    queue = [];
+    run.t0 = at;
+    run.clocks = pattern.rows.map(() => ({ next: at, step: 0 }));
+    run.voices = pattern.rows.map(() => []);
+    run.shown = pattern.rows.map(() => -1);
+    run.queue = [];
     clickNext = at;
     clickBeat = 0;
     logEvent('beat', { action: 'switch', bpm: pattern.bpm, bars: pattern.bars, after });
@@ -565,8 +567,7 @@ export function createSequencer(deps) {
       const used = new Set(pattern.rows.map((r) => r.clipId));
       engine.keep(used);
     }
-    queue = [];
-    t0 = ctx.currentTime + 0.05;
+    let t0 = ctx.currentTime + 0.05;
     if (countIn) {
       let at = t0;
       groups().forEach((size, b) => { blip(at, b === 0); at += size * baseStep(); });
@@ -575,14 +576,30 @@ export function createSequencer(deps) {
     clickNext = t0;
     clickBeat = 0;
     clickOn = clickOverride ?? clickWanted;
-    clocks = pattern.rows.map(() => ({ next: t0, step: 0 }));
-    voices = pattern.rows.map(() => []);
-    shown = pattern.rows.map(() => -1);
-    stats = { started: performance.now(), hits: 0, cuts: 0, maxRinging: 0, limiterDb: 0 };
+    stats = { started: performance.now(), limiterDb: 0 };
     logEvent('beat', { action: 'play', bpm: pattern.bpm, bars: pattern.bars, advanced, mode: playMode(), signature: sigOf(), rows: pattern.rows.map(rowSummary) });
-    timer = setInterval(schedule, TICK_MS);
-    deps.onTempo?.();  // before the first schedule, so pads already looping join on the first "1"
-    schedule();
+    run = engine.play({
+      from: t0,
+      beat: () => pattern,
+      mode: playMode,
+      swing: swingNow,
+      loaded: (id) => (engine.has(id) ? { clip: deps.clipById(id), loaded: engine.get(id) } : null),
+      steps: true,
+      limit: () => (queued ? queued.at - 0.001 : Infinity),
+      beforeRows: (until) => {
+        scheduleClicks(clickOn, until);
+        if (skips.length) skips = skips.filter((k) => k.at > audio.context().currentTime - 1);   // a skip whose moment passed
+      },
+      join: joinClock,
+      skip: usedSkip,
+      onHit: (clipId, at) => deps.onHit?.(clipId, (at - audio.context().currentTime) * 1000),
+      afterTick: () => {
+        meter.run();  // the speaker grille follows the beat
+        if (queued && audio.context().currentTime + LOOKAHEAD >= queued.at) { switchNow(); run.tick(); }
+      },
+    });
+    deps.onTempo?.();  // before the first tick, so pads already looping join on the first "1"
+    run.tick();
     raf = requestAnimationFrame(follow);
     rowFollow.start();
     showPlayKeys(true);
@@ -608,22 +625,19 @@ export function createSequencer(deps) {
     // The beat's graphs (and a 🎹 note preview's) go once they ring out; a groove sample keeps its own.
     letGo((m) => m.dest === audio.master && m.p !== sample?.pattern);
     if (!playing()) return;
-    clearInterval(timer);
+    const was = run;
+    run = null;
+    was.stop();   // its timer, and its voices fade
     cancelAnimationFrame(raf);
-    timer = 0;
     raf = 0;
     skips = [];
     const now = audio.context().currentTime;
-    for (const list of voices) for (const v of list) fadeStop(v, now);
     for (const v of ringing) fadeStop(v, now);
-    voices = [];
     ringing = [];
-    queue = [];
-    shown = shown.map(() => -1);
     showSteps();
     if (stats) {
       logEvent('beat', { action: 'stop', seconds: Math.round((performance.now() - stats.started) / 100) / 10,
-        hits: stats.hits, cuts: stats.cuts, maxRinging: stats.maxRinging, limiterDb: Math.round(stats.limiterDb * 10) / 10 });
+        hits: was.stats.hits, cuts: was.stats.cuts, maxRinging: was.stats.maxRinging, limiterDb: Math.round(stats.limiterDb * 10) / 10 });
       stats = null;
     }
     showPlayKeys(false);
@@ -639,11 +653,11 @@ export function createSequencer(deps) {
   // two rows out of sync). Only with no such row does it count from t0.
   function joinClock(i) {
     const mine = stepSeconds(pattern, pattern.rows[i], playMode());
-    const j = clocks.findIndex((c, k) => c && k !== i && pattern.rows[k] && stepSeconds(pattern, pattern.rows[k], playMode()) === mine);
-    if (j >= 0) return { next: clocks[j].next, step: clocks[j].step % countOf(i) };
+    const j = run.clocks.findIndex((c, k) => c && k !== i && pattern.rows[k] && stepSeconds(pattern, pattern.rows[k], playMode()) === mine);
+    if (j >= 0) return { next: run.clocks[j].next, step: run.clocks[j].step % countOf(i) };
     const base = baseStep();
-    const k = Math.max(0, Math.ceil((audio.context().currentTime - t0) / base));
-    return { next: t0 + k * base, step: k % countOf(i) };
+    const k = Math.max(0, Math.ceil((audio.context().currentTime - run.t0) / base));
+    return { next: run.t0 + k * base, step: k % countOf(i) };
   }
 
   // ── The click: a short blip on every beat, higher on the "1". Never
@@ -684,7 +698,7 @@ export function createSequencer(deps) {
       // The last beat of the whole beat is being booked: the keys view may
       // grow it now, a beat before the rows' wrap is booked (setGrow).
       // (Counted in pills from t0, which a tempo change keeps right.)
-      if (growHook && playing() && Math.round((clickNext - t0) / baseStep()) % total() === total() - g.at(-1) && growHook()) grow();
+      if (growHook && playing() && Math.round((clickNext - run.t0) / baseStep()) % total() === total() - g.at(-1) && growHook()) grow();
       if (on) blip(clickNext, b === 0);
       clickNext += g[b] * baseStep();
       clickBeat++;
@@ -722,59 +736,22 @@ export function createSequencer(deps) {
     aloneTimer = setInterval(() => { if (!playing()) scheduleClicks(true); }, TICK_MS);
   }
 
-  function schedule() {
-    const ctx = audio.context();
-    // A beat picked on a chip opens at the next bar line (switchNow): nothing
-    // of this beat is booked from there on. A millisecond short of it, so a
-    // clock that summed to just under the line books no extra pill.
-    const until = queued ? Math.min(ctx.currentTime + LOOKAHEAD, queued.at - 0.001) : ctx.currentTime + LOOKAHEAD;
-    scheduleClicks(clickOn, until);
-    if (skips.length) skips = skips.filter((k) => k.at > ctx.currentTime - 1);   // a skip whose moment passed
-    pattern.rows.forEach((row, i) => {
-      const clock = clocks[i] ??= joinClock(i);
-      voices[i] ??= [];
-      while (clock.next < until) {
-        if (clock.step >= countOf(i)) clock.step = 0;  // the row got shorter while playing
-        // Swing moves when a pill sounds (and lights), never the clock itself.
-        const at = clock.next + swingDelay(clock.step, stepSeconds(pattern, row, playMode()), swingNow(), groups());
-        const dt = stepSeconds(pattern, row, playMode());
-        const skip = skips.findIndex((k) => k.row === i && Math.abs(k.at - clock.next) < dt / 2);
-        if (skip >= 0) skips.splice(skip, 1);
-        else if (audible(row, pattern)) {
-          // A tune row's notes start on the pill or half a pill after it (notes.js).
-          // One whose moment passed in a stall is dropped (tooLate), so the
-          // beat goes on in time instead of playing what it missed at once.
-          for (const h of pillHits(row, clock.step)) {
-            const when = h.at ? clock.next + h.at * dt : at;
-            if (!tooLate(when, ctx.currentTime)) hit(i, when, h.loud, h.note, h.len * dt);
-          }
-        }
-        queue.push({ row: i, step: clock.step, time: at });
-        clock.next += stepSeconds(pattern, row, playMode());  // read every step, so a tempo change lands right away
-        clock.step = (clock.step + 1) % countOf(i);
-      }
-    });
-    queue.sort((a, b) => a.time - b.time);
-    meter.run();  // the speaker grille follows the beat
-    if (queued && ctx.currentTime + LOOKAHEAD >= queued.at) { switchNow(); schedule(); }
-  }
-
-  function hit(i, time, loud, note = 0, len = 0) {
-    const row = pattern.rows[i];
-    const loaded = engine.get(row.clipId);
-    if (!loaded) return;
-    const cuts = sound(audio.context(), busFor(audio.context(), audio.master, pattern).input(i), voices[i], row, loaded, time, loud, note, len);
-    deps.onHit?.(row.clipId, (time - audio.context().currentTime) * 1000);
-    stats.hits++;
-    stats.cuts += cuts;
-    stats.maxRinging = Math.max(stats.maxRinging, voices[i].length);
+  // The beat's loop is the engine's (beat-engine.js play: what is due, and a
+  // tick that books it). What is Beats' own is passed in as hooks (play,
+  // above): the click before the rows, the chip switch at the bar line.
+  // A pill a live hit already played is not booked again; the skip is used up.
+  function usedSkip(row, next, dt) {
+    const k = skips.findIndex((s) => s.row === row && Math.abs(s.at - next) < dt / 2);
+    if (k < 0) return false;
+    skips.splice(k, 1);
+    return true;
   }
 
   // Every frame: the pills being heard now, from the audio clock less the
   // output's delay, so the playhead keeps with the click a kid hears.
   function follow() {
     const ctx = audio.context();
-    if (stepsHeard(queue, shown, ctx.currentTime, outputDelay(ctx))) { showSteps(); deps.onSteps?.(shown); }
+    if (run && stepsHeard(run.queue, run.shown, ctx.currentTime, outputDelay(ctx))) { showSteps(); deps.onSteps?.(run.shown); }
     // How hard the limiter is holding the output down (dB, negative): the
     // event log keeps the worst, a sign that sounds stacked up.
     if (stats && audio.limiter) stats.limiterDb = Math.min(stats.limiterDb, audio.limiter.reduction || 0);
@@ -784,6 +761,7 @@ export function createSequencer(deps) {
   // Only the pills that change: the one each row leaves and the one it reaches
   // (16 rows of 4 bars are over a thousand pills).
   function showSteps() {
+    const shown = run?.shown ?? [];   // nothing is lit once the beat has stopped
     pills.forEach((row, i) => {
       const p = row[shown[i]] ?? null;
       if (litPills[i] === p) return;
@@ -794,7 +772,7 @@ export function createSequencer(deps) {
     litPills.length = pills.length;
     drawPlayhead();
     keepInSight();
-    roll?.step(shown);
+    roll?.step(run?.shown ?? []);
   }
 
   // The rows scroll sideways (Ben, 2026-10-25). While a beat plays the box
@@ -816,6 +794,7 @@ export function createSequencer(deps) {
   // playing pill instead.
   function drawPlayhead() {
     // Collapsed rows have no pills on screen, so the bar skips them.
+    const shown = run?.shown ?? [];
     const current = pills.map((row, i) => (shown[i] >= 0 && row.length ? row[shown[i]] : null)).filter(Boolean);
     if (!current.length) { el.playhead.replaceChildren(); return; }
     const box = el.rows.getBoundingClientRect();
@@ -954,7 +933,7 @@ export function createSequencer(deps) {
         showPill(p, row, s);
         if (held?.has(s)) p.classList.add('held');
         p.hidden = s >= count;
-        if (s === shown[i]) { p.classList.add('now'); litPills[i] = p; }
+        if (s === run?.shown[i]) { p.classList.add('now'); litPills[i] = p; }
         beat.append(p);
         rowPills.push(p);
       }
@@ -1277,8 +1256,8 @@ export function createSequencer(deps) {
   function moveRow(from, to) {
     const where = moveItem(pattern.rows, from, to);
     if (playing()) {
-      for (const list of [voices, clocks, shown]) moveItem(list, from, to);
-      queue = queue.map((q) => ({ ...q, row: where[q.row] }));
+      for (const list of [run.voices, run.clocks, run.shown]) moveItem(list, from, to);
+      run.queue = run.queue.map((q) => ({ ...q, row: where[q.row] }));
     }
     cell.row = where[cell.row] ?? 0;
     save();
@@ -1365,11 +1344,11 @@ export function createSequencer(deps) {
   }
   function removeRow(i) {
     if (playing()) {
-      for (const v of voices[i] || []) fadeStop(v, audio.context().currentTime);
-      voices.splice(i, 1);
-      clocks.splice(i, 1);
-      shown.splice(i, 1);
-      queue = queue.filter((q) => q.row !== i).map((q) => (q.row > i ? { ...q, row: q.row - 1 } : q));
+      for (const v of run.voices[i] || []) fadeStop(v, audio.context().currentTime);
+      run.voices.splice(i, 1);
+      run.clocks.splice(i, 1);
+      run.shown.splice(i, 1);
+      run.queue = run.queue.filter((q) => q.row !== i).map((q) => (q.row > i ? { ...q, row: q.row - 1 } : q));
     }
     const [row] = pattern.rows.splice(i, 1);
     offerUndo({ row, at: i, pattern });
@@ -1435,10 +1414,10 @@ export function createSequencer(deps) {
     pattern.rows.splice(i, 0, row);
     if (playing()) {
       // It rejoins in time, like a row added while playing.
-      voices.splice(i, 0, []);
-      clocks.splice(i, 0, undefined);
-      shown.splice(i, 0, -1);
-      queue = queue.map((q) => (q.row >= i ? { ...q, row: q.row + 1 } : q));
+      run.voices.splice(i, 0, []);
+      run.clocks.splice(i, 0, undefined);
+      run.shown.splice(i, 0, -1);
+      run.queue = run.queue.map((q) => (q.row >= i ? { ...q, row: q.row + 1 } : q));
       prepare(deps.clipById(row.clipId));
     }
     offerUndo(null);
@@ -1467,8 +1446,8 @@ export function createSequencer(deps) {
     const row = pattern?.rows[i];
     if (!row || !playing()) return;
     const now = audio.context().currentTime;
-    if (!audible(row, pattern)) { for (const v of voices[i] || []) fadeStop(v, now); return; }
-    for (const v of voices[i] || []) {
+    if (!audible(row, pattern)) { for (const v of run.voices[i] || []) fadeStop(v, now); return; }
+    for (const v of run.voices[i] || []) {
       if (v.end <= now) continue;
       v.level = (v.lift ?? 1) * rowLevel(row);
       try {
@@ -2576,7 +2555,7 @@ export function createSequencer(deps) {
   // Where the beat is, for snapping hits: pill 0's time, a pill's length,
   // the pills in the whole beat, and each row's speed.
   function beatClock() {
-    return { t0, step: baseStep(), total: total(), rates: (pattern?.rows ?? []).map((r) => (playMode() === 'speed' ? r.rate : 1)) };
+    return { t0: run?.t0 ?? 0, step: baseStep(), total: total(), rates: (pattern?.rows ?? []).map((r) => (playMode() === 'speed' ? r.rate : 1)) };
   }
   // The row for a sound: its first unmuted row, else a muted one (unmuted:
   // the kid is playing it), else a row with no hits, else a new row; -1 when
@@ -2627,7 +2606,7 @@ export function createSequencer(deps) {
       r.steps[step] = true;
       // Into a tune row, a key plays its sound's own note: a note a pill long.
       if (r.melody && !r.tune.some((o) => Math.floor(o.s) === step)) pattern.rows[row] = cleanRow({ ...r, tune: addNote(r.tune, 0, step, 1)?.tune ?? r.tune });
-      const at = t0 + n * stepSeconds(pattern, r, playMode());
+      const at = (run?.t0 ?? 0) + n * stepSeconds(pattern, r, playMode());
       if (playing() && at > skipAfter) skips.push({ row, at });
     }
     save();
