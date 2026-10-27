@@ -125,7 +125,7 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   plays a note, a 🌞 chord, a 🐘 bass note or a 🎩 hi-hat never shows: their
   pictures teach a grown-up something and a small kid the wrong thing (Ben,
   2026-10-22). A preset a grown-up hid in ✏️ Edit sounds stays hidden here
-  too. Swipe sideways for more pages (◀️ ▶️ with a mouse). The top
+  too. Swipe sideways for more pages (👈 👉 with a mouse, pointing the way; ▶️ is Play on Beats). The top
   bar's slider, centered between 🎨 and ⚙️, makes them bigger or smaller,
   smoothly: the person's own `padSize`, the same one as Pads' slider, between
   Kids' own ends (four across a phone, four per 560 px wider, up to one pad

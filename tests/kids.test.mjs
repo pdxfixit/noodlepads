@@ -417,11 +417,12 @@ test('Pads, a finger: it sounds on the lift with a bounce; a page swipe, a cance
   assert.deepEqual(played, [], 'a pinch never plays');
 });
 
-test('more pages: ◀️ waits on the first page, ▶️ turns to the next, a dot per page', () => {
+test('more pages: 👈 waits on the first page, 👉 turns to the next, a dot per page', () => {
   const pages = $('#kids-pages').querySelectorAll('.kids-page').length;
   assert.equal($('#kids-turn').hidden, false);
   assert.equal($('#kids-dots').children.length, pages);
   const [back, next] = $('#kids-turn').querySelectorAll('[data-turn]');
+  assert.deepEqual([back.textContent, next.textContent], ['👈', '👉'], 'pointing hands, not the ▶️ of Play');
   assert.equal(back.disabled, true);
   assert.ok($('#kids-dots').children[0].classList.contains('here'));
   next.dispatch('click');
