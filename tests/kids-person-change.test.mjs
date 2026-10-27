@@ -83,7 +83,7 @@ test('the mic listening when the person changes stops, and keeps the first kid\'
 test('a 🎹 tune recording when the person changes lands in the first kid\'s beat, never the next kid\'s', async () => {
   const first = state.personId;
   const next = others(first)[1];
-  const scratchOf = (pid) => state.savedBeats.find((b) => b.id === `beat-scratch-${pid}`);
+  const scratchOf = (pid) => state.savedBeats.find((b) => b.id === `beat-kidsown-${pid}`);
   const tuneOf = (pid) => scratchOf(pid)?.rows.find((r) => r.melody)?.tune ?? null;
   const nextBefore = JSON.stringify(tuneOf(next));
   $('[data-kids-tab="keys"]').dispatch('click');

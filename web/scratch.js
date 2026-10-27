@@ -10,6 +10,12 @@
 // the same record and the cloud merges them. After a person's id changes
 // (reid.js) the record keeps its old id and is still found by its prefix and
 // `personId`. Pure: no DOM, no storage.
+//
+// 🧸 Kids has a hidden beat of its own the same way (Ben, 2026-10-27: a Kids
+// visit never touches the grown-up's scratch): `beat-kidsown-<person>` in
+// `beats`. Its prefix is neither `beat-scratch-` nor the old `beat-kids-`, so
+// an older app, which adopts `beat-kids-…` into the scratch, leaves it alone
+// and just lists it as a beat called "🧸 Kids beat".
 
 import { GROOVES } from './grooves.js';
 
@@ -17,6 +23,10 @@ export const SCRATCH_BEAT = 'beat-scratch-';
 export const SCRATCH_SONG = 'song-scratch-';
 // 🧸 Kids' beat before ADR 0020 (`beat-kids-<random>`): it becomes the scratch.
 export const KIDS_BEAT = 'beat-kids-';
+// 🧸 Kids' own beat (its 4×8 grid and its ● tune), per person, kept across
+// visits and apart from the scratch.
+export const KIDS_OWN_BEAT = 'beat-kidsown-';
+export const KIDS_BEAT_NAME = '🧸 Kids beat';
 // The name a plain scratch is stored under. A backup or the cloud gives an
 // empty name a default, so the scratch has one of its own; a scratch loaded
 // from a groove is stored under the groove's name instead.
@@ -25,13 +35,15 @@ export const SCRATCH_NAME = 'Scratch';
 const idFor = (prefix, personId) => `${prefix}${String(personId ?? '').toLowerCase().replace(/[^a-z0-9-]+/g, '-')}`.slice(0, 53);
 export const scratchId = (personId) => idFor(SCRATCH_BEAT, personId);
 export const songScratchId = (personId) => idFor(SCRATCH_SONG, personId);
+export const kidsBeatId = (personId) => idFor(KIDS_OWN_BEAT, personId);
 
 const starts = (r, prefix) => typeof r?.id === 'string' && r.id.startsWith(prefix);
 export const isScratch = (beat) => starts(beat, SCRATCH_BEAT);
 export const isScratchSong = (song) => starts(song, SCRATCH_SONG);
 export const isKidsBeat = (beat) => starts(beat, KIDS_BEAT);
+export const isKidsOwnBeat = (beat) => starts(beat, KIDS_OWN_BEAT);
 // Beats never listed in 🗂️ Beats, the pattern chips, a song's beats or Share.
-export const isHiddenBeat = (beat) => isScratch(beat) || isKidsBeat(beat);
+export const isHiddenBeat = (beat) => isScratch(beat) || isKidsBeat(beat) || isKidsOwnBeat(beat);
 
 // The person's scratch record among `list` (beats or songs), or null. Should
 // there be two (a person whose id changed, then started one again), the one
@@ -42,6 +54,8 @@ function newest(list, personId, test) {
 }
 export const scratchOf = (beats, personId) => newest(beats, personId, isScratch);
 export const songScratchOf = (songs, personId) => newest(songs, personId, isScratchSong);
+// 🧸 Kids' own beat of the person's among `beats`, or null.
+export const kidsBeatOf = (beats, personId) => newest(beats, personId, isKidsOwnBeat);
 
 export const hasHits = (beat) => (beat?.rows ?? []).some((r) => (r?.steps ?? []).some(Boolean));
 

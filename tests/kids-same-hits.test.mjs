@@ -26,7 +26,7 @@ import { testManifest } from './test-board.mjs';
 import { KIDS_DRUMS, newKidsBeat, withBars, withSquare, withTuneNote, pillSeconds, tuneRowOf } from '../web/kids-logic.js';
 import { STEPS, noteRate } from '../web/beat.js';
 import { startsIn } from '../web/notes.js';
-import { scratchId } from '../web/scratch.js';
+import { kidsBeatId } from '../web/scratch.js';
 
 let page;
 let $;
@@ -51,7 +51,7 @@ const byTime = (a, b) => a.at - b.at || (a.clip < b.clip ? -1 : a.clip > b.clip 
 // last pill.
 function kidsBeat(pid) {
   const drums = KIDS_DRUMS.map((d) => `${pid}-${d}`);
-  let beat = withBars(newKidsBeat(pid, drums, scratchId(pid)), 4);
+  let beat = withBars(newKidsBeat(pid, drums, kidsBeatId(pid)), 4);
   const on = { 0: [0, 4], 1: [2, 6], 2: [0, 1, 2, 3, 4, 5, 6, 7], 3: [7] };
   for (const [drum, squares] of Object.entries(on)) for (const s of squares) beat = withSquare(beat, drums, Number(drum), s, true);
   beat = { ...beat, bpm: 140 };

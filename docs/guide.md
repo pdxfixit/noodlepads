@@ -163,11 +163,14 @@ ten keys go five across (`just look kids-pads --landscape`).
   🐢 80 and 🏃 140 BPM (neither lit: 110). A new beat starts with a simple
   kick (1st and 3rd beat) and snare (2nd and 4th) lit, so the first ▶️
   is not silence (`kids-logic.js` `newKidsBeat`; the regular app's scratch
-  beat stays empty). One beat per person: their
-  scratch beat (ADR 0020), saved on every tap (a square is every other pill
-  of a 16-pill bar), so the regular app's Beats opens it whenever nothing
-  else is open. A kids beat from before (`beat-kids-…`) becomes the scratch,
-  or a beat in 🗂️ Beats when the scratch already has hits.
+  beat stays empty). One beat per person: Kids' own hidden beat
+  (`beat-kidsown-<person>`, Ben 2026-10-27), saved on every tap (a square is
+  every other pill of a 16-pill bar) and kept across visits. A Kids visit
+  never touches the grown-up's scratch beat, and the regular app never lists
+  or opens Kids' beat; a person whose scratch held a Kids grid from before
+  keeps it there, and Kids starts its own, lit. It syncs and backs up as a
+  beat of theirs. A kids beat from long before (`beat-kids-…`) becomes the
+  scratch, or a beat in 🗂️ Beats when the scratch already has hits.
   Across on a wide screen; down the screen on a phone. ▶️ shows ⏸️ at once
   (⏹️ is Stop all, always on screen)
   and a second tap stops it, even while the sounds are still loading (they
@@ -207,7 +210,7 @@ ten keys go five across (`just look kids-pads --landscape`).
   (`kids-logic.js` "● Record": `pillAt`, `withTuneNote`). The beat grows to
   four bars for it (`withBars`, the drums' bar repeated; a square tapped on
   Beats lands in every bar, so the grid still shows one pattern), and the
-  tune is one tune row (🎹, ADR 0023) of the scratch beat, on the C of the
+  tune is one tune row (🎹, ADR 0023) of Kids' beat, on the C of the
   instrument playing, each key its note above it. The ring round ● fills as
   the beat goes round; it stops by itself as the beat comes round (or at the
   next tap, ⏹️, or leaving the screen), and the beat plays on with the tune:
@@ -216,8 +219,10 @@ ten keys go five across (`just look kids-pads --landscape`).
   take changes nothing); the beat with the tune it replaces is kept first,
   a beat of its own in 🗂️ Beats under a fun name with 🧸 in front (so a
   grown-up can find it), as 🆕 New keeps a beat (`kids-logic.js` `keptTune`). Nothing shows on the kid's screen: Kids has
-  no Undo, and a kid can't read a "Kept as …" line. A grown-up finds the tune row on 🥁 Beats and in 🎹
-  the piano roll, and keeps the beat with 💾 Keep.
+  no Undo, and a kid can't read a "Kept as …" line. A grown-up finds a kept
+  tune in 🗂️ Beats, where it is a beat with a tune row and opens in 🎹 the
+  piano roll. The tune the kid has now stays in Kids' beat until the next
+  recording replaces it (and keeps it).
 
 ⏹️ (or Esc, or Space) stops everything, the whole app's sounds too: every
 sound, the beat, a ● tune and a mic recording, which is kept as its pad

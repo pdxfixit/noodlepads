@@ -11,11 +11,12 @@ import assert from 'node:assert/strict';
 import {
   scratchId, songScratchId, isScratch, isScratchSong, isHiddenBeat, scratchOf, songScratchOf,
   adoptKidsBeats, grooveOf, scratchLabel, hasHits, SCRATCH_NAME,
+  kidsBeatId, kidsBeatOf, isKidsOwnBeat, isKidsBeat, KIDS_BEAT_NAME,
 } from '../web/scratch.js';
 import { keptName, MAX_LABEL } from '../web/names.js';
 import { BEAT_ID } from '../web/beat.js';
 import { SONG_ID } from '../web/playlist.js';
-import { makeBackup, readBackup } from '../web/backup.js';
+import { makeBackup, readBackup, intoPerson } from '../web/backup.js';
 import { recordsOf } from '../web/cloud-sync.js';
 import { GROOVES } from '../web/grooves.js';
 import { installPage } from './fake-dom.mjs';
@@ -114,6 +115,49 @@ test('the scratch backs up and syncs as an ordinary record: no new store, kind o
   const records = recordsOf({ beats: state.beats, songbook: state.songbook }, 'pip');
   assert.ok(records.has('beats:beat-scratch-pip'));
   assert.ok(records.has('songbook:song-scratch-pip'));
+});
+
+// 🧸 Kids' own beat (Ben, 2026-10-27): a hidden record in `beats` of its own,
+// apart from the scratch. Its id is neither of the two prefixes an older copy
+// of the app acts on (`beat-scratch-`, and `beat-kids-`, which it adopts into
+// the scratch), so an older app leaves it alone and just lists it.
+test('🧸 Kids\' own beat has a reserved id the cleaners accept, is hidden, and is found by person', () => {
+  assert.equal(kidsBeatId('p-mv4cyiqj-b8bt'), 'beat-kidsown-p-mv4cyiqj-b8bt');
+  assert.ok(BEAT_ID.test(kidsBeatId('p-mv4cyiqj-b8bt')) && BEAT_ID.test(kidsBeatId(`p-${'x'.repeat(70)}`)));
+  const own = beat(kidsBeatId('p-a'), 'p-a', true, { name: KIDS_BEAT_NAME });
+  assert.ok(isKidsOwnBeat(own) && isHiddenBeat(own));
+  assert.ok(!isScratch(own), 'never the scratch');
+  assert.equal(scratchOf([own], 'p-a'), null, 'the scratch is not found among it');
+  assert.equal(kidsBeatOf([own, beat(scratchId('p-a'), 'p-a', true)], 'p-a').id, 'beat-kidsown-p-a');
+  assert.equal(kidsBeatOf([own], 'p-b'), null, 'by person');
+  assert.equal(kidsBeatOf([beat('beat-kidsown-old-id', 'p-a', true, { saved: 9 }), own], 'p-a').id, 'beat-kidsown-old-id', 'found by prefix after a re-id; the newest wins');
+});
+
+test('an older app leaves 🧸 Kids\' own beat alone: its id is neither the scratch\'s prefix nor the old Kids beat\'s', () => {
+  const own = beat(kidsBeatId('p-a'), 'p-a', true, { name: KIDS_BEAT_NAME });
+  // What the older code tested (scratch.js before this change): both by `startsWith`.
+  assert.ok(!own.id.startsWith('beat-scratch-') && !own.id.startsWith('beat-kids-'));
+  assert.ok(!isKidsBeat(own));
+  assert.deepEqual(adoptKidsBeats([own], 'p-a', () => 'beat-made'), { put: [], remove: [] }, 'not adopted into the scratch');
+  assert.match(KIDS_BEAT_NAME, /^🧸 /, 'where it is listed (an older app), it wears 🧸 like a kept tune');
+});
+
+test('🧸 Kids\' own beat backs up, syncs and is renamed for another person like the scratch; an old backup without it loads', async () => {
+  const bundled = { peopleIds: new Set(['pip']), clipIds: new Set(['pip-kick']), colorOk: () => true };
+  const own = beat(kidsBeatId('pip'), 'pip', true, { name: KIDS_BEAT_NAME });
+  const state = {
+    people: [{ id: 'pip', name: 'Pip', color: '#1F3FA8' }], clips: [],
+    beats: [beat('beat-scratch-pip', 'pip', true, { name: 'Ska' }), own],
+  };
+  const out = await readBackup(await makeBackup(state), bundled);
+  assert.deepEqual(out.beats.map((b) => b.id).sort(), ['beat-kidsown-pip', 'beat-scratch-pip']);
+  assert.equal(out.beats.find((b) => b.id === 'beat-kidsown-pip').name, KIDS_BEAT_NAME);
+  assert.ok(recordsOf({ beats: state.beats }, 'pip').has('beats:beat-kidsown-pip'), 'syncs as an ordinary beats record');
+  const moved = intoPerson({ beats: state.beats, patterns: [], songs: [], songbook: [] }, 'pip', 'toby');
+  assert.deepEqual(moved.beats.map((b) => b.id).sort(), ['beat-kidsown-toby', 'beat-scratch-toby']);
+  // A backup from before has none of it, and loads as it always did.
+  const old = await readBackup(await makeBackup({ ...state, beats: [state.beats[0]] }), bundled);
+  assert.deepEqual(old.beats.map((b) => b.id), ['beat-scratch-pip']);
 });
 
 // ── the real app ──

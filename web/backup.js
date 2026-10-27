@@ -46,7 +46,7 @@ import { count } from './util.js';
 import { cleanGroups, groupIdOf } from './groups.js';
 import { cleanStamp, STAMP, STAMPED } from './merge3.js';
 import { reIdDoc, PERSON_STORES } from './reid.js';
-import { scratchId, songScratchId } from './scratch.js';
+import { scratchId, songScratchId, kidsBeatId } from './scratch.js';
 
 export const BACKUP_APP = 'noodlepads';
 // Backups saved before the 1.0 rename say 'noodle-pads'; they load the same.
@@ -241,7 +241,7 @@ export function withoutPeople(data, ids) {
 
 // A one-person backup's things as `to`'s, for "load it all into someone
 // here": every record that names `from` names `to` (reid.js, their copy of
-// the kit's edits too), their scratch beat and song become `to`'s (merge.js
+// the kit's edits too), their scratch beat and song, and 🧸 Kids' beat, become `to`'s (merge.js
 // keeps `to`'s own and adds this one beside it when they differ), and the
 // person, their settings and the device's settings stay out: `to` keeps
 // their own name, look and settings. Pure.
@@ -250,6 +250,7 @@ export function intoPerson(data, from, to) {
   const scratch = (r) => {
     if (r?.id === scratchId(from)) return { ...r, id: scratchId(to) };
     if (r?.id === songScratchId(from)) return { ...r, id: songScratchId(to) };
+    if (r?.id === kidsBeatId(from)) return { ...r, id: kidsBeatId(to) };
     return r;
   };
   const out = { ...moved, people: [], prefs: [], settings: [] };

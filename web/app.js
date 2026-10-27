@@ -238,8 +238,8 @@ function applyKids() {
   showKids(on);
   applySkin();
   page?.screen(on ? 'kids' : state.screen);
-  // Kids wrote the kid's beat (the scratch) behind the beat maker's back:
-  // show it again, so a pill tapped next builds on the kid's squares.
+  // Kids has its own hidden beat and never writes the scratch (Ben,
+  // 2026-10-27); the screen under it is drawn again as it was left.
   if (!on) { showView(); refitLines(); }
 }
 // The skin on the page: the person's Pads skin, or 🧸 Kids' own while Kids shows.

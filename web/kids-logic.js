@@ -7,7 +7,7 @@
 import { cleanRow, cleanPattern, STEPS, barSteps, multiplyRows } from './beat.js';
 import { addNote } from './notes.js';
 import { chainFields, voiceStep } from './voices.js';
-import { SCRATCH_NAME } from './scratch.js';
+import { KIDS_BEAT_NAME } from './scratch.js';
 import { versionFor } from './instruments.js';
 import { cutName, MAX_LABEL } from './names.js';
 
@@ -173,8 +173,9 @@ export function kidsPadOrder(clips) {
 
 // Four drums from the kit, eight squares each. A square is an eighth note:
 // square i is pill 2i of a 16-pill bar, so the beat is a normal beat. It is
-// the person's scratch beat (ADR 0020, scratch.js), which the regular app
-// opens whenever nothing else is open and plays the same.
+// 🧸 Kids' own hidden beat (scratch.js `kidsBeatId`, Ben 2026-10-27): the
+// regular app never opens or changes it, and a Kids visit never touches the
+// person's scratch beat.
 // Kick 🦶, snare 🪘, shaker 🪇, clap 👏 (Ben, 2026-10-26): each picture shows
 // its sound, and none is a tab's (🔊 🎙️ 🥁 🎹), where the snare's own 🥁 and
 // the hi-hat's 🎩 pun were. The snare wears 🪘 in this grid only.
@@ -205,12 +206,12 @@ export const squareSeconds = (bpm) => 60 / bpm / 2;
 // scratch beat stays empty until someone makes hits.
 export const KIDS_START = { 0: [0, 4], 1: [2, 6] };
 
-// A new scratch beat for Kids: at the middle tempo, with a simple kick and
-// snare lit, `id` the person's scratch id. `clipIds` are the four drums'
+// A new beat for Kids: at the middle tempo, with a simple kick and snare
+// lit, `id` the person's Kids beat id (scratch.js `kidsBeatId`). `clipIds` are the four drums'
 // sounds on this board (null when the board has none).
 export function newKidsBeat(personId, clipIds, id, now = Date.now()) {
   const blank = {
-    id, personId, name: SCRATCH_NAME, bpm: KIDS_TEMPOS.mid, bars: 1, swing: 0,
+    id, personId, name: KIDS_BEAT_NAME, bpm: KIDS_TEMPOS.mid, bars: 1, swing: 0,
     rows: clipIds.filter(Boolean).map((clipId) => cleanRow({ clipId, steps: [] })),
     created: now, saved: now,
   };

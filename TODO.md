@@ -79,10 +79,9 @@ Other work:
   1. Sound designer ✏️ (Quack and Burp are recordings now, 2026-10-27, Meta's Oculus Audio Pack, CC BY): still synthesized against decisions.md's recordings rule are Roar (a lion), Heartbeat, Djembe, Djembe slap, Dhol and Dhol tik (`tools/make_placeholders.py` KIT). This container reaches only github.com and raw.githubusercontent.com: VCSL has no djembe or dhol, ESC-50 and the Oculus pack have no lion or heartbeat. They need a CC0 or CC BY source from a machine that reaches Freesound (the Airhorn is an old starter clip, `make_placeholders.py` does not make it). Also add a loudness floor to `tools/test_preset_loudness.py` (8 presets sit 8–10 dB under the middle).
   2. Mission keeper: show the scratch beat in 🎼 Song's strip so a goofed-on beat goes on a lane without 💾 Keep; drop the groove card's creative prompt ("Can you hum a tune over them?").
   4. Performance: load the open groups' sounds first and the rest when idle; keep one decoded copy; `drawPlayhead` and `meter.run` without layout thrash; looping pulses on opacity/transform.
-  5. Pre-reader and child psychologist, the part left: a Kids visit no longer changes the grown-up's scratch beat. Not built: Kids' beat grid and ● tune write the person's scratch beat on purpose (ADR 0020; decisions.md, Ben 2026-10-22: "compose a little tune… use it again in the grown up mode", kept with 💾 Keep on Beats). A separate Kids beat would need its own hidden record and a way for a grown-up to keep a tune; Ben's call first.
-  6. Accessibility: a slow tap no longer turns into a loop by accident (hold time as a setting); a Loop action without a hold; `aria-pressed` on looping pads; flash rate capped.
-  7. Audio engineer and sound designer: a soft clip after the limiter; 2–3 ms edge fades on recordings; seed the reverb noise; voice extremes that a phone can play.
-  8. Producer: Seven, Motown, Bossa and Salsa texts match their patterns; dB-like fader taper; a 6/8 or 3/4 beat in Song rounds to whole song bars.
+  5. Accessibility: a slow tap no longer turns into a loop by accident (hold time as a setting); a Loop action without a hold; `aria-pressed` on looping pads; flash rate capped.
+  6. Audio engineer and sound designer: a soft clip after the limiter; 2–3 ms edge fades on recordings; seed the reverb noise; voice extremes that a phone can play.
+  7. Producer: Seven, Motown, Bossa and Salsa texts match their patterns; dB-like fader taper; a 6/8 or 3/4 beat in Song rounds to whole song bars.
 
 ### Offered, not approved
 

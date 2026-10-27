@@ -93,6 +93,8 @@ The rest is the recipe the app played the sound with. **A reader of 1.2 does not
 
 `beats` are saved beats (`id` is `beat-…`). `patterns` holds each person's open beat, one per person, with no `id` of its own (it may carry the `id` of the saved beat it is).
 
+Two beats per person have a reserved `id` and are hidden in the app, not listed in 🗂️ Beats: the scratch beat, `beat-scratch-<person id>` (ADR 0020), and the 🧸 Kids beat, `beat-kidsown-<person id>`, the 4×8 grid and ● tune of 🧸 Kids (Ben, 2026-10-27). Both are ordinary `beats` records with the fields below, backed up and synced like any other beat; a reader may show them as beats (the Kids beat is named `🧸 Kids beat`) or skip them. A copy of the app from before the Kids beat lists it as a beat and nothing else. A backup with none of them is as valid as ever; the format stays `1.x`.
+
 | Field | Meaning |
 |---|---|
 | `personId`, `name` | Owner; up to 24 characters. |

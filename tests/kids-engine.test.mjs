@@ -269,7 +269,7 @@ test('🧸 Kids\' rows: each drum\'s first plain row and the first tune row; a t
 // bars a ● grows it to and the pill a note lands on count 12, not 16.
 test('🧸 Kids\' squares, bars and notes count a grown-up\'s 3/4 bar of 12 pills, not 16', () => {
   const ids = ['kick', 'snare', 'shaker', 'clap'];
-  const waltz = { ...newKidsBeat('p-a', ids, 'beat-scratch-p-a', 5), signature: '3/4' };
+  const waltz = { ...newKidsBeat('p-a', ids, 'beat-kidsown-p-a', 5), signature: '3/4' };
   assert.equal(barOf(waltz), 12);
   assert.equal(totalOf(waltz), 12);
   assert.deepEqual([0, 5, 6, 7].map((s) => squareFits(waltz, s)), [true, true, false, false], 'six squares fit a 12-pill bar');
@@ -367,14 +367,14 @@ async function kidsWithClock(slow = false) {
   return t;
 }
 
-// The kid's scratch beat, with the squares it needs to play something.
+// The kid's own beat, with the squares it needs to play something.
 async function kidsBeatTab() {
-  const { scratchOf } = await import('../web/scratch.js');
+  const { kidsBeatOf } = await import('../web/scratch.js');
   $('[data-kids-tab="beats"]').dispatch('click');
-  if (!scratchOf(state.savedBeats.filter((b) => b.personId === state.personId), state.personId) || $('#kids-beat').querySelectorAll('.kids-square[aria-pressed="true"]').length === 0) {
+  if (!kidsBeatOf(state.savedBeats.filter((b) => b.personId === state.personId), state.personId) || $('#kids-beat').querySelectorAll('.kids-square[aria-pressed="true"]').length === 0) {
     $('#kids-beat').querySelectorAll('.kids-square')[0].dispatch('click');
   }
-  return () => scratchOf(state.savedBeats.filter((b) => b.personId === state.personId), state.personId);
+  return () => kidsBeatOf(state.savedBeats.filter((b) => b.personId === state.personId), state.personId);
 }
 
 // The council's block (2026-10-26): a double ▶ while the sounds loaded

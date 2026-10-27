@@ -7,7 +7,7 @@
 - **The keys own no beat.** In mode `'beat'` every change to the open beat goes through `deps.seq` (the one `sequencer.js createSequencer` object). The keys view only draws its own small grid of it (`dj.js renderGrid`).
 - **Pure rules sit apart:** `rhythm.js` (keys, snapping, takes), `keyset.js` (✏️ Layout for keys), `touch.js` (bands), `touch-grid.js` (the grid tree), `kids-logic.js` (Kids), `finger.js` (lift-to-play).
 - **🧸 Kids is a module singleton** (`kids.js`, state at module level, wired by `initKids`). It shares the data, `audio.js`, the person's settings and a few helpers with the regular app. It has its own beat player, recorder, toy keys and tune snap, and none of the keys panel.
-- **The kid's beat is the person's scratch beat** (ADR 0020). Kids writes it straight into `state.savedBeats`; the beat maker reads it again when a view shows (`sequencer.js show`), and leaving Kids shows the view again (`app.js applyKids` → `showView`).
+- **The kid's beat is Kids' own hidden beat** (`beat-kidsown-<pid>`, Ben 2026-10-27), apart from the person's scratch beat (ADR 0020). Kids writes it straight into `state.savedBeats` (`deps.saveBeat`); no other screen reads or writes it (`isHiddenBeat` keeps it out of 🗂️ Beats, the chips, a song's strip and shares), so a Kids visit changes nothing of the grown-up's.
 
 ## Files and who calls whom
 
@@ -288,11 +288,11 @@ One dialog `#kids-sum`, wired on first use. `askSum({ right, wrong, stay, owner 
 
 ### The kid's beat: a regular beat, read and written by Kids
 
-It is the person's scratch beat (`scratch.js scratchId`, `beat-scratch-<pid>`), found with `scratchOf`. `app.js adoptKidsBeat` turns an older Kids beat (`beat-kids-…`) into it.
+It is Kids' own beat (`scratch.js kidsBeatId`, `beat-kidsown-<pid>`), found with `kidsBeatOf`; a new one is made in memory by `newKidsBeat` and saved once a square, a tempo or a note changes it. A person whose scratch beat holds a Kids grid from before keeps it there (nothing is moved or deleted); the first Kids beat starts lit. `app.js adoptKidsBeat` still turns a pre-ADR-0020 Kids beat (`beat-kids-…`) into the scratch.
 
 | Field | Kids makes it | A regular beat |
 |---|---|---|
-| `name` | `SCRATCH_NAME` | any |
+| `name` | `KIDS_BEAT_NAME` (`🧸 Kids beat`) | any |
 | `bpm` | 80, 110 or 140 (`KIDS_TEMPOS`, `tempoAfter`) | 60–180 |
 | `bars` | 1; 4 once a tune is recorded (`TUNE_BARS`, `withBars`) | 1, 2, 4 |
 | `signature` | none (read as 4/4); a grown-up's 3/4, 6/8 or 7/8 plays in its own bars | `SIGNATURES` |
@@ -346,7 +346,7 @@ Kids writes it with `deps.saveBeat` (`state.savedBeats` + `persist('beats')`). I
 | Shared | How |
 |---|---|
 | People, sounds | `deps.clips` = `board.js clipsFor(state.personId, opts)` |
-| Beats | the scratch beat in `state.savedBeats` |
+| Beats | Kids' own beat in `state.savedBeats` |
 | Settings (person scope) | `kidsPadSize`, `kidsPadSkin`, `kidsInstNotes` (Kids' own; Pads, ⚙️ 🎨 Look and 🎹 Who plays keep `padSize`, `padSkin`, `instNotes`), `seen` (`tips.js kidsHint`, `markSeen`) |
 | Sound | `audio.js` (`play`, `stop`, `stopAll`, `load`, `decode`, `wake`, `master`, `trimBounds`, `dropRendered`) and the beat engine (`beat-engine.js play`, which makes the voices) |
 | The beat's rules | `beat.js` (`STEPS`, `outputDelay`, `hitsDue`, …) |
@@ -361,9 +361,9 @@ It shares none of `dj.js`, `pads.js`, `sheet.js`, `song.js` or the sequencer's o
 
 One open beat per person (ADR 0017), owned by `sequencer.js` (`pattern`, `doc`, `slot`). `app.js beatView` names the slot: `'beats'`, `'dj'` (a groove opens stopped) or `'live'` (none). `sequencer.js show` re-reads it from the library whenever a view shows, so a change made elsewhere (🧸 Kids' squares, a sync) appears then. Changing `slot` stops the beat.
 
-### The scratch beat = the kid's beat
+### The kid's beat is not the scratch beat
 
-`scratch.js` ids (`beat-scratch-<pid>`). Written by `sequencer.js save` (regular app) and `kids.js` `deps.saveBeat` (Kids). `sequencer.js show` re-reads it when `scratchSaved() !== doc.seen`. 💾 Keep (`sequencer.js keep`) and 🆕 New (`newScratch`) make a fresh one.
+`scratch.js` ids: `beat-kidsown-<pid>` for Kids (written only by `kids.js` `deps.saveBeat`), `beat-scratch-<pid>` for the regular app (written only by `sequencer.js save`). Before 2026-10-27 they were one record. The prefix is neither `beat-scratch-` nor the old `beat-kids-`, so a copy of the app from before neither opens it as a scratch nor adopts it (it lists it as a beat, "🧸 Kids beat"). It travels as an ordinary `beats` record: backups (`backup.js intoPerson` renames its id for another person, as the scratch's), the cloud and a one-person copy. A kept ● tune (`keptTune`) is an ordinary beat in 🗂️ Beats, so it shows in grown-up mode.
 
 ### 🔔 Let it ring: one rule, three players
 
@@ -422,7 +422,6 @@ Worked out in four places: `beat.js outputDelay`; `app.js` `deps.latency` for th
 | Loop glow goes through `pads.js` | `audio.on.looping` is owned by `pads.js initPads`, which forwards to `dj.looping` through a hook `app.js` passes in. |
 | Latency in four places (above) | A change to one leaves the others. |
 | Dead exports kept for tests | `rhythm.js hitTime`, `applySnaps`, `countInBeats`, `snapHits`; `kids-logic.js squareSeconds`; `touch-grid.js emptyBlock`, `swapBlocks`. The app uses none of them. |
-| Kids writes the scratch behind the beat maker's back | `sequencer.js` re-reads only in `show()`, so every way out of Kids must end in `showView` (`applyKids` does). |
 | Deletes skip `persist` | `app.js` `deleteTake`, `deleteLayout`, `deleteTouchLayout` call `db.remove` and only log a failure; `beatLibrary.remove` shows a notice. `adoptKidsBeat` writes with `db.batch`. |
 
 ## Invariants and gotchas
@@ -449,7 +448,7 @@ Worked out in four places: `beat.js outputDelay`; `app.js` `deps.latency` for th
 | A held key loops only on OS repeat past 350 ms; a press that stopped a loop never loops it again, held by key, mouse or finger; lifting a modifier forgets all holds | `keys-stop-hold.test.mjs` (repeats and the mouse; the modifier: no test found) |
 | Every remembered key (`dj-input`, `dj-size`, `dj-click`, `beat-keys`, `kids-tab`) starts the app safely | `startup-remembered.test.mjs` |
 | A take's `ring` is stored only when true, only on a hit | `overlap.test.mjs`, `rhythm.test.mjs` |
-| Leaving Kids shows the beat maker again, so it holds the kid's squares, never an older copy to save over them | `kids-scratch-back.test.mjs` |
+| A Kids visit never writes the grown-up's scratch beat; Kids' grid and tune live in `beat-kidsown-<pid>` and survive a reload | `kids-own-beat.test.mjs` |
 | A Kids recording is kept as the kid's who was recording (a recording kept while its kid is being deleted waits for the outcome, `deps.deletion`, then `deps.isPerson`: `person()` and not `beingDeleted`; a deleted boards.json person is stored hidden, so hidden counts as gone), named, pictured and colored among their sounds, even if the person changes before it is kept (`listen` → `keep(…, { pid })`); a tune recording lands in their beat (`tuneRec.pid`); nothing of theirs shows for the next kid | `kids-mic-person.test.mjs`, `kids-person-change.test.mjs`, `kids-person-deleted.test.mjs`, `delete-refused.test.mjs` |
 | Nothing of the grown-up app sounds in Kids (the keys' ⏲️, a take playing back, the beat, the song, a loop), on the way in and at start-up; Kids' ⏹️ quiets the whole app and keeps the grown-up's ⏲️ choices (one tick already booked as Kids shows, up to 0.1 s, still sounds) | `kids-quiet.test.mjs`, `kids-quiet-start.test.mjs` |
 | A held Enter on a Kids button clicks it once; a finger's tap and its click play a pad once | `kids-keyboard-repeat.test.mjs` |

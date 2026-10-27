@@ -47,7 +47,7 @@
 | `overrides` | `id` (a preset's id, `<person>-<kitId>`) | 1 | `{id, label?, emoji?, color?, voice?, amount?, fx?, tweaks?, trim?, edits?, fade?, root?, hidden?, changed?}`: only what differs from boards.json | `state.js setOverride` (sheet.js, bulk.js, pads.js, app.js) | yes | yes |
 | `orders` | `personId` | 2 | `{personId, ids: [clipId], groups?: [{id, name}], changed?}` | pads.js `saveOrder`, bulk.js `saveGroups` and Undo | yes | yes (one each) |
 | `patterns` | `personId` | 3 | the person's one open beat (ADR 0017): `cleanPattern` shape `{id?, personId, name, bpm, bars, swing, rows, signature?, volume?, fx?}` | app.js `makeSequencer` `setOpen` | yes | yes (one each) |
-| `beats` | `id` (`beat-…`, scratch `beat-scratch-<person>`) | 4 | a pattern plus `{id, name, created, saved, pinned?}` | app.js `beatLibrary`, `adoptKidsBeat`, Kids `saveBeat` | yes | yes |
+| `beats` | `id` (`beat-…`, scratch `beat-scratch-<person>`, Kids' own `beat-kidsown-<person>`) | 4 | a pattern plus `{id, name, created, saved, pinned?}` | app.js `beatLibrary`, `adoptKidsBeat`, Kids `saveBeat` | yes | yes |
 | `people` | `id` | 5 | boards.json person: `{id, name?, color?, hidden?}` (only what differs). Added person: `{id, name, color, avatar, added: true, created, edited?, fun?, solo?, hidden?, offline? (old, ignored)}` | `state.js setPersonEdit`, people.js `addPerson`, `app.js settlePeople`, `adoptStoredPeople` | yes | person record, not a `CLOUD_KINDS` kind (cloud area) |
 | `settings` | `key` | 6 | `{key, value}`: device settings, older person choices from before `prefs`, and `renamedPeople` (not declared in `SETTINGS`) | `settings.js setSetting`, `state.js rememberRenames`, `reIdStoredPeople` | declared keys only (`inBackups`) | no |
 | `decks` | `personId` | 7 | `{personId, keys: {KeyA: clipId\|null}, mine?, touch?, touchMine?, beatId? (old, dropped on next save)}` | app.js dj `saveDeck` | yes | yes (one each) |
@@ -172,7 +172,7 @@ A preset clip is the kit entry (`label, emoji, color, file, group, inst?, plays?
 | Person (added) | `p-<time36>-<rand4>` | `util.js newId('p')` | `reid.js CLOUD_ID` (cloud), `model.js PERSON_ID` (any person id) |
 | Own sound | `user-…` | `newId('user')` in sheet.js, chop.js, kids.js, app.js, cloud-sync.js | `backup.js` `CLIP_ID` |
 | Preset copy | `<personId>-<kitId>` | `model.js kitFor` | `validateManifest` (no clash with a person's clip) |
-| Beat / scratch beat | `beat-…` / `beat-scratch-<person>` | sequencer.js, app.js, `scratch.js scratchId` | `sequencer.js` `BEAT_ID` |
+| Beat / scratch beat / 🧸 Kids' beat | `beat-…` / `beat-scratch-<person>` / `beat-kidsown-<person>` | sequencer.js, app.js, `scratch.js scratchId`, `kidsBeatId` (Kids, kids.js) | `sequencer.js` `BEAT_ID` |
 | Song / scratch song | `song-…` / `song-scratch-<person>` | song.js, listen-make.js | `song.js` `SONG_ID` |
 | Take, key layout, touch layout, own voice | `take-…`, `layout-…`, `touch-…`, `voice-…` | dj.js, dj-keys.js, dj-touch.js, sheet.js | `rhythm.js` `TAKE_ID`, `keyset.js` `LAYOUT_ID`, `touch.js` `TOUCH_ID`, `backup.js` `VOICE_RECORD_ID` |
 | Own group | `g-<time36>-<rand4>` | `groups.js newGroupId` | `groups.js` `GROUP_ID` |
@@ -209,7 +209,7 @@ An override holds only what differs from boards.json (`model.js overrideFor`; th
 - **Order.** `state.js plainPersonIds` sorts longest first, so `ab` never touches `ab-2`.
 - **On the device:** `state.js reIdStoredPeople`. Stale `cloud` links are dropped first. Then one `db.batch`, and the map goes into settings `renamedPeople`.
 - **For incoming data:** `state.js reIdIncoming`, then `rememberRenames` (called by `backup-ui.js storeLoaded`).
-- **Scratch ids are not renamed.** `beat-scratch-<old id>` keeps its old id and is found by prefix and `personId` (`scratch.js`). `backup.js intoPerson` renames scratch ids itself.
+- **Scratch ids are not renamed.** `beat-scratch-<old id>` (and Kids' `beat-kidsown-<old id>`) keeps its old id and is found by prefix and `personId` (`scratch.js`). `backup.js intoPerson` renames both itself.
 
 ### Pad order and groups
 

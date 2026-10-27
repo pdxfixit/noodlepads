@@ -17,7 +17,7 @@ import {
 } from '../web/kids-logic.js';
 import { MELODY_NOTES } from '../web/notes.js';
 import { BEAT_ID, cleanPattern, STEPS } from '../web/beat.js';
-import { isScratch, scratchId } from '../web/scratch.js';
+import { isKidsOwnBeat, isHiddenBeat, kidsBeatId } from '../web/scratch.js';
 import { cutName } from '../web/names.js';
 
 // ── Pure ──
@@ -152,14 +152,14 @@ test('the startle sounds (explosion, siren, alarm, airhorn, evil laugh, buzzer) 
 
 test('the kid\'s beat is a normal beat: square i is pill 2i of a 16-pill bar', () => {
   const ids = ['p-kick', 'p-snare', 'p-shaker', 'p-clap'];
-  const beat = newKidsBeat('p-a', ids, scratchId('p-a'), 5);
-  assert.ok(BEAT_ID.test(beat.id) && isScratch(beat), 'the person\'s scratch beat (ADR 0020)');
+  const beat = newKidsBeat('p-a', ids, kidsBeatId('p-a'), 5);
+  assert.ok(BEAT_ID.test(beat.id) && isKidsOwnBeat(beat) && isHiddenBeat(beat), 'Kids\' own hidden beat, apart from the scratch (Ben, 2026-10-27)');
   assert.equal(beat.bpm, KIDS_TEMPOS.mid);
   assert.equal(beat.rows.length, 4);
   // A new Kids beat has a simple kick (1st and 3rd beat) and snare (2nd and 4th) lit; the others are off.
   const at = (squares) => Array.from({ length: 8 }, (_, i) => squares.includes(i));
   assert.deepEqual(squaresOf(beat, ids), [at([0, 4]), at([2, 6]), at([]), at([])]);
-  const sparse = newKidsBeat('p-a', [null, 'p-snare', null, null], scratchId('p-a'), 5);
+  const sparse = newKidsBeat('p-a', [null, 'p-snare', null, null], kidsBeatId('p-a'), 5);
   assert.equal(sparse.rows.length, 1, 'a drum the board lacks gets no row');
   assert.deepEqual(squaresOf(sparse, ids)[1], at([2, 6]), 'the snare is still lit');
   const on = withSquare(beat, ids, 1, 3, true, 9);
@@ -169,7 +169,7 @@ test('the kid\'s beat is a normal beat: square i is pill 2i of a 16-pill bar', (
   assert.deepEqual(squaresOf(on, ids)[1], at([2, 3, 6]));
   // It stays itself through the regular app's cleaning.
   const clean = cleanPattern(on, 'p-a');
-  assert.equal(clean.id, 'beat-scratch-p-a');
+  assert.equal(clean.id, 'beat-kidsown-p-a');
   assert.deepEqual(squaresOf(clean, ids), squaresOf(on, ids));
   // A drum with no row gets one; other rows and odd pills are left alone.
   const extra = { ...beat, rows: [{ ...beat.rows[0], steps: beat.rows[0].steps.map((_, i) => i === 1) }] };
@@ -210,7 +210,7 @@ test('🐢 and 🏃: tap one for slow or fast, tap it again for the middle', () 
 // in here… save it and use it again in the grown up mode".
 test('● a tune: the beat grows to four bars, the drums repeated; a square tapped lands in every bar', () => {
   const ids = ['p-kick', 'p-snare', 'p-shaker', 'p-clap'];
-  const one = withSquare(newKidsBeat('p-a', ids, scratchId('p-a'), 5), ids, 0, 2, true, 6);
+  const one = withSquare(newKidsBeat('p-a', ids, kidsBeatId('p-a'), 5), ids, 0, 2, true, 6);
   const four = withBars(one, TUNE_BARS, 7);
   assert.equal(TUNE_BARS, 4);
   assert.equal(four.bars, 4);
@@ -240,7 +240,7 @@ test('● a tune: a key lands on the nearest pill; an eager one in the count on 
 
 test('● a tune: notes land in one tune row on the instrument\'s C; a new recording\'s first note starts it again; the regular app keeps it', () => {
   const ids = ['p-kick', 'p-snare', 'p-shaker', 'p-clap'];
-  const beat = withBars(withSquare(newKidsBeat('p-a', ids, scratchId('p-a'), 5), ids, 0, 0, true), TUNE_BARS);
+  const beat = withBars(withSquare(newKidsBeat('p-a', ids, kidsBeatId('p-a'), 5), ids, 0, 0, true), TUNE_BARS);
   assert.equal(tuneRowOf(beat), null);
   const a = withTuneNote(beat, { clipId: 'p-a-piano-c', pitch: 4, s: 2, l: 1, fresh: true }, 8);
   const row = tuneRowOf(a);
@@ -268,7 +268,7 @@ test('● a tune: notes land in one tune row on the instrument\'s C; a new recor
 
 test('● a tune: a new recording keeps the beat with the tune it replaces, as a beat of its own under a fun name', () => {
   const ids = ['p-kick', 'p-snare', 'p-shaker', 'p-clap'];
-  const beat = withBars(withSquare(newKidsBeat('p-a', ids, scratchId('p-a'), 5), ids, 0, 0, true), TUNE_BARS);
+  const beat = withBars(withSquare(newKidsBeat('p-a', ids, kidsBeatId('p-a'), 5), ids, 0, 0, true), TUNE_BARS);
   assert.equal(keptTune(beat, { id: 'beat-x', name: 'Funky Moose' }), null, 'no tune: nothing to keep');
   const tuned = withTuneNote(beat, { clipId: 'p-a-piano-c', pitch: 4, s: 2, l: 1, fresh: true });
   const kept = keptTune(tuned, { id: 'beat-x', name: 'Funky Moose' }, 9);
@@ -277,7 +277,7 @@ test('● a tune: a new recording keeps the beat with the tune it replaces, as a
   const long = keptTune(tuned, { id: 'beat-x', name: 'Extremely Long Beat Name Indeed' }).name;
   assert.ok(long.startsWith('🧸 ') && cutName(long) === long, 'a long name is cut to keep the mark and still fit a name');
   assert.equal(kept.personId, 'p-a');
-  assert.ok(!isScratch(kept), 'not the scratch: it lists in 🗂️ Beats');
+  assert.ok(!isHiddenBeat(kept), 'not hidden: it lists in 🗂️ Beats');
   assert.deepEqual(tuneRowOf(kept).tune, [{ p: 4, s: 2, l: 1 }]);
   assert.deepEqual(squaresOf(kept, ids), squaresOf(tuned, ids), 'its drums too');
   assert.equal(kept.saved, 9);
@@ -448,14 +448,14 @@ test('more pages: 👈 waits on the first page, 👉 turns to the next, a dot pe
   assert.equal(back.disabled, true);
 });
 
-test('Beats: four drums of eight squares; a tap turns one on and saves the kid\'s one beat, their scratch beat', async () => {
+test('Beats: four drums of eight squares; a tap turns one on and saves the kid\'s one beat, Kids\' own, never the scratch', async () => {
   $('[data-kids-tab="beats"]').dispatch('click');
   assert.equal($('[data-kids-view="beats"]').hidden, false);
   assert.equal($('[data-kids-view="pads"]').hidden, true);
   const squares = $('#kids-beat').querySelectorAll('.kids-square');
   assert.equal(squares.length, 32);
   assert.deepEqual($('#kids-beat').querySelectorAll('.kids-drum').map((d) => d.textContent), ['🦶', '🪘', '🪇', '👏']);
-  const mine = () => state.savedBeats.filter((b) => b.personId === state.personId && b.id.startsWith('beat-scratch-'));
+  const mine = () => state.savedBeats.filter((b) => b.personId === state.personId && b.id.startsWith('beat-kidsown-'));
   assert.equal(mine().length, 0, 'nothing saved just for looking');
   // The first beat has a simple kick and snare lit (Ben, 2026-10-26), so the first ▶️ is not silence.
   const lit = () => squares.map((q, i) => (q.getAttribute('aria-pressed') === 'true' ? i : null)).filter((i) => i !== null);
@@ -864,13 +864,14 @@ test('🧸 Kids in Settings brings the kid\'s screens back; Regular leaves them 
   await page.settle();
   $('#settings-dialog').close();
   assert.equal(document.body.classList.contains('kids'), false);
-  // The kid's beat is their scratch beat: the regular app opens it, and it
-  // is not in 🗂️ Beats (ADR 0020).
-  assert.ok(state.savedBeats.some((b) => b.id.startsWith('beat-scratch-') && b.personId === state.personId));
+  // The kid's beat is Kids' own hidden beat (Ben, 2026-10-27): the regular
+  // app's scratch beat is untouched, and it is not in 🗂️ Beats.
+  assert.ok(state.savedBeats.some((b) => b.id.startsWith('beat-kidsown-') && b.personId === state.personId));
+  assert.ok(!state.savedBeats.some((b) => b.id.startsWith('beat-scratch-') && b.personId === state.personId), 'no scratch made by a Kids visit');
   $('#beats-toggle').dispatch('click');
   const bar = document.querySelectorAll('.beat-bar')[0];
   assert.equal(bar.querySelector('[data-beat-name]').value, 'Scratch beat');
-  assert.equal($('#seq-rows').children.filter((c) => c.classList.contains('seq-row')).length, 4, 'the four drums');
+  assert.equal($('#seq-rows').children.filter((c) => c.classList.contains('seq-row')).length, 0, 'the scratch is still empty');
   bar.querySelector('[data-beat-open]').dispatch('click');
   assert.equal($('#lib-list').children.length, 0, 'not in 🗂️ Beats');
   $('#library').close();
@@ -1089,7 +1090,7 @@ test('a Kids visit leaves the grown-up\'s pad size, skin and instrument as they 
 test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes round once, and the regular app shows the tune row', async () => {
   const { audio } = await import('../web/audio.js');
   const { getSetting, setSetting } = await import('../web/settings.js');
-  const { scratchOf } = await import('../web/scratch.js');
+  const { kidsBeatOf } = await import('../web/scratch.js');
   const { pillSeconds: pill, tuneRowOf: tuneOf } = await import('../web/kids-logic.js');
   await setLevel('regular');
   await setSetting('kidsInstNotes', 'piano');
@@ -1101,7 +1102,7 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   ctx.createBufferSource = () => ({ connect() {}, start() {}, stop() {}, playbackRate: { value: 1 }, buffer: null });
   const plainLoad = audio.load;
   audio.load = async () => ({ buffer: {}, duration: 0.2 });
-  const mine = () => scratchOf(state.savedBeats.filter((b) => b.personId === state.personId), state.personId);
+  const mine = () => kidsBeatOf(state.savedBeats.filter((b) => b.personId === state.personId), state.personId);
   // The kid's beat, with a square on, at a tempo that goes round in moments.
   $('[data-kids-tab="beats"]').dispatch('click');
   if (!mine()?.rows.some((r) => r.steps.some(Boolean))) $('#kids-beat').querySelectorAll('.kids-square')[0].dispatch('click');
@@ -1146,7 +1147,7 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   // A new recording: its first note starts the tune again; a tap on ● stops it early.
   // The tune it replaces is kept first, a beat of its own in 🗂️ Beats,
   // as 🆕 New keeps a beat: Kids has no Undo, and a kid can't read a line.
-  const kept = () => state.savedBeats.filter((b) => b.personId === state.personId && !b.id.startsWith('beat-scratch-') && tuneOf(b));
+  const kept = () => state.savedBeats.filter((b) => b.personId === state.personId && !isHiddenBeat(b) && tuneOf(b));
   const keptBefore = kept().length;
   rec.dispatch('click');
   await page.settle();
@@ -1184,16 +1185,20 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   await new Promise((r) => setTimeout(r, dt * 6));
   assert.equal($('#kids-play').getAttribute('aria-pressed'), 'false', 'nothing started');
   assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [4]);
-  // A grown-up finds it on 🥁 Beats: the drums and a 🎹 tune row, four bars.
+  // A grown-up finds the kept tune on 🥁 Beats (the drums and a 🎹 tune row,
+  // four bars); their own scratch beat is untouched.
   await setLevel('regular');
   $('#beats-toggle').dispatch('click');
-  const rows = $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
-  assert.equal(rows.length, 5);
-  assert.equal(rows.filter((r) => r.classList.contains('tune')).length, 1, 'one tune row, for 🎹 the piano roll');
-  assert.equal(document.querySelectorAll('.beat-bar')[0].querySelector('[data-beat-name]').value, 'Scratch beat', 'the scratch: 💾 Keep names it');
-  // And the earlier tune waits in 🗂️ Beats.
+  const rowsNow = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
+  assert.equal(rowsNow().length, 0, 'the scratch is empty: Kids wrote none of it');
+  assert.equal(document.querySelectorAll('.beat-bar')[0].querySelector('[data-beat-name]').value, 'Scratch beat');
   document.querySelectorAll('.beat-bar')[0].querySelector('[data-beat-open]').dispatch('click');
   assert.ok($('#lib-list').querySelector(`[data-load="${earlier.id}"]`), `"${earlier.name}" in 🗂️ Beats`);
+  assert.ok(!$('#lib-list').querySelectorAll('[data-load]').some((x) => x.dataset.load.startsWith('beat-kidsown-')), 'Kids\' own beat is not listed');
+  $('#lib-list').querySelector(`[data-load="${earlier.id}"]`).dispatch('click');
+  await page.settle();
+  assert.equal(rowsNow().length, 5);
+  assert.equal(rowsNow().filter((r) => r.classList.contains('tune')).length, 1, 'one tune row, for 🎹 the piano roll');
   $('#library').close();
   $('#pads-tab').dispatch('click');
   audio.load = plainLoad;

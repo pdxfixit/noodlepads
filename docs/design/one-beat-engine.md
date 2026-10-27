@@ -133,7 +133,7 @@ A beat made in Kids has no loud pills, no swing, 4/4 bars and its tune on a kit 
 | Memory | `busFor` keeps a graph per beat object, disposed only when rebuilt for the same object | Kids builds none (`mixer: false`). Step 7 prunes (below) |
 | `ready` is shared | `prepareBeats` (Song, previews) clears it | Kids' runs keep their own sounds; Beats and Song move off it in steps 6 and 8 |
 | Two runs | a second ▶ or another screen | the run is claimed before it loads (the block); step 9 gives one owner |
-| The scratch shared with Beats | leaving Kids, Beats held a stale scratch | on main since 7405e2c (`applyKids` → `showView`, `tests/kids-scratch-back.test.mjs`). Step 0 found it covered and skipped |
+| The scratch shared with Beats | leaving Kids, Beats held a stale scratch | on main since 7405e2c (`applyKids` → `showView`, `tests/kids-own-beat.test.mjs` (was kids-scratch-back; Kids has its own beat since 2026-10-27)). Step 0 found it covered and skipped |
 | A sync while Kids plays | a reordered row list moves rows under their clocks | as today; step 6's row methods cover Beats |
 | A grown-up's 3/4 beat in Kids | it now plays in its own bars, but `kids-logic.js` (`withSquare`, `withBars`, `pillAt`) and the ring round ● still count 16-pill bars | step 5a moves them to the beat's bars (`barSteps`), with a test of a square and a ● note on a 3/4 beat |
 | Safari | — | no new Web Audio call; Kids builds no graph |
@@ -144,7 +144,7 @@ Each step is one commit (two where it says), green on its own (`just test`), its
 
 | # | Step | Min | Tests | Seats |
 |---|---|---|---|---|
-| 0 | **The scratch re-read on leaving Kids:** already on main (7405e2c, `tests/kids-scratch-back.test.mjs`); skipped | 0 | `tests/kids-scratch-back.test.mjs` | storage-sync |
+| 0 | **The scratch re-read on leaving Kids:** already on main (7405e2c, `tests/kids-own-beat.test.mjs`); skipped | 0 | `tests/kids-own-beat.test.mjs` | storage-sync |
 | 1 | **S5 of [simplify.md](simplify.md):** the pure beat rules into `web/beat.js`, `encodeWav`/`normalize` into `web/wav.js`; `kids-logic.js`, `share-render.js` and the other importers take them from there. Both files in `sw.js` SHELL and layout.md. One push, no dynamic imports | 75 | the suite; `architecture.test.mjs`; `offline.test.mjs` | architect, browser-compat |
 | 2 | `test:` **`share-render.js renderAudio`** of a beat and a song: every hit and time, as a JSON fixture | 30 | green on the old code | test-qa |
 | 3 | **The engine file, no player yet:** `web/beat-engine.js` (sw.js, layout.md); `app.js` makes it and hands it to `createSequencer`, `initKids`, `createSong`; `share-render.js` named in the architecture table | 45 | the suite; step 2's fixture; `architecture.test.mjs` (only `beat-engine.js` imports `buildMix`) | architect, audio-engineer |

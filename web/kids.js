@@ -29,7 +29,7 @@ import { fingerTaps, isFinger } from './finger.js';
 import { remember, recall, newId, onePressOneClick } from './util.js';
 import { soundName, beatName } from './names.js';
 import { askSum, closeSum } from './grown-up.js';
-import { scratchOf, scratchId } from './scratch.js';
+import { kidsBeatOf, kidsBeatId } from './scratch.js';
 import { getSetting, setSetting, onSetting } from './settings.js';
 import { SKINS, nextSkin } from './skins.js';
 import { kidsHint, markSeen } from './tips.js';
@@ -594,12 +594,13 @@ function wireRecord() {
 let playing = null;   // the engine's run ({t0, stop, stats}) with the squares booked to light (`shows`) and its start (`started`)
 const drumClips = (all = deps.clips({ includeHidden: true, allPresets: true })) => KIDS_DRUMS.map((d) => all.find((c) => c.kitId === d) ?? null);
 
-// The kid's beat: their scratch beat (ADR 0020), as stored, or a new empty
-// one with the four drums, saved once a square is tapped.
+// The kid's beat: 🧸 Kids' own hidden beat (scratch.js, never the grown-up's
+// scratch), as stored, or a new one with the four drums and a simple kick
+// and snare lit, saved once a square is tapped.
 function kidsBeat(pid = deps.personId()) {
-  const found = scratchOf(deps.beats(pid), pid);
+  const found = kidsBeatOf(deps.beats(pid), pid);
   if (found) return found;
-  return newKidsBeat(pid, drumClips().map((c) => c?.id ?? null), scratchId(pid));
+  return newKidsBeat(pid, drumClips().map((c) => c?.id ?? null), kidsBeatId(pid));
 }
 
 function renderBeat() {
