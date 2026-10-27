@@ -203,3 +203,11 @@ The TODO line asks for the architect, storage-sync, privacy-safety, security, pa
 3. **Offer 🔑 Remember right after the grown-up sets the PIN?** Recommended: **yes**, the same offer a PIN open makes: the device where a grown-up sets it up is usually the kid's own, and without it the kid is asked the PIN the next time they open themselves there. Option B: no offer; it stays a button in the PIN part.
 
 Calls made here (say if any is wrong): the sum is asked every time the switch goes on, even just after 🧸 Kids' sum; the public line sits on the first PIN pad, not a sheet of its own; a person only on this device shows no ☁️ in 👥 People; the 🔒 PIN part shows only in the cloud; `just cloud-reset-pin` stops clearing PINs.
+
+## Ben's answers (2026-10-26)
+
+- The flow as shown is approved, to build after the bug sweep's cloud branch lands and the six seats have reviewed this plan.
+- No Undo after leaving the cloud: the red second tap and the PIN ask first, and the device keeps everything.
+- Both ways out stay, ☁️ off and Remove PIN, with the same words ("Leave the cloud?").
+- 🔑 Remember is offered right after the grown-up sets the PIN.
+- The "Tap again" ask on ☁️ Delete their cloud copy too (2962615) stays.

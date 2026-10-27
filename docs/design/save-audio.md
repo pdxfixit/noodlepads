@@ -125,3 +125,12 @@ The smaller calls, made here and changeable:
 - The file is named as on screen.
 - Song on a phone uses two full lines.
 - The button reports where 🔊 reports.
+
+## Ben's answers (2026-10-26)
+
+- 🗂️ Beats' three buttons (🔊 Make the open beat a sound, ⬇️ Save as audio file, 📥 Load a beat file) sit side by side in one row, short words, so the list of beats keeps its room; Song's likewise.
+- A beat's file loops to at least 15 s in whole passes, then the last hits ring out up to 2 s; a song is the song once through.
+- On a touch device that can share the file, the share sheet opens; a download where it can't.
+- A beat card's beat-file button becomes 📄 Save as a beat file, so ⬇️ always means the audio file.
+- No "My" anywhere in the app's words (Ben, 2026-10-26): 🗂️ Beats, 🗂️ Songs, 🎤 Sounds, ⭐ Voices…, the dialogs' titles too.
+- Builds after the bug sweep's beats+song branch lands (sequencer.js, song.js).
