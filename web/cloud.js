@@ -14,7 +14,7 @@ import { audio } from './audio.js';
 import { cleanBackup } from './backup.js';
 import { followPerson, cleanPrefs } from './settings.js';
 import { createCloudApi, CloudError, cloudTrouble } from './cloud-api.js';
-import { syncProfile, releaseOf, shareBundle, shareDoc, uploadAudio, syncNote, CLOUD_KINDS, CLOUD_MAX_SOUND } from './cloud-sync.js';
+import { syncProfile, releaseOf, recordsOf, planPush, shareBundle, shareDoc, uploadAudio, syncNote, CLOUD_KINDS, CLOUD_MAX_SOUND } from './cloud-sync.js';
 import { funName, isFunName } from './names.js';
 import { isHiddenBeat, isScratchSong } from './scratch.js';
 import { people } from './board.js';
@@ -442,6 +442,19 @@ function deps() {
     },
   };
 }
+
+// How many records of theirs on this device the cloud doesn't have yet (new
+// or changed here, or deleted here), by the hashes of the last sync: what
+// deleting them from this device without a sync would lose (cloud-ui.js,
+// 🤷 I don't know the PIN). Not counted: a sound whose audio alone changed.
+export function unsyncedCount(personId) {
+  const link = linkOf(personId);
+  if (!link) return 0;
+  const shaOf = (k) => (k.startsWith('clips:') ? link.sounds?.[k.slice(6)]?.sha256 ?? '' : '');
+  const { put, del } = planPush(recordsOf(storedLists(), personId, kitIds()), link.sent ?? {}, shaOf);
+  return put.length + del.length;
+}
+export const unsyncedText = (n) => `${n} ${n === 1 ? "change here isn't" : "changes here aren't"} in the cloud yet`;
 
 // Syncs one person now (one sync at a time each). Never throws: trouble is
 // kept as the person's status and said where the cloud is shown.

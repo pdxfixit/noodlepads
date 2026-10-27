@@ -77,7 +77,7 @@ Shape (as written by `cloud.js saveLink`):
 | `sounds` | `{<clip id>: {sha256, sound, print?}}`: the cloud's audio for the clip (its hash and sound id), and `print` (`<blob size>:<changed stamp>`) of the device's blob last hashed equal to it, so an unchanged clip is not hashed again (`cloud-sync.js hashAudio`) |
 | `pin` | the profile has a PIN (always, now: the Worker serves no other) |
 | `check` | `{salt, hash}`: PBKDF2 of the PIN, so the device can check it with no network |
-| `newPin` | the profile got a PIN this device never had typed; until typed, the person can't open, and 🤷 I don't know the PIN deletes them here |
+| `newPin` | the profile got a PIN this device never had typed; until typed, the person can't open, and 🤷 I don't know the PIN deletes them here (its pad says how many changes made here the cloud lacks: `cloud.js unsyncedCount`, `planPush` against `sent`) |
 | `remembered` | true: 🔑 Remember on this device skips the PIN here, with no end of its own (Ben, 2026-10-27). Set by `cloud.js rememberHere`; cleared by `forgetHere` or a key the cloud refused (`keyRefused`: a PIN changed elsewhere, or `KEY_IDLE_MS` unused); a PIN changed on this device keeps it |
 | `rememberUntil` | ms, from before 2026-10-27 (90 days on): read as `remembered`, whatever its day (`cloud.js remembers`); cleared as `remembered` is |
 | `keyDropped` | true: the cloud refused a key this device remembered (`keyRefused`), so the PIN pad and the profile say "This device forgot them"; cleared when the PIN is typed |

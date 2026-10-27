@@ -21,7 +21,7 @@ import {
   api, CloudError, cloudTrouble, cloudThere, inCloud, linkOf, keyOf, statusOf, syncNow,
   openProfile, unlock, pinIsNew, checkPin, setPin, goUp, leaveCloud, removeProfile, shareable, shareItem, showCode,
   sharedHere, openShare, forgetShare, remixShare, fetchShare, checkShared, mySharesOf, unshareItem, listProfiles,
-  rememberHere, declineRemember, offersRemember, forgetHere, deviceCount, forgetAllDevices, isRemembered, keyWasDropped, FORGOT_HERE, bringDown, leaveInCloud,
+  unsyncedCount, unsyncedText, rememberHere, declineRemember, offersRemember, forgetHere, deviceCount, forgetAllDevices, isRemembered, keyWasDropped, FORGOT_HERE, bringDown, leaveInCloud,
 } from './cloud.js';
 import { newProgress, progressShare } from './cloud-sync.js';
 import { askSum } from './grown-up.js';
@@ -106,7 +106,11 @@ function pinKey(k) {
 // `unknown` shows. `forgot` shows the line on what to do about a forgotten PIN.
 // `shown`: a line in a box of its own over the dots (what putting someone in
 // the cloud makes public), none when empty.
-export function askPin({ title = 'PIN', hint = '', note = '', shown = '', forgot = false, someoneNew = false, unknown = false } = {}) {
+// `unsynced`: how many changes made here the cloud doesn't have yet, said on
+// 🤷's second tap, since deleting them from this device loses those.
+let pinUnsynced = 0;
+export function askPin({ title = 'PIN', hint = '', note = '', shown = '', forgot = false, someoneNew = false, unknown = false, unsynced = 0 } = {}) {
+  pinUnsynced = unsynced;
   pinDigits = '';
   drawDots();
   el.pinTitle.textContent = title;
@@ -159,10 +163,10 @@ export function askWait({ title, wait, locked }) {
 
 // Tries `act(pin)` until it works, asking again on a wrong PIN; null when the
 // kid gives up, {unknown: true} after 🤷 I don't know the PIN.
-async function withPin(act, { title, hint, forgot = true, locked = false, unknown = false }) {
+async function withPin(act, { title, hint, forgot = true, locked = false, unknown = false, unsynced = 0 }) {
   let note = '';
   for (;;) {
-    const pin = await askPin({ title, hint, note, forgot, someoneNew: locked, unknown });
+    const pin = await askPin({ title, hint, note, forgot, someoneNew: locked, unknown, unsynced });
     if (pin === 'new') { addPerson(); return null; }
     if (pin === 'unknown') return { unknown: true };
     if (pin === null) {
@@ -203,14 +207,17 @@ async function askOnce(personId, { locked = false } = {}) {
   // A device that remembered them, whose key the cloud refused, says so first
   // (Ben, 2026-10-27): a kid who played yesterday knows why the pad is back.
   const why = keyWasDropped(personId) ? `${FORGOT_HERE} ` : 'They have a new PIN. Type it to open them here. ';
+  // Changes made here that the cloud hasn't got: deleting them here loses those.
+  const lost = fresh ? unsyncedCount(personId) : 0;
   try {
     const opened = await withPin(async (pin) => { await unlock(personId, pin); return pin; }, {
       title: `${p?.avatar ? `${p.avatar} ` : ''}${p?.name ?? 'PIN'}`,
       hint: fresh
-        ? `${why}Don't know it? Their things on this device are deleted; the cloud keeps what it has.`
+        ? `${why}Don't know it? Their things on this device are deleted; the cloud keeps what it has${lost ? `, but ${unsyncedText(lost)}` : ''}.`
         : 'Type their PIN to open them.',
       locked,
       unknown: fresh,
+      unsynced: lost,
     });
     if (opened?.unknown) {
       await dropPerson(personId);
@@ -1221,7 +1228,7 @@ export function initCloudUI(hooks) {
   el.pinNew.addEventListener('click', () => { const done = pinDone; pinDone = null; el.pin.close(); done?.('new'); });
   // 🤷 I don't know the PIN: the first tap asks, the second deletes them here.
   el.pinUnknown.addEventListener('click', () => {
-    if (!armed(el.pinUnknown, 'Tap again: delete them from this device')) return;
+    if (!armed(el.pinUnknown, `Tap again: delete them from this device${pinUnsynced ? `. ${unsyncedText(pinUnsynced)}.` : ''}`)) return;
     const done = pinDone;
     pinDone = null;
     el.pin.close();

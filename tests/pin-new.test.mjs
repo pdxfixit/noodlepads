@@ -139,6 +139,40 @@ test('🤷 I don\'t know the PIN asks first, then deletes them from this device;
   assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM profiles WHERE id = ?', id)[0].n, 1, 'the cloud keeps its copy');
 });
 
+test('🤷 I don\'t know the PIN says how many changes made here are not in the cloud yet, since deleting them loses those', async () => {
+  const id = 'p-unknown-edits';
+  await pinSetElsewhere(id, '8642');
+  // Two things made here since the last sync: a beat changed and another made.
+  state.savedBeats = state.savedBeats.map((b) => (b.id === `beat-${id}` ? { ...b, name: 'Turbo Taco', changed: Date.now() } : b));
+  await persist('beats', structuredClone(state.savedBeats.find((b) => b.id === `beat-${id}`)));
+  const more = { id: `beat-${id}-two`, personId: id, name: 'Second', bpm: 90, bars: 1, rows: [{ clipId: `${id}-kick`, steps: [0, 1, 0, 0] }], created: 2, saved: 2 };
+  state.savedBeats = [...state.savedBeats, more];
+  await persist('beats', structuredClone(more));
+  assert.equal(cloud.unsyncedCount(id), 2);
+  await cloud.syncNow(id);
+  await settle();
+  assert.equal($('#pin-dialog').open, true);
+  assert.match($('#pin-hint').textContent, /2 changes here aren't in the cloud yet/);
+  $('#pin-unknown').dispatch('click');
+  assert.match($('#pin-unknown').textContent, /^Tap again: delete them from this device\. 2 changes here aren't in the cloud yet\.$/);
+  $('#pin-dialog').close();
+  await settle();
+  assert.ok(state.peopleEdits.has(id), 'nothing deleted');
+});
+
+test('🤷 I don\'t know the PIN has nothing to add when every change is already in the cloud', async () => {
+  const id = 'p-unknown-clean';
+  await pinSetElsewhere(id, '8642');
+  assert.equal(cloud.unsyncedCount(id), 0);
+  await cloud.syncNow(id);
+  await settle();
+  assert.doesNotMatch($('#pin-hint').textContent, /aren't in the cloud yet/);
+  $('#pin-unknown').dispatch('click');
+  assert.equal($('#pin-unknown').textContent, 'Tap again: delete them from this device');
+  $('#pin-dialog').close();
+  await settle();
+});
+
 test('taken out of the cloud on another device: this device drops the link, says so, and keeps every record', async () => {
   const id = 'p-left';
   await personUp(id);

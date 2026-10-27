@@ -1039,7 +1039,10 @@ ADR 0002.
   can't be opened until it is typed: the person showing goes behind the PIN
   pad at once. Its 🤷 I don't know the PIN (two taps) deletes them from this
   device with everything of theirs here (unsynced work too); the cloud copy
-  stays (`cloud.js` `keyRefused`, `app.js` `dropLockedPerson`).
+  stays (`cloud.js` `keyRefused`, `app.js` `dropLockedPerson`). When changes
+  made here are not in the cloud yet (`cloud.js unsyncedCount`, by the hashes
+  of the last sync), the pad's line and the second tap say so: "2 changes here
+  aren't in the cloud yet."; those are lost.
 - **🔗 Share…** (in a person's ☁️) gives a code like `ABCD-2345` for one sound,
   beat or song: a snapshot, read-only. For someone with a PIN, every code
   made asks it on its own pad first, even on a device that remembers them
