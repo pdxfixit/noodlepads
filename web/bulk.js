@@ -442,6 +442,9 @@ function openVoice() {
     byHand(b.dataset.addKnob, ADDED_AT[b.dataset.addKnob]);
     draw();
     hear();
+    // The palette hid with the focus in it: back on + Add a layer (or on
+    // Apply, when every knob is a row now and + Add a layer is off).
+    (add.disabled ? apply : add).focus();
   });
   apply.addEventListener('click', async () => {
     if (apply.disabled) return;

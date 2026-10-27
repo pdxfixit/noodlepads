@@ -119,6 +119,13 @@ test('🪄 Voice: Esc closes the open + Add a layer palette, and only that', asy
   assert.equal(palette.hidden, true, 'closed');
   assert.equal(e.defaultPrevented, true, 'so the sheet stays open and nothing stops');
   assert.equal($('#bulk-dialog').open, true);
+  // A layer picked from it: the palette hides, and focus goes back to + Add a layer.
+  add.dispatch('click');
+  const knob = palette.querySelector('[data-add-knob]');
+  knob.focus();   // a pick by keyboard: the focus is on it as the palette hides
+  knob.dispatch('click');
+  assert.equal(palette.hidden, true);
+  assert.ok(document.activeElement === add || document.activeElement === $('#bulk-body').querySelector('.bulk-apply'), 'never left in the hidden palette');
   $('#bulk-dialog').close();
   $('#chosen-clear').dispatch('click');
 });
