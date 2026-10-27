@@ -310,7 +310,7 @@ Every list keeps only known fields of the right type. Anything else is dropped a
 
 | Limit | Value |
 |---|---|
-| Zip file | under 300 MB unpacked (`zip.js unzip` `maxBytes`) plus 1 MB; at most 5,000 entries; stored or deflated only; no ZIP64; every entry CRC-checked; inflate stops past the declared size |
+| Zip file | under 300 MB unpacked (`zip.js` `MAX_UNZIP_BYTES`, the `unzip` default `maxBytes`) plus 1 MB; `makeBackup` saves within it: the heard copies get min(`MAX_HEARD_BYTES`, cap − 1 MB − the originals), and originals alone past it throw at save time; at most 5,000 entries; stored or deflated only; no ZIP64; every entry CRC-checked; inflate stops past the declared size |
 | backup.json | 8 MB (`MAX_JSON_BYTES`) |
 | One sound | 80 MB (`MAX_SOUND_BYTES`); type must read as audio (`audioMime`: `video/*` becomes `audio/*`) |
 | Older sounds, all audio | 2 GB (`leftover.js` `MAX_OLD_AUDIO_BYTES`) |

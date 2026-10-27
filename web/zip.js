@@ -95,9 +95,13 @@ async function inflate(bytes, limit) {
   return out;
 }
 
+// The most a zip may unpack to in all. backup.js saves within it, so a backup
+// that saved also loads.
+export const MAX_UNZIP_BYTES = 300 * 1024 * 1024;
+
 // Blob -> Map(name -> Uint8Array). The file is untrusted, so it refuses
 // anything over `maxBytes` unpacked or `maxEntries` entries, and checks CRCs.
-export async function unzip(blob, { maxBytes = 300 * 1024 * 1024, maxEntries = 5000 } = {}) {
+export async function unzip(blob, { maxBytes = MAX_UNZIP_BYTES, maxEntries = 5000 } = {}) {
   // Entries are stored or deflated, so an honest archive is rarely bigger than
   // what it unpacks to; refuse before reading a huge file into memory.
   if (blob.size > maxBytes + 1024 * 1024) throw new Error('it is bigger than this app will load');

@@ -870,6 +870,32 @@ test('heard copies stop at MAX_HEARD_BYTES in all: a sound past it goes without 
   assert.deepEqual(doc.clips.map((c) => !!c.heard), [true, false, true], 'the second would pass the cap; the small third still fits');
 });
 
+// A backup that saves must load: the heard copies share what is left under
+// what unzip takes after the originals (caps injected small; the real ones are 300 and 120 MB).
+const bigState = (count, size) => ({
+  ...heardState(),
+  clips: Array.from({ length: count }, (_, i) => ({ ...goodClip({ id: `user-aa-${i + 1}`, personId: 'p-pip-1' }), blob: new Blob([new Uint8Array(size).fill(i + 1)], { type: 'audio/webm' }) })),
+});
+const MB = 1024 * 1024;
+
+test('heard copies fit under the unzip cap with the originals, so what saves also loads', async () => {
+  // 4 originals of 0.5 MB, a 3.2 MB cap: 0.2 MB is left after the originals and 1 MB of room.
+  const cap = 3.2 * MB;
+  const heardSizes = [0.1 * MB, 0.5 * MB, 0.5 * MB, 0.5 * MB];
+  let k = 0;
+  const heardOf = async () => new Blob([new Uint8Array(heardSizes[k++]).fill(9)], { type: 'audio/wav' });
+  const zipBlob = await makeBackup(bigState(4, 0.5 * MB), 'dev', { heardOf, unzipCap: cap });
+  const doc = await docOf(zipBlob);
+  assert.deepEqual(doc.clips.map((c) => !!c.heard), [true, false, false, false]);
+  const out = await readBackup(zipBlob, bundled(), { unzipCap: cap });
+  assert.equal(out.clips.length, 4, 'it loads again at the same cap');
+});
+
+test('originals alone over the unzip cap refuse the save and say why', async () => {
+  await assert.rejects(makeBackup(bigState(3, MB), 'dev', { unzipCap: 3.5 * MB }), /sounds alone come to 3 MB, more than the 2 MB a backup can hold/);
+  await makeBackup(bigState(2, MB), 'dev', { unzipCap: 3.5 * MB });
+});
+
 test('a 1.2 backup loads in this app: the heard copy is read past, nothing is dropped or counted', async () => {
   const zipBlob = await makeBackup(heardState(), 'dev', { heardOf: async () => wavOf(7) });
   const out = await readBackup(zipBlob, bundled());

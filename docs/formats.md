@@ -62,7 +62,7 @@ An empty first person who was never renamed (`solo`) is not worth importing.
 | `emoji`, `color` | The pad's picture (up to 8 characters) and a palette name (`red orange yellow lime teal blue pink white`). |
 | `file` | The audio entry as recorded. Required: a clip with no readable file is dropped. |
 | `mime` | `audio/webm` and the like. |
-| `heard` | **1.2.** The WAV entry as it plays. Optional: a sound that could not be rendered goes without, and together the heard copies stop at 120 MB. **Play this one when present**; play `file` with none of the recipe below when it is missing. |
+| `heard` | **1.2.** The WAV entry as it plays. Optional: a sound that could not be rendered goes without, and together the heard copies stop at 120 MB, or at what is left under the 300 MB unpack limit after the originals and 1 MB for `backup.json`, whichever is less. **Play this one when present**; play `file` with none of the recipe below when it is missing. |
 | `created` | When made. |
 | `group` | **1.1.** A group id from the person's order (below). |
 | `root` | The sound's note, a MIDI number 0 to 127 (middle C is 60), when the app found it. Used to play a tune row on key. |

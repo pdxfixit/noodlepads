@@ -19,7 +19,7 @@
 // A backup file is untrusted input: readBackup keeps only fields it knows,
 // of the right type and size, and drops anything else.
 
-import { zip, unzip } from './zip.js';
+import { zip, unzip, MAX_UNZIP_BYTES } from './zip.js';
 import { VOICES, storedFx } from './voices.js';
 import { cleanTweaks } from './tweaks.js';
 import { cleanPattern } from './beat.js';
@@ -104,9 +104,12 @@ function dropUndefined(o) {
 }
 
 // The most the "as heard" copies add to a backup, in bytes. A backup may
-// unpack to 300 MB in all (zip.js), and the originals come first; a sound
-// that would take the heard copies past this goes without one.
+// unpack to 300 MB in all (zip.js MAX_UNZIP_BYTES), and the originals come
+// first: the copies get what is left under that after the originals and
+// room for backup.json (HEADROOM), and never more than this. A sound that
+// would take them past it goes without one.
 export const MAX_HEARD_BYTES = 120 * 1024 * 1024;
+const HEADROOM = 1024 * 1024;
 
 // A sound as it plays, `{buffer, duration}` (audio.js load), as a 16-bit WAV
 // Blob: only the part that plays (`duration`), not the silent tail an effect
@@ -125,18 +128,33 @@ export function heardWav(loaded) {
 // gives a sound as it plays, a WAV Blob, or null/throws when it can't:
 // that sound goes without one, and the backup still saves (the original is
 // in it). Without `heardOf` no sound has one. Returns a zip Blob.
-export async function makeBackup(state, version = 'dev', { heardOf } = {}) {
+// A backup must load again: the originals alone over what unzip takes
+// (`unzipCap`) refuse the save, naming why, and the heard copies share what
+// is left. `unzipCap` and `heardCap` are for tests.
+export async function makeBackup(state, version = 'dev', { heardOf, unzipCap = MAX_UNZIP_BYTES, heardCap = MAX_HEARD_BYTES } = {}) {
   const files = [];
   const clips = [];
-  let heardBytes = 0;
+  const originals = [];
+  let originalBytes = 0;
   for (const c of state.clips) {
+    const data = new Uint8Array(await c.blob.arrayBuffer());
+    originalBytes += data.length;
+    originals.push(data);
+  }
+  if (originalBytes > unzipCap - HEADROOM) {
+    const mb = (n, round = Math.ceil) => round(n / 1048576);
+    throw new Error(`the sounds alone come to ${mb(originalBytes)} MB, more than the ${mb(unzipCap - HEADROOM, Math.floor)} MB a backup can hold and load again`);
+  }
+  const heardLeft = Math.min(heardCap, unzipCap - HEADROOM - originalBytes);
+  let heardBytes = 0;
+  for (const [i, c] of state.clips.entries()) {
     const file = `sounds/${c.id}.${extensionFor(c.mime)}`;
-    files.push({ name: file, data: new Uint8Array(await c.blob.arrayBuffer()) });
+    files.push({ name: file, data: originals[i] });
     const { blob, heard: _stale, ...meta } = c;
     const entry = { ...meta, file };
     let wav = null;
     try { wav = heardOf ? await heardOf(c) : null; } catch { wav = null; }
-    if (wav instanceof Blob && wav.size > 0 && heardBytes + wav.size <= MAX_HEARD_BYTES) {
+    if (wav instanceof Blob && wav.size > 0 && heardBytes + wav.size <= heardLeft) {
       heardBytes += wav.size;
       entry.heard = `sounds/${c.id}.heard.wav`;
       files.push({ name: entry.heard, data: new Uint8Array(await wav.arrayBuffer()) });
@@ -253,8 +271,8 @@ export function intoPerson(data, from, to) {
 // plus addedPeopleIds (people already added on this device) and colorOk(name)
 // (is this a palette color?) when known. Returns cleaned records, ready to
 // store, plus `skipped`, how many records were dropped for being malformed.
-export async function readBackup(file, bundled) {
-  const entries = await unzip(file);
+export async function readBackup(file, bundled, { unzipCap = MAX_UNZIP_BYTES } = {}) {
+  const entries = await unzip(file, { maxBytes: unzipCap });
   const raw = entries.get('backup.json');
   if (!raw) throw new Error("it isn't a Noodle Pads backup (no backup.json)");
   if (raw.length > MAX_JSON_BYTES) throw new Error('its backup.json is far bigger than a backup should be');
