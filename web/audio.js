@@ -83,6 +83,13 @@ export function trimBounds(buffer) {
   return { start: s / buffer.sampleRate, duration: (e - s) / buffer.sampleRate, silent: false };
 }
 
+// What a recording asks the microphone for (Ben, 2026-10-26): the plain
+// sound, with the phone-call settings off (echo cancelling, noise
+// suppression and auto-gain gated and pumped claps and beatbox). A quiet
+// voice is brought up afterwards by 🔊 Even it out. The sound sheet and
+// 🧸 Kids both ask with it.
+export const RAW_MIC = { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } };
+
 // How a recording came out, for the sound sheet's after-recording tip:
 // 'silent' (nothing there), 'quiet' (move closer), 'loud' (it hit the top
 // and crackled: move back) or 'ok'. `peak` is the loudest sample (0 to 1)

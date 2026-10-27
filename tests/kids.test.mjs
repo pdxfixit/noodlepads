@@ -560,7 +560,7 @@ async function until(fn, what, ms = 3000) {
 
 // A stand-in microphone and recorder: the page has neither. Each stream's
 // tracks count how often they were stopped (let go of).
-const mic = { streams: [] };
+const mic = { streams: [], asked: [] };
 function fakeMicrophone() {
   window.MediaRecorder = class {
     static isTypeSupported() { return true; }
@@ -569,7 +569,7 @@ function fakeMicrophone() {
     stop() { this.state = 'inactive'; this.ondataavailable({ data: new Blob(['sound']) }); this.onstop(); }
   };
   globalThis.MediaRecorder = window.MediaRecorder;
-  navigator.mediaDevices = { getUserMedia: async () => { const s = { stopped: 0, getTracks() { return [{ stop: () => { s.stopped += 1; } }]; } }; mic.streams.push(s); return s; } };
+  navigator.mediaDevices = { getUserMedia: async (constraints) => { mic.asked.push(constraints); const s = { stopped: 0, getTracks() { return [{ stop: () => { s.stopped += 1; } }]; } }; mic.streams.push(s); return s; } };
 }
 
 test('Record: a refused microphone shows 🚫 over 🎙️; once it is allowed, the mic is itself again', async () => {
@@ -618,6 +618,7 @@ test('Record: hold the mic, let go, and it is a new pad of the kid\'s own, in th
   await page.settle();
   assert.equal($('#kids-mic').classList.contains('recording'), false);
   assert.equal(mic.streams.at(-1).stopped, 1, 'the microphone is let go');
+  assert.deepEqual(mic.asked.at(-1), { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }, 'raw: no echo cancelling, noise suppression or auto-gain (Ben, 2026-10-26)');
   assert.equal(state.userClips.length, before + 1);
   const made = state.userClips.at(-1);
   assert.equal(made.personId, state.personId);

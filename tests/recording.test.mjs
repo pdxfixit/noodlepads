@@ -11,6 +11,7 @@ import { FakeAudioBuffer, FakeOfflineAudioContext, fakeBuffer } from './helpers.
 
 let page, $, audio, sheet;
 const recorders = [];
+const asked = [];   // what each recording asked the microphone for
 let decoded = null;   // what the next recording decodes to
 
 before(async () => {
@@ -20,7 +21,7 @@ before(async () => {
   page = installPage({ manifest: testManifest() });
   $ = page.$;
   const track = { stop() {} };
-  globalThis.navigator.mediaDevices = { getUserMedia: async () => ({ getTracks: () => [track] }) };
+  globalThis.navigator.mediaDevices = { getUserMedia: async (constraints) => { asked.push(constraints); return { getTracks: () => [track] }; } };
   class FakeRecorder {
     constructor() { this.state = 'inactive'; this.mimeType = 'audio/webm'; recorders.push(this); }
     static isTypeSupported() { return true; }
@@ -73,6 +74,7 @@ test('Record counts 3, 2, 1 before it listens', async () => {
   assert.equal(recorders[0].state, 'inactive', 'not listening during the count');
   await untilListening();
   assert.equal($('#rec-label').textContent, 'Stop');
+  assert.deepEqual(asked.at(-1), { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }, 'raw: no echo cancelling, noise suppression or auto-gain (Ben, 2026-10-26)');
   $('#sheet').close();
 });
 

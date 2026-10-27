@@ -421,9 +421,9 @@ the group's presets when a pick changes.
 
 | Path | Capture | Becomes | Stored as |
 |---|---|---|---|
-| Sound sheet 🎤 Record (`sheet.js startRecording`) | `getUserMedia({audio: true})` → `MediaRecorder` (webm/opus, mp4, webm, ogg); count-in 3-2-1 | `acceptAudio`: `audio.decode`, cap `MAX_CLIP_SECONDS` (120), `trimBounds` silent check, `sheet.original` = the trimmed slice, `chop.js recorded(buffer)` | `clips` with `blob` (the whole recording) |
+| Sound sheet 🎤 Record (`sheet.js startRecording`) | `getUserMedia(RAW_MIC)` (`audio.js`: echo cancelling, noise suppression and auto-gain off) → `MediaRecorder` (webm/opus, mp4, webm, ogg); count-in 3-2-1 | `acceptAudio`: `audio.decode`, cap `MAX_CLIP_SECONDS` (120), `trimBounds` silent check, `sheet.original` = the trimmed slice, `chop.js recorded(buffer)` | `clips` with `blob` (the whole recording) |
 | Sound sheet file chooser | the file | `acceptAudio` | same |
-| 🧸 Kids' mic (`kids.js`) | its own `getUserMedia` + `MediaRecorder`, count-in `beep`s | `keep`: decode, silent check, `kidsVoiceFields(voice)` (classic voice steps from `kids-logic.js KIDS_VOICES`) | `deps.saveClip` → `persist('clips')` |
+| 🧸 Kids' mic (`kids.js`) | its own `getUserMedia(RAW_MIC)` + `MediaRecorder`, count-in `beep`s | `keep`: decode, silent check, `kidsVoiceFields(voice)` (classic voice steps from `kids-logic.js KIDS_VOICES`) | `deps.saveClip` → `persist('clips')` |
 | ✨ Make one (`sheet.js`) | `synth.js renderSynth` (mono, 44.1 kHz, peak 0.9) | `encodeWav`; `sheet.original` = `keptAudio` of it (quiet ends off) | `blob` + `synth` |
 | ➕ Mix (`sheet.js`) | both sounds rendered as they play now, `mix.js mixSounds` | `encodeWav`; `keepOriginal` of its `keptAudio` | `blob` + `from: {how: 'mix'}` |
 | 🧩 Chop (`chop.js makePads`) | the voiced sound, cut at marks | `encodeWav` per piece | new `clips` with `from: {how: 'chop'}` |

@@ -19,7 +19,7 @@
 // the top bar and a pinch both move it, smoothly. An older copy kept a
 // device size in localStorage `kids-size`; it is ignored.
 
-import { audio, makeVoice, fadeStop, trimBounds, tooLate } from './audio.js';
+import { audio, makeVoice, fadeStop, trimBounds, tooLate, RAW_MIC } from './audio.js';
 import { levelOf } from './meter.js';
 import { logEvent } from './log.js';
 import { countPlay } from './play-count.js';
@@ -377,7 +377,7 @@ async function askMicrophone() {
   audio.stopAll();
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream = await navigator.mediaDevices.getUserMedia(RAW_MIC);
   } catch {
     rec.mode = null;
     micRefused = true;
