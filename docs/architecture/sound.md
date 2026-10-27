@@ -50,7 +50,7 @@ threshold -2 dB, knee 0, ratio 20, attack 2 ms, release 150 ms) ─► audio.ana
   (while the page shows: a call, a locked screen, iOS `'interrupted'`), and
   on `visibilitychange` to visible and `pageshow` (`app.js bindEvents`). A
   suspended context's clock stands still, so a beat picks up where it was;
-  should the clock have run on, the schedulers drop the hits they missed
+  should the clock have run on, the beat engine's tick drops the hits it missed
   (`tooLate`, below) and carry on in time (Tests: `tests/audio.test.mjs`, `tests/audio-wake.test.mjs`).
 - `audio.decode(arrayBuffer)` is `decodeAudioData` on this context. So every
   decoded clip is at the context's sample rate, whatever the file's.
@@ -517,7 +517,7 @@ the capture's sample rate is the app's.
 ### "A voice": two meanings
 
 - A **playing voice** is `audio.js makeVoice`'s `{src, gain}` (plus `level`,
-  `lift`, `end` added by the schedulers).
+  `lift`, `end`, `done` added by the beat engine's `sound`).
 - A **silly voice** is a `voices.js VOICES` entry (Chipmunk…), a chain step
   `{type: 'voice'}`, or (in the sheet today) a set of knobs from
   `voice-knobs.js PRESETS`.
@@ -633,7 +633,7 @@ by a load of its current version").
 | `listen.js` and `listen-make.js` import `beat.js` | for `SIGNATURES`, `barSteps`, `tempoStops`, `MAX_PILLS`, `cleanPattern` | `beat.js` imports `mixer.js`, `row-volume.js`, `model.js` and `instruments.js` for its rules, so the "pure" listener still loads those (not the beat maker screen) |
 | `ROWS` twice | `listen-dsp.js ROWS` and `listen-make.js ROWS` | kept equal by hand |
 | Name clashes | `KINDS` (`steps.js` vs `listen-input.js`), `FAMILIES` (`instruments.js` vs `voice-knobs.js`), `levelOf` (`meter.js`, `listen-input.js`, the sequencer's) | a wrong import still runs |
-| Bare players outside `audio.playing` | the engine's runs (`kids.js` beat), `kids.js` beeps, sequencer click | `audio.stopAll` does not stop them |
+| Bare players outside `audio.playing` | the engine's runs (Beats, Song, `kids.js` beat, a groove sample), `kids.js` beeps, sequencer click | `audio.stopAll` does not stop them; a new engine run stops the one playing (`beat-engine.js stopCurrent`) |
 
 ## Invariants and gotchas
 

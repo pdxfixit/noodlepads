@@ -131,7 +131,7 @@ Each is a copy of code that already exists, so each becomes an import. One commi
 | Risk | The beat and song writes clone the record (`structuredClone`) and the others don't; the shelf keeps that per store. No stored format change. |
 | Guards | `tests/app.test.mjs`, `tests/kids.test.mjs`, `tests/dj-grooves.test.mjs`, `tests/touch-edit.test.mjs`, `tests/fake-idb.mjs failCommit`. Proof: a test in `tests/state.test.mjs` (new) that `put` then `remove` leaves `state` and the store equal for each of the five, and that a failed commit keeps the record in memory. |
 
-### S7. 🎼 Song's record rules into `playlist.js` · 30 min
+### S7. 🎼 Song's record rules into `playlist.js` · 30 min (done, 2026-10-27, with step 8 of the one beat engine)
 
 | | |
 |---|---|
