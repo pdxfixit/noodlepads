@@ -396,6 +396,7 @@ export function installPage({ hash = '', storage, manifest, firstSteps = false }
           const param = () => ({ value: 0 });
           return { connect() {}, threshold: param(), knee: param(), ratio: param(), attack: param(), release: param(), reduction: 0 };
         }
+        createWaveShaper() { return { connect() {}, curve: null, oversample: 'none' }; }
         createAnalyser() { return { connect() {}, fftSize: 0 }; }
         createOscillator() { return { connect() {}, start() {}, stop() {}, frequency: { value: 0 } }; }
         resume() { return Promise.resolve(); }

@@ -201,6 +201,7 @@ class SilentContext {
   state = 'running'; currentTime = 0; destination = {}; listeners = {}; resumes = 0;
   createGain() { return { connect() {}, gain: { value: 1 } }; }
   createDynamicsCompressor() { const p = () => ({ value: 0 }); return { connect() {}, threshold: p(), knee: p(), ratio: p(), attack: p(), release: p() }; }
+  createWaveShaper() { return { connect() {}, curve: null, oversample: 'none' }; }
   createAnalyser() { return { connect() {}, fftSize: 0 }; }
   addEventListener(type, fn) { this.listeners[type] = fn; }
   resume() { this.resumes++; return Promise.resolve(); }
@@ -228,6 +229,31 @@ test('iOS: the page asks for a playback audio session before its first sound, so
   // A browser without the Audio Session API, or one that refuses it, still plays.
   withPage({}, () => { audio.ctx = null; assert.ok(audio.context()); });
   withPage({ navigator: { audioSession: { set type(v) { throw new Error(`no ${v}`); } } } }, () => { audio.ctx = null; assert.ok(audio.context()); });
+  audio.ctx = null;
+});
+
+test('the output is master, limiter, soft clip (oversampled 2x, loudness.js curve), analyser', async () => {
+  const { audio } = await import('../web/audio.js');
+  const { softClipCurve } = await import('../web/loudness.js');
+  withPage({}, () => {
+    audio.ctx = null;
+    const sent = [];
+    class Wired extends SilentContext {
+      constructor() {
+        super();
+        const tag = (name, node) => Object.assign(node, { name, connect(next) { sent.push(`${name}>${next.name ?? 'destination'}`); return next; } });
+        this.createGain = () => tag('master', { gain: { value: 1 } });
+        this.createDynamicsCompressor = () => tag('limiter', { threshold: {}, knee: {}, ratio: {}, attack: {}, release: {} });
+        this.createWaveShaper = () => tag('softClip', { curve: null, oversample: 'none' });
+        this.createAnalyser = () => tag('analyser', { fftSize: 0 });
+      }
+    }
+    window.AudioContext = Wired;
+    audio.context();
+    assert.deepEqual(sent, ['master>limiter', 'limiter>softClip', 'softClip>analyser', 'analyser>destination']);
+    assert.equal(audio.softClip.oversample, '2x');
+    assert.deepEqual(Array.from(audio.softClip.curve), Array.from(softClipCurve()));
+  });
   audio.ctx = null;
 });
 

@@ -11,6 +11,7 @@ import { showNotice } from './ui.js';
 import { ringOver } from './rhythm.js';
 import { cleanTrim, cleanEdits, applyEdits, applyFade, cutKey, hasGain, levelForGain } from './cuts.js';
 import { voicingOf, voice } from './instruments.js';
+import { softClipCurve } from './loudness.js';
 
 const MAX_LOOP_SECONDS = 600;
 // A broken sound is tried again by a tap at most this often (ms).
@@ -202,6 +203,7 @@ export const audio = {
   master: null,
   analyser: null,
   limiter: null,         // on the master output: several loud sounds at once get held under full scale instead of clipping
+  softClip: null,        // after the limiter: a peak that gets past its 2 ms attack is bent, never hard-clipped
   playing: new Map(),    // clip id (or 'preview') -> {src, gain, t0, duration, loop}
   ringing: new Map(),    // clip id -> its earlier hits still ringing under 🔔 Let it ring: [{src, gain, end}]
   originals: new Map(),  // clip id -> Promise<AudioBuffer>, decoded and trimmed
@@ -233,17 +235,23 @@ export const audio = {
       this.master = this.ctx.createGain();
       // Every clip is scaled to the same peak, so two or more at once can add
       // up past full scale; the browser would clip that into crackle. A fast,
-      // hard limiter just under full scale holds the sum down instead.
+      // hard limiter just under full scale holds the sum down instead. Its
+      // 2 ms attack lets a fast peak through, so a soft clip follows it
+      // (loudness.js softClipCurve), oversampled so the bend adds no fizz.
       this.limiter = this.ctx.createDynamicsCompressor();
       this.limiter.threshold.value = -2;
       this.limiter.knee.value = 0;
       this.limiter.ratio.value = 20;
       this.limiter.attack.value = 0.002;
       this.limiter.release.value = 0.15;
+      this.softClip = this.ctx.createWaveShaper();
+      this.softClip.curve = softClipCurve();
+      this.softClip.oversample = '2x';
       this.analyser = this.ctx.createAnalyser();
       this.analyser.fftSize = 512;
       this.master.connect(this.limiter);
-      this.limiter.connect(this.analyser);
+      this.limiter.connect(this.softClip);
+      this.softClip.connect(this.analyser);
       this.analyser.connect(this.ctx.destination);
       // A phone call, a locked screen or another app taking the sound can
       // leave the context 'suspended' (or 'interrupted' on iOS). Ask for it

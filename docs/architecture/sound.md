@@ -2,7 +2,7 @@
 
 **Answer first.** There is one realtime `AudioContext`, made lazily by
 `audio.js audio.context()`. Everything a kid hears goes into `audio.master`,
-then one hard limiter, then one analyser (the grilles read it), then the
+then one hard limiter, one soft clip, then one analyser (the grilles read it), then the
 speakers. A sound is never changed on disk: what a pad plays is rendered from
 the stored recording on load, through a pipeline of plain data kept on the
 clip (cuts → chain → knobs → level), and cached in memory by a key built from
@@ -37,9 +37,16 @@ ringer switch off), and wires the output once:
 
 ```
 every live sound ─► audio.master (Gain 1) ─► audio.limiter (DynamicsCompressor:
-threshold -2 dB, knee 0, ratio 20, attack 2 ms, release 150 ms) ─► audio.analyser
-(fftSize 512) ─► ctx.destination
+threshold -2 dB, knee 0, ratio 20, attack 2 ms, release 150 ms) ─► audio.softClip
+(WaveShaper, oversample '2x') ─► audio.analyser (fftSize 512) ─► ctx.destination
 ```
+
+The soft clip's curve is `loudness.js softClipCurve`: `softLimit` as a table over
+-1..1, the straight line up to 0.9 and a tanh bend above it (full scale in
+comes out 0.976). The limiter's 2 ms attack lets a fast peak of stacked rows
+through; the bend turns what would be a hard clip into a rounded one. A single
+sound at peak 0.9 passes untouched (`tests/audio.test.mjs`,
+`tests/loudness.test.mjs`).
 
 - `audio.wake()` calls `context()` and `revive()`. `app.js bindEvents` calls
   it on every `pointerdown` and `keydown` (capture), so the first tap plays at
@@ -87,7 +94,7 @@ Other contexts:
 
 | Field | What | Written by | Read by |
 |---|---|---|---|
-| `ctx`, `master`, `limiter`, `analyser` | the output graph | `context()` | everyone above; `meter.js` (analyser); `log-send.js`, `things.js`, `wave.js` read `ctx` |
+| `ctx`, `master`, `limiter`, `softClip`, `analyser` | the output graph | `context()` | everyone above; `meter.js` (analyser); `log-send.js`, `things.js`, `wave.js` read `ctx` |
 | `playing` | Map id → `{src, gain, t0, duration, loop, clip}`: what plays through `start`/`loopInTime` | `start`, `loopInTime`, `stop`, the `onended` handlers | `meter.js run` (progress of each), `wave.js follow`, `sheet.js sheetPlaying`, `things.js`, `app.js` (any loop?) |
 | `ringing` | Map id → earlier hits still ringing under 🔔 Let it ring | `start` with `ring` | `stop`, `stopAll` |
 | `pending` | Map id → a loop asked for while its sound loads (`loadForLoop`) | `loop`, `loopInTime` | `stop` and `stopAll` take it back, so it never starts; `isLooping` counts it, so a tap on the pad stops it (`tests/audio.test.mjs`) |
@@ -381,7 +388,7 @@ The chain of gains from a file to the speaker:
 | Preset level | `voices.js presetGain(clip.level)` | 10^(dB/20), dB in −24…0 |
 | A beat's hit | `beat-engine.js sound` | `hitGain(row, loud)`; an accent is `ACCENT_GAIN` 1.5 (🧸 Kids: 1.5 for a loud pill, else 1, no row level) |
 | A beat's mix | `mixer.js buildMix` via `beat-engine.js busFor` | row levels, mute, solo, effects, master level |
-| Output | `audio.limiter` | holds a pile-up under full scale |
+| Output | `audio.limiter`, then `audio.softClip` | the limiter holds a pile-up under full scale; the soft clip rounds a peak its attack let through |
 | Offline renders | `wav.js normalize` | peak 0.9 (bounce, song, share previews) |
 
 - **Preset levels.** `tools/preset_loudness.py` measures every preset as a
@@ -674,7 +681,7 @@ by a load of its current version").
 | Who plays a group by default | `instruments.js PLAYED` |
 | What decoding a clip means | `audio.js decoded` (and `recording` for an instrument's presets) |
 | What invalidates a render | `audio.js key` = `voices.js recipeKey` + `cuts.js cutKey`; any new field that changes the sound must enter one of them, or every place that changes it must call `audio.forget` |
-| The limiter | `audio.js context`; `sequencer.js follow` reads `reduction` |
+| The limiter and soft clip | `audio.js context`; `sequencer.js follow` reads `reduction` |
 | Pads looping in time | `audio.js loopBeats`, `loopInTime`, `syncLoops`; `sequencer.js grid`; `app.js` `deps.onTempo` |
 | The stretch | `stretch.js stretchChannels` (worker and page share it); the message shape in `voices.js stretcher` and `stretch-worker.js handle` |
 | A new way to listen (🎧) | `listen-input.js KINDS`, `sources`, `captureRequest`, `captureError`; `listen-ui.js SOURCE_LOOK`, `WAITING`, `NOTHING_TIP` |

@@ -24,6 +24,20 @@ export function softLimit(v) {
   return a <= 0.9 ? v : Math.sign(v) * (0.9 + 0.1 * Math.tanh((a - 0.9) / 0.1));
 }
 
+// The master output's soft clip (audio.js): softLimit's bend as a WaveShaper
+// curve over -1..1. The limiter just before it holds a stack of rows under
+// full scale on average, yet its 2 ms attack lets a fast peak through; this
+// bends such a peak toward 0.976 instead of the speaker's hard clip. Under
+// 0.9 it is the straight line, so nothing a single sound plays is touched.
+// An odd number of points puts 0 exactly at the middle (silence stays silence).
+export const SOFT_CLIP_POINTS = 2049;
+export function softClipCurve(points = SOFT_CLIP_POINTS) {
+  const n = Math.max(3, points | 1);   // odd
+  const curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) curve[i] = softLimit((i / (n - 1)) * 2 - 1);
+  return curve;
+}
+
 // How loud the presets seem as the app plays them (each at peak 0.9, then
 // turned down by its boards.json `level`): the median of the presets shown
 // with Advanced off (web/boards.json `kit`), in LUFS. tests/loudness.test.mjs

@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  kWeighting, loudness, peakOf, evenGain, softLimit, PRESET_LOUDNESS, EVEN_ENOUGH,
+  kWeighting, loudness, peakOf, evenGain, softLimit, softClipCurve, PRESET_LOUDNESS, EVEN_ENOUGH,
 } from '../web/loudness.js';
 import { fakeBuffer } from './helpers.mjs';
 
@@ -109,4 +109,26 @@ test('evenGain: a talking voice comes out at the target, a too-loud buzz is turn
   near(loudness(buzz, { scale: g }), PRESET_LOUDNESS, 0.1);
   assert.equal(evenGain(fakeBuffer([new Array(1000).fill(0)], rate)), 1);
   assert.equal(EVEN_ENOUGH, 1, 'within about 1 dB is already even');
+});
+
+test('softClipCurve: straight under 0.9, bent smoothly above it, never past 1, silent at the middle, odd and symmetric', () => {
+  const curve = softClipCurve();
+  assert.ok(curve instanceof Float32Array);
+  assert.equal(curve.length % 2, 1, 'an odd number of points puts 0 at the middle');
+  const mid = (curve.length - 1) / 2;
+  assert.equal(curve[mid], 0);
+  const last = curve.length - 1;
+  for (let i = 0; i <= mid; i++) {
+    const x = (i / last) * 2 - 1;
+    assert.ok(Math.abs(curve[i] + curve[last - i]) < 1e-6, `symmetric at ${x}`);
+    if (Math.abs(x) <= 0.9) near(curve[i], x, 1e-6, `untouched at ${x}`);
+    assert.ok(Math.abs(curve[i]) <= 1);
+  }
+  // Louder in always means louder out (no fold-back), and it flattens toward the top.
+  for (let i = 1; i < curve.length; i++) assert.ok(curve[i] > curve[i - 1], `rising at ${i}`);
+  const rise = (a, b) => curve[Math.round(((b + 1) / 2) * last)] - curve[Math.round(((a + 1) / 2) * last)];
+  assert.ok(rise(0.95, 1) < rise(0.85, 0.9) * 0.7, 'the last 0.05 gains well under what it would on the line');
+  near(curve[last], 0.976, 0.001, 'full scale in comes out just under it');
+  // A tiny curve still works.
+  assert.equal(softClipCurve(2).length, 3);
 });
