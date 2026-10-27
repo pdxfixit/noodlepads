@@ -28,6 +28,7 @@ handful of classes and `data-*` attributes that JS sets on `<body>` and
 | `who-now.js` | `el`, `hooks` | `app.js` (`initWhoNow`, `openWhoNow`, `closeWhoNow`, `whoNowOpen`), `people.js refreshPeople` | `hooks.pick` (= `app.js pickWhoNow`), `hooks.someoneNew` (= `people.js addPerson`); `cloud.js linkOf`; `pads.js makePad` |
 | `skins.js` | nothing (imports nothing) | `app.js` (`showSkin`), `settings.js` (`SKIN_IDS`), `settings-ui.js`, `kids.js` (`nextSkin`, `SKINS`) | sets `data-skin` on `<html>` |
 | `too-old.js` | nothing (a classic script; `TOO_OLD_NEEDS`, `tooOldMissing`, `tooOldCheck`) | `index.html` (deferred, before `app.js`); `tests/too-old.test.mjs` runs it on stand-ins | `CSS.supports` and a few globals; when one is missing, sets `data-too-old` on `<html>` and adds the notice to `<body>` |
+| `boot.js` | nothing (a classic script; `bootDecide`, `bootIsLoadFailure`, `bootWatch`, `BOOT_FLAG`) | `index.html` (deferred, after `too-old.js`, before `app.js`); `tests/boot.test.mjs` runs it on stand-ins | `window` `error` (capture) and `unhandledrejection`, `version.json`, `sessionStorage` `noodlepads-boot-reload`; when a module fails to load (two versions met across a deploy) and the live version is not the one already reloaded for, calls `location.reload()` once |
 | `backdrop.js` | nothing | `app.js start` | sets `data-bg` and `--backdrop` on `<html>` |
 | `emoji-more.js` | per chooser: its panel, `groups`, folds; module-wide `loading` (the one import of `emoji-all.js`) | `sheet.js`, `bulk.js`, `cloud-ui.js`, `dj.js`, `song.js` | `emoji-all.js` (dynamic `import()`, first tap of …) |
 | `emoji-check.js` | nothing | `backup.js` (a backup's avatars), `worker/cloud.js` | nothing (generated) |
@@ -39,8 +40,11 @@ handful of classes and `data-*` attributes that JS sets on `<body>` and
 ## Startup: from module load to first paint
 
 `index.html` loads `web/fonts/fonts.css`, `styles.css`, the browser floor
-check `too-old.js` (a deferred classic script, so it runs first) and one
-module script, `app.js`. When `<html>` has `data-too-old`, `start()` returns
+check `too-old.js` (a deferred classic script, so it runs first), the reload
+guard `boot.js` (also a deferred classic script: a module that fails to load,
+from two versions of the app meeting across a deploy, asks `version.json` what
+is live and reloads the page once per version, `sessionStorage`-flagged so it
+cannot loop) and one module script, `app.js`. When `<html>` has `data-too-old`, `start()` returns
 at once and draws nothing. `app.js` ends with `export const ready = start()`. Tests await
 `ready` before their first tap (`tests/app-ready.test.mjs` checks every test
 that starts the app does).

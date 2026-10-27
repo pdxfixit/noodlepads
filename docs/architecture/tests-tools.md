@@ -159,6 +159,7 @@ what it forces an agent to do.
 | Guard | What it checks | When it fails, do this |
 |---|---|---|
 | `offline.test.mjs` | every file under `web/` (dot files skipped) is in `sw.js SHELL` or in its own `NOT_LOADED` map, and nothing in `SHELL` is missing; then runs `sw.js` in a `vm` on stand-in caches | add a new `web/` file to `SHELL`, or to `NOT_LOADED` with why |
+| `boot.test.mjs` | `web/boot.js` on stand-ins: a module that will not load reloads once per live version (sessionStorage flag), never twice, never offline or with no storage; `index.html` runs it between `too-old.js` and `app.js` | fix `boot.js` or the order in `index.html` |
 | `modules.test.mjs` | every `web/*.js` but `app.js` and `sw.js` imports in Node with no page; every named import exists in its file; no import cycles; no `https:` imports; every `$('#id')`/`querySelector('#id')` id is in `index.html`; `index.html` loads only `app.js` and has no inline handlers or styles | keep module tops free of `document`/`window`; add the id to `index.html`; break the cycle |
 | `app-ready.test.mjs` | no test imports `app.js` without awaiting `ready` | write `await (await import('../web/app.js')).ready` |
 | `help.test.mjs` | every toolbar `data-screen` has a Help part in order; every label in its hand list `MUST_MENTION` is in the app's text (`index.html` and every `web/*.js` but `help.js`) and in Help; every label `help.js HELP` draws is in the app's text | add the control's label to `MUST_MENTION` and a Help line; rename both when a label changes |

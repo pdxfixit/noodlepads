@@ -72,10 +72,10 @@ test('every #id the code looks up exists in index.html', () => {
   assert.deepEqual(missing, []);
 });
 
-test('index.html loads app.js as a module, after the browser floor check (too-old.js), and nothing else as script', () => {
+test('index.html loads app.js as a module, after the browser floor check (too-old.js) and the reload guard (boot.js), and nothing else as script', () => {
   const html = readFileSync(new URL('index.html', webDir), 'utf8');
   const scripts = [...html.matchAll(/<script\b[^>]*>/g)].map((m) => m[0]);
-  assert.deepEqual(scripts, ['<script defer src="too-old.js">', '<script type="module" src="app.js">']);
+  assert.deepEqual(scripts, ['<script defer src="too-old.js">', '<script defer src="boot.js">', '<script type="module" src="app.js">']);
   assert.doesNotMatch(html, /\son[a-z]+\s*=/i, 'no inline event handlers');
   assert.doesNotMatch(html, /\sstyle\s*=/i, 'no inline style attributes');
 });

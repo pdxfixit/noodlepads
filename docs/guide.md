@@ -1217,7 +1217,13 @@ checks a few of the newest things the app leans on (CSS subgrid,
 `structuredClone` and `inert`); when one is missing it shows the notice and
 marks the page, and `app.js` does not start. `:has()` (Firefox 121) and
 `@scope` (the pad skins) are newer than the floor in some browsers, so they
-are not checked. Without `@scope` every pad shows Tiles; without `:has()`
+are not checked.
+
+A page opened just as a new version goes live can meet modules of two versions and
+show nothing. `web/boot.js`, a second small classic script, notices a module that
+fails to load, asks `version.json` what is live and reloads the page once for
+that version (it remembers in the tab, so it can never loop; with no network it
+does nothing). Without `@scope` every pad shows Tiles; without `:has()`
 a few small layout touches are lost (how some bars and outlines fit), and
 the choices that show
 by a ring (🎨 Look's skins, the sound sheet's ⚙️ Advanced) are marked by a

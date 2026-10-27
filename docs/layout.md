@@ -29,6 +29,7 @@ opens with a comment saying what it owns. How the app behaves is in
   - `tooltips.js`: a tooltip on every control, from its `aria-label` or text, unless it has a `title` of its own
   - `contact.js`: the PIN-reset address, built from an encoded constant so it is never written out in a served or tracked file
   - `too-old.js`: the browser floor: a classic script, run before `app.js`, that checks a few of the newest features the app needs and, when one is missing, shows "This browser is too old" and marks the page so `app.js` does not start
+  - `boot.js`: the reload guard: a classic script, run before `app.js`, that reloads the page once when a module fails to load because two versions of the app met across a deploy (it asks `version.json`, and a `sessionStorage` flag keeps it from ever looping)
   - `update.js`: the "🆕 An update for Noodle Pads is ready." bar (when to ask `version.json`, when to show)
   - `sw.js`: the service worker: the whole app kept for opening with no network (`SHELL`, every file the app can load; `tests/offline.test.mjs` fails when one is missing), network first, `/api/` untouched, `version.json` network only; `offline.js` registers it once the page has loaded
   - `manifest.webmanifest`, `app-icons/`: installing it as an app (name, colors, the 192 and 512 px icons, a maskable 512 and the 180 px `apple-touch-icon`, drawn from the tab icon). Not `icons/`: the global git ignore's `Icon?` (macOS folder icons) matches it on a Mac's case-insensitive disk, and its files would silently stay out of a commit

@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="styles.css">
   <!-- The browser floor: too old a browser gets a plain notice, and app.js does not start (too-old.js). -->
   <script defer src="too-old.js"></script>
+  <!-- Two versions meeting across a deploy: a module that will not load reloads the page once (boot.js). -->
+  <script defer src="boot.js"></script>
   <script type="module" src="app.js"></script>
 </head>
 <body>

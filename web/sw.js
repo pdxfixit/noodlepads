@@ -73,6 +73,7 @@ const SHELL = [
   './',
   'styles.css',
   'too-old.js',
+  'boot.js',
   'boards.json',
   'manifest.webmanifest',
   'fonts/fonts.css',
