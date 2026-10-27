@@ -92,12 +92,12 @@ const ECHO = { type: 'echo', repeats: 3, gap: 0.25 };
 
 // The live loop for one Echo: the head (the sound in Normal, peak 0.9),
 // then the echo's nodes, as sheet.js startLive builds them.
-async function livePeak(sound) {
+async function livePeak(sound, echo = ECHO) {
   const head = (await applyChain(sound, [], null)).buffer;
-  const ctx = new SimContext(1, head.length + Math.round(tailOf([ECHO]) * RATE));
+  const ctx = new SimContext(1, head.length + Math.round(tailOf([echo]) * RATE));
   const src = ctx.createBufferSource();
   src.buffer = head;
-  buildLive(ctx, src, [ECHO]).output.connect(ctx.destination);
+  buildLive(ctx, src, [echo]).output.connect(ctx.destination);
   return peakOf(await ctx.startRendering());
 }
 
@@ -116,9 +116,21 @@ test('a long sound with Echo: the echoes pile on it live, so the live loop peaks
   const db = 20 * Math.log10(live / render);
   assert.ok(Math.abs(render - 0.9) < 1e-6, 'the render is evened out after the echo');
   assert.ok(live > render, `live ${live.toFixed(3)} is above the render's peak`);
-  // A held 220 Hz note with its echoes landing in phase is the worst case:
-  // about 1.81 live against the render's 0.9, +6 dB. The output limiter
-  // (audio.js: threshold -2 dB, ratio 20) holds it under full scale, so it
-  // is heard louder while dragging, never clipped (sound.md, Seams).
+  // A held 220 Hz note with 3 echoes landing in phase: about 1.81 live
+  // against the render's 0.9, +6 dB.
   assert.ok(db > 5 && db < 7, `${db.toFixed(1)} dB over`);
+});
+
+// Echo goes up to 8 repeats (steps.js): on a held note the most pile up.
+test('a held note with 8 echoes: the live loop peaks about 10 dB over the render', async () => {
+  const echo = { type: 'echo', repeats: 8, gap: 0.25 };
+  const sound = tone(3);
+  const render = peakOf((await applyChain(sound, [echo])).buffer);
+  const live = await livePeak(sound, echo);
+  const db = 20 * Math.log10(live / render);
+  // About 2.96 live against 0.9, +10.4 dB. The output limiter (audio.js:
+  // threshold -2 dB, ratio 20:1, not a brickwall) holds it near full scale,
+  // and while it does it turns down everything else on the master too (a
+  // playing beat) by about as much (sound.md, Seams).
+  assert.ok(db > 9.5 && db < 11, `${db.toFixed(1)} dB over`);
 });
