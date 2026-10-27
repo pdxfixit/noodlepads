@@ -997,7 +997,7 @@ ADR 0002.
   or into them loads nothing; `backup-ui.js` `pastPins`). A sync from
   another device still changes them: the gate is on this device's screens.
   It keeps kids out of each other's things; the browser's own storage on the
-  device is not encrypted. 5 wrong tries mean a 10-minute wait.
+  device is not encrypted. A wrong PIN says "N tries left"; from the second wrong one it adds "Ask a grown-up for the PIN." 5 wrong tries mean a 10-minute wait: the pad itself then says a grown-up knows the PIN and when it opens again (no dots or keys), with one button, ⬅️ Back to Pads, that closes it (👋 Someone new instead on a locked pad) (`cloud-ui.js askWait`; council, 2026-10-27).
 - **A PIN new to this device:** a PIN changed on another device closes
   the profile on every device. The next sync here is refused (401); the
   link says `newPin` (every profile has a PIN) and the person

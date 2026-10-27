@@ -505,7 +505,9 @@ const VIEWS = {
   'pin-forgot': { screen: 'pads', js: `const ui = await import('/cloud-ui.js'); const { FORGOT_HERE } = await import('/cloud.js');
     ui.askPin({ title: '🦊 Admiral Acorn', hint: FORGOT_HERE + " Don't know it? Their things on this device are deleted; the cloud keeps what it has.", forgot: true, unknown: true });` },
   pin: { screen: 'pads', js: `const ui = await import('/cloud-ui.js');
-    ui.askPin({ title: '🦊 Admiral Acorn', hint: "They have a new PIN. Type it to open them here. Don't know it? Their things on this device are deleted; the cloud keeps what it has.", note: "That PIN isn't right. 4 tries left before a 10-minute wait.", forgot: true, someoneNew: true, unknown: true });` },
+    ui.askPin({ title: '🦊 Admiral Acorn', hint: "They have a new PIN. Type it to open them here. Don't know it? Their things on this device are deleted; the cloud keeps what it has.", note: "That PIN isn't right. 3 tries left. Ask a grown-up for the PIN.", forgot: true, someoneNew: true, unknown: true });` },
+  // pin-wait: the pad when the 10-minute wait starts (cloud-ui.js askWait).
+  'pin-wait': { screen: 'pads', js: `(await import('/cloud-ui.js')).askWait({ title: '🦊 Admiral Acorn', wait: 600, locked: false });` },
   // ⚙️ Settings → 🎨 Look open (the pad skins to choose from), scrolled to it.
   look: { screen: 'pads', js: `${q('#settings-open')} { const h = document.querySelector('#set-look .set-head'); if (h.getAttribute('aria-expanded') !== 'true') h.click(); }
     document.querySelector('#set-look').scrollIntoView(); ${nap}` },

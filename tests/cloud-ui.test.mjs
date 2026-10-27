@@ -340,8 +340,11 @@ test('someone only on this device opens their profile and changes the color at o
   rows()[lineOf(id)].querySelector('[data-profile]').dispatch('click');
   await settle();
   for (let i = 0; i < 5; i++) { typePin('1111'); await settle(); }
-  assert.equal($('#pin-dialog').open, false, 'the pad gives way to the wait');
-  assert.match($('#banner-text').textContent, /Too many wrong tries\. Wait 10 minutes/);
+  assert.equal($('#pin-dialog').open, true, 'the pad says the wait itself (tests/pin-pad-tries.test.mjs)');
+  assert.match($('#pin-hint').textContent, /A grown-up knows the PIN/);
+  $('#pin-back').dispatch('click');
+  await settle();
+  assert.equal($('#pin-dialog').open, false);
   assert.equal($('#profile-dialog').open, false);
   assert.equal(cloud.pinGuards(id), true, 'still guarded');
   $('#people-dialog').close();

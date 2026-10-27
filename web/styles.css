@@ -3456,8 +3456,11 @@ body[data-locked] main { visibility: hidden; }
 .cl-code { display: block; font: 700 0.85rem/1.4 ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0.06em; opacity: 0.75; }
 #shared-code { flex: 1 1 10rem; text-transform: uppercase; }
 .pin-forgot { margin: 12px 0 0; text-align: center; }
-.pin-new, .pin-unknown { display: flex; justify-content: center; width: 100%; min-height: 44px; margin-top: 10px; }
-.pin-new[hidden], .pin-unknown[hidden] { display: none; }
+.pin-new, .pin-unknown, .pin-back { display: flex; justify-content: center; width: 100%; min-height: 44px; margin-top: 10px; }
+.pin-new[hidden], .pin-unknown[hidden], .pin-back[hidden] { display: none; }
+/* The 10-minute wait (cloud-ui.js askWait): the words and one way back, no dots or keys. */
+.pin-waiting .pin-dots, .pin-waiting .pin-keys { display: none; }
+.pin-waiting .pin-back { min-height: 56px; font-size: 1.05rem; }
 
 /* ── ⇆ The pills locked (sequencer.js setLock, pill-select.js) ─────── */
 

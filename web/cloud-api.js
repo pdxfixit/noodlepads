@@ -140,7 +140,8 @@ export function cloudTrouble(err) {
   // One profile's daily allowance (worker/cloud.js withinProfileDaily), apart from the site's.
   if (err.status === 429 && err.mine) return 'This profile has done a lot in the cloud today. It catches up tomorrow, and everything still works here.';
   if (err.status === 429) return 'The cloud is busy today. Try again tomorrow.';
-  if (err.status === 401 && err.error === 'pin') return `That PIN isn't right. ${err.tries} ${err.tries === 1 ? 'try' : 'tries'} left before a 10-minute wait.`;
+  // From the 2nd wrong try the pad also says who to ask, before the wait (council, 2026-10-27).
+  if (err.status === 401 && err.error === 'pin') return `That PIN isn't right. ${err.tries} ${err.tries === 1 ? 'try' : 'tries'} left.${err.tries <= 3 ? ' Ask a grown-up for the PIN.' : ''}`;
   if (err.status === 401) return 'This device needs to open this profile again (its PIN changed).';
   if (err.status === 404 && err.error === 'profile') return "That profile isn't in the cloud any more.";
   // The Worker makes no profile without a PIN (worker/cloud.js makeProfile): only a copy of the app from before says it.

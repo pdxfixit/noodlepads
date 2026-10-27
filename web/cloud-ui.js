@@ -86,6 +86,7 @@ function drawDots() {
 }
 
 function pinKey(k) {
+  if (el.pin.classList.contains('pin-waiting')) return;   // the wait screen has no keys
   if (k === '⌫') pinDigits = pinDigits.slice(0, -1);
   else if (/^\d$/.test(k) && pinDigits.length < 4) pinDigits += k;
   drawDots();
@@ -113,7 +114,8 @@ export function askPin({ title = 'PIN', hint = '', note = '', shown = '', forgot
   el.pinNote.textContent = note;
   // A note is trouble (a wrong PIN, two that didn't match): red, and the dots
   // shake once, so the pad says no out loud (a tester, 2026-10-19).
-  el.pin.classList.remove('pin-wrong');
+  el.pin.classList.remove('pin-wrong', 'pin-waiting');
+  el.pinBack.hidden = true;
   void el.pin.offsetWidth;   // restarts the shake when it says no again
   el.pin.classList.toggle('pin-wrong', !!note);
   el.pinForgot.hidden = !forgot;
@@ -123,6 +125,30 @@ export function askPin({ title = 'PIN', hint = '', note = '', shown = '', forgot
   return new Promise((resolve) => {
     pinDone = resolve;
     openDialog(el.pin, { focus: el.pinKeys.querySelector('[data-key="1"]') });
+  });
+}
+
+// The 10-minute wait, said on the pad itself (council, 2026-10-27): who knows
+// the PIN, when the pad opens again, and one obvious way out. No dots or keys.
+// Resolves 'back' (⬅️ Back to Pads), 'new' (👋 Someone new, when `locked`: the
+// pad cannot be left) or null (closed).
+export function askWait({ title, wait, locked }) {
+  const opens = new Date(Date.now() + wait * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  pinDigits = '';
+  drawDots();
+  el.pinTitle.textContent = title;
+  el.pinHint.textContent = 'That was too many tries. A grown-up knows the PIN: ask them.';
+  el.pinPublic.hidden = true;
+  el.pinNote.textContent = `The PIN pad opens again at ${opens}.`;
+  el.pin.classList.remove('pin-wrong');
+  el.pin.classList.add('pin-waiting');
+  el.pinForgot.hidden = false;
+  el.pinNew.hidden = !locked;
+  el.pinUnknown.hidden = true;
+  el.pinBack.hidden = locked;
+  return new Promise((resolve) => {
+    pinDone = resolve;
+    openDialog(el.pin, { focus: locked ? el.pinNew : el.pinBack });
   });
 }
 
@@ -143,6 +169,12 @@ async function withPin(act, { title, hint, forgot = true, locked = false, unknow
       return { result: await act(pin) };
     } catch (err) {
       if (err instanceof CloudError && err.status === 401 && err.error === 'pin') { note = cloudTrouble(err); continue; }
+      if (err instanceof CloudError && err.status === 429 && err.error === 'wait') {
+        const went = await askWait({ title, wait: err.wait, locked });
+        if (went === 'new') { addPerson(); return null; }
+        if (locked) { note = ''; continue; }
+        return null;
+      }
       if (err instanceof CloudError && err.status === 0 && locked) { note = "That isn't this device's PIN for them."; continue; }
       throw err;
     }
@@ -1100,7 +1132,7 @@ export function initCloudUI(hooks) {
   if (hooks.backup) backup = hooks.backup;
   Object.assign(el, {
     pin: $('#pin-dialog'), pinTitle: $('#pin-title'), pinHint: $('#pin-hint'), pinNote: $('#pin-note'), pinPublic: $('#pin-public'), pinDots: $('#pin-dots'), pinKeys: $('#pin-keys'),
-    pinForgot: $('#pin-forgot'), pinNew: $('#pin-new'), pinUnknown: $('#pin-unknown'),
+    pinForgot: $('#pin-forgot'), pinBack: $('#pin-back'), pinNew: $('#pin-new'), pinUnknown: $('#pin-unknown'),
     remember: $('#remember-dialog'), rememberTitle: $('#remember-title'), rememberSub: $('#remember-sub'), rememberYes: $('#remember-yes'), rememberNo: $('#remember-no'),
     avatar: $('#avatar-dialog'), avatarGrid: $('#avatar-grid'),
     cloudSwitch: $('#profile-cloud'), cloudText: $('#profile-cloud-text'), cloudTools: $('#profile-cloud-tools'),
@@ -1158,6 +1190,7 @@ export function initCloudUI(hooks) {
     done?.(null);
   });
   el.pinForgot.textContent = FORGOT_PIN;
+  el.pinBack.addEventListener('click', () => { const done = pinDone; pinDone = null; el.pin.close(); done?.('back'); });
   el.pinNew.addEventListener('click', () => { const done = pinDone; pinDone = null; el.pin.close(); done?.('new'); });
   // 🤷 I don't know the PIN: the first tap asks, the second deletes them here.
   el.pinUnknown.addEventListener('click', () => {
