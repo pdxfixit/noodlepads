@@ -45,7 +45,7 @@ import {
   cleanTempos, tempoAt, putTempo, removeTempo, songClock, MAX_TEMPO_MARKS,
   MAX_SONG_SECONDS, beatSteps, cleanSong, linkSong, uniqueSongName, planSong, soundSong,
 } from './playlist.js';
-import { cutName, MAX_LABEL } from './names.js';
+import { cutName, MAX_NAME } from './names.js';
 
 const TEMPO_STOPS = tempoStops(MIN_TEMPO, MAX_TEMPO);   // the slider's stops: Beats' pull toward common tempos
 const ARM_MS = 3000;                     // how long a Remove? waits for its second tap

@@ -9,7 +9,7 @@ import { addNote } from './notes.js';
 import { chainFields, voiceStep } from './voices.js';
 import { KIDS_BEAT_NAME } from './scratch.js';
 import { versionFor } from './instruments.js';
-import { cutName, MAX_LABEL } from './names.js';
+import { cutName, MAX_NAME } from './names.js';
 
 // ── The grown-up sum ──
 
@@ -349,7 +349,7 @@ export function withTuneNote(beat, { clipId, pitch, s, l = 1, fresh = false }, n
 // child psychologist's ask), so a grown-up can tell a kid's tune in
 // 🗂️ Beats from their own; a long name is cut to leave room for it.
 export const KIDS_TUNE_MARK = '🧸 ';
-export const kidsTuneName = (name) => KIDS_TUNE_MARK + cutName(String(name ?? '').trim(), MAX_LABEL - KIDS_TUNE_MARK.length);
+export const kidsTuneName = (name) => KIDS_TUNE_MARK + cutName(String(name ?? '').trim(), MAX_NAME - KIDS_TUNE_MARK.length);
 export function keptTune(beat, { id, name }, now = Date.now()) {
   if (!tuneRowOf(beat)?.tune?.length) return null;
   return { ...cleanPattern(beat, beat.personId), id, name: kidsTuneName(name), created: now, saved: now };

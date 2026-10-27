@@ -9,7 +9,7 @@
 import { SIGNATURES, barSteps, cleanPattern } from './beat.js';
 import { closestSound } from './listen-dsp.js';
 import { cleanTempos, cleanLanes, newLanes, legacySlots, blockBars, MAX_SONG_BARS, MAX_BLOCKS, MAX_TIMES, BAR_STEPS } from './playlist.js';
-import { partNames, cutName, MAX_LABEL } from './names.js';
+import { partNames, cutName, MAX_NAME } from './names.js';
 
 export const ROWS = ['kick', 'snare', 'hat'];
 
@@ -207,7 +207,7 @@ function uniqueName(name, list) {
   const taken = new Set(list.map((n) => String(n).toLowerCase()));
   if (!taken.has(name.toLowerCase())) return name;
   for (let n = 2; ; n++) {
-    const candidate = `${cutName(name, MAX_LABEL - String(n).length - 1)} ${n}`;
+    const candidate = `${cutName(name, MAX_NAME - String(n).length - 1)} ${n}`;
     if (!taken.has(candidate.toLowerCase())) return candidate;
   }
 }

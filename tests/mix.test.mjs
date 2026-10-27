@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MIX, cleanMix, mixLevels, mixSounds, MAX_MIX_SECONDS } from '../web/mix.js';
-import { mixName, MAX_LABEL } from '../web/names.js';
+import { mixName, MAX_NAME } from '../web/names.js';
 
 const ones = (n, v = 0.5) => new Float32Array(n).fill(v);
 const peak = (d) => d.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
@@ -55,6 +55,6 @@ test('mixName blends the start of one with the end of the other, and falls back 
   assert.equal(mixName('Wobbly Kazoo', 'Kick', [], () => 0.9), 'Kickazoo', 'last words');
   const long = 'Supercalifragilisticexpialidocious';
   const fallback = mixName(long, long, []);
-  assert.ok(fallback.length <= MAX_LABEL && fallback.includes(' '), `too long: a made-up name (${fallback})`);
+  assert.ok(fallback.length <= MAX_NAME && fallback.includes(' '), `too long: a made-up name (${fallback})`);
   assert.ok(mixName('A', 'B', []).length >= 3, 'too short: a made-up name');
 });

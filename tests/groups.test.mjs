@@ -4,8 +4,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  cleanGroups, groupOwn, pruneGroups, moveGroup, joinGroups, newGroupId, groupName, groupIdOf, MAX_GROUP_NAME, UNGROUPED, UNGROUPED_NAME,
+  cleanGroups, groupOwn, pruneGroups, moveGroup, joinGroups, newGroupId, groupName, groupIdOf, UNGROUPED, UNGROUPED_NAME,
 } from '../web/groups.js';
+import { MAX_NAME } from '../web/names.js';
 import { makeBackup, readBackup } from '../web/backup.js';
 import { mergeLoaded } from '../web/merge.js';
 import { shareBundle, shareDoc } from '../web/cloud-sync.js';
@@ -20,7 +21,7 @@ test('cleanGroups keeps each real group once, with a name; junk goes', () => {
   assert.deepEqual(cleanGroups([
     { id: 'g-a', name: '  Drums  ' }, { id: 'g-a', name: 'Again' }, { id: 'nope', name: 'x' }, { id: 'g-b', name: '   ' },
     { id: 'g-c', name: 'L'.repeat(60), extra: 1 }, null, 'g-d',
-  ]), [{ id: 'g-a', name: 'Drums' }, { id: 'g-c', name: 'L'.repeat(MAX_GROUP_NAME) }]);
+  ]), [{ id: 'g-a', name: 'Drums' }, { id: 'g-c', name: 'L'.repeat(MAX_NAME) }]);
   assert.equal(groupName('  Silly voices '), 'Silly voices');
   assert.equal(groupIdOf('g-x1'), 'g-x1');
   assert.equal(groupIdOf('drums'), undefined, 'a kit group is no own group');

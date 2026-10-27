@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ADJECTIVES, BEAT_NOUNS, SOUND_NOUNS, TAKE_NOUNS, PERSON_NAMES, MAX_LABEL, MAX_PERSON,
+  ADJECTIVES, BEAT_NOUNS, SOUND_NOUNS, TAKE_NOUNS, PERSON_NAMES, MAX_NAME, MAX_PERSON,
   beatName, soundName, takeName, personName, FUN_TITLES, FUN_NOUNS, FUN_ADJECTIVES, FUN_ANIMALS, TITLE_NAMES, ANIMAL_NAMES, FUN_NAMES, FUN_AVOID, funName, isFunName, SPECIAL_NAMES, nameChoices,
 } from '../web/names.js';
 
@@ -14,8 +14,8 @@ test('the word lists are big enough, and have no repeats', () => {
 
 test('every combination fits its field', () => {
   const longest = (l) => Math.max(...l.map((w) => w.length));
-  assert.ok(longest(ADJECTIVES) + 1 + longest(BEAT_NOUNS) <= MAX_LABEL);
-  assert.ok(longest(ADJECTIVES) + 1 + longest(SOUND_NOUNS) <= MAX_LABEL);
+  assert.ok(longest(ADJECTIVES) + 1 + longest(BEAT_NOUNS) <= MAX_NAME);
+  assert.ok(longest(ADJECTIVES) + 1 + longest(SOUND_NOUNS) <= MAX_NAME);
   assert.ok(longest(PERSON_NAMES) <= MAX_PERSON);
 });
 
@@ -24,7 +24,7 @@ test('names are made of the lists and fit, over many random draws', () => {
     const b = beatName();
     const [adj, ...rest] = b.split(' ');
     assert.ok(ADJECTIVES.includes(adj) && BEAT_NOUNS.includes(rest.join(' ')), b);
-    assert.ok(b.length <= MAX_LABEL && soundName().length <= MAX_LABEL && personName().length <= MAX_PERSON);
+    assert.ok(b.length <= MAX_NAME && soundName().length <= MAX_NAME && personName().length <= MAX_PERSON);
   }
 });
 
@@ -56,7 +56,7 @@ test('take names: a big list, every combination fits, and none repeats in a run'
   assert.ok(TAKE_NOUNS.length >= 40);
   assert.equal(new Set(TAKE_NOUNS).size, TAKE_NOUNS.length);
   const longest = (l) => Math.max(...l.map((w) => w.length));
-  assert.ok(longest(ADJECTIVES) + 1 + longest(TAKE_NOUNS) <= MAX_LABEL);
+  assert.ok(longest(ADJECTIVES) + 1 + longest(TAKE_NOUNS) <= MAX_NAME);
   const taken = [];
   for (let i = 0; i < 50; i++) taken.push(takeName(taken));
   assert.equal(new Set(taken).size, 50);
@@ -70,10 +70,10 @@ test('a beat saved as a sound is a remix: "<beat> (<emoji> <word> Remix)", fitti
   // Too long with the whole name: the beat's last word stays.
   const long = remixName('Wobbly Thunder Machine', [], () => 0);
   assert.match(long, /^Machine \(/);
-  assert.ok(long.length <= MAX_LABEL);
+  assert.ok(long.length <= MAX_NAME);
   // A name already on the board is not used again.
   assert.notEqual(remixName('Bop', [short], () => 0), short);
-  for (let i = 0; i < 200; i++) assert.ok(remixName('Supercalifragilistic', []).length <= MAX_LABEL);
+  for (let i = 0; i < 200; i++) assert.ok(remixName('Supercalifragilistic', []).length <= MAX_NAME);
   assert.match(remixName('Supercalifragilisticexpi', [], () => 0), /^\S+ \w+ Remix$/, 'nothing of the beat fits: the remix alone');
 });
 
@@ -81,7 +81,7 @@ test('song names: no repeated nouns, every combination fits, and none repeats in
   const { SONG_NOUNS, songName } = await import('../web/names.js');
   assert.ok(SONG_NOUNS.length >= 20);
   assert.equal(new Set(SONG_NOUNS).size, SONG_NOUNS.length);
-  assert.ok(Math.max(...ADJECTIVES.map((w) => w.length)) + 1 + Math.max(...SONG_NOUNS.map((w) => w.length)) <= MAX_LABEL);
+  assert.ok(Math.max(...ADJECTIVES.map((w) => w.length)) + 1 + Math.max(...SONG_NOUNS.map((w) => w.length)) <= MAX_NAME);
   const taken = [];
   for (let i = 0; i < 50; i++) taken.push(songName(taken));
   assert.equal(new Set(taken).size, 50);
@@ -158,9 +158,9 @@ test('nameChoices: a dozen fresh fun names nobody has, then the special names no
 // Ben, 2026-10-11 (Q18): 🎛️ Remix names the copy "<title> remix", and it
 // always fits a label.
 test('a remix of something shared is "<title> remix", cut to fit', async () => {
-  const { sharedRemixName, MAX_LABEL } = await import('../web/names.js');
+  const { sharedRemixName, MAX_NAME } = await import('../web/names.js');
   assert.equal(sharedRemixName('Wobbly Taco'), 'Wobbly Taco remix');
   assert.equal(sharedRemixName('Wobbly Marshmallow'), 'Wobbly Marshmallow remix');
-  assert.ok(sharedRemixName('Supercalifragilisticexpi').length <= MAX_LABEL);
+  assert.ok(sharedRemixName('Supercalifragilisticexpi').length <= MAX_NAME);
   assert.equal(sharedRemixName(''), 'Shared remix');
 });

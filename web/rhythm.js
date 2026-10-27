@@ -3,7 +3,7 @@
 // No DOM, no audio, no storage, so every rule is unit-tested.
 
 import { cleanTouch } from './touch.js';
-import { cutName, MAX_LABEL } from './names.js';
+import { cutName, nameLength, MAX_NAME } from './names.js';
 
 // The number row and the three letter rows of a keyboard, by physical
 // position (KeyboardEvent.code), so a key stays put whatever the layout.
@@ -213,7 +213,7 @@ export const TAKE_KINDS = ['hit', 'loop', 'stop', 'beat'];
 export const MAX_TAKE_SECONDS = 180;
 export const MAX_TAKE_EVENTS = 10000;
 // An id: as it is, or refused (null). Never cut or mended into another one.
-const shortText = (v, max) => (typeof v === 'string' && v.length <= max && cutName(v, max) === v ? v : null);
+const shortText = (v, max) => (typeof v === 'string' && nameLength(v) <= max && cutName(v, max) === v ? v : null);
 
 // A deck: only the 40 key codes, each a sound id or null (No sound). The
 // number row (Digit1…Digit0) came 2026-10-12: an older copy drops those keys
@@ -251,7 +251,7 @@ export function cleanTake(t, fallbackName = () => 'Take') {
     .map(({ ring, ...e }) => ({ ...e, t: Math.round(e.t * 1000) / 1000, ...(ring ? { ring } : {}) }))
     .sort((a, b) => a.t - b.t);
   const duration = Number(t.duration);
-  const name = typeof t.name === 'string' ? cutName(t.name, MAX_LABEL).trim() : null;
+  const name = typeof t.name === 'string' ? cutName(t.name, MAX_NAME).trim() : null;
   return {
     id: t.id,
     personId: t.personId,

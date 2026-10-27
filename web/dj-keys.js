@@ -13,8 +13,9 @@
 import { KEY_ROWS, keyFor } from './rhythm.js';
 import {
   fullKeys, placeSounds, loadRow, nextFreeRow, swapKeys, clearKey, sameKeys, changedKeys,
-  READY_LAYOUTS, readyKeys, keepAsMine, layoutName, MAX_LAYOUT_NAME,
+  READY_LAYOUTS, readyKeys, keepAsMine, layoutName,
 } from './keyset.js';
+import { MAX_NAME } from './names.js';
 import { groupKit } from './model.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { newId } from './util.js';
@@ -391,7 +392,7 @@ export function createKeysEditor({ el, deps }) {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); asking = null; renderLayouts(); }
   });
   el.saveCancel.addEventListener('click', () => { asking = null; renderLayouts(); });
-  el.saveName.maxLength = MAX_LAYOUT_NAME;
+  el.saveName.maxLength = MAX_NAME;
 
   el.rename.addEventListener('change', () => {
     const l = deps.layouts(pid()).find((x) => x.id === el.rename.dataset.id);
@@ -400,7 +401,7 @@ export function createKeysEditor({ el, deps }) {
     renderLayouts();
   });
   el.rename.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.rename.blur(); } });
-  el.rename.maxLength = MAX_LAYOUT_NAME;
+  el.rename.maxLength = MAX_NAME;
   // Delete asks first: the first tap turns it red, the second deletes.
   el.remove.addEventListener('click', () => {
     const l = deps.layouts(pid()).find((x) => x.id === el.rename.dataset.id);

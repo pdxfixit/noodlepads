@@ -12,7 +12,7 @@
 
 import { TWEAKS, NO_TWEAKS, cleanTweaks, fullTweaks, knobSay } from './tweaks.js';
 import { VOICES, amountFor } from './voices.js';
-import { cutName } from './names.js';
+import { cutName, MAX_NAME } from './names.js';
 
 const log2 = (x) => Math.log2(x);
 const tenth = (v) => Math.round(v * 10) / 10;
@@ -141,14 +141,13 @@ export function surpriseVoices(random = Math.random, max = 3) {
 // (cleaned, never `first`). Kept per person with a random id, so the cloud
 // and backups can carry them as they are later (docs/state.md).
 
-export const MY_VOICE_NAME = 24;   // characters, like a sound's name
 const MY_VOICE_EMOJI = 16;         // an emoji can be several code units
 
 // A stored voice cleaned, or null when it can't be used. Untrusted input is fine.
 export function cleanMyVoice(raw) {
   if (!raw || typeof raw !== 'object') return null;
   if (typeof raw.id !== 'string' || !raw.id || typeof raw.personId !== 'string' || !raw.personId) return null;
-  const name = typeof raw.name === 'string' ? cutName(raw.name.trim(), MY_VOICE_NAME) : '';
+  const name = typeof raw.name === 'string' ? cutName(raw.name.trim(), MAX_NAME) : '';
   const emoji = typeof raw.emoji === 'string' ? cutName(raw.emoji.trim(), MY_VOICE_EMOJI) : '';
   const { first, muted, ...knobs } = cleanTweaks(raw.knobs) ?? {};
   if ((!name && !emoji) || !Object.keys(knobs).length) return null;

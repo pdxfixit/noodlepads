@@ -18,7 +18,7 @@
 // changes the one it was given.
 
 import { cleanGrid, settle, dropBand } from './touch-grid.js';
-import { cutName } from './names.js';
+import { cutName, MAX_NAME } from './names.js';
 
 export const MINE = 'mine';                       // 🎤 Sounds, the person's own
 export const SIZES = { s: 5, m: 4, l: 2 };        // tiles across on a phone (Ben, 2026-10-16)
@@ -26,7 +26,6 @@ export const SIZE_NAMES = { s: 'Small', m: 'Medium', l: 'Large' };
 export const MAX_BANDS = 8;
 export const MAX_BAND_SOUNDS = 40;
 export const MAX_TOUCH_LAYOUTS = 500;             // saved per person, as key layouts
-export const MAX_TOUCH_NAME = 24;
 export const TOUCH_ID = /^touch-[a-z0-9-]{1,48}$/;
 const GROUP_ID = /^[a-z0-9-]{1,32}$/;
 
@@ -326,9 +325,9 @@ function reindex(g, index) {
   }) };
 }
 
-// A name typed for a touch layout: trimmed and cut to 24, or null when blank.
+// A name typed for a touch layout: trimmed and cut to MAX_NAME, or null when blank.
 export function touchName(v) {
-  const name = typeof v === 'string' ? cutName(v.trim().replace(/\s+/g, ' '), MAX_TOUCH_NAME).trim() : '';
+  const name = typeof v === 'string' ? cutName(v.trim().replace(/\s+/g, ' '), MAX_NAME).trim() : '';
   return name || null;
 }
 

@@ -4,7 +4,10 @@
 // one, and every name fits the field it goes in (sound labels and beat names
 // 24 characters, person names 16).
 
-export const MAX_LABEL = 24;
+// Every name a kid gives or a clean keeps (sounds, beats, songs, takes, groups,
+// layouts, voices, shares): at most this many characters, counted by
+// `nameLength` and cut by `cutName`.
+export const MAX_NAME = 24;
 export const MAX_PERSON = 20;   // "Captain Cranberries" (19), a person's fun name
 
 // A name cut to at most `max` characters, the one way every name and label
@@ -24,7 +27,7 @@ const LOOK = 8;   // times `max`: code units looked at, far past any real name's
 // as one unit. (No lookbehind regex: Safari before 16.4 can't parse one.)
 const lone = (ch) => ch.length === 1 && ch >= '\uD800' && ch <= '\uDFFF';
 export const nameLength = (text) => [...String(text ?? '')].length;
-export function cutName(text, max = MAX_LABEL) {
+export function cutName(text, max = MAX_NAME) {
   let s = String(text ?? '');
   if (s.length > max * LOOK) s = s.slice(0, max * LOOK);
   if (/[\uD800-\uDFFF]/.test(s)) s = [...s].filter((ch) => !lone(ch)).join('');
@@ -107,25 +110,25 @@ function pick(all, taken, max, random) {
 const combos = (nouns, max) => ADJECTIVES.flatMap((a) => nouns.map((n) => `${a} ${n}`)).filter((n) => n.length <= max);
 
 // The combinations are built once; there are over a thousand of each.
-const BEAT_NAMES = combos(BEAT_NOUNS, MAX_LABEL);
-const SOUND_NAMES = combos(SOUND_NOUNS, MAX_LABEL);
-const TAKE_NAMES = combos(TAKE_NOUNS, MAX_LABEL);
-const SONG_NAMES = combos(SONG_NOUNS, MAX_LABEL);
+const BEAT_NAMES = combos(BEAT_NOUNS, MAX_NAME);
+const SOUND_NAMES = combos(SOUND_NOUNS, MAX_NAME);
+const TAKE_NAMES = combos(TAKE_NOUNS, MAX_NAME);
+const SONG_NAMES = combos(SONG_NOUNS, MAX_NAME);
 
 // `taken`: the names already used (this person's saved beats, say).
-export const beatName = (taken = [], random = Math.random) => pick(BEAT_NAMES, taken, MAX_LABEL, random);
-export const soundName = (taken = [], random = Math.random) => pick(SOUND_NAMES, taken, MAX_LABEL, random);
-export const takeName = (taken = [], random = Math.random) => pick(TAKE_NAMES, taken, MAX_LABEL, random);
-export const songName = (taken = [], random = Math.random) => pick(SONG_NAMES, taken, MAX_LABEL, random);
+export const beatName = (taken = [], random = Math.random) => pick(BEAT_NAMES, taken, MAX_NAME, random);
+export const soundName = (taken = [], random = Math.random) => pick(SOUND_NAMES, taken, MAX_NAME, random);
+export const takeName = (taken = [], random = Math.random) => pick(TAKE_NAMES, taken, MAX_NAME, random);
+export const songName = (taken = [], random = Math.random) => pick(SONG_NAMES, taken, MAX_NAME, random);
 // 🎧 From a song's beats (docs/design/beat-from-a-song.md): one fun name
 // for the whole song, each part's beat that name and its letter, "Zippy
 // Noodle · A". `letters` are the parts' ids; the name chosen is one whose
-// every lettered name nobody has and fits MAX_LABEL. → { base, names }, the
+// every lettered name nobody has and fits MAX_NAME. → { base, names }, the
 // names in `letters` order. With every name taken, a number joins the base.
 export function partNames(letters, taken = [], random = Math.random) {
   const used = new Set([...taken].map(key));
   const tail = (l) => ` · ${l}`;
-  const room = MAX_LABEL - Math.max(1, ...letters.map((l) => tail(l).length));
+  const room = MAX_NAME - Math.max(1, ...letters.map((l) => tail(l).length));
   const free = (base) => base.length <= room && letters.every((l) => !used.has(key(base + tail(l))));
   const open = BEAT_NAMES.filter(free);
   let base = open.length ? open[Math.floor(random() * open.length) % open.length] : null;
@@ -139,7 +142,7 @@ export function partNames(letters, taken = [], random = Math.random) {
 
 // A scratch beat kept with 💾 Keep (ADR 0020) after it came from a groove:
 // a fun name and the groove, "Sleepy Squid (Ska version)". Beat names hold
-// MAX_LABEL characters and most grooves' names are long, so the first of
+// MAX_NAME characters and most grooves' names are long, so the first of
 // these that fits and nobody has: a beat's fun name and "(<groove>
 // version)"; its noun alone, "Squid (House version)"; the fun name and
 // "(<groove>)"; "<groove> version"; then the groove's own name, numbered
@@ -155,19 +158,19 @@ export function keptName(groove, taken = [], random = Math.random) {
     [`${g} version`],
   ];
   for (const tier of tiers) {
-    const free = tier.filter((n) => n.length <= MAX_LABEL && !used.has(key(n)));
+    const free = tier.filter((n) => nameLength(n) <= MAX_NAME && !used.has(key(n)));
     if (free.length) return free[Math.floor(random() * free.length) % free.length];
   }
   if (!used.has(key(g))) return g;
   for (let n = 2; ; n++) {
     const tail = ` ${n}`;
-    const name = cutName(g, MAX_LABEL - tail.length) + tail;
+    const name = cutName(g, MAX_NAME - tail.length) + tail;
     if (!used.has(key(name))) return name;
   }
 }
 
 // A beat saved as a sound is a remix: "<beat> (<emoji> <silly word> Remix)".
-// Labels hold MAX_LABEL characters, so a long beat name keeps only its last
+// Labels hold MAX_NAME characters, so a long beat name keeps only its last
 // word, and if even that won't fit, the remix stands alone.
 export const REMIX_WORDS = [
   'Wonky', 'Turbo', 'Funky', 'Sneaky', 'Bouncy', 'Spicy', 'Mega', 'Noodle', 'Disco', 'Cosmic',
@@ -184,7 +187,7 @@ export function remixName(beat, taken = [], random = Math.random) {
     for (let i = 0; i < tries.length; i++) {
       const remix = tries[(start + i) % tries.length];
       const name = base ? `${base} (${remix})` : remix;
-      if (name.length <= MAX_LABEL && !used.has(key(name))) return name;
+      if (nameLength(name) <= MAX_NAME && !used.has(key(name))) return name;
     }
   }
   return soundName(taken, random);
@@ -203,8 +206,8 @@ export const SYNTH_NOUNS = {
   wind: ['Breeze', 'Gust', 'Whoosh', 'Wind', 'Draft', 'Blizzard'],
   other: ['Gizmo', 'Doodad', 'Contraption', 'Widget', 'Thingamajig', 'Noise'],
 };
-const SYNTH_NAMES = Object.fromEntries(Object.entries(SYNTH_NOUNS).map(([k, nouns]) => [k, combos(nouns, MAX_LABEL)]));
-export const synthName = (kind, taken = [], random = Math.random) => pick(SYNTH_NAMES[kind] ?? SYNTH_NAMES.other, taken, MAX_LABEL, random);
+const SYNTH_NAMES = Object.fromEntries(Object.entries(SYNTH_NOUNS).map(([k, nouns]) => [k, combos(nouns, MAX_NAME)]));
+export const synthName = (kind, taken = [], random = Math.random) => pick(SYNTH_NAMES[kind] ?? SYNTH_NAMES.other, taken, MAX_NAME, random);
 
 // Two sounds mixed into one: a blend, the start of one and the end of the
 // other ("Burp" and "Honk" make "Burponk", or "Honkurp"). Each label's last
@@ -216,7 +219,7 @@ export function mixName(a, b, taken = [], random = Math.random) {
   const tail = (w) => { const i = w.slice(1).search(/[aeiouy]/i); return (i < 0 ? w : w.slice(i + 1)).toLowerCase(); };
   const blend = (x, y) => { const w = last(x) + tail(last(y)); return w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : ''; };
   const tries = random() < 0.5 ? [blend(a, b), blend(b, a)] : [blend(b, a), blend(a, b)];
-  return tries.find((n) => n.length >= 3 && n.length <= MAX_LABEL && !used.has(key(n)))
+  return tries.find((n) => nameLength(n) >= 3 && nameLength(n) <= MAX_NAME && !used.has(key(n)))
     ?? soundName(taken, random);
 }
 
@@ -307,7 +310,7 @@ export function nameChoices(taken = [], n = 12, random = Math.random) {
 // A remix of something shared (🎛️ Remix): its title and " remix", cut so the
 // whole still fits a label ("Wobbly Marshmallow remix" is 24).
 export function sharedRemixName(title) {
-  const base = cutName(String(title ?? '').trim(), MAX_LABEL - 6).trim() || 'Shared';
+  const base = cutName(String(title ?? '').trim(), MAX_NAME - 6).trim() || 'Shared';
   return `${base} remix`;
 }
 
@@ -327,7 +330,7 @@ export function chopName(parent, taken = [], random = Math.random) {
   for (const base of bases) {
     for (let i = 0; i < CHOP_NAMES.length; i++) {
       const name = CHOP_NAMES[(start + i) % CHOP_NAMES.length].replace('{}', base);
-      if (name.length <= MAX_LABEL && !used.has(key(name))) return name;
+      if (nameLength(name) <= MAX_NAME && !used.has(key(name))) return name;
     }
   }
   return soundName(taken, random);

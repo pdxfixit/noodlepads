@@ -47,7 +47,7 @@ import { createRoll } from './roll.js';
 import { createPillSelect } from './pill-select.js';
 import { edgeScroller } from './edge-scroll.js';
 import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
-import { cutName, MAX_LABEL } from './names.js';
+import { cutName, MAX_NAME as MAX_LABEL } from './names.js';   // (the old name here: sequencer.js is being edited elsewhere)
 import { TICK_MS, lookahead } from './beat-engine.js';
 import { merge3, sameContent } from './merge3.js';
 

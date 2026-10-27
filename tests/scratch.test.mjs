@@ -13,7 +13,7 @@ import {
   adoptKidsBeats, grooveOf, scratchLabel, hasHits, SCRATCH_NAME,
   kidsBeatId, kidsBeatOf, isKidsOwnBeat, isKidsBeat, KIDS_BEAT_NAME,
 } from '../web/scratch.js';
-import { keptName, MAX_LABEL } from '../web/names.js';
+import { keptName, MAX_NAME } from '../web/names.js';
 import { BEAT_ID } from '../web/beat.js';
 import { SONG_ID } from '../web/playlist.js';
 import { makeBackup, readBackup, intoPerson } from '../web/backup.js';
@@ -71,7 +71,7 @@ test('💾 Keep names a groove "<fun name> (<groove> version)", shorter when it 
   assert.equal(keptName('Four on the floor', [], pick), 'Four on the floor', 'then the groove\'s own name');
   assert.equal(keptName('Four on the floor', ['four on the floor'], pick), 'Four on the floor 2');
   for (const g of GROOVES) {
-    for (let i = 0; i < 5; i++) assert.ok(keptName(g.name, [], Math.random).length <= MAX_LABEL, g.name);
+    for (let i = 0; i < 5; i++) assert.ok(keptName(g.name, [], Math.random).length <= MAX_NAME, g.name);
   }
   const first = keptName('Ska', [], pick);
   assert.notEqual(keptName('Ska', [first], pick), first, 'a name already in 🗂️ Beats is skipped');

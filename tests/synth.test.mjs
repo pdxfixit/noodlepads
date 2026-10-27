@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { STARTERS, TONES, SHAPES, cleanSynth, renderSynth, surpriseSynth } from '../web/synth.js';
-import { synthName, SYNTH_NOUNS, MAX_LABEL } from '../web/names.js';
+import { synthName, SYNTH_NOUNS, MAX_NAME } from '../web/names.js';
 
 const peak = (d) => d.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
 
@@ -56,11 +56,11 @@ test('synthName: an adjective and a word for what was made, fits 24, never repea
   const taken = [];
   for (let i = 0; i < 300; i++) {
     const name = synthName('laser', taken);
-    assert.ok(name.length <= MAX_LABEL, name);
+    assert.ok(name.length <= MAX_NAME, name);
     assert.ok(!taken.includes(name), `repeat: ${name}`);
     taken.push(name);
   }
   assert.ok(SYNTH_NOUNS.laser.some((w) => synthName('laser', [], () => 0).endsWith(w)));
   assert.ok(SYNTH_NOUNS.other.some((w) => synthName('surprise', [], () => 0.5).endsWith(w)));
-  for (const kind of Object.keys(SYNTH_NOUNS)) assert.ok(synthName(kind).length <= MAX_LABEL);
+  for (const kind of Object.keys(SYNTH_NOUNS)) assert.ok(synthName(kind).length <= MAX_NAME);
 });

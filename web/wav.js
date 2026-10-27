@@ -4,6 +4,7 @@
 // a Blob; no audio graph, DOM or storage.
 
 import { peakOf } from './loudness.js';
+import { cutName, MAX_NAME } from './names.js';
 
 // Scales a rendered buffer so its loudest moment is just under full scale
 // (rows add up, so a render can clip). In place; returns the buffer.
@@ -75,8 +76,9 @@ export function audioView(buffer, frames) {
 }
 
 // The file's name is the name on screen: letters, numbers, spaces and ( ) ' _ -
-// (no emoji, no / \ : * ? " < > |), up to 24 characters, then .wav.
+// (no emoji, no / \ : * ? " < > |), up to MAX_NAME characters, then .wav.
 export function audioFileName(name, fallback = 'Noodle Pads') {
-  const clean = String(name ?? '').replace(/[^\p{L}\p{N} ()'_-]+/gu, '').replace(/\s+/g, ' ').trim().slice(0, 24).trim();
-  return `${clean || fallback}.wav`;
+  const clean = String(name ?? '').replace(/[^\p{L}\p{N} ()'_-]+/gu, '').replace(/\s+/g, ' ').trim();
+  const cut = cutName(clean, MAX_NAME).trim();
+  return `${cut || fallback}.wav`;
 }

@@ -8,8 +8,9 @@
 
 import {
   MINE, SIZES, SIZE_NAMES, MAX_BANDS, READY_TOUCH, readyTouch, newBand, addBand, removeBand, moveBand, resizeBand,
-  offeredSounds, addSounds, swapTile, swapBand, removeTile, sameTouch, keepAsMine, touchName, MAX_TOUCH_NAME, cleanTouch,
+  offeredSounds, addSounds, swapTile, swapBand, removeTile, sameTouch, keepAsMine, touchName, cleanTouch,
 } from './touch.js';
+import { MAX_NAME } from './names.js';
 import { hasPicker, pickerButton, pickerList, pickedFor, pickInstrument } from './inst-picker.js';
 import { presetInstrument, versionFor, ownIdOf, instrumentById } from './instruments.js';
 import {
@@ -906,8 +907,8 @@ export function createTouchEditor({ el, deps }) {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); asking = null; renderLayouts(); }
   });
   el.saveCancel.addEventListener('click', () => { asking = null; renderLayouts(); });
-  el.saveName.maxLength = MAX_TOUCH_NAME;
-  el.rename.maxLength = MAX_TOUCH_NAME;
+  el.saveName.maxLength = MAX_NAME;
+  el.rename.maxLength = MAX_NAME;
   el.rename.addEventListener('change', () => {
     const l = deps.layouts(pid()).find((x) => x.id === el.rename.dataset.id);
     const name = touchName(el.rename.value);

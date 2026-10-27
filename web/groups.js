@@ -7,16 +7,15 @@
 //   the person's pad order    `groups: [{id, name}]` on their orders record, in the kid's order
 // A sound naming a group the person no longer has is simply not in a group.
 
-import { cutName } from './names.js';
+import { cutName, MAX_NAME } from './names.js';
 
-export const MAX_GROUP_NAME = 24;   // like a sound's name
 export const MAX_GROUPS = 50;       // per person
 export const GROUP_ID = /^g-[a-z0-9-]{1,40}$/;
 export const UNGROUPED = '';        // the "Not in a group" heading's id
 export const UNGROUPED_NAME = 'Not in a group';
 
-// A group's name as typed: trimmed and cut to MAX_GROUP_NAME; '' when nothing is left.
-export const groupName = (v) => (typeof v === 'string' ? cutName(v.trim(), MAX_GROUP_NAME).trim() : '');
+// A group's name as typed: trimmed and cut to MAX_NAME; '' when nothing is left.
+export const groupName = (v) => (typeof v === 'string' ? cutName(v.trim(), MAX_NAME).trim() : '');
 
 // A clip's group id, if it is one; undefined otherwise (as backups store it).
 export const groupIdOf = (v) => (typeof v === 'string' && GROUP_ID.test(v) ? v : undefined);

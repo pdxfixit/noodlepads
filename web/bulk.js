@@ -24,7 +24,8 @@ import { emojiMore, withCurrent } from './emoji-more.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { announce, showBanner } from './ui.js';
 import { count } from './util.js';
-import { cleanGroups, pruneGroups, moveGroup, groupName, newGroupId, MAX_GROUP_NAME } from './groups.js';
+import { cleanGroups, pruneGroups, moveGroup, groupName, newGroupId } from './groups.js';
+import { MAX_NAME } from './names.js';
 
 const el = {};
 let share = async () => {};   // cloud-ui.js shareSounds
@@ -210,7 +211,7 @@ function openMove() {
   list.append(pick('Not in a group', '', clips.every((c) => !known.has(c.group))));
   const form = make('form', 'bulk-new');
   const name = make('input', 'set-field');
-  Object.assign(name, { id: 'bulk-group-name', maxLength: MAX_GROUP_NAME, autocomplete: 'off', placeholder: 'New group’s name' });
+  Object.assign(name, { id: 'bulk-group-name', maxLength: MAX_NAME, autocomplete: 'off', placeholder: 'New group’s name' });
   name.setAttribute('aria-label', 'New group’s name');
   const add = button('chip-dark', '➕ New group');
   add.type = 'submit';
@@ -478,7 +479,7 @@ function editGroup(id) {
   const at = groups.indexOf(g);
   const form = make('form', 'bulk-new');
   const name = make('input', 'set-field');
-  Object.assign(name, { id: 'bulk-group-rename', maxLength: MAX_GROUP_NAME, autocomplete: 'off', value: g.name });
+  Object.assign(name, { id: 'bulk-group-rename', maxLength: MAX_NAME, autocomplete: 'off', value: g.name });
   name.setAttribute('aria-label', 'Group name');
   const save = button('chip-dark', '✓ Rename');
   save.type = 'submit';

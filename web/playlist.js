@@ -18,7 +18,7 @@
 // starts.
 
 import { cleanVolume } from './row-volume.js';
-import { cutName, MAX_LABEL } from './names.js';
+import { cutName, MAX_NAME } from './names.js';
 import { barSteps } from './old-beats.js';
 import { newId } from './util.js';
 
@@ -433,7 +433,7 @@ export function uniqueSongName(name, list, exceptId) {
   if (!taken.has(name.toLowerCase())) return name;
   for (let n = 2; ; n++) {
     const tail = ` ${n}`;
-    const candidate = cutName(name, MAX_LABEL - tail.length) + tail;
+    const candidate = cutName(name, MAX_NAME - tail.length) + tail;
     if (!taken.has(candidate.toLowerCase())) return candidate;
   }
 }

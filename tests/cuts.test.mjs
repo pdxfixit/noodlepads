@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { onsets, cleanTrim, trimKey, cleanFrom, cleanMarks, pieces, newMark, MAX_PIECES } from '../web/cuts.js';
-import { chopName, soundName, MAX_LABEL, CHOP_NAMES } from '../web/names.js';
+import { chopName, soundName, MAX_NAME, CHOP_NAMES } from '../web/names.js';
 import { fakeBuffer } from './helpers.mjs';
 
 const RATE = 8000;
@@ -100,7 +100,7 @@ test('chopName: a long parent keeps its last word; nothing fits falls back to a 
   assert.equal(chopName('Supercalifragilistic Kazoo', [], () => 0), 'Baby Kazoo');
   const huge = 'X'.repeat(30);
   const name = chopName(huge, [], () => 0);
-  assert.ok(name.length <= MAX_LABEL && !name.includes('X'), name);
+  assert.ok(name.length <= MAX_NAME && !name.includes('X'), name);
   assert.equal(chopName('', [], () => 0), soundName([], () => 0));
-  for (let i = 0; i < 200; i++) assert.ok(chopName('Wobbly Kazoo Thunder Boom').length <= MAX_LABEL);
+  for (let i = 0; i < 200; i++) assert.ok(chopName('Wobbly Kazoo Thunder Boom').length <= MAX_NAME);
 });

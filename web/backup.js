@@ -40,7 +40,7 @@ import { cleanSong, SONG_ID } from './playlist.js';
 import { cleanSynth } from './synth.js';
 import { adoptPeople, nextPersonColor, freePicture, PERSON_ID, isEmptyOverride } from './model.js';
 import { isListedEmoji } from './emoji-check.js';
-import { funName, isFunName, MAX_PERSON, cutName } from './names.js';
+import { funName, isFunName, MAX_PERSON, MAX_NAME, nameLength, cutName } from './names.js';
 import { dropNameSounds } from './starters.js';
 import { count } from './util.js';
 import { cleanGroups, groupIdOf } from './groups.js';
@@ -95,7 +95,7 @@ const MAX_RECORDS = { people: 100, clips: 2000, overrides: 2000, orders: 100, pa
 const text = (v, max) => (typeof v === 'string' ? v.slice(0, max) : undefined);
 // An id or a palette color: as it is, or refused. Never cut or mended,
 // which could turn a broken id into one already here.
-const exact = (v, max) => (typeof v === 'string' && v.length <= max && cutName(v, max) === v ? v : undefined);
+const exact = (v, max) => (typeof v === 'string' && nameLength(v) <= max && cutName(v, max) === v ? v : undefined);
 // A picture: cut by characters, never inside one (an emoji of several stays whole: names.js cutName).
 const picture = (v, max) => (typeof v === 'string' ? cutName(v, max) : undefined);
 // A name or label: trimmed, cut to `max`, and undefined when nothing is left.
@@ -391,7 +391,7 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
   const knownPerson = (id) => personIds.has(id) || (bundled.addedPeopleIds?.has(id) ?? false);
   // Pad colors are palette names. Without a palette to check against, keep the name.
   const colorName = (v) => {
-    const c = exact(v, 24);
+    const c = exact(v, MAX_NAME);
     return c && (bundled.colorOk ? bundled.colorOk(c) : true) ? c : undefined;
   };
 
@@ -406,7 +406,7 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
     return dropUndefined({
       id: c.id,
       personId: c.personId,
-      label: title(c.label, 24) || 'Sound',
+      label: title(c.label, MAX_NAME) || 'Sound',
       emoji: picture(c.emoji, 8),
       color: colorName(c.color),
       voice: voiceId(c.voice) ?? 'normal',
@@ -433,7 +433,7 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
     .some((k) => id.endsWith(`-${k}`) && knownPerson(id.slice(0, -k.length - 1)));
   const overrides = clean('overrides', (o) => (bundled.clipIds.has(o?.id) || isKitCopy(o?.id) ? dropUndefined({
     id: o.id,
-    label: title(o.label, 24),
+    label: title(o.label, MAX_NAME),
     emoji: picture(o.emoji, 8),
     color: colorName(o.color),
     voice: voiceId(o.voice),
@@ -471,7 +471,7 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
     ? {
       ...cleanPattern(b, b.personId, unsignedFor(b.personId)),
       id: b.id,
-      name: title(b.name, 24) || 'Beat',
+      name: title(b.name, MAX_NAME) || 'Beat',
       created: num(b.created) ?? Date.now(),
       saved: num(b.saved) ?? Date.now(),
       // 📌 pinned to the pattern chips: when, only while pinned (ADR 0021).
