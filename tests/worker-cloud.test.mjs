@@ -1188,3 +1188,12 @@ test('wrong tries at /open and wrong PINs on a keyed request are counted apart: 
   c.later(WAIT_MS);
   assert.equal((await c.call('DELETE', 'profiles/p-a', { key: k2, body: { pin: '3333' } })).status, 200, 'after the wait the right PIN deletes');
 });
+
+test('a path with a bad percent escape is answered, not thrown', async () => {
+  const c = cloud();
+  for (const path of ['%', 'profiles/%E0%A4%A', 'shares/%zz', 'sounds/%']) {
+    const r = await c.call('GET', path);
+    assert.equal(r.status, 404, path);
+    assert.equal(r.data.error, 'not found', path);
+  }
+});

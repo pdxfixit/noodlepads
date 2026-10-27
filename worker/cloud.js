@@ -1003,10 +1003,16 @@ export async function handleCloud(request, env, now = Date.now(), ctx = null) {
 
 async function route(request, env, now, seen) {
   const url = new URL(request.url);
-  const parts = url.pathname.split('/').slice(2).map(decodeURIComponent);   // after /api/
   const m = request.method;
   if (!env.DB) return fail(503, 'not set up');
   try {
+    // After /api/. A bad percent escape ("/api/%") throws in decodeURIComponent.
+    let parts;
+    try {
+      parts = url.pathname.split('/').slice(2).map(decodeURIComponent);
+    } catch {
+      return fail(404, 'not found');
+    }
     const [a, b, c] = parts;
     if (a === 'cloud' && parts.length === 1 && m === 'GET') return json(200, { ok: true, chunk: CHUNK_BYTES, maxSound: MAX_SOUND_BYTES });
     if (a === 'profiles') {
