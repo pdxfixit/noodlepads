@@ -41,6 +41,7 @@ Every change serves this. Why, and the north star it steers: [ADR 0022](docs/adr
 | File | What it holds |
 |---|---|
 | [README.md](README.md) | The public front page: what it is, the live link, screenshots, run and test it, every `just` recipe ("Running it yourself"), the privacy statement. |
+| [docs/privacy-policy.md](docs/privacy-policy.md) | The public privacy policy: this app's own sections, with the shared `@include` blocks. The privacy site (pdxfixit/privacy) pulls it from GitHub; a push that changes it tells that repo. `web/privacy.js` and README's statement say the same, held by `tests/privacy.test.mjs`. |
 | [docs/guide.md](docs/guide.md) | How the app works: every screen, how things are stored, cloud profiles, keyboard use, limits on what comes in. |
 | [docs/layout.md](docs/layout.md) | The file map: one line per file in `web/`, `worker/` and `tools/`. |
 | [docs/architecture/](docs/architecture/README.md) | How the code is wired: the shared engines, who calls whom, the record shapes that cross modules, the known seams, and "to change X, touch …". One file per area. |
@@ -201,7 +202,7 @@ Ben: *"Optimizing the user interface for a variety of screens is very important.
 
 ## Privacy
 
-The site is public. Anyone can load every file under `web/` (at noodlepads.com). Sounds recorded in the app stay in the browser that made them until their person is put in the cloud ([ADR 0002](docs/adr/0002-cloud-profiles-on-one-worker.md)); then they are stored in D1 and anyone with a sound's link can play it, and the profile list is public. They also leave in a backup someone saves. The disclosure in `web/privacy.js` must stay true: change it in the same commit as any change to what the cloud stores or shows.
+The site is public. Anyone can load every file under `web/` (at noodlepads.com). Sounds recorded in the app stay in the browser that made them until their person is put in the cloud ([ADR 0002](docs/adr/0002-cloud-profiles-on-one-worker.md)); then they are stored in D1 and anyone with a sound's link can play it, and the profile list is public. They also leave in a backup someone saves. The disclosure in `web/privacy.js` must stay true: change it in the same commit as any change to what the cloud stores or shows, and change `docs/privacy-policy.md` and README's copy with it (`tests/privacy.test.mjs` fails until the three agree). Bump the policy's `updated:` date when its words change.
 
 **No kids' names anywhere in the repo** (Ben, 2026-10-11): not in code, tests, tools, file names or docs. Write "a kid" or "the kids"; tests make up names (Pip, Juno, Toby, Wren). "Sandberg Family" is the most private detail allowed. `boards.json` lists no people. `tests/no-names.test.mjs` checks every tracked file, with the names' hashes kept outside the repo (the GitHub secret `NOODLE_NAME_HASHES`, `~/.config/noodlepads/names.json` on Ben's Mac); a cloud session has neither and skips it, so CI is the check there. Before a real voice clip goes into `web/clips/`, remember it becomes public.
 

@@ -1,0 +1,42 @@
+# Tells the privacy site (pdxfixit/privacy) that Noodle Pads' policy changed,
+# so it rebuilds and deploys privacy.pdxfixit.com from docs/privacy-policy.md
+# (Ben, 2026-10-26: the policy is written here, the privacy site pulls it).
+# The privacy repo's deploy listens for the `noodlepads-policy` event and
+# reads the policy at the commit named in the payload.
+#
+# Secret: PRIVACY_DISPATCH_TOKEN, a fine-grained token limited to
+# pdxfixit/privacy with "Contents: Read and write" (the one permission the
+# repository_dispatch endpoint asks for). While it is missing the job warns
+# and succeeds, so a push is never held up by it; the privacy site then picks
+# the change up at its next deploy (any push there, or its manual run).
+name: privacy-policy
+on:
+  push:
+    branches: [main]
+    paths: [docs/privacy-policy.md]
+  workflow_dispatch:
+permissions: {}
+jobs:
+  dispatch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      TOKEN: ${{ secrets.PRIVACY_DISPATCH_TOKEN }}
+    steps:
+      - name: Tell the privacy site
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::PRIVACY_DISPATCH_TOKEN is not set, so the privacy site was not told. It reads docs/privacy-policy.md at its next deploy. See TODO.md, Ben does."
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/dispatch.out -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/pdxfixit/privacy/dispatches \
+            -d "{\"event_type\":\"noodlepads-policy\",\"client_payload\":{\"sha\":\"$GITHUB_SHA\"}}")
+          if [ "$code" != 204 ]; then
+            echo "::error::GitHub answered $code: $(cat /tmp/dispatch.out)"
+            exit 1
+          fi
+          echo "Sent noodlepads-policy for $GITHUB_SHA to pdxfixit/privacy."

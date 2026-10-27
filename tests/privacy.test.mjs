@@ -17,6 +17,7 @@ import { PRIVACY, PRIVACY_TITLE, PRIVACY_URL } from '../web/privacy.js';
 import { cleanPayload } from '../web/log-clean.js';
 import { HELP } from '../web/help.js';
 import { hasMade } from '../web/cloud-sync.js';
+import { SETTINGS } from '../web/settings.js';
 
 const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8').replace(/\s+/g, ' ');
 const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
@@ -346,4 +347,64 @@ test('"A song 🎧 From a song listens to ... is never saved, synced or sent": i
     }
     assert.doesNotMatch(code, /\bfetch\(|XMLHttpRequest|sendBeacon|indexedDB|localStorage/, `${name} reaches no network or storage`);
   }
+});
+
+// The same claims are made three times: web/privacy.js (copied word for word
+// into README, checked above), and the public policy, docs/privacy-policy.md,
+// which the privacy site (pdxfixit/privacy) pulls from this repo (Ben,
+// 2026-10-26). The three are worded differently, so each claim below is a few
+// key phrases that every one of them must carry. A change to what the cloud
+// stores or shows fails here until all three say it.
+const policy = readFileSync(new URL('../docs/privacy-policy.md', import.meta.url), 'utf8');
+const policyText = policy.replace(/\s+/g, ' ');
+const statement = PRIVACY.join(' ');
+const readmePrivacy = readme.slice(readme.indexOf('## Privacy'), readme.indexOf('## License'));
+const sources = { 'web/privacy.js': statement, 'README.md': readmePrivacy, 'docs/privacy-policy.md': policyText };
+const webCode = ['index.html', 'help.js', 'cloud-ui.js', 'people.js', 'settings.js']
+  .map((f) => readFileSync(new URL(`../web/${f}`, import.meta.url), 'utf8')).join('\n');
+
+test('the policy keeps the shape the privacy site builds: front matter, the shared blocks, no plain address', () => {
+  const front = policy.match(/^---\nname: Noodle Pads\nblurb: .+\nupdated: \d{1,2} [A-Z][a-z]+ 20\d\d\nurl: https:\/\/noodlepads\.com\/\n---\n# Noodle Pads privacy policy\n/);
+  assert.ok(front, 'front matter and the one headline');
+  for (const block of ['rules', 'feedback', 'closing']) assert.match(policy, new RegExp(`^@include ${block}$`, 'm'));
+  assert.ok(!/[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(policy), 'the contact address is written {contact}');
+  assert.match(policy, /\{contact\}/);
+});
+
+const SHARED = [
+  ['the public list shows fun names, colors, whether there is a PIN, and when the look last changed',
+    [/fun names?/, /colou?rs?/, /\bPIN\b/, /when (its|their) look last changed|look last changed/]],
+  ['a problem report is kept 14 days', [/Problem reports[^.]*\.[^.]*14 days|14 days[^.]*report/i]],
+  ['problem reports are on unless switched off', [/Problem reports[^.]{0,12}(are )?on (unless someone switches them off|to start with)/i]],
+  ['a device nobody chose for sends only after an error or a tap that made no sound', [/only after an error or a tap that made no sound/]],
+  ['deleting a profile names the real buttons, and share codes go with it', [/👥 People/, /Delete twice/, /☁️ Delete their cloud copy too/, /☁️ In the cloud/, /every share code it made/]],
+  ['sharing ends at 🚫 Unshare or when the profile is deleted', [/🚫 Unshare/, /(sharer taps|until) 🚫 Unshare or their profile is deleted/]],
+  ['a sound\'s link plays it for anyone, and is not secret', [/[Aa]nyone with a sound's link can play it|[Aa]nyone who has a sound's link can play it/, /not secret/]],
+  ['a PIN is not security', [/PIN[^.]*not security|not security/]],
+];
+for (const [name, patterns] of SHARED) {
+  test(`policy, statement and README agree: ${name}`, () => {
+    for (const [file, text] of Object.entries(sources)) {
+      for (const p of patterns) assert.match(text, p, `${file} says: ${name} (${p})`);
+    }
+  });
+}
+
+test('every button the policy names is a real one, and the switches it describes default as it says', () => {
+  for (const label of ['👥 People', '☁️ Delete their cloud copy too', '☁️ In the cloud', '📊 Data sharing', '📮 Send problem reports', '🚫 Unshare', '⚙️ Settings']) {
+    assert.ok(webCode.includes(label.replace(/^\S+ /, '')), `the app has: ${label}`);
+  }
+  assert.ok(policyText.includes('📮 Send problem reports') && html.includes('📮 Send problem reports'));
+  assert.equal(SETTINGS.sendLogs.default, true, 'the policy and the statement say reports start on');
+  assert.equal(SETTINGS.sendUsage.default, true, 'the policy says Share play data starts on');
+  assert.match(policyText, /Share play data\*\* is on \([^)]*on to start with\)/);
+});
+
+test('a push to main that changes the policy tells the privacy site; a missing token only warns', () => {
+  const wf = readFileSync(new URL('../.github/workflows/privacy-policy.yml', import.meta.url), 'utf8');
+  assert.match(wf, /branches: \[main\]\s+paths: \[docs\/privacy-policy\.md\]/);
+  assert.match(wf, /repos\/pdxfixit\/privacy\/dispatches/);
+  assert.ok(wf.includes('noodlepads-policy') && wf.includes('event_type'), 'the event the privacy deploy listens for');
+  assert.match(wf, /secrets\.PRIVACY_DISPATCH_TOKEN/);
+  assert.match(wf, /if \[ -z "\$TOKEN" \]; then\s+echo "::warning::[^\n]+\s+exit 0/, 'no token: warn and succeed');
 });

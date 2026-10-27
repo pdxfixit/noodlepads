@@ -17,11 +17,12 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 ## Ben does
 
+- **Let this repo tell the privacy site when the policy changes** (3 min), after the policy move lands: GitHub → Settings → Developer settings → Fine-grained tokens → new token, owner `pdxfixit`, only repository `pdxfixit/privacy`, repository permission **Contents: Read and write** (the one permission `repository_dispatch` asks for; "Actions: write" is not enough), 1 year. Add it as the secret `PRIVACY_DISPATCH_TOKEN` on `pdxfixit/noodlepads` (Settings → Secrets and variables → Actions). Until then `.github/workflows/privacy-policy.yml` only warns, and the privacy site picks up an edited `docs/privacy-policy.md` at its next deploy. Put a reminder to renew it in a year.
+
 - **Record the spoken callouts** (15 min, when you like): the 14 callouts ("Let's go!", "Level up!" …; list in `web/clips/kit/LICENSE-samples.txt`) and the evil laugh and cackle are macOS `say` voices, which may not be ours to share (Ben, 2026-10-26: replace them). Record your own (no names in them) and attach them in a chat, or say "use a CC0 voice set".
 
 - **Read the mission and make it yours** (2 min): `AGENTS.md` → Mission, drafted from your interview answers (2026-10-26). Reword anything that isn't how you'd say it; the council checks every change against it.
 
-- **Say in the public policy that problem reports are on by default** (5 min), before this lands: `src/noodlepads/policy.md` in `pdxfixit/privacy` (privacy.pdxfixit.com/noodlepads). 📮 Send problem reports is on for every device unless someone switches it off, and a report can carry a silent tap: the screen, what it tapped, how far the tap got, what lay on top of it (an element's id or class), the open dialog's id, the audio's state, how long the page had run. No names, no sounds.
 
 - **Delete the old address's DNS record** (1 min): in Cloudflare, open the old address's domain → DNS and delete its `soundboard` record if it is still there (the Worker is gone and the name answers 530). The domain's apex stays. Also, if you like, delete the old address's leftover folder in `~/src/flarepress/` (only wrangler's local `.wrangler/` cache is in it).
 
