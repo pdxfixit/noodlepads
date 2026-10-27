@@ -192,10 +192,28 @@ export function keptAudio(buffer, clip) {
   const range = keptRange(buffer, clip);
   const edits = cleanEdits(clip?.edits, buffer.duration);
   if (!edits && !clip?.fade && clip?.exact && !cleanTrim(clip?.trim, buffer.duration)) return buffer;
-  const source = edits ? applyEdits(slice(buffer, 0, buffer.duration), edits) : buffer;
-  const kept = applyFade(slice(source, range.start, range.end - range.start), clip?.fade);
-  const out = hasGain(edits) ? levelForGain(kept, slice(buffer, range.start, range.end - range.start)) : kept;
+  const out = keptParts(buffer, { range, edits, fade: clip?.fade }).level();
   return wantsEdges(clip) ? softEdges(out) : out;
+}
+
+// The one builder of the kept audio, for the pad (keptAudio) and the trim
+// editor (chop.js), so what the editor plays is what the pad plays after a
+// reload. From the whole stored recording `full`, with its (cleaned) `edits`,
+// the kept `range` and the `fade`: `edited` is the whole with the edits
+// applied (a copy only when there are edits, or when `copy` asks for one to
+// draw on), `faded` the kept range of it with the fade, and level() the kept
+// audio after Louder or Quieter's levelling (levelForGain, by the unedited
+// recording's peak), or `faded` as it is where there is no gain edit (level(true)
+// levels it anyway: 🔊 Even it out, which is about to add a gain edit). Edges
+// are the caller's (wantsEdges).
+export function keptParts(full, { range, edits, fade }, { copy = false } = {}) {
+  const edited = edits || copy ? applyEdits(slice(full, 0, full.duration), edits) : full;
+  const faded = applyFade(slice(edited, range.start, range.end - range.start), fade);
+  return {
+    edited,
+    faded,
+    level: (always = false) => (always || hasGain(edits) ? levelForGain(faded, slice(full, range.start, range.end - range.start)) : faded),
+  };
 }
 
 const noop = () => {};

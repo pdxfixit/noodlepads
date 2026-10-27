@@ -17,7 +17,7 @@
 // ("Baby Burp"). The pure parts are in cuts.js; sheet.js calls in here.
 
 import { state, persist } from './state.js';
-import { audio, slice, keptRange } from './audio.js';
+import { audio, slice, keptRange, keptParts } from './audio.js';
 import { currentPerson, clipsFor, nextClipColor } from './board.js';
 import { renderPads } from './pads.js';
 import { encodeWav } from './wav.js';
@@ -27,7 +27,7 @@ import { newId } from './util.js';
 import { chopName } from './names.js';
 import {
   cleanTrim, onsets, cleanMarks, pieces, newMark, MIN_PIECE,
-  cleanEdits, cleanFade, addEdit, applyEdits, applyFade, GAIN_STEP, hasGain, levelForGain, editsKey, softEdges, wantsEdges,
+  cleanEdits, cleanFade, addEdit, applyFade, GAIN_STEP, hasGain, editsKey, softEdges, wantsEdges,
 } from './cuts.js';
 import { loudness, peakOf, evenGain, PRESET_LOUDNESS, EVEN_ENOUGH } from './loudness.js';
 import { logEvent } from './log.js';
@@ -247,13 +247,12 @@ export function createCut(sheet) {
   }
 
   // The recording with the edits and fade as they are now: `kept` is what
-  // the voices start from (exactly as audio.js keptAudio makes it), and the
+  // the voices start from (audio.js keptParts builds it, as for the pad), and the
   // wave draws all of it, the fade included.
   function rebuild() {
     const { start, end } = cut.range;
-    const edited = applyEdits(slice(cut.full, 0, cut.full.duration), cut.edits);
-    let kept = applyFade(slice(edited, start, end - start), cut.fade);
-    if (hasGain(cut.edits)) kept = levelForGain(kept, slice(cut.full, start, end - start));
+    const { edited, level } = keptParts(cut.full, { range: cut.range, edits: cut.edits, fade: cut.fade }, { copy: true });
+    const kept = level();
     if (cut.edges) softEdges(kept);
     cut.shown = applyFade(edited, cut.fade, start, end);
     sheet.wave.show(cut.shown);
@@ -315,15 +314,14 @@ export function createCut(sheet) {
     if (!cut.mode && !(await loadTrim())) return;
     const now = saved();
     const d = cut.full.duration;
-    const { start, end } = cut.range;
-    const kept = applyFade(slice(applyEdits(slice(cut.full, 0, d), cut.edits), start, end - start), cut.fade);
+    const { faded: kept, level } = keptParts(cut.full, { range: cut.range, edits: cut.edits, fade: cut.fade });
     const peak = peakOf(kept);
     if (!peak) { showNotice('🔊 There is no sound here to even out.'); return; }
     // How loud it seems now: scaled to its own peak, or (with Louder or
     // Quieter in it) to the recording's, under the soft ceiling.
     const gained = hasGain(cut.edits);
     const plain = gained ? 0 : loudness(kept, { scale: 0.9 / peak });
-    const base = levelForGain(kept, slice(cut.full, start, end - start));
+    const base = level(true);
     const heard = gained ? loudness(base, { limit: true }) : plain;
     const already = () => showNotice('🔊 It is already even: as loud as the ready-made sounds.');
     if (Math.abs(heard - PRESET_LOUDNESS) < EVEN_ENOUGH) { already(); return; }

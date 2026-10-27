@@ -281,6 +281,57 @@ test('wave editor: pick a part, make it louder (twice is one edit) and backwards
   assert.equal(recording.getChannelData(0)[Math.round(0.95 * RATE)], Math.fround(Math.sin(0.05 * RATE / 2) * 0.5), 'the recording itself is unchanged');
 });
 
+// The trim editor builds the kept audio (chop.js rebuild) the way the pad does
+// (audio.js keptAudio): 👂 Plain after Louder, Backwards, a fade and a trim
+// plays what the pad plays once it is saved, sample for sample.
+test('wave editor: what 👂 Plain plays after edits, a fade and a trim is what the saved pad plays', async () => {
+  const { applyChain } = await import('../web/voices.js');
+  await setSetting('advancedBeats', true);
+  if (!document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+  const pad = pads()[3];
+  const id = pad.dataset.id;
+  audio.forget(id);
+  pad.parent.querySelector('[data-edit]').dispatch('click');
+  await page.settle();
+  $('#trim-btn').dispatch('click');
+  await page.settle();
+  view('part').dispatch('click');
+  edit('louder').dispatch('click');
+  await page.settle();
+  edit('louder').dispatch('click');
+  await page.settle();
+  view('fades').dispatch('click');
+  const fin = handles()[0];
+  for (let i = 0; i < 2; i++) fin.dispatch('keydown', { key: 'ArrowRight', shiftKey: true });
+  fin.dispatch('keyup', { key: 'ArrowRight' });
+  await page.settle();
+  view('part').dispatch('click');
+  edit('keep').dispatch('click');
+  await page.settle();
+  $('#cut-done').dispatch('click');
+  await page.settle();
+  $('#voices').children.find((b) => b.dataset.preset === 'chipmunk').dispatch('click');   // 👂 Plain needs a voice on
+  await page.settle();
+  started.length = 0;
+  $('#plain-btn').dispatch('click');
+  await page.settle();
+  const plain = started.filter(([what]) => what === 'preview-original').at(-1)?.[1];
+  assert.ok(plain, '👂 Plain played');
+  $('#save-btn').closest('form').dispatch('submit');
+  await page.settle();
+  const saved = state.overrides.get(id) ?? state.userClips.find((c) => c.id === id);
+  assert.ok(saved.edits?.length && saved.fade && saved.trim, 'edits, a fade and a trim were kept');
+  const padPlays = (await applyChain(await audio.original({ id, ...saved }), [], null, saved.level)).buffer;
+  assert.equal(plain.length, padPlays.length);
+  const a = plain.getChannelData(0), b = padPlays.getChannelData(0);
+  let most = 0, peak = 0;
+  for (let i = 0; i < a.length; i++) { most = Math.max(most, Math.abs(a[i] - b[i])); peak = Math.max(peak, Math.abs(a[i])); }
+  assert.ok(peak > 0.1, 'there is sound to compare');
+  assert.ok(most < 1e-6, `sample for sample (${most})`);
+  state.overrides.delete(id);   // the next test starts from a pad as it was
+  audio.forget(id);
+});
+
 test('wave editor: Undo walks back through edits and fades to how the sheet opened; Save then stores none', async () => {
   await setSetting('advancedBeats', true);
   if (!document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');

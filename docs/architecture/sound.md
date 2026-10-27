@@ -316,7 +316,7 @@ without `first` or `muted`.
    (`EDGE_FADE_SECONDS`) fade in and out so a trim never clicks, for a kid's
    own sound and a new recording only (`wantsEdges`: not a bundled preset,
    whose loudness is measured as it is, and not an `exact` sound, which loops
-   on a grid). `chop.js rebuild` does the same (`cut.edges`).
+   on a grid). `chop.js rebuild` builds it through the same `audio.js keptParts` (and `cut.edges`); `evenOut` takes its `faded` and `level(true)`.
 2. **The plan** (`voices.js renderPlan`): the playing chain (muted steps out,
    else Normal), knobs' steps before or after it (`first`), Normal dropped
    beside knobs.
@@ -637,7 +637,6 @@ by a load of its current version").
 
 | Seam | Where | What a fix in one place misses |
 |---|---|---|
-| The kept audio is built three times | `audio.js keptAudio`, `chop.js rebuild`, `chop.js evenOut` (all three take their range from `keptRange`: the automatic trim to the millisecond; `sheet.js acceptAudio` and `makeSound` use `keptAudio` itself) | a change to the cut order (edits → trim → fade → levelForGain → soft edges) in `keptAudio` leaves the trim editor drawing and playing something else |
 | One noise maker for the tails | `steps.js noiseBuffer` (stadium hall, walkie static, Room size) | seeded (`seededRandom`, `NOISE_SEEDS`, one seed per place, another per channel), so a room or hall is the same on every load; the stadium and static use the context's channel count, Room always 2 (`tests/steps.test.mjs`) |
 | Two 🎲 families | `voices.js SURPRISE` (used by `surpriseShape`) and `voice-knobs.js FAMILIES` (`surpriseVoices`) | a new voice must be added to both |
 | A voice is listed four times | `voices.js VOICES` + `RECIPES`, `voices.js OPENED`, `voice-knobs.js MADE`, `log-clean.js VOICE_IDS` | a new voice needs a recipe, an opened form, its knobs and its report id (the last is guarded: `tests/log-clean.test.mjs` checks the lists against `VOICES` and `KINDS`) |
@@ -686,7 +685,7 @@ by a load of its current version").
 | A new building block (step kind) | `steps.js KINDS` (live: `build`, `tail`; else a `voices.js STEP_RENDERS` entry), `log-clean.js STEP_KINDS`, `voices.js SHAPE_SURPRISE` if 🎲 should pick it, `tests/steps.test.mjs`; `mixer.js` only if it should be a mixer effect |
 | A new knob | `tweaks.js TWEAKS` (a new `short` letter), `tweakSteps` (its place in the order), `LAYER_ORDER`, `ADDED_AT`; `voice-knobs.js MADE` if a voice uses it; `shape.js` draws it from `TWEAKS`; keep old `tweaksKey`s unchanged |
 | A new cut (edit kind) | `cuts.js EDIT_KINDS`, `cleanEdit`, `applyEdits`, `editsKey`; `chop.js editPart` and its buttons in `index.html`; `help.js` |
-| The order cuts apply in | `audio.js keptAudio` and `chop.js rebuild` and `chop.js evenOut` together |
+| The order cuts apply in | `audio.js keptParts` (the one builder) |
 | The house peak (0.9) | `voices.js finish`, `cuts.js levelForGain`, `wav.js normalize`, `mix.js`, `synth.js`, `chop.js evenOut`, `loudness.js softLimit`, `tools/preset_loudness.py PEAK`; then `just preset-loudness --fix` and `PRESET_LOUDNESS` |
 | A new preset, or a kit WAV | `web/clips/kit/`, boards.json, then `just preset-loudness --fix`; an instrument note: `tools/kit_instruments.py` |
 | A new instrument | `instruments.js INSTRUMENTS` (and `FAMILIES`), its recordings (`tools/make_samples.py` or `make_placeholders.py`), `tools/kit_instruments.py`, `just preset-loudness --fix`; `settings.js` takes the ids from `instrumentIds` |
