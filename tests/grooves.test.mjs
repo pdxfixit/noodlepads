@@ -53,6 +53,13 @@ test('every groove says where it comes from or what to listen for, in one short 
   }
 });
 
+// Goofing around is the point (mission, council round 1, 2026-10-27): a
+// groove's card tells what it is. It never sets a task ("Can you hum a tune
+// over them?") that a kid who only wants to play can fail.
+test('a groove\'s card asks no question and sets no task', () => {
+  for (const g of GROOVES) assert.doesNotMatch(g.about, /\?|\bcan you\b|\btry to\b/i, `${g.id}: says what it is, asks nothing`);
+});
+
 test('🪘 Hand drums are presets, and the new styles play them (Ben, 2026-10-17)', () => {
   const inGroup = kit.filter((k) => k.group === 'handdrums').map((k) => k.id);
   for (const id of ['taiko', 'djembe', 'djembe-slap', 'log-drum', 'dhol', 'dhol-high', 'bongo', 'cajon']) assert.ok(inGroup.includes(id), id);

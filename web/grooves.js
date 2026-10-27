@@ -235,7 +235,7 @@ export const GROOVES = [
     ['snare', '....x.......x...'],
     ['hihat', 'x.x.x.x.x.x.x.x.']] },
   { id: 'pop', name: 'Pop', emoji: '🍭', group: 'rock', bpm: 110,
-    about: 'Four chords that a thousand songs use. Can you hum a tune over them?',
+    about: 'Four chords that a thousand songs use. They go round and round.',
     rows: [
     ['kick', 'x.......x.x..... x.......x.x..... x.......x.x..... x.......x.x.....'],
     ['snare', '....x.......x... ....x.......x... ....x.......x... ....x.......x...'],
