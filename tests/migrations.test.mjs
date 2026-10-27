@@ -119,3 +119,15 @@ test('008 clears the deploy checks\' old shares and the audio nothing uses, and 
   assert.deepEqual(sounds, ['s-family', 's-familyshared', 's-preview'], 'the check share\'s audio and the loose one go; a family\'s and a preview stay');
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM share_sounds WHERE code = 'OLDSMOKE'").get().n, 0);
 });
+
+// 009 gives the keyed requests (Change PIN, Delete) a wrong-PIN count of their
+// own, apart from /open's (docs/design/cloud-needs-pin.md). Additive: every
+// profile, its PIN and its /open count stay, and the new count starts at 0.
+test('009 adds the keyed wrong-PIN count at 0 and keeps every profile, PIN and /open count', () => {
+  const db = migrated();
+  for (const f of MIGRATIONS.filter((m) => m < '009')) db.exec(read(`../worker/migrations/${f}`));
+  db.exec("INSERT INTO profiles (id, name, color, pin_hash, pin_salt, fails, locked_until, edited, created) VALUES ('p-a', 'Funky Moose', 'teal', 'h', 's', 3, 99, 0, 0)");
+  db.exec(read('../worker/migrations/009-key-fails.sql'));
+  const row = { ...db.prepare('SELECT id, pin_hash, pin_salt, fails, locked_until, key_fails, key_locked_until FROM profiles').get() };
+  assert.deepEqual(row, { id: 'p-a', pin_hash: 'h', pin_salt: 's', fails: 3, locked_until: 99, key_fails: 0, key_locked_until: 0 });
+});

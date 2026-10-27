@@ -141,6 +141,11 @@ async function smoke({ url }) {
       key = (await api.create({ ...look, pin })).key;
       return `made ${look.avatar} ${look.name} with a PIN`;
     });
+    // The cloud takes no profile without a PIN (docs/design/cloud-needs-pin.md).
+    await s.step('a profile with no PIN is refused', async () => {
+      await refused(api.create({ ...look }), 400, 'needs pin');
+      return 'a create without a PIN is refused (400 needs pin)';
+    });
     await s.step('a wrong PIN is refused', async () => {
       const err = await refused(api.open(id, wrong), 401, 'pin');
       return `a wrong PIN is refused (401, ${err.tries} tries left)`;
@@ -150,6 +155,12 @@ async function smoke({ url }) {
       must(opened.name === look.name && opened.pin === true, `opened ${JSON.stringify(opened.name)} pin ${opened.pin}`);
       key = opened.key;
       return 'opened with the PIN: a new key, the same look';
+    });
+    await s.step('Remove PIN through the API is refused', async () => {
+      await refused(api.change(id, key, { pin, newPin: null }), 400, 'needs pin');
+      const page = await api.pull(id, key, 0);
+      must(page.profile?.pin === true, 'the PIN went');
+      return 'a PATCH that clears the PIN is refused (400 needs pin), and the profile still has it';
     });
     const beat = { name: 'Smoke Beat', bpm: 96, bars: 1, swing: 0, rows: [] };
     await s.step('push a record', async () => {
@@ -221,11 +232,18 @@ async function smoke({ url }) {
       must(!profiles.some((x) => x.id === id), 'a check profile is in the public list');
       return `the public list answers (${profiles.length}) and leaves the check's profile out`;
     });
+    // Opening and requests that carry a key count wrong PINs apart (migration
+    // 009): five wrong at /open wait only /open, and the key still deletes.
+    await s.step('wrong PINs at open do not lock the key', async () => {
+      for (let i = 0; i < 4; i++) await refused(api.open(id, wrong), 401, 'pin');
+      await refused(api.open(id, wrong), 429, 'wait');
+      return 'five wrong PINs at open: it waits 10 minutes (429)';
+    });
     await s.step('delete the profile', async () => {
       await refused(api.remove(id, key, wrong), 401, 'pin');
       await api.remove(id, key, pin);
       gone = true;
-      return 'deleted it (a wrong PIN first: refused)';
+      return 'deleted it with the key and the right PIN, though opening waits (a wrong PIN first: refused)';
     });
     await s.step('it is gone', async () => {
       must(!(await api.list()).profiles.some((x) => x.id === id), 'still in the list');

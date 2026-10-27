@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   name         TEXT NOT NULL,             -- a fun name (web/names.js isFunName)
   avatar       TEXT NOT NULL DEFAULT '',  -- an emoji (web/model.js PICTURES)
   color        TEXT NOT NULL,             -- a person color (web/model.js PERSON_COLORS)
-  pin_hash     TEXT,                      -- PBKDF2-SHA-256 of the PIN, hex; NULL: no PIN
+  pin_hash     TEXT,                      -- PBKDF2-SHA-256 of the PIN, hex; NULL: not there (the Worker serves only profiles with a PIN)
   pin_salt     TEXT,                      -- 16 random bytes, hex, one per profile
   fails        INTEGER NOT NULL DEFAULT 0,-- wrong PINs since the last right one or wait
   locked_until INTEGER NOT NULL DEFAULT 0,-- no PIN is checked before this time
@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS profiles (
   record_bytes INTEGER NOT NULL DEFAULT 0,-- its records' and shares' size: JSON + 100 a row (worker/cloud.js ROW_BYTES), capped
   bytes_counted INTEGER NOT NULL DEFAULT 0,-- 1 once the Worker that keeps record_bytes counted it (0: an older Worker may have written since)
   reserved_bytes INTEGER NOT NULL DEFAULT 0,-- room writes in flight have taken, not yet in record_bytes (worker/cloud.js reserve)
-  reserved_at  INTEGER NOT NULL DEFAULT 0 -- the last reservation; older than a minute, reserved_bytes counts for nothing
+  reserved_at  INTEGER NOT NULL DEFAULT 0,-- the last reservation; older than a minute, reserved_bytes counts for nothing
+  key_fails    INTEGER NOT NULL DEFAULT 0,-- wrong PINs on requests that carry a key (Change PIN, Delete), counted apart from `fails`
+  key_locked_until INTEGER NOT NULL DEFAULT 0-- no PIN is checked on a keyed request before this time
 );
 
 -- A device that opened a profile (with its PIN, if it has one) keeps a key.
@@ -184,4 +186,4 @@ CREATE TABLE IF NOT EXISTS migrations (
   name    TEXT PRIMARY KEY,   -- the file's name, without .sql
   applied INTEGER NOT NULL
 );
-INSERT OR IGNORE INTO migrations (name, applied) VALUES ('001-shares-not-gifts-or-families', 0), ('002-player-metrics', 0), ('003-visits-no-ip-hash', 0), ('004-country-only', 0), ('005-drop-uses-visits', 0), ('006-record-bytes', 0), ('007-key-used', 0), ('008-clear-check-shares', 0);
+INSERT OR IGNORE INTO migrations (name, applied) VALUES ('001-shares-not-gifts-or-families', 0), ('002-player-metrics', 0), ('003-visits-no-ip-hash', 0), ('004-country-only', 0), ('005-drop-uses-visits', 0), ('006-record-bytes', 0), ('007-key-used', 0), ('008-clear-check-shares', 0), ('009-key-fails', 0);

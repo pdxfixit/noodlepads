@@ -30,7 +30,7 @@ function cloud(secret = SECRET) {
   return { env, call };
 }
 
-const look = (id) => ({ id, name: 'Admiral Acorn', avatar: '🦖', color: '#1F3FA8' });
+const look = (id) => ({ id, name: 'Admiral Acorn', avatar: '🦖', color: '#1F3FA8', pin: '2468' });
 const SMOKE = 'p-smoke-mv4cyiqj-b8bt';
 
 test("a check's id without the secret is refused as a bad id; with it, it is a check", async () => {
@@ -48,10 +48,10 @@ test("a check's id without the secret is refused as a bad id; with it, it is a c
   assert.deepEqual(c.env.DB.rows('SELECT name, n FROM counters'), [{ name: 'check-profiles', n: 1 }], "on the checks' own cap");
   // Every route that names the id wants the secret too, even with the profile's key.
   const routes = [
-    ['POST', `profiles/${SMOKE}/open`, {}],
+    ['POST', `profiles/${SMOKE}/open`, { pin: '2468' }],
     ['GET', `profiles/${SMOKE}/records`, undefined],
     ['POST', `profiles/${SMOKE}/records`, { put: [] }],
-    ['DELETE', `profiles/${SMOKE}`, {}],
+    ['DELETE', `profiles/${SMOKE}`, { pin: '2468' }],
   ];
   for (const [method, path, body] of routes) {
     const r = await c.call(method, path, { key, body });

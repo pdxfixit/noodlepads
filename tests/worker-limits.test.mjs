@@ -45,7 +45,7 @@ function cloud(limit = 2) {
   return { env, call };
 }
 
-const look = (id) => ({ id, name: 'Admiral Acorn', avatar: '🦖', color: '#1F3FA8' });
+const look = (id) => ({ id, name: 'Admiral Acorn', avatar: '🦖', color: '#1F3FA8', pin: '2468' });
 const sha = (n) => n.toString(16).padStart(64, '0');
 
 async function made(c, id) {
@@ -107,7 +107,7 @@ test('a pull and a sound\'s download are limited per profile (a download by its 
 test('a profile\'s keys share one count, and a made-up key is refused before it counts against the family', async () => {
   const c = cloud(2);
   const first = await made(c, 'p-one');
-  const second = (await c.call('POST', 'profiles/p-one/open', { body: {} })).data.key;
+  const second = (await c.call('POST', 'profiles/p-one/open', { body: { pin: '2468' } })).data.key;
   assert.ok(second && second !== first);
   const push = (key) => c.call('POST', 'profiles/p-one/records', { key, body: { put: [] } });
   // A stranger with made-up bearers: each is refused, and none is counted.
@@ -122,7 +122,7 @@ test('an open is limited per profile (it has no key yet), and a call with no key
   const c = cloud(2);
   await made(c, 'p-one');
   await made(c, 'p-two');
-  const open = (id) => c.call('POST', `profiles/${id}/open`, { body: {} });
+  const open = (id) => c.call('POST', `profiles/${id}/open`, { body: { pin: '2468' } });
   assert.equal((await open('p-one')).status, 200);
   assert.equal((await open('p-one')).status, 200);
   assert.deepEqual([(await open('p-one')).status, (await open('p-one')).data.error], [429, 'slow']);
@@ -145,7 +145,7 @@ test('a limiter that fails lets the call through; no binding limits nothing', as
     console.error = realError;
   }
   for (const name of Object.values(LIMITERS)) delete c.env[name];
-  for (let i = 0; i < 5; i++) assert.equal((await c.call('POST', 'profiles/p-one/open', { body: {} })).status, 200);
+  for (let i = 0; i < 5; i++) assert.equal((await c.call('POST', 'profiles/p-one/open', { body: { pin: '2468' } })).status, 200);
 });
 
 test('site/wrangler.toml declares each limiter, a minute window, far above what a family meets', () => {

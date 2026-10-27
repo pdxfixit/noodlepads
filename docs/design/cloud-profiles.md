@@ -203,7 +203,9 @@ A device key goes in `Authorization: Bearer <key>`.
   device key that opening gave. Changing or removing the PIN needs the current
   PIN as well.
 - **Wrong tries:** after 5 wrong PINs in a row the profile waits 10 minutes
-  before any PIN is checked again (`fails`, `locked_until`, in D1). Trying all
+  before any PIN is checked again (`fails`, `locked_until`, in D1; a request that
+  carries a key counts apart, in `key_fails` and `key_locked_until`, so a
+  stranger's wrong tries never lock a device that has the key). Trying all
   10,000 PINs takes 2,000 waits: about two weeks without a break.
 - **Asked each time the person is opened** (Ben, Q9): switching to them, or
   starting the app on them. Online, `open` checks it and gives a key; offline,

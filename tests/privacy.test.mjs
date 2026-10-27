@@ -128,7 +128,7 @@ test('an expired report goes even when no new report comes: a make, open, push, 
   // Every device has switched reports off; a kid's tablet makes a profile (no X-Noodle-App: usage off too).
   const res = await worker.fetch(new Request('https://noodlepads.com/api/profiles', {
     method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8' }),
+    body: JSON.stringify({ id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '1234' }),
   }), env);
   assert.equal(res.status, 201);
   assert.deepEqual(env.DB.rows('SELECT key FROM reports').map((r) => r.key), ['new']);
@@ -137,7 +137,7 @@ test('an expired report goes even when no new report comes: a make, open, push, 
   report('old-too', now - 1000);
   const made = await worker.fetch(new Request('https://noodlepads.com/api/profiles', {
     method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'X-Noodle-App': 'v=abc&w=400&t=1' },
-    body: JSON.stringify({ id: 'p-b', name: 'Baron Bagel', avatar: '', color: '#1F3FA8' }),
+    body: JSON.stringify({ id: 'p-b', name: 'Baron Bagel', avatar: '', color: '#1F3FA8', pin: '1234' }),
   }), env);
   assert.equal(made.status, 201);
   assert.deepEqual(env.DB.rows('SELECT key FROM reports').map((r) => r.key), ['new']);
@@ -153,7 +153,7 @@ test('an expired report also goes when someone only syncs or looks at the profil
   }), env);
   const { key } = await (await worker.fetch(new Request('https://noodlepads.com/api/profiles', {
     method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8' }),
+    body: JSON.stringify({ id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '1234' }),
   }), env)).json();
   const said = [];
   const log = console.log;
@@ -235,11 +235,11 @@ test('"until the sharer taps 🚫 Unshare. Remixes others made of it stay theirs
     await call('PUT', `sounds/${s}/0`, { key, body: new Uint8Array([n, n]) });
     return s;
   };
-  const a = (await (await call('POST', 'profiles', { body: { id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8' } })).json()).key;
+  const a = (await (await call('POST', 'profiles', { body: { id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '1234' } })).json()).key;
   const s = await sound('p-a', a, 1);
   const { code } = await (await call('POST', 'profiles/p-a/shares', { key: a, body: { kind: 'sound', title: 'Burp', bundle: { clips: [{ id: 'user-1', sound: s }] } } })).json();
   // A remix is the receiver's own record with its own copy of the audio (cloud.js remixShare, then their sync).
-  const b = (await (await call('POST', 'profiles', { body: { id: 'p-b', name: 'Sir Squid', avatar: '', color: '#1F3FA8' } })).json()).key;
+  const b = (await (await call('POST', 'profiles', { body: { id: 'p-b', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '1234' } })).json()).key;
   const mine = await sound('p-b', b, 1);
   await call('POST', 'profiles/p-b/records', { key: b, body: { put: [{ kind: 'clips', id: 'user-9', body: { sound: mine } }] } });
   assert.equal((await call('DELETE', `profiles/p-a/shares/${code}`, { key: a })).status, 200);
@@ -253,10 +253,10 @@ test('"Anyone with a share code can see and play what was shared, until … thei
   claim('until the sharer taps 🚫 Unshare or their profile is deleted');
   claim('gone from the cloud at once, with every share code it made');
   const call = cloud();
-  const { key } = await (await call('POST', 'profiles', { body: { id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8' } })).json();
+  const { key } = await (await call('POST', 'profiles', { body: { id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '1234' } })).json();
   const { code } = await (await call('POST', 'profiles/p-a/shares', { key, body: { kind: 'beat', title: 'Wobbly Taco', bundle: { beats: [{ id: 'beat-1' }] } } })).json();
   assert.equal((await call('GET', `shares/${code}`, { origin: null })).status, 200, 'no key, no PIN');
-  await call('DELETE', 'profiles/p-a', { key, body: {} });
+  await call('DELETE', 'profiles/p-a', { key, body: { pin: '1234' } });
   assert.equal((await call('GET', `shares/${code}`, { origin: null })).status, 404, 'the profile is gone, and its code with it');
 });
 
@@ -277,7 +277,7 @@ test('player metrics last 14 days, devices 90, and hold no IP, city or User-Agen
   const req = new Request('https://noodlepads.com/api/profiles', {
     method: 'POST',
     headers: { Origin: ORIGIN, 'Content-Type': 'application/json', 'CF-Connecting-IP': '192.0.2.44', 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)', 'X-Noodle-App': 'v=abc&w=400&t=1' },
-    body: JSON.stringify({ id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8' }),
+    body: JSON.stringify({ id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '1234' }),
   });
   Object.defineProperty(req, 'cf', { value: { city: 'Portland', region: 'Oregon', country: 'US', asOrganization: 'Comcast Cable', asn: 7922 } });
   assert.equal((await worker.fetch(req, env)).status, 201);

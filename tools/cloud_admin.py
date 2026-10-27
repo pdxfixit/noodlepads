@@ -261,7 +261,7 @@ def migrate(db, yes, out=print, archive=None, allow=()):
 
 # ── profiles ──
 
-PROFILES_SQL = """SELECT p.id, p.name, p.avatar, p.created, p.active, p.rev,
+PROFILES_SQL = """SELECT p.id, p.name, p.avatar, p.created, p.active, p.rev, (p.pin_hash IS NOT NULL) AS pin,
   (SELECT COUNT(*) FROM records r WHERE r.profile_id = p.id AND r.deleted = 0) AS records,
   (SELECT COALESCE(SUM(s.bytes), 0) FROM sounds s WHERE s.profile_id = p.id) AS bytes,
   (SELECT COUNT(*) FROM keys k WHERE k.profile_id = p.id) AS keys,
@@ -282,7 +282,10 @@ def table(rows, out=print):
     for p in rows:
         name = f"{p.get('avatar') or ''} {p['name']}".strip()
         out(f"{p['id']:<28} {name:<18} {when(p['created']):<10} {when(last_active(p)):<10} "
-            f"{p['records']:>7} {size(p['bytes']):>9} {p['keys']:>4} {p['shares']:>6}")
+            f"{p['records']:>7} {size(p['bytes']):>9} {p['keys']:>4} {p['shares']:>6}"
+            # The Worker serves and lists only profiles with a PIN (docs/design/cloud-needs-pin.md): one with
+            # none, made by hand in D1, is unreachable, and Ben deletes it.
+            f"{'' if p['pin'] else '  🔓 no PIN'}")
 
 
 def profiles(db, out=print):
@@ -728,8 +731,9 @@ def reset_pin(db, who, yes=False, ask=input, out=print):
     salt = secrets.token_hex(16)
     h = pin_hash(pin, salt)
     # One UPDATE sets the hash and salt together: a clear, then a set, would let a sync
-    # between them see the profile with no PIN.
-    db.execute(f"UPDATE profiles SET pin_hash = '{h}', pin_salt = '{salt}', fails = 0, locked_until = 0 WHERE id = {q}; DELETE FROM keys WHERE profile_id = {q};")
+    # between them see the profile with no PIN, which the Worker treats as not there.
+    # Both wrong-try counters (opening, and requests that carry a key) start again.
+    db.execute(f"UPDATE profiles SET pin_hash = '{h}', pin_salt = '{salt}', fails = 0, locked_until = 0, key_fails = 0, key_locked_until = 0 WHERE id = {q}; DELETE FROM keys WHERE profile_id = {q};")
     after = db.query(f'SELECT pin_hash FROM profiles WHERE id = {q}')
     if not after or after[0]['pin_hash'] != h:
         raise Trouble('the PIN did not change: check with `just cloud-profiles`.')

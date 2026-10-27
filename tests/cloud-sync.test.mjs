@@ -21,6 +21,7 @@ import { appMeta } from '../web/device-meta.js';
 import { cleanPrefs } from '../web/settings.js';
 
 const KIT = ['kick', 'snare'];
+const PIN = '2468';   // every profile in the cloud has one
 const KEYS = { clips: 'id', overrides: 'id', orders: 'personId', patterns: 'personId', beats: 'id', people: 'id',
   settings: 'key', decks: 'personId', takes: 'id', songs: 'personId', songbook: 'id', prefs: 'personId', layouts: 'id', voices: 'id', touchLayouts: 'id' };
 
@@ -97,11 +98,11 @@ async function startA(api) {
     rows: [{ clipId: 'user-1', steps: [1, 0, 0, 0] }, { clipId: 'p-a-kick', steps: [0, 1, 0, 0] }], created: 6, saved: 6 });
   a.stores.overrides.push({ id: 'p-a-kick', label: 'Boom' });
   a.stores.orders.push({ personId: 'p-a', ids: ['user-1'] });
-  const { key, rev } = await api.create({ id: 'p-a', name: person.name, avatar: person.avatar, color: person.color, edited: 10 });
+  const { key, rev } = await api.create({ id: 'p-a', name: person.name, avatar: person.avatar, color: person.color, edited: 10, pin: PIN });
   return { a, link: { id: 'p-a', key, rev } };
 }
 
-async function openOn(api, id, pin) {
+async function openOn(api, id, pin = PIN) {
   const d = new Device();
   d.stores.people.push({ id: 'p-me', name: 'Me', color: '#1F3FA8', added: true, created: 1 });   // a new device's own "Me"
   const opened = await api.open(id, pin);

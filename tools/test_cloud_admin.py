@@ -191,6 +191,25 @@ class Prune(unittest.TestCase):
         self.assertEqual(rows['p-old']['bytes'], 5)
         self.assertEqual(rows['p-busy']['records'], 3)
 
+    def test_profiles_marks_one_with_no_pin(self):
+        # The Worker treats a profile with no PIN as not there; only by hand can one exist.
+        self.db.execute("UPDATE profiles SET pin_hash = 'h', pin_salt = 's' WHERE id = 'p-busy'")
+        lines, out = quiet()
+        ca.profiles(self.db, out)
+        marked = {l.split()[0]: '🔓 no PIN' in l for l in lines if l.startswith('p-')}
+        self.assertEqual(marked, {'p-old': True, 'p-busy': False, 'p-empty': True, 'p-new': True})
+
+    def test_reset_pin_writes_one_update_that_never_clears_the_pin(self):
+        db = Local(ROOT / 'worker' / 'schema.sql')
+        ResetPin().kid(db)
+        db.ran.clear()
+        ca.reset_pin(db, 'p-cc', yes=True, out=quiet()[1])
+        writes = [sql for sql in db.ran if 'UPDATE profiles' in sql]
+        self.assertEqual(len(writes), 1)
+        self.assertNotIn('pin_hash = NULL', writes[0])
+        self.assertIn('key_fails = 0, key_locked_until = 0', writes[0])
+        self.assertFalse(re.search(r'pin_hash = NULL', ' '.join(db.ran)))
+
     def test_stats_lists_players_not_test_profiles(self):
         lines, out = quiet()
         rows = ca.stats(self.db, now=NOW, out=out, archive=sqlite3.connect(':memory:'))
@@ -463,7 +482,7 @@ class ResetPin(unittest.TestCase):
     # Ben, 2026-10-26: "reset Captain Cranberries' PIN" from a cold session; 2026-10-27: the tool
     # picks a random PIN for Ben to pass on, never 1234 (the profile list is public).
     def kid(self, db, pid='p-cc', name='Captain Cranberries', active=1):
-        db.execute(f"INSERT INTO profiles (id, name, avatar, color, pin_hash, pin_salt, fails, locked_until, rev, edited, created, active) VALUES ('{pid}', '{name}', '', '#1F3FA8', 'h', 's', 4, 99, 0, 1, 1, {active});"
+        db.execute(f"INSERT INTO profiles (id, name, avatar, color, pin_hash, pin_salt, fails, locked_until, key_fails, key_locked_until, rev, edited, created, active) VALUES ('{pid}', '{name}', '', '#1F3FA8', 'h', 's', 4, 99, 3, 77, 0, 1, 1, {active});"
                    f"INSERT INTO keys (hash, profile_id, created) VALUES ('k-{pid}', '{pid}', 1);")
 
     def reset(self, db, who, draws, **kw):
@@ -476,7 +495,7 @@ class ResetPin(unittest.TestCase):
         return done, lines
 
     def stored(self, db, pid='p-cc'):
-        return db.query(f"SELECT pin_hash, pin_salt, fails, locked_until FROM profiles WHERE id = '{pid}'")[0]
+        return db.query(f"SELECT pin_hash, pin_salt, fails, locked_until, key_fails, key_locked_until FROM profiles WHERE id = '{pid}'")[0]
 
     def test_asks_then_sets_a_random_pin_and_drops_every_key(self):
         db = Local(ROOT / 'worker' / 'schema.sql')
@@ -505,6 +524,7 @@ class ResetPin(unittest.TestCase):
         self.assertEqual(row['pin_hash'], ca.pin_hash('4821', row['pin_salt']))
         self.assertEqual(len(row['pin_salt']), 32, '16 random bytes, as the Worker makes')
         self.assertEqual((row['fails'], row['locked_until']), (0, 0), 'no wait left from wrong tries')
+        self.assertEqual((row['key_fails'], row['key_locked_until']), (0, 0), 'nor on the requests that carry a key')
         self.assertEqual(db.query('SELECT COUNT(*) AS n FROM keys')[0]['n'], 0, 'every device opens it again')
 
     def test_a_pin_is_always_four_digits_leading_zeros_too(self):

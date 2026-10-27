@@ -36,22 +36,31 @@ function same(a, b) {
 
 const wait = (until, now) => ({ ok: false, wait: Math.ceil((until - now) / 1000) });
 
+// Which pair of a profile's columns a try is counted in. Opening a profile
+// (anyone, no key) counts in `fails` / `locked_until`; a request that carries a
+// key (Change PIN, Delete) in `key_fails` / `key_locked_until`, so a stranger's
+// wrong tries at /open never lock out a device that has the key. The names are
+// fixed here, never from a request.
+export const OPENING = { fails: 'fails', until: 'locked_until' };
+export const KEYED = { fails: 'key_fails', until: 'key_locked_until' };
+
 // Checks `given` against a profile's PIN (`row`: {id, hash, salt}), and
-// records the try. Returns {ok: true}, {ok: false, wait} (seconds to wait) or
-// {ok: false, tries} (tries left before a wait).
+// records the try in `cols`. Returns {ok: true}, {ok: false, wait} (seconds to
+// wait) or {ok: false, tries} (tries left before a wait).
 //
 // The try is counted first, in one UPDATE that hands back the new count, and
 // only then is the PIN compared: requests sent all at once each get their own
 // number, so no more than TRIES of them are ever compared in a window. (Read
 // first and written after, every one of them read the same count.)
-export async function checkSecret(db, row, given, now) {
-  const counted = await db.prepare(`UPDATE profiles SET fails = fails + 1
-    WHERE id = ? AND locked_until <= ? RETURNING fails`).bind(row.id, now).first();
+export async function checkSecret(db, row, given, now, cols = OPENING) {
+  const { fails: F, until: U } = cols;
+  const counted = await db.prepare(`UPDATE profiles SET ${F} = ${F} + 1
+    WHERE id = ? AND ${U} <= ? RETURNING ${F} AS fails`).bind(row.id, now).first();
   if (!counted) {
-    const locked = await db.prepare('SELECT locked_until FROM profiles WHERE id = ?').bind(row.id).first();
-    return wait(locked?.locked_until ?? now + WAIT_MS, now);
+    const locked = await db.prepare(`SELECT ${U} AS until FROM profiles WHERE id = ?`).bind(row.id).first();
+    return wait(locked?.until ?? now + WAIT_MS, now);
   }
-  const lock = () => db.prepare('UPDATE profiles SET fails = 0, locked_until = ? WHERE id = ? AND locked_until <= ?')
+  const lock = () => db.prepare(`UPDATE profiles SET ${F} = 0, ${U} = ? WHERE id = ? AND ${U} <= ?`)
     .bind(now + WAIT_MS, row.id, now).run();
   // Past the last try of this window: the wait starts, with no compare.
   if (counted.fails > TRIES) {
@@ -60,7 +69,7 @@ export async function checkSecret(db, row, given, now) {
   }
   const right = typeof given === 'string' && given.length <= 64 && same(await hashSecret(given, row.salt), row.hash);
   if (right) {
-    await db.prepare('UPDATE profiles SET fails = 0 WHERE id = ?').bind(row.id).run();
+    await db.prepare(`UPDATE profiles SET ${F} = 0 WHERE id = ?`).bind(row.id).run();
     return { ok: true };
   }
   if (counted.fails >= TRIES) {

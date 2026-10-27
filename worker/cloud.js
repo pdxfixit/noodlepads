@@ -8,7 +8,7 @@ import { isListedEmoji } from '../web/emoji-check.js';
 import { isFunName, cutName } from '../web/names.js';
 import { CLOUD_ID } from '../web/reid.js';
 import { ORIGIN, json, fail, Refuse, readJson, readBytes, randomId, sha256Hex, toBytes, withinDaily, utcDay } from './http.js';
-import { isPin, newSalt, hashSecret, checkSecret, shareCode, isShareCode, plainCode } from './pin.js';
+import { isPin, newSalt, hashSecret, checkSecret, OPENING, KEYED, shareCode, isShareCode, plainCode } from './pin.js';
 import { noteEvent, forgetProfile, expireReports } from './metrics.js';
 import { allowed } from './events-worker.js';
 
@@ -109,40 +109,63 @@ const bearer = (request) => /^Bearer ([a-z2-7]{32})$/.exec(request.headers.get('
 const touch = (env, id, now) => env.DB.prepare('UPDATE profiles SET active = ? WHERE id = ? AND active < ?')
   .bind(now, id, now - ACTIVE_STEP_MS);
 
-// The profile the request's key opens, or null. A key unused for
-// KEY_IDLE_MS is deleted instead; a used one is marked, at most once an hour
-// (one row write). `used` is 0 on a key an older Worker made: its `created` counts.
+// What the request's key opens: the profile's id, NO_KEY (no key, or one the
+// cloud doesn't know), or NO_PIN (the profile has no PIN, which the cloud
+// treats as not there). A key unused for KEY_IDLE_MS is deleted instead; a
+// used one is marked, at most once an hour (one row write). `used` is 0 on a
+// key an older Worker made: its `created` counts. One SELECT reads the key
+// and whether its profile has a PIN.
+const NO_KEY = Symbol('no key');
+const NO_PIN = Symbol('no PIN');
 async function keyProfile(request, env, now) {
   const key = bearer(request);
-  if (!key) return null;
+  if (!key) return NO_KEY;
   const hash = await sha256Hex(key);
-  const row = await env.DB.prepare('SELECT profile_id, created, used FROM keys WHERE hash = ?').bind(hash).first();
-  if (!row) return null;
+  const row = await env.DB.prepare(`SELECT k.profile_id, k.created, k.used, p.pin_hash IS NOT NULL AS has_pin
+    FROM keys AS k LEFT JOIN profiles AS p ON p.id = k.profile_id WHERE k.hash = ?`).bind(hash).first();
+  if (!row) return NO_KEY;
   const last = Math.max(row.used, row.created);
   if (last < now - KEY_IDLE_MS) {
     await env.DB.prepare('DELETE FROM keys WHERE hash = ?').bind(hash).run();
-    return null;
+    return NO_KEY;
   }
+  if (!row.has_pin) return NO_PIN;
   if (last < now - ACTIVE_STEP_MS) await env.DB.prepare('UPDATE keys SET used = ? WHERE hash = ?').bind(now, hash).run();
   return row.profile_id;
 }
 
+// The id the key opens, or a refusal. A profile with no PIN is not there
+// (404 'profile', never 401): it can exist only by hand in D1, and nothing
+// serves it. A key that isn't found is 401 'key' while its profile is there
+// with a PIN (a PIN change closed it), and 404 'profile' once the profile is
+// gone: that is how another device hears someone left the cloud. The extra
+// SELECT runs only on this failure path.
 async function needKey(request, env, profileId, now) {
   const who = await keyProfile(request, env, now);
-  if (!who || (profileId && who !== profileId)) throw new Refuse(401, 'key');
+  if (who === NO_PIN) throw new Refuse(404, 'profile');
+  if (who === NO_KEY) {
+    if (profileId && !await env.DB.prepare('SELECT 1 AS x FROM profiles WHERE id = ? AND pin_hash IS NOT NULL').bind(profileId).first()) {
+      throw new Refuse(404, 'profile');
+    }
+    throw new Refuse(401, 'key');
+  }
+  if (profileId && who !== profileId) throw new Refuse(401, 'key');
   return who;
 }
 
+// Only a profile with a PIN is there.
 async function getProfile(env, id) {
-  const row = await env.DB.prepare('SELECT * FROM profiles WHERE id = ?').bind(id).first();
+  const row = await env.DB.prepare('SELECT * FROM profiles WHERE id = ? AND pin_hash IS NOT NULL').bind(id).first();
   if (!row) throw new Refuse(404, 'profile');
   return row;
 }
 
-// The PIN rule for a profile that has one: right, or 401 {tries} / 429 {wait}.
-async function needPin(env, profile, pin, now) {
-  if (!profile.pin_hash) return;
-  const r = await checkSecret(env.DB, { id: profile.id, hash: profile.pin_hash, salt: profile.pin_salt }, pin, now);
+// The PIN rule: right, or 401 {tries} / 429 {wait}. Opening counts its wrong
+// tries apart (`fails`) from a request that carries a key (`keyed`:
+// `key_fails`), so a stranger's wrong tries at /open never lock Leave,
+// Remove PIN, Change PIN or Delete on a device that has the key.
+async function needPin(env, profile, pin, now, keyed = false) {
+  const r = await checkSecret(env.DB, { id: profile.id, hash: profile.pin_hash, salt: profile.pin_salt }, pin, now, keyed ? KEYED : OPENING);
   if (r.ok) return;
   if (r.wait) throw new Refuse(429, 'wait', { wait: r.wait });
   throw new Refuse(401, 'pin', { tries: r.tries });
@@ -223,9 +246,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 async function listProfiles(env) {
   // Check profiles and old plain ids are left out in the SQL, before the
-  // LIMIT, so any number of them can't push kids out of the 300. Anyone can
+  // LIMIT, so any number of them can't push kids out of the 300. Only profiles
+  // with a PIN are listed (one with none, made by hand, is not there). Anyone can
   // read the list, so it says only which day a look last changed.
-  const rows = await env.DB.prepare(`SELECT * FROM profiles WHERE ${NOT_CHECK} AND ${IS_CLOUD_ID} ORDER BY created DESC LIMIT ?`).bind(LIMITS.listed).all();
+  const rows = await env.DB.prepare(`SELECT * FROM profiles WHERE pin_hash IS NOT NULL AND ${NOT_CHECK} AND ${IS_CLOUD_ID} ORDER BY created DESC LIMIT ?`).bind(LIMITS.listed).all();
   return json(200, {
     profiles: rows.results.filter((r) => CLOUD_ID.test(r.id) && !isCheck(r.id))
       .map((r) => ({ ...looks(r), edited: Math.floor((Number(r.edited) || 0) / DAY_MS) * DAY_MS })),
@@ -258,7 +282,8 @@ async function makeProfile(request, env, now, seen) {
   if (typeof body.id !== 'string' || !CLOUD_ID.test(body.id)) throw new Refuse(400, 'id');
   needProvenCheck(request, env, body.id);
   const look = checkLooks(body);
-  if (body.pin !== undefined && body.pin !== null && !isPin(body.pin)) throw new Refuse(400, 'pin');
+  // A profile needs a PIN: any `pin` that is not four digits is refused.
+  if (!isPin(body.pin)) throw new Refuse(400, 'needs pin');
   await dropOldChecks(env, now);
   await sweepProfileCounters(env, now);
   if (await env.DB.prepare('SELECT 1 AS x FROM profiles WHERE id = ?').bind(body.id).first()) throw new Refuse(409, 'exists');
@@ -271,8 +296,8 @@ async function makeProfile(request, env, now, seen) {
   if (!await withinDaily(env, checks ? 'check-profiles' : 'profiles', checks ? LIMITS.checkProfilesPerDay : LIMITS.newProfilesPerDay, now)) {
     throw new Refuse(429, 'busy');
   }
-  const salt = body.pin ? newSalt() : null;
-  const hash = body.pin ? await hashSecret(body.pin, salt) : null;
+  const salt = newSalt();
+  const hash = await hashSecret(body.pin, salt);
   const edited = Number.isFinite(body.edited) ? Math.min(body.edited, now) : now;
   await env.DB.prepare(`INSERT INTO profiles (id, name, avatar, color, pin_hash, pin_salt, rev, edited, created, active, bytes_counted)
     VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 1)`).bind(body.id, look.name, look.avatar, look.color, hash, salt, edited, now, now).run();
@@ -309,6 +334,10 @@ async function changeProfile(request, env, id, now, seen) {
   await needKey(request, env, id, now);
   const p = await getProfile(env, id);
   const out = { ok: true };
+  // Remove PIN through the API is refused: leaving is a DELETE, which needs the
+  // key and the PIN. Checked before anything changes.
+  if (body.newPin === null) throw new Refuse(400, 'needs pin');
+  if (body.newPin !== undefined && !isPin(body.newPin)) throw new Refuse(400, 'pin');
   const look = checkLooks(body, { partial: true });
   if (Object.keys(look).length) {
     const edited = Number.isFinite(body.edited) ? Math.min(body.edited, now) : now;
@@ -318,13 +347,13 @@ async function changeProfile(request, env, id, now, seen) {
     }
   }
   if (body.newPin !== undefined) {
-    if (body.newPin !== null && !isPin(body.newPin)) throw new Refuse(400, 'pin');
-    await needPin(env, p, body.pin, now);
-    const salt = body.newPin ? newSalt() : null;
-    const hash = body.newPin ? await hashSecret(body.newPin, salt) : null;
+    await needPin(env, p, body.pin, now, true);
+    const salt = newSalt();
+    const hash = await hashSecret(body.newPin, salt);
     // A new PIN closes the profile on every device; this one gets a new key.
+    // One UPDATE from one hash to the next: a profile with a PIN never reads as gone mid-change.
     await env.DB.batch([
-      env.DB.prepare('UPDATE profiles SET pin_hash = ?, pin_salt = ?, fails = 0, locked_until = 0 WHERE id = ?').bind(hash, salt, id),
+      env.DB.prepare('UPDATE profiles SET pin_hash = ?, pin_salt = ?, fails = 0, locked_until = 0, key_fails = 0, key_locked_until = 0 WHERE id = ?').bind(hash, salt, id),
       env.DB.prepare('DELETE FROM keys WHERE profile_id = ?').bind(id),
     ]);
     // The same device, under its new key.
@@ -354,7 +383,7 @@ async function deleteProfile(request, env, id, now) {
   const body = await readJson(request);
   await needKey(request, env, id, now);
   const p = await getProfile(env, id);
-  await needPin(env, p, body.pin, now);
+  await needPin(env, p, body.pin, now, true);
   await wipeProfile(env, id);
   return json(200, { ok: true });
 }

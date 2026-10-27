@@ -39,7 +39,9 @@ function cloud() {
   return { env, call, at: (t) => { now = t; }, later: (ms) => { now += ms; } };
 }
 
-const look = (id, extra = {}) => ({ id, name: 'Admiral Acorn', avatar: '🦖', color: '#1F3FA8', ...extra });
+const PIN = '2468';
+// Every profile has a PIN: the Worker makes no other.
+const look = (id, extra = {}) => ({ id, name: 'Admiral Acorn', avatar: '🦖', color: '#1F3FA8', pin: PIN, ...extra });
 
 async function made(c, id = 'p-one', extra = {}) {
   const r = await c.call('POST', 'profiles', { body: look(id, extra) });
@@ -98,22 +100,22 @@ test('an avatar may be any one emoji from the full list, not only the short list
   assert.deepEqual(c.env.DB.rows('SELECT avatar FROM profiles ORDER BY id').map((r) => r.avatar), ['🧛', '❤️', '#️⃣', '']);
 });
 
-test('the list shows fun names and avatars to anyone, newest first, and whether each has a PIN', async () => {
+test('the list shows fun names and avatars to anyone, newest first; every one has a PIN, and a row with none is not listed', async () => {
   const c = cloud();
   await made(c, 'p-one');
   c.later(1000);
   await made(c, 'p-two', { name: 'Sir Squid', pin: '1234' });
+  // A row with no PIN can exist only by hand in D1 (`just cloud-sql`): newer than both, and not there.
+  c.env.DB.db.prepare("INSERT INTO profiles (id, name, color, edited, created) VALUES ('p-none', 'Lady Lemon', '#1F3FA8', 0, ?)").run(T0 + 5000);
   const r = await c.call('GET', 'profiles', { origin: null });
   assert.equal(r.status, 200);
-  assert.deepEqual(r.data.profiles.map((p) => [p.id, p.name, p.pin]), [['p-two', 'Sir Squid', true], ['p-one', 'Admiral Acorn', false]]);
+  assert.deepEqual(r.data.profiles.map((p) => [p.id, p.name, p.pin]), [['p-two', 'Sir Squid', true], ['p-one', 'Admiral Acorn', true]]);
   assert.deepEqual(Object.keys(r.data.profiles[0]).sort(), ['avatar', 'color', 'edited', 'id', 'name', 'pin']);
   assert.ok(!JSON.stringify(r.data).includes('pin_hash') && !JSON.stringify(r.data).includes('salt'));
 });
 
-test('opening: no PIN opens; a PIN is checked; 5 wrong tries, then a 10-minute wait', async () => {
+test('opening: the PIN is checked; 5 wrong tries, then a 10-minute wait', async () => {
   const c = cloud();
-  await made(c, 'p-open');
-  assert.equal((await c.call('POST', 'profiles/p-open/open', { body: {} })).status, 200);
   await made(c, 'p-pin', { pin: '4321' });
   const row = c.env.DB.rows("SELECT pin_hash, pin_salt FROM profiles WHERE id = 'p-pin'")[0];
   assert.match(row.pin_hash, /^[0-9a-f]{64}$/);
@@ -124,7 +126,7 @@ test('opening: no PIN opens; a PIN is checked; 5 wrong tries, then a 10-minute w
   // 1,000 runs, 2026-10-26.)
   assert.ok(!Object.values(c.env.DB.rows("SELECT * FROM profiles WHERE id = 'p-pin'")[0]).includes('4321'));
   assert.equal(row.pin_hash, await hashSecret('4321', row.pin_salt, 20_000));
-  assert.equal((await c.call('POST', 'profiles/p-pin/open', { body: {} })).status, 401);
+  assert.equal((await c.call('POST', 'profiles/p-pin/open', { body: { pin: PIN } })).status, 401);
   for (const left of [3, 2, 1]) {
     const r = await c.call('POST', 'profiles/p-pin/open', { body: { pin: '0000' } });
     assert.equal(r.status, 401);
@@ -179,7 +181,7 @@ test('records need the profile\'s own key; a push is one rev; a pull brings what
   assert.equal(all.data.rev, 2);
   const since = await c.call('GET', 'profiles/p-a/records?since=2', { key });
   assert.deepEqual([since.data.records, since.data.rev, since.data.more], [[], 2, false]);
-  assert.deepEqual(since.data.profile, { id: 'p-a', name: 'Admiral Acorn', avatar: '🦖', color: '#1F3FA8', edited: T0, pin: false, created: T0 }, 'and the look, for the newer-edit rule');
+  assert.deepEqual(since.data.profile, { id: 'p-a', name: 'Admiral Acorn', avatar: '🦖', color: '#1F3FA8', edited: T0, pin: true, created: T0 }, 'and the look, for the newer-edit rule');
   const del = await c.call('POST', 'profiles/p-a/records', { key, body: { del: [{ kind: 'beats', id: 'beat-1' }] } });
   assert.equal(del.data.rev, 3);
   const gone = await c.call('GET', 'profiles/p-a/records?since=2', { key });
@@ -555,9 +557,22 @@ test('changing the PIN needs the current one, and closes the profile on every ot
   assert.equal((await c.call('GET', 'profiles/p-a/records', { key: elsewhere })).status, 401, 'the other device must open it again');
   assert.equal((await c.call('GET', 'profiles/p-a/records', { key })).status, 401, 'the old key too');
   assert.equal((await c.call('GET', 'profiles/p-a/records', { key: ok.data.key })).status, 200);
-  const off = await c.call('PATCH', 'profiles/p-a', { key: ok.data.key, body: { pin: '2222', newPin: null } });
-  assert.equal(off.status, 200);
-  assert.equal(c.env.DB.rows("SELECT pin_hash FROM profiles WHERE id = 'p-a'")[0].pin_hash, null);
+});
+
+test('Remove PIN through the API is refused: nothing changes, and the PIN still opens the profile', async () => {
+  const c = cloud();
+  const key = await made(c, 'p-a', { pin: '1111' });
+  const before = c.env.DB.rows("SELECT pin_hash, pin_salt FROM profiles WHERE id = 'p-a'")[0];
+  for (const body of [{ pin: '1111', newPin: null }, { newPin: null }, { name: 'Sir Squid', newPin: null }]) {
+    const off = await c.call('PATCH', 'profiles/p-a', { key, body });
+    assert.deepEqual([off.status, off.data.error], [400, 'needs pin']);
+  }
+  assert.deepEqual(c.env.DB.rows("SELECT pin_hash, pin_salt FROM profiles WHERE id = 'p-a'")[0], before);
+  assert.equal(c.env.DB.rows("SELECT name FROM profiles WHERE id = 'p-a'")[0].name, 'Admiral Acorn', 'nothing else changed with it');
+  assert.equal((await c.call('GET', 'profiles/p-a/records', { key })).status, 200, 'the key still works');
+  assert.equal((await c.call('POST', 'profiles/p-a/open', { body: { pin: '1111' } })).status, 200);
+  const bad = await c.call('PATCH', 'profiles/p-a', { key, body: { pin: '1111', newPin: '12' } });
+  assert.deepEqual([bad.status, bad.data.error], [400, 'pin']);
 });
 
 test('a new look keeps the newer edit; only fun names and listed avatars', async () => {
@@ -687,7 +702,7 @@ test('a share outlives the sound it uses, until its profile is deleted: then its
   const theirs = await sound(c, b, 'p-b', 7);
   await c.call('POST', 'profiles/p-b/records', { key: b, body: { put: [{ kind: 'clips', id: 'user-9', body: { sound: theirs } }] } });
   const { data: { code: their } } = await c.call('POST', 'profiles/p-b/shares', { key: b, body: { kind: 'sound', title: 'Burp remix', bundle: { clips: [{ id: 'user-9', sound: theirs }] } } });
-  assert.equal((await c.call('DELETE', 'profiles/p-a', { key: a, body: {} })).status, 200);
+  assert.equal((await c.call('DELETE', 'profiles/p-a', { key: a, body: { pin: PIN } })).status, 200);
   for (const x of [code, beat]) assert.equal((await c.call('GET', `shares/${x}`)).status, 404, 'its codes stop working');
   assert.equal((await c.call('GET', `sounds/${s}`)).status, 404, 'its audio is gone');
   assert.deepEqual(c.env.DB.rows('SELECT id FROM sounds').map((r) => r.id), [theirs], 'only the remix\'s copy is left');
@@ -784,7 +799,7 @@ test('a key not remembered is a session key, deleted after a week; Forget on thi
 test('a profile keeps the keys of its 20 most recently used devices; opening on one more drops the one unused longest', async () => {
   const c = cloud();
   const first = await made(c, 'p-a');
-  const open = async () => { c.later(1000); return (await c.call('POST', 'profiles/p-a/open', { body: {} })).data.key; };
+  const open = async () => { c.later(1000); return (await c.call('POST', 'profiles/p-a/open', { body: { pin: PIN } })).data.key; };
   const early = [];
   for (let i = 0; i < 5; i++) early.push(await open());
   c.later(ACTIVE_STEP_MS + 1);
@@ -801,7 +816,7 @@ test('a profile keeps the keys of its 20 most recently used devices; opening on 
 test('a key unused for 180 days stops working; one used every month never does', async () => {
   const c = cloud();
   const idle = await made(c, 'p-a');
-  const monthly = (await c.call('POST', 'profiles/p-a/open', { body: {} })).data.key;
+  const monthly = (await c.call('POST', 'profiles/p-a/open', { body: { pin: PIN } })).data.key;
   for (let month = 0; month < 12; month++) {
     c.later(30 * 24 * ACTIVE_STEP_MS);
     assert.equal((await c.call('GET', 'profiles/p-a/records', { key: monthly })).status, 200, `month ${month + 1}`);
@@ -812,7 +827,7 @@ test('a key unused for 180 days stops working; one used every month never does',
   // An older Worker's key has no `used`: its `created` counts.
   c.env.DB.db.prepare("INSERT INTO keys (hash, profile_id, created) VALUES ('old', 'p-a', ?)").run(T0);
   c.env.DB.db.prepare("INSERT INTO keys (hash, profile_id, created) VALUES ('new', 'p-a', ?)").run(T0 + 360 * 24 * ACTIVE_STEP_MS);
-  await c.call('POST', 'profiles/p-a/open', { body: {} });
+  await c.call('POST', 'profiles/p-a/open', { body: { pin: PIN } });
   assert.deepEqual(c.env.DB.rows("SELECT hash FROM keys WHERE hash IN ('old', 'new')").map((r) => r.hash), ['new'], 'an open sweeps the idle ones');
 });
 
@@ -828,7 +843,7 @@ test('last activity: opening, pulling and pushing mark it, at most once an hour'
   await c.call('POST', 'profiles/p-a/records', { key, body: { put: [{ kind: 'prefs', id: 'p-a', body: { personId: 'p-a', values: { padSize: 'l' } } }] } });
   assert.equal(active(), T0 + ACTIVE_STEP_MS * 1.5);
   c.later(ACTIVE_STEP_MS * 2);
-  await c.call('POST', 'profiles/p-a/open', { body: {} });
+  await c.call('POST', 'profiles/p-a/open', { body: { pin: PIN } });
   assert.equal(active(), T0 + ACTIVE_STEP_MS * 3.5);
 });
 
@@ -847,11 +862,11 @@ test("daily caps: a deleted profile gives no place back; the deploy checks' have
   const c = cloud();
   const day = (name) => c.env.DB.rows("SELECT n FROM counters WHERE name = ? AND day = '2026-10-11'", name)[0]?.n ?? 0;
   const churn = await made(c, 'p-churn');
-  assert.equal((await c.call('DELETE', 'profiles/p-churn', { key: churn, body: {} })).status, 200);
+  assert.equal((await c.call('DELETE', 'profiles/p-churn', { key: churn, body: { pin: PIN } })).status, 200);
   assert.equal(day('profiles'), 1, 'made and deleted today still counts');
   for (const id of ['p-smoke-mv4cyiqj-b8bt', 'p-e2e-mv4cyiqj-c9cu']) {
     const key = await made(c, id);
-    assert.equal((await c.call('DELETE', `profiles/${id}`, { key, body: {} })).status, 200);
+    assert.equal((await c.call('DELETE', `profiles/${id}`, { key, body: { pin: PIN } })).status, 200);
   }
   assert.deepEqual([day('profiles'), day('check-profiles')], [1, 2], "the checks' count apart from kids'");
   c.env.DB.db.prepare("UPDATE counters SET n = ? WHERE name = 'profiles'").run(LIMITS.newProfilesPerDay);
@@ -922,7 +937,7 @@ test("a deploy check's profile holds 64 KB of records, one sound of 4 MB and one
   // A kid's profile made 10 minutes on sweeps it away, with everything in it.
   c.later(CHECK_MS + 1);
   await made(c, 'p-kid-2');
-  assert.equal((await c.call('GET', `profiles/${id}/records`, { key })).status, 401);
+  assert.equal((await c.call('GET', `profiles/${id}/records`, { key })).status, 404, 'gone: another device hears that');
   for (const table of ['records', 'sounds', 'shares', 'keys']) {
     assert.equal(c.env.DB.rows(`SELECT COUNT(*) AS n FROM ${table} WHERE profile_id = ?`, id)[0].n, 0, table);
   }
@@ -934,7 +949,7 @@ test("a deploy check's profile holds 64 KB of records, one sound of 4 MB and one
 test("check profiles never push a kid out of the list, and a sound's start sweeps old ones too", async () => {
   const c = cloud();
   const kid = await made(c, 'p-kid');
-  const add = c.env.DB.db.prepare("INSERT INTO profiles (id, name, color, edited, created) VALUES (?, 'Sir Squid', '#1F3FA8', 0, ?)");
+  const add = c.env.DB.db.prepare("INSERT INTO profiles (id, name, color, pin_hash, pin_salt, edited, created) VALUES (?, 'Sir Squid', '#1F3FA8', 'h', 's', 0, ?)");
   for (let i = 0; i < LIMITS.listed; i++) add.run(`p-e2e-${i}`, T0 + 1 + i);
   assert.deepEqual((await c.call('GET', 'profiles', { origin: null })).data.profiles.map((p) => p.id), ['p-kid']);
   c.later(CHECK_MS + LIMITS.listed + 1);
@@ -985,14 +1000,14 @@ test('the public list never shows a profile whose id is a plain name from an old
 test("old plain-id profiles never push a kid out of the list's 300, and the list says only which day a look changed", async () => {
   const c = cloud();
   await made(c, 'p-kid', { edited: T0 - 54321 });
-  const add = c.env.DB.db.prepare("INSERT INTO profiles (id, name, color, edited, created) VALUES (?, 'Sir Squid', '#1F3FA8', 0, ?)");
+  const add = c.env.DB.db.prepare("INSERT INTO profiles (id, name, color, pin_hash, pin_salt, edited, created) VALUES (?, 'Sir Squid', '#1F3FA8', 'h', 's', 0, ?)");
   for (let i = 0; i < LIMITS.listed; i++) add.run(`plain${i}`, T0 + 1 + i);   // newer than the kid, every one
   add.run('p-UPPER', T0 + 5000);
   const r = await c.call('GET', 'profiles', { origin: null });
   assert.deepEqual(r.data.profiles.map((p) => p.id), ['p-kid']);
   const day = 24 * 60 * 60 * 1000;
   assert.equal(r.data.profiles[0].edited, Math.floor((T0 - 54321) / day) * day, 'the day, not the moment');
-  const key = await c.call('POST', 'profiles/p-kid/open', { body: {} });
+  const key = await c.call('POST', 'profiles/p-kid/open', { body: { pin: PIN } });
   assert.equal(key.data.edited, T0 - 54321, 'opening it (with its key) still gets the exact time, for the newer edit');
 });
 
@@ -1048,4 +1063,88 @@ test('a push with `since` leaves a record someone wrote after that pull, and nam
   // An older copy of the app sends no `since`: written, as before.
   assert.deepEqual((await push({ put: [beat(80)] })).data, { rev: 6, was: 5 });
   assert.equal((await c.call('GET', 'profiles/p-a/records?since=5', { key })).data.records[0].body.bpm, 80);
+});
+
+// docs/design/cloud-needs-pin.md, section 2: the Worker makes, lists and opens
+// only profiles with a PIN, and a profile with none is not there.
+test('a profile is made only with a PIN: missing, null, "", a number or three digits are refused 400 needs pin, and nothing is made or counted', async () => {
+  const c = cloud();
+  for (const pin of [undefined, null, '', 1234, '123', '12345', 'abcd', ' 123']) {
+    const r = await c.call('POST', 'profiles', { body: { ...look('p-x'), pin } });
+    assert.deepEqual([r.status, r.data.error], [400, 'needs pin'], JSON.stringify(pin));
+  }
+  assert.equal(c.env.DB.rows('SELECT COUNT(*) AS n FROM profiles')[0].n, 0);
+  assert.equal(c.env.DB.rows("SELECT COUNT(*) AS n FROM counters WHERE name = 'profiles'")[0].n, 0, 'a refused try uses no place');
+  assert.equal((await c.call('POST', 'profiles', { body: look('p-x', { pin: '0000' }) })).status, 201, 'four digits, leading zeros too');
+  const row = c.env.DB.rows("SELECT pin_hash, pin_salt FROM profiles WHERE id = 'p-x'")[0];
+  assert.match(row.pin_hash, /^[0-9a-f]{64}$/);
+  assert.match(row.pin_salt, /^[0-9a-f]{32}$/);
+});
+
+test('a profile with no PIN (only by hand in D1) is not there: open, pull, push, sounds, shares, PATCH and DELETE are all 404 profile, never 401', async () => {
+  const c = cloud();
+  const key = await made(c, 'p-a');
+  const other = await made(c, 'p-b', { name: 'Sir Squid' });
+  c.env.DB.db.prepare("UPDATE profiles SET pin_hash = NULL, pin_salt = NULL WHERE id = 'p-a'").run();
+  const answers = {
+    open: await c.call('POST', 'profiles/p-a/open', { body: { pin: PIN } }),
+    openNone: await c.call('POST', 'profiles/p-a/open', { body: {} }),
+    pull: await c.call('GET', 'profiles/p-a/records', { key }),
+    push: await c.call('POST', 'profiles/p-a/records', { key, body: { put: [{ kind: 'beats', id: 'beat-1', body: {} }] } }),
+    sound: await c.call('POST', 'profiles/p-a/sounds', { key, body: { sha256: sha(1), bytes: 2, mime: 'audio/wav' } }),
+    share: await c.call('POST', 'profiles/p-a/shares', { key, body: { kind: 'beat', title: 'Boom', bundle: { beats: [{ id: 'beat-1' }] } } }),
+    mine: await c.call('GET', 'profiles/p-a/shares', { key }),
+    patch: await c.call('PATCH', 'profiles/p-a', { key, body: { name: 'Duke Dumpling' } }),
+    del: await c.call('DELETE', 'profiles/p-a', { key, body: { pin: PIN } }),
+    forget: await c.call('DELETE', 'profiles/p-a/key', { key }),
+  };
+  for (const [name, r] of Object.entries(answers)) assert.deepEqual([name, r.status, r.data.error], [name, 404, 'profile']);
+  assert.equal(c.env.DB.rows("SELECT COUNT(*) AS n FROM records WHERE profile_id = 'p-a'")[0].n, 0);
+  assert.deepEqual((await c.call('GET', 'profiles', { origin: null })).data.profiles.map((p) => p.id), ['p-b'], 'and not listed');
+  assert.equal((await c.call('POST', 'profiles', { body: look('p-a') })).status, 409, 'its id stays taken');
+  assert.equal((await c.call('GET', 'profiles/p-b/records', { key: other })).status, 200, 'everyone else is untouched');
+  assert.equal((await c.call('GET', 'profiles/p-b/records', { key })).status, 404, "its key opens nothing: it is not there either");
+});
+
+test('a profile with a PIN never answers 404: a PIN change closes other devices with 401 key; a delete makes them hear 404 profile', async () => {
+  const c = cloud();
+  const key = await made(c, 'p-a', { pin: '1111' });
+  const elsewhere = (await c.call('POST', 'profiles/p-a/open', { body: { pin: '1111' } })).data.key;
+  const changed = await c.call('PATCH', 'profiles/p-a', { key, body: { pin: '1111', newPin: '2222' } });
+  assert.equal(changed.status, 200);
+  const closed = await c.call('GET', 'profiles/p-a/records', { key: elsewhere });
+  assert.deepEqual([closed.status, closed.data.error], [401, 'key'], 'still there: it must open again');
+  assert.equal((await c.call('GET', 'profiles/p-a/records', { key: 'a'.repeat(32) })).status, 401, 'a made-up key');
+  assert.equal((await c.call('GET', 'profiles/p-a/records')).status, 401, 'no key');
+  assert.equal((await c.call('DELETE', 'profiles/p-a', { key: changed.data.key, body: { pin: '2222' } })).status, 200);
+  for (const k of [elsewhere, key, changed.data.key]) {
+    const gone = await c.call('GET', 'profiles/p-a/records', { key: k });
+    assert.deepEqual([gone.status, gone.data.error], [404, 'profile'], 'another device hears that they left');
+  }
+  assert.equal((await c.call('GET', 'profiles/p-a/records')).status, 404, 'with no key at all, a profile that is gone is gone');
+});
+
+test('wrong tries at /open and wrong PINs on a keyed request are counted apart: a stranger cannot lock Leave, and five wrong keyed ones lock only keyed ones', async () => {
+  const c = cloud();
+  const key = await made(c, 'p-a', { pin: '1111' });
+  for (let i = 0; i < 5; i++) await c.call('POST', 'profiles/p-a/open', { body: { pin: '0000' } });
+  assert.equal((await c.call('POST', 'profiles/p-a/open', { body: { pin: '1111' } })).status, 429, 'opening waits');
+  const row = () => c.env.DB.rows("SELECT fails, locked_until, key_fails, key_locked_until FROM profiles WHERE id = 'p-a'")[0];
+  assert.equal(row().key_fails, 0);
+  assert.equal(row().key_locked_until, 0);
+  // The device that has the key can still change the PIN, and delete.
+  const wrong = await c.call('PATCH', 'profiles/p-a', { key, body: { pin: '9999', newPin: '3333' } });
+  assert.deepEqual([wrong.status, wrong.data.tries], [401, 4], 'its own count: 4 left, not locked');
+  const changed = await c.call('PATCH', 'profiles/p-a', { key, body: { pin: '1111', newPin: '3333' } });
+  assert.equal(changed.status, 200, 'a stranger at /open did not lock Change PIN');
+  assert.equal(row().fails > 0 || row().locked_until > 0, false, 'a new PIN starts both counts again');
+  // Five wrong keyed PINs: 10 minutes for keyed requests only.
+  const k2 = changed.data.key;
+  for (let i = 0; i < 4; i++) assert.equal((await c.call('DELETE', 'profiles/p-a', { key: k2, body: { pin: '0000' } })).status, 401);
+  const fifth = await c.call('DELETE', 'profiles/p-a', { key: k2, body: { pin: '0000' } });
+  assert.deepEqual([fifth.status, fifth.data.wait], [429, WAIT_MS / 1000]);
+  assert.equal((await c.call('DELETE', 'profiles/p-a', { key: k2, body: { pin: '3333' } })).status, 429, 'even the right PIN waits');
+  assert.equal((await c.call('POST', 'profiles/p-a/open', { body: { pin: '0000' } })).data.tries, 4, 'opening has its own count');
+  c.later(WAIT_MS);
+  assert.equal((await c.call('DELETE', 'profiles/p-a', { key: k2, body: { pin: '3333' } })).status, 200, 'after the wait the right PIN deletes');
 });

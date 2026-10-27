@@ -27,6 +27,9 @@ test('cloud-smoke passes against the Worker, checks a deleted sound frees its au
   assert.ok(said.some((l) => l.startsWith("✅ deleted the sound's record: its audio answers 404 at once")), said.join('\n'));
   assert.ok(said.some((l) => l.startsWith('✅ uploaded a small sound to keep')), 'a sound is kept for the profile delete to take');
   assert.ok(said.some((l) => l.startsWith('✅ gone: not listed, opens 404, its sound and its share code 404')), said.join('\n'));
+  for (const start of ['✅ a create without a PIN is refused', '✅ a PATCH that clears the PIN is refused', '✅ five wrong PINs at open: it waits', '✅ deleted it with the key and the right PIN']) {
+    assert.ok(said.some((l) => l.startsWith(start)), `${start}: ${said.join('\n')}`);
+  }
   assert.ok(!said.some((l) => l.startsWith('❌')), said.join('\n'));
   assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM sounds')[0].n, 0, 'nothing left in the cloud');
   assert.equal(env.DB.rows("SELECT COUNT(*) AS n FROM profiles WHERE id LIKE 'p-smoke-%'")[0].n, 0);
