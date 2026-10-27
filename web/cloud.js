@@ -73,9 +73,11 @@ export function resetCloudCheck() { there = null; askedAt = 0; }
 
 // ── links and keys ──
 //
-// A link: {id, key, rev, sent, sounds, pin, check, newPin, remembered,
-// keyDropped, noOffer}. `key` is kept for a profile with no PIN (a link from
-// before every profile had one), or one this device remembers; any other
+// A link: {id, key, rev, sent, sounds, foreign, pin, check, newPin, remembered,
+// keyDropped, noOffer}. `foreign`: per record, what a newer copy of the app
+// wrote that this copy's checks dropped, put back on a push (foreign.js).
+// `key` is kept for a profile with no PIN (a link from before every profile
+// had one), or one this device remembers; any other
 // PIN's key lives in `sessionKeys`, for this page's life, so the PIN is asked
 // on every visit. goUp saves a pending link first (the id, no key, `pin`,
 // the PIN's `check`), so a tab that dies mid-create reopens with a link that
@@ -466,7 +468,7 @@ export function syncNow(personId, { onProgress } = {}) {
     const id = personId;
     try {
       const link = linkOf(id);
-      const report = await syncProfile({ ...link, key: keyOf(id), sent: { ...link.sent }, sounds: { ...link.sounds } }, {
+      const report = await syncProfile({ ...link, key: keyOf(id), sent: { ...link.sent }, sounds: { ...link.sounds }, foreign: { ...link.foreign } }, {
         ...deps(),
         signal: stop.signal,
         fetched: fetchedFor.get(id),
@@ -641,7 +643,7 @@ export async function openProfile(profileId, pin) {
   const opened = await api.open(profileId, pin, false);
   const before = linkOf(profileId);
   await saveLink({
-    id: profileId, key: opened.key, rev: before?.rev ?? 0, sent: before?.sent ?? {}, sounds: before?.sounds ?? {},
+    id: profileId, key: opened.key, rev: before?.rev ?? 0, sent: before?.sent ?? {}, sounds: before?.sounds ?? {}, foreign: before?.foreign ?? {},
     pin: !!opened.pin, check: pin ? await pinCheck(pin) : undefined,
   });
   if (pin) { unlocked.add(profileId); pinTyped.add(profileId); }

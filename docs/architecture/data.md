@@ -54,7 +54,7 @@
 | `takes` | `id` (`take-…`) | 7 | `{id, personId, name, created, duration, events}` | app.js dj `saveTake` / `deleteTake` | yes | yes |
 | `songs` | `personId` | 8 | the open song: `cleanSong` shape `{id?, personId, name, tempo, tempos?, lanes, slots}` | app.js `makeSong` `save` / `close` | yes | yes (one each) |
 | `songbook` | `id` (`song-…`) | 9 | a song plus `{id, created, saved}` | app.js `songBook` | yes | yes |
-| `cloud` | `id` (person id) | 10 | this device's link: `{id, key, rev, sent, sounds, pin, check, newPin?, remembered?, rememberUntil? (before 2026-10-27), keyDropped?, noOffer?}` (cloud.md "The cloud link") | cloud.js `saveLink`, `dropLink` | **never** | it is the link |
+| `cloud` | `id` (person id) | 10 | this device's link: `{id, key, rev, sent, sounds, foreign?, pin, check, newPin?, remembered?, rememberUntil? (before 2026-10-27), keyDropped?, noOffer?}` (cloud.md "The cloud link") | cloud.js `saveLink`, `dropLink` | **never** | it is the link |
 | `prefs` | `personId` | 11 | `{personId, values: {level, advancedBeats, padSize, …}}` | `settings.js setSetting` | yes | yes (one each) |
 | `layouts` | `id` (`layout-…`) | 12 | `{id, personId, name, created, keys}` | app.js dj `saveLayout` | yes | yes |
 | `voices` | `id` (`voice-…`) | 13 | `{id, personId, name, emoji, knobs, created, used, edited?}` | `state.js saveMyVoice` (sheet.js) | yes | yes |

@@ -1054,3 +1054,45 @@ test('a sound read as it arrives: its bytes told piece by piece, a stop is a Clo
   const pulls = createCloudApi({ fetch: async () => new Response('{"records":[]}', { headers: { 'Content-Type': 'application/json' } }) });
   await assert.rejects(pulls.pull('p-abcdefghij', 'k', 0, halt.signal), (err) => err.status === 0 && err.error === 'stalled');
 });
+
+// What a newer copy of the app wrote into a record (a field the older copy's
+// checks drop) is still in the cloud after the older copy edits that record
+// (web/foreign.js; storage and sync seat, council round 1).
+test('an older app\'s edit to a record keeps the fields a newer app wrote into it', async () => {
+  const { api, env } = server();
+  const { a: newer, link } = await startA(api);
+  newer.stores.beats[0] = { ...newer.stores.beats[0], mood: 'spooky', rows: newer.stores.beats[0].rows.map((r, i) => (i ? r : { ...r, wobble: 0.5 })) };
+  await syncProfile(link, newer.deps(api));
+  const inCloud = () => JSON.parse(env.DB.rows("SELECT body FROM records WHERE kind = 'beats'")[0].body);
+  assert.equal(inCloud().mood, 'spooky');
+
+  // The older copy: its checks do not know `mood` or `wobble`.
+  const { d: older, link: ol } = await openOn(api, 'p-a');
+  await syncProfile(ol, older.deps(api));
+  assert.equal(older.stores.beats[0].mood, undefined, 'dropped on this device, as ever');
+  const quiet = await syncProfile(ol, older.deps(api));
+  assert.deepEqual(moved(quiet), { pulled: 0, pushed: 0, deleted: 0, sounds: 0 }, 'a sync with no edit sends nothing');
+  assert.equal(inCloud().mood, 'spooky');
+
+  const mine = older.stores.beats[0];
+  await older.put('beats', { ...mine, name: 'Turbo Taco', rows: [{ ...mine.rows[0], steps: mine.rows[0].steps.map((s, i) => (i === 2 ? true : s)) }, mine.rows[1]], changed: Date.now() });
+  const sent = await syncProfile(ol, older.deps(api));
+  assert.equal(sent.pushed, 1);
+  const body = inCloud();
+  assert.equal(body.name, 'Turbo Taco', 'the edit reached the cloud');
+  assert.equal(body.rows[0].steps[2], true);
+  assert.equal(body.mood, 'spooky', 'and so did what the newer app wrote');
+  assert.equal(body.rows[0].wobble, 0.5);
+  assert.deepEqual(moved(await syncProfile(ol, older.deps(api))), { pulled: 0, pushed: 0, deleted: 0, sounds: 0 }, 'settled');
+
+  // A second edit, later: the fields are still carried.
+  await older.put('beats', { ...older.stores.beats[0], bpm: 130, changed: Date.now() });
+  await syncProfile(ol, older.deps(api));
+  assert.equal(inCloud().bpm, 130);
+  assert.equal(inCloud().mood, 'spooky');
+  assert.equal(inCloud().rows[0].wobble, 0.5);
+
+  // The other device pulls the older copy's edits.
+  await syncProfile(link, newer.deps(api));
+  assert.equal(newer.stores.beats[0].bpm, 130);
+});

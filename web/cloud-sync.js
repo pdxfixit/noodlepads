@@ -14,6 +14,7 @@ import { sharedRemixName, cutName } from './names.js';
 import { groupName } from './groups.js';
 import { STAMP, resolve } from './merge3.js';
 import { songBeatIds, mapSongBeats } from './playlist.js';
+import { foreignOf, restoreForeign } from './foreign.js';
 
 // The stores that belong to one person (`voices` is ⭐ Voices, IndexedDB
 // `voices`). orders, patterns, decks, songs and
@@ -392,6 +393,7 @@ export async function syncProfile(link, deps) {
   const id = link.id;
   link.sent ??= {};
   link.sounds ??= {};
+  link.foreign ??= {};   // per record: what a newer app wrote that this copy's checks dropped (foreign.js)
   // A clip's audio hash: as the cloud has it (shaOf), and as this device
   // holds it now (shaHere), which differ once its audio is changed here.
   const shaOf = (k) => (k.startsWith('clips:') ? link.sounds[k.slice(6)]?.sha256 ?? '' : '');
@@ -606,6 +608,13 @@ async function pullOnce(link, deps, { of: shaOf, here: shaHere, map: hereSha }, 
       if (wrote) hereSha.delete(p.id);   // the push hashes what this device holds now
     }
     const cloudIs = (record) => { link.sent[k] = hashOf(record, shaOf(k)); bases_.set(k, record); };
+    // What a newer app wrote into this record, which the checks dropped: the
+    // push puts it back (foreign.js). Nothing, when the cloud's copy is whole here.
+    if (p.deleted || action === 'delete' || p.skip || (action === 'same' && p.same)) delete link.foreign[k];
+    else if (f.there) {
+      const foreign = foreignOf(f.there, p.kind === 'overrides' ? p.body : { ...p.body, personId: id });
+      if (foreign) link.foreign[k] = foreign; else delete link.foreign[k];
+    }
     if (p.deleted || action === 'delete') {
       // Gone in the cloud: forgotten here. A record this device changed (or
       // never deleted) is pushed again as new.
@@ -620,7 +629,7 @@ async function pullOnce(link, deps, { of: shaOf, here: shaHere, map: hereSha }, 
     if (action === 'take') {
       cloudIs(f.there);
     } else if (action === 'same') {
-      cloudIs(p.body);
+      cloudIs(f.there ?? p.body);   // as this device holds it: that is what the push compares
     } else if (action === 'fresh') {
       if (after.has(k)) cloudIs(after.get(k).record);
     } else if (action === 'merged') {
@@ -695,14 +704,19 @@ async function pushAll(link, deps, { of: shaOf, map: hereSha }, report, bases_) 
   const utf8 = new TextEncoder();
   const work = [];
   for (const r of plan.put) {
-    const text = JSON.stringify(body(r));
+    const k = keyOf(r.kind, r.id);
+    const mine = body(r);
+    // What a newer app wrote into this record goes back with it (foreign.js);
+    // the base is the record without it, as this copy of the app knows it.
+    const f = link.foreign[k];
+    const sent = f ? restoreForeign(mine, f.cleaned, f.raw) : mine;
+    const text = JSON.stringify(sent);
     if (text.length > RECORD_BYTES) {
       report.heavy = (report.heavy ?? 0) + 1;
       continue;
     }
     const wire = { kind: r.kind, id: r.id, body: JSON.parse(text) };
-    const k = keyOf(r.kind, r.id);
-    work.push({ put: r, wire, hash: hashOf(r.record, shaOf(k)), bytes: utf8.encode(text).length + utf8.encode(`{"kind":"${r.kind}","id":"${r.id}","body":}`).length });
+    work.push({ put: r, wire, base: f ? JSON.parse(JSON.stringify(mine)) : wire.body, foreign: !!f, hash: hashOf(r.record, shaOf(k)), bytes: utf8.encode(text).length + utf8.encode(`{"kind":"${r.kind}","id":"${r.id}","body":}`).length });
   }
   for (const d of plan.del) work.push({ del: d, bytes: utf8.encode(JSON.stringify(d)).length });
   let stale = 0;
@@ -718,9 +732,16 @@ async function pushAll(link, deps, { of: shaOf, map: hereSha }, report, bases_) 
       if (left.has(k)) continue;   // the next round pulls the other device's and merges
       if (w.put) {
         link.sent[k] = w.hash;
-        bases_.set(k, w.wire.body);
+        bases_.set(k, w.base);
+        // The cloud now holds the record with those fields; this device's
+        // copy of it is what the next push puts them back into.
+        if (w.foreign) {
+          const still = foreignOf(w.base, w.wire.body);
+          if (still) link.foreign[k] = still; else delete link.foreign[k];
+        }
       } else {
         delete link.sent[k];
+        delete link.foreign[k];
         bases_.drop(k);
       }
     }
