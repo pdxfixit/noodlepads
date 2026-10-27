@@ -16,10 +16,18 @@ serve port="8765":
 doctor:
     @sh tools/doctor.sh
 
-# (one file per `node --check`: given several, it checks only the first)
+# Once per clone (a worktree shares its checkout's setting): git runs .githooks/ before a commit
+# (every module parses; a staged web/version.js carries this commit's number) and before a push
+# (the last release carries its commit's number). Sets no author: commits keep your own git identity
+[doc("Turn on the git hooks in .githooks/ (once per clone): a commit checks syntax and the staged release, a push checks the release's number")]
+setup:
+    git config core.hooksPath .githooks
+    @echo "✅ commits check syntax and a staged web/version.js; pushes check the release's number"
+
+# (tools/syntax_check.sh: one file per `node --check`, as it takes only the first of several)
 [doc("Check syntax, then run the tests (Node's built-in runner, then the tools' and the noodlepads-logs skill's unittest; no install step). Judge by the exit code")]
 test:
-    @for f in web/*.js worker/*.js tools/*.mjs; do node --check "$f" || exit 1; done
+    @sh tools/syntax_check.sh
     @# The spec reporter, as on GitHub; a file whose test --test-force-exit cut
     @# short ("▶") runs again alone, and its exit code counts (tools/node_tests.sh).
     @sh tools/node_tests.sh

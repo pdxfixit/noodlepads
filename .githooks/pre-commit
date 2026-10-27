@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Fast checks before every commit (about 4 s; the full suite is `just test`,
+# run once per landing): every module parses, and a staged web/version.js
+# carries this commit's number. 2026-10-26 (a83f8e9): a release counted from a
+# commit already in HEAD reached a push and failed the version check. Turn it
+# on once per clone with `just setup`.
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)"
+if ! sh tools/syntax_check.sh >&2; then
+  echo "🛑 a module has a syntax error, so the commit is refused." >&2
+  exit 1
+fi
+python3 tools/bump_version.py --staged || exit 1

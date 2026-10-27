@@ -13,6 +13,9 @@ count + 1). It only ever goes up. The deploy labels version.json from it
     python3 tools/bump_version.py --check   exit 1 unless the release's PATCH is
                                             the commit count of the commit that
                                             set it (CI, just ship; full history)
+    python3 tools/bump_version.py --staged  the same for the commit being made, when
+                                            web/version.js is staged (the
+                                            pre-commit hook, `just setup`)
     python3 tools/bump_version.py --restamp when HEAD set web/version.js, make its
                                             PATCH HEAD's own commit count (just
                                             land runs it after each pick: a
@@ -86,6 +89,21 @@ def check_problem(stamp, count):
             f"Run 'just version' before committing a change to web/.")
 
 
+def staged_problem(stamp, head_count, parents=()):
+    """Why a staged release is wrong for the commit being made, or None. Pure.
+    head_count: commits behind the one being made (for a merge, both sides').
+    parents: a merge's parent releases; keeping one of them is fine, since the
+    commit that set it already carries its number."""
+    if stamp in parents:
+        return None
+    m = SEMVER.match(stamp)
+    want = head_count + 1
+    if m and int(m.group(3)) == want:
+        return None
+    return (f"web/version.js says {stamp}, but this commit will be commit {want}: PATCH must be {want}. "
+            f"Another commit landed since 'just version'; run it again and stage web/version.js.")
+
+
 def merging():
     return subprocess.run(["git", "-C", str(ROOT), "rev-parse", "-q", "--verify", "MERGE_HEAD"],
                           capture_output=True).returncode == 0
@@ -121,6 +139,18 @@ def check():
     print(f"✅ web/version.js {stamp}: PATCH is the commit count of {last[:7]}")
 
 
+def staged():
+    if subprocess.run(["git", "-C", str(ROOT), "diff", "--cached", "--quiet", "--", "web/version.js"]).returncode == 0:
+        return  # version.js is not in this commit
+    refuse_shallow(", then 'just version'")
+    stamp = stamp_of(git("show", ":web/version.js")).group(1)
+    parents = (tuple(stamp_of(git("show", f"{r}:web/version.js")).group(1) for r in ("HEAD", "MERGE_HEAD"))
+               if merging() else ())
+    problem = staged_problem(stamp, behind(), parents)
+    if problem:
+        sys.exit(f"🛑 {problem}")
+
+
 def restamp():
     if "web/version.js" not in git("diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD").split("\n"):
         return  # this commit does not set the release
@@ -137,6 +167,8 @@ def main():
     args = sys.argv[1:]
     if "--check" in args:
         return check()
+    if "--staged" in args:
+        return staged()
     if "--restamp" in args:
         return restamp()
     text = FILE.read_text()

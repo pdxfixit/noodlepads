@@ -78,6 +78,22 @@ class LiveAgainstMain(unittest.TestCase):
         self.assertTrue(line.startswith("✅"), line)
         self.assertIn(f"{label}, which is origin/main", line)
 
+    def hooks_line(self):
+        out = subprocess.run(["sh", "tools/doctor.sh"], cwd=self.root, env=self.env, capture_output=True,
+                             text=True).stdout
+        lines = [line for line in out.splitlines() if "git hooks" in line]
+        self.assertEqual(len(lines), 1, out)
+        return lines[0]
+
+    def test_hooks_off_warns_and_names_just_setup(self):
+        line = self.hooks_line()
+        self.assertTrue(line.startswith("⚠️"), line)
+        self.assertIn("just setup", line)
+
+    def test_hooks_on_is_ok(self):
+        self.git("config", "core.hooksPath", ".githooks")
+        self.assertTrue(self.hooks_line().startswith("✅"))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -31,6 +31,8 @@ if git rev-parse -q --verify main > /dev/null; then
 fi
 dirty=$(git status --porcelain | wc -l | tr -d ' ')
 [ "$dirty" = 0 ] || warn "$dirty uncommitted file(s) here (git status)"
+if [ "$(git config core.hooksPath)" = .githooks ]; then ok "git hooks on (a commit checks syntax and the staged release; a push, the release's number)"
+else warn "git hooks are off: just setup (once per clone) turns on the commit and push checks"; fi
 
 # Tools. Tests need node; tools need python3 3.8+; just look needs Node's own
 # WebSocket (Node 22+) and Chrome.

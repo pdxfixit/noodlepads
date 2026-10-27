@@ -15,7 +15,7 @@ Every change serves this. Why, and the north star it steers: [ADR 0022](docs/adr
 
 ## TL;DR
 
-- **Start:** `just doctor`: are you in the main checkout or a worktree, are the tools there, is `main` live. Then the cold start below. A cloud container may have no `just`: `pip install rust-just` gives it (2026-10-17).
+- **Start:** `just setup` once per clone (git hooks: a commit checks syntax and a staged `web/version.js`'s number, a push checks the release's number; a worktree shares its checkout's setting), then `just doctor`: are you in the main checkout or a worktree, are the tools there, is `main` live. Then the cold start below. A cloud container may have no `just`: `pip install rust-just` gives it (2026-10-17).
 - **Test:** `just test` (syntax check, then Node's built-in test runner; nothing to install).
 - **Run:** `just serve`, then http://localhost:8765/. Port 8765 is Ben's own server; agents preview on 8781 (see [Verify](#verify)).
 - **Ship:** a change to `web/` gets `just version` in the same commit ([Ship](#ship)). `just ship`, from the main checkout only. In a worktree, commit on your branch and report the commits; they are landed with `just land` ([docs/how-to.md](docs/how-to.md)). Every push to `main` is deployed by GitHub (`.github/workflows/deploy.yml`, [ADR 0025](docs/adr/0025-github-deploys.md)): tests, deploy, then the live cloud checks. Agents never deploy and hold no Cloudflare token; after a push, read the deploy run.

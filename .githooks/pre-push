@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Before every push: the last web/version.js release must carry the number of
+# the commit that set it, as CI checks. A rebase onto a newer main after
+# `just version` moves the commit count and turns CI red after the push.
+# Turned on by `just setup`.
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)"
+if ! out=$(python3 tools/bump_version.py --check 2>&1); then
+  echo "$out" >&2
+  # 'just version' + 'git commit --amend' cannot work: the pre-commit hook
+  # counts an amend as a new commit (count + 1), and --check wants HEAD's own
+  # count. Recommitting from the parent satisfies both.
+  echo "🛑 push refused: a rebase moved the commit count. Recommit the release: git reset --soft HEAD~1 && just version && git add web/version.js && git commit (not --amend: the pre-commit hook counts an amend as a new commit)." >&2
+  exit 1
+fi

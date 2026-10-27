@@ -1,6 +1,6 @@
 # How to
 
-Step by step for the common jobs, so a fresh session never has to guess. [AGENTS.md](../AGENTS.md) has the rules; this file has the order to apply them in. Start every session with `just doctor`: it says whether you are in the main checkout or a worktree, checks just, node, python and Chrome, and compares what is live with `main`.
+Step by step for the common jobs, so a fresh session never has to guess. [AGENTS.md](../AGENTS.md) has the rules; this file has the order to apply them in. Start every session with `just doctor`: it says whether you are in the main checkout or a worktree, checks just, node, python and Chrome, and compares what is live with `main`. Run `just setup` once per clone (a worktree shares its checkout's setting) to turn on the git hooks in `.githooks/`: a commit checks that every module parses and that a staged `web/version.js` carries this commit's number; a push checks that the last release carries its own commit's number. After a rebase moved the count, recommit the release from its parent (`git reset --soft HEAD~1`, `just version`, `git add web/version.js`, `git commit`), never `--amend`: the pre-commit hook counts an amend as a new commit. `just land` commits its restamp with `--no-verify`, so it is unaffected.
 
 ## Where you run things
 
