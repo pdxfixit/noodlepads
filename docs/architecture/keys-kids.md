@@ -418,6 +418,7 @@ Worked out in four places: `sequencer.js outputDelay`; `app.js` `deps.latency` f
 | Every `touch.js` and `keyset.js` change returns a new object and never changes its input | `touch.test.mjs`, `keyset.test.mjs` |
 | A hit is snapped once, on the clock of its moment | `beat-builder.test.mjs`, `rhythm.test.mjs` |
 | `stopBeatRec` clears `beatRec` before `seq.stop()`, since stopping calls `dj.beatStopped` | `beat-rec-stop.test.mjs` |
+| A recording into the beat ended while its sounds load (`startBeatRec` awaits `seq.play`) stops the beat once they have, and leaves no 40 ms timer | `beat-rec-early-stop.test.mjs` |
 | A beat stopped from outside ends the recording | `beat-rec-stop.test.mjs` |
 | While recording, a new sound takes an empty row first, never one already used this recording | `rec-empty-rows.test.mjs` |
 | `showRec` runs every 40 ms and writes only what changed (`putText`, `putAttr`): rewriting labels re-ran tooltips and held the playhead up | `keys-playhead.test.mjs` |

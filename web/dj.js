@@ -877,13 +877,17 @@ export function createDJ({ el, deps }) {
     seq.metronome(false);                 // the beat's own schedule ticks now
     seq.setClick(clickWanted);            // only when ⏲️ Click track is on (the count-in always counts)
     showRec();
-    if (beatRec.startedBeat) {
+    const mine = beatRec;
+    if (mine.startedBeat) {
       await seq.play({ countIn: true });
-      if (beatRec) beatRec.from = seq.beatClock().t0;
+      // Ended while the sounds loaded (■ Stop, Esc, the page hidden): its
+      // stop found nothing playing yet, so the beat stops now.
+      if (beatRec !== mine) { if (!beatRec) seq.stop(); return; }
+      mine.from = seq.beatClock().t0;
     } else {
-      beatRec.from = seq.grid()?.next ?? deps.now();
+      mine.from = seq.grid()?.next ?? deps.now();
     }
-    if (beatRec) beatRec.snap = createSnapper(beatRec.from);
+    mine.snap = createSnapper(mine.from);
     beatTimer = setInterval(showRec, 40);   // often enough that the count lands on its beat
   }
   // why: what ended it ('button', 'escape', 'leave', or 'stopped': the beat
