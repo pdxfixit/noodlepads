@@ -76,3 +76,29 @@ test('▶ Play keeps only the open beat\'s sounds: one no row uses is let go', a
   assert.deepEqual(seq.held(), [mine.rows[0].clipId], 'only the open beat\'s sound');
   $('#seq-play').dispatch('click');
 });
+
+// ▶ Play waits for its sounds. A song started meanwhile (or the screen left)
+// stops the beat maker, and the ▶ still waiting stands down: it used to go
+// on once its sounds came, playing the beat over the song and letting go of
+// the song's other beats' sounds.
+test('▶ Play on Beats, then a song started while its sounds load: the beat stands down', async () => {
+  const { dropBeat } = await import('./song-ui.mjs');
+  if (playing()) $('#seq-play').dispatch('click');
+  const x = mine.rows[0].clipId;
+  const y = other.rows[0].clipId;
+  state.savedBeats.push({ id: 'beat-y', personId: state.personId, name: 'Y beat', bpm: 100, bars: 1, swing: 0, saved: 2, created: 2,
+    rows: [{ clipId: y, steps: Array(16).fill(true), accents: Array(16).fill(false), rate: 1, ring: false, muted: false }] });
+  const openX = hold(x);
+  $('#seq-play').dispatch('click');   // waits for X
+  $('#song-tab').dispatch('click');
+  dropBeat($, { name: mine.name });
+  dropBeat($, { lane: 1, name: 'Y beat' });
+  $('#song-play').dispatch('click');  // waits for X too
+  openX();
+  await flush();
+  await page.settle();
+  assert.equal($('#song-play').getAttribute('aria-pressed'), 'true', 'the song plays');
+  assert.ok(!playing(), 'the beat did not start over it');
+  assert.ok(seq.held().includes(y), "the song's other beat keeps its sound");
+  $('#song-play').dispatch('click');
+});

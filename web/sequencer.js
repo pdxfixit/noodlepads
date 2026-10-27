@@ -1104,8 +1104,11 @@ export function createSequencer(deps) {
     deps.onPlay?.();   // a song playing stops: one thing plays at a time
     const ctx = audio.wake();
     const asked = pattern;
+    const ask = ++playAsk;
     await refresh(pattern.rows);
-    if (playing() || pattern !== asked) return;   // stopped, or another beat opened, while its sounds loaded
+    // Stopped (a song or a sample began, the screen changed), or another
+    // beat opened, while its sounds loaded: this ▶ stands down.
+    if (playing() || pattern !== asked || ask !== playAsk) return;
     // Only the open beat's sounds stay (a song playing stopped as this began),
     // so a sound deleted or taken off every row is not kept decoded all visit.
     if (!preparing) {
@@ -1146,7 +1149,9 @@ export function createSequencer(deps) {
   }
 
   // A groove loaded with ⌨️ Keys on stays in the scratch when it stops.
+  let playAsk = 0;   // counts ▶ asks; stop() makes one still loading stand down
   function stop() {
+    playAsk++;
     growHook = null;
     // A chip waiting for the bar line is taken back: a tap on it now opens it at once.
     if (queued) { queued = null; showChips(); }
@@ -2735,7 +2740,7 @@ export function createSequencer(deps) {
     const again = sample?.id === id;
     stopSample();
     if (again) return;   // ■: the same ▶ again stops it
-    if (playing()) stop({ keepTrial: true });
+    stop();              // the beat, or a ▶ still loading its sounds
     deps.onPlay?.();     // a song playing stops
     const mine = { id, voices: new Map(), timer: 0, onEnd };
     sample = mine;

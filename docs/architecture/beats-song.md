@@ -121,7 +121,7 @@ The library is the truth. `patterns` only says which named beat is open; no reco
 | Song's `raf` | `song.js follow` | every frame | the playhead line and the lit blocks |
 | 🧸 Kids' `run.timer` | `kids.js playBeat` | 25 ms | its own, 0.12 s ahead |
 
-`play()` waits for every row's sound (`refresh` → `audio.load`, into the `ready` map), then sets `t0 = currentTime + 0.05` (plus one bar with a count-in).
+`play()` waits for every row's sound (`refresh` → `audio.load`, into the `ready` map); a `stop()` meanwhile (a song or sample begins, the screen changes) makes it stand down (`playAsk`, `tests/beat-ready.test.mjs`). Then it sets `t0 = currentTime + 0.05` (plus one bar with a count-in).
 
 ### Per-row clocks
 
