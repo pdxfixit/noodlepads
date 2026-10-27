@@ -5232,7 +5232,6 @@ dialog.kids-sum :focus-visible { outline: 4px solid var(--ink); outline-offset: 
 
 @media (prefers-reduced-motion: reduce) {
   .kids .boing, .kids .wiggle, .kids-sum .wiggle { animation: none; }
-  .kids .kids-pad.kids-pad.boing { animation: none; }   /* outranks the 🌀 Spinner skin's turn */
   .kids .boing { filter: brightness(1.2); }
   .kids-mic.recording { scale: 1; }   /* the glow still follows the voice */
   .kids-dot, .kids-pad, .kids-tab, .kids-key { transition: none; }
