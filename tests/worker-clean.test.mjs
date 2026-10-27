@@ -10,8 +10,15 @@ import { cleanPayload } from '../web/log-clean.js';
 
 const boards = JSON.parse(readFileSync(new URL('../web/boards.json', import.meta.url), 'utf8'));
 
-test('the kit ids are the kit in boards.json', () => {
+test('the kit ids are the kit in boards.json, read from it', () => {
   assert.deepEqual([...KIT_IDS].sort(), boards.kit.map((k) => k.id).sort());
+  assert.ok(KIT_IDS.includes('kick') && KIT_IDS.includes('piano-e'), 'the instruments\' own copies are in it');
+});
+
+test('the Worker holds no list of its own: worker/clean.js reads boards.json', () => {
+  const code = readFileSync(new URL('../worker/clean.js', import.meta.url), 'utf8');
+  assert.match(code, /from '\.\.\/web\/boards\.json' with \{ type: 'json' \}/);
+  assert.doesNotMatch(code, /'kick', 'snare'/);
 });
 
 test('a report the app builds passes the Worker unchanged', () => {

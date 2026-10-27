@@ -180,7 +180,7 @@ test('✅ only web/cloud.js and worker/pin.js run PBKDF2; only cloud-api.js send
 
 test('✅ what the Worker imports from web/', () => {
   const names = new Set(WORKER.flatMap((f) => [...read(`worker/${f}`).matchAll(/from '\.\.\/web\/([\w-]+)\.js'/g)].map((m) => m[1])));
-  assert.deepEqual([...names].sort(), ['agent', 'device-meta', 'emoji-check', 'instruments', 'log-clean', 'model', 'names', 'reid'], FIX);
+  assert.deepEqual([...names].sort(), ['agent', 'device-meta', 'emoji-check', 'log-clean', 'model', 'names', 'reid'], FIX);
 });
 
 test('✅ three Node tools: look.mjs and the two it loads', () => {

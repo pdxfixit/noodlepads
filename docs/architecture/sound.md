@@ -432,7 +432,7 @@ in the same group (`notes`, `chords`, `bass`) as the group's own presets, with
 | The same note on another instrument | `versionFor(ownId, group, inst)`, `instrumentKitId`, `ownIdOf` (sequencer's tune row, 👆 bands, 🧸 Kids' keys) |
 | The sound | `audio.js decoded` → `recording(file)` + `voice(samples, voicingOf(clip))`: Catmull-Rom resampling of one recording, summed for a chord, back to the recording's peak |
 | The picker | `inst-picker.js pickerButton`, `pickerList`, `pickInstrument` (writes the setting); screens handle the taps |
-| The Worker's kit ids | `worker/clean.js` imports `kitIdsOf` |
+| The Worker's kit ids | `worker/clean.js` reads `boards.json` (`instruments.js kitIdsOf` is the test's expectation of its instrument copies) |
 | The checks on boards.json | `instrumentProblem`, `model.js validateManifest` |
 
 What was made keeps its preset: a beat row, key or band stores the exact

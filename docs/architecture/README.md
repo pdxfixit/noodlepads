@@ -49,8 +49,8 @@ X, touch …**.
   `synth.js`, `mix.js`, `pitch.js`, `listen.js`, `listen-dsp.js`. Several of
   them import nothing at all ✅.
 - **The Worker imports from `web/` ✅** (`agent`, `device-meta`,
-  `emoji-check`, `instruments`, `log-clean`, `model`, `names`, `reid`), so
-  the rules both sides apply are written once.
+  `emoji-check`, `log-clean`, `model`, `names`, `reid`, and `boards.json` as
+  data), so the rules both sides apply are written once.
 
 ## One or several?
 

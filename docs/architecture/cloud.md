@@ -52,7 +52,7 @@
 | `pin.js` | PIN hash and wrong-try rule, share codes | `http.js hex` |
 | `metrics.js` | `devices` and `activity` rows, sweeps, `forgetProfile` | `web/device-meta.js WIDTHS`, `web/agent.js parseAgent` |
 | `reports.js` | `POST /api/log` | `clean.js`, `http.js` |
-| `clean.js` | `cleanUpload` (runs `web/log-clean.js cleanPayload`), `KIT_IDS` | `web/log-clean.js`, `web/instruments.js kitIdsOf` |
+| `clean.js` | `cleanUpload` (runs `web/log-clean.js cleanPayload`), `KIT_IDS` (the ids in `web/boards.json`, imported; wrangler bundles the JSON) | `web/log-clean.js`, `web/boards.json` |
 | `events-worker.js` | (vendored) `handleEvents`, `handleFeedback` | nothing |
 
 **The Worker pulls 19 `web/` modules in.** Through `model.js`, the Worker's import closure is `agent, contrast, cuts, device-meta, emoji-check, instruments, log-clean, log, loudness, model, names, playlist, reid, row-volume, steps, stretch, tweaks, usage, voices` (computed from the import lines). Any of them that touches `document`, `window` or an `AudioContext` at import time breaks the Worker. `tests/worker*.test.mjs` import the Worker under Node (no DOM), which catches a top-level DOM touch.
@@ -424,7 +424,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 | pieces and caps | `CHUNK_BYTES` (web and worker), `CLOUD_MAX_SOUND`/`MAX_SOUND_BYTES` (tested equal), `PER_PUSH`, `RECORD_BYTES`, `PUSH_BYTES`/`LIMITS.perPush`, `recordBytes`, `pushBytes` (tested equal) | the Worker's `GET /api/cloud` already returns `chunk` and `maxSound`; the app ignores them |
 | browser and OS families | `agent.js parseAgent` (reports, metrics), `track-page.js browserOf` and `environment` `os` (usage events) | different order of checks and different case (`'Chrome'` vs `'chrome'`; `OPT/` only in `browserOf`) |
 | the site's origin | `worker/http.js ORIGIN`, `worker/clean.js KNOWN.origin` (literal), `log-send.js LIVE_HOST`, `index.js EVENTS_OPTS`/`FEEDBACK_OPTS` (from `ORIGIN`) | a domain change must touch all of them |
-| kit ids | `boards.json`, `worker/clean.js KIT_IDS` (test-guarded), `sw.js KIT` (test-guarded by the file list) | three lists of one kit |
+| kit ids | `boards.json`; `worker/clean.js KIT_IDS` is read from it; `sw.js KIT` (test-guarded by the file list) | two lists of one kit |
 | feedback limits | `feedback.js MAX_BYTES`/`appVersion` regex and `events-worker.js MAX_FEEDBACK`/`VERSION` | equal today; the device copy is hand-kept |
 | person id patterns | `reid.js CLOUD_ID` (make, list, client) and `model.js PERSON_ID` (Worker path ids) | `CLOUD_ID` allows up to 62 characters, `PERSON_ID` 49 |
 | storing pulled records | `deps.put`/`deps.remove` write IndexedDB directly; only `fresh`/`keepBoth` go through `storeLoaded` (merge.js) | a rule added to `merge.js` or `persist` does not reach `take`, `merged` or `delete` |
@@ -448,7 +448,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 | everything the Worker imports from `web/` is import-safe without a page | the Worker runs with no DOM | the worker tests import it in Node |
 | `usage.js`, `agent.js`, `device-meta.js` (but for `usage.js`), `log-clean.js` (but for `agent.js`) import nothing else | the Worker imports them | `tests/agent.test.mjs` (the Worker uses `web/agent.js` itself) |
 | every `logEvent` kind and field has a rule in `log-clean.js RULES` | an unlisted one is silently dropped | `tests/log-clean.test.mjs` |
-| `worker/clean.js KIT_IDS` equals the kit in `boards.json` | else kit sounds report as `'kit'` | `tests/worker-clean.test.mjs` |
+| `worker/clean.js` imports `web/boards.json` (`with { type: 'json' }`) for `KIT_IDS`; the Worker grows by the file's size (66 KB) | else kit sounds report as `'kit'`; if wrangler could not bundle the JSON, the deploy fails before the upload | `tests/worker-clean.test.mjs`; the deploy's own checks |
 | every `EVENTS` name and key is in the standard's `events.toml` | the runner refuses others | `tests/telemetry.test.mjs` (only when `../telemetry` sits beside the checkout) |
 | every `web/` file is in `sw.js SHELL` or `NOT_LOADED` | else the app opens broken offline | `tests/offline.test.mjs` |
 | `sw.js` never serves the cache while the network answers | deploys must reach tablets at once | `tests/offline.test.mjs` ("online, every answer comes from the network") |

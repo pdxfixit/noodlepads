@@ -99,8 +99,8 @@ export function versionFor(ownId, group, inst) {
 }
 
 // Every instrument's preset ids, from the groups' own preset ids (`note-…`,
-// `chord-…`, `bass-…`; others are left out): the Worker's list of kit ids
-// (worker/clean.js), which cannot read boards.json.
+// `chord-…`, `bass-…`; others are left out): the ids boards.json should hold
+// for the instruments (tests/instruments.test.mjs checks it does).
 export function kitIdsOf(ownIds) {
   const groupOf = { note: 'notes', chord: 'chords', bass: 'bass' };
   return INSTRUMENTS.filter((i) => !Object.values(PLAYED).some((p) => p.default === i.id)).flatMap((i) => ownIds
