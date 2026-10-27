@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import worker from '../worker/index.js';
 import { CHUNK_BYTES, MAX_SOUND_BYTES, LIMITS, SESSION_KEY_MS, ACTIVE_STEP_MS, ROW_BYTES, KEY_IDLE_MS, KEYS_PER_PROFILE, PENDING_MS, CHECK_MS, RESERVE_MS, pieceCount, pieceSize } from '../worker/cloud.js';
 import { ORIGIN } from '../worker/http.js';
-import { WAIT_MS } from '../worker/pin.js';
+import { WAIT_MS, hashSecret } from '../worker/pin.js';
 import { FakeD1 } from './fake-d1.mjs';
 import { CLOUD_MAX_SOUND } from '../web/cloud-sync.js';
 
@@ -118,7 +118,12 @@ test('opening: no PIN opens; a PIN is checked; 5 wrong tries, then a 10-minute w
   const row = c.env.DB.rows("SELECT pin_hash, pin_salt FROM profiles WHERE id = 'p-pin'")[0];
   assert.match(row.pin_hash, /^[0-9a-f]{64}$/);
   assert.match(row.pin_salt, /^[0-9a-f]{32}$/);
-  assert.ok(!row.pin_hash.includes('4321'));
+  // The PIN is never kept as typed: no column holds it, and the hash is the
+  // salted hash of it, at 20,000 rounds written out here, so fewer rounds in
+  // pin.js fail. (A substring check on the hex failed by chance about once in
+  // 1,000 runs, 2026-10-26.)
+  assert.ok(!Object.values(c.env.DB.rows("SELECT * FROM profiles WHERE id = 'p-pin'")[0]).includes('4321'));
+  assert.equal(row.pin_hash, await hashSecret('4321', row.pin_salt, 20_000));
   assert.equal((await c.call('POST', 'profiles/p-pin/open', { body: {} })).status, 401);
   for (const left of [3, 2, 1]) {
     const r = await c.call('POST', 'profiles/p-pin/open', { body: { pin: '0000' } });
