@@ -407,16 +407,31 @@ test('the policy keeps the shape the privacy site builds: front matter with a re
   const [, day, month, year] = front;
   const m = MONTHS.indexOf(month);
   assert.ok(m >= 0, `${month} is a month`);
-  assert.equal(new Date(Date.UTC(+year, m, +day)).getUTCDate(), +day, `updated: ${day} ${month} ${year} is a real date`);
+  const when = new Date(Date.UTC(+year, m, +day));
+  assert.equal(when.getUTCDate(), +day, `updated: ${day} ${month} ${year} is a real date`);
+  assert.ok(when <= new Date(), `updated: ${day} ${month} ${year} is not in the future`);
   for (const block of ['rules', 'feedback', 'closing']) assert.match(policy, new RegExp(`^@include ${block}$`, 'm'));
   assert.ok(!/[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(policy), 'the contact address is written {contact}');
   assert.ok(!/mailto:/i.test(policy), 'no mailto: link; the privacy site builds it from {contact}');
   assert.match(policy, /\{contact\}/);
 });
 
+test('every @include is a line of its own with a blank line either side', () => {
+  const lines = policy.split('\n');
+  const at = lines.flatMap((l, i) => (l.includes('@include') ? [i] : []));
+  assert.ok(at.length, 'the policy includes the shared blocks');
+  for (const i of at) {
+    assert.match(lines[i], /^@include [a-z0-9-]+$/, `line ${i + 1} is only an @include`);
+    assert.ok(lines[i - 1] === '' && (lines[i + 1] === '' || lines[i + 1] === undefined), `line ${i + 1}: a blank line before and after ${lines[i]}`);
+  }
+});
+
 test('every @include names a shared block the privacy repo has', (t) => {
   const dir = privacyCheckout();
-  if (!dir || !existsSync(join(dir, 'src', '_shared'))) return t.skip('no privacy checkout beside this repo (set PRIVACY=/path to check the @include lines)');
+  if (!dir || !existsSync(join(dir, 'src', '_shared'))) {
+    console.log('note: no privacy checkout beside this repo (or $PRIVACY): @include names not checked');
+    return t.skip('no privacy checkout beside this repo (set PRIVACY=/path to check the @include lines)');
+  }
   for (const [, name] of policy.matchAll(/^@include (\S+)$/gm)) assert.ok(existsSync(join(dir, 'src', '_shared', `${name}.md`)), `${dir}/src/_shared/${name}.md exists`);
 });
 
@@ -462,14 +477,11 @@ test('every button the policy names is a real one, and the switches it describes
   assert.match(policyText, /Share play data\*\* is on \([^)]*on to start with\)/);
 });
 
-test('the policy is copied to the privacy site by `just policy`, not by a workflow or a token', () => {
+test('the policy is sent to the privacy site by `just policy`, which runs the privacy repo\'s tools/send.sh, not a workflow or a token', () => {
   assert.ok(!existsSync(new URL('../.github/workflows/privacy-policy.yml', import.meta.url)), 'no dispatch workflow');
+  assert.ok(!existsSync(new URL('../tools/policy.sh', import.meta.url)), 'the logic lives once, in the privacy repo');
   const justfile = readFileSync(new URL('../justfile', import.meta.url), 'utf8');
-  assert.match(justfile, /^policy \*args:\n\s+@bash tools\/policy\.sh "\$@"/m);
-  const script = readFileSync(new URL('../tools/policy.sh', import.meta.url), 'utf8');
-  assert.match(script, /--no-land/);
-  assert.match(script, /POLICY_NO_LAND/);
-  assert.ok(script.includes('TAKE_SHA=$sha just take') && script.includes('just land'), 'takes with the sha, then lands');
+  assert.match(justfile, /^policy \*args:\n(?:.*\n)*?\s+exec bash "\$p\/tools\/send\.sh" noodlepads docs\/privacy-policy\.md "\$@"$/m);
   const agents = readFileSync(new URL('../AGENTS.md', import.meta.url), 'utf8');
   assert.match(agents, /docs\/privacy-policy\.md[^\n]*bump `updated:`[^\n]*`just policy`/, 'AGENTS.md says to run it');
 });
