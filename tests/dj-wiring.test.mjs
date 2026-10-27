@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 
 const read = (f) => readFileSync(new URL(`../web/${f}`, import.meta.url), 'utf8');
 const app = read('app.js');
-const panel = ['dj.js', 'dj-keys.js', 'dj-touch.js'].map(read).join('\n');
+const panel = ['dj.js', 'dj-keys.js', 'dj-touch.js', 'dj-takes.js'].map(read).join('\n');
 
 test('every element app.js hands the keys panel is read there', () => {
   const start = app.indexOf('dj = createDJ({');

@@ -12,13 +12,11 @@
 // click track) and 🥁 Beats with ⌨️ Keys on (mode 'beat': the open beat
 // above the keys, ● Record into it). app.js picks the mode with setMode.
 
-import { countAt, KEY_ROWS, KEY_CODES, keyboardOrder, defaultDeck, fallbackLabel, layoutLabel, detectLayout, LAYOUTS, LAYOUT_NAMES, keyFor, takeFrom, planTake, clockText, MAX_TAKE_SECONDS, createSnapper, tapTempo, TAP_GAP_MAX } from './rhythm.js';
-import { encodeWav } from './wav.js';
+import { countAt, KEY_ROWS, KEY_CODES, keyboardOrder, defaultDeck, fallbackLabel, layoutLabel, detectLayout, LAYOUTS, LAYOUT_NAMES, keyFor, clockText, createSnapper, tapTempo, TAP_GAP_MAX } from './rhythm.js';
 import { SIGNATURES, COMMON_BPMS, tempoStops, stopFor, typedBpm } from './beat.js';
-import { recall, remember, newId, onePressOneClick } from './util.js';
+import { recall, remember, onePressOneClick } from './util.js';
 import { PICTURES, pictureTakenBy } from './model.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
-import { takeName, soundName, cutName } from './names.js';
 import { openDialog, setupDialog, openerOf } from './dialogs.js';
 import { setSetting, onSetting, deviceChoice } from './settings.js';
 import { createKeysEditor } from './dj-keys.js';
@@ -26,7 +24,7 @@ import { fadeAway, showBanner } from './ui.js';
 import { drawSpeaker, speakerControls, percent } from './row-volume.js';
 import { rowParts, rowSpeaker, rowEmoji, twinRows } from './beat-row.js';
 import { logEvent } from './log.js';
-import { renderTake } from './share-render.js';
+import { createTakes } from './dj-takes.js';
 import { fingerTaps, isFinger, pillHolds } from './finger.js';
 import { soundsOf, defaultTouch, touchOrder, touchSounds } from './touch.js';
 import { drawBands, createTouchEditor } from './dj-touch.js';
@@ -38,6 +36,8 @@ import { refitLines } from './lines.js';
 
 const STOPS = tempoStops();   // the click track slider's positions (see sequencer.js)
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
+// How long a line with Undo (for the beat, or a take taken out) stays (held while touched).
+const LINE_MS = 10000;
 export const HOLD_TO_LOOP_MS = 350;   // as on the pads: hold this long and it keeps repeating
 
 // One color per family, like the groups of the periodic table. Dark enough
@@ -268,7 +268,7 @@ export function createDJ({ el, deps }) {
   // A sound playing elsewhere (a beat's hit, scheduled `ms` from now): its
   // keys light in time, and a freestyle take records it.
   function flashClip(clipId, ms = 0) {
-    record(clipId, 'beat', deps.now() + Math.max(0, ms) / 1000);
+    takes.record(clipId, 'beat', deps.now() + Math.max(0, ms) / 1000);
     const codes = Object.entries(deck()).filter(([, id]) => id === clipId).map(([c]) => c);
     setTimeout(() => { codes.forEach((c) => light(c, { ripple: false })); lightTiles(clipId); }, Math.max(0, ms));
   }
@@ -302,14 +302,14 @@ export function createDJ({ el, deps }) {
     const ring = ringing();
     // A tap on a looping sound stops it; a play counts once, as a key.
     const stopped = deps.tap(clip, { ring, kind: 'keys' });
-    record(clip.id, stopped ? 'stop' : 'hit', deps.now(), ring);
+    takes.record(clip.id, stopped ? 'stop' : 'hit', deps.now(), ring);
     showRow(clip);
     if (!stopped) intoBeat(clip, earlier);
     return clip;
   }
   function loopIt(clip) {
     deps.loop(clip);
-    record(clip.id, 'loop');
+    takes.record(clip.id, 'loop');
   }
 
   // A touch or click: plays now, and loops if still held after the hold time.
@@ -474,76 +474,13 @@ export function createDJ({ el, deps }) {
 
   // ── Live: record whatever is played, whenever ──
 
-  let rec = null;        // {started: bool, events: [{at, clipId, kind, ring?}]} while recording
-  let recTimer = 0;
-  let lastTake = null;   // the take just made, for the take card (#dj-done)
   let beatLine = null;   // the banner with ↩️ Undo for a change to the beat (ui.js showBanner)
   let levelUndo = null;  // {at, before}: a row's loudness before the drags that line undoes
   let gridSpeakers = null;   // the grid's speakers and their loudness popover (renderGrid draws them)
   let gridMenus = null;      // the rows' menus, each opened by its emoji (overflow.js)
-  let replay = [];       // timers of a take being played back
-  const booked = new Set();   // the plays it booked on the audio clock (deps.bookPlay's voices), until each ends
-  let replaying = null;  // the id of the take playing back, or null
-  let replayRun = null;  // that playback, so one stopped while loading never starts
-  // How far ahead of now a take's first hit is booked: time to book the rest.
-  const REPLAY_LEAD = 0.05;
-
-  function record(clipId, kind, at = deps.now(), ring = false) {
-    if (!rec || !clipId) return;
-    if (!rec.started) {
-      if (kind === 'beat') return;   // a take starts at the kid's first hit
-      rec.started = true;
-      rec.from = at;
-    }
-    rec.events.push({ at, clipId, kind, ...(ring ? { ring } : {}) });
-    showRec();
-  }
-  function startRec() {
-    stopReplay();
-    rec = { started: false, events: [] };
-    lastTake = null;
-    el.done.hidden = true;
-    logEvent('take', { rec: 'start' });
-    recTimer = setInterval(() => {
-      if (rec?.started && deps.now() - rec.from >= MAX_TAKE_SECONDS) stopRec();
-      else showRec();
-    }, 250);
-    showRec();
-  }
-  function stopRec() {
-    if (!rec) return;
-    clearInterval(recTimer);
-    const made = takeFrom(rec.events, deps.now());
-    rec = null;
-    showRec();
-    logEvent('take', { rec: 'stop', made: !!made, seconds: made?.duration ?? 0 });
-    if (!made) return;
-    const pid = deps.personId();
-    lastTake = {
-      id: newId('take'),
-      personId: pid,
-      name: takeName(deps.takes(pid).map((t) => t.name)),
-      created: Date.now(),
-      ...made,
-    };
-    deps.saveTake(lastTake);
-    showTake(lastTake);
-    deps.announce?.(`Saved ${lastTake.name}, ${Math.round(lastTake.duration)} seconds.`);
-  }
-  // The take card (#dj-done) for the take just made, or brought back by Undo.
-  function showTake(take) {
-    lastTake = take;
-    // The take's name is a field, so it can be renamed right here.
-    el.takeLine.hidden = false;
-    el.takeName.value = take.name;
-    fitTakeName();
-    el.takeLength.textContent = `(${clockText(take.duration)})`;
-    el.donePlay.hidden = false;
-    el.doneSound.hidden = false;
-    el.doneRename.hidden = false;
-    el.done.hidden = false;
-    showPlaying();
-  }
+  // The takes themselves (recording, the take card, replay, the Takes list) are dj-takes.js.
+  const takes = createTakes({ el, deps, deck, light, lightTiles, showRec, lineMs: LINE_MS });
+  const { stopReplay } = takes;
   // The big count-in over the keys: 1, 2, 3, 4 (as many as the time
   // signature has beats), each in its own color, popping in on its beat.
   const COUNT_COLORS = ['#FF6B6B', '#FFB347', '#FFE066', '#7CE38B', '#6EC6FF', '#C792EA', '#FF8FC8'];
@@ -569,6 +506,7 @@ export function createDJ({ el, deps }) {
   function putText(node, text) { if (node.textContent !== text) node.textContent = text; }
   function putAttr(node, name, value) { if (node.getAttribute(name) !== value) node.setAttribute(name, value); }
   function showRec() {
+    const rec = takes.rec();
     const on = !!rec || !!beatRec;
     putText(el.record, on ? '■ Stop' : '● Record');
     el.record.dataset.icon = on ? '■' : '●';   // all it shows where its line is short (styles.css)
@@ -589,186 +527,6 @@ export function createDJ({ el, deps }) {
     showCount(null);
     putText(el.status, !rec ? '' : !rec.started ? 'Play something!'
       : `● ${clockText(deps.now() - rec.from)}`);
-  }
-
-  // The take's name field is as wide as its name, so its length "(0:03)"
-  // sits right after it rather than out in the middle of the bar.
-  function fitTakeName() { el.takeName.size = Math.max(4, [...el.takeName.value].length + 1); }
-
-  // ▶ Play on a take turns into ■ Stop while it plays (Ben, 2026-10-11); a
-  // second tap, or the take ending, puts it back.
-  // Every sound is loaded first, then the take as it was heard
-  // (rhythm.js planTake, as 🔊 Make a sound renders it: each hit, a loop's
-  // passes up to its stop, a hit cut where the next one cut it) is booked on
-  // the audio clock at once, t0 + its time. Each play is a voice of its own,
-  // outside audio.playing, so a pad tapped meanwhile and the take never
-  // take each other's place. Only the keys' lighting and the end run on
-  // timers, which may come a little late.
-  async function playTake(take) {
-    if (replaying === take.id) { stopReplay(); return; }
-    stopReplay();
-    const run = {};
-    replaying = take.id;
-    replayRun = run;
-    showPlaying();
-    const clips = new Map();
-    let gone = 0;
-    for (const e of take.events) {
-      const clip = deps.clipById(e.clipId);
-      if (clip) clips.set(clip.id, clip); else gone++;
-    }
-    if (gone) deps.announce?.(`${gone} ${gone === 1 ? 'sound in this take is' : 'sounds in this take are'} gone.`);
-    const loaded = new Map();
-    await Promise.all([...clips.values()].map((clip) => Promise.resolve(deps.loadSound(clip))
-      .then((got) => { if (got) loaded.set(clip.id, got); }).catch(() => null)));
-    if (replayRun !== run) return;   // stopped, or another take started, while loading
-    const t0 = deps.now() + REPLAY_LEAD;
-    for (const { clipId, at, end } of planTake(take, new Map([...loaded].map(([id, l]) => [id, l.duration])))) {
-      const voice = deps.bookPlay(loaded.get(clipId), t0 + at, end == null ? null : t0 + end);
-      booked.add(voice);
-      // Sounded and done: nothing left of it to cut.
-      if (voice?.src) voice.src.onended = () => booked.delete(voice);
-    }
-    const later = (at, fn) => replay.push(setTimeout(fn, Math.max(0, (at - deps.now()) * 1000)));
-    for (const e of take.events) {
-      const clip = clips.get(e.clipId);
-      if (!clip || e.kind === 'beat') continue;
-      later(t0 + e.t, () => {
-        for (const [code, id] of Object.entries(deck())) if (id === clip.id) light(code, { ripple: e.kind === 'hit' });
-        lightTiles(clip.id);
-      });
-    }
-    // Done when the take is: a moment after its last event, for the last sound to ring.
-    later(t0 + take.duration + 0.5, () => { replay = []; booked.clear(); replaying = null; replayRun = null; showPlaying(); });
-  }
-  // Stops a take being played back: its timers, and every play it booked
-  // (one still to come never sounds).
-  function stopReplay() {
-    replay.forEach(clearTimeout);
-    replay = [];
-    for (const voice of booked) deps.cutVoice(voice);
-    booked.clear();
-    replaying = null;
-    replayRun = null;
-    showPlaying();
-  }
-  // The done bar's and the Takes list's Play keys say ■ Stop for the take that is playing.
-  function showPlaying() {
-    const on = !!lastTake?.id && replaying === lastTake.id;
-    el.donePlay.textContent = on ? '■ Stop' : '▶ Play';
-    el.donePlay.setAttribute('aria-pressed', String(on));
-    for (const b of el.takesList.querySelectorAll('[data-play]')) {
-      b.textContent = replaying === b.dataset.play ? '■ Stop' : '▶ Play';
-      b.setAttribute('aria-pressed', String(replaying === b.dataset.play));
-    }
-  }
-
-  // Renders a take into a new pad (as Save as a sound does for a beat): every
-  // play mixed offline, loops repeated, scaled just under full scale. Named
-  // after the take, or a made-up name if that is already on the board.
-  async function makeSound(take, button) {
-    if (button) { button.disabled = true; button.textContent = 'Making…'; }
-    try {
-      // Each play as it was heard: a hit the next one cut off stops there,
-      // with the same short fade (planTake `end`; 🔔 Let it ring lets it ring).
-      const out = await renderTake(take, { clipById: deps.clipById, loadSound: deps.loadSound, rate: deps.sampleRate(), channels: 2 });
-      if (!out) { deps.announce?.('None of the sounds in this take are here any more.'); return null; }
-      const names = deps.soundNames();
-      const label = names.includes(take.name) ? soundName(names) : take.name;
-      const clip = await deps.addSound({ label, blob: encodeWav(out) });
-      deps.announce?.(`Added ${label} to the pads.`);
-      return clip;
-    } finally {
-      if (button) { button.disabled = false; button.textContent = button.dataset.idle || '🔊 Make a sound'; }
-    }
-  }
-
-  // Takes already made into a sound this visit: Make a sound again asks
-  // first ("Make another?"), since a second press makes a second pad.
-  const madeSounds = new Set();
-  let soundAsked = null;
-  let soundTimer = 0;
-  function disarmSound(button) {
-    soundAsked = null;
-    clearTimeout(soundTimer);
-    button.classList.remove('armed');
-    button.textContent = button.dataset.idle;
-    button.removeAttribute('aria-label');
-    if (button.dataset.label) button.setAttribute('aria-label', button.dataset.label);
-  }
-  // `nameBox` holds the take's name: a note fades in over it once it's made.
-  async function askThenMake(take, button, nameBox) {
-    if (madeSounds.has(take.id) && soundAsked !== take.id) {
-      soundAsked = take.id;
-      button.classList.add('armed');
-      button.textContent = 'Make another?';
-      button.setAttribute('aria-label', `${take.name} is already a sound. Tap again to make another.`);
-      clearTimeout(soundTimer);
-      soundTimer = setTimeout(() => disarmSound(button), ARM_MS);
-      return;
-    }
-    disarmSound(button);
-    const clip = await makeSound(take, button);
-    if (!clip) return;
-    madeSounds.add(take.id);
-    savedNote(nameBox, clip.label === take.name ? '✅ Sound saved' : `✅ Saved as “${clip.label}”`);
-  }
-  function savedNote(box, text) {
-    if (!box) return;
-    box.querySelector('.saved-note')?.remove();
-    const note = document.createElement('span');
-    note.className = 'saved-note';
-    note.setAttribute('aria-hidden', 'true');   // makeSound announces it
-    note.textContent = text;
-    box.append(note);
-    setTimeout(() => note.remove(), 2600);
-  }
-
-  // The Takes dialog: every take this person made, to play, rename or delete.
-  let deleteAsked = null;
-  function renderTakes() {
-    const takes = deps.takes(deps.personId()).slice().sort((a, b) => b.created - a.created);
-    el.takesEmpty.hidden = takes.length > 0;
-    el.takesList.replaceChildren(...takes.map((t) => {
-      const li = document.createElement('li');
-      li.className = 'lib-beat take';
-      const name = document.createElement('input');
-      name.className = 'take-name';
-      name.value = t.name;
-      name.maxLength = 24;
-      name.dataset.rename = t.id;
-      name.setAttribute('aria-label', 'Take name');
-      const info = document.createElement('span');
-      info.className = 'lib-info';
-      const hits = t.events.filter((e) => e.kind === 'hit').length;
-      info.textContent = `${clockText(t.duration)} · ${hits} ${hits === 1 ? 'hit' : 'hits'}`;
-      const text = document.createElement('span');
-      text.className = 'lib-text';
-      text.append(name, info);
-      const play = document.createElement('button');
-      play.type = 'button';
-      play.className = 'chip-dark';
-      play.dataset.play = t.id;
-      play.textContent = '▶ Play';
-      const sound = document.createElement('button');
-      sound.type = 'button';
-      sound.className = 'chip-dark';
-      sound.dataset.sound = t.id;
-      sound.dataset.idle = '🔊';
-      sound.dataset.label = `Make ${t.name} a sound on the pads`;
-      sound.textContent = '🔊';
-      sound.setAttribute('aria-label', sound.dataset.label);
-      const del = document.createElement('button');
-      del.type = 'button';
-      del.className = 'chip-dark';
-      del.dataset.delete = t.id;
-      del.textContent = deleteAsked === t.id ? 'Delete?' : '🗑️';
-      del.classList.toggle('armed', deleteAsked === t.id);
-      del.setAttribute('aria-label', deleteAsked === t.id ? `Tap again to delete ${t.name}` : `Delete ${t.name}`);
-      li.append(text, play, sound, del);
-      return li;
-    }));
-    showPlaying();   // the take playing back keeps its ■ Stop
   }
 
   // ── Beats with ⌨️ Keys (once DJ's Beat Builder): hits land on the beat's grid, forgivingly ──
@@ -817,7 +575,7 @@ export function createDJ({ el, deps }) {
     if (mode === 'beat') renderGrid();
     showSetup();
   }
-  function recording() { return !!rec || !!beatRec; }
+  function recording() { return !!takes.rec() || !!beatRec; }
   // The count-in's clicks are already booked, so the tempo waits for GO.
   // After it, the tempo can change while recording (Ben, 2026-10-11).
   function countingIn() { return !!beatRec && !(deps.now() >= beatRec.from); }
@@ -858,8 +616,7 @@ export function createDJ({ el, deps }) {
   async function startBeatRec() {
     const seq = deps.seq;
     stopReplay();
-    lastTake = null;
-    el.done.hidden = true;
+    takes.clearCard();
     beatLine?.close();   // its Undo is older than the take
     // Records into the open beat (🆕 New in the beat bar for a clean start).
     const copy = seq.snapshot();
@@ -921,8 +678,6 @@ export function createDJ({ el, deps }) {
     deps.announce?.(`Stopped. ${text} Undo is available.`);
   }
   const FULL = 'The beat is full: every row has hits. Remove a row (✕) to add another sound.';
-  // How long a line with Undo for the beat stays (held while touched).
-  const LINE_MS = 10000;
   // The banner with ↩️ Undo for a change to the beat: `copy` is the beat to
   // put back, or `fn` undoes it (🆕 New's emptied scratch, sequencer.js).
   // Undo is for the person it was offered to: another one showing by then
@@ -1558,107 +1313,30 @@ export function createDJ({ el, deps }) {
     showMode();
   }
   el.record.addEventListener('click', () => {
-    if (rec) stopRec();
+    if (takes.rec()) takes.stopRec();
     else if (beatRec) stopBeatRec();
     else if (mode === 'beat') { if (deps.seq.beat()) startBeatRec(); }
-    else startRec();
+    else takes.startRec();
   });
-  el.donePlay.addEventListener('click', () => lastTake && playTake(lastTake));
-  // ✕ puts the take card away (the take stays as it is).
-  el.doneClose.addEventListener('click', () => { lastTake = null; el.done.hidden = true; });
-  el.takeName.addEventListener('change', () => {
-    const name = cutName(el.takeName.value.trim());
-    if (lastTake?.id && name) { lastTake = { ...lastTake, name }; deps.saveTake(lastTake); }
-    el.takeName.value = lastTake?.name ?? '';
-    fitTakeName();
-  });
-  // ✏️ Rename: straight into the name, selected, ready to type over.
-  el.doneRename.addEventListener('click', () => { el.takeName.focus(); el.takeName.select?.(); });
-  el.takeName.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.takeName.blur(); } });
-  el.takeName.addEventListener('input', fitTakeName);
-  el.doneSound.dataset.idle = el.doneSound.textContent;
-  el.doneSound.addEventListener('click', () => lastTake?.id && askThenMake(lastTake, el.doneSound, el.takeLine));
-  // The take card's ↩️ Undo takes the take out at once, and the banner's
-  // ↩️ Undo puts it back, as a deleted sound comes back on Pads: a take is
-  // work a slip should not lose. Back, it gets its card again unless another
-  // take (or a recording) has the card by then.
-  el.doneUndo.addEventListener('click', () => {
-    if (!lastTake) return;
-    const take = lastTake;
-    if (replaying === take.id) stopReplay();
-    deps.deleteTake(take.id);
-    lastTake = null;
-    el.done.hidden = true;
-    takenOut = take;
-    takeLine = showBanner(`Took out “${take.name}”.`, {
-      action: { label: '↩️ Undo', fn: () => { takenOut = null; bringBack(take); } },
-      ms: LINE_MS,
-      focusBack: () => el.record,
-      onClose: () => { takeLine = null; takenOut = null; },   // its time is up (or another notice took its place)
-    });
-    deps.announce?.(`Took out ${take.name}. Undo is available.`);
-  });
-  let takeLine = null;   // the banner with ↩️ Undo for a take taken out
-  let takenOut = null;   // that take, while its banner can still bring it back
-  function bringBack(take) {
-    if (deps.takes(take.personId).some((t) => t.id === take.id)) return;
-    deps.saveTake(take);
-    if (!lastTake && !rec && take.personId === deps.personId()) showTake(take);
-    if (el.takes.open) renderTakes();
-    deps.announce?.(`${take.name} is back.`);
-  }
-  el.takesOpen.addEventListener('click', () => {
-    deleteAsked = null;
-    renderTakes();
-    openDialog(el.takes);
-  });
-  el.takesList.addEventListener('click', (e) => {
-    const find = (id) => deps.takes(deps.personId()).find((t) => t.id === id);
-    const play = e.target.closest('[data-play]');
-    if (play) { const t = find(play.dataset.play); if (t) playTake(t); return; }
-    const sound = e.target.closest('[data-sound]');
-    if (sound) { const t = find(sound.dataset.sound); if (t) askThenMake(t, sound, sound.closest('.take')?.querySelector('.lib-text')); return; }
-    const del = e.target.closest('[data-delete]');
-    if (!del) return;
-    if (deleteAsked !== del.dataset.delete) { deleteAsked = del.dataset.delete; renderTakes(); return; }
-    deleteAsked = null;
-    deps.deleteTake(del.dataset.delete);
-    renderTakes();
-  });
-  el.takesList.addEventListener('change', (e) => {
-    const input = e.target.closest('[data-rename]');
-    const t = input && deps.takes(deps.personId()).find((x) => x.id === input.dataset.rename);
-    if (!t) return;
-    const name = cutName(input.value.trim());
-    if (name) deps.saveTake({ ...t, name });
-    else input.value = t.name;
-  });
-  setupDialog(el.takes);
 
   // Leaving the keys view ends a recording into the beat (the beat maker
   // switches to the next screen's own beat), and a 🎤 Live take, kept as Esc
   // keeps it: out of sight it would run on, silent, and hold ⌨️ Keys still.
   function leave() {
     if (beatRec) stopBeatRec('leave');
-    if (rec) stopRec();
+    if (takes.rec()) takes.stopRec();
   }
   // Another person shows: nothing of this one's stays live on their screen.
   // A recording ends as this person's (kept; `keep: false`, the person was
   // deleted, drops a take in progress), a take playing back stops, and the
   // take card and a beat's ↩️ Undo go.
   function personLeft({ keep = true } = {}) {
-    if (!keep && rec) { clearInterval(recTimer); rec = null; showRec(); }
+    if (!keep) takes.discardRec();
     leave();
     stopReplay();
-    lastTake = null;
-    el.done.hidden = true;
+    takes.clearCard();
     beatLine?.close();
-    // A take taken out whose ↩️ Undo is still up: that banner is its only way
-    // back, so it goes back quietly as this person's (no card, no word for
-    // the next one) before the banner goes. A deleted person's stays gone.
-    if (takenOut && keep && !deps.takes(takenOut.personId).some((t) => t.id === takenOut.id)) deps.saveTake(takenOut);
-    takenOut = null;
-    if (takeLine?.open) takeLine.close();
+    takes.settleTakenOut(keep);
   }
   // The beat stopped (sequencer onStop): a recording into it ends too, so
   // ● Record never says recording with nothing playing.
@@ -1671,8 +1349,8 @@ export function createDJ({ el, deps }) {
   // Esc stops a take (and keeps it) before it stops everything else.
   function escape() {
     if (beatRec) { stopBeatRec('escape'); return true; }
-    if (!rec) return false;
-    stopRec();
+    if (!takes.rec()) return false;
+    takes.stopRec();
     return true;
   }
 
@@ -1685,7 +1363,7 @@ export function createDJ({ el, deps }) {
     if (!document.hidden) return;
     letGo();
     if (beatRec) stopBeatRec('leave');
-    if (rec) stopRec();
+    if (takes.rec()) takes.stopRec();
     stopReplay();
   });
 
@@ -1744,6 +1422,6 @@ export function createDJ({ el, deps }) {
   readLayout();
   showMode();
   // Recording a take, or playing one back: the update bar waits (update.js).
-  const busy = () => recording() || !!replaying;
+  const busy = () => recording() || !!takes.replaying();
   return { render, keydown, keyup, touching, level, flashClip, looping, escape, stopReplay, personLeft, steps, renderGrid, showSetup, shown, leave, beatStopped, busy, setMode, recording, clickOff };
 }

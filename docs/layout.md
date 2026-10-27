@@ -7,6 +7,7 @@ opens with a comment saying what it owns. How the app behaves is in
 - `web/`: the app (plain HTML, CSS and ES modules, no build step)
   - `app.js`: starts everything; who is showing, Edit sounds, the bottom bar's two modes, 🎉 Play (Pads, Live) and 🛠️ Make (Beats, Song) and Beats' ⌨️ Keys
   - `dj.js`, `rhythm.js`: the keys (like a periodic table), on Live and on Beats with ⌨️ Keys, and its pure rules: keymap, default keys, layouts, the forgiving snap
+  - `dj-takes.js`: 🎤 Live's takes (made by `dj.js`): recording whatever is played, the take card, playing a take back on the audio clock, making one into a sound, the Takes list
   - `dj-keys.js`, `keyset.js`: ✏️ Layout with ⌨️ Keys, and its pure rules: placing sounds, moving what was in the way, swaps, rows, the ready-made key layouts
   - `dj-touch.js`, `touch.js`: 👆 the touch layout (ADR 0029): drawing its bands for playing and ✏️ Layout with 👆 Pads, and its pure rules: bands of sounds, their sizes and starting sounds, the ready-made ones, editing, cleaning; `touch-grid.js`: a layout's grid (ADR 0032), the tree of splits placing its bands in blocks side by side: the ready-made grids, filling and emptying blocks, edges, splitting and joining, cleaning, and how many pad columns fill a block
   - data: `store.js` (IndexedDB schema and upgrades), `state.js` (what is in memory, and saving it)

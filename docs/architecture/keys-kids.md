@@ -15,6 +15,7 @@
 |---|---|---|---|
 | `dj.js` | `app.js start` (`createDJ({ el, deps })`) | `rhythm.js`, `touch.js`, `dj-keys.js createKeysEditor`, `dj-touch.js drawBands`/`createTouchEditor`, `finger.js fingerTaps`, `beat-row.js`, `row-volume.js`, `pill-select.js`, `overflow.js moreMenu`, `follow.js`, `share-render.js renderTake`, `deps.seq.*` | mode, input, layout, takes in progress, the beat recording, the click wish, 🔔 Let it ring, the grid |
 | `rhythm.js` | `dj.js`, `dj-keys.js`, `keyset.js`, `audio.js` and `beat-engine.js` (`ringOver`), `backup.js` (`cleanDeck`, `cleanTake`), `share-render.js` (`planTake`), `settings.js` (`LAYOUT_NAMES`) | `touch.js cleanTouch` | nothing (pure) |
+| `dj-takes.js` | `dj.js` (`createTakes({ el, deps, deck, light, lightTiles, showRec, lineMs })`, once) | `rhythm.js` (`takeFrom`, `planTake`), `share-render.js renderTake`, `wav.js`, `names.js`, `dialogs.js`, `ui.js showBanner`, `deps.bookPlay`/`cutVoice`/`loadSound`/`addSound`/`saveTake`/`deleteTake` | 🎤 Live's take in progress, the take card's take, the replay timers and booked voices, the taken-out take's Undo |
 | `dj-keys.js` | `dj.js` (once) | `keyset.js`, `rhythm.js`, `inst-picker.js`, `dialogs.js` | the ✏️ Layout (⌨️ Keys) dialog's picks, undo stack, drag |
 | `keyset.js` | `dj-keys.js`, `backup.js` (`cleanLayout`) | `rhythm.js` | nothing (pure) |
 | `dj-touch.js` | `dj.js` (`drawBands` every render; `createTouchEditor` once) | `touch.js`, `touch-grid.js`, `inst-picker.js`, `instruments.js` | the ✏️ Layout (👆 Pads) dialog's picker, undo stack, three drags |
@@ -36,7 +37,7 @@
 | | 🎤 Live (`'free'`) | Beats with ⌨️ Keys (`'beat'`) |
 |---|---|---|
 | Open beat | none: `seq.show('live')` sets `pattern` to null | the one open beat (ADR 0017), drawn in `#dj-grid` |
-| ● Record | a take (`startRec` / `stopRec`) | into the beat (`startBeatRec` / `stopBeatRec`) |
+| ● Record | a take (`dj-takes.js startRec` / `stopRec`) | into the beat (`startBeatRec` / `stopBeatRec`) |
 | Takes button | shown | hidden |
 | ⏲️ Click track | `#dj-click` on the control bar, after its own tempo `#dj-click-tempo` (slider `#dj-click-bpm`; on a phone the tempo key `#dj-click-key`) | `#dj-beat-click` on the control bar |
 | Tempo | `seq.tempo()`: the sequencer's `LOOSE` tempo (100 BPM, never saved) | the open beat's, saved with it |
@@ -54,7 +55,7 @@
 | `keyboardSeen` | a key was pressed (or Q / D picked) this visit | memory |
 | `row` | the row shown on a phone's row tabs | memory |
 | `holds`, `held`, `fingers` | pointers and keys held, for hold-to-loop | memory |
-| `rec`, `lastTake`, `replay`, `booked`, `replaying`, `replayRun` | a take being recorded, the last one, playback timers, the hits it booked | memory; takes in `state.takes` |
+| `rec`, `lastTake`, `replay`, `booked`, `replaying`, `replayRun` (in `dj-takes.js`; `dj.js` reads them through `takes.rec()` and `takes.replaying()`) | a take being recorded, the last one, playback timers, the hits it booked | memory; takes in `state.takes` |
 | `beatRec` | the recording into the beat | memory |
 | `clickWanted` | the keys' ⏲️ | localStorage `dj-click` |
 | `overlap` | 🔔 Let it ring on Live | memory only (off after a reload) |
@@ -156,9 +157,9 @@ The footer's how-to (`app.js showHint`, `screenHint`) uses the same `pointer: fi
 | `duration` | seconds, ≤ `MAX_TAKE_SECONDS` (180) |
 | `events` | ≤ `MAX_TAKE_EVENTS` (10 000), each `{t, clipId, kind: 'hit'\|'loop'\|'stop'\|'beat', ring?}`, `t` seconds from the first hit, to 1 ms; `ring: true` only on a hit played with 🔔 Let it ring |
 
-**Play back.** `dj.js playTake` loads every sound of the take (`deps.loadSound`), then books the take as it was heard, `rhythm.js planTake` (each hit, a loop's passes up to its stop or the take's end, a hit cut where the next cut it: what 🔊 Make a sound renders), on the audio clock at once, `t0 + at` (`t0` is `REPLAY_LEAD`, 50 ms, from now), each through `deps.bookPlay` = `audio.book`, a voice of its own outside `audio.playing` (`booked`). So a pad tapped meanwhile and the take never take each other's place. Only the keys' lighting and the end run on `setTimeout`. `stopReplay` clears the timers and cuts every booked voice (`deps.cutVoice`, so a play still to come never sounds); a take stopped while loading books nothing (`replayRun`). ⏹️ Stop all and 🧸 Kids call `stopReplay`, since `audio.stopAll` cannot reach booked voices outside `audio.playing`. A take's ▶ shows ■ Stop while it plays (`showPlaying`); its pads show no progress. Test: `tests/take-replay.test.mjs`.
+**Play back.** `dj-takes.js playTake` loads every sound of the take (`deps.loadSound`), then books the take as it was heard, `rhythm.js planTake` (each hit, a loop's passes up to its stop or the take's end, a hit cut where the next cut it: what 🔊 Make a sound renders), on the audio clock at once, `t0 + at` (`t0` is `REPLAY_LEAD`, 50 ms, from now), each through `deps.bookPlay` = `audio.book`, a voice of its own outside `audio.playing` (`booked`). So a pad tapped meanwhile and the take never take each other's place. Only the keys' lighting and the end run on `setTimeout`. `stopReplay` clears the timers and cuts every booked voice (`deps.cutVoice`, so a play still to come never sounds); a take stopped while loading books nothing (`replayRun`). ⏹️ Stop all and 🧸 Kids call `stopReplay`, since `audio.stopAll` cannot reach booked voices outside `audio.playing`. A take's ▶ shows ■ Stop while it plays (`showPlaying`); its pads show no progress. Test: `tests/take-replay.test.mjs`.
 
-**Make a sound.** `dj.js makeSound` → `share-render.js renderTake` (offline, `rhythm.js planTake`: hits cut their sound's earlier hits unless `ring`; loops repeat until stopped) → `wav.js encodeWav` → `deps.addSound` = `app.js addMadeSound` (🎛️). A second press on the same take asks "Make another?" (`askThenMake`, `ARM_MS`).
+**Make a sound.** `dj-takes.js makeSound` → `share-render.js renderTake` (offline, `rhythm.js planTake`: hits cut their sound's earlier hits unless `ring`; loops repeat until stopped) → `wav.js encodeWav` → `deps.addSound` = `app.js addMadeSound` (🎛️). A second press on the same take asks "Make another?" (`askThenMake`, `ARM_MS`).
 
 **Where takes show:** the take card `#dj-done` (rename, ▶, 🔊, ↩️ Undo deletes the take, ✕; `app.js` fades it after 10 s), the Takes dialog `#takes`, 🗂️ See all (`things.js`), cloud share previews (`share-render.js`).
 
@@ -471,6 +472,8 @@ More gotchas:
 | A new field on the deck | `rhythm.js cleanDeck`, `app.js` `deps.saveDeck` (keeps fields), `merge.js` `keepMine('decks')` (clip ids renamed), `store.js` comment, `state.js` comment, `backup.js` notes. |
 | A new take event kind | `rhythm.js TAKE_KINDS`, `takeFrom`, `planTake`, `cleanTake`; `dj.js playTake`; `merge.js` (takes' clip ids). |
 | A ready-made key layout | `keyset.js READY_LAYOUTS` (kit ids, 4 × 10); `keyset.test.mjs` checks every id is real. One with a `family` (instruments.js `FAMILIES`) names instrument presets exactly and resolves through `dj-keys.js exactClip`; the rest follow the pick (`kitClip`). |
+| A new take event kind | `rhythm.js TAKE_KINDS`, `takeFrom`, `planTake`, `cleanTake`; `dj-takes.js playTake`; `merge.js` (takes' clip ids). |
+| A ready-made key layout | `keyset.js READY_LAYOUTS` (kit ids, 4 × 10); `keyset.test.mjs` checks every id is real. |
 | A ready-made touch layout or grid | `touch.js READY_TOUCH` / `STARTERS`; `touch-grid.js READY_GRIDS`. |
 | The snap | `rhythm.js createSnapper` (and `snapHits` for tests); `beat-builder.test.mjs`, `rhythm.test.mjs`. Kids' tune snap is `kids-logic.js pillAt`, separate. |
 | How the beat grows | `dj.js growNow` (when), `sequencer.js scheduleClicks`/`grow` (how). |

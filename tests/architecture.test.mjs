@@ -85,6 +85,7 @@ const ONLY = [
   // keys-kids.md
   ['🔔 Let it ring: one rule, three players', /\bringOver\b/, ['audio.js', 'beat-engine.js', 'rhythm.js']],
   ['one beat engine, made by the composition root', /(?<!function )\bcreateBeatEngine\(/, ['app.js']],
+  ['Live takes are made by the keys panel', /\bcreateTakes\(/, ['dj-takes.js', 'dj.js']],
   ['the ✏️ Layout editors are built by the keys panel', /createKeysEditor|createTouchEditor/, ['dj-keys.js', 'dj-touch.js', 'dj.js']],
   ['the grown-up sum', /askSum\(/, ['cloud-ui.js', 'feedback.js', 'grown-up.js', 'kids.js']],
   ['lift to play', /fingerTaps\(/, ['dj.js', 'finger.js', 'kids.js', 'pads.js']],
@@ -140,7 +141,7 @@ test('✅ the backup gate and the share preview load neither screen: song rules 
 });
 
 test('✅ the keys never touch audio.js directly; they play through pads.js tapPad', () => {
-  assert.deepEqual(['dj.js', 'dj-keys.js', 'dj-touch.js'].filter((f) => src[f].includes("from './audio.js'")), [], FIX);
+  assert.deepEqual(['dj.js', 'dj-keys.js', 'dj-touch.js', 'dj-takes.js'].filter((f) => src[f].includes("from './audio.js'")), [], FIX);
 });
 
 test('✅ 🧸 Kids takes only pure rules from the beat rules, plays through the engine it is handed, and none of the regular screens', () => {
