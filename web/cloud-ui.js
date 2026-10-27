@@ -23,6 +23,7 @@ import {
   rememberHere, declineRemember, offersRemember, forgetHere, isRemembered, keyWasDropped, FORGOT_HERE, bringDown, leaveInCloud,
 } from './cloud.js';
 import { newProgress, progressShare } from './cloud-sync.js';
+import { askSum } from './grown-up.js';
 import { SETTINGS } from './settings.js';
 import { mergeSummary } from './merge.js';
 
@@ -499,10 +500,15 @@ export async function pinClick(personId, t, note = () => {}) {
     return true;
   }
   // 🔑 Remember on this device asks the PIN (the cloud gives a key that
-  // lasts for it); Forget this device needs none.
+  // lasts for it). Forget this device asks the grown-up sum first (Ben,
+  // 2026-10-27), so a kid can't lock themselves out by a slip: a wrong
+  // answer asks another, and ✕ forgets nothing.
   if (t === el.pinRemember) {
     if (isRemembered(personId)) {
-      await run(async () => { await forgetHere(personId); flashPin(personId, '🔒 Forgotten here'); });
+      askSum({
+        owner: 'forget', stay: true,
+        right: () => run(async () => { await forgetHere(personId); flashPin(personId, '🔒 Forgotten here'); }),
+      });
       return true;
     }
     await run(async () => {

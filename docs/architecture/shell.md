@@ -350,7 +350,7 @@ just before a dialog opens: `tips.js` (the sound sheet's tip), `nudge.js`
 | `help` | `help.js` | |
 | `welcome` | `welcome.js` | |
 | `who-now` | `who-now.js` (`beforeClose: () => false`: only a pick closes it) | |
-| `kids-sum` | `grown-up.js` | used by `kids.js`, `feedback.js` |
+| `kids-sum` | `grown-up.js` | used by `kids.js`, `feedback.js`, `cloud-ui.js` (Forget this device) |
 | `feedback-dialog` | `feedback.js` | |
 | `people-dialog`, `profile-dialog`, `names-dialog` | `people.js` | |
 | `things-dialog` | `things.js` | |

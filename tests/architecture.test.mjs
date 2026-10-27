@@ -84,7 +84,7 @@ const ONLY = [
   // keys-kids.md
   ['🔔 Let it ring: one rule, three players', /\bringOver\b/, ['audio.js', 'rhythm.js', 'sequencer.js']],
   ['the ✏️ Layout editors are built by the keys panel', /createKeysEditor|createTouchEditor/, ['dj-keys.js', 'dj-touch.js', 'dj.js']],
-  ['the grown-up sum', /askSum\(/, ['feedback.js', 'grown-up.js', 'kids.js']],
+  ['the grown-up sum', /askSum\(/, ['cloud-ui.js', 'feedback.js', 'grown-up.js', 'kids.js']],
   ['lift to play', /fingerTaps\(/, ['dj.js', 'finger.js', 'kids.js', 'pads.js']],
   // data.md
   ['IndexedDB is opened by the store and Older sounds only', /indexedDB\.open\(/, ['old-backup.js', 'store.js']],

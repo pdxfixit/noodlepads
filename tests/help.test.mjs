@@ -102,6 +102,7 @@ test('Help says what 🔑 Remember does now: until Forget, sharing still asks, a
   }
   assert.match(offer.text, /Sharing still asks it\. Anyone using this device can open them\./);
   assert.match(part.text, /Lost this device\? Change the PIN, and every device asks it again\./);
+  assert.match(part.text, /Forget this device asks a grown-up’s sum first/);
   assert.match(drawing('🔗 Share…').text, /Someone with a PIN types it for every code, even on a device that remembers them\./);
   const bulk = HELP.flatMap((s) => shownItems(s)).find((i) => i.pic.some((p) => p.t === 'Share'));
   assert.match(bulk?.text ?? '', /one share code \(their PIN first, if they have one\)/);

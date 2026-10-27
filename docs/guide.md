@@ -915,7 +915,10 @@ ADR 0002.
   has 🔑 Remember on this device (asks the PIN) or Forget this device; its
   hint says sharing still asks the PIN, that anyone using the device can open
   them, and "Lost this device? Change the PIN, and every device asks it
-  again." Forget or a removed PIN drops the key here and in the cloud; a
+  again." Forget this device asks the grown-up sum first (`web/grown-up.js`,
+  as Feedback does: a wrong answer asks another, ✕ forgets nothing; Ben,
+  2026-10-27: a kid can't lock themselves out by a slip). Forget or a
+  removed PIN drops the key here and in the cloud; a
   key the cloud refused (a PIN changed elsewhere, or 180 days unused) ends it
   too, and the PIN pad then says "This device forgot them. A grown-up can
   type the PIN." (`keyDropped`), so the PIN is asked again (`cloud-ui.js`

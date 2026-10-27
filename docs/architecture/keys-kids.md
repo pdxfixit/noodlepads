@@ -23,7 +23,7 @@
 | `finger.js` | `dj.js`, `kids.js`, `pads.js` | none | one follower per caller |
 | `kids.js` | `app.js` (`initKids`, `showKids`, `refreshKids`, `kidsPersonLeaving`, `kidsShowing`, `kidsBusy`, `askGrownUp`, `kidsKeydown`, `kidsKeyup`) | `audio.js`, `kids-logic.js`, `grown-up.js`, `scratch.js`, `settings.js`, `skins.js`, `tips.js`, `finger.js`, `meter.js levelOf`, `notes.js startsIn`, `sequencer.js` (`STEPS`, `noteRate`), `instruments.js` | the tab, the page, the recorder, the beat player, held toy keys, the tune recording |
 | `kids-logic.js` | `kids.js`, `grown-up.js` (`makeSum`, `typeDigit`) | `sequencer.js` (`cleanRow`, `STEPS`, `multiplyRows`), `notes.js addNote`, `voices.js` (`chainFields`, `voiceStep`), `scratch.js SCRATCH_NAME`, `instruments.js versionFor` | nothing (pure) |
-| `grown-up.js` | `kids.js askGrownUp`, `feedback.js` | `kids-logic.js`, `dialogs.js` | the one `#kids-sum` dialog and who asked it (`ask`) |
+| `grown-up.js` | `kids.js askGrownUp`, `feedback.js`, `cloud-ui.js` (Forget this device) | `kids-logic.js`, `dialogs.js` | the one `#kids-sum` dialog and who asked it (`ask`) |
 
 `dj.js` imports no `audio.js`. Every sound it makes goes through `deps`: `tap`, `loop`, `playOnce`, `stopClip`, `loadSound`, `isLooping`, `now`, `latency`, `sampleRate`.
 
@@ -272,7 +272,7 @@ Four tabs (`kids-logic.js KIDS_TABS`): 🔊 Pads, 🎙️ Record, 🥁 Beats, �
 
 ### The grown-up gate (`grown-up.js`)
 
-One dialog `#kids-sum`, wired on first use. `askSum({ right, wrong, stay, owner })` shows a number 12–39 plus one 6–9 (`kids-logic.js makeSum`: the answer always has two digits, 18–48, its first digit no clue); digits go through `typeDigit`. After three wrong answers in a row (`wrongs`, whoever asked, until the page reloads) each next try waits 30 s (`sumWait`, `SUM_WAIT`): the keys dim and ⏳ counts down (`showWait`); a right answer ends it. Kids asks with `owner: 'kids'` and no `stay`: a wrong answer wiggles and closes. `feedback.js` asks with `stay: true` at every level. `closeSum(owner)` closes only the asker's sum. A held Enter on its keypad types once (its repeats are taken); its focus rings (the keys, ✕ Back) are dark, on its light card (`dialog.kids-sum :focus-visible`). Behind it: `settings-ui.js initSettingsUI({ gate })`, where `app.js` passes `gate: () => kidsShowing() && askGrownUp()`.
+One dialog `#kids-sum`, wired on first use. `askSum({ right, wrong, stay, owner })` shows a number 12–39 plus one 6–9 (`kids-logic.js makeSum`: the answer always has two digits, 18–48, its first digit no clue); digits go through `typeDigit`. After three wrong answers in a row (`wrongs`, whoever asked, until the page reloads) each next try waits 30 s (`sumWait`, `SUM_WAIT`): the keys dim and ⏳ counts down (`showWait`); a right answer ends it. Kids asks with `owner: 'kids'` and no `stay`: a wrong answer wiggles and closes. `feedback.js` and `cloud-ui.js` (a profile's Forget this device, owner `'forget'`) ask with `stay: true` at every level. `closeSum(owner)` closes only the asker's sum. A held Enter on its keypad types once (its repeats are taken); its focus rings (the keys, ✕ Back) are dark, on its light card (`dialog.kids-sum :focus-visible`). Behind it: `settings-ui.js initSettingsUI({ gate })`, where `app.js` passes `gate: () => kidsShowing() && askGrownUp()`.
 
 ### Its recorder, beside the sound sheet's
 
@@ -463,7 +463,7 @@ More gotchas:
 | A new sequencer feature the keys must follow | `sequencer.js` returned object, `dj.js renderGrid`/`intoBeat`, and Beats' own `render`. Check whether Kids should follow too (`kids.js playBeat`). |
 | How a beat plays everywhere | `sequencer.js` (Beats, keys, Song, previews) **and** `kids.js playBeat`. |
 | A Kids tab or screen | `kids-logic.js KIDS_TABS`, `kids.js setTab`/`render`/`initKids`, `index.html` `[data-kids-view]`. |
-| The grown-up sum | `grown-up.js`, `kids-logic.js makeSum`; two askers (`kids.js`, `feedback.js`). |
+| The grown-up sum | `grown-up.js`, `kids-logic.js makeSum`; three askers (`kids.js`, `feedback.js`, `cloud-ui.js` Forget this device). |
 | Who sees Kids | `app.js applyKids`, `enterKids`, `grownUp`/`kidsVisit`; `settings.js` `level`. |
 | A recorder fix | `kids.js` (`listen`, `keep`) and `sheet.js` (`startRecording`, `acceptAudio`). |
 

@@ -2,11 +2,13 @@
 // (kids-logic.js makeSum), answered on big number keys, so a young kid can't
 // get past it by tapping. After three wrong answers in a row each next try
 // waits 30 s (kids-logic.js sumWait): the keys dim and ⏳ counts down, no
-// words; a right answer ends it. Two places ask it:
+// words; a right answer ends it. Three places ask it:
 //   🧸 Kids' ⚙️ (kids.js): a wrong answer goes quietly back to the kid's
 //     screens (ADR 0019).
 //   ⚙️ Settings → About → Feedback (feedback.js), at every level (Ben,
 //     2026-10-19): a wrong answer says so and asks another sum.
+//   A profile's Forget this device (cloud-ui.js), at every level (Ben,
+//     2026-10-27): the same as Feedback; ✕ forgets nothing.
 // The dialog closes as every dialog does (✕, the backdrop, Esc).
 
 import { setupDialog, openDialog } from './dialogs.js';

@@ -228,7 +228,11 @@ test('Not now closes the offer and it is not offered again on this device', asyn
   assert.equal($('#remember-dialog').open, false, 'and nothing is offered');
 });
 
-test('the profile\'s PIN part: Forget this device asks the PIN next time; 🔑 Remember on this device asks it, then remembers', async () => {
+// The grown-up sum (web/grown-up.js): its answer, typed on its keys.
+const sum = () => Number($('#kids-sum-a').textContent) + Number($('#kids-sum-b').textContent);
+const typeSum = (n) => { for (const d of String(n)) $('#kids-sum-keys').querySelector(`[data-digit="${d}"]`).dispatch('click'); };
+
+test('the profile\'s PIN part: Forget this device asks the grown-up sum first (a wrong or cancelled one forgets nothing), then the PIN next time; 🔑 Remember on this device asks it, then remembers', async () => {
   await openProfileSheet(OFFER);
   await settle();
   const btn = $('#cloud-pin-remember');
@@ -237,6 +241,27 @@ test('the profile\'s PIN part: Forget this device asks the PIN next time; 🔑 R
   assert.equal($('#profile-pin-hint').textContent, 'This device opens Friendly Sloth without it until someone taps Forget this device. Sharing still asks it. Anyone using this device can open them. Lost this device? Change the PIN, and every device asks it again.');
   btn.dispatch('click');
   await settle();
+  assert.equal($('#kids-sum').open, true, 'Forget asks the sum');
+  assert.equal(cloud.isRemembered(OFFER), true, 'nothing forgotten yet');
+  const wrong = sum() % 10 === 9 ? sum() - 1 : sum() + 1;
+  typeSum(wrong);
+  await settle();
+  assert.equal($('#kids-sum').open, true, 'a wrong answer asks another');
+  assert.equal($('#kids-sum-note').hidden, false);
+  assert.equal(cloud.isRemembered(OFFER), true, 'a wrong answer forgets nothing');
+  $('#kids-sum').close();
+  await settle();
+  assert.equal(cloud.isRemembered(OFFER), true, '✕ forgets nothing');
+  assert.ok(cloud.linkOf(OFFER).key);
+  assert.equal(keyRows(OFFER).length, 1, 'the key stays in the cloud');
+  assert.equal(btn.textContent, 'Forget this device');
+
+  btn.dispatch('click');
+  await settle();
+  assert.equal($('#kids-sum').open, true);
+  typeSum(sum());
+  await settle();
+  assert.equal($('#kids-sum').open, false);
   assert.equal(cloud.isRemembered(OFFER), false);
   assert.equal(cloud.linkOf(OFFER).key, null);
   assert.equal(keyRows(OFFER).length, 0, 'its key is deleted in the cloud');
