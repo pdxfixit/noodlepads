@@ -357,6 +357,22 @@ test('Regular shows the regular app; the Kids level swaps in the kid\'s screens'
   assert.equal($('[data-kids-view="pads"]').hidden, false);
 });
 
+// Council round 1 (pre-reader, child psychologist; Ben, 2026-10-26): ⏹️
+// stood in the row of tabs as a fifth, red one, and a kid hunting for a tab
+// hit Stop all. It is a button apart from the tabs: outside their group, no
+// tab's class, round, and the tab group ends in a divider before it.
+test('⏹️ is set apart from the tabs: outside their group, not styled as a tab, round behind a divider', () => {
+  const stop = $('#kids-stop');
+  const tabs = $('#kids').querySelectorAll('[data-kids-tab]');
+  assert.equal(stop.classList.contains('kids-tab'), false, 'not a tab');
+  assert.ok(tabs.every((t) => t.parentElement === tabs[0].parentElement), 'the four tabs share a group');
+  assert.ok(stop.parentElement !== tabs[0].parentElement, '⏹️ is not in it');
+  assert.ok(tabs[0].parentElement.classList.contains('kids-tabs'));
+  const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.kids-stop \{[^}]*border-radius: 50%/, 'round, where the tabs are rounded squares');
+  assert.match(css, /\.kids-tabs \{[^}]*border-right: 2px solid/, 'a divider after the tabs');
+});
+
 test('Pads: big picture pads, the kit and the kid\'s own; a tap plays, nothing to edit or delete', () => {
   const pads = $('#kids-pages').querySelectorAll('.kids-pad');
   assert.ok(pads.length > 20, String(pads.length));

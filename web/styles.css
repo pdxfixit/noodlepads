@@ -4931,20 +4931,25 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
 .kids-view { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: var(--max); margin: 0 auto; }
 .kids-view[hidden] { display: none; }
 
-/* The bottom bar: four tabs and ⏹️, each a big picture. */
+/* The bottom bar: four tabs in a group of their own, and ⏹️ apart from them,
+   round and red behind a divider (the pre-reader and child psychologist,
+   2026-10-26: a kid hunting for a tab must not hit Stop all by mistake). */
 .kids-bar {
+  --kids-tab-h: 72px;
   flex: none;
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 16px;
   width: 100%;
   max-width: 900px;
   margin: 0 auto;
   padding: 12px 0 calc(14px + env(safe-area-inset-bottom));
 }
+.kids-tabs { flex: 1 1 0; display: flex; gap: 10px; min-width: 0; padding-right: 16px; border-right: 2px solid rgba(255, 255, 255, 0.28); }
 .kids-tab {
   flex: 1 1 0;
   min-width: 0;
-  height: 72px;
+  height: var(--kids-tab-h);
   border: 0;
   border-radius: 20px;
   background: var(--bed);
@@ -4954,9 +4959,21 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
   transition: transform 60ms, box-shadow 60ms;
 }
 .kids-tab[aria-pressed="true"] { background: var(--led); box-shadow: 0 6px 0 #B89A10; }
-.kids-stop { flex: 0 0 auto; width: 72px; background: var(--record); box-shadow: 0 6px 0 #7E1612; }
+.kids-stop {
+  flex: 0 0 auto;
+  width: var(--kids-tab-h);
+  height: var(--kids-tab-h);
+  border: 0;
+  border-radius: 50%;
+  background: var(--record);
+  box-shadow: 0 6px 0 #7E1612;
+  font-size: 2.2rem;
+  line-height: 1;
+  transition: transform 60ms, box-shadow 60ms;
+}
+.kids-stop:active { transform: translateY(4px); box-shadow: 0 2px 0 #7E1612; }
 .kids-tab:active, .kids-pad:active, .kids-key.down, .kids-square:active, .kids-voice:active, .kids-play:active, .kids-tempo:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--bed-edge); }
-@media (max-width: 360px) { .kids-bar { gap: 6px; } .kids-tab { height: 64px; font-size: 1.9rem; } .kids-stop { width: 60px; } }
+@media (max-width: 360px) { .kids-bar { --kids-tab-h: 64px; gap: 10px; } .kids-tabs { gap: 6px; padding-right: 10px; } .kids-tab, .kids-stop { font-size: 1.9rem; } }
 
 /* A bounce on a tap, and a head shake when a tap did nothing. */
 @keyframes kids-boing { 0% { scale: 1; } 35% { scale: 1.12; } 65% { scale: 0.95; } 100% { scale: 1; } }
@@ -5139,8 +5156,7 @@ body.kids .title-row .grille { display: grid; }   /* the level lights stay: they
   .kids-play, .kids-tempo { height: 56px; border-radius: 18px; font-size: 2rem; }
   .kids-beat { gap: 5px; }
   .kids-beat[data-layout="down"] { grid-template-rows: minmax(44px, 48px) repeat(8, minmax(44px, 1fr)); }
-  .kids-bar { padding: 6px 0 calc(8px + env(safe-area-inset-bottom)); }
-  .kids-tab { height: 60px; }
+  .kids-bar { --kids-tab-h: 60px; padding: 6px 0 calc(8px + env(safe-area-inset-bottom)); }
 }
 .kids-drum {
   border: 0;
@@ -5266,7 +5282,7 @@ dialog.kids-sum :focus-visible { outline: 4px solid var(--ink); outline-offset: 
   .kids .boing, .kids .wiggle, .kids-sum .wiggle { animation: none; }
   .kids .boing { filter: brightness(1.2); }
   .kids-mic.recording { scale: 1; }   /* the glow still follows the voice */
-  .kids-dot, .kids-pad, .kids-tab, .kids-key { transition: none; }
+  .kids-dot, .kids-pad, .kids-tab, .kids-stop, .kids-key { transition: none; }
 }
 
 /* A new kid's first steps, with no words (tips.js kidsHint, ADR 0028): a 👆

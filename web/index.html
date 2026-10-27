@@ -409,11 +409,14 @@
       <div class="kids-keys" id="kids-keys" role="group" aria-label="Keys"></div>
     </div>
     <nav class="kids-bar" aria-label="Kids screens">
-      <button type="button" class="kids-tab" data-kids-tab="pads" aria-pressed="true" aria-label="Pads">🔊</button>
-      <button type="button" class="kids-tab" data-kids-tab="record" aria-pressed="false" aria-label="Record">🎙️</button>
-      <button type="button" class="kids-tab" data-kids-tab="beats" aria-pressed="false" aria-label="Beats">🥁</button>
-      <button type="button" class="kids-tab" data-kids-tab="keys" aria-pressed="false" aria-label="Keys">🎹</button>
-      <button type="button" class="kids-tab kids-stop" id="kids-stop" aria-label="Stop all">⏹️</button>
+      <!-- The four tabs are a group; ⏹️ stands apart from them, round and red (styles.css .kids-stop). -->
+      <div class="kids-tabs" role="group" aria-label="Screens">
+        <button type="button" class="kids-tab" data-kids-tab="pads" aria-pressed="true" aria-label="Pads">🔊</button>
+        <button type="button" class="kids-tab" data-kids-tab="record" aria-pressed="false" aria-label="Record">🎙️</button>
+        <button type="button" class="kids-tab" data-kids-tab="beats" aria-pressed="false" aria-label="Beats">🥁</button>
+        <button type="button" class="kids-tab" data-kids-tab="keys" aria-pressed="false" aria-label="Keys">🎹</button>
+      </div>
+      <button type="button" class="kids-stop" id="kids-stop" aria-label="Stop all">⏹️</button>
     </nav>
   </section>
 
