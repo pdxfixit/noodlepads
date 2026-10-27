@@ -73,3 +73,9 @@ test('a ruler numbers the bars over the rows, and a row has no fold', async () =
   assert.ok($('#seq-rows').closest('.seq-scroll'), 'the rows sit in the box that scrolls');
   assert.equal($('#seq-rows').querySelector('.seq-fold'), null);
 });
+
+test('the ruler is as tall as its numbers: its empty head has no 44 px minimum', () => {
+  const head = rule('.seq-ruler .seq-head');
+  assert.match(head, /min-height: 0;/, 'a row head is 44 px tall, the ruler\'s is not a tap target');
+  assert.match(head, /padding-block: 0;/);
+});

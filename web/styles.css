@@ -1168,7 +1168,10 @@ dialog .lib-empty { border-color: rgb(20 19 24 / 0.25); background: var(--chalk)
 .seq-row .seq-beat > .pill:last-child::after { right: -5px; }
 .pill.beat-start { background: rgb(255 255 255 / 0.19); }
 /* The ruler over the rows: each bar's number over its "1", a dot over each beat. */
-.seq-ruler .seq-steps { padding-block: 8px 2px; }
+.seq-ruler .seq-steps { padding-block: 6px 0; }
+/* Its head is empty (it only holds the numbers clear of the rows' heads): no
+   44 px tap height, or the numbers sit in a band of dead space. */
+.seq-ruler .seq-head { min-height: 0; padding-block: 0; }
 .seq-ruler .seq-beat { padding-block: 0; background: transparent; }
 .seq-tick { font: 800 0.8rem/1 var(--font-display); color: rgb(255 255 255 / 0.55); text-align: center; }
 .seq-tick.one { color: #fff; }
