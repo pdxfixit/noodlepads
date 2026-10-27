@@ -680,7 +680,7 @@ test('➕ Add to this beat lays a groove over the open beat, keeping its tempo a
   $('#grooves').close();
 });
 
-test('a beat file: 📥 Load a beat file opens it under its own name; ⬇️ saves one back with kit sounds by name', async () => {
+test('a beat file: 📥 Load a beat file opens it under its own name; 📄 saves one back with kit sounds by name', async () => {
   $('#beats-toggle').dispatch('click');
   const file = { format: 'noodle-pads-beat', version: 1, name: 'Disco', bpm: 120, bars: 1, swing: 0,
     rows: [{ sound: 'kick', steps: [true, false, false, false, true] }, { sound: 'laser-of-doom', steps: [true] }] };
@@ -695,7 +695,7 @@ test('a beat file: 📥 Load a beat file opens it under its own name; ⬇️ sav
   assert.equal($('#seq-bpm-out').textContent, '120 BPM');
   const rows = $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
   assert.equal(rows.length, 1, 'a sound this app has not got is left out');
-  // ⬇️ on it in 🗂️ Beats downloads it again.
+  // 📄 on it in 🗂️ Beats downloads it again.
   document.querySelector('.beat-bar [data-beat-open]').dispatch('click');
   let blob;
   const real = URL.createObjectURL;

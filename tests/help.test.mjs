@@ -48,13 +48,13 @@ const MUST_MENTION = [
   '👆 Select part', '🔄 Backwards', '🔇 Silence it', '🔊 Louder', '🔉 Quieter', '🔊 Even it out', '✂️ Keep only this', '🧩 Chop into pads', '🧩 Make pads',
   // Beats
   '🆕 New', '🗂️ Beats', '🗂️ Songs', '🎧 Listen', '▶ Play', '⏲️', 'Straight', 'Swing', 'Shuffle', '4/4', '+ Add a row', 'loudness', '🧹?',
-  'Who plays it?', '💃 Grooves', '📝 Into scratch', '➕ Add to this beat', '💾 Keep', '🔊 Make the open beat a sound', '📥 Load a beat file', '🔔 Let it ring', '🎹 Tune', '🎹 Add a tune', '♯ All notes', '½ Half pills', '🎚️ Mixer', 'All on',
+  'Who plays it?', '💃 Grooves', '📝 Into scratch', '➕ Add to this beat', '💾 Keep', '🔊 As a sound', '⬇️ Audio file', '📥 Load', '🔔 Let it ring', '🎹 Tune', '🎹 Add a tune', '♯ All notes', '½ Half pills', '🎚️ Mixer', 'All on',
   '⌨️', '● Record', '↩️ Beat', 'tap to change it',
   // Live
   '⏲️ Click track', 'keep tapping…', '✏️ Layout', '⌨️ Keys', '👆 Pads', '↺ Reset keys', '⭐ Save this layout', '⭐ Keys', '✕ Unpick all', '🎬 Takes',
   '🔊 Make a sound', 'Make another?', 'QWERTY', 'Dvorak', '+ Add a group', '+ more', '⭐ Layout', '🗑️ Take it out',
   // Song
-  '🎼 Song', '➕ Add a lane', '▶ Play song', '🔊 Save as a sound', '↩️ Undo',
+  '🎼 Song', '➕ Add a lane', '▶ Play song', '🔊 As a sound', '⬇️ Audio file', '↩️ Undo',
   // Settings
   '💾 Save a backup', '📂 Load a backup', 'Advanced', '🧸 Kids', 'Regular', '📮 Send problem reports', 'Kids mode',
   // The cloud

@@ -120,7 +120,7 @@ export const RULES = {
   beat: {
     // switch: a pattern chip's beat taking over at a bar line, `after` bars into the beat before it.
     // groove: one loaded into the scratch (`replaced`: over hits); keep: 💾 Keep (`groove`: from one); new: 🆕 New (`replaced`: emptied a scratch with rows).
-    action: oneOf(['play', 'stop', 'sample', 'switch', 'groove', 'keep', 'new']), replaced: bool, groove: bool, bpm: num, bars: num, advanced: bool, mode: oneOf(['plain', 'speed']), after: num,
+    action: oneOf(['play', 'stop', 'sample', 'switch', 'groove', 'keep', 'new', 'audio']), how: oneOf(['share', 'download']), replaced: bool, groove: bool, bpm: num, bars: num, advanced: bool, mode: oneOf(['plain', 'speed']), after: num,
     signature: oneOf(SIGNATURE_IDS), rows,
     seconds: num, hits: num, cuts: num, maxRinging: num, limiterDb: num,
   },
@@ -155,7 +155,7 @@ export const RULES = {
     action: oneOf(['start', 'stop', 'made', 'song', 'beat', 'thrown', 'cancelled']), source: oneOf(['tab', 'screen', 'mic', 'file']),
     seconds: num, parts: num, tempos: num, beats: num, song: bool,
   },
-  song: { action: oneOf(['play', 'stop', 'sound', 'keep', 'new', 'tempo']), replaced: bool, slots: num, parts: num, lanes: num, blocks: num, marks: num, seconds: num },
+  song: { action: oneOf(['play', 'stop', 'sound', 'audio', 'keep', 'new', 'tempo']), how: oneOf(['share', 'download']), replaced: bool, slots: num, parts: num, lanes: num, blocks: num, marks: num, seconds: num },
   render: { voice: chain, amount: nums, seconds: num, out: num, ms: num },
   storage: { opened: bool, late: bool, waiting: bool },
   setting: { key: oneOf(Object.keys(SETTING_VALUES)), value: settingValue, was: settingValue },

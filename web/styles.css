@@ -750,7 +750,7 @@ body.keys-on .dj-bar { position: sticky; top: calc(var(--head-h, 0px) - var(--de
   .tempo-key + .song-tempo.tempo-open .song-tempo-open::before { content: "＋ Tempo change" / ""; font-size: 1rem; }
   /* Every bar wraps, so the open line goes under the rest. */
   .beat-go, .song-deck { flex-wrap: wrap; row-gap: 10px; }
-  .song-deck #song-sound { order: 10; flex-basis: 100%; }   /* its own line, under the open tempo */
+  .song-deck .song-save { order: 10; flex: 1 1 100%; }   /* its own line, under the open tempo: 🔊 and ⬇️ side by side */
   .song-deck .song-play { flex: 1 1 0; }
   .song-deck .tempo-key { flex: none; }
   .seq .beat-go .seq-play { flex: 1 1 auto; width: auto; }
@@ -1431,6 +1431,8 @@ dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
 /* ▶ Play song, the song's tempo (➖ 60–180 BPM ➕) and Save as a sound on the deck. */
 .song-deck { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .song-deck > * { flex: 1 1 auto; }
+.song-save { display: flex; gap: 12px; }
+.song-save > * { flex: 1 1 0; min-width: 0; }
 .song-tempo { display: flex; align-items: center; gap: 6px; }
 .song-tempo .tempo-nudge { flex: none; width: 52px; padding: 0; }
 .song-tempo-field { display: flex; flex: 1 1 auto; align-items: center; justify-content: center; gap: 6px; font-weight: 800; }
@@ -2098,7 +2100,9 @@ button.sa-row { cursor: pointer; }
 
 /* Saved beats: a name field, then the library, newest first. */
 .lib-note { min-height: 1.4em; margin: 8px 0 4px; font-weight: 700; }
-.lib-sound-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+/* 🔊 ⬇️ 📥 in one row, so the list of beats keeps its room (Ben, 2026-10-26). */
+.lib-sound-row { display: flex; align-items: stretch; gap: 10px; margin-top: 12px; }
+.lib-sound-row > .chip-dark { flex: 1 1 0; min-width: 0; padding: 6px 4px; line-height: 1.15; text-align: center; }
 .lib-bars { display: inline-flex; border: 2px solid var(--line); border-radius: 12px; overflow: hidden; }
 .lib-bars button { min-height: 44px; padding: 0 12px; border: 0; background: #fff; font-weight: 700; }
 .lib-bars button[aria-pressed="true"] { background: var(--board); color: #fff; }

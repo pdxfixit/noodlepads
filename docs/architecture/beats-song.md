@@ -256,6 +256,8 @@ The beat sounds the same in all of them because they share `sound()`, `busFor()`
 | After | `normalize` (peak to 0.9), `encodeWav`, `deps.addClip({label, blob})` → `app.js addMadeSound` with 🥁 | same, with 🎼 |
 | Where it shows | 🗂️ Beats' note line (`el.libNote`) | the banner (`note`) |
 
+**⬇️ Save as audio file** (Ben, 2026-10-26) uses the same two renders: `sequencer.js makeAudioFile` calls `bounce({ passes, ring })` (the beat round `audioPasses` times, at least 15 s in whole passes, and 2 s more rendered past the end) and `song.js makeAudioFile` calls `renderSong(plan, ring)` (the song once, the same ring-out; refused over 180 s like 🔊). `wav.js audioFileFrames` keeps the ring-out only as far as something is still heard, `audioView` hands `encodeWav` that many frames, and `audioFileName` makes the name on screen safe (24 characters, `.wav`; a scratch beat takes its groove's name or a fun name, a scratch song a fun name). `download.js createAudioSaver` owns the button (⏳ while it renders, one at a time) and `saveAudio` picks the way out: `navigator.share({ files })` on a touch device whose `canShare` accepts the file (`deliveryOf`), else `downloadBlob`. A share refused with `NotAllowedError` (the render outlasted the tap) turns the button into 📤 Send, and the next tap shares the file already made; `AbortError` (sheet closed) is silent. 🧸 Kids has neither screen, so no button. It logs `beat`/`song` `action: 'audio'` with `how` (`share` or `download`). Guard: `tests/save-audio.test.mjs`.
+
 A share preview (`share-render.js`) is mono at 22,050 Hz, a beat played twice (`BEAT_PASSES`), with a 1 s tail.
 
 ## 💃 Grooves and trying a groove (ADR 0004, 0020)

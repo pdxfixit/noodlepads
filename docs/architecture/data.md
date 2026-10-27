@@ -33,7 +33,7 @@
 | `backup-ui.js` | 💾 / 📂 buttons, `storeLoaded`, `whatIsHere`, `savePersonBackup`, `pastPins`, its own `storedLists` | no | app.js, leftover.js, cloud.js |
 | `old-backup.js` | `readEverything`, `makeEverything`, `holdings`, `holdsWords`, `sizeWords` | partly | leftover.js, backup-ui.js |
 | `leftover.js` | ⚙️ Settings → Older sounds found on this device | no | app.js (`initLeftover`) |
-| `download.js` | `downloadBlob` | needs a page | backup-ui.js, leftover.js, others |
+| `download.js` | `downloadBlob`; `saveAudio`, `deliveryOf`, `createAudioSaver` (⬇️ Save as audio file: share sheet or download) | needs a page | backup-ui.js, leftover.js, sequencer.js, song.js, others |
 | `util.js` | `newId`, `extensionFor`, `slug`, `count`, `localDate`, `remember`/`recall`/`forget` (localStorage that never throws), `versionLabel` | yes | everywhere |
 | `app.js` | start-up order, who is showing (`setPerson`, `showPerson`, `startOver`), `settlePeople`, `addMadeSound`, `setClipEmoji`, the stores the factories write through (`beatLibrary`, `songBook`, the `deps` of `createDJ`, `createSong`, `initKids`) | no | `index.html` |
 

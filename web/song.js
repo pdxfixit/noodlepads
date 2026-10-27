@@ -26,9 +26,10 @@
 
 import { openDialog, setupDialog } from './dialogs.js';
 import { tempoKey } from './tempo-key.js';
-import { encodeWav, normalize } from './wav.js';
+import { encodeWav, normalize, audioFileFrames, audioView, audioFileName, AUDIO_RING_SECONDS } from './wav.js';
 import { COMMON_BPMS, tempoStops, stopFor, outputDelay } from './beat.js';
 import { logEvent } from './log.js';
+import { createAudioSaver } from './download.js';
 import { showBanner } from './ui.js';
 import { countPlay } from './play-count.js';
 import { newId } from './util.js';
@@ -64,6 +65,7 @@ const blockCount = (song) => song.lanes.reduce((n, l) => n + l.blocks.length, 0)
 export function createSong(deps) {
   const { el, audio, meter, seq, engine } = deps;
   let song = null;
+  let audioSaver = null;   // ⬇️ Save as audio file's button (made below)
   // On a phone the song's tempo folds into one key (tempo-key.js); its line holds ➖ the tempo ➕ (with Advanced, the way into 🎼 Tempo).
   let sliding = null;   // the tempo a slider drag is at, shown on the key until it lets go
   const songKey = el.tempoKey && el.tempoBox ? tempoKey(el.tempoKey, el.tempoBox, () => sliding ?? song?.tempo ?? 100) : null;
@@ -290,6 +292,8 @@ export function createSong(deps) {
     const any = song.lanes.some((l) => l.blocks.some((b) => beatById(b.beatId)));
     el.play.disabled = !any && !playing();
     el.sound.disabled = !any;
+    el.audio.disabled = !any;
+    audioSaver?.reset();   // a file made for the song as it was, waiting to be sent, is forgotten
   }
 
   // The strip of the person's beats, as the pattern chips look: a tap picks
@@ -1232,23 +1236,31 @@ export function createSong(deps) {
 
   // ── 🔊 Save as a sound: every lane mixed, to a new pad ──
 
+  // The song through once, every unmuted lane mixed (and `ring` seconds more
+  // past its end), or null when nothing in it makes a sound.
+  async function renderSong(plan, ring = 0) {
+    await seq.prepareBeats([...plan.plans.values()].map((p) => p.pattern));
+    const rate = audio.context().sampleRate;
+    const ctx = new OfflineAudioContext(2, Math.ceil((plan.seconds + ring) * rate), rate);
+    const hits = soundSong(ctx, laneGainsFor(ctx, ctx.destination, { live: false }), plan, seq);
+    return hits ? normalize(await ctx.startRendering()) : null;
+  }
+
+  const tooLong = (plan, what) => `This song is ${Math.round(plan.seconds)} seconds. Songs up to ${MAX_SONG_SECONDS / 60} minutes can be ${what}: take a block out, repeat one less, or speed up the tempo.`;
+
   async function saveAsSound() {
     if (!song) return;
     const plan = planSong(song, beatById, seq, { skipMuted: true });
     if (!plan.parts.length) return;
     if (plan.seconds > MAX_SONG_SECONDS) {
-      note(`This song is ${Math.round(plan.seconds)} seconds. Songs up to ${MAX_SONG_SECONDS / 60} minutes can be a sound: take a block out, repeat one less, or speed up the tempo.`);
+      note(tooLong(plan, 'a sound'));
       return;
     }
     el.sound.disabled = true;
     note('Making the sound…');
     try {
-      await seq.prepareBeats([...plan.plans.values()].map((p) => p.pattern));
-      const rate = audio.context().sampleRate;
-      const ctx = new OfflineAudioContext(2, Math.ceil(plan.seconds * rate), rate);
-      const hits = soundSong(ctx, laneGainsFor(ctx, ctx.destination, { live: false }), plan, seq);
-      if (!hits) { note('This song has nothing to hear yet. Turn on some pills in its beats, or unmute a lane.'); return; }
-      const buffer = normalize(await ctx.startRendering());
+      const buffer = await renderSong(plan);
+      if (!buffer) { note('This song has nothing to hear yet. Turn on some pills in its beats, or unmute a lane.'); return; }
       const label = deps.soundLabel(song.name);
       await deps.addClip({ label, blob: encodeWav(buffer) });
       note(`Added “${label}” to the pads (${buffer.duration.toFixed(1)} s).`);
@@ -1261,6 +1273,28 @@ export function createSong(deps) {
     }
   }
   el.sound.addEventListener('click', saveAsSound);
+
+  // ⬇️ Save as audio file: the song once through as a WAV, its last notes
+  // ringing out up to 2 s, to the share sheet or a download. A scratch song
+  // gets a fresh fun name, so five saves are not five "Scratch song.wav".
+  async function makeAudioFile() {
+    if (!song) return null;
+    const plan = planSong(song, beatById, seq, { skipMuted: true });
+    if (!plan.parts.length) return null;
+    if (plan.seconds > MAX_SONG_SECONDS) { note(tooLong(plan, 'an audio file')); return null; }
+    const buffer = await renderSong(plan, AUDIO_RING_SECONDS);
+    if (!buffer) { note('This song has nothing to hear yet. Turn on some pills in its beats, or unmute a lane.'); return null; }
+    const rate = buffer.sampleRate;
+    const frames = audioFileFrames(buffer, Math.ceil(plan.seconds * rate), Math.ceil(AUDIO_RING_SECONDS * rate));
+    const name = audioFileName(onScratch() ? deps.songName(songs().map((x) => x.name)) : song.name);
+    return { blob: encodeWav(audioView(buffer, frames)), name, seconds: frames / rate };
+  }
+  audioSaver = createAudioSaver({
+    button: el.audio,
+    make: makeAudioFile,
+    say: note,
+    done: (how) => logEvent('song', { action: 'audio', how }),
+  });
 
   // A song in 🗂️ Songs opened by id (🎧 From a song's 🎼 Open it as a
   // song); false when it is not there.

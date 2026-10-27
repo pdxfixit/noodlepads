@@ -29,7 +29,7 @@ import { logEvent } from './log.js';
 import { showBanner } from './ui.js';
 import { countPlay } from './play-count.js';
 import { soundKind } from './log-clean.js';
-import { downloadBlob } from './download.js';
+import { downloadBlob, createAudioSaver } from './download.js';
 import { instrumentById, presetInstrument, versionFor, ownIdOf } from './instruments.js';
 import { isScratch, isHiddenBeat, scratchOf, scratchId, scratchLabel, grooveOf, hasHits, SCRATCH_NAME } from './scratch.js';
 import { cleanVolume, rowLevel, setRowLevel, drawSpeaker, speakerControls, percent } from './row-volume.js';
@@ -38,7 +38,7 @@ import { moreMenu } from './overflow.js';
 import { follower, keepInView } from './follow.js';
 import { fitLine } from './lines.js';
 import { pillHolds } from './finger.js';
-import { encodeWav, normalize } from './wav.js';
+import { encodeWav, normalize, audioPasses, audioFileFrames, audioView, audioFileName, AUDIO_RING_SECONDS } from './wav.js';
 import { BAR_CHOICES, BEAT_BAR_STEPS, COMMON_BPMS, DEFAULT_BPM, MAX_BEAT_FILE_BYTES, MAX_BPM, MAX_PINS, MAX_ROWS, MAX_SWING, MIN_BPM, RING_MS, ROW_RATES, SAMPLE_SECONDS, STEPS_PER_BEAT, SIGNATURES, audible, barSteps, beatFromFile, beatToFile, chipBeats, cleanPattern, cleanRow, grooveBeat, groovePlayers, grooveShape, holdPill, isPinned, mergeGroove, moveItem, multiplyRows, nextSound, outputDelay, pillTarget, planHits, retimeAt, rowSlot, stepSeconds, stepsHeard, stopFor, tapPill, tempoStops, typedBpm } from './beat.js';
 import { GROOVES, GROOVE_GROUPS } from './grooves.js';
 import { cleanFx, silencedBySolo, createMixer } from './mixer.js';
@@ -2281,6 +2281,7 @@ export function createSequencer(deps) {
   function openLibrary(from) {
     el.libNote.textContent = '';
     deleteAsked = null;
+    audioSaver.reset();   // a file made for another beat, waiting to be sent, is forgotten
     renderLibrary();
     openDialog(el.library, { returnTo: () => from });
   }
@@ -2288,6 +2289,7 @@ export function createSequencer(deps) {
   function renderLibrary() {
     const beats = library();
     el.libSound.disabled = !pattern;   // 🔊 makes the open beat a sound: with none open, nothing to make
+    el.libAudio.disabled = !pattern;   // ⬇️ saves it as an audio file: likewise
     el.libEmpty.hidden = beats.length > 0;
     el.libList.replaceChildren(...beats.map((beat) => {
       const item = document.createElement('li');
@@ -2340,7 +2342,7 @@ export function createSequencer(deps) {
       save.type = 'button';
       save.className = 'chip-dark';
       save.dataset.export = beat.id;
-      save.textContent = '⬇️';
+      save.textContent = '📄';
       save.setAttribute('aria-label', `Save ${beat.name} as a beat file`);
 
       item.append(openBtn, pin, dup, save, del);
@@ -2467,21 +2469,41 @@ export function createSequencer(deps) {
   // Plays the pattern into an OfflineAudioContext exactly as play() would:
   // the same hits (planHits), each row's tempo, fades and Let it ring, once
   // through the whole beat, every bar.
-  async function bounce() {
+  // `passes` plays it round that many times, and `ring` seconds more are
+  // rendered past the end so the last hits ring out (⬇️ Save as audio file).
+  async function bounce({ passes = 1, ring = 0 } = {}) {
     await Promise.all(pattern.rows.map((r) => prepare(deps.clipById(r.clipId))));
     const rate = audio.context().sampleRate;
     const seconds = total() * baseStep();
-    const ctx = new OfflineAudioContext(2, Math.ceil(seconds * rate), rate);
+    const ctx = new OfflineAudioContext(2, Math.ceil((seconds * passes + ring) * rate), rate);
     const lists = pattern.rows.map(() => []);
     let hits = 0;
-    for (const { row: i, time, loud, note, len } of planHits(pattern, playMode(), seconds, bar(), swingNow(), groups())) {
-      const loaded = engine.get(pattern.rows[i].clipId);
-      if (!loaded) continue;
-      sound(ctx, busFor(ctx, ctx.destination, pattern).input(i), lists[i], pattern.rows[i], loaded, time, loud, note, len);
-      hits++;
+    const plan = planHits(pattern, playMode(), seconds, bar(), swingNow(), groups());
+    for (let pass = 0; pass < passes; pass++) {
+      for (const { row: i, time, loud, note, len } of plan) {
+        const loaded = engine.get(pattern.rows[i].clipId);
+        if (!loaded) continue;
+        sound(ctx, busFor(ctx, ctx.destination, pattern).input(i), lists[i], pattern.rows[i], loaded, time + pass * seconds, loud, note, len);
+        hits++;
+      }
     }
     if (!hits) return null;
     return normalize(await ctx.startRendering());
+  }
+
+  // ⬇️ Save as audio file: the beat round at least 15 s in whole passes, its
+  // last hits ringing out up to 2 s, as a WAV that download.js hands on.
+  async function makeAudioFile() {
+    if (!pattern) return null;
+    const rate = audio.context().sampleRate;
+    const pass = total() * baseStep();
+    const passes = audioPasses(pass);
+    const buffer = await bounce({ passes, ring: AUDIO_RING_SECONDS });
+    if (!buffer) { el.libNote.textContent = 'Turn on some pills first, then save it as an audio file.'; return null; }
+    const frames = audioFileFrames(buffer, Math.ceil(pass * passes * rate), Math.ceil(AUDIO_RING_SECONDS * rate));
+    // The name on screen; a scratch beat is named as 🔊 names it (its groove's, or a fun name).
+    const name = audioFileName(onScratch() ? grooveOf(pattern)?.name || freshName() : pattern.name);
+    return { blob: encodeWav(audioView(buffer, frames)), name, seconds: frames / rate };
   }
 
   async function saveAsSound() {
@@ -2505,6 +2527,14 @@ export function createSequencer(deps) {
   }
 
   el.libSound.addEventListener('click', saveAsSound);
+
+  // ⬇️ Save as audio file: the open beat as a WAV, to the share sheet or a download.
+  const audioSaver = createAudioSaver({
+    button: el.libAudio,
+    make: makeAudioFile,
+    say: (text) => { el.libNote.textContent = text; },
+    done: (how) => logEvent('beat', { action: 'audio', how }),
+  });
 
   // Bars: how long the whole beat is before it starts over. Rows keep pills
   // they had in bars that are no longer shown, so going back loses nothing.

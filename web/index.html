@@ -301,7 +301,10 @@
           <button type="button" class="seq-tool song-tempo-open" id="song-tempo-open" aria-label="Song tempo: tap to change it or add a tempo change" hidden>BPM</button>
           <button type="button" class="seq-tool tempo-nudge" id="song-tempo-up" aria-label="Faster">➕</button>
         </div>
-        <button type="button" class="seq-tool" id="song-sound">🔊 Save as a sound</button>
+        <div class="song-save">
+          <button type="button" class="seq-tool" id="song-sound" aria-label="Save the song as a sound">🔊 As a sound</button>
+          <button type="button" class="seq-tool" id="song-audio" aria-label="Save as audio file">⬇️ Audio file</button>
+        </div>
       </div>
       <!-- Your beats, as the pattern chips look: pick one, then tap a spot on a lane (ADR 0024). -->
       <div class="beat-chips song-beats" id="song-beats" role="group" aria-label="Your beats: pick one, then tap a spot on a lane"></div>
@@ -875,8 +878,9 @@
       </div>
       <p class="field-hint">Every beat saves itself. Tap one to open it.</p>
       <div class="lib-sound-row">
-        <button type="button" class="chip-dark" id="lib-sound">🔊 Make the open beat a sound</button>
-        <label class="chip-dark">📥 Load a beat file<input type="file" id="lib-file" accept=".json,application/json"></label>
+        <button type="button" class="chip-dark" id="lib-sound" aria-label="Make the open beat a sound">🔊 As a sound</button>
+        <button type="button" class="chip-dark" id="lib-audio" aria-label="Save as audio file">⬇️ Audio file</button>
+        <label class="chip-dark" title="Load a beat file">📥 Load<input type="file" id="lib-file" accept=".json,application/json" aria-label="Load a beat file"></label>
       </div>
       <p class="lib-note" id="lib-note" role="status"></p>
       <p class="lib-empty" id="lib-empty" hidden>No beats yet. Tap 🆕 New to start one.</p>

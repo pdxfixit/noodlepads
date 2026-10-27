@@ -38,3 +38,45 @@ export function encodeWav(buffer) {
   }
   return new Blob([view], { type: 'audio/wav' });
 }
+
+// ── ⬇️ Save as audio file: how long the file is, and what it is called ──
+
+export const AUDIO_MIN_SECONDS = 15;   // a beat's file loops to at least this long, in whole passes
+export const AUDIO_RING_SECONDS = 2;   // the last hits ring out for up to this long past the end
+
+// How many whole passes of a beat fill a file of at least `min` seconds
+// (a beat of 4 slow bars is already longer than that: one pass).
+export function audioPasses(passSeconds, min = AUDIO_MIN_SECONDS) {
+  if (!(passSeconds > 0)) return 1;
+  return Math.max(1, Math.ceil(min / passSeconds - 1e-9));
+}
+
+// How many frames of a rendered buffer to keep: everything up to the end of
+// the music (`musicFrames`), then the ring-out for as long as anything is
+// still heard in it, at most `ringFrames` (the buffer is rendered that much
+// longer), and a short breath after the last sound so it does not click off.
+export function audioFileFrames(buffer, musicFrames, ringFrames) {
+  const end = Math.min(buffer.length, musicFrames + ringFrames);
+  const data = Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c));
+  let last = -1;
+  for (let i = end - 1; i >= musicFrames && last < 0; i--) {
+    for (const d of data) if (Math.abs(d[i]) > 0.001) { last = i; break; }
+  }
+  if (last < 0) return Math.min(end, musicFrames);
+  return Math.min(end, last + 1 + Math.round(buffer.sampleRate * 0.05));
+}
+
+// The first `frames` of a rendered buffer, shaped for encodeWav.
+export function audioView(buffer, frames) {
+  return {
+    numberOfChannels: buffer.numberOfChannels, sampleRate: buffer.sampleRate, length: frames,
+    getChannelData: (c) => buffer.getChannelData(c).subarray(0, frames),
+  };
+}
+
+// The file's name is the name on screen: letters, numbers, spaces and ( ) ' _ -
+// (no emoji, no / \ : * ? " < > |), up to 24 characters, then .wav.
+export function audioFileName(name, fallback = 'Noodle Pads') {
+  const clean = String(name ?? '').replace(/[^\p{L}\p{N} ()'_-]+/gu, '').replace(/\s+/g, ' ').trim().slice(0, 24).trim();
+  return `${clean || fallback}.wav`;
+}
