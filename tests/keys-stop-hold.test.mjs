@@ -8,6 +8,7 @@ import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
+import { HOLD_TO_LOOP_MS } from '../web/dj.js';
 
 let page;
 let $;
@@ -41,7 +42,7 @@ test('a mouse held on a looping key stops it, and it stays stopped', async () =>
   loopA();
   calls.length = 0;
   key().dispatch('pointerdown', { button: 0, pointerId: 2 });
-  await wait(450);   // past the 350 ms hold
+  await wait(HOLD_TO_LOOP_MS + 100);   // past the hold, with room for a busy machine
   key().dispatch('pointerup', { pointerId: 2 });
   assert.deepEqual(calls.map(([w]) => w), ['stop']);
   assert.equal(looping.size, 0);
@@ -73,7 +74,7 @@ test('a 👆 tile: a mouse held on a looping tile stops it, and it stays stopped
   assert.equal(looping.size, 1);
   calls.length = 0;
   tile.dispatch('pointerdown', { button: 0, pointerId: 6 });
-  await wait(450);
+  await wait(HOLD_TO_LOOP_MS + 100);
   tile.dispatch('pointerup', { pointerId: 6 });
   assert.deepEqual(calls.map(([w]) => w), ['stop']);
   assert.equal(looping.size, 0);

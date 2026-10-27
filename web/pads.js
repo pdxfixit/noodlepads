@@ -18,7 +18,7 @@ import { fingerTaps, isFinger } from './finger.js';
 import { hasPicker, pickerButton, pickerList, instrumentBadge } from './inst-picker.js';
 import { PLAYED } from './instruments.js';
 
-const HOLD_TO_LOOP_MS = 350;  // hold a pad this long and it keeps repeating; a tap stops it
+export const HOLD_TO_LOOP_MS = 350;  // hold a pad this long and it keeps repeating; a tap stops it
 
 const el = {};
 let openSheet = () => {};

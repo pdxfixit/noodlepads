@@ -37,7 +37,7 @@ import { refitLines } from './lines.js';
 
 const STOPS = tempoStops();   // the click track slider's positions (see sequencer.js)
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
-const HOLD_TO_LOOP_MS = 350;   // as on the pads: hold this long and it keeps repeating
+export const HOLD_TO_LOOP_MS = 350;   // as on the pads: hold this long and it keeps repeating
 
 // One color per family, like the groups of the periodic table. Dark enough
 // for white text (tests/contrast.test.mjs). A person's own sounds use their color.

@@ -7,6 +7,7 @@ import { test, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
+import { HOLD_TO_LOOP_MS } from '../web/pads.js';
 
 let page;
 let $;
@@ -94,13 +95,13 @@ test('a pad\'s loop counts once, as a pad, however it starts; a tap that stops i
   assert.deepEqual(takePlay(), { pads: 1 }, 'Shift+Enter');
   looping.clear();
   pad().dispatch('pointerdown', { button: 0, pointerId: 12, pointerType: 'touch', clientX: 5, clientY: 5 });
-  await new Promise((r) => setTimeout(r, 450));
+  await new Promise((r) => setTimeout(r, HOLD_TO_LOOP_MS + 100));   // past the hold, with room for a busy machine
   page.winEvent('pointerup', { pointerId: 12, pointerType: 'touch', clientX: 5, clientY: 5 });
   assert.equal(looping.size, 1, 'a finger held: it loops');
   assert.deepEqual(takePlay(), { pads: 1 }, 'a finger held');
   looping.clear();
   pad().dispatch('pointerdown', { button: 0, pointerId: 13 });
-  await new Promise((r) => setTimeout(r, 450));
+  await new Promise((r) => setTimeout(r, HOLD_TO_LOOP_MS + 100));   // past the hold, with room for a busy machine
   page.winEvent('pointerup', { pointerId: 13 });
   assert.equal(looping.size, 1, 'a mouse held: it loops');
   assert.deepEqual(takePlay(), { pads: 1 }, 'a mouse held: its tap, once');
