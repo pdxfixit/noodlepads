@@ -49,7 +49,7 @@ export function openRecorder(stream, onBlob) {
     },
     stop({ discard = false, quiet: silently = false } = {}) {
       clearTimeout(timer);
-      thrown = discard;
+      thrown ||= discard;   // a plain stop after a discard never keeps it
       quiet = silently;
       if (recorder.state !== 'inactive') recorder.stop();
     },

@@ -3,7 +3,8 @@
 // (planHits), the starter grooves as beats, a beat file, tempo stops, and
 // the little decisions the screen asks (which sound a new row takes, which
 // pill an arrow key reaches, whether a beat is saved). No screen, DOM,
-// storage or audio in it, so the backup gate, 🧸 Kids' rules, the listener,
+// storage or sound in it (outputDelay only reads the latency fields of an
+// AudioContext it is handed), so the backup gate, 🧸 Kids' rules, the listener,
 // 🎼 Song and the share preview load it without loading the beat maker
 // (docs/design/simplify.md S5). sequencer.js is the screen on top of it.
 
