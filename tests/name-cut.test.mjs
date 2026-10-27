@@ -11,7 +11,7 @@ import { groupName } from '../web/groups.js';
 import { layoutName } from '../web/keyset.js';
 import { touchName } from '../web/touch.js';
 import { cleanMyVoice } from '../web/voice-knobs.js';
-import { cleanTake } from '../web/rhythm.js';
+import { cleanTake, cleanDeck } from '../web/rhythm.js';
 import { cleanPattern } from '../web/sequencer.js';
 import { cleanSong, uniqueSongName } from '../web/song.js';
 import { cleanLane } from '../web/playlist.js';
@@ -101,4 +101,17 @@ test('a backup\'s broken person id or color is refused, never mended into anothe
   assert.deepEqual(out.people.map((p) => p.id), [], 'neither becomes p-pip-1, nor a cut id');
   assert.equal(out.overrides[0].label, 'Kick it');
   assert.equal(out.overrides[0].color, undefined, 'not mended into red');
+});
+
+// Every id in what comes in is taken whole or refused: a deck's keys and its
+// person, a take's person, a pad order's ids. A cut id could be another one.
+test('a deck\'s sound ids and person, a take\'s person and a pad order\'s ids are never cut', () => {
+  const long = `user-${'a'.repeat(70)}`;
+  const deck = cleanDeck({ personId: 'p-pip-1', keys: { KeyA: long, KeyS: 'user-b' } });
+  assert.deepEqual(deck.keys, { KeyS: 'user-b' }, 'the long sound id is left out, not cut');
+  assert.equal(cleanDeck({ personId: `p-${'a'.repeat(70)}`, keys: {} }), null);
+  assert.equal(cleanTake({ id: 'take-a', personId: `p-${'a'.repeat(70)}`, name: 'Jam', duration: 1, events: [] }), null);
+  const out = cleanBackup({ app: 'noodlepads', format: '1.1', orders: [{ personId: 'pip', ids: [long, 'pip-kick', 'pip-x\uD83E'] }] },
+    () => null, { peopleIds: new Set(['pip']), clipIds: new Set(['pip-kick']), colorOk: () => true });
+  assert.deepEqual(out.orders[0].ids, ['pip-kick']);
 });

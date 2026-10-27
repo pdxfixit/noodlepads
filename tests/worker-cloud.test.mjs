@@ -656,6 +656,8 @@ test('a share title is cut to 24 characters, keeping an emoji whole; a huge one 
   const unicorn = await c.call('POST', 'profiles/p-a/shares', { key: a, body: { kind: 'sound', title: `${'a'.repeat(23)}🦄zz`, bundle } });
   assert.equal(unicorn.status, 201);
   assert.equal((await c.call('GET', `shares/${unicorn.data.code}`)).data.title, `${'a'.repeat(23)}🦄`);
+  const spaced = await c.call('POST', 'profiles/p-a/shares', { key: a, body: { kind: 'sound', title: `${'c'.repeat(23)} dd`, bundle } });
+  assert.equal((await c.call('GET', `shares/${spaced.data.code}`)).data.title, 'c'.repeat(23), 'no space left at the end of the cut');
   const start = performance.now();
   const huge = await c.call('POST', 'profiles/p-a/shares', { key: a, body: { kind: 'sound', title: `${'b'.repeat(1000000)}`, bundle } });
   assert.ok(performance.now() - start < 1000, 'quick');

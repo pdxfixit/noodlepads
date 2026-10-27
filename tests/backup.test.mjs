@@ -340,7 +340,7 @@ test('overrides: only boards.json clips, typed fields only', async () => {
   assert.equal(out.skipped, 3);
 });
 
-test('orders: strings only, capped in count and length', async () => {
+test('orders: strings only, capped in count; an id too long is left out, never cut into another', async () => {
   const out = await read({
     orders: [
       { personId: 'pip', ids: ['a', 5, null, 'b'.repeat(100), ...Array(600).fill('c')] },
@@ -349,8 +349,8 @@ test('orders: strings only, capped in count and length', async () => {
     ],
   });
   assert.equal(out.orders.length, 1);
-  assert.equal(out.orders[0].ids.length, 500);
-  assert.equal(out.orders[0].ids[1].length, 64);
+  assert.equal(out.orders[0].ids.length, 499, '500 strings kept, less the one too long');
+  assert.equal(out.orders[0].ids[1], 'c', 'the 100-character id is gone, not cut to 64');
   assert.equal(out.skipped, 2);
 });
 

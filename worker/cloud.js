@@ -720,7 +720,7 @@ async function makeShare(request, env, id, now, seen) {
   await needKey(request, env, id, now);
   await slowDown(env, LIMITERS.shares, id);
   if (!SHARE_KINDS.includes(body.kind)) throw new Refuse(400, 'kind');
-  const title = typeof body.title === 'string' ? cutName(body.title.trim()) : '';
+  const title = typeof body.title === 'string' ? cutName(body.title.trim()).trim() : '';
   if (!title) throw new Refuse(400, 'title');
   const b = body.bundle;
   if (!b || typeof b !== 'object' || Array.isArray(b)) throw new Refuse(400, 'bundle');

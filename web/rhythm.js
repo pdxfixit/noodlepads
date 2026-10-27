@@ -220,18 +220,18 @@ const shortText = (v, max) => (typeof v === 'string' && v.length <= max && cutNa
 // (ADR 0014), and a deck from before them just has none, so they play their
 // defaults.
 export function cleanDeck(d) {
-  if (typeof d?.personId !== 'string' || !d.keys || typeof d.keys !== 'object') return null;
+  if (!shortText(d?.personId, 64) || !d.keys || typeof d.keys !== 'object') return null;
   const codes = (from) => {
     const keys = {};
     for (const code of KEY_CODES) {
       if (!Object.hasOwn(from, code)) continue;
       const v = from[code];
       if (v === null) keys[code] = null;
-      else if (typeof v === 'string' && v) keys[code] = v.slice(0, 64);
+      else if (shortText(v, 64)) keys[code] = v;   // a sound id as it is, or left out: never cut into another
     }
     return keys;
   };
-  const out = { personId: d.personId.slice(0, 64), keys: codes(d.keys) };
+  const out = { personId: d.personId, keys: codes(d.keys) };
   // `beatId`: DJ's Beat Builder's own open beat in older copies (ADR 0008), a saved beat's id. Nothing reads it since ADR 0017 (one open beat); it is kept so older copies' decks and backups load as they were.
   if (/^beat-[a-z0-9-]{1,48}$/.test(d.beatId)) out.beatId = d.beatId;
   // `mine`: ⭐ My keys, the kid's own keyboard kept when a layout replaced it (ADR 0014), all 40 keys (an older one's number row as No sound).
@@ -244,7 +244,7 @@ export function cleanDeck(d) {
 // A take: a safe id, a name, a length, and its events in time order.
 // `name` falls back to `fallbackName()` when missing.
 export function cleanTake(t, fallbackName = () => 'Take') {
-  if (!TAKE_ID.test(t?.id) || typeof t.personId !== 'string') return null;
+  if (!TAKE_ID.test(t?.id) || !shortText(t.personId, 64)) return null;
   const events = (Array.isArray(t.events) ? t.events : []).slice(0, MAX_TAKE_EVENTS)
     .map((e) => ({ t: Number(e?.t), clipId: shortText(e?.clipId, 64), kind: e?.kind, ring: e?.ring === true && e?.kind === 'hit' }))
     .filter((e) => Number.isFinite(e.t) && e.t >= 0 && e.t <= MAX_TAKE_SECONDS && e.clipId && TAKE_KINDS.includes(e.kind))
@@ -254,7 +254,7 @@ export function cleanTake(t, fallbackName = () => 'Take') {
   const name = typeof t.name === 'string' ? cutName(t.name, MAX_LABEL).trim() : null;
   return {
     id: t.id,
-    personId: t.personId.slice(0, 64),
+    personId: t.personId,
     name: name || fallbackName(),
     created: Number.isFinite(Number(t.created)) ? Number(t.created) : Date.now(),
     duration: Number.isFinite(duration) ? Math.min(MAX_TAKE_SECONDS, Math.max(0, duration)) : 0,

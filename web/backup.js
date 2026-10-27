@@ -414,7 +414,7 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
   const orders = clean('orders', (o) => (knownPerson(o?.personId) && Array.isArray(o.ids)
     ? dropUndefined({
       personId: o.personId,
-      ids: o.ids.filter((x) => typeof x === 'string').slice(0, 500).map((x) => x.slice(0, 64)),
+      ids: o.ids.filter((x) => typeof x === 'string').slice(0, 500).map((x) => exact(x, 64)).filter(Boolean),   // a pad's id as it is, or left out
       groups: cleanGroups(o.groups) ?? undefined,
     })
     : null));
