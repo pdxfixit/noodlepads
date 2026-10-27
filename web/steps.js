@@ -91,15 +91,14 @@ export const KINDS = [
       warm.type = 'lowpass';
       warm.frequency.value = 5000;
       const wet = ctx.createGain();
-      wet.gain.value = 0.6;
+      wet.gain.value = ECHO_WET;
       input.connect(out);
       input.connect(delay);
       delay.connect(warm).connect(fb).connect(delay);
       warm.connect(wet).connect(out);
       const set = (step, at) => {
         param(delay.delayTime, step.gap, ctx, at);
-        // After `repeats` echoes the sound is down to about a tenth.
-        param(fb.gain, 0.1 ** (1 / step.repeats), ctx, at);
+        param(fb.gain, echoFeedback(step.repeats), ctx, at);
       };
       set(s);
       return { output: out, set };
@@ -235,6 +234,29 @@ export const KINDS = [
 ];
 
 export const kindById = (id) => KINDS.find((k) => k.id === id);
+
+// Make it echo's mix: each echo comes back at ECHO_WET of what went in, and
+// after `repeats` echoes the sound is down to about a tenth.
+const ECHO_WET = 0.6;
+const echoFeedback = (repeats) => 0.1 ** (1 / repeats);
+
+// The gain a live loop plays its live steps at, after `seconds` of sound,
+// so that the echoes piling on the sound (in step with it: the most they can
+// add) peak no higher than the sound alone. The saved render evens a sound
+// out after every step; a live loop cannot, so without this a held note with
+// 8 echoes played 10 dB louder while dragging than once let go. 1 when no
+// echo comes back while the sound still plays (sound.md, Seams).
+export function liveTrim(steps, seconds) {
+  let trim = 1;
+  for (const s of steps) {
+    if (s.type !== 'echo' || s.off) continue;
+    const back = Math.min(s.repeats, Math.max(0, Math.ceil(seconds / s.gap) - 1));   // echoes heard over the sound
+    if (!back) continue;
+    const fb = echoFeedback(s.repeats);
+    trim /= 1 + (ECHO_WET * (1 - fb ** back)) / (1 - fb);
+  }
+  return trim;
+}
 
 // Moves an AudioParam to `value`: smoothed over about 20 ms while a sound
 // plays (at = the audio clock now), or set outright before a render starts.

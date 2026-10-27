@@ -1489,3 +1489,53 @@ test('six tries back is still instant on a sound with live steps: its render is 
     await advanced(false);
   }
 });
+
+// Dragging Echo's slider on a held note: its echoes pile on the note in the
+// live loop, where no evening-out follows them. The loop is turned down by
+// as much as they can add, so it peaks near the saved render's 0.9 instead
+// of 10 dB over it (tests/live-peak.test.mjs has the numbers).
+test('a held note with 8 echoes, dragged: the live loop peaks near where the saved render will', async () => {
+  const { state } = await import('../web/state.js');
+  const { currentPerson } = await import('../web/board.js');
+  const { renderPads } = await import('../web/pads.js');
+  const { SimContext } = await import('./helpers.mjs');
+  await advanced(true);
+  const RATE = 16000;
+  const held = new FakeAudioBuffer({ length: 3 * RATE, sampleRate: RATE });
+  const d = held.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = 0.5 * Math.sin((2 * Math.PI * 220 * i) / RATE) * Math.min(1, (d.length - i) / 80);
+  const clip = { id: 'user-echo-8', personId: currentPerson().id, label: 'Ooo', emoji: '🎵', color: 'red', created: 1, blob: new Blob(['x']), mime: 'audio/webm', voice: 'normal', fx: [{ type: 'echo', repeats: 8, gap: 0.25 }] };
+  state.userClips.push(clip);
+  renderPads();
+  let live = null;
+  const realStart = audio.start;
+  audio.start = (id, sound, opts = {}) => { if (opts.via) live = { loop: sound.buffer, via: opts.via }; audio.playing.set(id, { fake: true }); };
+  audio.unloop = () => {};
+  try {
+    if (!document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+    audio.forget(clip.id);
+    audio.originals.set(clip.id, Promise.resolve(held));
+    audio.originalTrims.set(clip.id, '');
+    pads().find((p) => p.dataset.id === clip.id).parent.querySelector('[data-edit]').dispatch('click');
+    await page.settle();
+    const slider = $('#layer-rows').querySelector('input[data-key="repeats"]');
+    slider.dispatch('pointerdown', { button: 0 });
+    await page.settle();
+    assert.ok(live, 'it loops live');
+    const ctx = new SimContext(1, Math.round(5.3 * RATE), RATE);   // the note and its echoes
+    const src = ctx.createBufferSource();
+    src.buffer = live.loop;
+    live.via(ctx, src).connect(ctx.destination);
+    const out = await ctx.startRendering();
+    const peak = out.getChannelData(0).reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+    const db = 20 * Math.log10(peak / 0.9);
+    assert.ok(Math.abs(db) < 1.5, `${db.toFixed(1)} dB from the render's peak`);
+    slider.dispatch('change');
+  } finally {
+    audio.start = realStart;
+    $('#sheet').close();
+    state.userClips = state.userClips.filter((c) => c.id !== clip.id);
+    renderPads();
+    await advanced(false);
+  }
+});

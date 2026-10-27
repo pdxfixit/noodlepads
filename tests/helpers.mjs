@@ -119,3 +119,65 @@ export async function failure(promise) {
   try { await promise; } catch (err) { return err.message; }
   return null;
 }
+
+// A Web Audio graph rendered one sample at a time, for the few nodes the
+// live steps need (tests/live-peak.test.mjs). Use a rate over twice 5 kHz:
+// Echo's lowpass rings out of control below it. Each node's output at
+// sample n is pulled from its inputs; a delay hands out what came in
+// `delayTime` ago, which breaks the echo's feedback loop.
+export class SimContext {
+  constructor(channels, length, sampleRate) {
+    Object.assign(this, { length, sampleRate, currentTime: 0, nodes: [] });
+    this.destination = this.node({ out: (n) => this.sum(this.destination, n) });
+  }
+  node(props) {
+    const nd = { inputs: [], memo: new Map(), connect: (next) => { (next.into ?? next).inputs.push(nd); return next; }, disconnect() {}, ...props };
+    this.nodes.push(nd);
+    return nd;
+  }
+  at(nd, n) {
+    if (n < 0) return 0;
+    if (!nd.memo.has(n)) nd.memo.set(n, nd.out(n));
+    return nd.memo.get(n);
+  }
+  sum(nd, n) { return nd.inputs.reduce((t, i) => t + this.at(i, n), 0); }
+  param(value) { return { value, setTargetAtTime(v) { this.value = v; }, cancelScheduledValues() {} }; }
+  createBuffer(c, length, sampleRate) { return new FakeAudioBuffer({ numberOfChannels: c, length, sampleRate }); }
+  createBufferSource() {
+    const nd = this.node({ buffer: null, playbackRate: this.param(1), start() {}, stop() {}, out: (n) => nd.buffer.getChannelData(0)[n] ?? 0 });
+    return nd;
+  }
+  createGain() {
+    const nd = this.node({ gain: this.param(1), out: (n) => nd.gain.value * this.sum(nd, n) });
+    return nd;
+  }
+  createDelay() {
+    const nd = this.node({ delayTime: this.param(0), out: (n) => this.sum(nd, n - Math.round(nd.delayTime.value * this.sampleRate)) });
+    return nd;
+  }
+  createBiquadFilter() {
+    // A lowpass as Web Audio makes it (Q in dB); the echo's only filter.
+    const nd = this.node({
+      type: 'lowpass', frequency: this.param(350), Q: this.param(1),
+      out: (n) => {
+        const w = (2 * Math.PI * nd.frequency.value) / this.sampleRate;
+        const alpha = Math.sin(w) / (2 * 10 ** (nd.Q.value / 20));
+        const a0 = 1 + alpha;
+        const b0 = (1 - Math.cos(w)) / 2 / a0, b1 = (1 - Math.cos(w)) / a0;
+        const a1 = (-2 * Math.cos(w)) / a0, a2 = (1 - alpha) / a0;
+        const x = (k) => this.sum(nd, k);
+        return b0 * x(n) + b1 * x(n - 1) + b0 * x(n - 2) - a1 * this.at(nd, n - 1) - a2 * this.at(nd, n - 2);
+      },
+    });
+    return nd;
+  }
+  startRendering() {
+    const out = new FakeAudioBuffer({ numberOfChannels: 1, length: this.length, sampleRate: this.sampleRate });
+    const d = out.getChannelData(0);
+    for (let n = 0; n < this.length; n++) {
+      d[n] = this.at(this.destination, n);
+      for (const nd of this.nodes) if (nd.delayTime) this.sum(nd, n);   // what each delay heard now, for later
+    }
+    return Promise.resolve(out);
+  }
+}

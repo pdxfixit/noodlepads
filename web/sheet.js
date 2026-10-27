@@ -16,7 +16,7 @@ import { meter, drawGrille, levelOf } from './meter.js';
 import { currentPerson, clipsFor, colorName, nextClipColor } from './board.js';
 import { overrideFor, withHidden } from './model.js';
 import { applyChain, livePlan, voiceById, amountFor, amountText, chainOf, chainFields, recipeKey, surpriseShape, openVoice, stepLook, MAX_CHAIN } from './voices.js';
-import { buildLive, tailOf, newStep, isLive, cleanStep, kindById } from './steps.js';
+import { buildLive, tailOf, liveTrim, newStep, isLive, cleanStep, kindById } from './steps.js';
 import { renderLayers, renderLayerPalette, fromSlider, numsOf, sliderText } from './shape.js';
 import { getSetting, setSetting, onSetting } from './settings.js';
 import { padFor, renderPads } from './pads.js';
@@ -1303,16 +1303,17 @@ function startLive() {
       loop: true,
       via: (ctx, src) => {
         live.nodes = buildLive(ctx, src, split.tail);
-        if (split.gain === 1) return live.nodes.output;
-        // Quiet and Quietest, on knobs that play after the steps.
-        const quiet = ctx.createGain();
-        quiet.gain.value = split.gain;
-        live.nodes.output.connect(quiet);
-        return quiet;
+        // Quiet and Quietest (knobs that play after the steps), and the trim
+        // that keeps echoes piling on the sound from playing louder than the
+        // saved render will (steps.js liveTrim).
+        live.level = ctx.createGain();
+        live.level.gain.value = split.gain * liveTrim(split.tail, head.duration);
+        live.nodes.output.connect(live.level);
+        return live.level;
       },
     });
     wave.follow('preview');
-    Object.assign(live, { on: true, split });
+    Object.assign(live, { on: true, split, seconds: head.duration });
     return true;
   })().finally(() => { live.starting = null; });
   return live.starting;
@@ -1322,6 +1323,8 @@ function startLive() {
 function moveLive(i) {
   if (!live.on || !live.split || i < live.split.tailIndex) return;
   live.nodes?.set(i - live.split.tailIndex, sheet.chain[i]);
+  const tail = live.split.tail.map((s, k) => sheet.chain[live.split.tailIndex + k] ?? s);
+  live.level?.gain.setTargetAtTime?.(live.split.gain * liveTrim(tail, live.seconds), audio.ctx?.currentTime ?? 0, 0.02);
 }
 
 // Let go of a live slider: the loop finishes its pass, and the wave catches up.
