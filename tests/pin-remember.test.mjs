@@ -1,9 +1,9 @@
-// 🔑 Remember on this device (Ben, 2026-10-26): once a PIN opens someone,
-// the app offers to skip it on this device for REMEMBER_DAYS. Yes keeps a
-// key that lasts; Not now stops the offer here; the profile's PIN part has
-// Remember and Forget; a remembering whose day has come is forgotten when
-// the app starts. The real app with a stand-in IndexedDB, against the real
-// Worker and a fake D1.
+// 🔑 Remember on this device (Ben, 2026-10-26; no end of its own, 2026-10-27):
+// once a PIN opens someone, the app offers to skip it on this device. Yes
+// keeps a key that lasts; Not now stops the offer here; the profile's PIN part
+// has Remember and Forget. It lasts until Forget, a PIN change, or the cloud
+// drops the key after 180 days unused: the device keeps no clock of its own.
+// The real app with a stand-in IndexedDB, against the real Worker and a fake D1.
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,6 +12,7 @@ import { fakeIndexedDB } from './fake-idb.mjs';
 import { testManifest } from './test-board.mjs';
 import worker from '../worker/index.js';
 import { ORIGIN } from '../worker/http.js';
+import { KEY_IDLE_MS } from '../worker/cloud.js';
 import { FakeD1 } from './fake-d1.mjs';
 import { SCHEMA, DB_NAME, DB_VERSION } from '../web/store.js';
 
@@ -24,34 +25,48 @@ let openProfileSheet;
 const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') } };
 const idb = fakeIndexedDB();
 const DAY = 24 * 60 * 60 * 1000;
-const KEPT = 'p-kept-2';      // remembered here, 10 days left
-const LAPSED = 'p-lapsed-1';  // remembered here, its day came yesterday
-const OFFER = 'p-offer-1';    // a PIN, not remembered: says yes
-const DECLINE = 'p-decline-1'; // a PIN, not remembered: says Not now
+const KEPT = 'p-kept-2';        // remembered here (`remembered`)
+const OLD = 'p-old-1';          // remembered before 2026-10-27: its 90-day `rememberUntil` passed yesterday
+const IDLE = 'p-idle-1';        // remembered here; its key goes unused for 181 days
+const ELSEWHERE = 'p-else-1';   // remembered here; another device changes the PIN
+const OFFER = 'p-offer-1';      // a PIN, not remembered: says yes
+const DECLINE = 'p-decline-1';  // a PIN, not remembered: says Not now
+// Made-up test PINs.
 const PIN = '2468';
+const NEW_PIN = '8642';
+const REMEMBERED = [KEPT, OLD, IDLE, ELSEWHERE];
 const keyRows = (id) => env.DB.rows('SELECT session FROM keys WHERE profile_id = ?', id);
-const call = async (path, body) => (await worker.fetch(new Request(`https://noodlepads.com/api/${path}`, {
-  method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ORIGIN }, body: JSON.stringify(body),
+const send = async (method, path, body, key) => (await worker.fetch(new Request(`https://noodlepads.com/api/${path}`, {
+  method, headers: { 'Content-Type': 'application/json', Origin: ORIGIN, ...(key ? { Authorization: `Bearer ${key}` } : {}) }, body: JSON.stringify(body),
 }), env)).json();
+const call = (path, body) => send('POST', path, body);
+// Every key of `id` last used `days` ago.
+const ageKeys = (id, days) => env.DB.db.prepare('UPDATE keys SET created = ?, used = ? WHERE profile_id = ?').run(Date.now() - days * DAY, Date.now() - days * DAY, id);
 
 before(async () => {
   console.error = () => {};
-  const names = { [KEPT]: 'Admiral Acorn', [LAPSED]: 'Captain Cranberries', [OFFER]: 'Friendly Sloth', [DECLINE]: 'Sleepy Walrus' };
+  const names = {
+    [KEPT]: 'Admiral Acorn', [OLD]: 'Captain Cranberries', [IDLE]: 'Duke Dumpling', [ELSEWHERE]: 'Lady Lentil',
+    [OFFER]: 'Friendly Sloth', [DECLINE]: 'Sleepy Walrus',
+  };
   const keys = {};
   for (const [id, name] of Object.entries(names)) {
     await call('profiles', { id, name, avatar: '', color: '#1F3FA8', pin: PIN });
     // The make's own key stays out of the count.
     await env.DB.exec(`DELETE FROM keys WHERE profile_id = '${id}'`);
-    if (id === KEPT || id === LAPSED) keys[id] = (await call(`profiles/${id}/open`, { pin: PIN, remember: true })).key;
+    if (REMEMBERED.includes(id)) keys[id] = (await call(`profiles/${id}/open`, { pin: PIN, remember: true })).key;
   }
   const now = Date.now();
+  const link = (id, more) => ({ id, key: keys[id] ?? null, rev: 0, sent: {}, sounds: {}, pin: true, ...more });
   idb.seed(DB_NAME, DB_VERSION, SCHEMA, {
     people: Object.entries(names).map(([id, name], i) => ({ id, name, fun: true, avatar: '🦉', color: '#1F3FA8', added: true, created: i + 1 })),
     cloud: [
-      { id: KEPT, key: keys[KEPT], rev: 0, sent: {}, sounds: {}, pin: true, rememberUntil: now + 10 * DAY },
-      { id: LAPSED, key: keys[LAPSED], rev: 0, sent: {}, sounds: {}, pin: true, rememberUntil: now - DAY },
-      { id: OFFER, key: null, rev: 0, sent: {}, sounds: {}, pin: true },
-      { id: DECLINE, key: null, rev: 0, sent: {}, sounds: {}, pin: true },
+      link(KEPT, { remembered: true }),
+      link(OLD, { rememberUntil: now - DAY }),
+      link(IDLE, { remembered: true }),
+      link(ELSEWHERE, { remembered: true }),
+      link(OFFER),
+      link(DECLINE),
     ],
   });
   globalThis.indexedDB = idb;
@@ -81,7 +96,8 @@ const typePin = (digits) => { for (const k of digits) $('#pin-keys').querySelect
 const choose = async (id) => { renderPeople(); $(`.person-list [data-person="${id}"]`).dispatch('click'); await settle(); };
 
 test('a device that remembers someone opens them without the PIN, and keeps their key', async () => {
-  assert.ok(cloud.rememberedUntil(KEPT) > Date.now() + 9 * DAY);
+  assert.equal(cloud.REMEMBER_DAYS, undefined, 'no day of its own');
+  assert.equal(cloud.isRemembered(KEPT), true);
   assert.equal(cloud.needsPin(KEPT), false);
   assert.equal(cloud.pinGuards(KEPT), false, 'nor does their profile ask');
   await choose(OFFER);
@@ -93,33 +109,91 @@ test('a device that remembers someone opens them without the PIN, and keeps thei
   assert.ok(cloud.linkOf(KEPT).key, 'the key is stored on the device');
 });
 
-test('a remembering whose day has come is forgotten when the app starts: the PIN is asked again, and its key is deleted in the cloud', async () => {
-  const link = cloud.linkOf(LAPSED);
-  assert.equal(link.rememberUntil, undefined);
-  assert.equal(link.key, null);
-  assert.equal(cloud.needsPin(LAPSED), true);
-  assert.equal(keyRows(LAPSED).length, 0, 'the key that lasted is gone from the cloud');
+test('91 days on, a remembered key still syncs and still opens them without the PIN: only 180 days unused ends it', async () => {
+  ageKeys(KEPT, 91);
+  assert.ok(91 * DAY < KEY_IDLE_MS);
+  assert.ok(await cloud.syncNow(KEPT), 'the cloud takes the key');
+  assert.equal(cloud.isRemembered(KEPT), true);
+  assert.equal(cloud.needsPin(KEPT), false);
+  assert.equal(keyRows(KEPT).length, 1);
 });
 
-test('after a PIN opens someone, 🔑 Remember them here? is offered; Remember keeps them for 90 days', async () => {
+test('a link remembered before 2026-10-27, its 90 days up, still opens them without the PIN and keeps its key', async () => {
+  const link = cloud.linkOf(OLD);
+  assert.ok(link.rememberUntil < Date.now(), 'its old day has passed');
+  assert.ok(link.key, 'the start kept its key');
+  assert.equal(cloud.isRemembered(OLD), true);
+  assert.equal(cloud.needsPin(OLD), false);
+  assert.equal(cloud.pinGuards(OLD), false);
+  assert.equal(keyRows(OLD).length, 1, 'its key is still in the cloud');
+  await choose(OLD);
+  assert.equal($('#pin-dialog').open, false, 'no PIN pad');
+  assert.equal(state.personId, OLD);
+});
+
+test('the cloud drops a remembered key unused for 180 days: the PIN pad says this device forgot them', async () => {
+  ageKeys(IDLE, 181);
+  assert.equal(await cloud.syncNow(IDLE), null, 'the key is refused');
+  assert.equal(keyRows(IDLE).length, 0, 'and deleted in the cloud');
+  assert.equal(cloud.isRemembered(IDLE), false);
+  assert.equal(cloud.linkOf(IDLE).key, null);
+  assert.equal(cloud.needsPin(IDLE), true);
+  assert.match(cloud.statusOf(IDLE).text, /This device forgot them/);
+  await choose(IDLE);
+  assert.equal($('#pin-dialog').open, true, 'the PIN is asked');
+  assert.match($('#pin-hint').textContent, /^This device forgot them\. A grown-up can type the PIN\./);
+  typePin(PIN);
+  await settle();
+  assert.equal(state.personId, IDLE, 'the same PIN opens them');
+  assert.equal(cloud.linkOf(IDLE).keyDropped, undefined);
+  assert.equal($('#remember-dialog').open, true, 'Remember is offered again');
+  $('#remember-no').dispatch('click');
+  await settle();
+});
+
+test('a PIN changed on another device ends the remembering here', async () => {
+  const other = (await call(`profiles/${ELSEWHERE}/open`, { pin: PIN, remember: true })).key;
+  assert.equal((await send('PATCH', `profiles/${ELSEWHERE}`, { pin: PIN, newPin: NEW_PIN }, other)).ok, true);
+  assert.equal(await cloud.syncNow(ELSEWHERE), null, 'this device\'s key is refused');
+  assert.equal(cloud.isRemembered(ELSEWHERE), false);
+  assert.equal(cloud.needsPin(ELSEWHERE), true);
+  assert.equal(cloud.pinGuards(ELSEWHERE), true);
+  await choose(ELSEWHERE);
+  assert.equal($('#pin-dialog').open, true);
+  assert.match($('#pin-hint').textContent, /This device forgot them/);
+  typePin(PIN);
+  await settle();
+  assert.equal($('#pin-dialog').open, true, 'the old PIN no longer opens them');
+  typePin(NEW_PIN);
+  await settle();
+  assert.equal(state.personId, ELSEWHERE);
+  if ($('#remember-dialog').open) $('#remember-no').dispatch('click');
+  await settle();
+});
+
+test('after a PIN opens someone, 🔑 Remember them here? is offered, Not now focused and as big; Remember keeps them with no end date', async () => {
   await choose(OFFER);
   assert.equal($('#pin-dialog').open, true);
   typePin(PIN);
   await settle();
   assert.equal(state.personId, OFFER, 'they show at once');
   const offered = $('#remember-dialog').open;
+  const focused = globalThis.document.activeElement;
   const title = $('#remember-title').textContent;
   const sub = $('#remember-sub').textContent;
   $('#remember-yes').dispatch('click');
   await settle();
   // Checked once it is answered, so a wrong word fails here and leaves no dialog open for the tests after.
   assert.equal(offered, true, 'the offer opens over them');
+  assert.ok(focused === $('#remember-no'), 'Not now has the focus');
+  assert.equal($('#remember-no').className, 'chain-tool', 'the same size of button as Remember');
   assert.equal($('#remember-dialog').open, false);
   assert.match(title, /Remember Friendly Sloth here\?/);
-  assert.match(sub, /90 days\. Anyone using it can open them/);
-  assert.equal(cloud.REMEMBER_DAYS, 90);
-  const until = cloud.rememberedUntil(OFFER);
-  assert.ok(Math.abs(until - (Date.now() + 90 * DAY)) < 60_000, '90 days from now');
+  assert.equal(sub, 'This device opens them without the PIN until someone taps Forget this device. Sharing still asks it. Anyone using this device can open them.');
+  assert.doesNotMatch(sub, /days|forever/);
+  assert.equal(cloud.isRemembered(OFFER), true);
+  assert.equal(cloud.linkOf(OFFER).remembered, true);
+  assert.equal(cloud.linkOf(OFFER).rememberUntil, undefined, 'no day it ends');
   assert.ok(cloud.linkOf(OFFER).key, 'its key is stored');
   assert.deepEqual(keyRows(OFFER).map((r) => r.session), [0], 'one key, one that lasts: the visit\'s own was dropped');
   await choose(KEPT);
@@ -136,7 +210,7 @@ test('Not now closes the offer and it is not offered again on this device', asyn
   $('#remember-no').dispatch('click');
   await settle();
   assert.equal($('#remember-dialog').open, false);
-  assert.equal(cloud.rememberedUntil(DECLINE), 0);
+  assert.equal(cloud.isRemembered(DECLINE), false);
   assert.equal(cloud.linkOf(DECLINE).noOffer, true);
   assert.equal(cloud.linkOf(DECLINE).key, null, 'the key is held for this visit only');
   await choose(KEPT);
@@ -154,10 +228,10 @@ test('the profile\'s PIN part: Forget this device asks the PIN next time; 🔑 R
   const btn = $('#cloud-pin-remember');
   assert.equal(btn.hidden, false);
   assert.equal(btn.textContent, 'Forget this device');
-  assert.match($('#profile-pin-hint').textContent, /This device skips it until/);
+  assert.equal($('#profile-pin-hint').textContent, 'This device opens Friendly Sloth without it until someone taps Forget this device. Sharing still asks it. Anyone using this device can open them. Lost this device? Change the PIN, and every device asks it again.');
   btn.dispatch('click');
   await settle();
-  assert.equal(cloud.rememberedUntil(OFFER), 0);
+  assert.equal(cloud.isRemembered(OFFER), false);
   assert.equal(cloud.linkOf(OFFER).key, null);
   assert.equal(keyRows(OFFER).length, 0, 'its key is deleted in the cloud');
   assert.equal($('#profile-pin-state').textContent, '🔒 Forgotten here');
@@ -167,13 +241,14 @@ test('the profile\'s PIN part: Forget this device asks the PIN next time; 🔑 R
   btn.dispatch('click');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'Remember asks for the PIN');
+  assert.match($('#pin-hint').textContent, /until someone taps Forget this device/);
   typePin('1111');
   await settle();
   assert.equal($('#pin-dialog').open, true, 'a wrong one asks again');
-  assert.equal(cloud.rememberedUntil(OFFER), 0);
+  assert.equal(cloud.isRemembered(OFFER), false);
   typePin(PIN);
   await settle();
-  assert.ok(cloud.rememberedUntil(OFFER) > Date.now() + 89 * DAY);
+  assert.equal(cloud.isRemembered(OFFER), true);
   assert.equal($('#profile-pin-state').textContent, '🔑 Remembered here');
   assert.equal(btn.textContent, 'Forget this device');
   assert.equal($('#remember-dialog').open, false, 'no offer on top: it is on');
@@ -183,10 +258,10 @@ test('the profile\'s PIN part: Forget this device asks the PIN next time; 🔑 R
 
 test('changing the PIN here keeps the device remembering; removing it ends the remembering', async () => {
   await cloud.setPin(OFFER, PIN, '1357');
-  assert.ok(cloud.rememberedUntil(OFFER) > Date.now());
+  assert.equal(cloud.isRemembered(OFFER), true);
   assert.ok(cloud.linkOf(OFFER).key, 'the new key is kept');
   assert.deepEqual(keyRows(OFFER).map((r) => r.session), [0]);
   await cloud.setPin(OFFER, '1357', null);
-  assert.equal(cloud.linkOf(OFFER).rememberUntil, undefined);
+  assert.equal(cloud.linkOf(OFFER).remembered, undefined);
   assert.equal(cloud.needsPin(OFFER), false, 'no PIN at all now');
 });

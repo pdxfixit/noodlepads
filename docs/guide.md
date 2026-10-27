@@ -904,15 +904,23 @@ ADR 0002.
   with a PIN syncs only once it is typed. **🔑 Remember them here?** opens
   once a PIN opens someone (on switching to them, or ☁️ Open from the cloud;
   Ben, 2026-10-26): 🔑 Remember asks the cloud for a key that lasts, keeps it
-  on the device and skips their PIN and its guard here for 90 days
-  (`REMEMBER_DAYS`; the link's `rememberUntil`). Not now, ✕ or Esc stops the
-  offer on this device (`noOffer`). Their profile's PIN part has 🔑 Remember
-  on this device (asks the PIN) or Forget this device, with the day it ends
-  in the hint. Forget, a removed PIN, a PIN changed elsewhere, or the day
-  coming (checked at start and on each open) drops the key here and in the
-  cloud, so the PIN is asked again (`cloud-ui.js` `offerRemember`, `cloud.js`
-  `rememberHere`, `forgetHere`). A PIN changed on this device stays
-  remembered.
+  on the device and skips their PIN and its guard here (the link's
+  `remembered`) until someone taps Forget this device, the PIN changes on
+  another device, or the cloud drops the key after 180 days unused
+  (`worker/cloud.js` `KEY_IDLE_MS`). The device keeps no clock of its own
+  (Ben, 2026-10-27: a kid who plays every day never meets a surprise PIN
+  pad); a link remembered before then holds a 90-day `rememberUntil`, read as
+  remembered whatever its day. Not now (focused, as big as Remember), ✕ or
+  Esc stops the offer on this device (`noOffer`). Their profile's PIN part
+  has 🔑 Remember on this device (asks the PIN) or Forget this device; its
+  hint says sharing still asks the PIN, that anyone using the device can open
+  them, and "Lost this device? Change the PIN, and every device asks it
+  again." Forget or a removed PIN drops the key here and in the cloud; a
+  key the cloud refused (a PIN changed elsewhere, or 180 days unused) ends it
+  too, and the PIN pad then says "This device forgot them. A grown-up can
+  type the PIN." (`keyDropped`), so the PIN is asked again (`cloud-ui.js`
+  `offerRemember`, `cloud.js` `rememberHere`, `forgetHere`, `keyRefused`). A
+  PIN changed on this device stays remembered.
   **Nothing of theirs is read or changed past it** (Ben, 2026-10-24), and
   once typed it holds until the page reloads (`cloud.js` `pinGuards`, the
   PIN typed on this visit): their profile opens only after it (so 🗂️ See

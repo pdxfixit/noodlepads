@@ -20,7 +20,7 @@ import {
   api, CloudError, cloudTrouble, cloudThere, inCloud, linkOf, keyOf, isOffline, statusOf, syncNow,
   openProfile, unlock, pinIsNew, checkPin, setPin, setOffline, removeProfile, putUpNow, wantsCloud, shareable, shareItem, showCode,
   sharedHere, openShare, forgetShare, remixShare, fetchShare, checkShared, mySharesOf, unshareItem, listProfiles,
-  rememberHere, declineRemember, offersRemember, forgetHere, rememberedUntil, REMEMBER_DAYS, bringDown, leaveInCloud,
+  rememberHere, declineRemember, offersRemember, forgetHere, isRemembered, keyWasDropped, FORGOT_HERE, bringDown, leaveInCloud,
 } from './cloud.js';
 import { newProgress, progressShare } from './cloud-sync.js';
 import { SETTINGS } from './settings.js';
@@ -157,11 +157,14 @@ export function askToOpen(personId, opts) {
 async function askOnce(personId, { locked = false } = {}) {
   const p = people({ includeHidden: true }).find((x) => x.id === personId);
   const fresh = pinIsNew(personId);
+  // A device that remembered them, whose key the cloud refused, says so first
+  // (Ben, 2026-10-27): a kid who played yesterday knows why the pad is back.
+  const why = keyWasDropped(personId) ? `${FORGOT_HERE} ` : 'They have a new PIN. Type it to open them here. ';
   try {
     const opened = await withPin(async (pin) => { await unlock(personId, pin); return pin; }, {
       title: `${p?.avatar ? `${p.avatar} ` : ''}${p?.name ?? 'PIN'}`,
       hint: fresh
-        ? "They have a new PIN. Type it to open them here. Don't know it? Their things on this device are deleted; the cloud keeps what it has."
+        ? `${why}Don't know it? Their things on this device are deleted; the cloud keeps what it has.`
         : 'Type their PIN to open them.',
       locked,
       unknown: fresh,
@@ -180,22 +183,26 @@ async function askOnce(personId, { locked = false } = {}) {
 }
 
 // 🔑 Remember them here? Offered once a PIN opens someone (Ben, 2026-10-26):
-// this device then skips their PIN for REMEMBER_DAYS. Not now, ✕ or Esc
-// stops the offer on this device; their profile's PIN part keeps the choice.
+// this device then skips their PIN until Forget this device, a PIN change, or
+// the cloud drops its key unused (Ben, 2026-10-27); sharing still asks it.
+// Not now, ✕ or Esc stops the offer on this device; their profile's PIN part
+// keeps the choice. Not now has the focus, as big as Remember: a kid tapping
+// on through gets the safe one. Exported for `just look remember`.
 let rememberDone = null;
-async function offerRemember(personId, pin) {
+export const REMEMBER_SUB = 'This device opens them without the PIN until someone taps Forget this device. Sharing still asks it. Anyone using this device can open them.';
+export async function offerRemember(personId, pin) {
   if (!offersRemember(personId)) return;
   const p = people({ includeHidden: true }).find((x) => x.id === personId);
   el.rememberTitle.textContent = `🔑 Remember ${p ? nameOf(p) : 'them'} here?`;
-  el.rememberSub.textContent = `This device opens them without the PIN for ${REMEMBER_DAYS} days. Anyone using it can open them.`;
+  el.rememberSub.textContent = REMEMBER_SUB;
   const yes = await new Promise((resolve) => {
     rememberDone = resolve;
-    openDialog(el.remember);
+    openDialog(el.remember, { focus: el.rememberNo });
   });
   if (!yes) { await declineRemember(personId); return; }
   try {
     await rememberHere(personId, pin);
-    announce(`🔑 Remembered on this device for ${REMEMBER_DAYS} days.`);
+    announce('🔑 Remembered on this device, until someone taps Forget this device.');
   } catch (err) {
     announce(trouble(err));
   }
@@ -280,6 +287,8 @@ export const PIN_FLASH_MS = 3000;
 let flash = null;   // {id, text, until}: what the pill says just after a change
 
 const nameOf = (p) => p?.name ?? 'them';
+// Where the PIN part (and Help) explain 🔑 Remember: what to do about a lost phone.
+export const LOST_DEVICE = 'Lost this device? Change the PIN, and every device asks it again.';
 
 // A cloud state someone has to see to: ☁️⚠️ on their line in 👥 People
 // (cloudLabel), and the same ⚠️ before what is wrong in their profile sheet.
@@ -318,7 +327,7 @@ export function drawPin(personId) {
   el.backupBtn.setAttribute('aria-label', `Back up ${nameOf(p)}: one file of everything of theirs`);
 
   const hasPin = !!link?.pin;
-  const until = hasPin && !pinIsNew(personId) ? rememberedUntil(personId) : 0;
+  const kept = hasPin && !pinIsNew(personId) && isRemembered(personId);
   const now = flash && flash.id === personId && flash.until > Date.now() ? flash : null;
   el.pinState.hidden = !p.added;
   el.pinState.textContent = now ? now.text : hasPin ? '🔒 PIN on' : '🔓 No PIN';
@@ -327,12 +336,12 @@ export function drawPin(personId) {
   el.pinBtn.hidden = !p.added || hasPin;
   el.pinTools.hidden = !p.added || !hasPin;
   el.pinRemember.hidden = !p.added || !hasPin || pinIsNew(personId);
-  el.pinRemember.textContent = until ? 'Forget this device' : '🔑 Remember on this device';
+  el.pinRemember.textContent = kept ? 'Forget this device' : '🔑 Remember on this device';
   el.pinPartHint.textContent = !p.added ? "Someone from the app's own list can't have a PIN."
     : hasPin ? (pinIsNew(personId)
-      ? `They got a new PIN on another device. Open ${nameOf(p)} and type it.`
-      : until
-        ? `This device skips it until ${new Date(until).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}. Asked every time ${nameOf(p)} is opened on any other device.`
+      ? (keyWasDropped(personId) ? `This device forgot ${nameOf(p)}. Open them and type the PIN.` : `They got a new PIN on another device. Open ${nameOf(p)} and type it.`)
+      : kept
+        ? `This device opens ${nameOf(p)} without it until someone taps Forget this device. Sharing still asks it. Anyone using this device can open them. ${LOST_DEVICE}`
         : `Asked every time ${nameOf(p)} is opened, on every device, and before the name, picture or color changes.`)
       : linked ? `Anyone on any device can open ${nameOf(p)}.`
         : 'A PIN needs the cloud. Setting one turns it on.';
@@ -467,14 +476,14 @@ export async function pinClick(personId, t, note = () => {}) {
   // 🔑 Remember on this device asks the PIN (the cloud gives a key that
   // lasts for it); Forget this device needs none.
   if (t === el.pinRemember) {
-    if (rememberedUntil(personId)) {
+    if (isRemembered(personId)) {
       await run(async () => { await forgetHere(personId); flashPin(personId, '🔒 Forgotten here'); });
       return true;
     }
     await run(async () => {
       const got = await withPin(async (pin) => { await rememberHere(personId, pin); return true; }, {
         title: `${p?.avatar ? `${p.avatar} ` : ''}${p ? nameOf(p) : 'PIN'}`,
-        hint: `Type their PIN. This device then opens them without it for ${REMEMBER_DAYS} days.`,
+        hint: 'Type their PIN. This device then opens them without it until someone taps Forget this device. Sharing still asks it.',
       });
       if (got) flashPin(personId, '🔑 Remembered here');
     });
@@ -938,7 +947,7 @@ export function initCloudUI(hooks) {
   Object.assign(el, {
     pin: $('#pin-dialog'), pinTitle: $('#pin-title'), pinHint: $('#pin-hint'), pinNote: $('#pin-note'), pinDots: $('#pin-dots'), pinKeys: $('#pin-keys'),
     pinForgot: $('#pin-forgot'), pinNew: $('#pin-new'), pinUnknown: $('#pin-unknown'),
-    remember: $('#remember-dialog'), rememberTitle: $('#remember-title'), rememberSub: $('#remember-sub'), rememberYes: $('#remember-yes'),
+    remember: $('#remember-dialog'), rememberTitle: $('#remember-title'), rememberSub: $('#remember-sub'), rememberYes: $('#remember-yes'), rememberNo: $('#remember-no'),
     avatar: $('#avatar-dialog'), avatarGrid: $('#avatar-grid'),
     cloudSwitch: $('#profile-cloud'), cloudText: $('#profile-cloud-text'), cloudTools: $('#profile-cloud-tools'),
     syncBtn: $('#cloud-sync'), shareBtn: $('#cloud-share'), backupBtn: $('#cloud-backup'),

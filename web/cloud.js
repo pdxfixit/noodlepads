@@ -35,11 +35,13 @@ export { cloudTrouble, CloudError };
 
 export { SYNC_DELAY_MS, ACTIVE_MS };    // when it syncs: sync-timing.js
 export const PIN_ROUNDS = 20_000;      // the device's own check of a PIN (link.check)
-export const REMEMBER_DAYS = 90;       // how long 🔑 Remember on this device skips the PIN
-const REMEMBER_MS = REMEMBER_DAYS * 24 * 60 * 60 * 1000;
 const SHARED_KEY = 'shared';           // localStorage: the codes this device opened (Shared with me)
 export const MAX_SHARED = 100;
 export const SHARE_TOO_LONG = `That sound is too long to share (the most is ${CLOUD_MAX_SOUND / 1048576} MB).`;
+// What the PIN pad and the profile say once the cloud refused a key this
+// device remembered (keyRefused): a PIN changed elsewhere, or 180 days unused.
+export const FORGOT_HERE = 'This device forgot them. A grown-up can type the PIN.';
+const FORGOT_HERE_STATUS = '🔒 This device forgot them. Open them and type the PIN.';
 
 // ── is the cloud there? ──
 
@@ -64,12 +66,18 @@ export function resetCloudCheck() { there = null; askedAt = 0; }
 
 // ── links and keys ──
 //
-// A link: {id, key, rev, sent, sounds, pin, check, newPin, rememberUntil,
-// noOffer}. `key` is kept for a profile with no PIN, or one this device
-// remembers; any other PIN's key lives in `sessionKeys`, for this page's
-// life, so the PIN is asked on every visit. `rememberUntil` (ms): after the
-// PIN, 🔑 Remember on this device skips it here for REMEMBER_DAYS (Ben,
-// 2026-10-26); `noOffer`: they said Not now, so it isn't offered again here.
+// A link: {id, key, rev, sent, sounds, pin, check, newPin, remembered,
+// keyDropped, noOffer}. `key` is kept for a profile with no PIN, or one this
+// device remembers; any other PIN's key lives in `sessionKeys`, for this
+// page's life, so the PIN is asked on every visit. `remembered`: after the
+// PIN, 🔑 Remember on this device skips it here until Forget this device, a
+// PIN change, or the cloud drops the key after KEY_IDLE_MS unused (180 days;
+// worker/cloud.js). The device keeps no clock of its own (Ben, 2026-10-27:
+// a kid who plays every day never meets a surprise PIN pad). A link from
+// before then holds `rememberUntil` (ms, 90 days on) instead: it counts as
+// remembered, whatever its day. `keyDropped`: a key this device remembered
+// was refused by the cloud, so the PIN pad says this device forgot them.
+// `noOffer`: they said Not now, so Remember isn't offered again here.
 // `check` ({salt, hash}) lets the device check a PIN itself when offline.
 // `newPin`: the profile has a PIN this device has never had typed (set or
 // changed on another device since it was last opened here); until it is
@@ -87,8 +95,9 @@ export const linkOf = (personId) => state.cloud.get(personId) ?? null;
 export const inCloud = (personId) => state.cloud.has(personId);
 export const keyOf = (personId) => linkOf(personId)?.key || sessionKeys.get(personId) || null;
 export const isOffline = (personId) => state.peopleEdits.get(personId)?.offline === true;
-// A PIN this device remembers, until its day comes.
-const remembers = (link) => !!link?.pin && link.rememberUntil > Date.now();
+// A PIN this device remembers (a link's `remembered`, or an older
+// `rememberUntil`, read with no end).
+const remembers = (link) => !!link?.pin && (link.remembered === true || link.rememberUntil > 0);
 // Only a profile with no PIN, or one remembered here, keeps its key on the device.
 const keepsKey = (link) => !link?.pin || remembers(link);
 // The profile has a PIN this device has never had typed (a link's `newPin`).
@@ -147,19 +156,16 @@ async function pinCheck(pin) {
   return { salt, hash: await pinHash(pin, salt) };
 }
 
-// Whether this device skips their PIN (🔑 Remember on this device): until
-// when, in ms, or 0. A remembering whose day has come is forgotten here.
-export function rememberedUntil(personId) {
-  const link = linkOf(personId);
-  if (remembers(link)) return link.rememberUntil;
-  if (link?.rememberUntil) forgetHere(personId);
-  return 0;
-}
+// Whether this device skips their PIN (🔑 Remember on this device).
+export const isRemembered = (personId) => remembers(linkOf(personId));
+// Whether the cloud refused a key this device remembered for them (keyRefused):
+// the PIN pad says this device forgot them.
+export const keyWasDropped = (personId) => !!linkOf(personId)?.keyDropped;
 
 // Whether opening this person on this device asks for their PIN now.
 export function needsPin(personId) {
   const link = linkOf(personId);
-  return !!link?.pin && !unlocked.has(personId) && !rememberedUntil(personId);
+  return !!link?.pin && !unlocked.has(personId) && !remembers(link);
 }
 
 // The PIN guard: whether reading or changing anything of this person's asks
@@ -167,7 +173,7 @@ export function needsPin(personId) {
 // counts and sounds on others' screens, backups (backup-ui.js). Only a person
 // whose cloud profile has a PIN, and only until it is typed once on this
 // visit. A gate on this device's screens: syncs change them as before.
-export const pinGuards = (personId) => !!linkOf(personId)?.pin && !pinTyped.has(personId) && !rememberedUntil(personId);
+export const pinGuards = (personId) => !!linkOf(personId)?.pin && !pinTyped.has(personId) && !isRemembered(personId);
 
 // Checks a PIN for the guard the way opening a person does (unlock: the
 // Worker, with its wrong-try count and 10-minute wait; offline, the device's
@@ -197,7 +203,7 @@ export async function unlock(personId, pin) {
     const before = keyOf(personId);
     if (before && before !== opened.key) api.forget(personId, before).catch(() => {});
     sessionKeys.delete(personId);
-    await saveLink({ ...link, key: opened.key, pin: !!opened.pin, check: await pinCheck(pin), newPin: undefined });
+    await saveLink({ ...link, key: opened.key, pin: !!opened.pin, check: await pinCheck(pin), newPin: undefined, keyDropped: undefined });
     status.delete(personId);
   } catch (err) {
     // The cloud said no to the PIN (wrong, or too many wrong tries): a usage
@@ -211,12 +217,16 @@ export async function unlock(personId, pin) {
   if (keyOf(personId)) syncNow(personId);
 }
 
-// A key the cloud no longer takes (401 on a sync): a PIN was set, changed or
-// removed on another device, which closes the profile everywhere
-// (worker/cloud.js changeProfile), or Ben gave a forgotten one a new random
-// PIN (`just cloud-reset-pin`). The public list says which, without spending
-// a wrong try: no PIN now, and it opens again at once; else the PIN is new
-// here and must be typed before the person opens (Ben, 2026-10-19).
+// A key the cloud no longer takes (401 on a sync): a PIN was set or changed
+// on another device, which closes the profile everywhere (worker/cloud.js
+// changeProfile), Ben gave a forgotten one a new random PIN
+// (`just cloud-reset-pin`), or
+// the key went unused for KEY_IDLE_MS (worker/cloud.js keyProfile). The
+// public list says which, without spending a wrong try: no PIN now, and it
+// opens again at once; else the PIN is new here and must be typed before the
+// person opens (Ben, 2026-10-19). 🔑 Remember ends either way; a device that
+// remembered them says it forgot them (`keyDropped`), since it can't tell a
+// new PIN from a key that idled out.
 async function keyRefused(personId) {
   sessionKeys.delete(personId);
   unlocked.delete(personId);
@@ -227,20 +237,22 @@ async function keyRefused(personId) {
   if (listed && !listed.pin) {
     try {
       const opened = await api.open(personId);
-      await saveLink({ ...link, key: opened.key, pin: false, check: undefined, newPin: undefined, rememberUntil: undefined });
+      await saveLink({ ...link, key: opened.key, pin: false, check: undefined, newPin: undefined, remembered: undefined, rememberUntil: undefined, keyDropped: undefined });
       setStatus(personId, { state: 'ok', text: 'Opened again: its PIN was cleared.' });
       return;
     } catch { /* a PIN came meanwhile: as below */ }
   }
-  await saveLink({ ...link, key: null, pin: true, check: undefined, newPin: true, rememberUntil: undefined });
-  setStatus(personId, { state: 'locked', text: '🔒 They have a new PIN. Open them and type it.' });
+  const dropped = remembers(link) || !!link.keyDropped;
+  await saveLink({ ...link, key: null, pin: true, check: undefined, newPin: true, remembered: undefined, rememberUntil: undefined, keyDropped: dropped || undefined });
+  setStatus(personId, { state: 'locked', text: dropped ? FORGOT_HERE_STATUS : '🔒 They have a new PIN. Open them and type it.' });
 }
 
 // 🔑 Remember on this device, offered after their PIN opens them (cloud-ui.js
 // offerRemember) and in their profile's PIN part: this device skips the PIN
-// for REMEMBER_DAYS. The cloud gives a key that lasts, which this device
-// keeps; the visit's own key is dropped. Needs the cloud: throws a CloudError
-// as unlock does.
+// until Forget this device, a PIN change, or the cloud drops the key unused
+// (keyRefused). Sharing still asks it (cloud-ui.js askToShare). The cloud
+// gives a key that lasts, which this device keeps; the visit's own key is
+// dropped. Needs the cloud: throws a CloudError as unlock does.
 export async function rememberHere(personId, pin) {
   const link = linkOf(personId);
   if (!link) return;
@@ -248,7 +260,7 @@ export async function rememberHere(personId, pin) {
   const before = keyOf(personId);
   if (before && before !== opened.key) api.forget(personId, before).catch(() => {});
   sessionKeys.delete(personId);
-  await saveLink({ ...link, key: opened.key, pin: !!opened.pin, check: await pinCheck(pin), newPin: undefined, rememberUntil: Date.now() + REMEMBER_MS, noOffer: undefined });
+  await saveLink({ ...link, key: opened.key, pin: !!opened.pin, check: await pinCheck(pin), newPin: undefined, remembered: true, rememberUntil: undefined, keyDropped: undefined, noOffer: undefined });
   unlocked.add(personId);
   pinTyped.add(personId);
   logEvent('cloud', { remember: true });
@@ -269,18 +281,18 @@ export const offersRemember = (personId) => {
   return !!link?.pin && !link.noOffer && !remembers(link);
 };
 
-// Forget this device, or a remembering whose day has come: the PIN is asked
+// Forget this device (behind the grown-up sum, cloud-ui.js): the PIN is asked
 // the next time they are opened. The key that lasts is deleted here and in
 // the cloud, so syncs wait for that PIN.
 const forgetting = new Set();
 export async function forgetHere(personId) {
   const link = linkOf(personId);
-  if (!link?.rememberUntil || forgetting.has(personId)) return;
+  if (!remembers(link) || forgetting.has(personId)) return;
   forgetting.add(personId);
   try {
     const key = link.key || sessionKeys.get(personId);
     sessionKeys.delete(personId);
-    await saveLink({ ...link, key: link.pin ? null : link.key, rememberUntil: undefined });
+    await saveLink({ ...link, key: link.pin ? null : link.key, remembered: undefined, rememberUntil: undefined });
     if (key && link.pin) api.forget(personId, key).catch(() => {});
     logEvent('cloud', { remember: false });
     tell();
@@ -617,7 +629,7 @@ export async function setPin(personId, current, next) {
   const link = linkOf(personId);
   const res = await api.change(personId, keyOf(personId), { pin: current || undefined, newPin: next });
   // A PIN changed here stays remembered here; a removed one has nothing to remember.
-  await saveLink({ ...link, key: res.key, pin: !!next, check: next ? await pinCheck(next) : undefined, newPin: undefined, rememberUntil: next ? link.rememberUntil : undefined });
+  await saveLink({ ...link, key: res.key, pin: !!next, check: next ? await pinCheck(next) : undefined, newPin: undefined, remembered: next && remembers(link) ? true : undefined, rememberUntil: undefined, keyDropped: undefined });
   if (next) { unlocked.add(personId); pinTyped.add(personId); }
   logEvent('cloud', { pin: next ? 'set' : 'removed' });
 }
@@ -824,11 +836,10 @@ export function initCloud(hooks = {}) {
   if (hooks.whatIsHere) whatIsHere = hooks.whatIsHere;
   if (hooks.renderShare) renderShare = hooks.renderShare;
   // A PIN's key kept by an older Remember (a link's `remember`, before
-  // 2026-10-19, with no day it ends) serves this visit only: from the next one
-  // the PIN is asked first. One whose 🔑 Remember day has come is forgotten.
+  // 2026-10-19) serves this visit only: from the next one the PIN is asked
+  // first. 🔑 Remember (`remembered`, or an older `rememberUntil`) keeps its key.
   for (const link of [...state.cloud.values()]) {
-    if (link.rememberUntil && !remembers(link)) forgetHere(link.id);
-    else if (link.pin && link.key) saveLink(link);
+    if (link.pin && link.key && !remembers(link)) saveLink(link);
   }
   db.onChange = (store) => {
     if ((expected.get(store) ?? 0) > 0) { expected.set(store, expected.get(store) - 1); return; }

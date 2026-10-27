@@ -74,7 +74,9 @@ Shape (as written by `cloud.js saveLink`):
 | `pin` | the profile has a PIN |
 | `check` | `{salt, hash}`: PBKDF2 of the PIN, so the device can check it with no network |
 | `newPin` | the profile got a PIN this device never had typed; until typed, the person can't open, and 🤷 I don't know the PIN deletes them here |
-| `rememberUntil` | ms: 🔑 Remember on this device skips the PIN here until then (`REMEMBER_DAYS`, 30). Set by `cloud.js rememberHere`; cleared by `forgetHere`, a removed PIN or a PIN changed elsewhere; a PIN changed on this device keeps it |
+| `remembered` | true: 🔑 Remember on this device skips the PIN here, with no end of its own (Ben, 2026-10-27). Set by `cloud.js rememberHere`; cleared by `forgetHere`, a removed PIN, or a key the cloud refused (`keyRefused`: a PIN changed elsewhere, or `KEY_IDLE_MS` unused); a PIN changed on this device keeps it |
+| `rememberUntil` | ms, from before 2026-10-27 (90 days on): read as `remembered`, whatever its day (`cloud.js remembers`); cleared as `remembered` is |
+| `keyDropped` | true: the cloud refused a key this device remembered (`keyRefused`), so the PIN pad and the profile say "This device forgot them"; cleared when the PIN is typed |
 | `noOffer` | they said Not now to the offer, so `offersRemember` stops offering it on this device |
 
 Readers and writers:
@@ -88,12 +90,12 @@ Readers and writers:
 
 - A no-PIN profile gets a remembered key (`keys.session = 0`): `putInCloud` (create, or open after a 409) and `openProfile` with no PIN (`remember = !pin`).
 - A PIN profile gets a session key (`session = 1`): `unlock` calls `api.open(id, pin, remembers(link))`, so `false` unless this device remembers them. The key goes in `sessionKeys`, never IndexedDB.
-- 🔑 Remember on this device (Ben, 2026-10-26): after a PIN opens someone, `cloud-ui.js offerRemember` asks once (`cloud.js offersRemember`); their profile's PIN part offers it too. `rememberHere(personId, pin)` opens again with `remember: true`, keeps that lasting key in the link, drops the visit's key (`api.forget` on the old one) and sets `rememberUntil`. While it holds, `needsPin` and `pinGuards` are false. `rememberedUntil` forgets a remembering whose day has come; so does `initCloud` at start. `forgetHere` (Forget this device, or the day) deletes the key here and in the cloud.
+- 🔑 Remember on this device (Ben, 2026-10-26): after a PIN opens someone, `cloud-ui.js offerRemember` asks once (`cloud.js offersRemember`); their profile's PIN part offers it too. `rememberHere(personId, pin)` opens again with `remember: true`, keeps that lasting key in the link, drops the visit's key (`api.forget` on the old one) and sets `remembered`. While it holds (`isRemembered`), `needsPin` and `pinGuards` are false. It has no day of its own: it ends with `forgetHere` (Forget this device), which deletes the key here and in the cloud, or with `keyRefused`, once the Worker drops the key (a new PIN, or `KEY_IDLE_MS` unused).
 - `unlock` deletes the device's previous key in the cloud (`api.forget`), so a device holds one key per profile.
 - The Worker deletes session keys older than `SESSION_KEY_MS` (7 days) only when that profile is next opened (`openProfile`). That is why a remembered PIN asks for a lasting key.
 - Any key unused for `KEY_IDLE_MS` (180 days) stops working: `keyProfile` deletes it when it is next sent, and `openProfile` sweeps the profile's. `keys.used` is marked at most once an hour (0 on a key an older Worker made: its `created` counts). A profile keeps its `KEYS_PER_PROFILE` (20) most recently used keys: `newKey` drops the one unused longest. A device whose key went gets 401 like any other refused key (`keyRefused`).
-- A new PIN, or a PIN reset by Ben, deletes every key of the profile (`changeProfile`). The next sync gets 401 → `cloud.js keyRefused` asks the public list: no PIN now → opens again by itself; a PIN → `newPin: true`, `rememberUntil` cleared, status `locked`. A PIN changed on this device keeps its `rememberUntil`.
-- `initCloud` moves a stored key of a PIN profile with no `rememberUntil` (from the retired Remember, before 2026-10-19) into `sessionKeys` for this visit.
+- A new PIN, or a PIN reset by Ben, deletes every key of the profile (`changeProfile`). The next sync gets 401 → `cloud.js keyRefused` asks the public list: no PIN now → opens again by itself; a PIN → `newPin: true`, `rememberUntil` cleared, status `locked`; a link that was remembered gets `keyDropped`, and its status and PIN pad say "This device forgot them" (it can't tell a new PIN from an idle key). A PIN changed on this device keeps `remembered`.
+- `initCloud` moves a stored key of a PIN profile this device doesn't remember (from the retired Remember, before 2026-10-19) into `sessionKeys` for this visit.
 
 ### PINs (and the three PIN sets in `cloud.js`)
 

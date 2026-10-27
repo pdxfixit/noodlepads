@@ -450,7 +450,7 @@ const VIEWS = {
   // The taps are 600 ms apart: one within 500 ms is a double tap, ignored.
   'profile-left': { screen: 'pads', js: `${q('#people-open') + q('#person-add')} ${nap}
     const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()].at(-1);
-    state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true, rememberUntil: Date.now() + 864e5 });
+    state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true, remembered: true });
     document.querySelector('#people-edit [data-person="' + id + '"] [data-profile]').click(); ${nap}
     ${q('#profile-delete')} ${SLOW} ${q('#profile-delete')} ${nap} ${nap}` },
   share: { screen: 'pads', js: `const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()][0];
@@ -471,6 +471,13 @@ const VIEWS = {
     ['cloud-stopped', `'stopped', { phase: 'sounds', sounds: 12, done: 5, total: 10276045, got: 4299161 }, "The cloud isn't reachable from here. Everything still works on this device."`],
   ].map(([name, args]) => [name, { screen: 'pads', noButtons: args.startsWith("'working'"), js: `${q('#people-open') + q('#cloud-browse')} ${nap}
     (await import('/cloud-ui.js')).lookOpen({ id: 'p-look', name: 'Professor Pumpernickel', avatar: '🐙', color: '#0C5E4B' }, ${args}); ${nap}` }])),
+  // remember: 🔑 Remember them here?, as it opens over someone their PIN just
+  // opened (a faked link; nothing is tapped, so the cloud is never asked).
+  remember: { screen: 'pads', js: `${PIN_LINK} (await import('/cloud-ui.js')).offerRemember(pinId, null); ${nap}` },
+  // pin-forgot: the PIN pad on a device that remembered someone, after the
+  // cloud refused its key (a PIN changed elsewhere, or 180 days unused).
+  'pin-forgot': { screen: 'pads', js: `const ui = await import('/cloud-ui.js'); const { FORGOT_HERE } = await import('/cloud.js');
+    ui.askPin({ title: '🦊 Admiral Acorn', hint: FORGOT_HERE + " Don't know it? Their things on this device are deleted; the cloud keeps what it has.", forgot: true, unknown: true });` },
   pin: { screen: 'pads', js: `const ui = await import('/cloud-ui.js');
     ui.askPin({ title: '🦊 Admiral Acorn', hint: "They have a new PIN. Type it to open them here. Don't know it? Their things on this device are deleted; the cloud keeps what it has.", note: "That PIN isn't right. 4 tries left before a 10-minute wait.", forgot: true, someoneNew: true, unknown: true });` },
   // ⚙️ Settings → 🎨 Look open (the pad skins to choose from), scrolled to it.
