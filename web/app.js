@@ -451,6 +451,7 @@ function stopEverything({ keepClicks = false } = {}) {
   dj?.stopReplay();
   seq.stop();
   song.stop();
+  engine?.stop();   // whatever else the engine plays: a groove's sample
   if (keepClicks) return;
   seq.clickOff();
   dj?.clickOff();

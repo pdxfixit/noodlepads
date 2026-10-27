@@ -8,14 +8,18 @@ import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
 
 let page;
+let seq;
 let stops = 0;
 before(async () => {
   console.error = () => {};
+  globalThis.noodleTestSeq = (s) => { seq = s; };
   page = installPage({ manifest: testManifest() });
   const { audio } = await import('../web/audio.js');
   const real = audio.stopAll.bind(audio);
   audio.stopAll = (...a) => { stops++; return real(...a); };
   await (await import('../web/app.js')).ready;   // drawn and wired
+  audio.load = async () => ({ buffer: {}, duration: 0.1 });
+  audio.context().createBufferSource = () => ({ connect() {}, disconnect() {}, stop() {}, start() {}, playbackRate: { value: 1 }, buffer: null });
   await page.settle();
 });
 
@@ -128,4 +132,16 @@ test('Esc with sounds chosen only lets go of them', async () => {
   assert.equal(page.$('#pads-chosen').hidden, true, 'Esc let go of it');
   assert.equal(stops, before, 'and stopped nothing');
   page.$('#edit-toggle').dispatch('click');
+});
+
+// Help says Space stops everything: a groove's ▶ sample too (it is a run of the beat engine).
+test('Space and Esc stop a groove sample that is playing', async () => {
+  const beat = { personId: 'p', name: 'S', bpm: 100, bars: 1, rows: [{ clipId: page.$('#pads').querySelectorAll('.pad')[0].dataset.id, steps: Array.from({ length: 16 }, (_, i) => i % 4 === 0) }] };
+  for (const key of [' ', 'Escape']) {
+    await seq.hearBeat('s', beat, { seconds: 2 });
+    await page.settle();
+    assert.equal(seq.sampling(), 's', 'the sample plays');
+    page.key(key);
+    assert.equal(seq.sampling(), null, `${key === ' ' ? 'Space' : 'Esc'} stopped it`);
+  }
 });
