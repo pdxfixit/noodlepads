@@ -465,7 +465,7 @@ live:
 rollback:
     @"{{flarepress}}/tools/site.sh" "{{site}}" rollback
 
-[doc("The daily live check, here: /, /version.json and /api/cloud answer, and /api/cloud says ok (3 retries, 20 s apart). GitHub runs it daily (.github/workflows/live.yml)")]
+[doc("The daily live check, here: /, /version.json and /api/cloud answer, /api/cloud says ok and /api/profiles lists (it reads D1) (3 retries, 20 s apart). GitHub runs it daily (.github/workflows/live.yml)")]
 live-check *args:
     python3 tools/live_check.py {{args}}
 

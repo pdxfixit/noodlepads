@@ -2,7 +2,9 @@
 """The live site is up and working: CI's daily live.yml, or `just live-check`.
 
 One rule: down or broken is never excused. `/` and `/version.json` must answer
-200, and `/api/cloud` must answer {"ok":true,...} (a read: it writes nothing). A
+200, `/api/cloud` must answer {"ok":true,...} (the Worker is up; it does not touch
+the database), and `/api/profiles` must answer {"profiles":[...]} (the public
+list: a read of D1, so a database that is down or over its limit is a red run). A
 miss is retried 3 times, 20 s apart, to ride out a blip, then fails. Which
 commit is live is not checked: deploy.yml deploys every push to main, and a
 failed deploy is already a red run there.
@@ -20,15 +22,20 @@ import time
 import urllib.error
 import urllib.request
 
-PAGES = ["/", "/version.json", "/api/cloud"]
+PAGES = ["/", "/version.json", "/api/cloud", "/api/profiles"]
 TRIES = 3
 WAIT_S = 20
 
 
 def page_ok(path, status, text):
-    """A page answered as it should: 200, and /api/cloud says ok."""
+    """A page answered as it should: 200, /api/cloud says ok, /api/profiles lists."""
     if status != 200:
         return False
+    if path == "/api/profiles":
+        try:
+            return isinstance(json.loads(text).get("profiles"), list)
+        except (ValueError, AttributeError):
+            return False
     if path == "/api/cloud":
         try:
             return json.loads(text).get("ok") is True

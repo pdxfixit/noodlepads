@@ -4,14 +4,14 @@ import unittest
 import live_check as lc
 
 GOOD = {"/": (200, "<!doctype html>"), "/version.json": (200, '{"version":"abc1234"}'),
-        "/api/cloud": (200, '{"ok":true,"v":1}')}
+        "/api/cloud": (200, '{"ok":true,"v":1}'), "/api/profiles": (200, '{"profiles":[]}')}
 
 
 class Decide(unittest.TestCase):
     def test_a_healthy_site_passes(self):
         ok, lines = lc.decide(GOOD)
         self.assertTrue(ok)
-        self.assertEqual(lines, ["✅ / 200", "✅ /version.json 200", "✅ /api/cloud 200"])
+        self.assertEqual(lines, ["✅ / 200", "✅ /version.json 200", "✅ /api/cloud 200", "✅ /api/profiles 200"])
 
     def test_any_live_version_passes(self):
         for v in ("fff0000", "v1.0-3-gabc1234", "abc1234-dirty", "not-a-commit"):
@@ -32,6 +32,17 @@ class Decide(unittest.TestCase):
         ok, _ = lc.decide({**GOOD, "/api/cloud": (200, "<html>")})
         self.assertFalse(ok)
 
+    def test_database_down_fails_though_the_worker_is_up(self):
+        # /api/cloud never reads D1; the profile list does (a 503 "cloud" when D1 is down or over its limit).
+        ok, lines = lc.decide({**GOOD, "/api/profiles": (503, '{"error":"cloud"}')})
+        self.assertFalse(ok)
+        self.assertIn("/api/profiles answered 503", "\n".join(lines))
+
+    def test_profile_list_200_but_not_a_list_fails(self):
+        for text in ('{"ok":true}', '{"profiles":"x"}', "<html>", "[]"):
+            ok, _ = lc.decide({**GOOD, "/api/profiles": (200, text)})
+            self.assertFalse(ok, text)
+
     def test_home_page_down_fails(self):
         ok, lines = lc.decide({**GOOD, "/": (404, "")})
         self.assertFalse(ok)
@@ -45,7 +56,8 @@ class Decide(unittest.TestCase):
 
 class Retries(unittest.TestCase):
     def test_retries_only_the_misses(self):
-        answers = {"/": [(200, "x")], "/version.json": [(200, "{}")], "/api/cloud": [(503, ""), (200, '{"ok":true}')]}
+        answers = {"/": [(200, "x")], "/version.json": [(200, "{}")], "/api/cloud": [(503, ""), (200, '{"ok":true}')],
+                   "/api/profiles": [(200, '{"profiles":[]}')]}
         calls, sleeps = [], []
 
         def fetch(p):
@@ -53,7 +65,7 @@ class Retries(unittest.TestCase):
             return answers[p].pop(0)
         out = lc.check_pages(fetch, sleeps.append)
         self.assertEqual(out["/api/cloud"], (200, '{"ok":true}'))
-        self.assertEqual(calls, ["/", "/version.json", "/api/cloud", "/api/cloud"])
+        self.assertEqual(calls, ["/", "/version.json", "/api/cloud", "/api/profiles", "/api/cloud"])
         self.assertEqual(sleeps, [lc.WAIT_S])
 
     def test_a_page_still_down_is_tried_three_more_times(self):
