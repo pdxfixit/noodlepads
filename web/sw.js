@@ -69,7 +69,7 @@ const MODULES = [
   'keyset', 'kids-logic', 'kids', 'leftover', 'lines', 'listen-dsp', 'listen-input', 'listen-make', 'listen-ui', 'listen-worklet', 'listen', 'log-clean', 'log-send', 'log', 'loudness', 'merge', 'merge3', 'meter', 'mic', 'mini-deck',
   'mix', 'mixer', 'model', 'names', 'notes', 'nudge', 'offline', 'old-backup', 'old-beats', 'overflow', 'pad-size', 'pads', 'people',
   'pill-select', 'pitch', 'play-count', 'playlist', 'privacy', 'reid', 'rhythm', 'roll', 'row-volume', 'scratch', 'sequencer',
-  'settings-ui', 'settings', 'shape', 'share-render', 'sheet', 'skins', 'slide', 'song', 'starters', 'state', 'steps',
+  'settings-ui', 'settings', 'shape', 'share-render', 'sheet-make', 'sheet-state', 'sheet-voices', 'sheet', 'skins', 'slide', 'song', 'starters', 'state', 'steps',
   'store', 'stretch-worker', 'stretch', 'sync-timing', 'synth', 'tap-watch', 'telemetry', 'tempo-key', 'things', 'tips', 'tooltips', 'touch-grid', 'touch', 'track-page', 'tweaks',
   'ui', 'update', 'usage', 'util', 'voice-knobs', 'voices', 'wav', 'wave', 'welcome', 'who-now', 'zip',
 ];

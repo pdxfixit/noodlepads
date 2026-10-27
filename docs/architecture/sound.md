@@ -19,12 +19,12 @@ beats and a song) that only ends in the app's normal beat and song saving.
 | Building blocks | `steps.js` | yes (builds nodes on any ctx it is given) | `voices.js`, `tweaks.js`, `mixer.js`, `sheet.js`, `shape.js` |
 | Pitch-keeping stretch | `stretch.js`, `stretch-worker.js` | yes | `voices.js timeStretch` only |
 | Knobs | `tweaks.js` | yes | `voices.js`, `sheet.js`, `shape.js`, `bulk.js`, `voice-knobs.js`, `backup.js`, `model.js` |
-| Voices as knobs, own voices | `voice-knobs.js` | yes | `sheet.js` |
+| Voices as knobs, own voices | `voice-knobs.js` | yes | `sheet-voices.js` |
 | Trim, edits, fades, onsets | `cuts.js` | yes | `audio.js`, `chop.js`, `backup.js`, `model.js` |
 | Even it out | `loudness.js` | yes | `chop.js`, `voices.js` (softLimit), `wav.js normalize` (`peakOf`) |
 | The WAV file | `wav.js` (`encodeWav`, `normalize`) | yes, no DOM, storage or audio ✅ | `sheet.js`, `chop.js`, `dj.js`, `song.js`, `share-render.js`, `sequencer.js` |
-| Mix, Find its note, Make one | `mix.js`, `pitch.js`, `synth.js` | yes | `sheet.js`; `pitch.js rootShift` also by `sequencer.js` |
-| Sheet drawing | `wave.js`, `chop.js`, `shape.js` | no (DOM) | `sheet.js` |
+| Mix, Find its note, Make one | `mix.js`, `pitch.js`, `synth.js` | yes | `sheet.js`, `sheet-make.js`; `pitch.js rootShift` also by `sequencer.js` |
+| Sheet drawing | `wave.js`, `chop.js`, `shape.js` | no (DOM) | `sheet.js`, `sheet-voices.js` (`shape.js`) |
 | Instruments | `instruments.js`, `inst-picker.js` | `instruments.js` yes, no imports | `audio.js`, `model.js`, `board.js`, `settings.js`, `beat.js`, `sequencer.js`, `dj-*.js`, `kids*.js`, `worker/clean.js` |
 | 🎧 From a song | `listen-input.js`, `listen-worklet.js`, `listen-dsp.js`, `listen.js`, `listen-make.js`, `listen-ui.js` | all but `listen-ui.js` and the capture half of `listen-input.js` | `app.js initListen`; `app.js` passes `showCard` to the sequencer as `deps.onGroovesOpen` |
 
@@ -71,7 +71,7 @@ sound at peak 0.9 passes untouched (`tests/audio.test.mjs`,
 - The 🎧 worklet node connects straight to `ctx.destination`
   (`listen-input.js startCapture`). It writes no output; the connection only
   keeps the browser running it.
-- The recorders (`sheet.js listen`, `kids.js`) make a `MediaStreamSource` →
+- The recorders (`sheet.js listen`, `kids.js`; both through `mic.js openMeter`) make a `MediaStreamSource` →
   their own `AnalyserNode` on this context for their level ring. Neither
   connects to the speakers.
 - `sequencer.js follow` reads `audio.limiter.reduction` each frame into the

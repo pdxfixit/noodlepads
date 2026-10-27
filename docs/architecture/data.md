@@ -23,6 +23,11 @@
 | `bulk.js` | Edit sounds with sounds chosen: change, move to group, delete with Undo, a group's ✏️ sheet | no | pads.js hooks (`setPadHooks`) |
 | `sheet.js` | the sound sheet: makes, edits, hides and deletes one sound; ⭐ Save voice | no | pads.js (`openSheet` via app.js) |
 | `people.js` | 👥 People, the profile sheet, `addPerson`, `deleteHere`, `editLook` | no | app.js, backup-ui.js, welcome.js |
+| `sheet.js` | the sound sheet: opens, plays, records, saves, hides and deletes one sound; the preview cache; Layers | no | pads.js (`openSheet` via app.js) |
+| `sheet-state.js` | the sheet's shared state (`el`, `sheet`, `live`, `parts`) and `hooks`, the few things the other two parts call back into `sheet.js` for | no | sheet.js, sheet-voices.js, sheet-make.js |
+| `sheet-voices.js` | the sheet's voice chips, ⭐ My voices (⭐ Save voice, rename, delete), tapping a voice, ⤢ Turn into knobs, the folds and the chain and Layers rows | no | sheet.js (imports nothing from it ✅) |
+| `sheet-make.js` | the sheet's ➕ Mix with another sound (`makeMix`) and ✨ Make one (`makeSound`, the starters) | no | sheet.js (imports nothing from it ✅) |
+| `people.js` | 👥 People, the profile sheet, `addPerson`, `deleteHere`, `editLook`, its own `storedLists` | no | app.js, backup-ui.js, welcome.js |
 | `things.js` | 🗂️ See all: lists `personThings`, plays rows | no | people.js (`openThings`), app.js deps |
 | `reid.js` | `CLOUD_ID`, `isCloudId`, `PERSON_STORES`, `remapId`, `remapText`, `remapRecord`, `reIdDoc` | yes | state.js, backup.js |
 | `starters.js` | `STARTERS`, `nameSoundOf`, `dropNameSounds` (pre-1.0 data only) | yes | backup.js |
@@ -57,7 +62,7 @@
 | `cloud` | `id` (person id) | 10 | this device's link: `{id, key, rev, sent, sounds, foreign?, pin, check, newPin?, remembered?, rememberUntil? (before 2026-10-27), keyDropped?, noOffer?}` (cloud.md "The cloud link") | cloud.js `saveLink`, `dropLink` | **never** | it is the link |
 | `prefs` | `personId` | 11 | `{personId, values: {level, advancedBeats, padSize, …}}` | `settings.js setSetting` | yes | yes (one each) |
 | `layouts` | `id` (`layout-…`) | 12 | `{id, personId, name, created, keys}` | app.js dj `saveLayout` | yes | yes |
-| `voices` | `id` (`voice-…`) | 13 | `{id, personId, name, emoji, knobs, created, used, edited?}` | `state.js saveMyVoice` (sheet.js) | yes | yes |
+| `voices` | `id` (`voice-…`) | 13 | `{id, personId, name, emoji, knobs, created, used, edited?}` | `state.js saveMyVoice` (sheet-voices.js) | yes | yes |
 | `bases` | `id` (`<person>\|<kind>:<record id>`) | 14 | `{id, personId, body}`: each record as last synced | cloud.js only | **never** | sync's own |
 | `touchLayouts` | `id` (`touch-…`) | 15 | `{id, personId, name, created, bands, grid?}` | app.js dj `saveTouchLayout` | yes | yes |
 
@@ -75,7 +80,7 @@ The comments on `state` in `state.js` give older shapes for `patterns` (`rows: [
 |---|---|---|---|
 | `manifest` | boards.json (`app.js loadManifest`, checked by `model.js validateManifest`) | app.js once | board.js, state.js, backup-ui.js `whatIsHere`, pads.js (`kitGroups`), app.js |
 | `personId` | — (who is showing) | app.js only: `showPerson`, `startOver` (null), `followRenames` | board.js `currentPerson`, settings.js `getSetting`/`setSetting`, every screen |
-| `userClips` | `clips` | sheet.js, chop.js, bulk.js, app.js; `state.js deleteUserClip`, `deletePerson` | board.js `clipsFor` (via `clipsForPerson`), people.js counts |
+| `userClips` | `clips` | sheet.js, sheet-make.js, chop.js, bulk.js, app.js; `state.js deleteUserClip`, `deletePerson` | board.js `clipsFor` (via `clipsForPerson`), people.js counts |
 | `overrides` (Map id→) | `overrides` | `state.js setOverride`, `deletePerson` | board.js `clipsFor`, bulk.js, sheet.js, app.js `setClipEmoji` |
 | `orders` (Map personId→) | `orders` | pads.js `saveOrder`, bulk.js `saveGroups` / Undo | board.js `clipsFor`, pads.js `ownGroups`, app.js (`ownGroups` dep) |
 | `patterns` (Map) | `patterns` | app.js `setOpen` | sequencer via `opened` |
@@ -89,7 +94,7 @@ The comments on `state` in `state.js` give older shapes for `patterns` (`rows: [
 | `cloud` (Map) | `cloud` | cloud.js `saveLink`, `dropLink`; `reIdStoredPeople` (deletes stale links) | cloud.js, pads.js (🔒 in the menu), people.js |
 | `prefs` (Map) | `prefs` | settings.js `setSetting` | settings.js `getSetting` |
 | `layouts`, `touchLayouts` | same names | app.js dj deps | dj-keys.js, dj-touch.js |
-| `myVoices` | `voices` | `state.js saveMyVoice`, `deleteMyVoice` | sheet.js, bulk.js (🪄 Voice), things |
+| `myVoices` | `voices` | `state.js saveMyVoice`, `deleteMyVoice` | sheet-voices.js, bulk.js (🪄 Voice), things |
 | `version` | version.json (`app.js loadVersion`) | app.js | backups, update.js, cloud.js, feedback, log-send |
 | `screen` | localStorage `screen` | `app.js setScreen` | help.js, app.js |
 | `editing` | — | `app.js setEditing` | pads.js, bulk.js, app.js |
@@ -170,7 +175,7 @@ A preset clip is the kit entry (`label, emoji, color, file, group, inst?, plays?
 | Thing | Shape | Made by | Checked by |
 |---|---|---|---|
 | Person (added) | `p-<time36>-<rand4>` | `util.js newId('p')` | `reid.js CLOUD_ID` (cloud), `model.js PERSON_ID` (any person id) |
-| Own sound | `user-…` | `newId('user')` in sheet.js, chop.js, kids.js, app.js, cloud-sync.js | `backup.js` `CLIP_ID` |
+| Own sound | `user-…` | `newId('user')` in sheet.js, sheet-make.js, chop.js, kids.js, app.js, cloud-sync.js | `backup.js` `CLIP_ID` |
 | Preset copy | `<personId>-<kitId>` | `model.js kitFor` | `validateManifest` (no clash with a person's clip) |
 | Beat / scratch beat / 🧸 Kids' beat | `beat-…` / `beat-scratch-<person>` / `beat-kidsown-<person>` | sequencer.js, app.js, `scratch.js scratchId`, `kidsBeatId` (Kids, kids.js) | `sequencer.js` `BEAT_ID` |
 | Song / scratch song | `song-…` / `song-scratch-<person>` | song.js, listen-make.js | `song.js` `SONG_ID` |
@@ -349,7 +354,7 @@ Nothing found is changed or deleted.
 | Own sounds (and hiding presets) from Edit sounds | `pads.js cornerBadge` / bulk bar → `bulk.js removeSounds` | yes (two taps) | ↩️ Undo in the banner, 8 s: puts back records, override edits and the order's groups |
 | A sound from its sheet | `sheet.js removeFromSheet` → `state.js deleteUserClip` | yes for own; hide is one tap | none (hide: Show sound) |
 | A group | `bulk.js editGroup` | yes | none; its sounds stay, in no group |
-| An own voice | `sheet.js` `deleteVoice` → `state.js deleteMyVoice` | yes | none |
+| An own voice | `sheet-voices.js` `deleteVoice` → `state.js deleteMyVoice` | yes | none |
 | A person | `people.js` profile Delete → `deleteHere` → `cloud.js dropLink` (bases kept), `syncEnded`, `state.js deletePerson`, then `cloud.js forgetBases`, `audio.forget` | yes; then ☁️ Delete their cloud copy too (moved to the top of the box, ☁️ Keep in its place; it asks "Tap again" first) deletes the cloud copy | boards.json people: Bring back (their own sounds don't come back) |
 
 `state.js deletePerson` removes their clips, preset edits (`<id>-<kitId>`), beats, songbook, takes, layouts, voices, touch layouts, open beat, order, deck, open song, prefs, and the people record, all in one transaction (a boards.json person's record is put back hidden in the same one). It returns the clip ids so the caller can forget their audio, or null when the browser refused it (nothing changed).
@@ -376,6 +381,12 @@ A sync that changes the open beat while it plays is merged into the next save (`
 4. **Three counters of what is here** (above). A new kind a backup carries goes into `holdings` and `holdsWords` too (`tests/holds.test.mjs`), or "A backup now holds…" leaves it out.
 5. **`extensionFor` is defined twice:** `util.js extensionFor` and `old-backup.js extensionFor` (the second says it copies the first). Pluralizers are three: `util.js count`, `old-backup.js plural`, and `model.js`'s private `plural`.
 6. **Making an own sound is done in five places; two use the one way so far.** `model.js newClip(fields)` builds the record (the defaults: `id`, `voice: 'normal'`, `mime`, `created`) and `board.js addClip(clip)` pushes it and stores it. `app.js addMadeSound` (beats, songs, takes made into sounds) and `app.js initKids` `saveClip` (a recording Kids built) use them. Still by hand, each with its own push: `sheet.js saveSheet`, `sheet.js makeMix`, `chop.js makePads`, and `kids.js` builds its record (`newId('user')`).
+6. **Making an own sound is done in five places, each building the record by hand:**
+   - `sheet.js saveSheet`
+   - `sheet-make.js makeMix`
+   - `chop.js makePads`
+   - `app.js addMadeSound` (beats, songs, takes made into sounds)
+   - Kids, through `app.js initKids` `saveClip` (kids.js builds the record)
 
    A new required field on `clips` goes in `newClip`, those three, and `backup.js cleanBackup`.
 7. **Editing one sound is done in three ways:** `sheet.js saveSheet`, `bulk.js changeSounds` (through `model.js withBulkChanges`) and `app.js setClipEmoji`. All three branch on own sound or preset, then call `persist('clips')` or `setOverride(overrideFor…)`.

@@ -9,8 +9,12 @@
 // play, each with its control, 🔈 mute and (for the ones that can go) ✕; with
 // Advanced on, the kid's own steps are rows too, to add, drag, open and
 // tune, and a slider on a live step changes the sound while it loops.
+//
+// The sheet is three files on one shared state (sheet-state.js): this one opens,
+// plays, records, saves and closes it, and draws Layers' live loop; sheet-voices.js
+// has the voices and the chain's rows; sheet-make.js has ➕ Mix and ✨ Make one.
 
-import { state, persist, setOverride, deleteUserClip, saveMyVoice, deleteMyVoice } from './state.js';
+import { state, persist, setOverride, deleteUserClip } from './state.js';
 import { audio, trimBounds, keptAudio, levelsOf, levelVerdict, TOO_LOUD, padTo } from './audio.js';
 import { meter, drawGrille } from './meter.js';
 import { MAX_RECORD_SECONDS, COUNT_IN, canRecord, openMicrophone, dropStream, openRecorder, openMeter } from './mic.js';
@@ -18,25 +22,26 @@ import { currentPerson, clipsFor, colorName, nextClipColor } from './board.js';
 import { overrideFor, withHidden } from './model.js';
 import { applyChain, livePlan, voiceById, amountFor, amountText, chainOf, chainFields, recipeKey, surpriseShape, openVoice, stepLook, MAX_CHAIN } from './voices.js';
 import { buildLive, tailOf, liveTrim, newStep, isLive, cleanStep, kindById } from './steps.js';
-import { renderLayers, renderLayerPalette, fromSlider, numsOf, sliderText } from './shape.js';
-import { getSetting, setSetting, onSetting } from './settings.js';
+import { fromSlider, numsOf, sliderText } from './shape.js';
+import { setSetting, onSetting } from './settings.js';
 import { padFor, renderPads } from './pads.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { extensionFor, slug, newId } from './util.js';
-import { soundName, synthName, mixName, funName, cutName } from './names.js';
-import { MIX, cleanMix, mixSounds } from './mix.js';
-import { showNotice } from './ui.js';
+import { soundName, cutName } from './names.js';
+import { MIX, cleanMix } from './mix.js';
 import { track } from './telemetry.js';
-import { STARTERS, TONES, LIMITS, RATE, renderSynth, cleanSynth, surpriseSynth } from './synth.js';
-import { encodeWav } from './wav.js';
+import { cleanSynth } from './synth.js';
 import { findNote, noteName } from './pitch.js';
 import { cutKey, cleanEdits, cleanFade } from './cuts.js';
 import { createWave } from './wave.js';
 import { createCut } from './chop.js';
 import { fitLine, keysForSlider, showingKeys, KEYED_STEPS } from './lines.js';
-import { NO_TWEAKS, MORE_KNOBS, cleanTweaks, fullTweaks, tweakText, tweakByKey, allNormal, knobMoved, layerRows, addableKnobs, ADDED_AT } from './tweaks.js';
-import { PRESETS, presetById, stackAll, matches, voiceLine, presetText, chainToKnobs, hasClassicVoice, surpriseVoices, cleanMyVoice, myVoicesFor, MY_VOICE_CHIPS } from './voice-knobs.js';
+import { NO_TWEAKS, cleanTweaks, fullTweaks, tweakText, tweakByKey, knobMoved, layerRows, ADDED_AT } from './tweaks.js';
+import { voiceLine, hasClassicVoice } from './voice-knobs.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
+import { el, sheet, live, parts, hooks, advanced, plainChain, sheetError, setStatus } from './sheet-state.js';
+import { closeKeep, closePalette, editable, knobMovedByHand, litFromKnobs, moveKnobs, placeStickyRow, renderFolds, renderLayerRows, renderVoiceChips, renderVoices, wireFolds, wireVoices } from './sheet-voices.js';
+import { hearMix, makeMix, openMix, renderMake, renderMix, renderStarters, wireMake } from './sheet-make.js';
 
 let emojiAll = null;   // the "…" full list under the Picture choices (emoji-more.js)
 export const EMOJI = ['📣', '🎺', '🥁', '🎸', '💥', '🚀', '⚡', '🔔', '🎉', '👋', '😂', '😱',
@@ -48,50 +53,8 @@ const MAX_CLIP_SECONDS = 120;
 export { COUNT_IN };   // Record counts 3, 2, 1 before it listens (mic.js); tests shorten the beat
 const LOUD_SHOW_MS = 600;   // how long the grille stays red after the sound hit the top
 
-const el = {};
 let wave;  // the sound's wave (wave.js), made in initSheet
 let cut;   // trim and chop (chop.js), made in initSheet
-
-const sheet = {
-  mode: 'new',          // 'new' | 'edit'
-  clip: null,           // the clip being edited
-  pending: null,        // new audio: {blob, mime, original, synth?}
-  made: null,           // ✨ Make one: {kind, recipe} of the sound being made, or null
-  found: null,          // 🎵 Find its note: {midi (null: no clear note), key: the chain it was found for}
-  mix: { with: null, offset: MIX.offset.default, balance: MIX.balance.default },   // ➕ Mix with another sound
-  original: null,       // Promise<AudioBuffer> the voice previews render from
-  previews: new Map(),  // recipeKey -> Promise<{buffer, duration}> for this sheet
-  chain: [],            // old voices and Shape it steps, in order: [{type: 'voice', voice, amount}, …]; amount null for a voice without one
-  link: 0,              // which of them the amount slider (simple) or Shape it (Advanced) edits
-  tweaks: { ...NO_TWEAKS },   // the knobs (tweaks.js): deeper, faster, echo…, and a ✦ special layer
-  lit: [],              // the voices tapped since the knobs last moved by hand, in tap order: [{id, name, emoji, knobs}]
-  base: { ...NO_TWEAKS },     // the knobs before the first of them was tapped
-  knobsFirst: true,     // the knobs play before the chain (new sounds) or after it (sounds saved with old voices and tweaks)
-  undo: null,           // ⤢ Turn into knobs, for ↩️ The old way: {chain, tweaks, knobsFirst} before it
-  keep: null,           // ⭐ Save voice's form: {id} renames that voice; {} keeps a new one; null closed
-  keepEmoji: '',        // the picture picked in that form
-  shown: new Set(),     // knobs that are rows though at normal: added, or moved by hand since the knobs last jumped (Q42b)
-  muted: new Set(),     // knob layers muted (🔈): keys, and 'special'; a step's mute is its own `off`
-  armed: null,          // the layer whose ✕ asks "Remove?", waiting for its second tap
-  ready: false,         // there is a sound to try voices on
-  emoji: '📣',
-  color: 'yellow',
-  voiced: 0,            // seconds of the voiced sound last drawn, so the plain one is drawn to the same scale
-  plain: false,         // 👂 Plain: false, 'waiting' for the recording, or 'playing' it
-  trim: null,           // {start, end} seconds into the stored audio (chop.js), or null for the automatic trim
-  edits: null,          // the wave editor's changes to parts of the stored audio (cuts.js), or null
-  fade: null,           // the wave editor's fades, {in, out} seconds, or null
-  downloadUrl: null,
-  opened: '',           // sheetSignature() as the sheet opened: unlike it now, closing would lose work
-};
-
-// The live preview (Advanced): while a live step's slider is held, the sound
-// loops through real nodes that the slider moves. `split` is the chain it was
-// built for; `nodes` move its live steps.
-const live = { on: false, split: null, nodes: null, starting: null };
-
-// The one Advanced switch (Settings, and at the bottom of Layers) shows the kid's own steps.
-const advanced = () => getSetting('advancedBeats') === true;
 
 const recording = {
   stream: null,
@@ -108,15 +71,6 @@ export const isRecording = () => !!recording.recorder;
 
 // The link of the chain being edited.
 const link = () => sheet.chain[sheet.link];
-
-function sheetError(text) {
-  el.sheetError.textContent = text || '';
-  el.sheetError.hidden = !text;
-}
-
-function setStatus(text) {
-  el.recStatus.textContent = text;
-}
 
 // The short list, the picture in use if it came from "…", then "…".
 function renderEmojiGrid() {
@@ -168,517 +122,6 @@ function renderMode() {
   el.sheetAdvanced.checked = adv;
   // Its box is marked .on: Firefox before 121 has no :has(input:checked).
   el.sheetAdvanced.closest('label').classList.toggle('on', adv);
-}
-
-// ── Voices as knob settings (voice-knobs.js) ──────────────────────────
-// The chips: every voice but Normal, emoji only (the name is its label and
-// its title), then the person's three latest own voices, ⭐ Voices ▾ for
-// all of them, and 🎲. A chip is lit while the knobs are where its voice put
-// them; moving a knob by hand makes them the kid's own.
-
-const reducedMotion = () => !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-
-// The person's own voices, cleaned, most recently used first.
-const myVoices = () => myVoicesFor(state.myVoices, currentPerson().id).map(cleanMyVoice).filter(Boolean);
-
-// A voice as the sheet stacks it: a built-in one, or one of the person's own.
-function voiceFor(b) {
-  if (b.dataset.preset) return presetById(b.dataset.preset);
-  const mine = myVoices().find((v) => v.id === b.dataset.my);
-  return mine ? { id: `my:${mine.id}`, name: mine.name, emoji: mine.emoji, knobs: mine.knobs } : null;
-}
-
-function voiceChip(look, data) {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'voice-chip';
-  Object.assign(b.dataset, data);
-  const e = document.createElement('span');
-  e.className = 'voice-emoji';
-  e.setAttribute('aria-hidden', 'true');
-  e.textContent = look.emoji;
-  b.append(e);
-  return b;
-}
-
-function renderVoiceChips() {
-  const mine = myVoices();
-  const chips = PRESETS.map((p) => {
-    const b = voiceChip(p, { preset: p.id });
-    b.setAttribute('aria-label', p.special ? `${p.name} (special)` : p.name);
-    b.title = p.special ? `${p.name} ✦ special` : p.name;
-    if (p.special) {
-      const s = document.createElement('span');
-      s.className = 'voice-special';
-      s.setAttribute('aria-hidden', 'true');
-      s.textContent = '✦';
-      b.append(s);
-    }
-    return b;
-  });
-  for (const v of mine.slice(0, MY_VOICE_CHIPS)) {
-    const b = voiceChip({ emoji: v.emoji || '⭐' }, { my: v.id });
-    b.classList.add('my-voice');
-    if (v.name) {
-      const n = document.createElement('span');
-      n.className = 'voice-name';
-      n.textContent = v.name;
-      b.append(n);
-    }
-    b.setAttribute('aria-label', v.name || v.emoji);
-    b.title = v.name || v.emoji;
-    chips.push(b);
-  }
-  if (mine.length) {
-    const list = voiceChip({ emoji: '⭐' }, { myOpen: '1' });
-    list.classList.add('my-voices-open');
-    const words = document.createElement('span');
-    words.className = 'voice-name';
-    words.textContent = 'Voices ▾';
-    list.append(words);
-    list.setAttribute('aria-label', 'Voices');
-    list.setAttribute('aria-expanded', String(!el.myList.hidden));
-    list.setAttribute('aria-controls', 'my-voice-list');
-    chips.push(list);
-  } else el.myList.hidden = true;
-  const surprise = voiceChip({ emoji: '🎲' }, { surprise: '1' });
-  surprise.setAttribute('aria-label', 'Surprise me');
-  surprise.title = 'Surprise me';
-  chips.push(surprise);
-  el.voices.replaceChildren(...chips);
-  renderMyList(mine);
-}
-
-// ⭐ Voices ▾: every one of the person's own voices, to use, rename or delete.
-function renderMyList(mine = myVoices()) {
-  el.myList.replaceChildren(...mine.map((v) => {
-    const li = document.createElement('li');
-    li.className = 'chain-item my-voice-item';
-    const use = document.createElement('button');
-    use.type = 'button';
-    use.className = 'chain-link';
-    use.dataset.my = v.id;
-    use.textContent = [v.emoji, v.name].filter(Boolean).join(' ');
-    const rename = document.createElement('button');
-    rename.type = 'button';
-    rename.className = 'chain-remove';
-    rename.dataset.rename = v.id;
-    rename.setAttribute('aria-label', `Rename ${v.name || v.emoji}`);
-    rename.textContent = '✏️';
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.className = 'chain-remove my-voice-delete';
-    del.dataset.deleteVoice = v.id;
-    del.setAttribute('aria-label', `Delete ${v.name || v.emoji}`);
-    del.textContent = '🗑️';
-    li.append(use, rename, del);
-    return li;
-  }));
-}
-
-// Everything the voice part shows, after the knobs, the lit voices or the chain changed.
-function renderVoices() {
-  const ids = new Set(sheet.lit.map((p) => p.id));
-  for (const b of el.voices.children) {
-    b.disabled = !sheet.ready;
-    const v = b.dataset.preset ? b.dataset.preset : b.dataset.my ? `my:${b.dataset.my}` : null;
-    if (v) b.setAttribute('aria-pressed', String(ids.has(v)));
-    if (b.dataset.myOpen) b.setAttribute('aria-expanded', String(!el.myList.hidden));
-  }
-  for (const b of el.myList.querySelectorAll('button')) b.disabled = !sheet.ready && !b.dataset.rename && !b.dataset.deleteVoice;
-  el.voiceLine.textContent = sheet.ready ? voiceLine(sheet.lit, sheet.tweaks) : '';
-  el.keepBtn.disabled = !sheet.ready || allNormal(sheet.tweaks);
-  el.normalBtn.disabled = !sheet.ready || (allNormal(sheet.tweaks) && plainChain());
-  el.plainBtn.disabled = el.normalBtn.disabled;   // with no voice on, plain sounds the same
-  renderTweaks();
-  renderChain();
-}
-
-// A voice chip tapped: its knobs go on top of the knobs (the last tap wins a
-// knob both use), and it lights. Tapping a lit voice takes it off again: the
-// knobs go back to what they were, with the other lit voices on top.
-function tapVoice(voice) {
-  const from = { ...sheet.tweaks };
-  if (!sheet.lit.length) sheet.base = { ...sheet.tweaks };
-  const on = sheet.lit.some((p) => p.id === voice.id);
-  sheet.lit = on ? sheet.lit.filter((p) => p.id !== voice.id) : [...sheet.lit, voice];
-  sheet.tweaks = stackAll(sheet.base, sheet.lit);
-  // A voice whose knob a later one took is no longer what the knobs say.
-  sheet.lit = sheet.lit.filter((p) => matches(sheet.tweaks, p.knobs));
-  // A knob a voice moves plays: its mute comes off.
-  for (const k of Object.keys(voice.knobs)) sheet.muted.delete(k);
-  knobsChanged();
-  moveKnobs(from, Object.keys(voice.knobs));
-  previewVoice();
-}
-
-// On open: the voices (built-in, then the person's own) whose knobs are all
-// where the sound's knobs are light up, and `base` is the knobs without them.
-function litFromKnobs() {
-  const mine = myVoices().map((v) => ({ id: `my:${v.id}`, name: v.name, emoji: v.emoji, knobs: v.knobs }));
-  sheet.lit = [...PRESETS, ...mine].filter((p) => matches(sheet.tweaks, p.knobs));
-  sheet.base = { ...sheet.tweaks };
-  for (const p of sheet.lit) for (const k of Object.keys(p.knobs)) sheet.base[k] = NO_TWEAKS[k];
-}
-
-// The knobs moved (a voice, Normal, 🎲, Turn into knobs): ⭐ Save voice's
-// form closes and ↩️ The old way is forgotten.
-function knobsChanged() {
-  sheet.undo = null;
-  sheet.shown.clear();   // Layers show the knobs the voice set, not ones it left (Q42b)
-  closeKeep();
-  renderVoices();
-}
-
-// A knob moved by hand: the voices are no longer lit; the knobs are the kid's own.
-function knobMovedByHand() {
-  sheet.lit = [];
-  sheet.undo = null;
-  renderVoices();
-}
-
-// The knobs a voice moved slide from where they were (about 300 ms) and glow
-// for a second, so a kid sees which knobs make the voice. Reduced motion:
-// the glow only. The knobs already hold their new values; the slide is drawn
-// from the next frame on.
-function moveKnobs(from, keys) {
-  const rows = keys.map((k) => knobRow(k)).filter(Boolean);
-  for (const row of rows) {
-    row.classList.remove('knob-glow');
-    void row.offsetWidth;   // restart the glow
-    row.classList.add('knob-glow');
-    setTimeout(() => row.classList.remove('knob-glow'), 1200);
-  }
-  if (reducedMotion() || typeof requestAnimationFrame !== 'function') return;
-  const sliders = keys.map((k) => ({ k, input: el.layerRows.querySelector(`input[data-layer-knob="${k}"]`) }))
-    .filter(({ k, input }) => input && !input.parentElement.classList.contains('keyed') && from[k] !== sheet.tweaks[k]);
-  if (!sliders.length) return;
-  let start = null;
-  const frame = (now) => {
-    start ??= now;
-    const t = Math.min(1, (now - start) / 300);
-    const ease = 1 - (1 - t) ** 3;
-    for (const { k, input } of sliders) {
-      const v = from[k] + (sheet.tweaks[k] - from[k]) * ease;
-      input.value = String(v);
-      if (input.isConnected) input.parentElement.querySelector('output').textContent = tweakText(k, t < 1 ? Math.round(v / Number(input.step)) * Number(input.step) : sheet.tweaks[k]);
-    }
-    if (t < 1) requestAnimationFrame(frame);
-    else renderTweaks();
-  };
-  requestAnimationFrame(frame);
-}
-
-const knobRow = (k) => el.layerRows.querySelector(`[data-layer="${k}"]`);
-
-// ↩️ Reset voice: every knob back to the middle, no voices, nothing from the old way.
-function backToNormal() {
-  const from = { ...sheet.tweaks };
-  const moved = Object.keys(sheet.tweaks).filter((k) => sheet.tweaks[k] !== NO_TWEAKS[k]);
-  sheet.tweaks = { ...NO_TWEAKS };
-  sheet.lit = [];
-  sheet.chain = [editable({ voice: 'normal' })];
-  sheet.link = 0;
-  sheet.knobsFirst = true;
-  sheet.muted.clear();
-  knobsChanged();
-  live.on = false;
-  renderAmount();
-  moveKnobs(from, moved);
-  previewVoice();
-}
-
-// 🎲 Surprise me: one to three voices from different families, stacked on normal knobs.
-function surpriseKnobs() {
-  const from = { ...sheet.tweaks };
-  sheet.base = { ...NO_TWEAKS };
-  sheet.lit = surpriseVoices().map(presetById);
-  sheet.tweaks = stackAll(sheet.base, sheet.lit);
-  sheet.muted.clear();
-  knobsChanged();
-  moveKnobs(from, Object.keys(sheet.tweaks).filter((k) => sheet.tweaks[k] !== from[k]));
-  previewVoice();
-}
-
-// ⤢ Turn into knobs: the old voices become knob positions (close, not the
-// same: the kid's choice). ↩️ The old way puts them back until anything else changes.
-function turnIntoKnobs() {
-  const before = { chain: sheet.chain.map((s) => ({ ...s })), tweaks: { ...sheet.tweaks }, knobsFirst: sheet.knobsFirst };
-  const from = { ...sheet.tweaks };
-  const { knobs, rest } = chainToKnobs(sheet.chain, sheet.tweaks);
-  sheet.tweaks = knobs;
-  sheet.chain = rest.length ? rest.map(editable) : [editable({ voice: 'normal' })];
-  sheet.link = sheet.chain.length - 1;
-  sheet.knobsFirst = true;
-  sheet.lit = [];
-  knobsChanged();
-  sheet.undo = before;
-  renderChain();
-  renderAmount();
-  moveKnobs(from, Object.keys(knobs).filter((k) => knobs[k] !== from[k]));
-  previewVoice();
-}
-
-function oldWayBack() {
-  if (!sheet.undo) return;
-  Object.assign(sheet, { chain: sheet.undo.chain, tweaks: sheet.undo.tweaks, knobsFirst: sheet.undo.knobsFirst, lit: [], undo: null });
-  sheet.link = sheet.chain.length - 1;
-  renderVoices();
-  renderAmount();
-  previewVoice();
-}
-
-// The knobs as they play: a muted one counts as normal (⭐ Save voice keeps what is heard).
-const playingKnobs = () => fullTweaks(Object.fromEntries(Object.entries(sheet.tweaks).map(([k, v]) => [k, sheet.muted.has(k) ? NO_TWEAKS[k] : v])));
-
-// ⭐ Save voice: a name (a fun one offered, never a person's) and a
-// picture, then the knobs as they are now become the person's own voice.
-const KEEP_EMOJI = ['⭐', '🎤', '🦄', '🐉', '👾', '🎃', '🧙', '🐙', '🌈', '🔥'];
-
-function openKeep(edit = null) {
-  sheet.keep = edit ? { id: edit.id } : {};
-  sheet.keepEmoji = edit ? edit.emoji : '';
-  el.keepTitle.textContent = edit ? 'New name' : 'Name it';
-  el.keepName.value = edit ? edit.name : '';
-  el.keepName.placeholder = funName(myVoices().map((v) => v.name));
-  el.keepSaveLabel.textContent = edit ? 'Rename it' : 'Save it';
-  renderKeepEmoji();
-  el.keepForm.hidden = false;
-  el.keepBtn.setAttribute('aria-expanded', 'true');
-  el.keepName.focus({ preventScroll: true });
-}
-
-function closeKeep() {
-  sheet.keep = null;
-  el.keepForm.hidden = true;
-  el.keepBtn.setAttribute('aria-expanded', 'false');
-}
-
-function renderKeepEmoji() {
-  el.keepEmoji.replaceChildren(...withCurrent(KEEP_EMOJI, sheet.keepEmoji || KEEP_EMOJI[0]).map((e) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.dataset.keepEmoji = e;
-    b.textContent = e;
-    b.setAttribute('aria-pressed', String(e === sheet.keepEmoji));
-    return b;
-  }));
-}
-
-async function keepVoice() {
-  if (!sheet.keep) return;
-  const typed = el.keepName.value.trim();
-  const editing = sheet.keep.id ? myVoices().find((v) => v.id === sheet.keep.id) : null;
-  const now = Date.now();
-  const record = cleanMyVoice(editing
-    ? { ...editing, name: typed, emoji: sheet.keepEmoji, edited: now }
-    : { id: newId('voice'), personId: currentPerson().id, name: typed || (sheet.keepEmoji ? '' : el.keepName.placeholder), emoji: sheet.keepEmoji, knobs: playingKnobs(), created: now, used: now });
-  if (!record) { el.keepName.focus(); return; }   // a rename with no name and no picture
-  await saveMyVoice(record);
-  closeKeep();
-  if (!editing) {
-    // The knobs are that voice now: it lights.
-    sheet.base = { ...NO_TWEAKS };
-    sheet.lit = [{ id: `my:${record.id}`, name: record.name, emoji: record.emoji, knobs: record.knobs }];
-  } else sheet.lit = sheet.lit.map((p) => (p.id === `my:${record.id}` ? { ...p, name: record.name, emoji: record.emoji } : p));
-  renderVoiceChips();
-  renderVoices();
-}
-
-// 🗑️ on one of the person's own voices: the first tap asks, the second deletes.
-async function deleteVoice(b) {
-  if (!b.classList.contains('armed')) {
-    b.classList.add('armed');
-    b.textContent = 'Delete?';
-    return;
-  }
-  const id = b.dataset.deleteVoice;
-  await deleteMyVoice(id);
-  sheet.lit = sheet.lit.filter((p) => p.id !== `my:${id}`);
-  if (sheet.keep?.id === id) closeKeep();
-  renderVoiceChips();
-  renderVoices();
-}
-
-// A person's own voice used: it moves to the front of their chips.
-function usedMyVoice(id) {
-  const v = myVoices().find((x) => x.id === id);
-  if (v) saveMyVoice({ ...v, used: Date.now() });
-}
-
-function wireVoices() {
-  let pressTimer = 0;
-  let peeked = null;   // the chip a long press named, whose click that follows is not a tap
-  el.voices.addEventListener('click', (e) => {
-    const b = e.target.closest('button');
-    if (!b || b.disabled) return;
-    if (b.dataset.surprise) { surpriseKnobs(); return; }
-    if (b.dataset.myOpen) {
-      el.myList.hidden = !el.myList.hidden;
-      renderVoices();
-      return;
-    }
-    if (peeked === b) { peeked = null; return; }   // a long press showed its name: not a tap
-    const voice = voiceFor(b);
-    if (!voice) return;
-    if (e.shiftKey) { peekVoice(voice); return; }   // Shift does what a hold does
-    tapVoice(voice);
-    if (b.dataset.my) { usedMyVoice(b.dataset.my); renderVoiceChips(); renderVoices(); }
-  });
-  // A long press (or Shift-click) on a chip says its name and its knobs in
-  // the line, without using it (a mouse has the title too).
-  const peekVoice = (voice) => { el.voiceLine.textContent = `${voice.emoji} ${voice.name || ''}: ${presetText(voice.knobs)}`; };
-  el.voices.addEventListener('pointerdown', (e) => {
-    const b = e.target.closest('button');
-    clearTimeout(pressTimer);
-    if (!b || b.disabled) return;
-    const voice = voiceFor(b);
-    if (!voice) return;
-    pressTimer = setTimeout(() => {
-      peeked = b;
-      peekVoice(voice);
-    }, 500);
-  });
-  for (const type of ['pointerup', 'pointercancel', 'pointerleave']) el.voices.addEventListener(type, () => clearTimeout(pressTimer));
-  el.voices.addEventListener('contextmenu', (e) => { if (e.target.closest('button')) e.preventDefault(); });
-  el.myList.addEventListener('click', (e) => {
-    const b = e.target.closest('button');
-    if (!b || b.disabled) return;
-    if (b.dataset.rename) openKeep(myVoices().find((v) => v.id === b.dataset.rename));
-    else if (b.dataset.deleteVoice) deleteVoice(b);
-    else if (b.dataset.my) {
-      const voice = voiceFor(b);
-      if (!voice) return;
-      tapVoice(voice);
-      usedMyVoice(b.dataset.my);
-      renderVoiceChips();
-      renderVoices();
-    }
-  });
-  el.normalBtn.addEventListener('click', () => { if (!el.normalBtn.disabled) backToNormal(); });
-  el.keepBtn.addEventListener('click', () => {
-    if (el.keepBtn.disabled) return;
-    if (sheet.keep) closeKeep(); else openKeep();
-  });
-  el.keepEmoji.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-keep-emoji]');
-    if (!b) return;
-    sheet.keepEmoji = sheet.keepEmoji === b.dataset.keepEmoji ? '' : b.dataset.keepEmoji;   // tap again: no picture
-    renderKeepEmoji();
-  });
-  el.keepSave.addEventListener('click', keepVoice);
-  el.keepCancel.addEventListener('click', closeKeep);
-  // Enter in the name keeps it, and doesn't save the whole sound.
-  el.keepName.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); keepVoice(); } });
-  el.chainKnobs.addEventListener('click', () => { if (!el.chainKnobs.disabled) turnIntoKnobs(); });
-  el.chainUndo.addEventListener('click', oldWayBack);
-}
-
-// The sheet's folding sections (Ben, 2026-10-11: "same with tweaks in the
-// sound editor"): Voice and Layers fold under headings like Settings'. Open to start; a fold is kept while the page is open (not
-// remembered on the device: provisional, docs/questions.md). ⭐ Save voice
-// and ↩️ Reset voice sit outside the folds, so they are always there.
-const folds = { voice: true, layers: true };
-
-function renderFolds() {
-  for (const b of el.sheet.querySelectorAll('[data-fold]')) {
-    const open = folds[b.dataset.fold] !== false;
-    b.setAttribute('aria-expanded', String(open));
-    b.querySelector('.set-head-caret').textContent = open ? '▾' : '▸';
-    const body = el.sheet.querySelector(`#${b.dataset.fold}-body`);
-    if (body) body.hidden = !open;
-  }
-}
-
-function wireFolds() {
-  el.sheet.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-fold]');
-    if (!b) return;
-    folds[b.dataset.fold] = !(folds[b.dataset.fold] !== false);
-    renderFolds();
-  });
-}
-
-// The sticky row sits under the sheet's sticky heading, whose height changes
-// with its title: measured when the sheet opens and when the window resizes.
-function placeStickyRow() {
-  const head = el.sheet.querySelector('.sheet-head');
-  if (head?.offsetHeight) el.sheet.style.setProperty('--sheet-head-h', `${head.offsetHeight}px`);
-}
-
-// A chain step as the sheet edits it: a voice's amount null for a voice
-// without one. Other steps (Shape it) are edited as they are stored.
-const editable = (s) => (s.type && s.type !== 'voice' ? { ...s } : { type: 'voice', voice: s.voice, amount: amountFor(s.voice, s.amount) });
-
-// The old way (simple mode): a sound saved with old voices, or with Shape
-// it steps, shows them as chips in the order they play (tap one for its
-// slider, ✕ to take it out), with ⤢ Turn into knobs for the voices. It plays
-// exactly as it did until the kid changes it. A plain sound shows nothing here.
-function renderChain() {
-  const adv = advanced();
-  el.chain.hidden = adv || (plainChain() && !sheet.undo);
-  el.chainLinks.hidden = plainChain();
-  el.chainHint.hidden = plainChain();
-  el.chainKnobs.hidden = !hasClassicVoice(sheet.chain);
-  el.chainKnobs.disabled = !sheet.ready;
-  el.chainUndo.hidden = !sheet.undo;
-  el.chainLinks.replaceChildren(...(plainChain() ? [] : sheet.chain).map((s, i) => {
-    const v = stepLook(s);
-    const li = document.createElement('li');
-    li.className = 'chain-item';
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'chain-link';
-    b.dataset.link = String(i);
-    b.dataset.voice = s.voice ?? s.type;
-    b.disabled = !sheet.ready;
-    b.setAttribute('aria-pressed', String(i === sheet.link));
-    const e = document.createElement('span');
-    e.setAttribute('aria-hidden', 'true');
-    e.textContent = v.emoji;
-    if (i > 0) {   // reads as a sentence: Chipmunk, then Stadium
-      const then = document.createElement('span');
-      then.className = 'chain-then';
-      then.textContent = 'then';
-      b.append(then);
-    }
-    b.append(e, v.name);
-    li.append(b);
-    const x = document.createElement('button');
-    x.type = 'button';
-    x.className = 'chain-remove';
-    x.dataset.remove = String(i);
-    x.disabled = !sheet.ready;
-    x.setAttribute('aria-label', `Take out ${v.name}`);
-    x.textContent = '✕';
-    li.append(x);
-    return li;
-  }));
-  if (adv) {
-    el.shapeSurprise.disabled = !sheet.ready;
-    renderNote();
-  }
-}
-
-// The steps Layers show as rows: the chain with Advanced on, unless it is
-// only Normal (a plain sound).
-const shownSteps = () => (advanced() && !plainChain() ? sheet.chain.length : 0);
-
-// Layers: every row, top to bottom as they play (tweaks.js layerRows), then
-// + Add a layer's palette. A sound saved with old voices and knobs plays its
-// knobs after its steps (sheet.knobsFirst), so there they sit after them.
-function renderLayerRows() {
-  for (const k of MORE_KNOBS) if (sheet.tweaks[k] !== NO_TWEAKS[k]) sheet.shown.add(k);
-  const rows = layerRows(sheet.tweaks, { shown: [...sheet.shown], steps: shownSteps(), knobsFirst: sheet.knobsFirst || plainChain() });
-  // A ✕ waiting for its second tap whose row went away is forgotten.
-  if (sheet.armed && !rows.includes(sheet.armed)) sheet.armed = null;
-  const canOpen = (s) => { const steps = openVoice(s); return !!steps && sheet.chain.length - 1 + steps.length <= MAX_CHAIN; };
-  renderLayers(el.layerRows, rows, { tweaks: sheet.tweaks, muted: sheet.muted, chain: sheet.chain, ready: sheet.ready, armed: sheet.armed, canOpen });
-  const knobs = addableKnobs(sheet.tweaks, [...sheet.shown]);
-  const stepsOn = advanced() && sheet.chain.length < MAX_CHAIN;
-  renderLayerPalette(el.layerPalette, { knobs, steps: advanced(), stepsOn });
-  el.layerAdd.disabled = !sheet.ready || (!knobs.length && !stepsOn);
-  if (el.layerAdd.disabled) closePalette();
 }
 
 // ── 🎵 Find its note and Tune ─────────────────────────────────────────
@@ -744,99 +187,6 @@ async function findItsNote() {
   renderNote();
 }
 
-// ── ➕ Mix with another sound ─────────────────────────────────────────
-
-const mixPartner = () => clipsFor(currentPerson().id, { allPresets: true }).find((c) => c.id === sheet.mix.with);
-
-function renderMix() {
-  const other = mixPartner();
-  el.mixOffset.value = String(sheet.mix.offset);
-  el.mixOffsetOut.textContent = sheet.mix.offset ? `${sheet.mix.offset.toFixed(2)} s` : 'together';
-  el.mixBalance.value = String(sheet.mix.balance);
-  const b = sheet.mix.balance;
-  el.mixBalanceOut.textContent = Math.abs(b - 0.5) < 0.03 ? 'half and half' : b < 0.5 ? 'more of this one' : `more ${other?.label ?? 'of the other'}`;
-  for (const x of [el.mixPlay, el.mixMake]) x.disabled = !other || !sheet.ready;
-}
-
-function openMix() {
-  const here = sheet.clip?.id;
-  const options = clipsFor(currentPerson().id).filter((c) => c.id !== here);
-  el.mixWith.replaceChildren(...options.map((c) => {
-    const o = document.createElement('option');
-    o.value = c.id;
-    o.textContent = `${c.emoji || '🔊'} ${c.label}`;
-    return o;
-  }));
-  sheet.mix.with = options.some((c) => c.id === sheet.mix.with) ? sheet.mix.with : options[0]?.id ?? null;
-  el.mixWith.value = sheet.mix.with ?? '';
-  renderMix();
-}
-
-// This sound as it plays now, the other as it plays on its pad, mixed.
-async function buildMix() {
-  const other = mixPartner();
-  if (!other || !sheet.original) return null;
-  const [mine, theirs] = await Promise.all([rendered(), audio.load(other)]);
-  // Each sound as long as it plays (a beat made a sound keeps its silent tail).
-  const side = ({ buffer, duration }) => ({
-    channels: Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c).subarray(0, Math.round(duration * buffer.sampleRate))),
-    rate: buffer.sampleRate,
-  });
-  const chans = mixSounds(side(mine), side(theirs), sheet.mix);
-  const out = new AudioBuffer({ length: chans[0].length, numberOfChannels: chans.length, sampleRate: mine.buffer.sampleRate });
-  chans.forEach((d, c) => out.copyToChannel(d, c));
-  return { buffer: out, other };
-}
-
-async function hearMix() {
-  try {
-    const made = await buildMix();
-    if (!made || !el.sheet.open) return;
-    live.on = false;
-    wave.show(made.buffer, made.buffer.duration);
-    audio.start('preview', { buffer: made.buffer, duration: made.buffer.duration });
-    wave.follow('preview');
-  } catch (err) {
-    console.error('The mix did not render:', err);
-    sheetError('That mix didn’t work. Pick another sound.');
-  }
-}
-
-// The mix becomes a new sound on this board, named as a blend of the two.
-async function makeMix() {
-  let made;
-  try { made = await buildMix(); } catch (err) { console.error('The mix did not render:', err); }
-  if (!made) { sheetError('That mix didn’t work. Pick another sound.'); return; }
-  const p = currentPerson();
-  const here = sheet.clip;
-  const clip = {
-    id: newId('user'),
-    personId: p.id,
-    label: mixName(here.label, made.other.label, clipsFor(p.id, { includeHidden: true }).map((c) => c.label)),
-    emoji: here.emoji || made.other.emoji || '🎛️',
-    color: nextClipColor(p.id),
-    voice: 'normal',
-    blob: encodeWav(made.buffer),
-    mime: 'audio/wav',
-    from: { id: here.id, how: 'mix' },
-    // Two beats made into sounds: the mix keeps their length too, to loop in time.
-    ...(here.exact && made.other.exact ? { exact: true } : {}),
-    created: Date.now(),
-  };
-  state.userClips.push(clip);
-  if (!(await persist('clips', clip))) {
-    state.userClips = state.userClips.filter((c) => c !== clip);
-    sheetError('That mix didn’t save. Tap Make it a new sound to try again.');
-    return;
-  }
-  // What it plays now is what it plays after a reload: its quiet ends off
-  // (keptAudio), or all of it when it is exact.
-  audio.keepOriginal(clip, Promise.resolve(keptAudio(made.buffer, clip)));
-  closeSheet();
-  renderPads();
-  showNotice(`Made “${clip.label}” from ${here.label} and ${made.other.label}. It’s on your board.`);
-}
-
 // Tune: sets (or adds, or removes at 0) the Higher or lower at the end.
 function setTune(n) {
   if (tuneOf(sheet.chain).has) {
@@ -851,8 +201,6 @@ function setTune(n) {
   }
   sheet.link = Math.min(sheet.link, sheet.chain.length - 1);
 }
-
-const plainChain = () => sheet.chain.length === 1 && sheet.chain[0].type === 'voice' && sheet.chain[0].voice === 'normal';
 
 // After the chain or the chosen link changed: the slider, the old-way chips
 // and Shape it follow (and ↩️ Reset voice, which also clears the chain).
@@ -1036,66 +384,6 @@ function cleanupSheet() {
   resetPreviews();
 }
 
-// ── ✨ Make one ───────────────────────────────────────────────────────
-
-const HZ = { min: Math.log2(LIMITS.from.min), max: Math.log2(LIMITS.from.max) };
-// Tone's three choices, as its keys show them.
-const TONE_NAMES = { smooth: 'Smooth', buzzy: 'Buzzy', hiss: 'Hiss' };
-let toneKeys = null;   // copies the Tone slider onto its keys (lines.js)
-const knobText = {
-  tone: (r) => r.tone,
-  from: (r) => `${r.from} Hz`,
-  to: (r) => `${r.to} Hz`,
-  length: (r) => `${r.length.toFixed(2)} s`,
-};
-
-// The starters (which one is lit) and, with Advanced on, its settings: Tone's keys and three sliders.
-function renderMake() {
-  const kind = sheet.made?.kind;
-  for (const b of el.makeStarters.children) b.setAttribute('aria-pressed', String(b.dataset.make === kind));
-  const r = sheet.made?.recipe;
-  el.makeKnobs.hidden = !advanced() || !r;
-  if (!r) return;
-  el.makeHint.textContent = advanced() ? 'Change it: tap how it sounds, slide where its pitch starts and ends and how long it lasts.' : 'No microphone needed: pick one.';
-  for (const input of el.makeKnobs.querySelectorAll('input')) {
-    const k = input.dataset.knob;
-    if (k === 'from' || k === 'to') Object.assign(input, { min: HZ.min, max: HZ.max, step: 0.01 });
-    input.value = String(k === 'tone' ? TONES.indexOf(r.tone) : k === 'length' ? r.length : Math.log2(r[k]));
-    input.closest('.amount').querySelector('output').textContent = knobText[k](r);
-  }
-  toneKeys?.();
-}
-
-// Makes the sound from the recipe, as a recording would be: the sound to
-// try voices on, saved as a WAV with its recipe.
-function makeSound() {
-  const recipe = cleanSynth(sheet.made.recipe);
-  sheet.made.recipe = recipe;
-  const samples = renderSynth(recipe, RATE);
-  const buffer = new AudioBuffer({ length: samples.length, numberOfChannels: 1, sampleRate: RATE });
-  buffer.copyToChannel(samples, 0);
-  // Voices start from it as from a recording: its quiet ends off (keptAudio),
-  // as the saved sound is after a reload.
-  const original = keptAudio(buffer, null);
-  sheet.pending = { blob: encodeWav(buffer), mime: 'audio/wav', original, synth: recipe };
-  // New audio: an old trim no longer fits it, and trim and chop work on all of it.
-  sheet.trim = sheet.edits = sheet.fade = null;
-  cut.recorded(buffer);
-  sheet.original = Promise.resolve(original);
-  resetPreviews();
-  live.on = false;
-  el.sheetPlay.disabled = false;
-  sheetError('');
-  setVoicesReady(true);
-  renderAmount();
-  renderMake();
-  const starter = STARTERS.find((x) => x.id === sheet.made.kind);
-  setStatus(`Made ${starter ? `a ${starter.name}` : 'a new sound'}: ${recipe.length.toFixed(1)} seconds. Now try a voice!`);
-  // A new sound is offered a name for what was made, unless one was typed.
-  if (sheet.mode === 'new') el.label.placeholder = synthName(sheet.made.kind, clipsFor(currentPerson().id, { includeHidden: true }).map((c) => c.label));
-  previewVoice();
-}
-
 // The amount slider shows only for a voice that has a amount setting (in
 // simple mode: Shape it has the sliders in its cards). A setting with a few
 // stops (Loud's 1–10) shows them as keys while they fit.
@@ -1195,9 +483,6 @@ const SPEED_PULL = 0.15;   // Slower ↔ faster snaps to normal this close to it
 const ARM_MS = 4000;       // how long a ✕ waits for its second tap
 let armTimer = 0;
 
-// The rows follow the knobs, the mutes and the chain.
-const renderTweaks = () => renderLayerRows();
-
 // A knob moved by hand to `value`: the voices go dark, the words follow.
 // Its row stays, even back at normal, until the knobs jump (Q42b).
 function setKnob(key, value) {
@@ -1250,11 +535,6 @@ function addKnob(key) {
   setKnob(key, ADDED_AT[key]);
   moveKnobs({ ...sheet.tweaks, [key]: NO_TWEAKS[key] }, [key]);
   previewVoice();
-}
-
-function closePalette() {
-  el.layerPalette.hidden = true;
-  el.layerAdd.setAttribute('aria-expanded', 'false');
 }
 
 // The live loop's head for the chain and knobs as they are now (voices.js
@@ -1665,6 +945,9 @@ async function removeFromSheet() {
   renderPads();
 }
 
+// What sheet-voices.js and sheet-make.js call back into (sheet-state.js `later`).
+Object.assign(hooks, { previewVoice, renderAmount, renderNote, rendered, resetPreviews, setVoicesReady, closeSheet, isRecording });
+
 export function initSheet() {
   const $ = (sel) => document.querySelector(sel);
   Object.assign(el, {
@@ -1743,8 +1026,8 @@ export function initSheet() {
   renderStarters();
   // The switch can change while the sheet is open (Settings is behind it, but a backup can load).
   onSetting('advancedBeats', () => { if (el.sheet.open) { renderMode(); showLink(); renderMake(); } });
-  wave = createWave($('#wave'));
-  cut = createCut({
+  wave = parts.wave = createWave($('#wave'));
+  cut = parts.cut = createCut({
     wave,
     now: () => ({
       mode: sheet.mode, clip: sheet.clip, ready: sheet.ready, emoji: sheet.emoji,
@@ -2008,50 +1291,3 @@ function wireLayers() {
   el.sheetAdvanced.addEventListener('change', () => { setSetting('advancedBeats', el.sheetAdvanced.checked); });
 }
 
-function renderStarters() {
-  const b = (id, emoji, name) => {
-    const x = document.createElement('button');
-    x.type = 'button';
-    x.className = 'chip make-starter';
-    x.dataset.make = id;
-    x.setAttribute('aria-pressed', 'false');
-    const e = document.createElement('span');
-    e.setAttribute('aria-hidden', 'true');
-    e.textContent = emoji;
-    x.append(e, name);
-    return x;
-  };
-  el.makeStarters.replaceChildren(...STARTERS.map((st) => b(st.id, st.emoji, st.name)), b('surprise', '🎲', 'Surprise'));
-}
-
-// ✨ Make one: the button opens the starters; a starter makes its sound; the
-// sliders (Advanced) remake it when let go.
-function wireMake() {
-  const tone = el.makeKnobs.querySelector('[data-knob="tone"]');
-  toneKeys = keysForSlider(tone, (i) => TONE_NAMES[TONES[i]] ?? TONES[i]);
-  fitLine(tone.parentElement, KEYED_STEPS);
-  el.makeBtn.addEventListener('click', () => {
-    const open = el.make.hidden;
-    el.make.hidden = !open;
-    el.makeBtn.setAttribute('aria-expanded', String(open));
-    if (open) el.makeStarters.firstElementChild?.focus();
-  });
-  el.makeStarters.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-make]');
-    if (!b || isRecording()) return;
-    const starter = STARTERS.find((x) => x.id === b.dataset.make);
-    sheet.made = starter ? { kind: starter.id, recipe: { ...starter.recipe } } : { kind: 'surprise', recipe: surpriseSynth() };
-    makeSound();
-  });
-  el.makeKnobs.addEventListener('input', (e) => {
-    const input = e.target.closest('[data-knob]');
-    if (!input || !sheet.made) return;
-    const k = input.dataset.knob;
-    const r = sheet.made.recipe;
-    r[k] = k === 'tone' ? TONES[Number(input.value)] : k === 'length' ? Number(input.value) : Math.round(2 ** Number(input.value));
-    input.closest('.amount').querySelector('output').textContent = knobText[k](cleanSynth(r));
-  });
-  el.makeKnobs.addEventListener('change', (e) => {
-    if (e.target.closest('[data-knob]') && sheet.made) makeSound();
-  });
-}
