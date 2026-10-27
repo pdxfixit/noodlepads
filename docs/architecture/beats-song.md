@@ -90,7 +90,7 @@ Library records add three fields that `cleanPattern` drops, so every write puts 
 
 The library is the truth. `patterns` only says which named beat is open; no record means the scratch is open. `fromStore` still handles a pre-ADR-0008 `patterns` record that holds a whole beat with no library copy: one with hits joins the library (`link`), an empty one is dropped.
 
-**The scratch beat** (`scratch.js`). A normal `beats` record with the reserved id `beat-scratch-<person>`, never listed (`isHiddenBeat`) in 🗂️ My beats, the chips, a song's strip, or shares. Before its first change it does not exist (`scratchPattern` makes an empty one with `signature: '4/4'`). Its `name` is `SCRATCH_NAME` (`'Scratch'`), or a groove's name when a groove was loaded into it; `scratch.js grooveOf` finds the groove by that name, and `scratchLabel` shows "Ska (scratch)". 🧸 Kids' old `beat-kids-…` beats become the scratch (`scratch.js adoptKidsBeats`, run by `app.js adoptKidsBeat` every time a person shows).
+**The scratch beat** (`scratch.js`). A normal `beats` record with the reserved id `beat-scratch-<person>`, never listed (`isHiddenBeat`) in 🗂️ My beats, the chips, a song's strip, or shares. Before its first change it does not exist (`scratchPattern` makes an empty one with `signature: '4/4'`). Its `name` is `SCRATCH_NAME` (`'Scratch'`), or a groove's name when a groove was loaded into it; `scratch.js grooveOf` finds the groove by that name (or a renamed groove's old one, `was`: "Motown" is Detroit soul), and `scratchLabel` shows "Ska (scratch)". 🧸 Kids' old `beat-kids-…` beats become the scratch (`scratch.js adoptKidsBeats`, run by `app.js adoptKidsBeat` every time a person shows).
 
 **Lifecycle of the open beat.**
 

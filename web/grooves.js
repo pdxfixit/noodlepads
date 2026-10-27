@@ -17,6 +17,9 @@
 //   a pill is an eighth note, so the tempo is half what a musician would say.
 // No groove uses the beat's Swing setting: it plays only with Advanced on.
 //
+// A scratch beat is stored under its groove's name (scratch.js grooveOf), so
+// a renamed groove lists its old names in `was`.
+//
 // `about` is the line under a groove's name in the chooser: where it comes
 // from and what to listen for, in words a kid knows (Ben, 2026-10-17).
 //
@@ -188,7 +191,7 @@ export const GROOVES = [
     ['bass-c', 'x............... ................'],
     ['bass-a', '................ x...............']] },
   { id: 'drill', name: 'Drill', emoji: '🧊', group: 'hiphop', bpm: 142,
-    about: 'From London and Chicago: sliding 808 bass and hats that skip.',
+    about: 'From London and Chicago: sliding boom bass and hats that skip.',
     rows: [
     ['kick', 'x.........x..... ..x.......x.....'],
     ['snare', '........x....... ........x.....x.'],
@@ -243,8 +246,10 @@ export const GROOVES = [
     ['bass-g', '................ x.....x.....x... ................ ................'],
     ['bass-a', '................ ................ x.....x.....x... ................'],
     ['bass-f', '................ ................ ................ x.....x.....x...']] },
-  { id: 'motown', name: 'Motown', emoji: '🚗', group: 'soul', bpm: 120,
-    about: 'From Detroit in the 1960s: the snare and tambourine hit every beat.',
+  // Once named after a record label (no product names, Ben 2026-10-26): a
+  // scratch beat loaded from it is stored as "Motown", so `was` finds it.
+  { id: 'motown', name: 'Detroit soul', was: ['Motown'], emoji: '🚗', group: 'soul', bpm: 120,
+    about: 'Soul from the 1960s: the snare and tambourine hit every beat.',
     rows: [
     ['snare', 'x...x...x...x... x...x...x...x...'],
     ['tambourine', '....x.......x... ....x.......x...'],

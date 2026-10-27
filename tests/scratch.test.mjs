@@ -54,6 +54,13 @@ test('a scratch from a groove is stored under the groove\'s name, and shows it',
   assert.equal(scratchLabel({ id: 'beat-scratch-a', name: 'Beat' }), 'Scratch beat', 'a name a backup gave is not a groove');
 });
 
+test('a scratch stored under a groove\'s old name finds it, and shows the new name', () => {
+  // "Motown" became Detroit soul (no product names, 2026-10-26).
+  assert.equal(grooveOf({ id: 'beat-scratch-a', name: 'Motown' })?.id, 'motown');
+  assert.equal(scratchLabel({ id: 'beat-scratch-a', name: 'Motown' }), 'Detroit soul (scratch)');
+  assert.equal(scratchLabel({ id: 'beat-scratch-a', name: 'Detroit soul' }), 'Detroit soul (scratch)');
+});
+
 test('💾 Keep names a groove "<fun name> (<groove> version)", shorter when it must, never over 24, never taken', () => {
   const pick = () => 0;
   assert.match(keptName('Ska', [], Math.random), /^\S+ \S+ \(Ska version\)$/);

@@ -439,7 +439,7 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   Strings, Wind, each in its color), and a tap on one picks it, closes the
   list and opens the group. Notes: Pluck (its own sound), Piano, Organ, Chip,
   Marimba, Steel drum, Kalimba, Guitar, Strings, Brass, Flute. Chords: Synth
-  (its own), Piano, Organ, Guitar, Strings. Bass: Synth (its own), 808,
+  (its own), Piano, Organ, Guitar, Strings. Bass: Synth (its own), Boom bass,
   Upright. The pick is the person's (settings `instNotes`, `instChords`,
   `instBass`): synced and in backups. The same picker sits on Notes, Chords
   and Bass in the beat row's sound chooser and above an open group in ✏️ Edit
@@ -467,7 +467,7 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   a `chord` of several notes at once: `audio.js` decodes the recording once and
   resamples it, as a tune row moves a sound, so extra notes and chords cost no
   bytes. `tools/kit_instruments.py` writes these entries; marimba, steel drum,
-  kalimba, chip, guitar and 808 are generated (`make_placeholders.py`), piano,
+  kalimba, chip, guitar and Boom bass (id `808`) are generated (`make_placeholders.py`), piano,
   strings, brass, flute, organ and the upright bass are cut from CC0 libraries
   (`make_samples.py`, `web/clips/kit/LICENSE-samples.txt`).
 - **Sounds made in the app** (recorded or uploaded) live in that browser's

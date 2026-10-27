@@ -119,9 +119,9 @@ test('➕ Add to this beat: a 2-bar groove fills a 4-bar beat bar by bar, round 
 
 // Phase 2 of instruments (ADR 0030): grooves name an instrument's presets,
 // so the instrument plays them whoever the person picked.
-test('real instruments play Motown, Lo-fi, Reggae, Gospel and R&B; Soca has steel drums and Chiptune the chip', () => {
+test('real instruments play Detroit soul, Lo-fi, Reggae, Gospel and R&B; Soca has steel drums and Chiptune the chip', () => {
   const players = (id) => groovePlayers(groove(id), kitOf).map((i) => i.id);
-  assert.ok(players('motown').includes('piano'), 'Motown: piano');
+  assert.ok(players('motown').includes('piano'), 'Detroit soul: piano');
   assert.ok(players('lofi').includes('piano'), 'Lo-fi: piano');
   assert.ok(players('reggae').some((i) => ['guitar', 'organ'].includes(i)), 'Reggae: a guitar or organ skank');
   assert.ok(players('gospel').includes('organ'), 'Gospel: organ');

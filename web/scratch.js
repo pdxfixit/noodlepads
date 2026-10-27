@@ -46,7 +46,10 @@ export const songScratchOf = (songs, personId) => newest(songs, personId, isScra
 export const hasHits = (beat) => (beat?.rows ?? []).some((r) => (r?.steps ?? []).some(Boolean));
 
 // The groove a scratch came from, by the name it is stored under, or null.
-export const grooveOf = (beat) => (isScratch(beat) && GROOVES.find((g) => g.name === beat.name)) || null;
+// A groove renamed since keeps its old names in `was` ("Motown" is Detroit
+// soul now), so a scratch saved before still shows and keeps under the new.
+export const grooveOf = (beat) => (isScratch(beat)
+  && GROOVES.find((g) => g.name === beat.name || g.was?.includes(beat.name))) || null;
 
 // What the beat bar shows for a scratch: "Scratch beat", or the groove's
 // name and "(scratch)".

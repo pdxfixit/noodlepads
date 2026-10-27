@@ -251,6 +251,7 @@ const VIEWS = {
   // Notes picked as Piano (the list closed, the pads with their 🎹 badge).
   // Use --scroll-to '.pad-group-inst' to see them on a phone.
   'inst-list': { screen: 'pads', js: `${OPEN_KIT('notes')} ${q('[data-inst-pick="notes"]')} ${nap}` },
+  'inst-bass': { screen: 'pads', js: `${OPEN_KIT('bass')} ${q('[data-inst-pick="bass"]')} ${nap}` },
   'inst-piano': { screen: 'pads', js: `${OPEN_KIT('notes')} ${q('[data-inst-pick="notes"]')} ${nap} ${q('#inst-list-notes [data-inst="piano"]')} ${nap}` },
   // The same picker everywhere else (phase 2): a row's sound chooser with
   // Notes' list open (--scroll-to '.chooser-inst-row'); 🎹 Add a tune's Who
