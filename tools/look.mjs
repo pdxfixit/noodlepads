@@ -560,7 +560,7 @@ const CONTROLS = 'button, [role="button"], summary, select, textarea, a[href], [
   + 'input[type="range"], input[type="checkbox"], input[type="radio"], input:not([type]), '
   + ['text', 'number', 'search', 'email', 'url', 'tel', 'password'].map((t) => `input[type="${t}"]`).join(', ');
 
-// Phones held sideways, [width, height]: an iPhone SE/8, a common Android, an iPhone 14, an iPhone 14 Pro Max.
+// Phones held sideways, [width, height]: an iPhone SE/8, a common Android, an iPhone 14, the biggest iPhone 14.
 const LANDSCAPE = [[667, 375], [740, 360], [844, 390], [932, 430]];
 
 function usage(msg) {
