@@ -1,6 +1,7 @@
 // No kid's name anywhere in the repo (Ben, 2026-10-11): not in code, tests,
-// tools, file names or docs. This reads every tracked text file and every
-// path. The names are known here only as SHA-256 hashes, so this file does
+// tools, file names, docs or commit messages. This reads every tracked text
+// file, every path, and every commit's author, committer and message (the
+// history is public too). The names are known here only as SHA-256 hashes, so this file does
 // not name anyone either. No exceptions: since 1.0 the repo and its folder
 // are `noodlepads`.
 
@@ -83,6 +84,38 @@ test('namesIn finds a name however it is written, and leaves everyday words alon
   assert.deepEqual(names('~/src/pip-soundboard'), ['pip'], 'an old folder name is caught too');
   assert.deepEqual(names('pip-kick'), ['pip']);
   assert.deepEqual(names('Toby and Pippa'), [], 'only whole words with those hashes');
+});
+
+// What is wrong with the commits in a `git log` made with LOG_FORMAT: a name
+// in an author, a committer or a message. Pure; the hash sets are a parameter
+// for the same reason as in namesIn.
+export const LOG_FORMAT = '%H%x00%an%x00%ae%x00%cn%x00%ce%x00%B%x1e';
+export function commitProblems(log, hashes) {
+  const bad = [];
+  for (const rec of log.split('\x1e').map((s) => s.trim()).filter(Boolean)) {
+    const [id, ...fields] = rec.split('\0');
+    if (namesIn(fields.join('\n'), hashes).length) bad.push(`${id.slice(0, 7)}: a kid's name in its author, committer or message`);
+  }
+  return bad;
+}
+
+test('commitProblems finds a name in a message, an author or an email, and names only the commit', () => {
+  const madeUp = { anyCase: new Set([sha('pip')]), asName: new Set() };
+  const rec = (an, ae, body) => ['abcdef1234', an, ae, an, ae, body].join('\0') + '\x1e';
+  assert.deepEqual(commitProblems(rec('Toby', 't@x.y', 'feat: a thing'), madeUp), []);
+  assert.deepEqual(commitProblems(rec('Toby', 't@x.y', 'fix: for Pip\n\nbody'), madeUp), ["abcdef1: a kid's name in its author, committer or message"]);
+  assert.equal(commitProblems(rec('Pip', 't@x.y', 'feat: a thing'), madeUp).length, 1);
+  assert.equal(commitProblems(rec('Toby', 'pip@x.y', 'feat: a thing'), madeUp).length, 1);
+  const two = rec('Toby', 't@x.y', 'ok') + rec('Toby', 't@x.y', 'about pip');
+  assert.equal(commitProblems(two, madeUp).length, 1);
+  assert.deepEqual(commitProblems('', madeUp), []);
+});
+
+test("no commit author, committer or message holds a kid's name", (t) => {
+  if (!HAVE) { t.skip("no NOODLE_NAME_HASHES or ~/.config/noodlepads/names.json here: the names check runs in CI and on Ben's Mac"); return; }
+  let log;
+  try { log = execFileSync('git', ['log', `--format=${LOG_FORMAT}`], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 28 }); } catch { return; }   // no history here
+  assert.deepEqual(commitProblems(log, HASHES), []);
 });
 
 test('no tracked file, and no file name, holds a kid\'s name', (t) => {
