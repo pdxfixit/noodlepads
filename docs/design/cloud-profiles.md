@@ -1,13 +1,14 @@
 # Cloud profiles
 
-**What it is.** Everyone on a Noodle Pads board lives in the cloud once they
-have made something: one shared list on noodlepads.com, open on any device.
-Their sounds, beats, songs, takes, DJ keys, kit edits and settings follow
-them. A person can be set 📴 Offline (this device only) instead. The device
-keeps working offline and catches up when it is online again. Kids never type
-a profile name: they get a fun name and choose an emoji. A 4-digit PIN is
-optional, asked each time the person is opened unless the device remembers
-it. One sound, beat or song can be shared with a code.
+**What it is.** A person on a Noodle Pads board lives in the cloud once a
+grown-up puts them there, with a PIN (docs/design/cloud-needs-pin.md): one
+shared list on noodlepads.com, open on any device. Their sounds, beats, songs,
+takes, recorded voices, DJ keys, kit edits and settings follow them. Everyone
+else stays on their device only. The device keeps working offline and catches
+up when it is online again. Kids never type a profile name: they get a fun
+name and choose an emoji. The 4-digit PIN is asked each time the person is
+opened unless the device remembers it. One sound, beat or song can be shared
+with a code.
 
 Decided by Ben, 2026-10-11 (the rules are in [decisions.md](../decisions.md),
 Hosting and data and People and boards; why, in
@@ -146,7 +147,7 @@ content, so it never makes a record look different. A stamp more than a day
 in the future is dropped.
 
 Person records gain `avatar` (an emoji), `fun: true` (the name was made by
-the generator), `offline: true` (📴 Offline) and `solo: true` (the device's
+the generator), `offline: true` (an old 📴 Offline: read and kept, ignored) and `solo: true` (the device's
 own first person, until edited). Backups carry all four.
 
 **Shared with me** is localStorage `shared`: the codes this device opened,
@@ -185,7 +186,7 @@ A device key goes in `Authorization: Bearer <key>`.
 | `POST /api/profiles/:id/open` | the PIN, if set | `{pin?, remember?}` → `{key, rev, name, avatar, color, edited}`; `remember: false` makes a session key; a wrong PIN → 401 `{tries}`; while waiting → 429 `{wait}` |
 | `DELETE /api/profiles/:id/key` | key | deletes the key the request carries: the one a device held before it opened the profile again |
 | `PATCH /api/profiles/:id` | key | `{name?, avatar?, color?, edited?}`; `{pin, newPin}` sets, changes (`newPin` a PIN) or removes (`newPin: null`) the PIN, and needs the current PIN too |
-| `DELETE /api/profiles/:id` | key, and the PIN if set | deletes the profile, its records, keys and unshared sounds (📴 Offline uses it) |
+| `DELETE /api/profiles/:id` | key, and the PIN if set | deletes the profile, its records, keys and unshared sounds (leaving the cloud uses it; counts wrong PINs apart from `/open`) |
 | `GET /api/profiles/:id/records?since=N` | key | records with `rev > N`, oldest first, 500 at a time: `{records, rev, more}` |
 | `POST /api/profiles/:id/records` | key | `{put: [{kind, id, body}], del: [{kind, id}]}` (200 at most) → `{rev, was}` |
 | `POST /api/profiles/:id/sounds` | key | `{sha256, bytes, mime}` → `{id, need: [piece numbers]}`; a sound the profile already has (same SHA-256 and size) needs none |
@@ -247,12 +248,12 @@ A device key goes in `Authorization: Bearer <key>`.
 `web/cloud-sync.js` holds the rules as pure functions; `web/cloud.js` runs
 them against storage and the API.
 
-**Who:** everyone on the device who has made something (a sound, beat, song,
-take or kit edit) and is not 📴 Offline; a person with nothing of theirs
-stays here, so a visitor's empty first board never fills the public list
-(Q20). Their profile is made at the first sync, with a fun name
-first. The same person already in the cloud (from a backup elsewhere) is
-opened instead; one with a PIN waits, locked, for it.
+**Who:** only a person a grown-up puts there: ☁️ In the cloud, in their
+profile, asks the sum and a PIN typed twice (`cloud.js goUp`); a sync never
+does it (this was "everyone who has made something" until 2026-10-27). Their
+profile is made then, with a fun name first and the PIN in the same request.
+The same person already in the cloud (from a backup elsewhere) is never opened
+with the PIN just picked: a pad asks the PIN they have (a 409 on create).
 
 **When** (`web/sync-timing.js`; Ben, 2026-10-11: "transitions focus/blur, as
 well as every 5?m while active"): on open; 20 s after the last change (`db`
@@ -358,10 +359,10 @@ live record in that profile names it.
 
 **Removing a person from a device** (People → Delete) first drops its `cloud`
 record, so the deletes stay on the device and the profile stays in the cloud.
-**📴 Offline (this device only)** deletes the cloud copy: it asks twice, says
-plainly what goes, and needs the PIN. A person taken out of the cloud
-elsewhere (Offline there, or pruned) goes Offline here too, rather than
-coming back by itself.
+**Leaving the cloud** (☁️ off, or Remove PIN) brings their latest here, then
+deletes the cloud copy: it asks twice, says plainly what goes, and needs the
+PIN. A person taken out of the cloud elsewhere (or pruned) drops the link here
+and keeps everything, rather than coming back by itself.
 
 ## 7. Chunking
 
@@ -407,13 +408,14 @@ Send to… are gone.
 - **Guessing:** 40 bits against at most 100,000 requests a day is about
   30,000 years to find one code. No per-guess limit is needed.
 
-## 9. 📴 Offline (this device only)
+## 9. Leaving the cloud
 
-Ben (Q13): everyone syncs, except a person set Offline. In the person's ☁️
-sheet, 📴 Offline (this device only) explains what happens, asks twice,
-wants the PIN if there is one, deletes the cloud copy, and marks the person
-`offline` on this device. ☁️ Put back in the cloud undoes it (the next sync
-makes the profile again). Families are gone (Q11).
+Ben (Q13, replaced 2026-10-26): there is no 📴 Offline; the device is the
+default and ☁️ is a grown-up's switch. In the person's ☁️ sheet, Remove PIN
+or ☁️ off turns red ("Leave the cloud?"), says what happens, and wants the
+PIN; their latest is brought here first, then the cloud copy and share codes
+are deleted. There is no Undo: the device keeps everything. Families are
+gone (Q11).
 
 ## 10. A forgotten PIN
 
@@ -431,7 +433,7 @@ Each device then asks for the new PIN once. The PIN pad, Help, ⚙️ Settings �
 The same words in ⚙️ Settings ("🔓 What's private (not much)"), Help, and
 README ("Privacy"). `web/privacy.js` holds the text once; tests tie its key
 claims to the code (`tests/privacy.test.mjs`): that everyone who made
-something is in the public list unless Offline, that the list and sound links
+someone is in the public list only when a grown-up put them there, that the list and sound links
 need nothing, that a share code is forever, that a PIN is not security, that
 nobody types a name, that reports are deleted from the cloud after 14 days,
 and how to delete a profile.
@@ -440,14 +442,14 @@ and how to delete a profile.
 
 Ben: "login sprawl is a concern."
 
-- **Built:** nobody who has made nothing goes to the cloud; the Worker keeps
+- **Built:** nobody goes to the cloud by themselves; the Worker keeps
   each profile's last activity (`active`, at most one write an hour);
   `just cloud-profiles` lists id, fun name, made, last active, records, sound
   bytes, keys and shares; `just cloud-prune [--days N] [--empty]` lists idle
   profiles (default 180 days), empty ones (over a day old) and loose sounds
   (no record and no share uses them), and deletes them with `--yes`. Shared
-  sounds stay. A device whose profile was pruned keeps everything and goes
-  Offline (Q20).
+  sounds stay. A device whose profile was pruned keeps everything and drops
+  the link (Q20).
 - **Already there:** 10 new profiles a UTC day across the site (Ben, 2026-10-26) (deleted or not; the deploy checks' throwaway profiles count on a cap of their own, 100 a day), 1,000 in all, 300 listed. The deploy checks' profiles are `p-smoke-…` and `p-e2e-…`; `just cloud-prune --smoke` removes any a killed check left, with their share codes.
 - **Proposed, not built:** (1) the list shows only profiles active in the
   last 180 days (one `WHERE`, about 5 minutes, but a returning kid would look
@@ -468,7 +470,7 @@ Ben: "login sprawl is a concern."
 | Profile full (40 MB) or everyone full (400 MB) | 507: "This profile's cloud is full: delete some sounds." The sound stays on the device |
 | Wrong PIN, waiting | the PIN pad says how many tries are left, or how many minutes to wait |
 | Key no longer valid (PIN changed elsewhere) | 401 on sync: the person shows 🔒 "Open again"; their records stay on the device |
-| Profile deleted elsewhere (Offline there, or pruned) | 404 on sync: the person stays on the device, goes 📴 Offline here, and says so |
+| Profile deleted elsewhere (left there, or pruned) | 404 on sync: the person stays on the device, the link goes, and it says so |
 | A sound over 25 MB | it stays on the device; the rest syncs, and the ☁️ sheet says how many stayed |
 | A PIN not remembered, after a reload | the PIN is asked when the person is opened; their sync waits for it |
 | A remembered device's key goes unused for 180 days | the Worker drops it; the next sync is refused, and the PIN pad says "This device forgot them. A grown-up can type the PIN." (Ben, 2026-10-27: no day of the device's own) |

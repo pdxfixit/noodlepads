@@ -661,14 +661,14 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   link, the remembered person, the address. The old id is remembered on the
   device only (settings `renamedPeople`, never backed up or synced), so an
   old backup or older sounds found land on the same person. A profile in the cloud
-  under an old plain id is not renamed: the device drops that link and puts the
-  person up as new (Cloud profiles, below).
+  under an old plain id is not renamed: the device drops that link, and the
+  person stays on the device (Cloud profiles, below).
 - **People** (the corner avatar → 👥 People; not in Settings): people added in the app (and any
   renames and recolors of people boards.json lists) live in IndexedDB
   `people`, with `avatar` (an emoji) and `fun: true` (a generated name).
   👥 People is a short list, one line per person: picture, name, counts and
   ☁️ state (🔒 with a PIN): ☁️✓ in the cloud (a PIN not typed yet on this
-  visit included), ☁️ not yet, 📴 offline, ☁️⚠️ something to see to, which
+  visit included), nothing for someone only on this device, ☁️⚠️ something to see to, which
   their profile sheet says after a ⚠️ in its ☁️ part (`cloud-ui.js` `warns`).
   The list follows a sync as it happens. Tapping a line opens their profile sheet
   (`#profile-dialog`, `people.js`): 🎲 Pick a name, the picture, every person
@@ -676,21 +676,39 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   chosen to stay apart for deuteranopia, `model.js` `PERSON_COLORS`; a
   person stored with one of the ten before 2026-10-19 takes the nearest as
   it is read, `OLD_PERSON_COLORS`), ☁️ In the cloud, 🔒 PIN and Delete.
-  ☁️ In the cloud is a switch: on puts them in the cloud now, even with
-  nothing made; off asks twice (and for the PIN), brings their latest here first, then
-  deletes the cloud copy and keeps them here only (📴 Offline); if their
-  latest can't be brought ("Couldn't bring their latest here; try again.")
-  nothing is deleted; a tap anywhere else takes the first tap
-  back. Under it, when they are in the cloud, 🔄 Sync now and 🔗 Share… (both
+  ☁️ In the cloud is a switch, the whole row its target (44 px tall). Nobody
+  goes to the cloud by themselves: a grown-up turns it on. On asks the grown-up
+  sum (the same as 🧸 Kids' ⚙️ and Feedback ask, with "☁️ To put 🔔 Name in the
+  cloud" under its title; a wrong answer asks another, ✕ leaves it off), then
+  "☁️ Pick their PIN": "A grown-up picks this PIN…" and, in a chalk box over
+  the dots, what becomes public ("Their sounds, beats and recorded voices are
+  stored on noodlepads.com. Anyone can see their fun name and picture, and
+  play a sound of theirs if they have its link."), then "Once more". Nothing
+  is sent before the second pad; ✕ anywhere leaves them on this device. Then
+  they are in the cloud and synced, and 🔑 Remember them here? opens (Not now
+  first and focused; "Anyone using this device can open them."). If the cloud
+  has them already (a backup restored here, or another device), a pad of its
+  own asks the PIN they have, never the one just picked (`cloud.js goUp`,
+  `cloud-ui.js putUp`, `joinPad`). With no cloud reachable it says so before
+  any sum. Off (and Remove PIN, the same thing, with the same words) turns
+  red on the first tap ("Leave the cloud?", with "Tap again, then type the
+  PIN: their cloud copy is deleted for every device, and links you shared stop
+  working. This device keeps everything." under it), and the second asks the
+  PIN: their latest is brought here first, then their cloud copy and shared
+  links are deleted; if the latest can't be brought ("Couldn't bring their
+  latest here; try again.") nothing is deleted (`cloud.js leaveCloud`). A tap
+  anywhere else takes the first tap back. Another device with them hears it
+  at its next sync: it drops the link, keeps everything, and says "Taken out
+  of the cloud on another device; everything here stays here." Under it, when they are in the cloud, 🔄 Sync now and 🔗 Share… (both
   ask for the PIN first on a visit that hasn't had it), and for everyone ⬇️
   Back up: one tap saves the file 🗂️ See all's ⬇️ Export a backup makes
   (`backup-ui.js` `savePersonBackup`). The 🔒 PIN part has a
   pill, 🔒 PIN on or 🔓 No PIN, and 🔒 shows by the name in the corner
-  menu. 🔒 Set a PIN (which puts them in
-  the cloud first if they aren't), or Change PIN and Remove PIN, which ask
-  for the PIN they have now. A new PIN is typed twice; a second that doesn't
-  match says so on the pad and asks again. What a button just did (✅ PIN
-  set, ✅ PIN changed, 🔓 PIN removed) shows in the pill for 3 s, then it
+  menu. The PIN part shows only for someone in the cloud: a PIN now means the
+  cloud, so there is no 🔒 Set a PIN. It has Change PIN (the PIN they have now,
+  then a new one twice) and Remove PIN (leaves the cloud, above). A second PIN
+  that doesn't match says so on the pad and asks again. What a button just did
+  (✅ In the cloud, PIN set, ✅ PIN changed) shows in the pill for 3 s, then it
   fades back (`cloud-ui.js` `drawPin`, `pinClick`). With a PIN on their cloud profile, changing the name, picture or
   color asks for it once per visit (until a reload; typing it to open them
   counts), checked like an open (`cloud.js` `pinGuards`, `checkPin`); without
@@ -720,7 +738,7 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   Someone new. A tap opens them, past their PIN; closing the PIN pad comes
   back. Only a pick closes it (no ✕, Esc or backdrop), and nothing behind it
   shows a board meanwhile: a sync or a redraw of people only redraws it. The
-  only one left, with no PIN, just shows. Switching ☁️ In the cloud off deletes the cloud copy
+  only one left, with no PIN, just shows. Switching ☁️ In the cloud off (or Remove PIN) deletes the cloud copy
   and keeps them here. Under each name, a row says how much that person has on
   this device, kinds with none left out: "🔊 27 · 🥁 4 · 🎼 1 · 🎬 1", or
   "nothing yet" (`personCounts` and `countsText` in `web/model.js`). It counts
@@ -729,8 +747,8 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   changed), ⌨️ key layouts and 👆 touch layouts.
 - **🗂️ See all** (Ben, 2026-10-24; `web/things.js`): the same count line at
   the top of a profile sheet is a button, "🔊 27 · 🥁 4 … See all ›"; for a
-  person switched off the cloud (📴) it starts "📴 This device only:". Everyone
-  else in the cloud has the same here and there, so it says no more. It opens a sheet over the profile, "Everything <name> has": a chip
+  person only on this device (not in the cloud) it starts "📴 This device only:". Everyone
+  in the cloud has the same here and there, so it says no more. It opens a sheet over the profile, "Everything <name> has": a chip
   per kind (All, then the nine, each with its count, 0 included; they fill the
   width in as many lines as it takes), then the list (`personThings` in
   `web/model.js`, which `personCounts` counts, so a chip is always its list's
@@ -852,17 +870,20 @@ new ones (`OLD_COLOR_NAMES`).
 
 ## Cloud profiles
 
-Everyone on a device goes to the cloud once they make something: one shared
-list on noodlepads.com. Their sounds, beats, songs, takes, keys, key and touch layouts, kit edits
-and settings then open on any phone or tablet, and changes on one device reach
-the others. Design and free-plan budget: `docs/design/cloud-profiles.md`; why:
+Nobody goes to the cloud by themselves. A grown-up puts someone there, with a
+PIN: one shared list on noodlepads.com. Their sounds, beats, songs, takes,
+recorded voices, keys, key and touch layouts, kit edits and settings then open
+on any phone or tablet, and changes on one device reach the others. Everyone
+else stays on their device only. Design and free-plan budget: `docs/design/cloud-profiles.md`; why:
 ADR 0002.
 
-- **By themselves.** A person who has made something (a sound, beat, song,
-  take or kit edit) goes to the cloud on the next sync. A typed name from
-  before is swapped for a fun name first, so it never leaves the device. A
-  person who has made nothing (a new device's empty first board) stays here
-  until their ☁️ In the cloud is switched on.
+- **Never by themselves** (Ben, 2026-10-26; `docs/design/cloud-needs-pin.md`).
+  A sync puts nobody in the cloud, whatever they made. ☁️ In the cloud, in
+  their profile (see People above), asks the grown-up sum and a new PIN typed
+  twice, and makes the profile in one request with the PIN (the Worker makes
+  none without one: 400 `needs pin`). A typed name from before is swapped for
+  a fun name first, so it never leaves the device. A person never put up has
+  no cloud backup: ⬇️ Back up is the way.
   👥 People → ☁️ Open from the cloud puts someone from the list on this device.
   A tap (after their PIN, if any) turns the sheet to them and locks it (no ✕,
   Esc or backdrop; Ben, 2026-10-26): "Finding their things…" with a spinner
@@ -883,11 +904,13 @@ ADR 0002.
   the sync carries on and the sheet opens on its progress. `just look
   cloud-finding`, `cloud-bringing`, `cloud-done`, `cloud-stopped` draw each
   state.
-- **📴 Offline (this device only)**: ☁️ In the cloud switched off in a
-  person's profile deletes their cloud copy (tap twice; the PIN if it has
-  one) and keeps them out of the cloud; switched on, they go back. A person
-  taken out of the cloud on another device goes Offline here too, rather than
-  coming back by itself.
+- **Leaving the cloud** (☁️ off, or Remove PIN; tap twice, then the PIN):
+  their latest is brought here first, then their cloud copy and every share
+  code they made are deleted, and this device keeps everything; if their
+  latest can't be brought, nothing is deleted. A person taken out of the
+  cloud on another device drops the link here, keeps everything and says so,
+  rather than coming back by itself. (📴 Offline, a person kept out, is gone;
+  an old `offline: true` is read and ignored.)
 - **Names are made up.** Nobody types a person's name: `names.js` `funName`
   makes alliterative ones ("Admiral Avocado"), 🎲 picks another, and the
   round picture picks an emoji avatar: one from the short list, or any one
@@ -911,8 +934,13 @@ ADR 0002.
 - **Settings travel with the person** (IndexedDB `prefs`, `settings.js`
   `scope: 'person'`): Advanced, the time signature, pad size, pad skin. The
   keyboard, problem reports and the device code stay with the device.
-- **PIN:** optional, 4 digits, in a person's profile sheet (once they are in
-  the cloud). It is asked each time that person is opened, on every device;
+- **PIN:** required for the cloud, 4 digits, typed twice when ☁️ goes on
+  (the Worker lists, opens and serves only profiles with one; a profile with
+  none, made by hand, is 404 and shown by `just cloud-profiles` as 🔓 no PIN).
+  Change PIN is in a person's profile sheet (once they are in the cloud).
+  Wrong tries are counted apart for opening and for a request that carries a
+  key (Change PIN, Leave, Delete; migration 009), so a stranger's wrong tries
+  never lock a device that has the key. It is asked each time that person is opened, on every device;
   the key lives for the visit only (`cloud.js` `sessionKeys`), so a person
   with a PIN syncs only once it is typed. **🔑 Remember them here?** opens
   once a PIN opens someone (on switching to them, or ☁️ Open from the cloud;
@@ -930,8 +958,8 @@ ADR 0002.
   them, and "Lost this device? Change the PIN, and every device asks it
   again." Forget this device asks the grown-up sum first (`web/grown-up.js`,
   as Feedback does: a wrong answer asks another, ✕ forgets nothing; Ben,
-  2026-10-27: a kid can't lock themselves out by a slip). Forget or a
-  removed PIN drops the key here and in the cloud; a
+  2026-10-27: a kid can't lock themselves out by a slip). Forget
+  drops the key here and in the cloud; a
   key the cloud refused (a PIN changed elsewhere, or 180 days unused) ends it
   too, and the PIN pad then says "This device forgot them. A grown-up can
   type the PIN." (`keyDropped`), so the PIN is asked again (`cloud-ui.js`
@@ -950,10 +978,9 @@ ADR 0002.
   another device still changes them: the gate is on this device's screens.
   It keeps kids out of each other's things; the browser's own storage on the
   device is not encrypted. 5 wrong tries mean a 10-minute wait.
-- **A PIN new to this device:** a PIN set or changed on another device closes
+- **A PIN new to this device:** a PIN changed on another device closes
   the profile on every device. The next sync here is refused (401); the
-  public list says whether the profile has a PIN now (a reset: it opens again
-  by itself, no PIN asked). If it has, the link says `newPin` and the person
+  link says `newPin` (every profile has a PIN) and the person
   can't be opened until it is typed: the person showing goes behind the PIN
   pad at once. Its 🤷 I don't know the PIN (two taps) deletes them from this
   device with everything of theirs here (unsynced work too); the cloud copy
@@ -974,8 +1001,8 @@ ADR 0002.
 - **Ids are random.** A profile's id is its person's random id (`p-…`); the
   Worker makes, lists and syncs no other, and the app's API client refuses
   any other before sending. Nothing renames a profile: a device still linked
-  to one under a plain id drops the link and puts the person up as new under
-  their random id (none are left live). A share never says whose it was.
+  to one under a plain id drops the link, and the person stays on the device
+  under their random id (none are left live). A share never says whose it was.
 - **No cloud here** (the dev server, `just look`): the app says "The cloud
   isn't reachable from here" and everything else works. `tools/serve.py`
   answers `/api/cloud` with `{ok: false}`.

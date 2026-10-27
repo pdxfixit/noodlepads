@@ -1,6 +1,6 @@
 # The cloud needs a PIN
 
-**Status:** a plan and a mockup, approved by Ben (2026-10-26) and reviewed by six council seats (2026-10-27); their findings and Ben's answers of 2026-10-27 are folded in below. Nothing here is built. The rule is Ben's (decisions.md, Hosting and data: "The cloud needs a PIN"); this file says how it works, what it touches, and in what order.
+**Status:** built (2026-10-27), in the plan's order: leaving brings the latest here first (section 0), the Worker and migration 009, then the app. A plan and a mockup, approved by Ben (2026-10-26) and reviewed by six council seats (2026-10-27); their findings and Ben's answers of 2026-10-27 are folded in below. Calls made while building: the section 3 e2e steps and the look views are written but the e2e runs only live; the dropped-quietly 404 is said to a screen reader only (`announce`); `leaveCloud` for a locked device opens a session key with the typed PIN before it syncs. The rule is Ben's (decisions.md, Hosting and data: "The cloud needs a PIN"); this file says how it works, what it touches, and in what order.
 
 **Already true when this is built** (Ben, 2026-10-27; another agent builds them first): 🔑 Remember lasts until Forget this device, a PIN change, or the cloud drops the key after 180 days unused (no 90-day clock on the device); 🔗 Share always asks the PIN, even on a remembered device; 🔑 Forget this device asks the grown-up sum first.
 

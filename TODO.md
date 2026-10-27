@@ -17,6 +17,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 ## Ben does
 
+- **Add the new cloud events to the telemetry runner** (2 min, on the Mac): in `../telemetry/events.toml` (the pdxfixit/telemetry repo beside this checkout) add `up` and `leave` under `noodlepads.cloud` (what `web/track-page.js` now sends in place of `put` and `offline`), then run `just test` in the main checkout, since `tests/telemetry.test.mjs` checks it only there.
+
 - **Let this repo tell the privacy site when the policy changes** (3 min), after the policy move lands: GitHub → Settings → Developer settings → Fine-grained tokens → new token, owner `pdxfixit`, only repository `pdxfixit/privacy`, repository permission **Contents: Read and write** (the one permission `repository_dispatch` asks for; "Actions: write" is not enough), 1 year. Add it as the secret `PRIVACY_DISPATCH_TOKEN` on `pdxfixit/noodlepads` (Settings → Secrets and variables → Actions). Until then `.github/workflows/privacy-policy.yml` only warns, and the privacy site picks up an edited `docs/privacy-policy.md` at its next deploy. Put a reminder to renew it in a year.
 
 - **Record the spoken callouts** (15 min, when you like): the 14 callouts ("Let's go!", "Level up!" …; list in `web/clips/kit/LICENSE-samples.txt`) and the evil laugh and cackle are macOS `say` voices, which may not be ours to share (Ben, 2026-10-26: replace them). Record your own (no names in them) and attach them in a chat, or say "use a CC0 voice set".
@@ -78,7 +80,6 @@ Other work:
   - 🧸 Kids' tune row ignores 🎵 Find its note's root, accents and row speed (keys-kids.md).
 
 - **One quiet rule for no storage** (the data seat's ask, 2026-10-27): with no storage at all, `persist`, `setOverride`, `setPersonEdit`, `deleteUserClip` and `deleteMyVoice` stay quiet as `removeRecord` does (one `noStorage()` helper in `web/state.js`), so a save can't push an ↩️ Undo off; `deleteUserClip` and `deleteMyVoice` go through `removeRecord`.
-- **The cloud needs a PIN** (Ben approved the plan and mockup, 2026-10-26; `docs/design/cloud-needs-pin.md` and its "Ben's answers"): the six seats review the plan now; build after the bug sweep's cloud branch lands (cloud.js, cloud-ui.js, worker/cloud.js).
 - **Council round 1, fixes in flight** (2026-10-26): Kids keyboard/tune/mic/sum; Live take Undo and audio clock, iOS silent switch, context resume, late pills; sync re-uploads edited audio and splits pushes by bytes; Worker caps, the PIN race, keys, shares deleted with a profile; `just test` fails on cut tests, deploy.yml version checks, the no-names self-test, stale deploy docs. Delete this line when they land.
 - **Apple voices out** (Ben, 2026-10-26), once Ben's recordings or a CC0 set arrive ("Ben does"): they replace the 16 Apple-voice clips that `web/clips/kit/LICENSE-samples.txt` lists, `tools/make_placeholders.py` stops making them (`KIT_CALLOUTS`, `cackle`), and that file's Apple section goes.
 - **⬇️ Save as audio file** (Ben approved the mockup, 2026-10-26; `docs/design/save-audio.md`, its "Ben's answers"): build after the bug sweep's beats+song branch lands. Its three buttons share one row.

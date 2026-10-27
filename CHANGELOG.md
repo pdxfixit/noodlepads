@@ -49,8 +49,10 @@ computer, at https://noodlepads.com/.
 - Each person has a level: 🧸 Kids (big picture pads, a mic with silly voices,
   a simple beat and toy keys, with no reading needed), Regular, or Advanced
   (more beat and sound tools).
-- ☁️ The cloud: a person's board syncs, so it opens on another device too.
-  Add a PIN, or switch ☁️ off to keep them on this device only.
+- ☁️ The cloud: a grown-up can put a person's board in the cloud, with a PIN,
+  so it opens on another device too. Nobody goes there by themselves. Remove
+  the PIN, or switch ☁️ off, to bring their latest back and keep them on this
+  device only (their shared links stop working).
 - Share a sound or a beat with a code.
 
 **For grown-ups**
