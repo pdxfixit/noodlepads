@@ -424,11 +424,14 @@ function deps() {
       await ownWrite(store, () => db.remove(store, key));
       if (store === 'clips' || store === 'overrides') audio.forget(key);
     },
-    // A sync's progress, without undoing what happened meanwhile: a new key
-    // (PIN changed) stays, and a link dropped while it ran stays dropped.
+    // A sync's progress, without undoing what happened meanwhile: it writes
+    // only its own fields (where it has got to and what it sent) on the link
+    // as it is now, so a new key (PIN changed), a 🔑 Remember or Forget, a
+    // Not now, all made while it ran, stay; and a link dropped while it ran
+    // stays dropped.
     saveLink: async (l) => {
       const now = linkOf(l.id);
-      if (now) await saveLink({ ...l, key: keyOf(l.id), pin: now.pin, check: now.check, newPin: now.newPin });
+      if (now) await saveLink({ ...now, rev: l.rev, sent: l.sent, sounds: l.sounds, foreign: l.foreign });
     },
   };
 }
