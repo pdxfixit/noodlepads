@@ -62,6 +62,12 @@ test('a sync\'s change to the beat that is playing survives the next pill tap', 
   pill(7).dispatch('click');   // the next tap, still playing
   await page.settle();
   assert.deepEqual(on(theBeat()), [2, 4, 7], 'the sync\'s pill is still there');
+  assert.equal(pill(4).getAttribute('aria-pressed'), 'true', 'and the screen shows it now');
+  pill(7).dispatch('click');   // on, then off again
+  await page.settle();
+  assert.deepEqual(on(theBeat()), [2, 4], 'a pill turned off after a sync stays off');
+  pill(7).dispatch('click');
+  await page.settle();
   $('#seq-play').dispatch('click');   // stop: the beat is read again
   await page.settle();
   assert.equal(pill(4).getAttribute('aria-pressed'), 'true', 'and shows on the screen');
@@ -98,6 +104,10 @@ test('where the two changes cannot be told apart, the synced copy is kept as a b
   assert.notEqual(aside.id, synced.id);
   assert.equal(state.savedBeats.find((b) => b.id === synced.id).rows[0].steps[11], true, 'this device\'s tap is in the beat');
   assert.match($('#banner-text').textContent, /kept as/);
+  pill(11).dispatch('click');   // off again: the copy is already kept, no second one
+  await page.settle();
+  assert.equal(state.savedBeats.length, count + 1, 'one synced copy, not one a tap');
+  assert.equal(state.savedBeats.find((b) => b.id === synced.id).rows[0].steps[11], false);
   $('#seq-play').dispatch('click');
   ctx.currentTime = 0;
 });

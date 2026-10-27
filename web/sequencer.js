@@ -319,11 +319,14 @@ export function createSequencer(deps) {
     // A sync stored a change to this beat behind the screen (it plays, so the
     // beat is read again only when it stops): this save must not undo it.
     const behind = !!before && !!doc?.seen && doc.seen.id === before.id && !sameContent(before, doc.seen);
-    if (behind) record = mergedWithStored(record, before);
+    let merged = false;
+    if (behind) ({ record, merged } = mergedWithStored(record, before));
     deps.library.put(record);
-    // After a merge the screen still holds the beat as it was read, so the
-    // next save merges again, from the same base, rather than undoing it.
-    doc = { pattern, seen: behind ? doc.seen : record };
+    // After a merge the screen shows the merged beat (the synced pills too),
+    // and what it holds is what was stored, so the next save is a plain one.
+    if (merged) pattern = cleanPattern(record, personId);
+    doc = { pattern, seen: record };
+    if (merged) render();
     deps.setOpen(personId, isScratch(pattern) ? null : pattern);
     // A named scratch keeps itself once it has a row: after the change that
     // gave it one has finished drawing.
@@ -334,14 +337,15 @@ export function createSequencer(deps) {
   // screen: the screen's changes and the stored ones together (merge3.js,
   // as the cloud sync merges). Where they cannot be told apart, the stored
   // copy is kept as a beat of its own and the screen's goes under the id.
+  // Returns {record, merged}.
   function mergedWithStored(mine, stored) {
     const m = merge3('beats', doc.seen, mine, stored);
-    if (m.record) return { ...m.record, id: mine.id, personId: mine.personId, created: mine.created, saved: mine.saved };
+    if (m.record) return { record: { ...m.record, id: mine.id, personId: mine.personId, created: mine.created, saved: mine.saved }, merged: true };
     const name = uniqueName(`${cutName(stored.name || SCRATCH_NAME, MAX_LABEL - 9)} (synced)`, null);
     deps.library.put({ ...structuredClone(stored), id: newId('beat'), name, created: stored.created ?? Date.now(), saved: Date.now() });
     logEvent('beat', { action: 'keep', groove: false });
     showBanner(`Another device changed this beat too. Its version is kept as “${name}” in 🗂️ Beats.`);
-    return mine;
+    return { record: mine, merged: false };
   }
 
   // 💾 Keep (ADR 0020): the scratch becomes a beat of its own in 🗂️ Beats,
