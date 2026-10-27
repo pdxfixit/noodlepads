@@ -1264,10 +1264,11 @@ export function createSong(deps) {
     // A lane's last block of a beat is over: that beat's mix there goes
     // (a 〰️ Warble or 🤖 Robot in it stops), not only at the song's end.
     const at = ctx.currentTime - t0 + from;
-    for (const m of mixEnds.filter((x) => at > x.end)) {
+    mixEnds = mixEnds.filter((m) => {
+      if (at <= m.end) return true;
       seq.endMix?.([laneGains[m.lane]], planned.plans.get(m.beatId)?.pattern);
-      mixEnds = mixEnds.filter((x) => x !== m);
-    }
+      return false;
+    });
     meter.run();
     if (heardAt() > planned.seconds + 0.2) stop();   // once its end is heard, so the line reaches it
   }

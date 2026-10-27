@@ -2213,6 +2213,9 @@ export function createSequencer(deps) {
   function endPreviews() {
     clearTimeout(previewTimer);
     previewTimer = 0;
+    // Every mix into the master but a groove sample's is the beat's (or a
+    // preview's) while the beat is stopped: nothing else plays into the
+    // master through busFor. A new player there must be left out here too.
     if (!playing()) letGo((m) => m.dest === audio.master && m.p !== sample?.pattern);
   }
   async function previewNote(i, p, l) {
