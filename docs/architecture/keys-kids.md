@@ -422,7 +422,7 @@ Worked out in four places: `beat.js outputDelay`; `app.js` `deps.latency` for th
 | Loop glow goes through `pads.js` | `audio.on.looping` is owned by `pads.js initPads`, which forwards to `dj.looping` through a hook `app.js` passes in. |
 | Latency in four places (above) | A change to one leaves the others. |
 | Dead exports kept for tests | `rhythm.js hitTime`, `applySnaps`, `countInBeats`, `snapHits`; `kids-logic.js squareSeconds`; `touch-grid.js emptyBlock`, `swapBlocks`. The app uses none of them. |
-| Deletes skip `persist` | `app.js` `deleteTake`, `deleteLayout`, `deleteTouchLayout` call `db.remove` and only log a failure; `beatLibrary.remove` shows a notice. `adoptKidsBeat` writes with `db.batch`. |
+| Deletes skip `persist` | `app.js` `deleteTake`, `deleteLayout`, `deleteTouchLayout` and `beatLibrary.remove` are `state.js shelf` removes: each tells a refusal in a notice (`removeRecord`). `adoptKidsBeat` writes with `db.batch`. |
 
 ## Invariants and gotchas
 

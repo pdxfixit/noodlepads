@@ -13,7 +13,7 @@
 // docs/architecture/shell.md "The composition root" says what each one gets
 // from here, and docs/layout.md has a line for every file.
 
-import { state, loadStorage, persist, setOverride, adoptStoredPeople, reIdStoredPeople, renamedId, removeRecord } from './state.js';
+import { state, loadStorage, persist, setOverride, adoptStoredPeople, reIdStoredPeople, renamedId, removeRecord, shelf } from './state.js';
 import { audio, voicesMade, fadeStop } from './audio.js';
 import { meter, buildGrille } from './meter.js';
 import { createSequencer } from './sequencer.js';
@@ -595,31 +595,15 @@ async function addMadeSound({ label, blob, emoji }) {
 
 // Every saved beat (🗂️ Beats, and the scratch beats) and every song
 // (🗂️ Songs), as the beat maker, 🎼 Song and 🎧 From a song keep them.
-const beatLibrary = {
-  list: (personId) => state.savedBeats
-    .filter((b) => b.personId === personId)
-    .sort((a, b) => b.saved - a.saved),
-  put: (beat) => {
-    state.savedBeats = [...state.savedBeats.filter((b) => b.id !== beat.id), beat];
-    persist('beats', structuredClone(beat));
-  },
-  remove: async (id) => {
-    state.savedBeats = state.savedBeats.filter((b) => b.id !== id);
-    engine?.letGo((m) => m.id === id);   // its mix graphs go once their last voice and tail have ended
-    await removeRecord('beats', id, 'That beat');
-  },
-};
-const songBook = {
-  list: (personId) => state.songbook.filter((s) => s.personId === personId).sort((a, b) => b.saved - a.saved),
-  put: (record) => {
-    state.songbook = [...state.songbook.filter((s) => s.id !== record.id), record];
-    persist('songbook', structuredClone(record));
-  },
-  remove: async (id) => {
-    state.songbook = state.songbook.filter((s) => s.id !== id);
-    await removeRecord('songbook', id, 'That song');
-  },
-};
+const beatLibrary = shelf('savedBeats', 'beats', {
+  what: 'That beat', clone: true, newest: true,
+  onRemove: (id) => engine?.letGo((m) => m.id === id),   // its mix graphs go once their last voice and tail have ended
+});
+const songBook = shelf('songbook', 'songbook', { what: 'That song', clone: true, newest: true });
+// The saved takes, DJ key layouts and 👆 touch layouts (createDJ's deps).
+const takeShelf = shelf('takes', 'takes', { what: 'That take' });
+const layoutShelf = shelf('layouts', 'layouts', { what: 'That key layout' });
+const touchShelf = shelf('touchLayouts', 'touchLayouts', { what: 'That touch layout' });
 
 // The beat maker, wired to the board: its sounds, its saved beat, its library.
 function makeSequencer() {
@@ -1018,37 +1002,19 @@ async function start() {
       cutVoice: (voice) => fadeStop(voice, audio.context().currentTime),   // a take's play booked ahead: it never sounds
       announce: (text) => announce(text),
       notice: (text) => showNotice(text),   // the banner over the top, which fades by itself
-      takes: (pid) => state.takes.filter((t) => t.personId === pid),
+      takes: takeShelf.list,
       setEmoji: setClipEmoji,
       boardClips: (clipId) => { const owner = people().find((p) => clipsFor(p.id, { allPresets: true }).some((c) => c.id === clipId)); return owner ? clipsFor(owner.id, { allPresets: true }) : []; },
-      saveTake: (take) => {
-        state.takes = [...state.takes.filter((t) => t.id !== take.id), take];
-        persist('takes', take);
-      },
-      deleteTake: (id) => {
-        state.takes = state.takes.filter((t) => t.id !== id);
-        removeRecord('takes', id, 'That take');
-      },
+      saveTake: takeShelf.put,
+      deleteTake: takeShelf.remove,
       // Saved key layouts (✏️ Layout with ⌨️ Keys, ADR 0013).
-      layouts: (pid) => state.layouts.filter((l) => l.personId === pid),
-      saveLayout: (layout) => {
-        state.layouts = [...state.layouts.filter((l) => l.id !== layout.id), layout];
-        persist('layouts', layout);
-      },
-      deleteLayout: (id) => {
-        state.layouts = state.layouts.filter((l) => l.id !== id);
-        removeRecord('layouts', id, 'That key layout');
-      },
+      layouts: layoutShelf.list,
+      saveLayout: layoutShelf.put,
+      deleteLayout: layoutShelf.remove,
       // Saved 👆 touch layouts (✏️ Layout with 👆 Pads, ADR 0029).
-      touchLayouts: (pid) => state.touchLayouts.filter((l) => l.personId === pid),
-      saveTouchLayout: (layout) => {
-        state.touchLayouts = [...state.touchLayouts.filter((l) => l.id !== layout.id), layout];
-        persist('touchLayouts', layout);
-      },
-      deleteTouchLayout: (id) => {
-        state.touchLayouts = state.touchLayouts.filter((l) => l.id !== id);
-        removeRecord('touchLayouts', id, 'That touch layout');
-      },
+      touchLayouts: touchShelf.list,
+      saveTouchLayout: touchShelf.put,
+      deleteTouchLayout: touchShelf.remove,
       kitGroups: () => state.manifest.kitGroups ?? [],
       inputChanged: () => showHint(),   // ⌨️ Keys | 👆 Pads: the footer's how-to follows
       // The kid's own groups of their sounds (groups.js), for ✏️ Layout's picker.
@@ -1101,10 +1067,7 @@ async function start() {
     // The kid's one beat is their scratch beat (ADR 0020), in the library
     // with every other beat but never listed.
     beats: (pid) => state.savedBeats.filter((b) => b.personId === pid),
-    saveBeat: (beat) => {
-      state.savedBeats = [...state.savedBeats.filter((b) => b.id !== beat.id), beat];
-      persist('beats', structuredClone(beat));
-    },
+    saveBeat: beatLibrary.put,
     // The sum ends a visit into Kids as well: then no grown-up is "in", so a
     // later change of level to Kids shows Kids at once.
     grownUp: () => { grownUp = !kidsVisit; kidsVisit = false; applyKids(); showSettings(); },

@@ -344,6 +344,31 @@ export async function removeRecord(store, key, what) {
   }
 }
 
+// A person's saved list kept in `state[field]` and the `store` behind it
+// (beats, songbook, takes, layouts, touchLayouts): one writer, so a put and a
+// remove are told the same way everywhere. `put` replaces the record by id in
+// memory and persists it (`clone`: a copy goes to storage, so the stamp
+// `persist` adds stays out of memory); `remove` takes it out of memory, calls
+// `onRemove(id)`, then deletes it from storage, telling a refusal as `what`
+// ("That take"). `list(personId)` is the person's, `newest` first when asked.
+export function shelf(field, store, { what, clone = false, newest = false, onRemove } = {}) {
+  return {
+    list: (personId) => {
+      const mine = state[field].filter((r) => r.personId === personId);
+      return newest ? mine.sort((a, b) => b.saved - a.saved) : mine;
+    },
+    put: (record) => {
+      state[field] = [...state[field].filter((r) => r.id !== record.id), record];
+      persist(store, clone ? structuredClone(record) : record);
+    },
+    remove: async (id) => {
+      state[field] = state[field].filter((r) => r.id !== id);
+      onRemove?.(id);
+      await removeRecord(store, id, what);
+    },
+  };
+}
+
 // Bundled people store only what differs from boards.json; a record that
 // changes nothing is deleted. People added in the app store everything.
 export async function setPersonEdit(id, changes) {
