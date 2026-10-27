@@ -278,8 +278,32 @@ export async function persist(store, value) {
     showNotice(wouldNotSave(err));
     return storageFailed;
   }
+  if (MADE.has(store)) keepStorage();
   return true;
 }
+
+// Browsers may clear a site's storage when the disk runs short, unless the
+// site asks to keep it (navigator.storage.persist). A family's sounds, beats
+// and songs live in IndexedDB, so the app asks, once per visit, the first
+// time something a kid made is saved: not at launch, when there is nothing to
+// keep and a browser that asks (Firefox) would be asking for nothing. The
+// browser decides; a refusal changes nothing.
+const MADE = new Set(['clips', 'beats', 'takes', 'songs', 'songbook', 'voices', 'decks']);
+let askedToKeep = false;
+export function keepStorage(nav = globalThis.navigator) {
+  if (askedToKeep || typeof nav?.storage?.persist !== 'function') return Promise.resolve(false);
+  askedToKeep = true;
+  return (async () => {
+    try {
+      if (await nav.storage.persisted?.()) return true;
+      return !!(await nav.storage.persist());
+    } catch {
+      return false;   // a browser that refuses to answer is no reason to stop saving
+    }
+  })();
+}
+// For tests: the next save asks again.
+export const forgetKeepAsk = () => { askedToKeep = false; };
 
 // An override that changes nothing is deleted rather than stored, so the
 // clip goes back to following boards.json. Its edit stamp (`changed`, from
