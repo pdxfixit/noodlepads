@@ -14,7 +14,7 @@ import { audio } from './audio.js';
 import { cleanBackup } from './backup.js';
 import { followPerson, cleanPrefs } from './settings.js';
 import { createCloudApi, CloudError, cloudTrouble } from './cloud-api.js';
-import { syncProfile, shareBundle, shareDoc, uploadAudio, syncNote, CLOUD_KINDS, CLOUD_MAX_SOUND } from './cloud-sync.js';
+import { syncProfile, releaseOf, shareBundle, shareDoc, uploadAudio, syncNote, CLOUD_KINDS, CLOUD_MAX_SOUND } from './cloud-sync.js';
 import { funName, isFunName } from './names.js';
 import { isHiddenBeat, isScratchSong } from './scratch.js';
 import { people } from './board.js';
@@ -419,6 +419,7 @@ function deps() {
     bases,
     lists: storedLists,
     kitIds: kitIds(),
+    release: releaseOf(state.version),
     sha256,
     clean: (doc, audioOf) => cleanBackup(doc, audioOf, whatIsHere()),
     merge: quietly((cleaned) => storeLoaded(cleaned)),
@@ -431,13 +432,13 @@ function deps() {
       if (store === 'clips' || store === 'overrides') audio.forget(key);
     },
     // A sync's progress, without undoing what happened meanwhile: it writes
-    // only its own fields (where it has got to and what it sent) on the link
+    // only its own fields (where it has got to, what it sent, the release it last looked from) on the link
     // as it is now, so a new key (PIN changed), a 🔑 Remember or Forget, a
     // Not now, all made while it ran, stay; and a link dropped while it ran
     // stays dropped.
     saveLink: async (l) => {
       const now = linkOf(l.id);
-      if (now) await saveLink({ ...now, rev: l.rev, sent: l.sent, sounds: l.sounds, foreign: l.foreign });
+      if (now) await saveLink({ ...now, rev: l.rev, sent: l.sent, sounds: l.sounds, foreign: l.foreign, release: l.release });
     },
   };
 }

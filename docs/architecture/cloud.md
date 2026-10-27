@@ -71,6 +71,7 @@ Shape (as written by `cloud.js saveLink`):
 | `id` | the person id = the profile id (`p-…`) |
 | `key` | the device key; stored only when this device remembers the PIN (`keepsKey`; a link from before every profile had a PIN may hold one with no PIN). Any other key lives in `cloud.js sessionKeys` for this page's life |
 | `rev` | the profile `rev` this device has caught up to |
+| `release` | the app release (`cloud-sync.js releaseOf` of the deploy label, no commit) of the sync that last ran. A sync under another release starts from `rev` 0 once, so a record an older copy's checks passed over is looked at again by the newer copy (hashes make the second look cost only the pull) |
 | `sent` | `{"<kind>:<id>": hash}`: each record as the cloud has it (`cloud-sync.js hashOf`) |
 | `foreign` | `{"<kind>:<id>": {cleaned, raw}}`: only for a record whose cloud copy has something this copy's checks dropped or changed (a newer app's field): the record as stored here beside the cloud's body. A push puts back, into the body it sends, what this device did not itself change (`foreign.js restoreForeign`); `hashOf` and the base never see it. Kept across `openProfile`; dropped with the record; at most `MAX_FOREIGN` (100) records, the oldest dropped first (`keepForeign`) |
 | `sounds` | `{<clip id>: {sha256, sound, print?}}`: the cloud's audio for the clip (its hash and sound id), and `print` (`<blob size>:<changed stamp>`) of the device's blob last hashed equal to it, so an unchanged clip is not hashed again (`cloud-sync.js hashAudio`) |
@@ -209,7 +210,7 @@ Three things send only from noodlepads.com, each checked on its own: `log-send.j
 
 ### Pull (`cloud-sync.js pullOnce`)
 
-1. `api.pull(id, key, since)` page by page (`more`), from `link.rev`.
+1. `api.pull(id, key, since)` page by page (`more`), from `link.rev` (0 after a new app release: `syncProfile` resets it once and records `link.release`).
 2. The last word on each `kind:id` wins (`latest`).
 3. Shortcuts: deleted here and unchanged there (`sent` equals the remote hash) → `skip`; same on both sides → `same`. Neither needs audio.
 4. For other clips, audio comes from this device's blob when the SHA matches, else `api.fetchSound`.

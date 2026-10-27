@@ -11,7 +11,7 @@ import { FakeD1 } from './fake-d1.mjs';
 import { createCloudApi, CloudError, cloudTrouble } from '../web/cloud-api.js';
 import {
   syncProfile, recordsOf, planPush, decideRecord, hashOf, pieces, shareBundle, shareDoc, syncNote, pushSlices, CHUNK_BYTES, CLOUD_MAX_SOUND, keyOf,
-  progressShare, soundBytes, newProgress, keepForeign, MAX_FOREIGN, RECORD_BYTES,
+  progressShare, soundBytes, newProgress, keepForeign, MAX_FOREIGN, RECORD_BYTES, releaseOf,
 } from '../web/cloud-sync.js';
 import { LIMITS } from '../worker/cloud.js';
 import { cleanBackup } from '../web/backup.js';
@@ -1117,6 +1117,36 @@ test('a newer app\'s fields that would push the record over the size cap go, so 
   assert.equal(report.pushed, 1);
   assert.equal(inCloud().name, 'Edited', 'the edit reached the cloud');
   assert.equal(ol.foreign['beats:beat-1'], undefined, 'and the big field was let go to fit');
+});
+
+// A record this copy's checks drop (a newer app's, say) is passed over, and the
+// link's rev moves on, so a later, newer copy of the app would never see it.
+// A new app release pulls from the start once; hashes keep that cheap.
+test('a new app release pulls everything again once, so a record the older checks dropped arrives', async () => {
+  const { api } = server();
+  const { a, link } = await startA(api);
+  await syncProfile(link, a.deps(api));
+  const { d: b, link: bl } = await openOn(api, 'p-a');
+  const noBeats = (device) => ({ ...device.deps(api), release: '1.0.1', clean: (doc, audioOf) => ({ ...device.deps(api).clean(doc, audioOf), beats: [] }) });
+  await syncProfile(bl, noBeats(b));
+  assert.equal(b.stores.beats.length, 0, 'the older checks dropped the beat');
+  assert.equal(bl.release, '1.0.1');
+  assert.notEqual(bl.rev, 0, 'and the sync moved on');
+
+  await syncProfile(bl, { ...b.deps(api), release: '1.0.1' });
+  assert.equal(b.stores.beats.length, 0, 'the same release does not look again');
+  const report = await syncProfile(bl, { ...b.deps(api), release: '1.0.2' });
+  assert.equal(b.stores.beats.length, 1, 'a new release finds it');
+  assert.ok(report.pulled >= 1);
+  assert.equal(bl.release, '1.0.2');
+  assert.deepEqual(moved(await syncProfile(bl, { ...b.deps(api), release: '1.0.2' })), { pulled: 0, pushed: 0, deleted: 0, sounds: 0 }, 'once, not every time');
+});
+
+test('the release is the deploy label without its commit; a page with no label has none', () => {
+  assert.equal(releaseOf('v1.0.215-4d5ef56'), '1.0.215');
+  assert.equal(releaseOf('v1.0.215-other'), '1.0.215', 'a docs-only deploy is the same release');
+  assert.equal(releaseOf('dev'), '');
+  assert.equal(releaseOf(undefined), '');
 });
 
 test('a link keeps newer-app fields for at most MAX_FOREIGN records, the oldest dropped first', () => {

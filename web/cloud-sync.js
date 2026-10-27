@@ -327,7 +327,7 @@ export function shareDoc(bundle, toId, kitIds, newId, { kind, title } = {}) {
 //   fetched                  optional: Map sound id -> Blob, sounds fetched before
 //                            (a try cut short), used instead of fetching again
 // }
-// `link`: {id, key, rev, sent, sounds}. Returns what happened, for a notice
+// `link`: {id, key, rev, sent, sounds, foreign, release}. `deps.release`: this app's release (releaseOf). Returns what happened, for a notice
 // and the log: {pulled, pushed, deleted, sounds, merged, clashes, kept}.
 export const SYNC_ROUNDS = 3;
 
@@ -388,8 +388,21 @@ async function hashAudio(link, deps, here) {
   }
 }
 
+// The release in the deploy's label ('v1.0.215-4d5ef56' -> '1.0.215'), or ''
+// when the page has none (a local copy). The commit is left off, so only a
+// change to the app itself counts as a new release.
+export const releaseOf = (version) => /^v?(\d+\.\d+\.\d+)/.exec(String(version ?? ''))?.[1] ?? '';
+
 export async function syncProfile(link, deps) {
   const id = link.id;
+  // A record this copy's checks drop is passed over, and the rev moves on
+  // past it, so a newer release that would keep it never sees it. Each new
+  // release pulls from the start once (`deps.release`); records the device
+  // already has hash the same and cost nothing but the pull.
+  if (deps.release && link.release !== deps.release) {
+    link.rev = 0;
+    link.release = deps.release;
+  }
   link.sent ??= {};
   link.sounds ??= {};
   link.foreign ??= {};   // per record: what a newer app wrote that this copy's checks dropped (foreign.js)
