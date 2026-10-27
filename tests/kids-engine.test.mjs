@@ -504,7 +504,7 @@ test('🧸 Kids\' square for a pill lights at the time that pill\'s hit sounds',
 // end it: so ● always gets a run of its own.
 test('● never takes the run of a ▶ that is already playing: it ends that one, starts its own, and the recording ends as the beat comes round', async () => {
   const { setSetting } = await import('../web/settings.js');
-  await setSetting('instNotes', 'piano');
+  await setSetting('kidsInstNotes', 'piano');
   const t = await kidsWithClock();
   try {
     const mine = await kidsBeatTab();
@@ -537,7 +537,7 @@ test('● never takes the run of a ▶ that is already playing: it ends that one
 
 test('● on a grown-up\'s 3/4 beat: a key lands on the 12-pill bar, and the ring fills over the beat\'s own length', async () => {
   const { setSetting } = await import('../web/settings.js');
-  await setSetting('instNotes', 'piano');
+  await setSetting('kidsInstNotes', 'piano');
   const t = await kidsWithClock();
   const plainRaf = globalThis.requestAnimationFrame;
   let ring = null;
@@ -693,7 +693,7 @@ test('🧸 Kids ▶ whose sounds all fail gives ▶ back once nothing has sounde
 
 test('● whose sounds miss the wait is called off with a head shake, and ▶ is not left lit', async () => {
   const { setSetting } = await import('../web/settings.js');
-  await setSetting('instNotes', 'piano');
+  await setSetting('kidsInstNotes', 'piano');
   const t = await kidsWithClock(true);
   const wait = KIDS_LOAD_WAIT.ms;
   KIDS_LOAD_WAIT.ms = 30;

@@ -231,9 +231,9 @@ test('👆 a band of Chords says who plays it; a pick plays every tile\'s chord 
   $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');
 });
 
-test('🧸 Kids: a round instrument button on Keys; each tap plays the toy keys on the next one, kept as the person\'s', async () => {
+test('🧸 Kids: a round instrument button on Keys; each tap plays the toy keys on the next one, kept as Kids\' own, apart from Notes\'', async () => {
   const { setSetting } = await import('../web/settings.js');
-  await setSetting('instNotes', 'pluck');
+  await setSetting('kidsInstNotes', 'pluck');
   await setSetting('level', 'kids');
   await page.settle();
   $('[data-kids-tab="keys"]').dispatch('click');
@@ -253,8 +253,8 @@ test('🧸 Kids: a round instrument button on Keys; each tap plays the toy keys 
   const fruit = faces();
   button.dispatch('click');
   await page.settle();
-  assert.equal(pick('instNotes'), 'piano');
-  assert.equal(button.textContent, '🎹');
+  assert.equal(pick('kidsInstNotes'), 'piano');
+  assert.equal(button.textContent, '🎼');   // the piano's 🎹 is the Keys tab's
   assert.deepEqual(heard, [['piano-c', 1]], 'the tap plays a C on the piano, so the change is heard (Ben, 2026-10-22)');
   heard.length = 0;
   tapKeys();
@@ -263,7 +263,7 @@ test('🧸 Kids: a round instrument button on Keys; each tap plays the toy keys 
   for (const want of ['marimba', 'steel', 'kalimba', 'pluck']) {
     button.dispatch('click');
     await page.settle();
-    assert.equal(pick('instNotes'), want);
+    assert.equal(pick('kidsInstNotes'), want);
   }
   heard.length = 0;
   tapKeys();

@@ -236,10 +236,15 @@ function applyKids() {
   }
   document.body.classList.toggle('kids', on);
   showKids(on);
+  applySkin();
   page?.screen(on ? 'kids' : state.screen);
   // Kids wrote the kid's beat (the scratch) behind the beat maker's back:
   // show it again, so a pill tapped next builds on the kid's squares.
   if (!on) { showView(); refitLines(); }
+}
+// The skin on the page: the person's Pads skin, or 🧸 Kids' own while Kids shows.
+function applySkin() {
+  showSkin(el.root, getSetting(kidsShowing() ? 'kidsPadSkin' : 'padSkin'));
 }
 function enterKids() {
   grownUp = false;
@@ -1103,9 +1108,11 @@ async function start() {
   });
   onSetting('level', () => applyKids());
   // The person's pad skin on every pad (skins.js): it follows a switch of
-  // person, a loaded backup and the cloud, as every setting does.
-  showSkin(el.root, getSetting('padSkin'));
-  onSetting('padSkin', (id) => showSkin(el.root, id));
+  // person, a loaded backup and the cloud, as every setting does. 🧸 Kids
+  // has a skin of its own (`kidsPadSkin`), shown while Kids does.
+  applySkin();
+  onSetting('padSkin', applySkin);
+  onSetting('kidsPadSkin', applySkin);
   bindEvents();
   watchTips(document.body);   // a tooltip on nearly every control (Ben)
 

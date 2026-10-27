@@ -72,6 +72,12 @@ export const SETTINGS = {
   instNotes: { default: PLAYED.notes.default, values: instrumentIds('notes'), scope: 'person' },
   instChords: { default: PLAYED.chords.default, values: instrumentIds('chords'), scope: 'person' },
   instBass: { default: PLAYED.bass.default, values: instrumentIds('bass'), scope: 'person' },
+  // 🧸 Kids' own size, look and instrument (council round 1, 2026-10-26): the
+  // same choices as `padSize`, `padSkin` and `instNotes`, kept apart so a
+  // kid's visit never changes what a grown-up set on Pads and Notes.
+  kidsPadSize: { default: 'auto', values: PAD_STOPS, scope: 'person' },
+  kidsPadSkin: { default: 'tiles', values: SKIN_IDS, scope: 'person' },
+  kidsInstNotes: { default: PLAYED.notes.default, values: instrumentIds('notes'), scope: 'person' },
   // What this person has seen of a new person's first steps (ADR 0028,
   // firsts.js): one-time tips, hint dots, the 🧸 hand. Free-form, so it has
   // `clean` in place of a list of values; `quiet`: a change is not logged

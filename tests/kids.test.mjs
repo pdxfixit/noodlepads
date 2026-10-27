@@ -526,7 +526,7 @@ test('🎹 the instrument button: every key wears who plays it; a tap moves to t
   const { getSetting, setSetting } = await import('../web/settings.js');
   const { KIDS_INSTRUMENTS } = await import('../web/kids-logic.js');
   const { instrumentById } = await import('../web/instruments.js');
-  await setSetting('instNotes', 'pluck');
+  await setSetting('kidsInstNotes', 'pluck');
   await page.settle();
   $('[data-kids-tab="keys"]').dispatch('click');
   const button = $('#kids-inst');
@@ -540,7 +540,7 @@ test('🎹 the instrument button: every key wears who plays it; a tap moves to t
     played.length = 0;
     button.dispatch('click');
     await page.settle();
-    const inst = getSetting('instNotes');
+    const inst = getSetting('kidsInstNotes');
     seen.push(inst);
     assert.equal(button.textContent, instPicture(instrumentById(inst)), 'the button shows the instrument now on');
     assert.deepEqual(badges(), Array(8).fill(instPicture(instrumentById(inst))), 'and so does every key');
@@ -959,41 +959,43 @@ test('🎨 the Kids skin button: each tap moves to the next skin and keeps it, r
   const button = $('#kids-skin');
   assert.equal(button.getAttribute('aria-label'), 'Next look', 'its tooltip; no words on it');
   assert.equal(button.closest('[data-kids-view]').dataset.kidsView, 'pads', 'on the Pads screen');
-  assert.equal(getSetting('padSkin'), 'tiles');
+  assert.equal(getSetting('kidsPadSkin'), 'tiles');
   assert.equal(button.textContent, SKINS[0].emoji);
   const seen = [];
   for (let i = 0; i < SKIN_IDS.length; i++) {
     button.dispatch('click');
     await page.settle();
-    seen.push(getSetting('padSkin'));
+    seen.push(getSetting('kidsPadSkin'));
     assert.equal(button.textContent, SKINS.find((s) => s.id === seen.at(-1)).emoji, 'it shows the skin now on');
     assert.equal(document.documentElement.getAttribute('data-skin'), seen.at(-1) === 'tiles' ? null : seen.at(-1));
   }
   assert.deepEqual(seen, ['slam', 'lit', 'switch', 'spinner', 'jelly', 'googly', 'tiles']);
-  assert.ok(state.prefs.get(state.personId) && 'padSkin' in state.prefs.get(state.personId).values, 'kept as the person\'s setting');
+  assert.ok(state.prefs.get(state.personId) && 'kidsPadSkin' in state.prefs.get(state.personId).values, 'kept as the person\'s own Kids setting');
   await setLevel('regular');
 });
 
-// Ben, 2026-10-16: one pad size per person, the same on Pads and on 🧸 Kids
-// at any level; Kids has the slider too (centered in its top bar), and a
-// pinch moves the same size.
-test('the pad size is the person\'s: the same on Pads and Kids, through a level change; two people keep their own', async () => {
+// Ben, 2026-10-16: a pad size per person, with a slider centered in Kids'
+// top bar and a pinch. Council round 1 (2026-10-26): Kids keeps its own
+// (`kidsPadSize`), so a kid's pinch never resizes the grown-up's Pads.
+test('the Kids pad size is the person\'s own, through a level change, and two people keep their own; Pads\' size is another', async () => {
   const { getSetting, setSetting } = await import('../web/settings.js');
   const people = () => $('#people').querySelectorAll('[data-person]');
   await setLevel('regular');
   people()[0].dispatch('click');
-  await setSetting('padSize', 0.3);
+  await setSetting('kidsPadSize', 0.3);
+  await setSetting('padSize', 0.6);
   people()[1].dispatch('click');
   await page.settle();
-  await setSetting('padSize', 0.8);
+  await setSetting('kidsPadSize', 0.8);
   people()[0].dispatch('click');
   await page.settle();
-  assert.equal(getSetting('padSize'), 0.3, 'the first person kept theirs');
-  assert.equal($('#pads-size-slider').value, '30');
+  assert.equal(getSetting('kidsPadSize'), 0.3, 'the first person kept theirs');
+  assert.equal(getSetting('padSize'), 0.6, 'and Pads\' size is its own');
+  assert.equal($('#pads-size-slider').value, '60', 'Pads shows its own');
   await toKids();
   $('[data-kids-tab="pads"]').dispatch('click');
-  assert.equal(getSetting('padSize'), 0.3, 'a level change keeps it');
-  assert.equal($('#kids-size-slider').value, '30', 'Kids\' slider shows the same size');
+  assert.equal(getSetting('kidsPadSize'), 0.3, 'a level change keeps it');
+  assert.equal($('#kids-size-slider').value, '30', 'Kids\' slider shows Kids\' size');
   const { kidsPadPx } = await import('../web/kids-logic.js');
   assert.equal($('#kids-pages').style.props['--kids-pad'], `${kidsPadPx(375, 520, 0.3)}px`, 'the pads are that size');
   people()[1].dispatch('click');
@@ -1004,10 +1006,10 @@ test('the pad size is the person\'s: the same on Pads and Kids, through a level 
   await setLevel('regular');
 });
 
-test('Kids\' slider and a pinch keep the person\'s pad size, and the pads follow as they move', async () => {
+test('Kids\' slider and a pinch keep the person\'s Kids pad size, and the pads follow as they move', async () => {
   const { getSetting, setSetting } = await import('../web/settings.js');
   const { kidsPadPx, pinchShare } = await import('../web/kids-logic.js');
-  await setSetting('padSize', 0.5);
+  await setSetting('kidsPadSize', 0.5);
   await toKids();
   $('[data-kids-tab="pads"]').dispatch('click');
   const slider = $('#kids-size-slider');
@@ -1016,14 +1018,14 @@ test('Kids\' slider and a pinch keep the person\'s pad size, and the pads follow
   slider.value = '90';
   slider.dispatch('input');
   assert.equal($('#kids-pages').style.props['--kids-pad'] ?? '', `${kidsPadPx(375, 520, 0.9)}px`, 'the pads grow as it moves');
-  assert.equal(getSetting('padSize'), 0.5, 'kept only when it lets go');
+  assert.equal(getSetting('kidsPadSize'), 0.5, 'kept only when it lets go');
   slider.dispatch('change');
   await page.settle();
-  assert.equal(getSetting('padSize'), 0.9);
+  assert.equal(getSetting('kidsPadSize'), 0.9);
   // Two fingers spread: bigger, smoothly; kept as the fingers lift.
   const pages = $('#kids-pages');
   const touch = (x) => [{ clientX: 100, clientY: 100 }, { clientX: 100 + x, clientY: 100 }];
-  await setSetting('padSize', 0.5);
+  await setSetting('kidsPadSize', 0.5);
   pages.dispatch('touchstart', { touches: touch(100) });
   pages.dispatch('touchmove', { touches: touch(80) });
   const want = pinchShare(0.5, 100, 80, 375, 520);
@@ -1031,8 +1033,50 @@ test('Kids\' slider and a pinch keep the person\'s pad size, and the pads follow
   assert.equal(slider.value, String(Math.round(want * 100)), 'the slider follows the pinch');
   pages.dispatch('touchend', { touches: [] });
   await page.settle();
-  assert.equal(getSetting('padSize'), want);
+  assert.equal(getSetting('kidsPadSize'), want);
   await setLevel('regular');
+});
+
+// Council round 1 (pre-reader, child psychologist; Ben, 2026-10-26): a
+// kid's visit changed the grown-up's pad size, skin and Notes instrument,
+// because Kids wrote the same settings as Pads and 🎹 Who plays. Kids keeps
+// its own, and the page wears Kids' skin only while Kids shows.
+test('a Kids visit leaves the grown-up\'s pad size, skin and instrument as they were; Kids keeps its own', async () => {
+  const { getSetting, setSetting } = await import('../web/settings.js');
+  await setLevel('regular');
+  await setSetting('padSize', 0.7);
+  await setSetting('padSkin', 'jelly');
+  await setSetting('instNotes', 'marimba');
+  await setSetting('kidsPadSkin', 'tiles');
+  await setSetting('kidsPadSize', 'auto');
+  await setSetting('kidsInstNotes', 'pluck');
+  const root = () => document.documentElement.getAttribute('data-skin');
+  assert.equal(root(), 'jelly', 'the grown-up\'s skin on the regular app');
+  await toKids();
+  assert.equal(root(), null, 'Kids\' own skin (Tiles) while Kids shows');
+  $('[data-kids-tab="pads"]').dispatch('click');
+  $('#kids-skin').dispatch('click');
+  await page.settle();
+  assert.equal(root(), 'slam', 'a tap on 🎨 changes Kids\' skin');
+  const slider = $('#kids-size-slider');
+  slider.value = '90';
+  slider.dispatch('input');
+  slider.dispatch('change');
+  await page.settle();
+  $('[data-kids-tab="keys"]').dispatch('click');
+  $('#kids-inst').dispatch('click');
+  await page.settle();
+  assert.equal(getSetting('kidsPadSkin'), 'slam');
+  assert.equal(getSetting('kidsPadSize'), 0.9);
+  assert.equal(getSetting('kidsInstNotes'), 'piano');
+  assert.equal(getSetting('padSkin'), 'jelly', 'the grown-up\'s skin is untouched');
+  assert.equal(getSetting('padSize'), 0.7, 'and their pad size');
+  assert.equal(getSetting('instNotes'), 'marimba', 'and their instrument');
+  await setLevel('regular');
+  assert.equal(root(), 'jelly', 'back in the regular app, the grown-up\'s skin is on again');
+  await setSetting('padSkin', 'tiles');
+  await setSetting('padSize', 'auto');
+  await setSetting('instNotes', 'pluck');
 });
 
 // ● on the Keys screen: 3, 2, 1 at the beat's tempo, the beat goes round
@@ -1048,7 +1092,7 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   const { scratchOf } = await import('../web/scratch.js');
   const { pillSeconds: pill, tuneRowOf: tuneOf } = await import('../web/kids-logic.js');
   await setLevel('regular');
-  await setSetting('instNotes', 'piano');
+  await setSetting('kidsInstNotes', 'piano');
   await toKids();
   // A running audio clock, and sounds that "load" and play silently.
   const ctx = audio.context();

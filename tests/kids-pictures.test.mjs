@@ -69,7 +69,7 @@ test('🔊 Pads: no pad, button or tab shares a picture, in any skin, with a kid
   await tab('pads');
   let pads = [];
   for (const skin of SKINS) {
-    await setSetting('padSkin', skin.id);
+    await setSetting('kidsPadSkin', skin.id);
     await page.settle();
     await tab('pads');
     pads = $('#kids-pages').querySelectorAll('.kids-pad').map((p) => p.textContent);
@@ -78,7 +78,7 @@ test('🔊 Pads: no pad, button or tab shares a picture, in any skin, with a kid
   }
   assert.ok(pads.length >= KIDS_PADS.length + KIDS_EMOJI.length, `every recording and every preset is a pad: ${pads.length}`);
   for (const emoji of KIDS_EMOJI) assert.ok(pads.includes(emoji), `${emoji} is a pad`);
-  await setSetting('padSkin', 'tiles');
+  await setSetting('kidsPadSkin', 'tiles');
 });
 
 test('🎙️ Record: the mic, the three voices and the last sound are four pictures, none a tab\'s', async () => {
@@ -107,7 +107,7 @@ test('🥁 Beats: ▶️ (and what it shows while playing), 🐢, 🏃 and the f
 test('🎹 Keys: the round button, ●, and the five fruits are different on every instrument; a high key is its low key\'s fruit with ✦', async () => {
   const { setSetting } = await import('../web/settings.js');
   for (const id of KIDS_INSTRUMENTS) {
-    await setSetting('instNotes', id);
+    await setSetting('kidsInstNotes', id);
     await page.settle();
     await tab('keys');
     const inst = text('#kids-inst');
@@ -128,7 +128,7 @@ test('🎹 Keys: the round button, ●, and the five fruits are different on eve
     const pictures = [...chrome(), inst, text('#kids-rec-face'), ...low];
     assert.equal(repeats(pictures).length, 0, `${id}: ${repeats(pictures).join(', ')}`);
   }
-  await setSetting('instNotes', KIDS_INSTRUMENTS[0]);
+  await setSetting('kidsInstNotes', KIDS_INSTRUMENTS[0]);
 });
 
 test('a kid\'s new sounds take pictures no screen uses: 28 different ones, none a preset pad\'s or button\'s', () => {

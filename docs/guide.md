@@ -127,7 +127,7 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   2026-10-22). A preset a grown-up hid in ✏️ Edit sounds stays hidden here
   too. Swipe sideways for more pages (👈 👉 with a mouse, pointing the way; ▶️ is Play on Beats). The top
   bar's slider, centered between 🎨 and ⚙️, makes them bigger or smaller,
-  smoothly: the person's own `padSize`, the same one as Pads' slider, between
+  smoothly: the person's own `kidsPadSize` (Pads' slider keeps `padSize`: a kid's visit never changes a grown-up's), between
   Kids' own ends (four across a phone, four per 560 px wider, up to one pad
   filling the line; `auto` is three across). Pads are square at an exact size,
   as many as fit, the room left shared evenly (`kids-logic.js` `kidsPadPx`,
@@ -135,7 +135,8 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   it is kept as the fingers lift. An older copy's `kids-size` in localStorage
   is ignored. A tap plays from the start; no holding or looping. The round button at the top left shows the
   person's pad skin; each tap moves to the next one (Tiles after Googly eyes)
-  and keeps it, as ⚙️ Settings → 🎨 Look would.
+  and keeps it as `kidsPadSkin`, Kids' own (⚙️ Settings → 🎨 Look is the
+  regular app's `padSkin`; the page wears Kids' skin only while Kids shows).
 - **🎙️ Record**: tap the big mic (🎤, as 🎙️ is the tab) and it counts 3, 2, 1 on its face (a beep
   each), then listens until the next tap; or hold it and let go to stop
   (Ben, 2026-10-22: "both should be capable"). A press under 350 ms is a tap
@@ -187,7 +188,7 @@ five-year-old, with no words to read and nothing to delete, edit or share:
   button at the top left, like Pads' skin button, shows who plays them by
   its picture; each tap moves to the next of Pluck, Piano, Marimba, Steel
   drum and Kalimba (`KIDS_INSTRUMENTS`; round again), keeps it as the
-  person's `instNotes`, so each key plays its note on that instrument
+  person's `kidsInstNotes` (🎹 Who plays on Notes keeps `instNotes`), so each key plays its note on that instrument
   (`keyKitId`), keeping its fruit, and plays a C on it so the change is
   heard. Every key wears the same picture small at its far end (the left end
   on a phone, the top on a wide screen), so the whole screen says who plays

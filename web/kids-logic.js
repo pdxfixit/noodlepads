@@ -40,8 +40,9 @@ export function typeDigit(typed, digit, answer) {
 
 // ── Picture pads ──
 
-// Pad size: the person's own `padSize` (settings.js), the same one Pads'
-// slider keeps (Ben, 2026-10-16): 'auto', or 0 to 1 between this screen's
+// Pad size: the person's own `kidsPadSize` (settings.js; Pads' slider keeps
+// `padSize`, a separate one: a kid's pinch never resizes a grown-up's pads):
+// 'auto', or 0 to 1 between this screen's
 // smallest and biggest pads. Kids has its own ends: the smallest is four
 // across a phone (four per 560 px on a wider screen), the biggest one pad
 // filling the line (or the box's height, whichever is less). Between them
@@ -426,9 +427,9 @@ export const isHighKey = (k) => (k.up || 0) >= 12;
 
 // Who plays the toy keys (ADR 0030): the round button at the top left moves
 // along this kid-sized list of the Notes instruments, round to Pluck again.
-// The pick is the person's own `instNotes`, the same one 🎹 Who plays on
-// Notes keeps, so an instrument picked elsewhere plays here too; a tap from
-// one not in this list starts it again at Pluck.
+// The pick is the person's own `kidsInstNotes`, apart from the `instNotes`
+// 🎹 Who plays on Notes keeps (a kid's tap never changes the grown-up's
+// instrument); a tap from one not in this list starts it again at Pluck.
 export const KIDS_INSTRUMENTS = ['pluck', 'piano', 'marimba', 'steel', 'kalimba'];
 // The picture an instrument wears in Kids: its own, except the piano's 🎹,
 // which is the Keys tab's, so it wears 🎼 here.

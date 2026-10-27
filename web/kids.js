@@ -5,8 +5,10 @@
 // beat, for a grown-up to keep (kids-logic.js, "● Record"). Nothing here deletes, edits, shares or opens Settings;
 // the ⚙️ gear in its usual corner asks a grown-up sum first (the Settings
 // gate, settings-ui.js). The Pads screen's round button at the top left
-// moves to the next pad skin (skins.js), the person's own `padSkin`, as
-// ⚙️ Settings → 🎨 Look would (Ben, 2026-10-16). The pure parts are in
+// moves to the next pad skin (skins.js), the person's own `kidsPadSkin`:
+// Kids keeps its own look, size and instrument, so a kid's visit never
+// changes what a grown-up set on Pads and Notes (council round 1,
+// 2026-10-26; before, it moved `padSkin`, `padSize` and `instNotes`). The pure parts are in
 // kids-logic.js.
 //
 // A new kid's first steps have no words (ADR 0028, tips.js kidsHint): a 👆
@@ -15,7 +17,7 @@
 // motion, and each shows once per person.
 //
 // Remembered on the device: the tab (`kids-tab`). The pad size is the
-// person's own `padSize`, shared with Pads (Ben, 2026-10-16): the slider in
+// person's own `kidsPadSize` (Pads keeps its own `padSize`): the slider in
 // the top bar and a pinch both move it, smoothly. An older copy kept a
 // device size in localStorage `kids-size`; it is ignored.
 
@@ -99,7 +101,7 @@ let page = 0;
 let pageCount = 1;
 
 const boxSize = () => ({ width: el.pages.clientWidth || 375, height: el.pages.clientHeight || 520 });
-const sizeNow = () => live ?? getSetting('padSize');
+const sizeNow = () => live ?? getSetting('kidsPadSize');
 let drawn = null;   // {cols, rows, count} of the pages drawn: a size that keeps them only resizes the pads
 
 // The pads at the person's size: square, exact px, as many as fit; the room
@@ -162,7 +164,7 @@ function goPage(n) {
 // 🎨 The skin button shows the person's skin's picture; a tap moves to the
 // next one, round to Tiles again after Googly eyes.
 function showSkinButton() {
-  const skin = SKINS.find((s) => s.id === getSetting('padSkin')) ?? SKINS[0];
+  const skin = SKINS.find((s) => s.id === getSetting('kidsPadSkin')) ?? SKINS[0];
   el.skin.textContent = skin.emoji;
   el.skin.dataset.skin = skin.id;
 }
@@ -170,7 +172,7 @@ function showSkinButton() {
 async function nextLook() {
   boing(el.skin);
   try {
-    await setSetting('padSkin', nextSkin(getSetting('padSkin')));
+    await setSetting('kidsPadSkin', nextSkin(getSetting('kidsPadSkin')));
   } catch (err) {
     console.error('Changing the look failed:', err);
   }
@@ -190,7 +192,7 @@ function resize() {
 async function keepSize(share) {
   live = null;
   try {
-    if (share !== getSetting('padSize')) await setSetting('padSize', share);
+    if (share !== getSetting('kidsPadSize')) await setSetting('kidsPadSize', share);
   } catch (err) {
     console.error('Saving the pad size failed:', err);
   }
@@ -202,7 +204,7 @@ function wireSize() {
   el.sizeSlider.addEventListener('input', () => { live = picked(); resize(); });
   el.sizeSlider.addEventListener('change', () => keepSize(picked()));
   // Pads' slider, another device or a loaded backup changed it.
-  onSetting('padSize', () => { if (live === null) { resize(); const { width, height } = boxSize(); el.sizeSlider.value = String(kidsSliderAt(width, height, sizeNow())); } });
+  onSetting('kidsPadSize', () => { if (live === null) { resize(); const { width, height } = boxSize(); el.sizeSlider.value = String(kidsSliderAt(width, height, sizeNow())); } });
 }
 
 function wirePads() {
@@ -785,18 +787,18 @@ const held = new Map();   // pointer id (or 'kb-<letter>') -> key index
 function keyClip(i) {
   const all = deps.clips({ includeHidden: true, allPresets: true });
   const k = KIDS_KEYS[i];
-  const want = keyKitId(k, getSetting('instNotes'));
+  const want = keyKitId(k, getSetting('kidsInstNotes'));
   return all.find((c) => c.kitId === want) ?? all.find((c) => c.kitId === k.note) ?? null;
 }
 
 // 🎹 The instrument button shows who plays the keys, by its picture; a tap
 // moves to the next one (kids-logic.js KIDS_INSTRUMENTS), kept as the
-// person's `instNotes`, and plays a C on it, so the change is heard. Every
+// person's `kidsInstNotes`, and plays a C on it, so the change is heard. Every
 // key wears the same picture small at its end, so the whole screen says who
 // plays (Ben, 2026-10-22: the toggle "should be far more indicative of
 // whatever the mode currently playing is"). No words: the instrument's name
 // is only for a screen reader.
-const keysInstrument = () => instrumentById(getSetting('instNotes')) ?? instrumentById(PLAYED.notes.default);
+const keysInstrument = () => instrumentById(getSetting('kidsInstNotes')) ?? instrumentById(PLAYED.notes.default);
 function showInstButton() {
   const inst = keysInstrument();
   el.inst.textContent = instPicture(inst);
@@ -808,7 +810,7 @@ async function nextInstrument() {
   boing(el.inst);
   releaseKeys();
   try {
-    await setSetting('instNotes', nextKidsInstrument(getSetting('instNotes')));
+    await setSetting('kidsInstNotes', nextKidsInstrument(getSetting('kidsInstNotes')));
   } catch (err) {
     console.error('Changing the instrument failed:', err);
     return;
@@ -1109,12 +1111,12 @@ export function initKids(d) {
   el.stop.addEventListener('click', stopAll);
   el.skin.addEventListener('click', nextLook);
   showSkinButton();
-  onSetting('padSkin', showSkinButton);
+  onSetting('kidsPadSkin', showSkinButton);
   el.inst.addEventListener('click', nextInstrument);
   showInstButton();
   // A new instrument: the button shows it, and the keys play it (each key
   // the same note, so its fruit stays).
-  onSetting('instNotes', () => { showInstButton(); if (showing && tab === 'keys') renderKeys(); });
+  onSetting('kidsInstNotes', () => { showInstButton(); if (showing && tab === 'keys') renderKeys(); });
   wirePads();
   wireSize();
   wireRecord();

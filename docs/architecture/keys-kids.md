@@ -337,7 +337,7 @@ Kids writes it with `deps.saveBeat` (`state.savedBeats` + `persist('beats')`). I
 ### The toy keys and ● tune
 
 - `KIDS_KEYS`: C D E G A, then high C D E (pentatonic). A high key plays its low note at `keyRate` (2×) under its own play id (`keyPlayId`, `<clipId>+12`), so both can sound.
-- The instrument button cycles `KIDS_INSTRUMENTS` and writes the person's `instNotes`, the same setting 🎹 Who plays on Notes keeps. `keyClip` finds `keyKitId(k, inst)` among `clips({ includeHidden: true, allPresets: true })`.
+- The instrument button cycles `KIDS_INSTRUMENTS` and writes the person's `kidsInstNotes`, apart from the `instNotes` 🎹 Who plays on Notes keeps. `keyClip` finds `keyKitId(k, inst)` among `clips({ includeHidden: true, allPresets: true })`.
 - Keyboard: `kidsKeydown` maps `e.key` a s d f g h j k (not `rhythm.js keyFor`); Esc or Space stops all; ← → turn pages. On a focused button Enter's repeats are taken (`util.js onePressOneClick` on `#kids`, from `initKids`), so a held Enter clicks once. `.kids :focus-visible` is a white outline off the button (outline only, so its own shadows show); a playhead square keeps its yellow, doubled (6 px, no offset); `.kids-beat` is padded 12 px so neither ring is clipped, a pressed square's 1.08 scale too.
 - ● (`startTune`): grows the beat to 4 bars, books 3 beeps on the audio clock, then `playBeat({ from: t0, onPass })`; the recording stops as the beat comes round once (`onPass`, from the run `playBeat` starts for it), at the next ● tap, ⏹️, a tab change, or leaving. A key held during it lands on lift (`landNote`): `kids-logic.js pillAt` over `totalOf(beat)` (nearest pill of the beat's own bars, no latency moved), length the pills held (1–16), `withTuneNote` (the first note of a new recording starts the tune again, after `keepOldTune` puts the beat with the tune it replaces in 🗂️ Beats: `kids-logic.js keptTune`, a fun name from `names.js beatName`).
 
@@ -347,7 +347,7 @@ Kids writes it with `deps.saveBeat` (`state.savedBeats` + `persist('beats')`). I
 |---|---|
 | People, sounds | `deps.clips` = `board.js clipsFor(state.personId, opts)` |
 | Beats | the scratch beat in `state.savedBeats` |
-| Settings (person scope) | `padSize` (with 🔊 Pads), `padSkin` (with ⚙️ 🎨 Look), `instNotes` (with 🎹 Who plays), `seen` (`tips.js kidsHint`, `markSeen`) |
+| Settings (person scope) | `kidsPadSize`, `kidsPadSkin`, `kidsInstNotes` (Kids' own; Pads, ⚙️ 🎨 Look and 🎹 Who plays keep `padSize`, `padSkin`, `instNotes`), `seen` (`tips.js kidsHint`, `markSeen`) |
 | Sound | `audio.js` (`play`, `stop`, `stopAll`, `load`, `decode`, `wake`, `master`, `trimBounds`, `dropRendered`) and the beat engine (`beat-engine.js play`, which makes the voices) |
 | The beat's rules | `beat.js` (`STEPS`, `outputDelay`, `hitsDue`, …) |
 | Helpers | `finger.js`, `grown-up.js`, `names.js soundName`, `log.js`, `play-count.js` (`'kids'`), `skins.js` |
@@ -383,7 +383,7 @@ Three: `sequencer.js play({ countIn })` blips (● Record into the beat, shown b
 
 ### Instruments (ADR 0030)
 
-Defaults on the keys and the default touch layout use the groups' own sounds (`clipsFor(…, { ownSounds: true })`). Editors show the picked instrument's sounds. Kids' toy keys follow `instNotes`. `app.js` redraws the keys on each `PLAYED` setting.
+Defaults on the keys and the default touch layout use the groups' own sounds (`clipsFor(…, { ownSounds: true })`). Editors show the picked instrument's sounds. Kids' toy keys follow `kidsInstNotes`. `app.js` redraws the keys on each `PLAYED` setting.
 
 ### Undo
 
@@ -454,7 +454,7 @@ Worked out in four places: `beat.js outputDelay`; `app.js` `deps.latency` for th
 | Nothing of the grown-up app sounds in Kids (the keys' ⏲️, a take playing back, the beat, the song, a loop), on the way in and at start-up; Kids' ⏹️ quiets the whole app and keeps the grown-up's ⏲️ choices (one tick already booked as Kids shows, up to 0.1 s, still sounds) | `kids-quiet.test.mjs`, `kids-quiet-start.test.mjs` |
 | A held Enter on a Kids button clicks it once; a finger's tap and its click play a pad once | `kids-keyboard-repeat.test.mjs` |
 | Kids' square *i* is pill 2*i* of a 16-pill bar, in every bar | `kids.test.mjs` |
-| Kids' keys mean `instNotes` changes for the whole person | `kids.test.mjs` (🎹 instrument button) |
+| A Kids visit changes none of the grown-up's `padSize`, `padSkin` or `instNotes`: Kids has `kidsPadSize`, `kidsPadSkin`, `kidsInstNotes` | `kids.test.mjs` (a Kids visit leaves the grown-up's…) |
 | `kids-logic.js` stays importable in Node; it imports `beat.js`, so that module must stay importable too | every Kids unit test |
 | `kidsHint` shows only at level Kids: a Regular person on a 🧸 visit gets no 👆 hand or mic wiggle | `kids-hints.test.mjs` ("Regular and Advanced never get the hand") |
 | The page's keydown stands down behind any open dialog, so the grown-up sum gets no toy-key presses | no test found |

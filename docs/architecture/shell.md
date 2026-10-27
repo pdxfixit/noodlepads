@@ -69,7 +69,7 @@ outside a browser).
 | 8 | `followUsage`: the usage switch from settings, and on change | settings loaded |
 | 9 | Meter wiring: `meter.grille`, `meter.setProgress = pads.js setProgress`, `audio.on.started = meter.run`, `meter.onLevel` → `dj.level` | nothing |
 | 10 | Every `init*`/`create*` call ([below](#the-composition-root)), screens first, then `seq`, `song`, `dj`, 🎧, 🧸 | nothing |
-| 11 | `onSetting('level', applyKids)`; `showSkin(el.root, getSetting('padSkin'))` and `onSetting('padSkin', …)` | nothing |
+| 11 | `onSetting('level', applyKids)`; `applySkin` (`showSkin(el.root, …)`: `kidsPadSkin` while Kids shows, else `padSkin`) and `onSetting('padSkin' / 'kidsPadSkin', applySkin)` | nothing |
 | 12 | `bindEvents` (page keys, toolbar, hashchange, the first-gesture `audio.wake`); `watchTips(document.body)` | nothing |
 | 13 | `setPerson(hash or remembered person, else the first)`: the first draw of the board; `started = true` | a PIN may hold it (see [who is showing](#who-is-showing)) |
 | 14 | `loadVersion()` (not awaited); `registerOffline()` (the service worker, after `load`) | network, in the background |
@@ -452,7 +452,7 @@ pad skin. Only a pick closes it (`showPerson` calls `closeWhoNow`).
 
 ### Pad skins and the backdrop
 
-- **Skins:** the person setting `padSkin` (values `skins.js SKIN_IDS`).
+- **Skins:** the person settings `padSkin` and, for 🧸 Kids, `kidsPadSkin` (values `skins.js SKIN_IDS`).
   `app.js` calls `skins.js showSkin(el.root, …)` at start and on every
   change (which includes a person switch, a backup and a sync, through
   `followPerson`/`notifyAllSettings`). Tiles removes `data-skin`.
