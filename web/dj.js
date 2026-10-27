@@ -481,7 +481,7 @@ export function createDJ({ el, deps }) {
   let gridSpeakers = null;   // the grid's speakers and their loudness popover (renderGrid draws them)
   let gridMenus = null;      // the rows' menus, each opened by its emoji (overflow.js)
   let replay = [];       // timers of a take being played back
-  let booked = [];       // the plays it booked on the audio clock (deps.bookPlay's voices)
+  const booked = new Set();   // the plays it booked on the audio clock (deps.bookPlay's voices), until each ends
   let replaying = null;  // the id of the take playing back, or null
   let replayRun = null;  // that playback, so one stopped while loading never starts
   // How far ahead of now a take's first hit is booked: time to book the rest.
@@ -624,9 +624,9 @@ export function createDJ({ el, deps }) {
     const t0 = deps.now() + REPLAY_LEAD;
     for (const { clipId, at, end } of planTake(take, new Map([...loaded].map(([id, l]) => [id, l.duration])))) {
       const voice = deps.bookPlay(loaded.get(clipId), t0 + at, end == null ? null : t0 + end);
-      booked.push(voice);
+      booked.add(voice);
       // Sounded and done: nothing left of it to cut.
-      if (voice?.src) voice.src.onended = () => { booked = booked.filter((v) => v !== voice); };
+      if (voice?.src) voice.src.onended = () => booked.delete(voice);
     }
     const later = (at, fn) => replay.push(setTimeout(fn, Math.max(0, (at - deps.now()) * 1000)));
     for (const e of take.events) {
@@ -638,7 +638,7 @@ export function createDJ({ el, deps }) {
       });
     }
     // Done when the take is: a moment after its last event, for the last sound to ring.
-    later(t0 + take.duration + 0.5, () => { replay = []; booked = []; replaying = null; replayRun = null; showPlaying(); });
+    later(t0 + take.duration + 0.5, () => { replay = []; booked.clear(); replaying = null; replayRun = null; showPlaying(); });
   }
   // Stops a take being played back: its timers, and every play it booked
   // (one still to come never sounds).
@@ -646,7 +646,7 @@ export function createDJ({ el, deps }) {
     replay.forEach(clearTimeout);
     replay = [];
     for (const voice of booked) deps.cutVoice(voice);
-    booked = [];
+    booked.clear();
     replaying = null;
     replayRun = null;
     showPlaying();
