@@ -1155,8 +1155,9 @@ A song file 🎧 From a song listens to must be under 20 MB (a 20-minute MP3; a 
 only its first 15 minutes are heard: it is decoded whole, in memory
 (`web/listen-input.js`).
 
-The cloud checks everything it is sent, too (`worker/cloud.js` `LIMITS`), so
-one device can't fill the free plan's 500 MB database for every family. A
+The cloud checks everything it is sent, too (`worker/cloud.js` `LIMITS`), and
+reads a body only after the key and the rate limit have passed (they need
+only the headers and the path), so one device can't fill the free plan's 500 MB database for every family. A
 sound is at most 25 MB; a profile's sounds at most 40 MB and everyone's 400
 MB. A record (a beat, a take…) is at most 512 KB of JSON, a push at most 4 MB
 and 200 records; a profile's records and share codes at most 10 MB and

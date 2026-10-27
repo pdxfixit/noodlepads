@@ -384,8 +384,8 @@ async function countKeys(request, env, id, now) {
 // /open never lock it, and a key alone can't cut the other devices off.
 async function forgetAllKeys(request, env, id, now) {
   if (request.headers.get('Origin') !== ORIGIN) throw new Refuse(403, 'origin');
-  const body = await readJson(request);
   await needKey(request, env, id, now);
+  const body = await readJson(request);
   const p = await getProfile(env, id);
   await needPin(env, p, body.pin, now, true);
   await env.DB.prepare('DELETE FROM keys WHERE profile_id = ?').bind(id).run();
@@ -393,8 +393,9 @@ async function forgetAllKeys(request, env, id, now) {
 }
 
 async function changeProfile(request, env, id, now, seen) {
-  const body = await readJson(request);
+  if (request.headers.get('Origin') !== ORIGIN) throw new Refuse(403, 'origin');
   await needKey(request, env, id, now);
+  const body = await readJson(request);
   const p = await getProfile(env, id);
   const out = { ok: true };
   // Remove PIN through the API is refused: leaving is a DELETE, which needs the
@@ -443,8 +444,9 @@ const dropProfileData = (env, id) => [
 ];
 
 async function deleteProfile(request, env, id, now) {
-  const body = await readJson(request);
+  if (request.headers.get('Origin') !== ORIGIN) throw new Refuse(403, 'origin');
   await needKey(request, env, id, now);
+  const body = await readJson(request);
   const p = await getProfile(env, id);
   await needPin(env, p, body.pin, now, true);
   await wipeProfile(env, id);
@@ -548,9 +550,10 @@ const release = (env, id, bytes) => (bytes ? settle(env, id, bytes).run().catch(
 // again, so two devices pushing the same record at once never lose one
 // edit. Without `since` (an older copy of the app), every record is written.
 async function push(request, env, id, now, seen) {
-  const body = await readJson(request, LIMITS.pushBytes);
+  if (request.headers.get('Origin') !== ORIGIN) throw new Refuse(403, 'origin');
   await needKey(request, env, id, now);
   await slowDown(env, LIMITERS.records, id);
+  const body = await readJson(request, LIMITS.pushBytes);
   Object.assign(seen, { kind: 'push', profile: id });
   const put = Array.isArray(body.put) ? body.put : [];
   const del = Array.isArray(body.del) ? body.del : [];
@@ -699,9 +702,10 @@ async function need(env, soundId, chunks) {
 }
 
 async function startSound(request, env, id, now) {
-  const body = await readJson(request);
+  if (request.headers.get('Origin') !== ORIGIN) throw new Refuse(403, 'origin');
   await needKey(request, env, id, now);
   await slowDown(env, LIMITERS.sounds, id);
+  const body = await readJson(request);
   const { sha256, bytes, mime } = body;
   if (!SHA.test(sha256 ?? '')) throw new Refuse(400, 'sha256');
   if (!Number.isInteger(bytes) || bytes < 1 || bytes > MAX_SOUND_BYTES) throw new Refuse(413, 'size');
@@ -808,9 +812,10 @@ async function ownSounds(env, profileId, soundIds) {
 // Every sound it names must be the profile's own, whole. The same snapshot
 // shared again gets its code back. -> {code}
 async function makeShare(request, env, id, now, seen) {
-  const body = await readJson(request, LIMITS.shareBytes + 4096);
+  if (request.headers.get('Origin') !== ORIGIN) throw new Refuse(403, 'origin');
   await needKey(request, env, id, now);
   await slowDown(env, LIMITERS.shares, id);
+  const body = await readJson(request, LIMITS.shareBytes + 4096);
   if (!SHARE_KINDS.includes(body.kind)) throw new Refuse(400, 'kind');
   const title = typeof body.title === 'string' ? cutName(body.title.trim()).trim() : '';
   if (!title) throw new Refuse(400, 'title');
@@ -920,8 +925,9 @@ async function unshare(request, env, id, raw, now) {
 // retrying for as long as the page stays open. Remove this route (and its
 // test) about 2026-11-16, when no copy is left.
 async function takeUses(request, env, id, now) {
-  await readJson(request, 32_768);
+  if (request.headers.get('Origin') !== ORIGIN) throw new Refuse(403, 'origin');
   await needKey(request, env, id, now);
+  await readJson(request, 32_768);
   return json(200, { ok: true });
 }
 
