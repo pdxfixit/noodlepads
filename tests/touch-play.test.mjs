@@ -56,7 +56,7 @@ test('⌨️ / 👆: the keys on a wide screen until the kid picks; 👆 shows t
   assert.equal($('#dj-touch').hidden, false);
   // The default: Pip's own sounds, then 🎸 Band (Chords, Drums, Bass).
   const who = $('#dj-touch').querySelectorAll('.touch-head-inst');
-  assert.deepEqual(who.map((w) => w.textContent), ['⚡', '⚡'], 'Chords and Bass show who plays them; Sounds and Drums do not');
+  assert.deepEqual(who.map((w) => w.textContent), ['(Synth)', '(Synth)'], 'Chords and Bass show who plays them; Sounds and Drums do not');
   assert.equal($('#dj-touch').querySelectorAll('.touch-head')[1].getAttribute('aria-label'), 'Chords: played by Synth', 'the words are in the label');
   assert.deepEqual(heads(), ['🎤 Sounds', '🎶 Chords', '🥁 Drums', '🎸 Bass']);
   assert.deepEqual($('#dj-touch').querySelectorAll('.touch-band').map((b) => b.dataset.size), ['m', 'm', 'l', 's']);
