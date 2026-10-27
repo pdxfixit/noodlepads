@@ -19,7 +19,7 @@ things in one line per control.
 - [Installing it](#installing-it), and opening it with no network
 ## Pads and the sound sheet
 
-A music studio anyone can pick up, starting as a soundboard: everyone gets a board of their own. Tap a
+Noodle Pads is a music studio anyone can pick up: kids, families, and grown-ups who love music but don't have the time for a pro studio. It starts as a soundboard (tap a pad, make a noise, annoy your family), and every next tool is one tap from what you are already playing with, so you learn by goofing around, never by lessons. No ads. No required account. No social feed. No AI makes the music for you. What we measure is only to make the app better. Everyone gets a board of their own. Tap a
 pad, hear the sound; hold it (or Shift-click it) and it keeps repeating (tap it again to stop), so several can loop at once. On a touch screen a pad sounds as the finger lifts, if it stayed put, so a scroll that starts on a pad never plays it (`finger.js`; 🧸 Kids pads too); a mouse plays on press. Record a one-liner ("GREAT!", "YOU LOSE!"), then make it
 silly with a voice: Loud, Chipmunk, Fast, Slow, Monster, Robot, Stadium, Walkie-talkie,
 Underwater, Alien, Clones, Stutter or Backwards. The sound sheet draws the

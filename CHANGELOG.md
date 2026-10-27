@@ -34,6 +34,8 @@ computer, at https://noodlepads.com/.
   hop and reggae to chiptune.
 - ⌨️ Keys: play sounds like a keyboard right under your beat, and ● Record
   what you play into it.
+- 🎷 Swing: lean the eighth notes into a skip, for Regular as well as
+  Advanced. The tempo is one row, 🐢 slow to 🐇 fast, on every bar.
 - 🎹 The piano roll: write a tune note by note.
 - 🎚️ The mixer: a fader, Mute, Solo and an effect for every row of a beat.
 - 🎼 Song: line up your beats on lanes into a whole song.
@@ -50,21 +52,36 @@ computer, at https://noodlepads.com/.
   a simple beat and toy keys, with no reading needed), Regular, or Advanced
   (more beat and sound tools). A beat made on 🥁 Beats sounds the same in
   🧸 Kids: its tune in tune, its loud hits and its swing.
+- 🧸 Kids is gentler: a new beat starts with a kick and a snare already lit,
+  its drums are kick, snare, shaker and clap, the startling sounds (explosion,
+  siren, alarm, airhorn, evil laugh, buzzer) wait on the last pad page, and a
+  kept tune's name carries a 🧸.
 - ☁️ The cloud: a grown-up can put a person's board in the cloud, with a PIN,
-  so it opens on another device too. Nobody goes there by themselves. Remove
+  so it opens on another device too. Nobody goes there by themselves. A busy
+  cloud says "busy right now" and tries again in a minute. Remove
   the PIN, or switch ☁️ off, to bring their latest back and keep them on this
   device only (their shared links stop working).
-- Share a sound or a beat with a code.
+- Share a sound or a beat with a code. 🔗 Share always asks the PIN first.
+- ⬇️ Audio file saves a beat or a song as a WAV file you can send to anyone.
 
 **For grown-ups**
 - 💾 Save a backup of everything, or of one person, to a file, and load it on
-  any device.
+  any device. Older backups always load.
 - ⚙️ Settings: each person's level and pad skin, sharing, backups and the data
-  switches. Leaving 🧸 Kids and sending feedback ask a grown-up sum first.
+  switches. Leaving 🧸 Kids, 🔑 Forget this device and sending feedback ask a
+  grown-up sum first.
+- 🔑 Remember on this device keeps a person open with no PIN until you tap
+  Forget. 🔑 Forget all devices cuts every other device off without a new PIN.
+  The PIN pad says how many tries are left and how long to wait.
+- New cloud profiles are limited to 3 a day for each network address, so one
+  visitor cannot use them all up.
 - 📊 Play data (on unless you turn it off) counts what gets used; 📮 problem
-  reports (off unless you turn them on) say what went wrong. Neither ever
-  includes sounds or names. The Privacy policy, linked beside the version,
-  says exactly what leaves the device.
+  reports (on unless you turn them off; they stop whenever Play data is off)
+  say what went wrong. Neither ever includes sounds or names. The Privacy
+  policy, linked beside the version, says exactly what leaves the device.
+- ✏️ Layout folds its layouts and grids away until you want them.
+- A browser too old for Noodle Pads says so plainly instead of showing a blank
+  page.
 - Feedback (⚙️ Settings → About) sends us a note.
 - Install it from the browser like an app; after one visit it opens with no
   network.

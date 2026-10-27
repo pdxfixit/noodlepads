@@ -1,11 +1,15 @@
 # Noodle Pads 🔊
 
-A music studio anyone can pick up, starting as a soundboard: tap a pad to
-play a sound, record your own, make it silly with a voice, and build beats and
-songs. Everyone in the family gets a board of their own.
+A music studio anyone can pick up: kids, families, and grown-ups who love
+music but don't have the time for a pro studio. It starts as a soundboard: tap
+a pad, make a noise, annoy your family. Every next tool is one tap away, so you
+learn by goofing around, never by lessons: record your own sounds, add silly
+voices, make beats and whole songs. Goofing around counts as much as finishing
+a song. Everyone in the family gets a board of their own.
 
 **Play it at https://noodlepads.com**, on a phone, a tablet or a computer.
-Nothing to install, no accounts.
+Nothing to install. No ads. No required account. No social feed. No AI makes
+the music for you. What we measure is only to make the app better.
 
 <p>
   <img src="docs/images/pads-phone.png" alt="The Pads screen on a phone: a New sound button, then the Drums presets as big colored pads" width="220">
