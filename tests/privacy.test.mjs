@@ -300,6 +300,17 @@ test('player metrics last 14 days, devices 90, and hold no IP, city or User-Agen
   assert.ok(!kept.includes('192.0.2.44') && !kept.includes('iPhone OS'), 'the IP and User-Agent are not');
 });
 
+// Ben, 2026-10-26: the words about player metrics and Cloudflare's beacon match the code.
+test('the play counts line matches the Worker\'s limits, and the beacon is the only outside origin', () => {
+  const line = claim('a profile in the cloud also counts');
+  assert.ok(line.includes(`Kept ${KEEP_MS / 86400000} days`) && line.includes(`a device's row ${DEVICE_KEEP_MS / 86400000} days`));
+  const headers = readFileSync(new URL('../web/_headers', import.meta.url), 'utf8');
+  const csp = headers.match(/Content-Security-Policy: (.+)/)[1];
+  const outside = csp.match(/https:\/\/[a-z.]+/g);
+  assert.deepEqual([...new Set(outside)].sort(), ['https://cloudflareinsights.com', 'https://static.cloudflareinsights.com'], 'the page counter is the only outside origin');
+  claim('only outside site');
+});
+
 // ADR 0026 (Ben, 2026-10-16): what the shared policy says of usage events, tied to the code.
 test('usage events go to the site only, from every device while Share play data is on, with fixed keys', async () => {
   assert.match(html, /<input type="checkbox" id="share-usage"> 📊 Share play data</, 'the checkbox the policy names is in Settings');
@@ -397,6 +408,9 @@ const SHARED = [
   ['deleting a profile names the real buttons, and share codes go with it', [/👥 People/, /Delete twice/, /☁️ Delete their cloud copy too/, /☁️ In the cloud/, /every share code it made/]],
   ['sharing ends at 🚫 Unshare or when the profile is deleted', [/🚫 Unshare/, /(sharer taps|until) 🚫 Unshare or their profile is deleted/]],
   ['a sound\'s link plays it for anyone, and is not secret', [/[Aa]nyone with a sound's link can play it|[Aa]nyone who has a sound's link can play it/, /not secret/]],
+  ['a cloud profile\'s play counts keep the country, device type and a scrambled device code, never an address or city, 14 days (a device 90) and our copy up to a year',
+    [/country/, /device type/, /scrambled code for each device/, /address or city/, /Kept 14 days/, /a device's row 90 days/, /up to a year/]],
+  ['Cloudflare counts page views, without cookies, and is the only outside site', [/counts page views, without cookies/, /only outside site|loads nothing from other sites but Cloudflare's page counter/]],
   ['a PIN is not security', [/PIN[^.]*not security|not security/]],
 ];
 for (const [name, patterns] of SHARED) {
