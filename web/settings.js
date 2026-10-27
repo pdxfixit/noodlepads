@@ -83,6 +83,11 @@ export const SETTINGS = {
   // press, so a change counts at once. Each person their own, in backups.
   // ✏️ Layout's drag has its own, shorter hold (finger.js DRAG_HOLD_MS).
   holdToLoop: { default: LOOP_HOLDS[0], values: LOOP_HOLDS, scope: 'person' },
+  // 🔁 Loop on the Pads bar (pads.js tapPad, dj.js): while on, a tap on a pad
+  // or key starts its loop and a tap on a looping one stops it, with no hold
+  // at all, for a hand that cannot hold still or a switch (accessibility
+  // seat; Ben, 2026-10-27). Each person their own, in backups.
+  tapToLoop: { default: false, values: [false, true], scope: 'person' },
   // 🧸 Kids' own size, look and instrument (council round 1, 2026-10-26): the
   // same choices as `padSize`, `padSkin` and `instNotes`, kept apart so a
   // kid's visit never changes what a grown-up set on Pads and Notes.

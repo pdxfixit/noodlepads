@@ -70,11 +70,13 @@
     </div>
     <div class="pads-bar" id="pads-bar">
       <!-- The top of the pads' panel, as 🎤 Live's ● Record · 🎬 Takes: Pad size at the left, one smooth
-           slider from this screen's smallest pads (0) to its biggest (100) (pads.js, pad-size.js), then ✏️ Edit sounds. -->
+           slider from this screen's smallest pads (0) to its biggest (100) (pads.js, pad-size.js), then 🔁 Loop and ✏️ Edit sounds. -->
       <div class="pads-size" id="pads-size">
         <label class="pads-size-word" for="pads-size-slider">Size</label>
         <input type="range" id="pads-size-slider" min="0" max="100" step="1" value="50" aria-label="Pad size">
       </div>
+      <!-- 🔁 Loop (pads.js initLoopSwitch, setting tapToLoop): lit, a tap starts or stops a loop and no hold is asked for. -->
+      <button type="button" class="pads-edit pads-loop" id="loop-toggle" aria-pressed="false" aria-label="Loop" title="Loop: while it is on, a tap starts or stops a loop and no hold is needed">🔁<span class="loop-word"> Loop</span></button>
       <button type="button" class="pads-edit" id="edit-toggle" aria-pressed="false">✏️<span class="edit-word"> Edit</span><span class="edit-more"> sounds</span></button>
     </div>
     <div class="pads" id="pads"></div>
@@ -505,6 +507,16 @@
         <div class="set-body" id="set-look-body" hidden>
           <p class="field-hint">How the pads look, everywhere. Each person has their own.</p>
           <div class="set-skins" id="skin-picks" role="radiogroup" aria-labelledby="set-look-title"></div>
+          <!-- How long a hold lasts before a pad or key keeps looping (settings.js holdToLoop; settings-ui.js). -->
+          <h4 class="set-sub" id="hold-title">Hold to loop</h4>
+          <div class="seq-barsel set-keys set-holds" id="hold-keys" role="group" aria-labelledby="hold-title">
+            <button type="button" data-hold="350" aria-pressed="false"><b>0.35</b><small>Quick</small></button>
+            <button type="button" data-hold="500" aria-pressed="false"><b>0.5</b><small>sec</small></button>
+            <button type="button" data-hold="750" aria-pressed="false"><b>0.75</b><small>sec</small></button>
+            <button type="button" data-hold="1000" aria-pressed="false"><b>1</b><small>sec</small></button>
+            <button type="button" data-hold="1500" aria-pressed="false"><b>1.5</b><small>Slow</small></button>
+          </div>
+          <p class="field-hint">How long to hold a pad or key before it keeps repeating. Tap it again to stop.</p>
         </div>
       </section>
 

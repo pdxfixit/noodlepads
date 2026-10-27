@@ -41,6 +41,7 @@ export const SETTING_VALUES = {
   instChords: ['synth', 'piano', 'organ', 'guitar', 'strings'],
   instBass: ['synth', '808', 'upright'],
   holdToLoop: [350, 500, 750, 1000, 1500],   // settings.js LOOP_HOLDS
+  tapToLoop: [false, true],
   // 🧸 Kids' own copies of padSize, padSkin and instNotes.
   kidsPadSize: ['auto', ...Array.from({ length: 101 }, (_, i) => i / 100)],
   kidsPadSkin: ['tiles', 'slam', 'lit', 'switch', 'spinner', 'jelly', 'googly'],

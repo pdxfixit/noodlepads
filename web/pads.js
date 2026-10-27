@@ -22,6 +22,8 @@ import { PLAYED } from './instruments.js';
 export const HOLD_TO_LOOP_MS = SETTINGS.holdToLoop.default;  // hold a pad this long and it keeps repeating; a tap stops it
 // What the person chose (⚙️ holdToLoop), asked at each press.
 const holdTime = () => getSetting('holdToLoop');
+// 🔁 Loop is on: a tap starts a loop and no hold is asked for.
+const tapMode = () => getSetting('tapToLoop') === true;
 
 const el = {};
 let openSheet = () => {};
@@ -601,8 +603,8 @@ function showLoopingPad(pad, on) {
   else showLooping(pad, on);
 }
 
-// A tap on a looping pad stops it; on any other pad, plays it once. Returns
-// true when it stopped a loop.
+// A tap on a looping pad stops it; on any other pad, plays it once, or with
+// 🔁 Loop on starts its loop. Returns true when it stopped a loop.
 // `ring`: 🎤 Live's 🔔 Let it ring, the sound's earlier hits ring on under this
 // one. A pad always restarts its sound (Ben, 2026-10-12).
 // `kind`: what a play counts as for `noodlepads.play` (the keys pass 'keys').
@@ -610,6 +612,11 @@ export function tapPad(clip, { ring = false, kind = 'pads' } = {}) {
   if (audio.isLooping(clip.id)) {
     audio.stop(clip.id);
     return true;
+  }
+  if (tapMode()) {
+    audio.loop(clip);
+    countPlay(kind);
+    return false;
   }
   audio.play(clip, { ring });
   countPlay(kind);
@@ -828,6 +835,20 @@ function initSize() {
   showSize();
 }
 
+// 🔁 Loop, beside ✏️ Edit sounds: a switch for the person's `tapToLoop`.
+// Lit, a tap starts or stops a loop and no hold is asked for. It follows the
+// setting, so another person, a backup or the cloud move it too.
+function initLoopSwitch() {
+  const button = document.querySelector('#loop-toggle');
+  if (!button) return;
+  const show = (on = tapMode()) => button.setAttribute('aria-pressed', String(on));
+  button.addEventListener('click', () => {
+    setSetting('tapToLoop', !tapMode()).catch((err) => console.error('Saving 🔁 Loop failed:', err));
+  });
+  onSetting('tapToLoop', show);
+  show();
+}
+
 // ── Events ─────────────────────────────────────────────────────────────
 
 // openSheet(mode, clip?, {returnToPad?}) opens the new/edit sound sheet;
@@ -842,6 +863,7 @@ export function initPads(hooks) {
     sizeSlider: document.querySelector('#pads-size-slider'),
   });
   initSize();
+  initLoopSwitch();
 
   // Group headers open and close their group (a kid's own, or the kit's);
   // focus stays on the header. ✏️ beside an own group's header edits it.
@@ -898,9 +920,9 @@ export function initPads(hooks) {
     if (!pad) return;
     const clip = findClip(pad.dataset.id);
     if (!clip) return;
-    if (isFinger(e)) { fingers.down(e, clip, { hold: !audio.isLooping(clip.id) }); return; }
+    if (isFinger(e)) { fingers.down(e, clip, { hold: !audio.isLooping(clip.id) && !tapMode() }); return; }
     if (e.shiftKey && !audio.isLooping(clip.id)) { startLoop(clip); return; }
-    if (tapPad(clip)) return;
+    if (tapPad(clip) || tapMode()) return;   // 🔁 Loop on: the tap was the loop, no hold to wait for
     holds.set(e.pointerId, setTimeout(() => audio.loop(clip), holdTime()));
   });
   // A mouse let go before the hold time is just a click.

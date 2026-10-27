@@ -1,8 +1,9 @@
 // How long a hold must last before a pad or a key keeps looping is the
 // person's choice (settings.js holdToLoop), so a slow tap does not turn into
 // a loop by accident (accessibility seat, council round 1).
-// Not tested here: a real finger, the sound (audio is spied on, not heard),
-// and a picker in ⚙️ Settings (there is none yet).
+// The picker in ⚙️ Settings and 🔁 Loop (a tap loops, no hold) are in
+// tests/tap-to-loop.test.mjs.
+// Not tested here: a real finger and the sound (audio is spied on, not heard).
 
 import { test, before, afterEach } from 'node:test';
 import assert from 'node:assert/strict';

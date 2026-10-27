@@ -41,6 +41,8 @@ const LINE_MS = 10000;
 export const HOLD_TO_LOOP_MS = SETTINGS.holdToLoop.default;   // as on the pads: hold this long and it keeps repeating
 // What the person chose (⚙️ holdToLoop), asked at each press.
 const holdTime = () => getSetting('holdToLoop');
+// 🔁 Loop is on (pads.js tapPad): a tap starts the loop, so no hold is asked for.
+const tapMode = () => getSetting('tapToLoop') === true;
 
 // One color per family, like the groups of the periodic table. Dark enough
 // for white text (tests/contrast.test.mjs). A person's own sounds use their color.
@@ -309,7 +311,7 @@ export function createDJ({ el, deps }) {
     const ring = ringing();
     // A tap on a looping sound stops it; a play counts once, as a key.
     const stopped = deps.tap(clip, { ring, kind: 'keys' });
-    takes.record(clip.id, stopped ? 'stop' : 'hit', deps.now(), ring);
+    takes.record(clip.id, stopped ? 'stop' : tapMode() ? 'loop' : 'hit', deps.now(), ring);
     showRow(clip);
     if (!stopped) intoBeat(clip, earlier);
     return clip;
@@ -327,14 +329,14 @@ export function createDJ({ el, deps }) {
     if (shift) { shiftPlay(target); return; }
     const wasLooping = deps.isLooping?.(soundOf(target));
     const clip = playTarget(target);
-    if (!clip || wasLooping) return;
+    if (!clip || wasLooping || tapMode()) return;
     clearTimeout(holds.get(id));
     holds.set(id, setTimeout(() => { holds.delete(id); loopIt(clip); }, holdTime()));
   }
   function shiftPlay(target) {
     const wasLooping = deps.isLooping?.(soundOf(target));
     const clip = playTarget(target);
-    if (clip && !wasLooping) loopIt(clip);
+    if (clip && !wasLooping && !tapMode()) loopIt(clip);   // 🔁 Loop on: the play was already the loop
   }
   function pointerUp(id) {
     clearTimeout(holds.get(id));
@@ -359,7 +361,7 @@ export function createDJ({ el, deps }) {
     if (e.repeat) {
       // Still down: loop once it has been held long enough.
       const h = held.get(code);
-      if (h && !h.looped && now - h.at >= holdTime()) {
+      if (h && !h.looped && !tapMode() && now - h.at >= holdTime()) {
         h.looped = true;
         const clip = deps.clipById(deck()[code]);
         if (clip) loopIt(clip);
@@ -391,7 +393,7 @@ export function createDJ({ el, deps }) {
   // A touch tile is the same as a key (Ben, 2026-10-16): lift to play, hold to loop.
   const fingers = fingerTaps({
     onTap: (t) => playTarget(t),
-    onHold: (t) => { const clip = playTarget(t); if (clip) loopIt(clip); },
+    onHold: (t) => { const clip = playTarget(t); if (clip && !tapMode()) loopIt(clip); },
     holdMs: holdTime,
   });
   // `sel` finds what was pressed in `box`; `targetOf` says which sound it is.
@@ -402,7 +404,7 @@ export function createDJ({ el, deps }) {
       if (!k || e.button > 0) return;
       k.classList.add('down');
       const target = targetOf(k);
-      if (isFinger(e)) { fingers.down(e, target, { hold: !deps.isLooping?.(soundOf(target)) }); return; }
+      if (isFinger(e)) { fingers.down(e, target, { hold: !deps.isLooping?.(soundOf(target)) && !tapMode() }); return; }
       pointerDown(target, `p${e.pointerId}`, e.shiftKey);
     });
     for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {

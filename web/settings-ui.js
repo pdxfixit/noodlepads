@@ -113,6 +113,7 @@ export function syncSettingsControls() {
   const level = getSetting('level');
   for (const b of el.levels) b.setAttribute('aria-pressed', String(b.dataset.level === level));
   el.levelHint.textContent = LEVEL_HINTS[level];
+  for (const b of el.holds) b.setAttribute('aria-pressed', String(Number(b.dataset.hold) === getSetting('holdToLoop')));
   el.shareUsage.checked = getSetting('sendUsage') === true;
   const reports = getSetting('sendLogs') === true;
   el.sendLogs.checked = reports;
@@ -175,6 +176,7 @@ export function initSettingsUI({ gate = () => false, onKids = () => {} } = {}) {
     radios: document.querySelector('#settings-dialog').querySelectorAll('input[type="radio"]'),
     levels: document.querySelector('#level-keys').querySelectorAll('[data-level]'),
     levelHint: document.querySelector('#level-hint'),
+    holds: document.querySelectorAll('#hold-keys [data-hold]'),
     sendLogs: document.querySelector('#send-logs'),
     shareUsage: document.querySelector('#share-usage'),
     code: document.querySelector('#send-logs-code'),
@@ -215,6 +217,17 @@ export function initSettingsUI({ gate = () => false, onKids = () => {} } = {}) {
       el.dialog.close();
       onKids();
     }
+  });
+  // 🎨 Look's Hold to loop: five keys, one per allowed hold time (numbers, not text, so not the radios' handler).
+  document.querySelector('#hold-keys').addEventListener('click', async (e) => {
+    const key = e.target.closest('[data-hold]');
+    if (!key) return;
+    try {
+      await setSetting('holdToLoop', Number(key.dataset.hold));
+    } catch (err) {
+      console.error('Changing the hold time failed:', err);
+    }
+    syncSettingsControls();
   });
   // The version and date in the page footer open Settings at About (Ben, 2026-10-11).
   el.version.addEventListener('click', (e) => { if (e.target.closest('[data-about]')) open(true); });

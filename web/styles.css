@@ -356,6 +356,13 @@ main {
 .pads-size > input { width: 120px; min-height: 44px; accent-color: var(--led); }
 .pads-bar .pads-edit { flex: none; min-height: 48px; white-space: nowrap; }   /* one line: the size gives way first */
 @media (max-width: 359px) { .pads-bar .pads-edit { padding: 0 12px; } }
+/* 🔁 Loop: a twin of ✏️ Edit sounds, lit the same way, at its left. */
+.pads-bar .pads-loop { padding: 0 12px; }
+/* On a phone, 🔁 keeps its icon only (the aria-label and tooltip say Loop) and ✏️ Edit drops its "sounds", as it already does in the slim bar, so Pad size keeps room. */
+@media (max-width: 429px) {
+  .pads-bar .loop-word, .pads-bar .edit-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .pads-bar .pads-loop { min-width: 48px; padding: 0 10px; }
+}
 
 /* The version, small, in the bottom corner of the page. */
 .version { margin: 0; text-align: right; font-size: 0.75rem; opacity: 0.8; font-variant-numeric: tabular-nums; }
@@ -3777,7 +3784,7 @@ body.head-slim .person-list { right: auto; left: 0; }   /* opens into the screen
    them, it waits at the top of the screen. */
 body.head-slim.screen-pads .pads-bar { padding-left: calc(12px + 4 * 44px + 3 * 6px + 10px); border-radius: 0; }
 body.head-slim.screen-pads .title-tools { left: calc(max(var(--gutter), (100% - var(--max)) / 2 + var(--gutter)) + 12px); }
-@media (max-width: 559px) {
+@media (max-width: 639px) {
   body.head-slim.screen-pads .pads-size { display: none; }
 }
 /* On a phone, ✏️ Edit sounds says ✏️ Edit beside them (screen readers
@@ -3787,11 +3794,27 @@ body.head-slim.screen-pads .title-tools { left: calc(max(var(--gutter), (100% - 
 @media (max-width: 429px) {
   body.head-slim.screen-pads .edit-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
-@media (max-width: 359px) {
-  body.head-slim .title-tools { gap: 4px; }
-  body.head-slim.screen-pads .pads-bar { padding-left: calc(12px + 4 * 44px + 3 * 4px + 8px); }
+/* 🔁 Loop stays in the slim bar at every width, beside ✏️ Edit. To make room: its word goes under 600 px,
+   Edit's "sounds" under 500 and its word under 430 (both keys are icons then), the buttons sit closer under 375,
+   and under 360 px ⬆️ steps out (the page scrolls to the top by itself, and the title is still there). */
+@media (max-width: 599px) {
+  body.head-slim.screen-pads .loop-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  body.head-slim.screen-pads .pads-bar .pads-loop { min-width: 48px; padding: 0 10px; }
+}
+@media (max-width: 499px) {
+  body.head-slim.screen-pads .edit-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+@media (max-width: 429px) {
   body.head-slim.screen-pads .edit-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   body.head-slim.screen-pads .pads-bar .pads-edit { min-width: 48px; padding: 0 10px; }
+}
+@media (max-width: 374px) {
+  body.head-slim .title-tools { gap: 4px; }
+  body.head-slim.screen-pads .pads-bar { padding-left: calc(12px + 4 * 44px + 3 * 4px + 8px); }
+}
+@media (max-width: 359px) {
+  body.head-slim.screen-pads .to-top { display: none; }
+  body.head-slim.screen-pads .pads-bar { padding-left: calc(12px + 3 * 44px + 2 * 4px + 8px); }
 }
 /* 🎤 Live: scrolled, ✏️ Layout rides at the right of the slim bar, as Edit
    sounds does on Pads, so it is in reach while the rows scroll (Ben,
@@ -5350,6 +5373,13 @@ dialog.kids-sum :focus-visible { outline: 4px solid var(--ink); outline-offset: 
 .kids-sum-wait { margin: -4px 0 14px; text-align: center; font: 900 2rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
 .kids-sum-wait[hidden] { display: none; }
 .kids-sum-keys button:disabled { opacity: 0.35; box-shadow: none; }
+
+/* Settings' Hold to loop (draft): five keys across the dialog, the time big, its word small under it. */
+.set-sub { margin: 14px 0 0; font-size: 1rem; font-weight: 800; }
+.set-holds { display: flex; width: 100%; margin: 8px 0; border-color: rgb(20 19 24 / 0.3); }
+.set-holds button { flex: 1 1 0; min-width: 0; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; color: var(--ink); line-height: 1.1; }
+.set-holds b { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.set-holds small { font-size: 0.72rem; font-weight: 700; }
 
 /* Settings' Level: three keys across the dialog. */
 .set-levels { display: flex; width: 100%; margin: 8px 0; border-color: rgb(20 19 24 / 0.3); }

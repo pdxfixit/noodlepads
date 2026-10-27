@@ -234,7 +234,7 @@ An override holds only what differs from boards.json (`model.js overrideFor`; th
 
 | | Person (`scope: 'person'`) | Device (`scope: 'device'`) |
 |---|---|---|
-| Keys | `level`, `advancedBeats`, `timeSignature`, `padSize`, `padSkin`, `instNotes`, `instChords`, `instBass`, `holdToLoop`, `kidsPadSize`, `kidsPadSkin`, `kidsInstNotes`, `seen`, `reaches` | `djLayout`, `sendLogs`, `sendUsage` |
+| Keys | `level`, `advancedBeats`, `timeSignature`, `padSize`, `padSkin`, `instNotes`, `instChords`, `instBass`, `holdToLoop`, `tapToLoop`, `kidsPadSize`, `kidsPadSkin`, `kidsInstNotes`, `seen`, `reaches` | `djLayout`, `sendLogs`, `sendUsage` |
 | Stored in | `prefs` `{personId, values}` | `settings` `{key, value}` |
 | Read order | the person's `prefs` value, then this device's `settings` value (choices from before per-person settings), then `legacy`, then `default` | `settings`, then `legacy` (`djLayout` reads localStorage `dj-layout`), then `default` |
 | Travels | cloud (`prefs` is a `CLOUD_KINDS` kind) and backups | backups only (`inBackups`); `renamedPeople` never |
