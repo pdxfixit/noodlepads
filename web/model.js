@@ -320,7 +320,7 @@ export function boardTitle() {
 
 // The heading over a board's own sounds.
 export function ownSoundsTitle(visiblePeople, current) {
-  return visiblePeople.length <= 1 || !current || current.name === SOLO_NAME ? 'My sounds' : `${current.name}\u2019s sounds`;
+  return visiblePeople.length <= 1 || !current || current.name === SOLO_NAME ? 'Sounds' : `${current.name}\u2019s sounds`;
 }
 
 // The person a board with no one on it gets: a new device (boards.json lists
@@ -500,7 +500,7 @@ export function overrideWithEmoji(base, existing, emoji) {
 // the app counts or names that kind (Ben, 2026-10-11: "emoji … should become
 // standard for songs, sounds etc"), and each button for a kind wears it:
 // 🔊 Pads, 🥁 Beats, 🎼 Song, 🎬 Takes (Ben: "Takes are 🎬"), 👥 People,
-// ✏️ Edit sounds, 🎛️ DJ, 🔗 Share, ⭐ My voices.
+// ✏️ Edit sounds, 🎛️ DJ, 🔗 Share, ⭐ Voices.
 export const KIND_EMOJI = Object.freeze({
   sounds: '🔊', beats: '🥁', songs: '🎼', takes: '🎬', voices: '⭐',
   people: '👥', edits: '✏️', djKeys: '🎛️', shares: '🔗', layouts: '⌨️', touchLayouts: '👆',
@@ -508,11 +508,11 @@ export const KIND_EMOJI = Object.freeze({
 
 // The kinds a person has, in order, with their words: what a row in
 // 👥 People counts and what 🗂️ See all lists (Ben, 2026-10-24: every kind).
-// ⭐ My voices are IndexedDB `voices` (state.myVoices); ✏️ preset edits are
+// ⭐ Voices are IndexedDB `voices` (state.myVoices); ✏️ preset edits are
 // `overrides`; 🎛️ key sets are a person's `decks` record, with keys changed.
 export const PERSON_KINDS = Object.freeze([
   ['sounds', 'sound', 'sounds', 'Sounds'], ['beats', 'beat', 'beats', 'Beats'], ['songs', 'song', 'songs', 'Songs'],
-  ['takes', 'take', 'takes', 'Takes'], ['voices', 'voice', 'voices', 'My voices'],
+  ['takes', 'take', 'takes', 'Takes'], ['voices', 'voice', 'voices', 'Voices'],
   ['edits', 'preset edit', 'preset edits', 'Preset edits'], ['djKeys', 'key set', 'key sets', 'Key sets'],
   ['layouts', 'key layout', 'key layouts', 'Key layouts'], ['touchLayouts', 'touch layout', 'touch layouts', 'Touch layouts'],
 ].map(Object.freeze));
@@ -561,7 +561,7 @@ export function personThings(lists, personId, { preset = () => null, dateText = 
       const p = preset(o.id.slice(prefix.length));
       return item('edits', o, o.label || p?.label || o.id.slice(prefix.length), o.emoji || p?.emoji, o.hidden ? 'Preset, hidden' : 'Preset, changed', 0);
     }),
-    djKeys: deck && keys(deck.keys) ? [item('djKeys', { id: deck.personId }, 'My keys', '', plural(keys(deck.keys), 'key changed', 'keys changed'), 0)] : [],
+    djKeys: deck && keys(deck.keys) ? [item('djKeys', { id: deck.personId }, 'Keys', '', plural(keys(deck.keys), 'key changed', 'keys changed'), 0)] : [],
     layouts: mine('layouts').map((l) => item('layouts', l, l.name, '', plural(keys(l.keys), 'key', 'keys'))),
     touchLayouts: mine('touchLayouts').map((l) => item('touchLayouts', l, l.name, '', plural(Array.isArray(l.bands) ? l.bands.length : 0, 'group', 'groups'))),
   };

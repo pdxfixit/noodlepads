@@ -1,6 +1,6 @@
 // Pattern chips (Ben, 2026-10-12, after a music studio's pattern picker): under
 // the beat bar, ⌨️ Keys off and on, 8 numbered spots: beats pinned with 📌 in
-// 🗂️ My beats first, then the last used, oldest made first, in an order a tap
+// 🗂️ Beats first, then the last used, oldest made first, in an order a tap
 // never changes (the order itself: beat-pins.test.mjs). The open one is
 // pressed. A tap opens that beat;
 // while the beat plays, the switch waits for the next bar line and the beat
@@ -71,7 +71,7 @@ test('a tap while stopped opens that beat at once, and no chip moves', () => {
   assert.equal(chips()[3].getAttribute('aria-pressed'), 'true');
 });
 
-test('📌 in 🗂️ My beats pins a beat to the first spots, in pin order; the spots left are 8 minus the pins', () => {
+test('📌 in 🗂️ Beats pins a beat to the first spots, in pin order; the spots left are 8 minus the pins', () => {
   const was = order();
   const oldest = mine().at(-1);   // used longest ago: no spot of its own
   assert.ok(!was.includes(oldest.id));

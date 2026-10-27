@@ -29,15 +29,15 @@ test('a new device starts with one board, a fun name and a picture (never "Me"),
   assert.ok(pads.length > 0, 'the kit is there');
   assert.ok(pads.every((p) => p.dataset.id.startsWith(`${all[0].id}-`)), 'every pad is their copy of the kit');
   const headings = $('#pads').children.filter((c) => c.classList.contains('pad-section')).map((h) => h.textContent);
-  assert.equal(headings[0], 'My sounds');
+  assert.equal(headings[0], 'Sounds');
 });
 
-test('✏️ Edit keys shows 🎤 My sounds on a new device too, and says how to make one', () => {
+test('✏️ Edit keys shows 🎤 Sounds on a new device too, and says how to make one', () => {
   const $ = page.$;
   $('#live-tab').dispatch('click');
   $('#dj-change').dispatch('click');
   const mine = $('#ke-groups').querySelector('[data-group="mine"]');
-  assert.ok(mine, '🎤 My sounds is there with nothing made yet');
+  assert.ok(mine, '🎤 Sounds is there with nothing made yet');
   assert.notEqual(mine.getAttribute('aria-pressed'), 'true', 'it opens on a group that has sounds');
   mine.dispatch('click');
   assert.equal($('#ke-picks').children.length, 0);

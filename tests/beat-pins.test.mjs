@@ -35,7 +35,7 @@ test('a beat new to the set pushes out the one used longest ago; the rest keep t
   const all = beats([11, 12, 13, 14, 15, 16, 17, 18, 19, 10]);
   all.push({ id: 'beat-10', created: 50, saved: 50 });   // 🆕 New
   assert.deepEqual(ids(chipBeats(all)), ['02', '03', '04', '05', '06', '07', '08', '10'], 'beat 01 (used longest ago) drops out; the new one is last');
-  all.find((b) => b.id === 'beat-09').saved = 60;        // an old beat opened from 🗂️ My beats
+  all.find((b) => b.id === 'beat-09').saved = 60;        // an old beat opened from 🗂️ Beats
   assert.deepEqual(ids(chipBeats(all)), ['03', '04', '05', '06', '07', '08', '09', '10'], 'it comes back in its made order; 02 drops');
 });
 

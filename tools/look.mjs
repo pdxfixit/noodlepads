@@ -69,7 +69,7 @@ const BUILDER_REC = `${q('#dj-record')}
   await new Promise((r) => setTimeout(r, 2700)); hit();
   await new Promise((r) => setTimeout(r, 600)); hit();
   await new Promise((r) => setTimeout(r, 300));`;
-// 🆕 New, + Add a row and 💾 Keep on Beats (⌨️ Keys off): a named beat in 🗂️ My beats.
+// 🆕 New, + Add a row and 💾 Keep on Beats (⌨️ Keys off): a named beat in 🗂️ Beats.
 // + Add a row opens the chooser with the next sound ticked; Add puts its row in.
 const ADD_ROW = q('#seq-add') + q('#chooser-ok');
 const KEEP_NEW = q('.beat-bar [data-beat-new]') + ADD_ROW + q('.beat-bar [data-beat-keep]');
@@ -309,7 +309,7 @@ const VIEWS = {
   // The scratch beat with Ska loaded (ADR 0020): "Ska (scratch)", 💾 Keep where ✏️ was, and the Undo line.
   keep: { screen: 'beats', js: q('#seq-grooves') + GROOVE_GROUPS_OPEN('latin') + q('[data-groove="ska"]') + 'await new Promise((r) => setTimeout(r, 300));' },
   // A fresh device has the empty scratch beat open (ADR 0020). 🆕 New opens it blank (Ben, 2026-10-12);
-  // KEEP_NEW is New, + Add a row and 💾 Keep: a named beat in 🗂️ My beats.
+  // KEEP_NEW is New, + Add a row and 💾 Keep: a named beat in 🗂️ Beats.
   'beat-new': { screen: 'beats', js: q('.beat-bar [data-beat-new]') },
   // The beat bar with the longest name (24 characters) typed into the scratch's title: one
   // line on a wide screen, 💃 ⌨️ 🗂️ on their own row above it on a phone; keys-long-name with ⌨️ Keys on.
@@ -326,7 +326,7 @@ const VIEWS = {
   'chooser-row': { screen: 'beats', js: q('.beat-bar [data-beat-new]') + ADD_ROW + q('.seq-row [data-pick]') },
   // Pattern chips: six beats made with 🆕 New, + Add a row and 💾 Keep (the newest open), then the chips' line.
   'beat-chips': { screen: 'beats', js: KEEP_NEW.repeat(6) },
-  // beat-chips with the two oldest beats 📌 pinned in 🗂️ My beats (each only if not pinned yet), Open closed again.
+  // beat-chips with the two oldest beats 📌 pinned in 🗂️ Beats (each only if not pinned yet), Open closed again.
   'beat-pins': { screen: 'beats', js: KEEP_NEW.repeat(6) + q('.beat-bar [data-beat-open]')
     + `for (const b of [...document.querySelectorAll('#lib-list [data-pin]')].slice(-2).reverse()) if (b.getAttribute('aria-pressed') !== 'true') b.click();`
     + q('#library [data-close]') },

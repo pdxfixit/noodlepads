@@ -209,10 +209,10 @@ test('cleanDeck keeps the number row; a deck from before it loads as it was', as
   assert.equal(Object.keys(d.mine).length, 40);
   const old = cleanDeck({ personId: 'p-1', keys: { KeyA: 'kick' }, mine: { KeyS: 'snare' } });
   assert.deepEqual(old.keys, { KeyA: 'kick' }, 'no number keys stored: they play their defaults');
-  assert.equal(old.mine.Digit1, null, 'an older ⭐ My keys has an empty number row');
+  assert.equal(old.mine.Digit1, null, 'an older ⭐ Keys has an empty number row');
 });
 
-test('cleanDeck keeps the 👆 touch layout and ⭐ My layout, cleaned; a broken one is dropped (ADR 0029)', async () => {
+test('cleanDeck keeps the 👆 touch layout and ⭐ Layout, cleaned; a broken one is dropped (ADR 0029)', async () => {
   const { cleanDeck } = await import('../web/rhythm.js');
   const d = cleanDeck({ personId: 'p-1', keys: {}, touch: { bands: [{ group: 'drums', size: 'l', sounds: ['kick'] }, { group: '<x>' }] }, touchMine: { bands: [] } });
   assert.deepEqual(d.touch, { bands: [{ group: 'drums', size: 'l', sounds: ['kick'] }] });

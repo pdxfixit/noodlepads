@@ -68,9 +68,9 @@
 |---|---|---|
 | `personId` | whose keys | `saveDeck` |
 | `keys` | `{code: clipId \| null}`, **only the keys that differ from the defaults** (`keyset.js changedKeys`). `null` is No sound. | `dj-keys.js setKeys` → `saveKeys` |
-| `mine` | ⭐ My keys: all 40 keys, kept when a layout replaced a hand-made board | `dj-keys.js loadLayout` → `saveMine` |
+| `mine` | ⭐ Keys: all 40 keys, kept when a layout replaced a hand-made board | `dj-keys.js loadLayout` → `saveMine` |
 | `touch` | the 👆 touch layout `{bands, grid?}`; missing means the default | `dj-touch.js set` → `saveTouch` |
-| `touchMine` | ⭐ My layout, the hand-made touch layout kept when a saved one replaced it | `dj-touch.js loadLayout`/`useShape` → `saveMine` |
+| `touchMine` | ⭐ Layout, the hand-made touch layout kept when a saved one replaced it | `dj-touch.js loadLayout`/`useShape` → `saveMine` |
 | `beatId` | old Beat Builder's open beat (ADR 0008). Read by nothing; `cleanDeck` keeps it so old backups load; `saveDeck` drops it | nobody now |
 
 `code` is a `KeyboardEvent.code` from `rhythm.js KEY_CODES`: `Digit1`…`Digit0`, `KeyQ`…`KeyP`, `KeyA`…`Semicolon`, `KeyZ`…`Slash` (`KEY_ROWS`, 4 rows of 10).
@@ -92,7 +92,7 @@ part   {size: 1…12, band?: index}            a block (no band: empty)
      | {size: 1…12, dir, parts: [part…]}     a split inside it
 ```
 
-- A band is one group (a kit group id, or `touch.js MINE` = 🎤 My sounds) with one tile size: S, M, L are 5, 4, 2 across on a phone (`SIZES`). At most `MAX_BANDS` (8) bands, `MAX_BAND_SOUNDS` (40) each.
+- A band is one group (a kit group id, or `touch.js MINE` = 🎤 Sounds) with one tile size: S, M, L are 5, 4, 2 across on a phone (`SIZES`). At most `MAX_BANDS` (8) bands, `MAX_BAND_SOUNDS` (40) each.
 - `grid` (ADR 0032) places the bands in blocks side by side. `band` is an index into `bands`. Sizes are twelfths of their split (`UNITS`), each part at least `MIN_PART` (2). At most 4 parts a split, 3 deep, 8 blocks.
 - **With a grid, `bands` are kept in the blocks' reading order** (`touch-grid.js settle`). A band no block holds is dropped. The beat's rows follow that order.
 - With a grid, a band's `size` is kept but unused: `touch-grid.js bestColumns` picks the columns from the block's measured size (`dj-touch.js fitPads`, a `ResizeObserver`).
@@ -338,7 +338,7 @@ Kids writes it with `deps.saveBeat` (`state.savedBeats` + `persist('beats')`). I
 - `KIDS_KEYS`: C D E G A, then high C D E (pentatonic). A high key plays its low note at `keyRate` (2×) under its own play id (`keyPlayId`, `<clipId>+12`), so both can sound.
 - The instrument button cycles `KIDS_INSTRUMENTS` and writes the person's `instNotes`, the same setting 🎹 Who plays on Notes keeps. `keyClip` finds `keyKitId(k, inst)` among `clips({ includeHidden: true, allPresets: true })`.
 - Keyboard: `kidsKeydown` maps `e.key` a s d f g h j k (not `rhythm.js keyFor`); Esc or Space stops all; ← → turn pages. On a focused button Enter's repeats are taken (`util.js onePressOneClick` on `#kids`, from `initKids`), so a held Enter clicks once. `.kids :focus-visible` is a white outline off the button (outline only, so its own shadows show); a playhead square keeps its yellow, doubled (6 px, no offset); `.kids-beat` is padded 12 px so neither ring is clipped, a pressed square's 1.08 scale too.
-- ● (`startTune`): grows the beat to 4 bars, books 3 beeps on the audio clock, then `playBeat({ from: t0, onPass })`; the recording stops as the beat comes round once (`onPass`, from the run `playBeat` starts for it), at the next ● tap, ⏹️, a tab change, or leaving. A key held during it lands on lift (`landNote`): `kids-logic.js pillAt` over `totalOf(beat)` (nearest pill of the beat's own bars, no latency moved), length the pills held (1–16), `withTuneNote` (the first note of a new recording starts the tune again, after `keepOldTune` puts the beat with the tune it replaces in 🗂️ My beats: `kids-logic.js keptTune`, a fun name from `names.js beatName`).
+- ● (`startTune`): grows the beat to 4 bars, books 3 beeps on the audio clock, then `playBeat({ from: t0, onPass })`; the recording stops as the beat comes round once (`onPass`, from the run `playBeat` starts for it), at the next ● tap, ⏹️, a tab change, or leaving. A key held during it lands on lift (`landNote`): `kids-logic.js pillAt` over `totalOf(beat)` (nearest pill of the beat's own bars, no latency moved), length the pills held (1–16), `withTuneNote` (the first note of a new recording starts the tune again, after `keepOldTune` puts the beat with the tune it replaces in 🗂️ Beats: `kids-logic.js keptTune`, a fun name from `names.js beatName`).
 
 ### What Kids shares with the regular app
 
@@ -391,7 +391,7 @@ Defaults on the keys and the default touch layout use the groups' own sounds (`c
 | ● Record into the beat, a row removed or cleared, a pill slide, a loudness drag | `ui.js showBanner` with ↩️ Undo → `seq.restore(copy)` or `seq.putLevel` (`dj.js offerBeatUndo`, `showBeatLine`) |
 | A take | the take card's ↩️ Undo deletes it |
 | ✏️ Layout (both) | an in-memory stack of 30, per opening |
-| A groove tried | ↩️ My beat → `seq.putTrialAway` |
+| A groove tried | ↩️ Beat → `seq.putTrialAway` |
 | Kids | none |
 
 ### Busy (the update bar waits)

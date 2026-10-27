@@ -441,7 +441,7 @@ test('Beats shows the beat maker in place of the pads; 🆕 New starts with no r
   assert.equal($('#seq-deck').hidden, false);
   assert.equal(name.value, 'Scratch beat');
   assert.equal(bar.querySelector('[data-beat-keep]').hidden, false, '💾 Keep, for when it has something');
-  assert.equal(state.savedBeats.filter((b) => b.personId === 'pip').length, 0, '🆕 New adds nothing to 🗂️ My beats');
+  assert.equal(state.savedBeats.filter((b) => b.personId === 'pip').length, 0, '🆕 New adds nothing to 🗂️ Beats');
   assert.equal(hasUndo(), false, 'an empty scratch emptied needs no Undo');
   // A new beat is empty (Ben, 2026-10-11): a line says how to fill it.
   const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
@@ -459,7 +459,7 @@ test('Beats shows the beat maker in place of the pads; 🆕 New starts with no r
   assert.equal(pills[0].getAttribute('aria-label'), 'Row 1, Pip Pads!: beat 1, part 1');
   assert.equal(pills[15].getAttribute('aria-label'), 'Row 1, Pip Pads!: beat 4, part 4');
   assert.deepEqual(pills.map((p) => p.tabIndex), [0, ...Array(15).fill(-1)]);
-  // 💾 Keep: now it is a named beat in 🗂️ My beats, for the tests below.
+  // 💾 Keep: now it is a named beat in 🗂️ Beats, for the tests below.
   bar.querySelector('[data-beat-keep]').dispatch('click');
   assert.notEqual(name.value, 'Scratch beat', 'a named beat');
   assert.equal(state.savedBeats.filter((b) => b.personId === 'pip' && !b.id.startsWith('beat-scratch-')).length, 1, '💾 Keep puts it in the list');
@@ -584,7 +584,7 @@ test('Beats tempo: on a short line ⌄ ⌃ step through the common tempos', () =
 });
 
 // ADR 0020: a groove loads into the scratch beat, copying nothing into
-// 🗂️ My beats; the beat that was open stays as it was.
+// 🗂️ Beats; the beat that was open stays as it was.
 test('a groove loads into the scratch beat, copying nothing, and Undo goes back to the beat that was open', () => {
   const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
   const sounds = () => rows().map((r) => (r.querySelector('[data-pick]') || r.querySelector('.seq-slim')).getAttribute('aria-label').split('.')[0].replace(/^Row \d+: /, ''));
@@ -600,7 +600,7 @@ test('a groove loads into the scratch beat, copying nothing, and Undo goes back 
   assert.equal($('.beat-bar [data-beat-keep]').hidden, false, '💾 Keep shows');
   assert.equal($('#seq-bpm-out').textContent, '120 BPM');
   assert.equal($('#banner-text').textContent, 'Loaded “Four on the floor” into your scratch beat.');
-  assert.deepEqual(listed(), before.listed, 'nothing new in 🗂️ My beats');
+  assert.deepEqual(listed(), before.listed, 'nothing new in 🗂️ Beats');
   $('#banner-action').dispatch('click');
   assert.deepEqual(sounds(), before.sounds);
   assert.equal(name(), before.name);
@@ -608,7 +608,7 @@ test('a groove loads into the scratch beat, copying nothing, and Undo goes back 
   assert.ok(!state.savedBeats.some((b) => b.id.startsWith('beat-scratch-') && b.personId === state.personId), 'and the scratch is as it was: never saved');
   $('#beats-toggle').dispatch('click');
   document.querySelector('.beat-bar [data-beat-open]').dispatch('click');
-  assert.ok(!$('#lib-list').children.some((li) => /Four on the floor/.test(li.querySelector('.lib-name')?.textContent)), 'no groove beat in 🗂️ My beats');
+  assert.ok(!$('#lib-list').children.some((li) => /Four on the floor/.test(li.querySelector('.lib-name')?.textContent)), 'no groove beat in 🗂️ Beats');
   $('#library').close();
 });
 
@@ -639,7 +639,7 @@ test('a groove over a scratch with hits says so, with Undo; 💾 Keep makes it a
   assert.equal($('.beat-bar [data-beat-keep]').hidden, true, 'a named beat: ✏️ again');
   assert.equal($('.beat-bar [data-beat-rename]').hidden, false);
   const kept = state.savedBeats.find((b) => b.name === name());
-  assert.ok(kept && !kept.id.startsWith('beat-scratch-'), 'in 🗂️ My beats under its own id');
+  assert.ok(kept && !kept.id.startsWith('beat-scratch-'), 'in 🗂️ Beats under its own id');
   assert.equal(scratch(), undefined, 'the scratch starts empty again');
   assert.equal(state.savedBeats.filter((b) => b.personId === state.personId).length, listed, 'one in, one out');
   // Deleting the open beat opens the scratch, empty.
@@ -695,7 +695,7 @@ test('a beat file: 📥 Load a beat file opens it under its own name; ⬇️ sav
   assert.equal($('#seq-bpm-out').textContent, '120 BPM');
   const rows = $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
   assert.equal(rows.length, 1, 'a sound this app has not got is left out');
-  // ⬇️ on it in 🗂️ My beats downloads it again.
+  // ⬇️ on it in 🗂️ Beats downloads it again.
   document.querySelector('.beat-bar [data-beat-open]').dispatch('click');
   let blob;
   const real = URL.createObjectURL;
@@ -1050,7 +1050,7 @@ test('beats are open documents: they save themselves; the beat bar renames, star
   bar().querySelector('[data-beat-new]').dispatch('click');
   assert.notEqual(name().value, 'Groove');
   assert.equal(rows().length, 0, 'a new beat has no rows');
-  // 🗂️ My beats Groove: its pill is back.
+  // 🗂️ Beats Groove: its pill is back.
   bar().querySelector('[data-beat-open]').dispatch('click');
   list().find((li) => li.querySelector('.lib-name').textContent === 'Groove').querySelector('[data-load]').dispatch('click');
   assert.equal($('#library').open, false);
@@ -1071,7 +1071,7 @@ test('beats are open documents: they save themselves; the beat bar renames, star
 });
 
 // Ben, 2026-10-11: "new beat should stop playback, and have no rows".
-test('🆕 New stops the beat playing and starts with no rows; 🗂️ My beats, a groove and Undo carry on playing', async () => {
+test('🆕 New stops the beat playing and starts with no rows; 🗂️ Beats, a groove and Undo carry on playing', async () => {
   const bar = () => document.querySelectorAll('.beat-bar')[0];
   const name = () => bar().querySelector('[data-beat-name]').value;
   const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
@@ -1094,13 +1094,13 @@ test('🆕 New stops the beat playing and starts with no rows; 🗂️ My beats,
   assert.equal(rows().length, 0, 'and has no rows');
   assert.equal($('#seq-no-rows').hidden, false);
   assert.equal(name(), 'Scratch beat', 'a blank scratch');
-  // 🗂️ My beats while playing carries on playing, as before.
+  // 🗂️ Beats while playing carries on playing, as before.
   $('#seq-play').dispatch('click');
   await page.settle();
   openBeat(groove);
   await page.settle();
   assert.equal(name(), groove);
-  assert.equal(playing(), true, '🗂️ My beats keeps playing');
+  assert.equal(playing(), true, '🗂️ Beats keeps playing');
   // A groove into the scratch keeps playing too, and so does its Undo.
   $('#seq-grooves').dispatch('click');
   $('#groove-list').querySelector('[data-groove="four"]').dispatch('click');
@@ -1202,15 +1202,15 @@ test('✏️ Edit keys: a focused view; layouts load and are saved, sounds go on
   assert.deepEqual($('#ke-keys').querySelectorAll('.ke-row').map((r) => r.getAttribute('aria-label')), ['number row', 'top letter row', 'middle row', 'bottom row']);
   assert.equal(label('Digit5'), '5: G');
   assert.equal(label('KeyA'), 'A: Kick');
-  // 🎤 My sounds is always the first group, even with none made yet; opened empty, it says how to make one.
+  // 🎤 Sounds is always the first group, even with none made yet; opened empty, it says how to make one.
   const mine = $('#ke-groups').querySelector('[data-group="mine"]');
-  assert.ok(mine, '🎤 My sounds is there');
+  assert.ok(mine, '🎤 Sounds is there');
   assert.equal($('#ke-groups').children[0], mine);
   if (!$('#ke-picks').children.length || mine.getAttribute('aria-pressed') !== 'true') {
     mine.dispatch('click');
     if (!$('#ke-picks').children.length) assert.match($('#ke-picks-hint').textContent, /No sounds of your own yet/);
   }
-  // Layouts: the ready-made ones, then Save; no ⭐ My keys until a layout replaces the keys.
+  // Layouts: the ready-made ones, then Save; no ⭐ Keys until a layout replaces the keys.
   assert.deepEqual(chips(), ['🥁 Beat lab', '🚀 Space band', '🐾 Zoo party', '🎹 Piano-ish', '⭐ Save this layout']);
 
   // Pick two animals, then tap A: they go on A and S. The keys are full, so Kick and Snare have no room.
@@ -1225,14 +1225,14 @@ test('✏️ Edit keys: a focused view; layouts load and are saved, sounds go on
   $('#ke-undo').dispatch('click');
   assert.equal(label('KeyA'), 'A: Kick');
 
-  // A ready-made layout replaces the keys; the kid's own keys are kept as ⭐ My keys.
+  // A ready-made layout replaces the keys; the kid's own keys are kept as ⭐ Keys.
   layout('ready-zoo-party').dispatch('click');
   assert.equal(label('KeyQ'), 'Q: Moo');
   assert.equal(layout('ready-zoo-party').getAttribute('aria-pressed'), 'true');
-  assert.match($('#ke-note').textContent, /kept in ⭐ My keys/);
-  assert.equal(chips()[0], '⭐ My keys');
+  assert.match($('#ke-note').textContent, /kept in ⭐ Keys/);
+  assert.equal(chips()[0], '⭐ Keys');
   layout('mine').dispatch('click');
-  assert.equal(label('KeyA'), 'A: Kick', 'My keys brings the hand-made board back');
+  assert.equal(label('KeyA'), 'A: Kick', 'Keys brings the hand-made board back');
 
   // ⭐ Save this layout: a name typed (never pre-filled), then rename and delete (two taps).
   $('#ke-save').dispatch('click');
@@ -1241,7 +1241,7 @@ test('✏️ Edit keys: a focused view; layouts load and are saved, sounds go on
   $('#ke-save-name').value = '  Party keys ';
   $('#ke-save-ok').dispatch('click');
   assert.deepEqual(state.layouts.map((l) => [l.name, l.personId, l.keys.KeyA]), [['Party keys', 'pip', 'pip-kick']]);
-  assert.deepEqual(chips().slice(0, 2), ['⭐ My keys', '⭐ Party keys'], 'own layouts first');
+  assert.deepEqual(chips().slice(0, 2), ['⭐ Keys', '⭐ Party keys'], 'own layouts first');
   assert.equal($('#ke-own-line').hidden, false, 'the one on the keys can be renamed or deleted');
   $('#ke-rename').value = 'Fiesta';
   $('#ke-rename').dispatch('change');
@@ -1293,7 +1293,7 @@ test('✏️ Edit keys: a focused view; layouts load and are saved, sounds go on
   $('#ke-reset').dispatch('click');
   assert.equal(label('KeyA'), 'A: Kick');
   assert.deepEqual(state.decks.get('pip').keys, {});
-  assert.ok(state.decks.get('pip').mine, 'My keys stays');
+  assert.ok(state.decks.get('pip').mine, 'Keys stays');
   // Done: the DJ keys show what was arranged.
   key('KeyA').dispatch('keydown', { key: 'Delete', code: 'Delete' });
   $('#keys-edit').querySelector('.ke-done').dispatch('click');
@@ -1310,7 +1310,7 @@ test('✏️ Edit keys: a focused view; layouts load and are saved, sounds go on
   state.orders.set('pip', { personId: 'pip', ids: [], ...order, groups: [{ id: 'g-burps', name: 'Burps' }] });
   $('#dj-change').dispatch('click');
   const groupChips = $('#ke-groups').querySelectorAll('[data-group]').map((b) => b.textContent);
-  assert.deepEqual(groupChips.slice(0, 3), ['🎤 My sounds', '📁 Burps', '🥁 Drums']);
+  assert.deepEqual(groupChips.slice(0, 3), ['🎤 Sounds', '📁 Burps', '🥁 Drums']);
   assert.ok(!groupChips.some((t) => /Not in a group/.test(t)));
   $('#ke-groups').querySelector('[data-group="own-g-burps"]').dispatch('click');
   assert.deepEqual($('#ke-picks').querySelectorAll('[data-sound]').map((b) => b.dataset.sound), ['user-keys-1']);
@@ -2154,7 +2154,7 @@ test('🎼 Song: its own tab, Advanced or not; pick a beat, then tap a spot on a
   // 🆕 New opens a blank scratch song (Ben, 2026-10-12): nothing joins the list.
   $('#song-new').dispatch('click');
   assert.equal($('#song-name').value, 'Scratch song');
-  assert.equal(state.songbook.filter((s) => s.personId === state.personId).length, 0, '🆕 New adds nothing to 🗂️ My songs');
+  assert.equal(state.songbook.filter((s) => s.personId === state.personId).length, 0, '🆕 New adds nothing to 🗂️ Songs');
   assert.equal(hasUndo(), false, 'an empty scratch emptied needs no Undo');
   assert.equal($('#song-step-undo').hidden, true, '↩️ Undo shows once there is something to take back');
   // Two saved beats: the open one with a pill on, then a new one at 132 BPM.
@@ -2289,12 +2289,12 @@ test('🎼 Song: its own tab, Advanced or not; pick a beat, then tap a spot on a
   assert.equal(lanes().length, 8);
   assert.equal($('#song-add-lane').disabled, true);
   assert.equal(lanes()[7].querySelector('.lane-name').textContent, 'Horns');
-  // 💾 Keep: a song in 🗂️ My songs with a fun name, which saves itself.
+  // 💾 Keep: a song in 🗂️ Songs with a fun name, which saves itself.
   $('#song-keep').dispatch('click');
   assert.equal($('#song-rename').hidden, false);
   assert.ok(state.songbook.some((s) => s.name === $('#song-name').value), '💾 Keep puts it in the list');
   assert.equal(state.songs.get(state.personId).lanes.length, 8);
-  // Deleting a beat in 🗂️ My beats: its blocks stay, greyed, as a deleted beat.
+  // Deleting a beat in 🗂️ Beats: its blocks stay, greyed, as a deleted beat.
   $('#beats-toggle').dispatch('click');
   bar().querySelector('[data-beat-open]').dispatch('click');
   const lib = () => $('#lib-list').children.find((li) => li.querySelector('.lib-name').textContent === first);
@@ -2319,7 +2319,7 @@ test('🎼 Song: its own tab, Advanced or not; pick a beat, then tap a spot on a
   $('#pads-tab').dispatch('click');
 });
 
-test('songs are a list, like beats: the open song saves itself; 🆕 New, 🗂️ My songs, ⧉ duplicate, 🗑️ delete (asks first); a song from before the list, or the playlist, joins it as lanes', async () => {
+test('songs are a list, like beats: the open song saves itself; 🆕 New, 🗂️ Songs, ⧉ duplicate, 🗑️ delete (asks first); a song from before the list, or the playlist, joins it as lanes', async () => {
   $('#song-tab').dispatch('click');
   const pid = state.personId;
   const mine = () => state.songbook.filter((s) => s.personId === pid);
@@ -2338,7 +2338,7 @@ test('songs are a list, like beats: the open song saves itself; 🆕 New, 🗂�
   $('#song-name').value = 'Verse';
   $('#song-name').dispatch('change');
   assert.equal($('#song-name').value, 'Verse 2', 'two songs never share a name');
-  // 🗂️ My songs lists both, marks the open one, and opens the other.
+  // 🗂️ Songs lists both, marks the open one, and opens the other.
   $('#song-open').dispatch('click');
   assert.equal($('#songs').open, true);
   assert.ok(names().includes('Verse') && names().includes('Verse 2'));
@@ -2411,7 +2411,7 @@ test('one open beat: ⌨️ Keys on and off show the same beat and its edits; Ne
   $('#dj-grid').children[0].querySelectorAll('[data-step]')[9].dispatch('click');
   keysOff(page);
   assert.deepEqual(lit(), [5, 9], 'one beat, two views');
-  // 🆕 New with Keys on replaces the open beat everywhere; the first stays in 🗂️ My beats.
+  // 🆕 New with Keys on replaces the open beat everywhere; the first stays in 🗂️ Beats.
   keysOn(page);
   await newBuilderBeatWithRow(page);
   const second = nameOf(djBar());
@@ -2420,7 +2420,7 @@ test('one open beat: ⌨️ Keys on and off show the same beat and its edits; Ne
   assert.equal(nameOf(beatsBar()), second, 'Keys off shows the new one too');
   assert.equal(state.patterns.get(state.personId).id, state.savedBeats.find((b) => b.name === second).id, 'stored once, as Beats\' open beat');
   beatsBar().querySelector('[data-beat-open]').dispatch('click');
-  assert.ok(library().some((li) => li.querySelector('.lib-name').textContent === first), 'the first beat is in 🗂️ My beats');
+  assert.ok(library().some((li) => li.querySelector('.lib-name').textContent === first), 'the first beat is in 🗂️ Beats');
   // Deleting the open beat opens the scratch, Keys on or off (ADR 0020).
   const item = () => library().find((li) => li.querySelector('.lib-name').textContent === second);
   item().querySelector('[data-delete]').dispatch('click');
@@ -2447,9 +2447,9 @@ test('one open beat: ⌨️ Keys on and off show the same beat and its edits; Ne
 
 // ADR 0017's upgrade: a device from before kept Beat Builder's own open
 // beat as `beatId` on the person's deck (ADR 0008). Beats' open beat is the
-// one that stays open; Beat Builder's stays in 🗂️ My beats; the deck drops the
+// one that stays open; Beat Builder's stays in 🗂️ Beats; the deck drops the
 // id the next time it saves, and nothing brings it back.
-test('upgrade: Beats\' open beat stays open, with ⌨️ Keys on too; Beat Builder\'s own beat stays in 🗂️ My beats; the deck drops its id', async () => {
+test('upgrade: Beats\' open beat stays open, with ⌨️ Keys on too; Beat Builder\'s own beat stays in 🗂️ Beats; the deck drops its id', async () => {
   const pid = state.personId;
   const beat = (id, name) => ({ id, personId: pid, name, bpm: 100, bars: 1, signature: '4/4', created: 1, saved: 1, rows: [{ clipId: `${pid}-kick`, steps: [true, false, true, false] }] });
   state.savedBeats = [...state.savedBeats, beat('beat-onbeats', 'On Beats'), beat('beat-inbuilder', 'In Builder')];
@@ -2462,7 +2462,7 @@ test('upgrade: Beats\' open beat stays open, with ⌨️ Keys on too; Beat Build
   keysOn(page);
   assert.equal($('#dj-beatbar').querySelector('[data-beat-name]').value, 'On Beats', 'the keys show Beats\' beat, not Beat Builder\'s');
   $('#dj-beatbar').querySelector('[data-beat-open]').dispatch('click');
-  assert.ok($('#lib-list').children.some((li) => li.querySelector('.lib-name').textContent === 'In Builder'), 'Beat Builder\'s beat is in 🗂️ My beats');
+  assert.ok($('#lib-list').children.some((li) => li.querySelector('.lib-name').textContent === 'In Builder'), 'Beat Builder\'s beat is in 🗂️ Beats');
   $('#library').close();
   // ✏️ Edit keys saves the deck: the old id goes, the keys stay.
   $('#dj-change').dispatch('click');

@@ -107,8 +107,8 @@ test('the beat stopped from outside (⏹ Stop all) ends the recording too: the b
 
 // 🆕 New stops first, so the recording ends and its note is saved in the
 // beat it went into (here the scratch); then New keeps that scratch in
-// 🗂️ My beats, note and all, and opens a blank one.
-test('🆕 New mid-recording ends the recording cleanly; the note is kept in 🗂️ My beats and the scratch is blank', async () => {
+// 🗂️ Beats, note and all, and opens a blank one.
+test('🆕 New mid-recording ends the recording cleanly; the note is kept in 🗂️ Beats and the scratch is blank', async () => {
   const { audio } = await import('../web/audio.js');
   const { getLog } = await import('../web/log.js');
   const ctx = audio.context();
@@ -127,7 +127,7 @@ test('🆕 New mid-recording ends the recording cleanly; the note is kept in �
   assert.equal($('#dj-beatbar').querySelector('[data-beat-name]').value, 'Scratch beat');
   assert.equal(hitsOf(scratch()), 0, 'a blank scratch');
   const kept = mine().filter((b) => !before.has(b.id));
-  assert.equal(kept.length, 1, 'the scratch joined 🗂️ My beats');
+  assert.equal(kept.length, 1, 'the scratch joined 🗂️ Beats');
   assert.equal(hitsOf(kept[0]), 1, 'with the note recorded');
   assert.equal(hasUndo(), false, 'nothing was lost: no Undo');
   $('#stop-all').dispatch('click');

@@ -250,7 +250,7 @@ test('the bar count stepping back at a tempo change holds the bars shown until t
   $('#listen').close();
 });
 
-test('■ Stop: What I heard, each part a beat in 🗂️ My beats and a 🎼 Song; 🎼 Open it as a song opens it', async () => {
+test('■ Stop: What I heard, each part a beat in 🗂️ Beats and a 🎼 Song; 🎼 Open it as a song opens it', async () => {
   const before = mine().length;
   const songsBefore = state.songbook.length;
   const { cap, lis } = await listening();

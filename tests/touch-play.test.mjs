@@ -55,7 +55,7 @@ test('⌨️ / 👆: the keys on a wide screen until the kid picks; 👆 shows t
   assert.equal($('#dj-tabs').hidden, true);
   assert.equal($('#dj-touch').hidden, false);
   // The default: Pip's own sounds, then 🎸 Band (Chords, Drums, Bass).
-  assert.deepEqual(heads(), ['🎤 My sounds', '🎶 Chords', '🥁 Drums', '🎸 Bass']);
+  assert.deepEqual(heads(), ['🎤 Sounds', '🎶 Chords', '🥁 Drums', '🎸 Bass']);
   assert.deepEqual($('#dj-touch').querySelectorAll('.touch-band').map((b) => b.dataset.size), ['m', 'm', 'l', 's']);
   assert.equal(tile('pip-kick').getAttribute('aria-label'), 'Kick');
   assert.ok(tile('pip-kick').style.props['--c'], 'colored by its family');

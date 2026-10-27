@@ -214,7 +214,7 @@ test('👆 a band of Chords says who plays it; a pick plays every tile\'s chord 
   const who = () => $('#te-bands').querySelector(`[data-inst-pick][data-inst-band="${i}"]`);
   assert.equal(who().getAttribute('aria-label'), 'Who plays Chords: Synth', 'the band\'s own instrument');
   assert.ok(who().title);
-  assert.equal($('#te-bands').querySelector('[data-inst-pick][data-inst-band="0"]'), null, '🎤 My sounds has none');
+  assert.equal($('#te-bands').querySelector('[data-inst-pick][data-inst-band="0"]'), null, '🎤 Sounds has none');
   const before = [...$('#te-bands').querySelector(`.te-band[data-band="${i}"]`).querySelectorAll('[data-tile]')].length;
   who().dispatch('click');
   $('#te-bands').querySelector(`[data-inst="piano"][data-inst-band="${i}"]`).dispatch('click');

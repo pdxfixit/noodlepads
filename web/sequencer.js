@@ -198,7 +198,7 @@ export function createSequencer(deps) {
   let readAgain = false;
   // A groove just loaded into the scratch (pickGroove, below), until the
   // beat changes: {groove, replaced, before, scratchBefore}, or null. The
-  // keys view shows a line for it with ↩️ My beat (undoLoad).
+  // keys view shows a line for it with ↩️ Beat (undoLoad).
   let loaded = null;
   // A name typed into the scratch's title (Ben, 2026-10-16): the scratch
   // keeps itself under it, at once if it has rows, else the moment it gets
@@ -218,7 +218,7 @@ export function createSequencer(deps) {
   }
 
   // Every beat of the person's, the scratch too; `library()` is the ones
-  // listed in 🗂️ My beats and the chips.
+  // listed in 🗂️ Beats and the chips.
   const allBeats = () => deps.library.list(personId);
   const library = () => allBeats().filter((b) => !isHiddenBeat(b));
   const freshName = () => (deps.beatName ? deps.beatName(library().map((b) => b.name)) : `Beat ${library().length + 1}`);
@@ -278,7 +278,7 @@ export function createSequencer(deps) {
   // stops and the scratch opens, blank: no rows, the tempo and bars a new
   // beat has. A named beat open stays there as it is (it saved itself). A
   // scratch with hits is kept first (Ben, 2026-10-24: 🗂️ See all lists it
-  // as theirs, so New must never lose it): it joins 🗂️ My beats under the
+  // as theirs, so New must never lose it): it joins 🗂️ Beats under the
   // name 💾 Keep would give it, open or not, and a line says so. A scratch
   // with no hits just empties.
   function newScratch() {
@@ -289,10 +289,10 @@ export function createSequencer(deps) {
     if (old) deps.library.remove(old.id);
     openBeat(null, { resume: false });
     logEvent('beat', { action: 'new' });
-    if (kept) showBanner(`Kept as “${kept}” in 🗂️ My beats. A blank scratch beat.`);
+    if (kept) showBanner(`Kept as “${kept}” in 🗂️ Beats. A blank scratch beat.`);
     else deps.announce?.('A blank scratch beat.');
   }
-  // The stored scratch, put in 🗂️ My beats as a beat of its own, named
+  // The stored scratch, put in 🗂️ Beats as a beat of its own, named
   // after its groove or with a fun name. Its name.
   function keepAside(scratch) {
     const groove = grooveOf(scratch);
@@ -320,7 +320,7 @@ export function createSequencer(deps) {
     if (wantedName && isScratch(pattern) && pattern.rows.length) queueMicrotask(() => { if (wantedName) keep(); });
   }
 
-  // 💾 Keep (ADR 0020): the scratch becomes a beat of its own in 🗂️ My beats,
+  // 💾 Keep (ADR 0020): the scratch becomes a beat of its own in 🗂️ Beats,
   // which is the open beat now, and the scratch starts empty again. It takes
   // a name typed into its title; else one from a groove is named after it
   // ("Sleepy Squid (Ska version)", names.js keptName), and a plain one gets
@@ -340,10 +340,10 @@ export function createSequencer(deps) {
     logEvent('beat', { action: 'keep', groove: !!groove });
     render();
     deps.onBeatChange?.();
-    deps.announce?.(`Kept as “${name}” in 🗂️ My beats. Your scratch beat is empty again.`);
+    deps.announce?.(`Kept as “${name}” in 🗂️ Beats. Your scratch beat is empty again.`);
   }
 
-  // ── The beat bar (Beats and DJ): the open beat's name, 🆕 New, 🗂️ My beats ──
+  // ── The beat bar (Beats and DJ): the open beat's name, 🆕 New, 🗂️ Beats ──
   // The scratch shows "Scratch beat" (or "Ska (scratch)"), in italics: not
   // kept yet. 💾 Keep stands where ✏️ is and names it as it keeps it; a
   // name typed into the title keeps it under that name (nameScratch).
@@ -354,7 +354,7 @@ export function createSequencer(deps) {
       const name = bar.querySelector('[data-beat-name]');
       name.hidden = !pattern;
       name.classList.toggle('scratch', scratch);
-      name.setAttribute('aria-label', scratch ? 'Scratch beat, not kept yet: type a name to keep it in 🗂️ My beats' : 'Beat name (tap to rename)');
+      name.setAttribute('aria-label', scratch ? 'Scratch beat, not kept yet: type a name to keep it in 🗂️ Beats' : 'Beat name (tap to rename)');
       bar.querySelector('[data-beat-rename]').hidden = !pattern || scratch;
       const keepButton = bar.querySelector('[data-beat-keep]');
       if (keepButton) {
@@ -482,7 +482,7 @@ export function createSequencer(deps) {
   }
   // Switches this screen to another beat (opened, new, or a groove), or to
   // the scratch (null: as it is stored), carrying on playing if it was, and
-  // tells the keys. `resume`: carry on playing if something was (🗂️ My beats,
+  // tells the keys. `resume`: carry on playing if something was (🗂️ Beats,
   // Undo); 🆕 New stops playback instead (Ben, 2026-10-11).
   function openBeat(next, { resume = true } = {}) {
     const was = playing();
@@ -496,7 +496,7 @@ export function createSequencer(deps) {
     deps.onBeatChange?.();
     if (resume && was) play();
   }
-  // A beat deleted in 🗂️ My beats closes if it was the open one: the scratch opens.
+  // A beat deleted in 🗂️ Beats closes if it was the open one: the scratch opens.
   function closeEverywhere(id) {
     if (doc?.pattern.id === id || pattern?.id === id) openBeat(null);
   }
@@ -516,7 +516,7 @@ export function createSequencer(deps) {
     if (wanted === titleOf()) return;
     wantedName = wanted;
     if (pattern.rows.length) keep();
-    else deps.announce?.(`Named “${wanted}”. It goes in 🗂️ My beats when you add a sound.`);
+    else deps.announce?.(`Named “${wanted}”. It goes in 🗂️ Beats when you add a sound.`);
   }
   for (const bar of el.beatBars ?? []) {
     const name = bar.querySelector('[data-beat-name]');
@@ -537,7 +537,7 @@ export function createSequencer(deps) {
     bar.querySelector('[data-beat-keep]')?.addEventListener('click', () => keep());
   }
   // On a phone the five tools with their words don't fit beside the name:
-  // the bar splits, 💃 Grooves, ⌨️ Keys and 🗂️ My beats on a row of their own
+  // the bar splits, 💃 Grooves, ⌨️ Keys and 🗂️ Beats on a row of their own
   // above the title, still worded (styles.css, "The beat bar"). Measured on
   // the bar, so it switches where the words really stop fitting.
   refitBars = [...(el.beatBars ?? [])].map((bar) => fitLine(bar, BEAT_BAR_STEPS));
@@ -2157,7 +2157,7 @@ export function createSequencer(deps) {
     openDialog(el.grooves, from ? { returnTo: () => from } : undefined);
   }
 
-  // A groove loads into the scratch (ADR 0020), so nothing in 🗂️ My beats is
+  // A groove loads into the scratch (ADR 0020), so nothing in 🗂️ Beats is
   // copied or overwritten, and the scratch opens; or, with ➕, its hits join
   // the open beat. Undo puts back the beat that was open and the scratch as
   // it was.
@@ -2171,12 +2171,12 @@ export function createSequencer(deps) {
       b.setAttribute('aria-pressed', String((b.dataset.how === 'add') === adding()));
       if (b.dataset.how === 'add') b.disabled = !pattern;
     }
-    const kept = onScratch() ? '' : ' Yours stays in 🗂️ My beats.';
+    const kept = onScratch() ? '' : ' Yours stays in 🗂️ Beats.';
     el.grooveHint.textContent = slot === 'dj'
       ? `Tap one to load it into your scratch beat and play along: ▶ Play plays it behind you, ● Record adds your hits, and 💾 Keep saves it.${kept}`
       : adding()
       ? 'Adds the groove’s hits to the beat on screen. Nothing is turned off, and Undo takes them back out.'
-      : `Loads the groove into your scratch beat to play with. 💾 Keep saves it in 🗂️ My beats.${kept}`;
+      : `Loads the groove into your scratch beat to play with. 💾 Keep saves it in 🗂️ Beats.${kept}`;
   }
   el.grooveHow.addEventListener('click', (e) => {
     const b = e.target.closest('[data-how]');
@@ -2210,7 +2210,7 @@ export function createSequencer(deps) {
   // stopped ("opening a groove in the beat builder should open stopped"),
   // and ▶ Play plays it behind the keys; on Beats a beat playing carries on.
   // A scratch with hits is replaced, so the line says so, with Undo (Keys
-  // off) or ↩️ My beat (Keys on).
+  // off) or ↩️ Beat (Keys on).
   function loadGroove(g) {
     const old = scratchSaved();
     const was = {
@@ -2232,7 +2232,7 @@ export function createSequencer(deps) {
     if (slot !== 'dj') offerUndo({ ...was, pattern });
   }
   // Undo of a groove loaded: the scratch as it was, and the beat that was
-  // open before (the scratch, or a beat in 🗂️ My beats).
+  // open before (the scratch, or a beat in 🗂️ Beats).
   function undoLoad(was) {
     loaded = null;
     if (was.scratchBefore) deps.library.put(was.scratchBefore);
@@ -2258,7 +2258,7 @@ export function createSequencer(deps) {
 
   // ── The keys: a groove just loaded (Ben, 2026-10-12; ADR 0020) ──
   // The keys view shows a line while the scratch holds a groove just loaded
-  // and nothing has changed it yet: `trying()`. ↩️ My beat there is the
+  // and nothing has changed it yet: `trying()`. ↩️ Beat there is the
   // groove's Undo (putTrialAway). Recording onto it or changing it ends the
   // line; the groove stays in the scratch.
   const trying = () => (loaded && onScratch() ? { groove: loaded.groove, replaced: loaded.replaced } : null);
@@ -2272,7 +2272,7 @@ export function createSequencer(deps) {
     const b = bar.querySelector('[data-beat-grooves]');
     b?.addEventListener('click', () => openGrooves(b));
   }
-  // ── 🗂️ My beats: every saved beat, to open, 📌 pin, duplicate or delete ──
+  // ── 🗂️ Beats: every saved beat, to open, 📌 pin, duplicate or delete ──
 
   let deleteAsked = null;
   function openLibrary(from) {
@@ -2417,7 +2417,7 @@ export function createSequencer(deps) {
     }
   });
 
-  // 📌 in 🗂️ My beats: pins a beat to the chips' first spots, in the order pinned,
+  // 📌 in 🗂️ Beats: pins a beat to the chips' first spots, in the order pinned,
   // or unpins it. Pinning is not using it: its `saved` stamp stays. With
   // MAX_PINS pinned, another waits until one is unpinned.
   function togglePin(id) {
@@ -2755,7 +2755,7 @@ export function createSequencer(deps) {
     cyclePill, clearRow, dropRow, toggleRing, ringTool, openLibrary, metronome, clickAt, setGrow, setTempo, setBars, setSignature, signature: () => sigOf(), advanced: () => advanced,
     beatPlan, prepareBeats, soundHit, endMix, thumbnail, levelOf, setLevel, putLevel, toggleMute, levelState,
     trying, putTrialAway, keep, onScratch, sampling: () => sample?.id ?? null, hearBeat, stopHearing: stopSample,
-    // A beat in 🗂️ My beats opened by id (🎧 From a song's 🥁 Open part A); false when it is not there.
+    // A beat in 🗂️ Beats opened by id (🎧 From a song's 🥁 Open part A); false when it is not there.
     openSaved: (id) => { const saved = library().find((b) => b.id === id); if (saved) openBeat(cleanPattern(saved, personId), { resume: false }); return !!saved; },
     lockChips, queuedBeat: () => (queued ? { ...queued } : null), openMixer, toggleSolo, setFx: setRowFx, setMaster, setMasterFx,
     openRoll, rollRow: () => roll?.row() ?? -1, clickOff,

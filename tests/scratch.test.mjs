@@ -73,7 +73,7 @@ test('💾 Keep names a groove "<fun name> (<groove> version)", shorter when it 
     for (let i = 0; i < 5; i++) assert.ok(keptName(g.name, [], Math.random).length <= MAX_LABEL, g.name);
   }
   const first = keptName('Ska', [], pick);
-  assert.notEqual(keptName('Ska', [first], pick), first, 'a name already in 🗂️ My beats is skipped');
+  assert.notEqual(keptName('Ska', [first], pick), first, 'a name already in 🗂️ Beats is skipped');
   assert.ok(keptName('', [], Math.random).length > 0, 'no groove: a plain fun name');
 });
 
@@ -90,7 +90,7 @@ test('🧸 Kids\' old beat becomes the scratch when the scratch has no hits; els
   // An empty scratch is replaced in place.
   out = adoptKidsBeats([beat('beat-scratch-old', 'p-a', false), beat('beat-kids-a1', 'p-a', true)], 'p-a', makeId);
   assert.equal(out.put[0].id, 'beat-scratch-old');
-  // A scratch with hits stays; the kids beat joins 🗂️ My beats under a new id.
+  // A scratch with hits stays; the kids beat joins 🗂️ Beats under a new id.
   out = adoptKidsBeats([beat('beat-scratch-p-a', 'p-a', true), beat('beat-kids-a1', 'p-a', true, { name: '🧸 My beat' })], 'p-a', makeId);
   assert.deepEqual(out.put.map((b) => [b.id, b.name]), [['beat-made-1', '🧸 My beat']]);
   assert.deepEqual(out.remove, ['beat-kids-a1']);
@@ -135,7 +135,7 @@ before(async () => {
   await page.settle();
 });
 
-test('a 🧸 Kids beat from before is adopted as the scratch: Beats opens it, and it is not in 🗂️ My beats or the chips', async () => {
+test('a 🧸 Kids beat from before is adopted as the scratch: Beats opens it, and it is not in 🗂️ Beats or the chips', async () => {
   const pid = state.personId;
   state.savedBeats = [...state.savedBeats, beat('beat-kids-zz9', pid, true, { name: '🧸 My beat' }), beat('beat-one', pid, true, { name: 'One' }), beat('beat-two', pid, true, { name: 'Two' })];
   reshow();
@@ -148,7 +148,7 @@ test('a 🧸 Kids beat from before is adopted as the scratch: Beats opens it, an
   const chips = document.querySelectorAll('[data-beat-chips]')[0];
   assert.deepEqual(chips.querySelectorAll('[data-chip]').map((c) => c.dataset.chip), ['beat-one', 'beat-two'], 'the chips leave it out');
   bar().querySelector('[data-beat-open]').dispatch('click');
-  assert.deepEqual($('#lib-list').children.map((li) => li.dataset.id).sort(), ['beat-one', 'beat-two'], 'so does 🗂️ My beats');
+  assert.deepEqual($('#lib-list').children.map((li) => li.dataset.id).sort(), ['beat-one', 'beat-two'], 'so does 🗂️ Beats');
   $('#library').close();
   // So does the strip of beats on 🎼 Song.
   $('#song-tab').dispatch('click');
@@ -157,7 +157,7 @@ test('a 🧸 Kids beat from before is adopted as the scratch: Beats opens it, an
   $('#pads-tab').dispatch('click');
 });
 
-test('a kids beat that arrives when the scratch already has hits joins 🗂️ My beats instead', () => {
+test('a kids beat that arrives when the scratch already has hits joins 🗂️ Beats instead', () => {
   const pid = state.personId;
   state.savedBeats = [...state.savedBeats, beat('beat-kids-late', pid, true, { name: '🧸 My beat' })];
   reshow();
@@ -185,7 +185,7 @@ test('the scratch survives showing the person again, and 💾 Keep with a playin
   $('#seq-play').dispatch('click');
 });
 
-test('🎼 Song: the scratch song is open by default; 💾 Keep makes it a song in 🗂️ My songs with a fun name', () => {
+test('🎼 Song: the scratch song is open by default; 💾 Keep makes it a song in 🗂️ Songs with a fun name', () => {
   $('#song-tab').dispatch('click');
   const pid = state.personId;
   const scratchSong = () => state.songbook.find((s) => s.personId === pid && s.id.startsWith('song-scratch-'));
@@ -195,7 +195,7 @@ test('🎼 Song: the scratch song is open by default; 💾 Keep makes it a song 
   assert.ok(scratchSong(), 'saved once it changes');
   assert.equal(state.songs.has(pid), false, 'the scratch open is no record');
   $('#song-open').dispatch('click');
-  assert.equal($('#songs-list').children.length, 0, 'not in 🗂️ My songs');
+  assert.equal($('#songs-list').children.length, 0, 'not in 🗂️ Songs');
   $('#songs').close();
   assert.equal($('#song-keep').disabled, false);
   $('#song-keep').dispatch('click');
@@ -225,16 +225,16 @@ test('Share lists no scratch: Keep it first', async () => {
 // pins and deletes live, like 🎬 Takes.
 // In the beat bar it follows 💃 and ⌨️: just 🗂️ under 560 px, the word
 // from data-word on wider screens (the words overflowed at 320 px): "Beats",
-// to save room (Ben, 2026-10-19); its name and its dialog say My beats.
-test('the beat bar\'s 📂 Open is 🗂️ My beats (worded Beats), and Song\'s is 🗂️ My songs, dialogs too', () => {
+// to save room (Ben, 2026-10-19); its name and its dialog say Beats.
+test('the beat bar\'s 📂 Open is 🗂️ Beats (worded Beats), and Song\'s is 🗂️ Songs, dialogs too', () => {
   for (const b of document.querySelectorAll('[data-beat-open]')) {
     assert.equal(b.textContent, '🗂️');
     assert.equal(b.dataset.word, 'Beats');
-    assert.match(b.getAttribute('aria-label'), /^🗂️ My beats/);
+    assert.match(b.getAttribute('aria-label'), /^🗂️ Beats/);
   }
-  assert.equal($('#song-open').textContent, '🗂️ My songs');
-  assert.equal($('#library-title').textContent, '🗂️ My beats');
-  assert.equal($('#songs-title').textContent, '🗂️ My songs');
+  assert.equal($('#song-open').textContent, '🗂️ Songs');
+  assert.equal($('#library-title').textContent, '🗂️ Beats');
+  assert.equal($('#songs-title').textContent, '🗂️ Songs');
 });
 
 // Ben, 2026-10-16: "while working on a scratch beat, the user should be able

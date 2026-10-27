@@ -2,8 +2,8 @@
 // should open up an entirely blank beat screen"), on Beats with ⌨️ Keys off
 // and on, and on 🎼 Song. A named beat open stays in the list as it was. A
 // scratch with hits (or blocks) is kept first (Ben, 2026-10-24: 🗂️ See all
-// lists it as theirs, and New had deleted it): it joins 🗂️ My beats or My
-// songs, named as 💾 Keep would name it, whether it was open or not, and a
+// lists it as theirs, and New had deleted it): it joins 🗂️ Beats or
+// 🗂️ Songs, named as 💾 Keep would name it, whether it was open or not, and a
 // line says so. Nothing is lost, so there is no Undo. Layout needs a
 // browser (`just look new-full`, `just look keys-new-full`, `just look song-new-full`).
 
@@ -44,7 +44,7 @@ function fillScratch() {
   $('#seq-bars').querySelector('[data-bars="2"]').dispatch('click');
 }
 
-test('🆕 New with a named beat open: a blank scratch, the beat stays in 🗂️ My beats as it was, nothing added', async () => {
+test('🆕 New with a named beat open: a blank scratch, the beat stays in 🗂️ Beats as it was, nothing added', async () => {
   tap('#beats-toggle');
   newBeatWithRow(page);
   rows()[0].querySelectorAll('.pill')[0].dispatch('click');
@@ -62,7 +62,7 @@ test('🆕 New with a named beat open: a blank scratch, the beat stays in 🗂�
   assert.equal($('#seq-no-rows').hidden, false, 'the dashed line points to + Add a row and 💃 Grooves');
   assert.equal($('#seq-bars').querySelector('[data-bars="1"]').getAttribute('aria-pressed'), 'true', 'one bar, as a new beat has');
   assert.equal(hasUndo(), false, 'nothing was lost: no Undo');
-  assert.equal(JSON.stringify(mine()), before, `“${named}” stays in 🗂️ My beats as it was, and nothing joins it`);
+  assert.equal(JSON.stringify(mine()), before, `“${named}” stays in 🗂️ Beats as it was, and nothing joins it`);
   assert.equal(scratch(), undefined, 'the blank scratch is saved only once it changes');
   assert.equal(state.patterns.get(state.personId) ?? null, null, 'the scratch is open');
 });
@@ -71,7 +71,7 @@ test('🆕 New with a named beat open: a blank scratch, the beat stays in 🗂�
 const seeAll = () => personThings({ beats: state.savedBeats }, state.personId).beats;
 const added = (before) => mine().filter((b) => !before.has(b.id));
 
-test('🆕 New over a scratch with hits: it joins 🗂️ My beats as it was, a line says so, and the scratch is blank', () => {
+test('🆕 New over a scratch with hits: it joins 🗂️ Beats as it was, a line says so, and the scratch is blank', () => {
   fillScratch();
   assert.equal(hitsOf(scratch()), 1);
   assert.equal(scratch().bars, 2);
@@ -83,11 +83,11 @@ test('🆕 New over a scratch with hits: it joins 🗂️ My beats as it was, a 
   assert.equal($('#seq-bars').querySelector('[data-bars="1"]').getAttribute('aria-pressed'), 'true', 'the bars go back to one');
   assert.equal(scratch(), undefined, 'the scratch is empty');
   const kept = added(before);
-  assert.equal(kept.length, 1, 'one beat joins 🗂️ My beats');
+  assert.equal(kept.length, 1, 'one beat joins 🗂️ Beats');
   assert.equal(hitsOf(kept[0]), 1, 'with its hit');
   assert.equal(kept[0].bars, 2, 'and its bars');
   assert.ok(seeAll().some((b) => b.name === kept[0].name), '🗂️ See all still lists it, under its new name');
-  assert.equal($('#banner-text').textContent, `Kept as “${kept[0].name}” in 🗂️ My beats. A blank scratch beat.`);
+  assert.equal($('#banner-text').textContent, `Kept as “${kept[0].name}” in 🗂️ Beats. A blank scratch beat.`);
   assert.equal(hasUndo(), false, 'nothing was lost: no Undo');
 });
 
@@ -123,9 +123,9 @@ test('⌨️ Keys on: 🆕 New opens the blank scratch; a full one is kept, with
   assert.equal($('#dj-no-rows').hidden, false, 'the line points to the keys');
   assert.equal(scratch(), undefined);
   const kept = added(before);
-  assert.equal(kept.length, 1, 'it joins 🗂️ My beats');
+  assert.equal(kept.length, 1, 'it joins 🗂️ Beats');
   assert.equal(hitsOf(kept[0]), 1);
-  assert.equal($('#banner-text').textContent, `Kept as “${kept[0].name}” in 🗂️ My beats. A blank scratch beat.`);
+  assert.equal($('#banner-text').textContent, `Kept as “${kept[0].name}” in 🗂️ Beats. A blank scratch beat.`);
   assert.equal(hasUndo(), false);
   // An empty scratch: nothing kept.
   $('#dj-beatbar').querySelector('[data-beat-new]').dispatch('click');
@@ -133,7 +133,7 @@ test('⌨️ Keys on: 🆕 New opens the blank scratch; a full one is kept, with
   keysOff(page);
 });
 
-test('🎼 Song: 🆕 New opens a blank scratch song; a scratch with blocks joins 🗂️ My songs, with a line', () => {
+test('🎼 Song: 🆕 New opens a blank scratch song; a scratch with blocks joins 🗂️ Songs, with a line', () => {
   tap('#song-tab');
   const songs = () => state.songbook.filter((s) => s.personId === state.personId && !s.id.startsWith('song-scratch-'));
   const songScratch = () => state.songbook.find((s) => s.personId === state.personId && s.id.startsWith('song-scratch-'));
@@ -159,9 +159,9 @@ test('🎼 Song: 🆕 New opens a blank scratch song; a scratch with blocks join
   assert.equal(allBlocks($).length, 0);
   assert.equal(songScratch(), undefined);
   const kept = songs().filter((x) => !ids.has(x.id));
-  assert.equal(kept.length, 1, 'it joins 🗂️ My songs');
+  assert.equal(kept.length, 1, 'it joins 🗂️ Songs');
   assert.equal(blocks(kept[0]), 2, 'with its blocks');
-  assert.equal($('#banner-text').textContent, `Kept as “${kept[0].name}” in 🗂️ My songs. A blank scratch song.`);
+  assert.equal($('#banner-text').textContent, `Kept as “${kept[0].name}” in 🗂️ Songs. A blank scratch song.`);
   assert.equal(hasUndo(), false);
   tap('#pads-tab');
 });

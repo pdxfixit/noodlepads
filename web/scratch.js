@@ -1,7 +1,7 @@
 // The scratch beat and the scratch song (ADR 0020): one of each per person,
-// open whenever nothing else is, to play with without filling 🗂️ My beats. A
+// open whenever nothing else is, to play with without filling 🗂️ Beats. A
 // groove loads into the scratch beat; 💾 Keep turns either into a named one
-// in 🗂️ My beats, and the scratch starts empty again.
+// in 🗂️ Beats, and the scratch starts empty again.
 //
 // The scratch is an ordinary record in `beats` (or `songbook`) with a
 // reserved id, so it syncs and backs up like every other beat or song with
@@ -30,7 +30,7 @@ const starts = (r, prefix) => typeof r?.id === 'string' && r.id.startsWith(prefi
 export const isScratch = (beat) => starts(beat, SCRATCH_BEAT);
 export const isScratchSong = (song) => starts(song, SCRATCH_SONG);
 export const isKidsBeat = (beat) => starts(beat, KIDS_BEAT);
-// Beats never listed in 🗂️ My beats, the pattern chips, a song's beats or Share.
+// Beats never listed in 🗂️ Beats, the pattern chips, a song's beats or Share.
 export const isHiddenBeat = (beat) => isScratch(beat) || isKidsBeat(beat);
 
 // The person's scratch record among `list` (beats or songs), or null. Should
@@ -61,7 +61,7 @@ export function scratchLabel(beat) {
 // 🧸 Kids' old beat, adopted (ADR 0020: "Kids mode's one beat is that
 // person's scratch"). For each `beat-kids-…` of the person's: with no hits
 // it goes; with hits it becomes the scratch if the scratch is missing or has
-// none, else it becomes a beat of its own (a new id, so it shows in 🗂️ My beats)
+// none, else it becomes a beat of its own (a new id, so it shows in 🗂️ Beats)
 // and nothing is lost. Returns {put: [records], remove: [ids]}.
 export function adoptKidsBeats(beats, personId, makeId, now = Date.now()) {
   const put = [];

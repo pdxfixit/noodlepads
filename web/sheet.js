@@ -183,7 +183,7 @@ function renderMode() {
 
 // ── Voices as knob settings (voice-knobs.js) ──────────────────────────
 // The chips: every voice but Normal, emoji only (the name is its label and
-// its title), then the person's three latest own voices, ⭐ My voices ▾ for
+// its title), then the person's three latest own voices, ⭐ Voices ▾ for
 // all of them, and 🎲. A chip is lit while the knobs are where its voice put
 // them; moving a knob by hand makes them the kid's own.
 
@@ -245,9 +245,9 @@ function renderVoiceChips() {
     list.classList.add('my-voices-open');
     const words = document.createElement('span');
     words.className = 'voice-name';
-    words.textContent = 'My voices ▾';
+    words.textContent = 'Voices ▾';
     list.append(words);
-    list.setAttribute('aria-label', 'My voices');
+    list.setAttribute('aria-label', 'Voices');
     list.setAttribute('aria-expanded', String(!el.myList.hidden));
     list.setAttribute('aria-controls', 'my-voice-list');
     chips.push(list);
@@ -260,7 +260,7 @@ function renderVoiceChips() {
   renderMyList(mine);
 }
 
-// ⭐ My voices ▾: every one of the person's own voices, to use, rename or delete.
+// ⭐ Voices ▾: every one of the person's own voices, to use, rename or delete.
 function renderMyList(mine = myVoices()) {
   el.myList.replaceChildren(...mine.map((v) => {
     const li = document.createElement('li');

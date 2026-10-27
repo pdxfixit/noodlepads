@@ -59,8 +59,8 @@ test('Grids: ☰ Stacked to start, then four ready-made grids; one turns the lay
   assert.deepEqual(qa('[data-drop]').map((b) => b.dataset.drop), ['0-0', '0-1', '1']);
   assert.match($('#te-note').textContent, /^Two and one: tap a block, then a group, or drag a group onto a block\./);
   if (before) {
-    assert.match($('#te-note').textContent, /kept in ⭐ My layout/);
-    assert.ok(state.decks.get('pip').touchMine?.bands?.length, 'the stack it replaced is ⭐ My layout');
+    assert.match($('#te-note').textContent, /kept in ⭐ Layout/);
+    assert.ok(state.decks.get('pip').touchMine?.bands?.length, 'the stack it replaced is ⭐ Layout');
   }
   q('[data-shape="two-one"]').dispatch('click');
   assert.deepEqual(held(), [null, null, null], 'the grid already on: nothing changes');

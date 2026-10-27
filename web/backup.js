@@ -418,7 +418,7 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
       from: cleanFrom(c.from) ?? undefined,
       synth: cleanSynth(c.synth) ?? undefined,   // how a ✨ sound was made
       root: rootNote(c.root),
-      group: groupIdOf(c.group),   // its group in My sounds (groups.js)
+      group: groupIdOf(c.group),   // its group in Sounds (groups.js)
       blob: new Blob([audio], { type: mime }),
       mime,
       created: num(c.created) ?? Date.now(),

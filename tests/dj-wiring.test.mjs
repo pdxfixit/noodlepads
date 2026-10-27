@@ -1,7 +1,7 @@
 // The keys panel's wiring carries nothing dead: every element app.js hands
 // createDJ is read by the panel or its editors, and every method the panel
 // returns is called by app.js. A dead name looks like a control that works
-// (2026-10-26: `el.tryingStop` was passed and never read, while ↩️ My beat
+// (2026-10-26: `el.tryingStop` was passed and never read, while ↩️ Beat
 // was wired through `el.trying`'s button; it is wired through it now).
 
 import { test } from 'node:test';

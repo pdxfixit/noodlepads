@@ -407,7 +407,7 @@ test('⭐ Save voice saves the knobs as the kid\'s own voice on this device, wit
   $('#sheet').close();
 });
 
-test('three of a kid\'s own voices are chips; ⭐ My voices ▾ lists them all, to rename or delete (two taps)', async () => {
+test('three of a kid\'s own voices are chips; ⭐ Voices ▾ lists them all, to rename or delete (two taps)', async () => {
   const { state } = await import('../web/state.js');
   const { currentPerson } = await import('../web/board.js');
   const me = currentPerson().id;
@@ -421,7 +421,7 @@ test('three of a kid\'s own voices are chips; ⭐ My voices ▾ lists them all, 
   const mineChips = () => $('#voices').children.filter((b) => b.dataset.my).map((b) => b.dataset.my);
   assert.deepEqual(mineChips(), ['voice-t5', 'voice-t4', 'voice-t3'], 'the three used most recently');
   const open = $('#voices').children.find((b) => b.dataset.myOpen);
-  assert.equal(open.querySelector('.voice-name').textContent, 'My voices ▾');
+  assert.equal(open.querySelector('.voice-name').textContent, 'Voices ▾');
   assert.equal($('#my-voice-list').hidden, true);
   open.dispatch('click');
   assert.equal($('#my-voice-list').hidden, false);

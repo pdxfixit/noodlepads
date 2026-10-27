@@ -99,11 +99,11 @@
         <span class="beat-bar-icon" aria-hidden="true">🥁</span>
         <input class="beat-name" data-beat-name maxlength="24" autocomplete="off" aria-label="Beat name (tap to rename)">
         <button type="button" class="seq-tool doc-rename" data-beat-rename aria-label="Rename this beat">✏️</button>
-        <button type="button" class="seq-tool doc-keep" id="seq-keep" data-beat-keep data-word="Keep" aria-label="Keep: put this scratch beat in 🗂️ My beats, with a name" hidden>💾</button>
+        <button type="button" class="seq-tool doc-keep" id="seq-keep" data-beat-keep data-word="Keep" aria-label="Keep: put this scratch beat in 🗂️ Beats, with a name" hidden>💾</button>
         <button type="button" class="seq-tool doc-grooves" id="seq-grooves" data-beat-grooves data-word="Grooves" aria-label="Grooves: ready-made beats">💃</button>
         <button type="button" class="seq-tool doc-keys" id="seq-keys" data-beat-keys data-word="Keys" aria-pressed="false" aria-label="Keys: play sounds under the beat, and ● Record them into it">⌨️</button>
         <button type="button" class="seq-tool doc-new" data-beat-new data-word="New" aria-label="New: a blank scratch beat, with no rows">🆕</button>
-        <button type="button" class="seq-tool doc-open" data-beat-open data-word="Beats" aria-label="🗂️ My beats: open, pin, copy or delete your beats">🗂️</button>
+        <button type="button" class="seq-tool doc-open" data-beat-open data-word="Beats" aria-label="🗂️ Beats: open, pin, copy or delete your beats">🗂️</button>
       </div>
       <!-- Pattern chips: the last beats used, a tap opens one (at the next bar line while playing). -->
       <div class="beat-chips" data-beat-chips role="group" aria-label="Your beats: tap one to open it" hidden></div>
@@ -165,11 +165,11 @@
         <span class="beat-bar-icon" aria-hidden="true">🥁</span>
         <input class="beat-name" data-beat-name maxlength="24" autocomplete="off" aria-label="Beat name (tap to rename)">
         <button type="button" class="seq-tool doc-rename" data-beat-rename aria-label="Rename this beat">✏️</button>
-        <button type="button" class="seq-tool doc-keep" id="dj-keep" data-beat-keep data-word="Keep" aria-label="Keep: put this scratch beat in 🗂️ My beats, with a name" hidden>💾</button>
+        <button type="button" class="seq-tool doc-keep" id="dj-keep" data-beat-keep data-word="Keep" aria-label="Keep: put this scratch beat in 🗂️ Beats, with a name" hidden>💾</button>
         <button type="button" class="seq-tool doc-grooves" id="dj-grooves" data-beat-grooves data-word="Grooves" aria-label="Grooves: play one behind you">💃</button>
         <button type="button" class="seq-tool doc-keys" id="dj-keys-toggle" data-beat-keys data-word="Keys" aria-pressed="true" aria-label="Keys: play sounds under the beat, and ● Record them into it">⌨️</button>
         <button type="button" class="seq-tool doc-new" data-beat-new data-word="New" aria-label="New: a blank scratch beat, with no rows">🆕</button>
-        <button type="button" class="seq-tool doc-open" data-beat-open data-word="Beats" aria-label="🗂️ My beats: open, pin, copy or delete your beats">🗂️</button>
+        <button type="button" class="seq-tool doc-open" data-beat-open data-word="Beats" aria-label="🗂️ Beats: open, pin, copy or delete your beats">🗂️</button>
         <span class="name-flash" id="dj-name-flash" aria-hidden="true" hidden></span>
       </div>
       <!-- Pattern chips: the last beats used, a tap opens one (at the next bar line while playing). -->
@@ -247,11 +247,11 @@
           <button type="button" class="close bar-close" id="dj-done-close" aria-label="Dismiss">✕</button>
         </span>
       </div>
-      <!-- A groove tried behind you (💃 in the beat bar): ↩️ My beat puts it away. -->
+      <!-- A groove tried behind you (💃 in the beat bar): ↩️ Beat puts it away. -->
       <div class="seq-undo dj-done dj-trying" id="dj-trying" role="status" hidden>
         <span id="dj-trying-text"></span>
         <span class="dj-done-buttons">
-          <button type="button" class="seq-tool" id="dj-trying-stop" aria-label="Put the groove away and bring back your beat">↩️ My beat</button>
+          <button type="button" class="seq-tool" id="dj-trying-stop" aria-label="Put the groove away and bring back your beat">↩️ Beat</button>
         </span>
       </div>
       <div class="dj-grid-scroll"><div class="dj-grid-ruler" id="dj-grid-ruler" aria-hidden="true"></div><div class="dj-grid" id="dj-grid" hidden></div></div>
@@ -285,9 +285,9 @@
         <span class="beat-bar-icon song-icon" aria-hidden="true">🎼</span>
         <input class="beat-name song-name" id="song-name" maxlength="24" autocomplete="off" aria-label="Song name (tap to rename)">
         <button type="button" class="seq-tool doc-rename" id="song-rename" aria-label="Rename this song">✏️</button>
-        <button type="button" class="seq-tool doc-keep" id="song-keep" data-word="Keep" aria-label="Keep: put this scratch song in 🗂️ My songs, with a name" hidden>💾</button>
+        <button type="button" class="seq-tool doc-keep" id="song-keep" data-word="Keep" aria-label="Keep: put this scratch song in 🗂️ Songs, with a name" hidden>💾</button>
         <button type="button" class="seq-tool doc-new" id="song-new">🆕 New</button>
-        <button type="button" class="seq-tool doc-open" id="song-open">🗂️ My songs</button>
+        <button type="button" class="seq-tool doc-open" id="song-open">🗂️ Songs</button>
       </div>
       <div class="song-deck deck deck-end">
         <button type="button" class="seq-play song-play" id="song-play" aria-pressed="false">▶ Play song</button>
@@ -870,7 +870,7 @@
   <dialog id="library" aria-labelledby="library-title">
     <div class="chooser-body">
       <div class="sheet-head">
-        <h2 id="library-title">🗂️ My beats</h2>
+        <h2 id="library-title">🗂️ Beats</h2>
         <button type="button" class="close" data-close aria-label="Close">✕</button>
       </div>
       <p class="field-hint">Every beat saves itself. Tap one to open it.</p>
@@ -931,7 +931,7 @@
   <dialog id="songs" aria-labelledby="songs-title">
     <div class="chooser-body">
       <div class="sheet-head">
-        <h2 id="songs-title">🗂️ My songs</h2>
+        <h2 id="songs-title">🗂️ Songs</h2>
         <button type="button" class="close" data-close aria-label="Close">✕</button>
       </div>
       <p class="field-hint">Every song saves itself. Tap one to open it.</p>
@@ -958,10 +958,10 @@
       </div>
       <p class="groove-or" id="groove-or">Or start from one of these:</p>
       <div class="seq-barsel groove-how" id="groove-how" role="group" aria-label="What a groove does">
-        <button type="button" data-how="load" aria-pressed="true"><span class="key-icon" aria-hidden="true">📝</span> Into my scratch</button>
+        <button type="button" data-how="load" aria-pressed="true"><span class="key-icon" aria-hidden="true">📝</span> Into scratch</button>
         <button type="button" data-how="add" aria-pressed="false"><span class="key-icon" aria-hidden="true">➕</span> Add to this beat</button>
       </div>
-      <p class="field-hint" id="groove-hint">Loads the groove into your scratch beat to play with. 💾 Keep saves it in 🗂️ My beats.</p>
+      <p class="field-hint" id="groove-hint">Loads the groove into your scratch beat to play with. 💾 Keep saves it in 🗂️ Beats.</p>
       <p class="lib-note" id="groove-note" role="status"></p>
       <div class="groove-groups" id="groove-list"></div>
     </div>
@@ -1320,7 +1320,7 @@
         <div class="fold-body" id="voice-body">
         <p class="field-hint" id="voice-hint">Record something first, then tap a voice to hear it.</p>
         <div class="voices voice-chips" id="voices"></div>
-        <ul class="my-voice-list" id="my-voice-list" aria-label="My voices" hidden></ul>
+        <ul class="my-voice-list" id="my-voice-list" aria-label="Voices" hidden></ul>
         <div class="chain" id="chain" hidden>
           <p class="field-hint chain-hint" id="chain-hint">Made the old way: it sounds just as it did.</p>
           <ol class="chain-links" id="chain-links" aria-label="Voices made the old way, in the order they play"></ol>

@@ -934,7 +934,7 @@ function landNote(id) {
 }
 
 // A new recording's first note starts the tune again: the beat with the
-// tune it replaces goes into 🗂️ My beats first, under a fun name, as 🆕 New
+// tune it replaces goes into 🗂️ Beats first, under a fun name, as 🆕 New
 // keeps a beat (kids-logic.js keptTune), so a kid's earlier tune is never lost.
 function keepOldTune(beat) {
   const kept = keptTune(beat, { id: newId('beat'), name: beatName(deps.beats(deps.personId()).map((b) => b.name)) });

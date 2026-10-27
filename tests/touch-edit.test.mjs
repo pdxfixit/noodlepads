@@ -1,6 +1,6 @@
 // ✏️ Edit layout (ADR 0029): the 👆 touch layout's own view. Bands with ⠿
 // (drag, or ↑ ↓), S M L and ✕ (two taps, ↩️ Undo); + Add a group; + more;
-// a tile swapped or taken out; layouts loaded (⭐ My layout kept), saved,
+// a tile swapped or taken out; layouts loaded (⭐ Layout kept), saved,
 // renamed and deleted; at most 8 bands. + more and a swap pick the group
 // with one ▾ picker and offer only sounds not on the board yet; sizing a
 // band down fills its line.
@@ -51,11 +51,11 @@ test('✏️ Layout on the bar opens, with 👆 Pads, its own view of the bands'
   $('#dj-change').dispatch('click');
   assert.equal($('#touch-edit').open, true);
   assert.equal($('#keys-edit').open, false, 'not the keys\' editor');
-  assert.deepEqual(names(), ['🎤 My sounds', '🎶 Chords', '🥁 Drums', '🎸 Bass']);
-  assert.deepEqual(chips(), ['🎸 Band', '🥁 Drum kit', '🎹 Chords and bass', '🐾 Zoo band', '⭐ Save this layout'], 'ready-made ones, then Save; no ⭐ My layout yet');
+  assert.deepEqual(names(), ['🎤 Sounds', '🎶 Chords', '🥁 Drums', '🎸 Bass']);
+  assert.deepEqual(chips(), ['🎸 Band', '🥁 Drum kit', '🎹 Chords and bass', '🐾 Zoo band', '⭐ Save this layout'], 'ready-made ones, then Save; no ⭐ Layout yet');
   assert.equal(q('[data-size="m"][data-band="1"]').getAttribute('aria-pressed'), 'true');
-  assert.equal(q('[data-handle="0"]').getAttribute('aria-label'), 'Move 🎤 My sounds: drag it, or press ↑ or ↓');
-  assert.ok($('#te-add').querySelector('[data-add-group="mine"]'), '+ Add a group offers 🎤 My sounds');
+  assert.equal(q('[data-handle="0"]').getAttribute('aria-label'), 'Move 🎤 Sounds: drag it, or press ↑ or ↓');
+  assert.ok($('#te-add').querySelector('[data-add-group="mine"]'), '+ Add a group offers 🎤 Sounds');
   assert.ok($('#te-add').querySelector('[data-add-group="animals"]'));
 });
 
@@ -142,15 +142,15 @@ test('⠿ moves a band: ↑ ↓ on it, or a drag (a mouse at once; a finger hold
   assert.deepEqual(groupsOf(touch()), ['mine', 'chords', 'drums', 'animals', 'bass']);
 });
 
-test('a ready-made layout keeps the hand-made one as ⭐ My layout; ⭐ Save this layout names one; rename; delete asks first', () => {
+test('a ready-made layout keeps the hand-made one as ⭐ Layout; ⭐ Save this layout names one; rename; delete asks first', () => {
   const mine = JSON.stringify(touch());
   $('#te-layouts').querySelector('[data-layout="ready-drum-kit"]').dispatch('click');
   assert.deepEqual(groupsOf(touch()), ['drums', 'drums', 'drums']);
-  assert.match($('#te-note').textContent, /kept in ⭐ My layout/);
-  assert.equal(chips()[0], '⭐ My layout');
+  assert.match($('#te-note').textContent, /kept in ⭐ Layout/);
+  assert.equal(chips()[0], '⭐ Layout');
   assert.equal($('#te-layouts').querySelector('[data-layout="ready-drum-kit"]').getAttribute('aria-pressed'), 'true');
   $('#te-layouts').querySelector('[data-layout="mine"]').dispatch('click');
-  assert.equal(JSON.stringify(touch()), mine, 'My layout brings it back');
+  assert.equal(JSON.stringify(touch()), mine, 'Layout brings it back');
 
   $('#te-save').dispatch('click');
   assert.equal($('#te-save-line').hidden, false);
@@ -159,7 +159,7 @@ test('a ready-made layout keeps the hand-made one as ⭐ My layout; ⭐ Save thi
   $('#te-save-ok').dispatch('click');
   assert.deepEqual(state.touchLayouts.map((l) => [l.name, l.personId, l.bands.length]), [['Jam pads', 'pip', 5]]);
   assert.match(state.touchLayouts[0].id, /^touch-/);
-  assert.deepEqual(chips().slice(0, 2), ['⭐ My layout', '⭐ Jam pads'], 'own ones first');
+  assert.deepEqual(chips().slice(0, 2), ['⭐ Layout', '⭐ Jam pads'], 'own ones first');
   assert.equal($('#te-own-line').hidden, false);
   $('#te-rename').value = 'Party';
   $('#te-rename').dispatch('change');

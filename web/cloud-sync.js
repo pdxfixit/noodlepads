@@ -15,7 +15,7 @@ import { groupName } from './groups.js';
 import { STAMP, resolve } from './merge3.js';
 import { songBeatIds, mapSongBeats } from './playlist.js';
 
-// The stores that belong to one person (`voices` is ⭐ My voices, IndexedDB
+// The stores that belong to one person (`voices` is ⭐ Voices, IndexedDB
 // `voices`). orders, patterns, decks, songs and
 // prefs (the person's settings) hold one record per person, keyed by personId.
 export const CLOUD_KINDS = ['clips', 'overrides', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices', 'touchLayouts'];

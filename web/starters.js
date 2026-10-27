@@ -44,7 +44,7 @@ function playedIds(doc) {
   for (const d of list(doc, 'decks')) for (const v of Object.values(d?.keys ?? {})) ids.push(v);
   for (const d of list(doc, 'decks')) for (const v of Object.values(d?.mine ?? {})) ids.push(v);
   for (const l of list(doc, 'layouts')) for (const v of Object.values(l?.keys ?? {})) ids.push(v);
-  // 👆 touch layouts (ADR 0029): the live one, ⭐ My layout and the saved ones.
+  // 👆 touch layouts (ADR 0029): the live one, ⭐ Layout and the saved ones.
   const bands = (t) => (Array.isArray(t?.bands) ? t.bands : []).flatMap((b) => (Array.isArray(b?.sounds) ? b.sounds : []));
   for (const d of list(doc, 'decks')) ids.push(...bands(d?.touch), ...bands(d?.touchMine));
   for (const l of list(doc, 'touchLayouts')) ids.push(...bands(l));

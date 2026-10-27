@@ -4,7 +4,7 @@
 // simpler in how to construct the layout and size of the tiles".
 //
 // A touch layout is a list of bands, top to bottom. Each band is one group
-// (a kit group like Drums or Chords, or 🎤 My sounds) holding a list of
+// (a kit group like Drums or Chords, or 🎤 Sounds) holding a list of
 // sounds, with one size for all its tiles: S, M or L, 5, 4 or 2 across on a
 // phone. No DOM, no audio, no storage: dj-touch.js draws and listens.
 //
@@ -20,7 +20,7 @@
 import { cleanGrid, settle, dropBand } from './touch-grid.js';
 import { cutName } from './names.js';
 
-export const MINE = 'mine';                       // 🎤 My sounds, the person's own
+export const MINE = 'mine';                       // 🎤 Sounds, the person's own
 export const SIZES = { s: 5, m: 4, l: 2 };        // tiles across on a phone (Ben, 2026-10-16)
 export const SIZE_NAMES = { s: 'Small', m: 'Medium', l: 'Large' };
 export const MAX_BANDS = 8;
@@ -274,7 +274,7 @@ export function sameTouch(a, b) {
 }
 
 // Before a layout replaces this one, the one on screen when it is the kid's
-// own: anything that is not just one of `layouts`. Kept as ⭐ My layout, so
+// own: anything that is not just one of `layouts`. Kept as ⭐ Layout, so
 // loading a layout never loses a hand-made one.
 export function keepAsMine(current, layouts) {
   return layouts.some((l) => sameTouch(l, current)) ? null : copy(cleanTouch(current));

@@ -19,14 +19,14 @@ import {
 import { openDialog, setupDialog } from './dialogs.js';
 import { newId } from './util.js';
 
-// A group's emoji and name: 🎤 My sounds, a kit group's own, or 🔊 Sounds.
+// A group's emoji and name: 🎤 Sounds, a kit group's own, or 🔊 Sounds.
 function groupParts(group, kitGroups = []) {
-  if (group === MINE) return { emoji: '🎤', name: 'My sounds' };
+  if (group === MINE) return { emoji: '🎤', name: 'Sounds' };
   const g = kitGroups.find((x) => x.id === group);
   return g ? { emoji: g.emoji || '🔊', name: g.name } : { emoji: '🔊', name: 'Sounds' };
 }
 
-// A band's heading: the group's emoji and name, or 🎤 My sounds.
+// A band's heading: the group's emoji and name, or 🎤 Sounds.
 export function groupLabel(group, kitGroups = []) {
   const { emoji, name } = groupParts(group, kitGroups);
   return `${emoji} ${name}`;
@@ -182,7 +182,7 @@ function soundButton(c, family, data) {
 // `el`: the dialog's parts (app.js). `deps`: from dj.js: personId(),
 // clipById, family(clip), kitGroups(), sounds() (touch.js soundsOf),
 // touch() (the layout as it plays), saveTouch(t), mine() and saveMine(t)
-// (⭐ My layout), layouts(pid), saveLayout(l), deleteLayout(id),
+// (⭐ Layout), layouts(pid), saveLayout(l), deleteLayout(id),
 // preview(clip), closed().
 export function createTouchEditor({ el, deps }) {
   let undo = [];              // earlier layouts, newest last
@@ -199,7 +199,7 @@ export function createTouchEditor({ el, deps }) {
   const label = (group) => groupLabel(group, deps.kitGroups());
   const soundText = (id) => { const c = clip(id); return c ? `${c.emoji || '🔊'} ${c.label}` : 'that sound'; };
   const now = () => deps.touch();
-  // The groups a band can be: 🎤 My sounds, then each kit group with sounds on this board.
+  // The groups a band can be: 🎤 Sounds, then each kit group with sounds on this board.
   const groups = () => { const s = deps.sounds(); return [MINE, ...deps.kitGroups().map((g) => g.id).filter((g) => s.groups.get(g)?.length)]; };
 
   function set(next, note, { keepUndo = false } = {}) {
@@ -211,19 +211,19 @@ export function createTouchEditor({ el, deps }) {
   }
   function say(text) { el.note.textContent = text || ''; }
 
-  // ── Layouts: ⭐ My layout, the kid's own, then the ready-made ──
+  // ── Layouts: ⭐ Layout, the kid's own, then the ready-made ──
 
   const own = () => deps.layouts(pid()).slice().sort((a, b) => a.created - b.created);
   function allLayouts() {
     const s = deps.sounds();
     const out = [];
     const mine = deps.mine();
-    if (mine) out.push({ id: 'mine', label: '⭐ My layout', touch: mine, mine: true });
+    if (mine) out.push({ id: 'mine', label: '⭐ Layout', touch: mine, mine: true });
     for (const l of own()) out.push({ id: l.id, label: `⭐ ${l.name}`, touch: { bands: l.bands, ...(l.grid ? { grid: l.grid } : {}) }, own: l });
     for (const r of READY_TOUCH) out.push({ id: `ready-${r.id}`, label: `${r.emoji} ${r.name}`, touch: readyTouch(r, s) });
     return out;
   }
-  // The layout on screen, when it is the kid's own, is kept as ⭐ My layout first.
+  // The layout on screen, when it is the kid's own, is kept as ⭐ Layout first.
   function loadLayout(id) {
     const all = allLayouts();
     const l = all.find((x) => x.id === id);
@@ -232,7 +232,7 @@ export function createTouchEditor({ el, deps }) {
     if (kept && !sameTouch(kept, l.touch)) deps.saveMine(kept);
     picking = null;
     chosen = null;
-    set(l.touch, `${l.label} is on.${kept && !l.mine ? ' Your own layout is kept in ⭐ My layout.' : ''}`);
+    set(l.touch, `${l.label} is on.${kept && !l.mine ? ' Your own layout is kept in ⭐ Layout.' : ''}`);
   }
   function renderLayouts() {
     const t = now();
@@ -284,7 +284,7 @@ export function createTouchEditor({ el, deps }) {
     }));
   }
   // A ready-made grid in place of the layout, its blocks empty; the one on
-  // screen kept as ⭐ My layout when it is the kid's own. ☰ Stacked keeps
+  // screen kept as ⭐ Layout when it is the kid's own. ☰ Stacked keeps
   // the groups, one band each, in the blocks' order.
   function useShape(id) {
     const cur = now();
@@ -298,7 +298,7 @@ export function createTouchEditor({ el, deps }) {
     const kept = cur.bands.length ? keepAsMine(cur, allLayouts().filter((x) => !x.mine).map((x) => x.touch)) : null;
     if (kept) deps.saveMine(kept);
     focusAfter = '[data-drop]';
-    set(useGrid(r.grid), `${r.name}: tap a block, then a group, or drag a group onto a block.${kept ? ' Your own layout is kept in ⭐ My layout.' : ''}`);
+    set(useGrid(r.grid), `${r.name}: tap a block, then a group, or drag a group onto a block.${kept ? ' Your own layout is kept in ⭐ Layout.' : ''}`);
   }
 
   // ── The bands ──

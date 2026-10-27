@@ -1285,7 +1285,7 @@ dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
 /* The open document's name bar: a beat on Beats and in Beat Builder, a song
    on 🎼 Song. It comes first on its screen, in a zone of its own a shade
    lighter than the panel. With room it is one line: icon, name (a text
-   field: tap to rename), ✏️, 🆕 New, 🗂️ My beats (🗂️ My songs). Short of
+   field: tap to rename), ✏️, 🆕 New, 🗂️ Beats (🗂️ Songs). Short of
    room, the song bar takes two balanced lines: icon, name and ✏️ over New
    and Open, which share the width; the icon and ✏️ columns are the same
    width, so the halves match. The beat bar's own lines follow below. */
@@ -1385,15 +1385,15 @@ dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
   .doc-bar .doc-new { grid-area: new; }
   .doc-bar .doc-open { grid-area: open; }
   /* Nothing open (ADR 0008): no name or ✏️, so one line: the icon, then
-     🆕 New and 🗂️ My songs sharing the width. */
+     🆕 New and 🗂️ Songs sharing the width. */
   .doc-bar:not(.beat-bar):has(.beat-name[hidden]) { grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "icon new open"; }
 }
 /* The beat bar (Beats, ⌨️ Keys off and on; ADR 0017). With room it is one
    line, every tool with its word: 🥁 name ✏️ (or 💾 Keep) · 💃 Grooves ·
-   ⌨️ Keys · 🆕 New · 🗂️ My beats. When the five with words no longer fit
+   ⌨️ Keys · 🆕 New · 🗂️ Beats. When the five with words no longer fit
    beside a name of 9em (measured on the bar itself: fitLine, from
    sequencer.js), the bar takes `fit-split`: 💃 Grooves, ⌨️ Keys and
-   🗂️ My beats move to a row of their own above the title, with their words,
+   🗂️ Beats move to a row of their own above the title, with their words,
    in thirds; the title line keeps ✏️ or 💾 and 🆕 beside the name, emoji
    alone (Ben, 2026-10-18). With no beat open, 🆕 New fills the title line
    with its word. Then `fit-tight` trims the top row's padding, and on the

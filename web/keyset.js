@@ -11,7 +11,7 @@
 import { KEY_ROWS, KEY_CODES } from './rhythm.js';
 import { cutName } from './names.js';
 
-// All 40 keys, a missing one as null (No sound): a layout or ⭐ My keys
+// All 40 keys, a missing one as null (No sound): a layout or ⭐ Keys
 // saved before the number row (2026-10-12) loads with that row empty.
 export function fullKeys(keys = {}) {
   const out = {};
@@ -180,7 +180,7 @@ export function readyKeys(layout, kitClip) {
 
 // Before a layout replaces the keys, the keys as they are, when they are the
 // kid's own arrangement: anything that is not just one of the layouts. That
-// is kept as ⭐ My keys, so loading a layout never loses a hand-made board.
+// is kept as ⭐ Keys, so loading a layout never loses a hand-made board.
 // `layouts` is every layout's keys (the kid's and the ready-made ones).
 export function keepAsMine(current, layouts) {
   return layouts.some((l) => sameKeys(l, current)) ? null : fullKeys(current);

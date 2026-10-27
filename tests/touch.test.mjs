@@ -44,7 +44,7 @@ test('every starter and ready-made sound is a real kit sound, never an Advanced-
   }
 });
 
-test('a new band starts with its group\'s few: drums, chords, the natural notes, five bass notes; others their first line; My sounds the newest', () => {
+test('a new band starts with its group\'s few: drums, chords, the natural notes, five bass notes; others their first line; Sounds the newest', () => {
   assert.deepEqual(startingSounds('drums', sounds), ['pip-kick', 'pip-snare', 'pip-hihat', 'pip-clap']);
   assert.deepEqual(startingSounds('chords', sounds), ['pip-chord-c', 'pip-chord-am', 'pip-chord-f', 'pip-chord-g']);
   assert.deepEqual(startingSounds('notes', sounds).map((id) => id.slice(4)), ['note-c', 'note-d', 'note-e', 'note-f', 'note-g', 'note-a', 'note-b', 'note-c-high']);
@@ -107,7 +107,7 @@ test('+ more adds the group\'s other sounds; a tile swaps its sound (trading pla
   assert.equal(many.bands[0].sounds.length, MAX_BAND_SOUNDS);
 });
 
-test('⭐ My layout keeps a hand-made layout, never one that is just a saved or ready-made one', () => {
+test('⭐ Layout keeps a hand-made layout, never one that is just a saved or ready-made one', () => {
   const band = readyTouch(READY_TOUCH[0], noOwn);
   assert.equal(keepAsMine(band, [band]), null);
   const mine = setSize(band, 0, 's');

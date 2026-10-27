@@ -1,6 +1,6 @@
 // The beat bar on a phone (Ben, 2026-10-18; docs/design/beat-from-a-song.md):
 // where the five tools with their words don't fit beside the name, 💃 Grooves,
-// ⌨️ Keys and 🗂️ My beats move to a row of their own above the title, still
+// ⌨️ Keys and 🗂️ Beats move to a row of their own above the title, still
 // worded, and the title line keeps ✏️ or 💾 and 🆕. Wide screens keep one
 // line. The switch is measured on the bar (lines.js fitLine), on both bars
 // (⌨️ Keys off and on). The stand-in page has no layout, so each bar is given
@@ -47,7 +47,7 @@ test('🆕 New can go emoji-only on the phone title line, and still says what it
   }
 });
 
-test('the split bar: Grooves, Keys and My beats first, in thirds, worded; Keep and New emoji alone', () => {
+test('the split bar: Grooves, Keys and Beats first, in thirds, worded; Keep and New emoji alone', () => {
   const css = web('styles.css');
   assert.match(css, /\.beat-bar \.seq-tool\[data-word\]::after \{ content: " " attr\(data-word\); \}/, 'the bar\'s words show at every width, not only from 560 px');
   assert.match(css, /\.beat-bar\.fit-split :is\(\.doc-grooves, \.doc-keys, \.doc-open\) \{ order: -1; flex: 1 1 calc\(\(100% - 17px\) \/ 3\);/);

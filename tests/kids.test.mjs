@@ -273,11 +273,11 @@ test('● a tune: a new recording keeps the beat with the tune it replaces, as a
   const tuned = withTuneNote(beat, { clipId: 'p-a-piano-c', pitch: 4, s: 2, l: 1, fresh: true });
   const kept = keptTune(tuned, { id: 'beat-x', name: 'Funky Moose' }, 9);
   assert.equal(kept.id, 'beat-x');
-  assert.equal(kept.name, '🧸 Funky Moose', 'a grown-up can tell a kid\'s tune in 🗂️ My beats by its 🧸');
+  assert.equal(kept.name, '🧸 Funky Moose', 'a grown-up can tell a kid\'s tune in 🗂️ Beats by its 🧸');
   const long = keptTune(tuned, { id: 'beat-x', name: 'Extremely Long Beat Name Indeed' }).name;
   assert.ok(long.startsWith('🧸 ') && cutName(long) === long, 'a long name is cut to keep the mark and still fit a name');
   assert.equal(kept.personId, 'p-a');
-  assert.ok(!isScratch(kept), 'not the scratch: it lists in 🗂️ My beats');
+  assert.ok(!isScratch(kept), 'not the scratch: it lists in 🗂️ Beats');
   assert.deepEqual(tuneRowOf(kept).tune, [{ p: 4, s: 2, l: 1 }]);
   assert.deepEqual(squaresOf(kept, ids), squaresOf(tuned, ids), 'its drums too');
   assert.equal(kept.saved, 9);
@@ -848,14 +848,14 @@ test('🧸 Kids in Settings brings the kid\'s screens back; Regular leaves them 
   $('#settings-dialog').close();
   assert.equal(document.body.classList.contains('kids'), false);
   // The kid's beat is their scratch beat: the regular app opens it, and it
-  // is not in 🗂️ My beats (ADR 0020).
+  // is not in 🗂️ Beats (ADR 0020).
   assert.ok(state.savedBeats.some((b) => b.id.startsWith('beat-scratch-') && b.personId === state.personId));
   $('#beats-toggle').dispatch('click');
   const bar = document.querySelectorAll('.beat-bar')[0];
   assert.equal(bar.querySelector('[data-beat-name]').value, 'Scratch beat');
   assert.equal($('#seq-rows').children.filter((c) => c.classList.contains('seq-row')).length, 4, 'the four drums');
   bar.querySelector('[data-beat-open]').dispatch('click');
-  assert.equal($('#lib-list').children.length, 0, 'not in 🗂️ My beats');
+  assert.equal($('#lib-list').children.length, 0, 'not in 🗂️ Beats');
   $('#library').close();
   $('#pads-tab').dispatch('click');
 });
@@ -1083,7 +1083,7 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   assert.equal($('#kids-play').getAttribute('aria-pressed'), 'true', 'the beat plays on, with the tune');
   assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [0, 9], 'the tune stays');
   // A new recording: its first note starts the tune again; a tap on ● stops it early.
-  // The tune it replaces is kept first, a beat of its own in 🗂️ My beats,
+  // The tune it replaces is kept first, a beat of its own in 🗂️ Beats,
   // as 🆕 New keeps a beat: Kids has no Undo, and a kid can't read a line.
   const kept = () => state.savedBeats.filter((b) => b.personId === state.personId && !b.id.startsWith('beat-scratch-') && tuneOf(b));
   const keptBefore = kept().length;
@@ -1101,7 +1101,7 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   assert.deepEqual(tuneOf(earlier).tune.map((n) => n.p), [0, 9], 'C then A, as it was');
   assert.equal(earlier.rows.length, 5, 'with the drums');
   assert.ok(earlier.name && earlier.name !== 'Scratch beat', `a fun name: ${earlier.name}`);
-  assert.ok(earlier.name.startsWith('🧸 '), `🧸 marks a kid's tune in 🗂️ My beats: ${earlier.name}`);
+  assert.ok(earlier.name.startsWith('🧸 '), `🧸 marks a kid's tune in 🗂️ Beats: ${earlier.name}`);
   rec.dispatch('click');
   assert.equal(rec.classList.contains('recording'), false, 'stopped early');
   assert.equal(rec.getAttribute('aria-pressed'), 'false');
@@ -1130,9 +1130,9 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   assert.equal(rows.length, 5);
   assert.equal(rows.filter((r) => r.classList.contains('tune')).length, 1, 'one tune row, for 🎹 the piano roll');
   assert.equal(document.querySelectorAll('.beat-bar')[0].querySelector('[data-beat-name]').value, 'Scratch beat', 'the scratch: 💾 Keep names it');
-  // And the earlier tune waits in 🗂️ My beats.
+  // And the earlier tune waits in 🗂️ Beats.
   document.querySelectorAll('.beat-bar')[0].querySelector('[data-beat-open]').dispatch('click');
-  assert.ok($('#lib-list').querySelector(`[data-load="${earlier.id}"]`), `"${earlier.name}" in 🗂️ My beats`);
+  assert.ok($('#lib-list').querySelector(`[data-load="${earlier.id}"]`), `"${earlier.name}" in 🗂️ Beats`);
   $('#library').close();
   $('#pads-tab').dispatch('click');
   audio.load = plainLoad;

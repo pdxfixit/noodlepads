@@ -1,4 +1,4 @@
-// Groups of a kid's own sounds (Ben, 2026-10-11; ADR 0013). In My sounds
+// Groups of a kid's own sounds (Ben, 2026-10-11; ADR 0013). In Sounds
 // only: the presets keep their fixed groups from boards.json. Pure functions
 // of plain data, so they can be tested; pads.js and bulk.js call them.
 //

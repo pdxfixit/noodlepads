@@ -406,11 +406,11 @@ test('the headline is the app for everyone: Noodle Pads (the person shows in the
   assert.equal(boardTitle([], undefined), 'Noodle Pads');
 });
 
-test('the own-sounds heading says "My sounds" when alone or still called Me', () => {
+test('the own-sounds heading says "Sounds" when alone or still called Me', () => {
   const me = { id: 'p-1', name: 'Me' };
   const pip = { id: 'pip', name: 'Pip' };
-  assert.equal(ownSoundsTitle([me], me), 'My sounds');
-  assert.equal(ownSoundsTitle([pip, me], me), 'My sounds');
+  assert.equal(ownSoundsTitle([me], me), 'Sounds');
+  assert.equal(ownSoundsTitle([pip, me], me), 'Sounds');
   assert.equal(ownSoundsTitle([pip, me], pip), 'Pip’s sounds');
 });
 

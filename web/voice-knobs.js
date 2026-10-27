@@ -164,7 +164,7 @@ export function cleanMyVoice(raw) {
 export const MY_VOICE_CHIPS = 3;
 
 // A person's own voices, most recently used (or made) first: the first
-// MY_VOICE_CHIPS are chips, the rest go in ⭐ My voices ▾.
+// MY_VOICE_CHIPS are chips, the rest go in ⭐ Voices ▾.
 export function myVoicesFor(all, personId) {
   return (all ?? []).filter((v) => v?.personId === personId)
     .sort((a, b) => (b.used || b.created) - (a.used || a.created) || String(a.id).localeCompare(String(b.id)));

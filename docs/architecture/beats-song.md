@@ -1,6 +1,6 @@
 # 🥁 Beats and 🎼 Song
 
-**In one paragraph.** `sequencer.js createSequencer` is the beat maker, and `beat-engine.js createBeatEngine` is the engine under it: the sounds loaded for scheduling (`ready`), one hit (`sound`), the mix graphs (`busFor`, `letGo`) and the "play a saved beat" path (`prepareBeats`, `soundHit`), with no screen, DOM or storage. `app.js` makes the one engine and hands it to the beat maker, `createSong` and `initKids` (`deps.engine`). Its `play(hooks)` is the loop on the audio clock that 🥁 Beats and 🧸 Kids play through (`beat.js hitsDue` says what is due, the tick books it); the loop of `song.js` moves onto it in step 8 of [one-beat-engine.md](../design/one-beat-engine.md). The sounds it holds are read through `has`/`get`/`drop`/`keep(ids)`/`held`, never as a map. The beat maker's pure rules are in `beat.js` (a beat made safe, the hits it plans, swing, grooves as beats, beat files, tempo stops; imported by the backup gate, Kids' rules, the listener, Song and the share preview, so none of them loads the screen), and the WAV encoder in `wav.js`. The beat maker owns the open beat, the hooks it gives the engine's loop (the click before the rows, the chip switch at the bar line, live hits not played twice, the playhead), the beat's mix bus, the sound chooser, 💃 Grooves, 🗂️ My beats, the pattern chips, the click, 🎚️ Mixer's wiring and 🎹 the roll's wiring. Everything else that plays a saved beat goes through three of its methods (`beatPlan`, `prepareBeats`, `soundHit`), which share the engine's `sound()` and `busFor()`. `song.js createSong` is 🎼 Song: its own record, its own 25 ms scheduler, and no sound code of its own (every hit is `seq.soundHit`). `playlist.js` and `notes.js` are the pure rules under them. 🧸 Kids plays its beat through the engine's `play` (`kids.js playBeat`), and ⌨️ Keys (`dj.js`) drives the sequencer through about 40 methods of its API.
+**In one paragraph.** `sequencer.js createSequencer` is the beat maker, and `beat-engine.js createBeatEngine` is the engine under it: the sounds loaded for scheduling (`ready`), one hit (`sound`), the mix graphs (`busFor`, `letGo`) and the "play a saved beat" path (`prepareBeats`, `soundHit`), with no screen, DOM or storage. `app.js` makes the one engine and hands it to the beat maker, `createSong` and `initKids` (`deps.engine`). Its `play(hooks)` is the loop on the audio clock that 🥁 Beats and 🧸 Kids play through (`beat.js hitsDue` says what is due, the tick books it); the loop of `song.js` moves onto it in step 8 of [one-beat-engine.md](../design/one-beat-engine.md). The sounds it holds are read through `has`/`get`/`drop`/`keep(ids)`/`held`, never as a map. The beat maker's pure rules are in `beat.js` (a beat made safe, the hits it plans, swing, grooves as beats, beat files, tempo stops; imported by the backup gate, Kids' rules, the listener, Song and the share preview, so none of them loads the screen), and the WAV encoder in `wav.js`. The beat maker owns the open beat, the hooks it gives the engine's loop (the click before the rows, the chip switch at the bar line, live hits not played twice, the playhead), the beat's mix bus, the sound chooser, 💃 Grooves, 🗂️ Beats, the pattern chips, the click, 🎚️ Mixer's wiring and 🎹 the roll's wiring. Everything else that plays a saved beat goes through three of its methods (`beatPlan`, `prepareBeats`, `soundHit`), which share the engine's `sound()` and `busFor()`. `song.js createSong` is 🎼 Song: its own record, its own 25 ms scheduler, and no sound code of its own (every hit is `seq.soundHit`). `playlist.js` and `notes.js` are the pure rules under them. 🧸 Kids plays its beat through the engine's `play` (`kids.js playBeat`), and ⌨️ Keys (`dj.js`) drives the sequencer through about 40 methods of its API.
 
 ## Who is built where
 
@@ -22,7 +22,7 @@
 
 ## The beat record
 
-One shape everywhere: the open beat in memory, a beat in 🗂️ My beats, the scratch, a groove made into a beat, a beat from 🎧 From a song. `beat.js cleanPattern(raw, personId, unsigned?)` makes any of them safe. Everything that brings a beat in uses it: `backup.js` (the `patterns` and `beats` lists), `listen-make.js`, `beatFromFile`, `grooveBeat`, and every read from the library.
+One shape everywhere: the open beat in memory, a beat in 🗂️ Beats, the scratch, a groove made into a beat, a beat from 🎧 From a song. `beat.js cleanPattern(raw, personId, unsigned?)` makes any of them safe. Everything that brings a beat in uses it: `backup.js` (the `patterns` and `beats` lists), `listen-make.js`, `beatFromFile`, `grooveBeat`, and every read from the library.
 
 ### The beat
 
@@ -47,7 +47,7 @@ Library records add three fields that `cleanPattern` drops, so every write puts 
 |---|---|---|
 | `created` | `sequencer.js save` (keeps the old one), `keepAside`, ⧉ duplicate, 📥 load, `listen-ui.js` | `chipBeats` (the order of the recent chips) |
 | `saved` | `sequencer.js save` on every change and every open | `chipBeats` (which beats get the recent spots), `beatLibrary.list` and `songBook`-style sorting, `scratch.js newest` |
-| `pinned` | 📌 in 🗂️ My beats (`togglePin`: the time it was pinned) | `isPinned`, `chipBeats`; `save` copies it forward, ⧉ deletes it |
+| `pinned` | 📌 in 🗂️ Beats (`togglePin`: the time it was pinned) | `isPinned`, `chipBeats`; `save` copies it forward, ⧉ deletes it |
 
 ### A row
 
@@ -75,7 +75,7 @@ Library records add three fields that `cleanPattern` drops, so every write puts 
 
 `{p, s, l}`: `p` semitones over the sound's C (−24 to 36), `s` the start pill, `l` the length in pills. `s` and `l` are halves at most (½ Half pills is Advanced). Two notes of one pitch never overlap (`cleanNotes` cuts the earlier one); different pitches may (chords). At most 256 notes a row, 64 pills a note.
 
-### A beat file (🗂️ My beats ⬇️ / 📥)
+### A beat file (🗂️ Beats ⬇️ / 📥)
 
 `beat.js beatToFile` / `beatFromFile`: `{format: 'noodlepads-beat', version: 1, name, bpm, bars, swing, rows, signature?, volume?, fx?}`. A row's `clipId` becomes `sound`, the kit id (`'kick'`); rows of a kid's own sounds are dropped and counted. Reading also accepts the old format name `noodle-pads-beat`, caps the text at 64 KB, and maps `sound` back to `<personId>-<kit id>`. The beat-level fields are listed by hand in `beatToFile`: a new beat field must be added there too. A beat file does **not** go through `backup.js` or `merge.js`. A file without a `signature` (made before beats had their own) is stamped on loading with the loader's settings (`settings.js unsignedSignature`, passed as `beatFromFile`'s fourth argument).
 
@@ -105,7 +105,7 @@ The owner's settings decide, not whoever is looking, so a beat sounds as it did 
 
 The library is the truth. `patterns` only says which named beat is open; no record means the scratch is open. `fromStore` still handles a pre-ADR-0008 `patterns` record that holds a whole beat with no library copy: one with hits joins the library (`link`), an empty one is dropped.
 
-**The scratch beat** (`scratch.js`). A normal `beats` record with the reserved id `beat-scratch-<person>`, never listed (`isHiddenBeat`) in 🗂️ My beats, the chips, a song's strip, or shares. Before its first change it does not exist (`scratchPattern` makes an empty one with `signature: '4/4'`). Its `name` is `SCRATCH_NAME` (`'Scratch'`), or a groove's name when a groove was loaded into it; `scratch.js grooveOf` finds the groove by that name (or a renamed groove's old one, `was`: "Motown" is Detroit soul), and `scratchLabel` shows "Ska (scratch)". 🧸 Kids' old `beat-kids-…` beats become the scratch (`scratch.js adoptKidsBeats`, run by `app.js adoptKidsBeat` every time a person shows).
+**The scratch beat** (`scratch.js`). A normal `beats` record with the reserved id `beat-scratch-<person>`, never listed (`isHiddenBeat`) in 🗂️ Beats, the chips, a song's strip, or shares. Before its first change it does not exist (`scratchPattern` makes an empty one with `signature: '4/4'`). Its `name` is `SCRATCH_NAME` (`'Scratch'`), or a groove's name when a groove was loaded into it; `scratch.js grooveOf` finds the groove by that name (or a renamed groove's old one, `was`: "Motown" is Detroit soul), and `scratchLabel` shows "Ska (scratch)". 🧸 Kids' old `beat-kids-…` beats become the scratch (`scratch.js adoptKidsBeats`, run by `app.js adoptKidsBeat` every time a person shows).
 
 **Lifecycle of the open beat.**
 
@@ -117,8 +117,8 @@ The library is the truth. `patterns` only says which named beat is open; no reco
 | 🆕 New | `newScratch` | stops; a scratch with hits is kept first (`keepAside`, a fun name or `keptName`); the scratch record is removed; an empty scratch opens |
 | 💾 Keep | `keep` | the scratch gets a new `beat-…` id and a name (typed, `keptName`, or `beatName`), is saved, and the scratch record is removed. Waits while ⌨️ Keys records (`chipsLocked`) |
 | A name typed on the scratch | `nameScratch` | keeps at once if it has rows; else `wantedName` waits, and `save` keeps it (in a microtask) once a row exists; `lockChips(false)` also keeps it |
-| A chip, 🗂️ My beats, 📥, Undo | `openBeat(next, {resume})` | stops, opens, saves, `onBeatChange`; plays again if it was playing and `resume` |
-| 🗑️ in 🗂️ My beats | `closeEverywhere(id)` | the scratch opens if that beat was open |
+| A chip, 🗂️ Beats, 📥, Undo | `openBeat(next, {resume})` | stops, opens, saves, `onBeatChange`; plays again if it was playing and `resume` |
+| 🗑️ in 🗂️ Beats | `closeEverywhere(id)` | the scratch opens if that beat was open |
 | 🎧 From a song's 🥁 Open part A | `seq.openSaved(id)` | `openBeat` stopped |
 
 ## The scheduler
@@ -254,7 +254,7 @@ The beat sounds the same in all of them because they share `sound()`, `busFor()`
 | Context | `OfflineAudioContext(2, …, live sampleRate)` | the same |
 | Name | `deps.remixName(beat name)`: "Wobbly Thunder (🌀 Wonky Remix)" | `deps.soundLabel(song name)`: its own name, or a remix if a pad has it |
 | After | `normalize` (peak to 0.9), `encodeWav`, `deps.addClip({label, blob})` → `app.js addMadeSound` with 🥁 | same, with 🎼 |
-| Where it shows | 🗂️ My beats' note line (`el.libNote`) | the banner (`note`) |
+| Where it shows | 🗂️ Beats' note line (`el.libNote`) | the banner (`note`) |
 
 A share preview (`share-render.js`) is mono at 22,050 Hz, a beat played twice (`BEAT_PASSES`), with a 1 s tail.
 
@@ -263,7 +263,7 @@ A share preview (`share-render.js`) is mono at 22,050 Hz, a beat played twice (`
 - **The data.** `grooves.js GROOVES` (51 grooves) and `GROOVE_GROUPS` (7 styles). A groove is `{id, name, emoji, group, bpm, about, signature?, rows: [[kit id, 'x..X']]}`. `x` a hit, `X` a loud hit, a space only splits bars. `tests/grooves.test.mjs` checks shapes and sounds.
 - **Into a beat.** `grooveBeat(groove, personId, hasClip)`: each row plays `<person>-<kit id>`; rows of sounds the board lacks are left out. Bass rows (`bass-a`, `upright-f`…, `bassNote`) become **one** tune row on that instrument's C, at each note (`notes.js lineOf`), where the first bass row was. Chord rows stay plain rows. `grooveShape` gives its signature, bar and bars.
 - **The card.** `grooveCard`: its thumbnail, `about`, the 🎻 "who plays" chips (`groovePlayers`, leaving out the default 💧 Pluck and ⚡ Synth), and with Advanced its sounds, bars and tempo.
-- **Loading** (`pickGroove` → `loadGroove`). Into the scratch, which opens; the scratch keeps its id and takes the groove's name. With ⌨️ Keys on it opens stopped; on Beats a playing beat carries on with it. `loaded = {before, scratchBefore, groove, replaced}` remembers how to undo it. Keys off: the banner's ↩️ Undo (`offerUndo`). Keys on: `seq.trying()` makes `dj.js` show its line, whose ↩️ My beat is `seq.putTrialAway()`. Both end in `undoLoad`. Any `save()` clears `loaded`.
+- **Loading** (`pickGroove` → `loadGroove`). Into the scratch, which opens; the scratch keeps its id and takes the groove's name. With ⌨️ Keys on it opens stopped; on Beats a playing beat carries on with it. `loaded = {before, scratchBefore, groove, replaced}` remembers how to undo it. Keys off: the banner's ↩️ Undo (`offerUndo`). Keys on: `seq.trying()` makes `dj.js` show its line, whose ↩️ Beat is `seq.putTrialAway()`. Both end in `undoLoad`. Any `save()` clears `loaded`.
 - **➕ Add to this beat** (`grooveAdds`, Keys off only): `mergeGroove` lays the groove's pills over the open beat's rows (same sound and kind → same row; a tune's notes join where none starts), turning nothing off, with Undo (`{before, pattern, groove, added}`). While the beat plays, the new rows' sounds load (`prepare`) and the rows join from their next pill, as every row-adding path does (`tests/beat-sounds-kept.test.mjs`).
 - **▶ sample** (`playSample` → `hearBeat`): see the table above. Closing the dialog, picking a groove, or another ▶ ends it.
 - `deps.onGroovesOpen` lets `app.js showCard` show 🎧 From a song's card for this person's level.
@@ -334,7 +334,7 @@ The person setting `advancedBeats` (true only at the Advanced level; `settings.j
 |---|---|---|
 | Beats' banner Undo | `sequencer.js offerUndo` / `undoRemove`, shown by `ui.js showBanner` (8 s) | one of: a removed row `{row, at, pattern}`; a level `{level: {at, before}}`; a pill drag or delete `{copy, text}`; a groove added `{before, added}`; a groove loaded `{before, scratchBefore, …}`. Forgotten when `pattern` changes (`render`) |
 | ⌨️ Keys' own Undo | `dj.js`, through `seq.snapshot()` / `seq.restore()` / `seq.putLevel()` | a copy of the beat |
-| ↩️ My beat | `seq.putTrialAway` → `undoLoad` | a groove just loaded |
+| ↩️ Beat | `seq.putTrialAway` → `undoLoad` | a groove just loaded |
 | 🎹 roll's ↩️ | `roll.js history` | the tune before each change |
 | 🎼 Song's ↩️ | `song.js undoSteps` (and a banner for a removed tempo mark) | `{tempo, tempos, lanes}` |
 
@@ -420,7 +420,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | `beatColor(beat)` | its first row's sound's color |
 | `announce`, `onHit` | as for the sequencer |
 
-`song.js` returns `setPerson`, `render`, `play`, `stop`, `playing`, `song`, `openSaved`. `app.js` also re-renders the song when 🗂️ My beats closes (`#library` `close`).
+`song.js` returns `setPerson`, `render`, `play`, `stop`, `playing`, `song`, `openSaved`. `app.js` also re-renders the song when 🗂️ Beats closes (`#library` `close`).
 
 ## Seams
 

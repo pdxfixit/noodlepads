@@ -14,8 +14,8 @@
 // the open song saves itself on every change. IndexedDB `songs` holds each
 // person's open song and `songbook` every song (ADR 0007). With nothing else
 // open, the person's scratch song is (ADR 0020, scratch.js): in `songbook`
-// under a reserved id, never listed; 💾 Keep makes it a song in 🗂️ My songs. The
-// song bar renames it, starts a 🆕 New one, or 🗂️ My songs opens another (⧉
+// under a reserved id, never listed; 💾 Keep makes it a song in 🗂️ Songs. The
+// song bar renames it, starts a 🆕 New one, or 🗂️ Songs opens another (⧉
 // duplicate, 🗑️ delete).
 //
 // Playback uses the Web Audio clock with the same lookahead as the beat
@@ -186,7 +186,7 @@ export function createSong(deps) {
   const beatById = (id) => beats().find((b) => b.id === id);
   const stepsOf = (id) => beatSteps(beatById(id));
   const allSongs = () => deps.songs.list(personId);
-  const songs = () => allSongs().filter((s) => !isScratchSong(s));   // the ones in 🗂️ My songs
+  const songs = () => allSongs().filter((s) => !isScratchSong(s));   // the ones in 🗂️ Songs
   const clean = (raw) => cleanSong(raw, () => deps.songName(songs().map((x) => x.name)), beatById);
   // The scratch song to open: as stored, or empty (saved once it changes).
   function scratchSong() {
@@ -243,7 +243,7 @@ export function createSong(deps) {
   // 🆕 New (Ben, 2026-10-12): a blank scratch song opens. A named song open
   // stays there as it is. A scratch with blocks is kept first (Ben,
   // 2026-10-24: 🗂️ See all lists it as theirs, so New must never lose it):
-  // it joins 🗂️ My songs with a fun name, open or not, and a line says so.
+  // it joins 🗂️ Songs with a fun name, open or not, and a line says so.
   function newScratch() {
     const old = songScratchOf(allSongs(), personId);
     let kept = null;
@@ -256,7 +256,7 @@ export function createSong(deps) {
     if (old) deps.songs.remove(old.id);
     openSong(null);
     logEvent('song', { action: 'new' });
-    if (kept) note(`Kept as “${kept}” in 🗂️ My songs. A blank scratch song.`);
+    if (kept) note(`Kept as “${kept}” in 🗂️ Songs. A blank scratch song.`);
     else deps.announce?.('A blank scratch song.');
   }
 
@@ -315,7 +315,7 @@ export function createSong(deps) {
     render();
   }
 
-  // 💾 Keep (ADR 0020): the scratch song becomes a song in 🗂️ My songs with
+  // 💾 Keep (ADR 0020): the scratch song becomes a song in 🗂️ Songs with
   // the name typed into its title, else a fun name, and opens; the scratch
   // starts empty again.
   function keep() {
@@ -328,7 +328,7 @@ export function createSong(deps) {
     if (old) deps.songs.remove(old.id);
     logEvent('song', { action: 'keep' });
     render();
-    deps.announce?.(`Kept as “${name}” in 🗂️ My songs. Your scratch song is empty again.`);
+    deps.announce?.(`Kept as “${name}” in 🗂️ Songs. Your scratch song is empty again.`);
   }
 
   // ── Drawing ──
@@ -358,7 +358,7 @@ export function createSong(deps) {
     const scratch = onScratch();
     const count = blockCount(song);
     el.name.classList.toggle('scratch', scratch);
-    el.name.setAttribute('aria-label', scratch ? 'Scratch song, not kept yet: type a name to keep it in 🗂️ My songs' : 'Song name (tap to rename)');
+    el.name.setAttribute('aria-label', scratch ? 'Scratch song, not kept yet: type a name to keep it in 🗂️ Songs' : 'Song name (tap to rename)');
     el.rename.hidden = scratch;
     el.keep.hidden = !scratch;
     el.keep.disabled = !count;
@@ -1057,7 +1057,7 @@ export function createSong(deps) {
     if (wanted !== titleOf()) {
       wantedName = wanted;
       if (blockCount(song)) keep();
-      else deps.announce?.(`Named “${wanted}”. It goes in 🗂️ My songs when you add a beat.`);
+      else deps.announce?.(`Named “${wanted}”. It goes in 🗂️ Songs when you add a beat.`);
     }
     render();
     el.name.value = titleOf();   // still focused while it changes
@@ -1131,7 +1131,7 @@ export function createSong(deps) {
   el.laneName.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.laneName.dispatchEvent(new Event('change')); el.laneSheet.close(); } });
   setupDialog(el.laneSheet);
 
-  // ── 🗂️ My songs: every saved song, to open, duplicate or delete ──
+  // ── 🗂️ Songs: every saved song, to open, duplicate or delete ──
 
   let deleteAsked = null;
   el.open.addEventListener('click', () => {
@@ -1356,7 +1356,7 @@ export function createSong(deps) {
   }
   el.sound.addEventListener('click', saveAsSound);
 
-  // A song in 🗂️ My songs opened by id (🎧 From a song's 🎼 Open it as a
+  // A song in 🗂️ Songs opened by id (🎧 From a song's 🎼 Open it as a
   // song); false when it is not there.
   function openSaved(id) {
     const saved = songs().find((x) => x.id === id);

@@ -43,16 +43,16 @@ const MUST_MENTION = [
   // Pads
   '✏️ Edit sounds', '✅ Done', 'Stop all', '🎉 Play', '🛠️ Make', '👥 People', '⬆️', 'Who plays',
   // Making a sound
-  'New sound', 'Record', 'Choose a file', '✨ Make one', '🎲 Surprise me', '👂 Plain', 'Save sound', 'Keep editing', 'Throw away', 'All emoji', 'Layers', 'Deeper ↔ higher', 'Slower ↔ faster', '+ Add a layer', '🔈', 'Backwards', 'Warble', '⭐ Save voice', 'My voices ▾', '↩️ Reset voice', '⤢ Turn into knobs', '↩️ The old way', 'Muffled ↔ Bright', 'Crunch', 'Stutter',
+  'New sound', 'Record', 'Choose a file', '✨ Make one', '🎲 Surprise me', '👂 Plain', 'Save sound', 'Keep editing', 'Throw away', 'All emoji', 'Layers', 'Deeper ↔ higher', 'Slower ↔ faster', '+ Add a layer', '🔈', 'Backwards', 'Warble', '⭐ Save voice', 'Voices ▾', '↩️ Reset voice', '⤢ Turn into knobs', '↩️ The old way', 'Muffled ↔ Bright', 'Crunch', 'Stutter',
   '🎲 Surprise steps', '⚙️ Advanced', '⤢', '🥁 On the beat', 'Smooth', 'Buzzy', 'Hiss', '🎵 Find its note', '➕ Mix with another sound', '✂️ Trim and edit', '✂️ Ends', '📐 Fades',
   '👆 Select part', '🔄 Backwards', '🔇 Silence it', '🔊 Louder', '🔉 Quieter', '🔊 Even it out', '✂️ Keep only this', '🧩 Chop into pads', '🧩 Make pads',
   // Beats
-  '🆕 New', '🗂️ My beats', '🗂️ My songs', '🎧 Listen', '▶ Play', '⏲️', 'Straight', 'Swing', 'Shuffle', '4/4', '+ Add a row', 'loudness', '🧹?',
-  'Who plays it?', '💃 Grooves', '📝 Into my scratch', '➕ Add to this beat', '💾 Keep', '🔊 Make the open beat a sound', '📥 Load a beat file', '🔔 Let it ring', '🎹 Tune', '🎹 Add a tune', '♯ All notes', '½ Half pills', '🎚️ Mixer', 'All on',
-  '⌨️', '● Record', '↩️ My beat', 'tap to change it',
+  '🆕 New', '🗂️ Beats', '🗂️ Songs', '🎧 Listen', '▶ Play', '⏲️', 'Straight', 'Swing', 'Shuffle', '4/4', '+ Add a row', 'loudness', '🧹?',
+  'Who plays it?', '💃 Grooves', '📝 Into scratch', '➕ Add to this beat', '💾 Keep', '🔊 Make the open beat a sound', '📥 Load a beat file', '🔔 Let it ring', '🎹 Tune', '🎹 Add a tune', '♯ All notes', '½ Half pills', '🎚️ Mixer', 'All on',
+  '⌨️', '● Record', '↩️ Beat', 'tap to change it',
   // Live
-  '⏲️ Click track', 'keep tapping…', '✏️ Layout', '⌨️ Keys', '👆 Pads', '↺ Reset keys', '⭐ Save this layout', '⭐ My keys', '✕ Unpick all', '🎬 Takes',
-  '🔊 Make a sound', 'Make another?', 'QWERTY', 'Dvorak', '+ Add a group', '+ more', '⭐ My layout', '🗑️ Take it out',
+  '⏲️ Click track', 'keep tapping…', '✏️ Layout', '⌨️ Keys', '👆 Pads', '↺ Reset keys', '⭐ Save this layout', '⭐ Keys', '✕ Unpick all', '🎬 Takes',
+  '🔊 Make a sound', 'Make another?', 'QWERTY', 'Dvorak', '+ Add a group', '+ more', '⭐ Layout', '🗑️ Take it out',
   // Song
   '🎼 Song', '➕ Add a lane', '▶ Play song', '🔊 Save as a sound', '↩️ Undo',
   // Settings
@@ -79,10 +79,10 @@ test('Help mentions every key control, by the label the app really shows', () =>
   assert.deepEqual(MUST_MENTION.filter((t) => !help.includes(t)), [], 'in the app but not in Help');
 });
 
-test('Beats Help explains 💃 Grooves with ⌨️ Keys on: a groove behind you, in the scratch, ↩️ My beat, and 💾 Keep', () => {
+test('Beats Help explains 💃 Grooves with ⌨️ Keys on: a groove behind you, in the scratch, ↩️ Beat, and 💾 Keep', () => {
   const line = shownItems(HELP.find((s) => s.id === 'beats')).find((i) => i.pic.some((p) => p.t === '💃 Grooves') && /Keys on/.test(i.text));
   assert.ok(line, 'a Beats line draws 💃 Grooves for the keys');
-  assert.ok(line.pic.some((p) => p.t === '↩️ My beat'));
+  assert.ok(line.pic.some((p) => p.t === '↩️ Beat'));
   assert.match(line.text, /behind you/);
   assert.match(line.text, /scratch beat/);
   assert.match(line.text, /💾 Keep saves it, named after the groove/);

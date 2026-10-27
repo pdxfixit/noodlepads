@@ -234,9 +234,9 @@ export function cleanDeck(d) {
   const out = { personId: d.personId, keys: codes(d.keys) };
   // `beatId`: DJ's Beat Builder's own open beat in older copies (ADR 0008), a saved beat's id. Nothing reads it since ADR 0017 (one open beat); it is kept so older copies' decks and backups load as they were.
   if (/^beat-[a-z0-9-]{1,48}$/.test(d.beatId)) out.beatId = d.beatId;
-  // `mine`: ⭐ My keys, the kid's own keyboard kept when a layout replaced it (ADR 0014), all 40 keys (an older one's number row as No sound).
+  // `mine`: ⭐ Keys, the kid's own keyboard kept when a layout replaced it (ADR 0014), all 40 keys (an older one's number row as No sound).
   if (d.mine && typeof d.mine === 'object' && !Array.isArray(d.mine)) out.mine = { ...Object.fromEntries(KEY_CODES.map((c) => [c, null])), ...codes(d.mine) };
-  // `touch`: the 👆 touch layout, bands of sounds (ADR 0029); `touchMine`: ⭐ My layout, the hand-made one kept when a saved one replaced it.
+  // `touch`: the 👆 touch layout, bands of sounds (ADR 0029); `touchMine`: ⭐ Layout, the hand-made one kept when a saved one replaced it.
   for (const k of ['touch', 'touchMine']) { const t = cleanTouch(d[k]); if (t) out[k] = t; }
   return out;
 }

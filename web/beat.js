@@ -93,7 +93,7 @@ export const hitGain = (row, loud) => (loud ? ACCENT_GAIN : 1) * rowLevel(row);
 export const audible = (row, p = null) => !row.muted && rowLevel(row) > 0 && !(p && silencedBySolo(p, row));
 export const RING_MS = 6000;           // a mix graph let go (and a note preview) rings out this long before it is disposed
 export const MAX_CHIPS = 8;            // pattern chips under the beat bar: 8 spots
-export const MAX_PINS = MAX_CHIPS;     // beats pinned with 📌 in 🗂️ My beats, each taking a spot
+export const MAX_PINS = MAX_CHIPS;     // beats pinned with 📌 in 🗂️ Beats, each taking a spot
 
 // Pattern chips (Ben, 2026-10-12): which beats get the 8 spots, in order.
 // Pinned beats come first, in the order they were pinned (a beat record's
@@ -350,7 +350,7 @@ export function mergeGroove(rows, grooveRows, bar, bars, shape = { bar: STEPS, b
   return { rows: out.map(cleanRow), added };
 }
 
-// A beat file (🗂️ My beats → ⬇️ / 📥): one beat as JSON, to move it to another
+// A beat file (🗂️ Beats → ⬇️ / 📥): one beat as JSON, to move it to another
 // copy of the app without a whole backup. Only the shared kit travels: a row
 // is saved by its kit sound's id ("kick"), which any copy has; a row of a
 // recorded sound can't come along, so it is left out (and counted).

@@ -59,7 +59,7 @@ test('a person\'s counts are theirs only; an open saved song counts once, an emp
   // A playlist song (ADR 0024) counts by the blocks on its lanes.
   assert.equal(personCounts({ songs: [{ id: 'new', personId: 'p3', lanes: [{ blocks: [] }, { blocks: [{ beatId: 'x', bar: 2, times: 1 }] }] }] }, 'p3').songs, 1);
   assert.equal(personCounts({ songs: [{ id: 'new', personId: 'p3', lanes: [{ blocks: [] }], slots: [] }] }, 'p3').songs, 0, 'empty lanes are an empty song');
-  assert.equal(personCounts({ voices: [{ id: 'v', personId: 'p1' }] }, 'p1').voices, 1, '⭐ My voices count once that store exists');
+  assert.equal(personCounts({ voices: [{ id: 'v', personId: 'p1' }] }, 'p1').voices, 1, '⭐ Voices count once that store exists');
 });
 
 test('a row reads "🔊 2 · 🥁 1 · 🎼 1 · 🎬 2", leaves out kinds with none, and says "nothing yet" for none', () => {
@@ -112,7 +112,7 @@ test('See all lists every kind of theirs, newest first, each with one fact', () 
   assert.deepEqual(t.edits.map((x) => [x.id, x.name, x.emoji, x.detail]), [
     ['p1-kick', 'Kick', '🦶', 'Preset, changed'], ['p1-snare', 'Snare', '🪘', 'Preset, hidden'],
   ], 'their own presets only, by the preset\'s name, in its new picture');
-  assert.deepEqual(t.djKeys.map((x) => [x.name, x.detail]), [['My keys', '2 keys changed']]);
+  assert.deepEqual(t.djKeys.map((x) => [x.name, x.detail]), [['Keys', '2 keys changed']]);
   assert.deepEqual(t.layouts.map((x) => [x.name, x.detail]), [['Zoo keys', '1 key']]);
   assert.deepEqual(t.touchLayouts.map((x) => [x.name, x.detail]), [['Band', '3 groups']]);
   const counts = personCounts(everything, 'p1');

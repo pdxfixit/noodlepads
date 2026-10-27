@@ -1,7 +1,7 @@
 // A new beat has no rows (Ben, 2026-10-11), and 🆕 New opens a blank scratch
 // (Ben, 2026-10-12). Tests that want a beat with a row start one, add the
-// row the way a kid would, and 💾 Keep it, so it is a named beat in 🗂️ My
-// beats. `page` is installPage's.
+// row the way a kid would, and 💾 Keep it, so it is a named beat in 🗂️
+// Beats. `page` is installPage's.
 
 // Beats: 🆕 New, + Add a row (it starts on this board's first sound), 💾 Keep.
 export function newBeatWithRow(page) {

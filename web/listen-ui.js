@@ -11,7 +11,7 @@
 //   result     3 · What I heard: a sentence, a card per part with ▶, the
 //              sounds picked, 🎼 Open it as a song, 🥁 Open part A, 🗑️ Throw away
 //   nothing    "I couldn't hear a beat in that", with Try again
-// At ■ Stop each part becomes a beat in 🗂️ My beats, and two or more also
+// At ■ Stop each part becomes a beat in 🗂️ Beats, and two or more also
 // a 🎼 Song, through the app's own saving (so they sync, back up and show
 // everywhere); 🗑️ Throw away deletes them again. The pure parts are
 // listen-make.js. Regular and Advanced only: 🧸 Kids never sees the card.
@@ -474,7 +474,7 @@ function showResult(s) {
       }
     }
   }
-  el.soundsLine.textContent = `Sounds picked to match: ${picked.map((p) => p.text).join(', ')}. Each part is a beat in 🗂️ My beats; change anything there.`;
+  el.soundsLine.textContent = `Sounds picked to match: ${picked.map((p) => p.text).join(', ')}. Each part is a beat in 🗂️ Beats; change anything there.`;
   el.asSong.hidden = !made.song;
   el.asBeat.textContent = `🥁 Open part ${made.beats[0].partId}`;
   el.asBeat.classList.toggle('primary', !made.song);
@@ -532,8 +532,8 @@ function openMade(what) {
 }
 
 // The sheet closing: listening stops, and nothing made is cancelled. What
-// was made and not opened or thrown away is kept, in 🗂️ My beats (and 🗂️
-// My songs): its outcome is what it kept.
+// was made and not opened or thrown away is kept, in 🗂️ Beats (and 🗂️
+// Songs): its outcome is what it kept.
 function closed() {
   const s = session;
   session = null;

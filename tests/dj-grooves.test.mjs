@@ -1,8 +1,8 @@
 // 💃 Grooves on both beat bars, and with ⌨️ Keys on (Ben, 2026-10-12; ADR
 // 0020): a groove loads into the scratch beat and opens stopped, and ▶ Play
 // loops it behind you while you play the keys; ● Record adds your hits on
-// top, in the scratch, and the beat that was open stays in 🗂️ My beats. ↩️ My
-// beat undoes the load. The dialog groups the grooves by style, and each has
+// top, in the scratch, and the beat that was open stays in 🗂️ Beats. ↩️
+// Beat undoes the load. The dialog groups the grooves by style, and each has
 // a ▶ that plays a short sample. Sound and layout need a browser
 // (`just look keys-on`, `just look builder-groove`).
 
@@ -106,9 +106,9 @@ test('each groove card names who plays it beyond the drums, a chip per instrumen
   $('#grooves').close();
 });
 
-test('with ⌨️ Keys on, a groove loads into the scratch, stopped, copying nothing; ▶ Play plays it behind you; ↩️ My beat brings back the beat that was open', async () => {
+test('with ⌨️ Keys on, a groove loads into the scratch, stopped, copying nothing; ▶ Play plays it behind you; ↩️ Beat brings back the beat that was open', async () => {
   keysOn(page);
-  await newBuilderBeatWithRow(page);   // a beat of the kid's own, in 🗂️ My beats
+  await newBuilderBeatWithRow(page);   // a beat of the kid's own, in 🗂️ Beats
   const mine = djBar().querySelector('[data-beat-name]').value;
   const saved = names();
   djBar().querySelector('[data-beat-grooves]').dispatch('click');
@@ -128,7 +128,7 @@ test('with ⌨️ Keys on, a groove loads into the scratch, stopped, copying not
   assert.equal(playing(), true, '▶ Play plays it');
   assert.equal($('#dj-play').textContent, '■ Stop');
   assert.match($('#dj-trying-text').textContent, /“House” is playing/);
-  assert.deepEqual(names(), saved, 'nothing new in 🗂️ My beats');
+  assert.deepEqual(names(), saved, 'nothing new in 🗂️ Beats');
   // Playing a key while jamming adds no row to the groove.
   const rows = scratch().rows.length;
   page.key('a', { code: 'KeyA' });
@@ -140,7 +140,7 @@ test('with ⌨️ Keys on, a groove loads into the scratch, stopped, copying not
   assert.equal($('#dj-trying').hidden, false);
   $('#dj-trying-stop').dispatch('click');
   assert.equal($('#dj-trying').hidden, true);
-  assert.equal(djBar().querySelector('[data-beat-name]').value, mine, '↩️ My beat: the beat that was open is back');
+  assert.equal(djBar().querySelector('[data-beat-name]').value, mine, '↩️ Beat: the beat that was open is back');
   assert.deepEqual(names(), saved);
   assert.equal(scratch(), undefined, 'and the scratch as it was: never saved');
 });
@@ -212,8 +212,8 @@ test('● Record onto a groove adds your hits to the scratch; Stop stops it; Und
   $('#dj-record').dispatch('click');
   assert.equal(playing(), false, 'stopping the recording stops the groove');
   assert.equal(djBar().querySelector('[data-beat-name]').value, 'Four on the floor (scratch)');
-  assert.ok(!names().some((n) => /Four on the floor/.test(n)), 'no copy in 🗂️ My beats');
-  assert.ok(names().includes(mine), 'the beat that was open stays in 🗂️ My beats');
+  assert.ok(!names().some((n) => /Four on the floor/.test(n)), 'no copy in 🗂️ Beats');
+  assert.ok(names().includes(mine), 'the beat that was open stays in 🗂️ Beats');
   const hitsOf = (b) => b.rows.reduce((n, r) => n + r.steps.filter(Boolean).length, 0);
   assert.equal(hitsOf(scratch()), 4 + 2 + 4 + 1, 'the groove\'s hits, and the one played on top');
   assert.match($('#banner-text').textContent, /^Added 1 note to your scratch beat/);
@@ -222,7 +222,7 @@ test('● Record onto a groove adds your hits to the scratch; Stop stops it; Und
   // 💾 Keep: a beat of its own, named after the groove; the scratch empties.
   djBar().querySelector('[data-beat-keep]').dispatch('click');
   const kept = djBar().querySelector('[data-beat-name]').value;
-  assert.ok(names().includes(kept), 'in 🗂️ My beats');
+  assert.ok(names().includes(kept), 'in 🗂️ Beats');
   assert.equal(kept, 'Four on the floor', 'too long for a fun name too: the groove\'s own (names.js keptName)');
   assert.equal(scratch(), undefined);
   ctx.currentTime = 0;

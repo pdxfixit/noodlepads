@@ -647,7 +647,7 @@ test('a person keeps their avatar (from the picture list) and `fun` (only on a g
   assert.deepEqual(out.people.map((x) => [x.avatar, x.fun]), [['🦖', true], [undefined, undefined], ['🧛', undefined], [undefined, undefined], [undefined, undefined]]);
 });
 
-test('saved DJ key layouts and ⭐ My keys round-trip in a backup, cleaned; strangers\' and broken ones dropped; older backups load', async () => {
+test('saved DJ key layouts and ⭐ Keys round-trip in a backup, cleaned; strangers\' and broken ones dropped; older backups load', async () => {
   const layout = { id: 'layout-q-1', personId: 'pip', name: 'Party keys', created: 3, keys: { KeyA: 'pip-airhorn' } };
   const state = {
     people: [{ id: 'pip', name: 'Pipsqueak', color: '#1F3FA8' }], clips: [], overrides: [], orders: [], patterns: [], beats: [],
@@ -663,7 +663,7 @@ test('saved DJ key layouts and ⭐ My keys round-trip in a backup, cleaned; stra
   assert.equal(out.decks[0].mine.KeyS, 'pip-laser');
   assert.equal(out.decks[0].mine.KeyA, null);
   assert.equal(out.skipped, 2);
-  // The number row round-trips: the live keys, ⭐ My keys and a saved layout.
+  // The number row round-trips: the live keys, ⭐ Keys and a saved layout.
   const numbered = {
     ...state,
     decks: [{ personId: 'pip', keys: { Digit1: 'pip-airhorn', Digit0: null }, mine: { Digit5: 'pip-laser' } }],
@@ -676,7 +676,7 @@ test('saved DJ key layouts and ⭐ My keys round-trip in a backup, cleaned; stra
   assert.deepEqual((await read({})).layouts, [], 'a backup from before layouts loads');
 });
 
-test('👆 touch layouts round-trip in a backup, cleaned: the live one and ⭐ My layout on the deck, the saved ones; strangers\' and broken ones dropped; older backups load (ADR 0029)', async () => {
+test('👆 touch layouts round-trip in a backup, cleaned: the live one and ⭐ Layout on the deck, the saved ones; strangers\' and broken ones dropped; older backups load (ADR 0029)', async () => {
   const saved = { id: 'touch-q-1', personId: 'pip', name: '  Jam   pads ', created: 3, bands: [{ group: 'drums', size: 'l', sounds: ['pip-kick', 'pip-kick', 7] }, { group: '<b>', size: 'm', sounds: [] }] };
   const touch = { bands: [{ group: 'mine', size: 'x', sounds: ['pip-airhorn'] }] };
   const state = {

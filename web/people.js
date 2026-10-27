@@ -38,7 +38,7 @@ let left = null;
 
 // What each person has on this device, as lists the way a backup holds them:
 // what 👥 People counts and 🗂️ See all lists (model.js personThings).
-// `voices` is ⭐ My voices (IndexedDB `voices`, state.myVoices).
+// `voices` is ⭐ Voices (IndexedDB `voices`, state.myVoices).
 export const storedLists = () => ({
   clips: state.userClips, beats: state.savedBeats, songs: [...state.songs.values()],
   songbook: state.songbook, takes: state.takes, voices: state.myVoices,

@@ -587,8 +587,8 @@ async function addMadeSound({ label, blob, emoji }) {
   return { ...clip, source: 'user' };
 }
 
-// Every saved beat (🗂️ My beats, and the scratch beats) and every song
-// (🗂️ My songs), as the beat maker, 🎼 Song and 🎧 From a song keep them.
+// Every saved beat (🗂️ Beats, and the scratch beats) and every song
+// (🗂️ Songs), as the beat maker, 🎼 Song and 🎧 From a song keep them.
 const beatLibrary = {
   list: (personId) => state.savedBeats
     .filter((b) => b.personId === personId)
@@ -667,7 +667,7 @@ function makeSequencer() {
     // always kept it. Nothing open is no record. Beats with ⌨️ Keys kept a
     // second one as `beatId` on the person's deck (ADR 0008); nothing reads
     // it now, and the deck drops it the next time it saves. That beat is in
-    // the library, so it stays in 🗂️ My beats.
+    // the library, so it stays in 🗂️ Beats.
     opened: (personId) => state.patterns.get(personId),
     setOpen: (personId, pattern) => {
       if (pattern) {
@@ -747,7 +747,7 @@ function makeSong() {
     beatColor: (beat) => { const clip = anyClip(beat.rows?.[0]?.clipId); return clip ? padColor(clip.color) : null; },
     onHit: (clipId, ms) => { if (keysShow()) dj?.flashClip(clipId, ms); },
   });
-  // A beat deleted or renamed in 🗂️ My beats shows in the song when it closes.
+  // A beat deleted or renamed in 🗂️ Beats shows in the song when it closes.
   $('#library').addEventListener('close', () => made.render());
   return made;
 }
@@ -1043,7 +1043,7 @@ async function start() {
       // The kid's own groups of their sounds (groups.js), for ✏️ Layout's picker.
       ownGroups: (pid) => groupOwn(clipsFor(pid).filter((c) => !c.kit), state.orders.get(pid)?.groups)
         .filter((g) => g.id !== UNGROUPED),
-      // `more`: other fields to set (`mine`, ⭐ My keys); the rest are kept,
+      // `more`: other fields to set (`mine`, ⭐ Keys); the rest are kept,
       // except the open beat older copies kept for DJ's Beat Builder (`beatId`,
       // ADR 0008), gone with ADR 0017's one open beat.
       saveDeck: (pid, keys, more = {}) => {

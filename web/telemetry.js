@@ -48,7 +48,7 @@ export const EVENTS = {
   // The sound's delay (the output and base latency of the audio context),
   // once a visit, when a sound has played.
   'perf.latency': ['ms'],
-  // 💾 Keep: a scratch beat or song kept in 🗂️ My beats or My songs.
+  // 💾 Keep: a scratch beat or song kept in 🗂️ Beats or Songs.
   'noodlepads.keep': ['kind'],
   // 💃 A groove loaded into the scratch beat, or its ▶ sample heard.
   'noodlepads.groove': ['action'],

@@ -150,7 +150,7 @@ export const heardABeat = (result) => (result?.parts ?? []).some(partHasHits);
 //   result     listener.finish()
 //   sounds     { [partId]: { kick, snare, hat } } kit ids (pickSounds)
 //   taken      this person's beat names
-// → [{ partId, beat }], beat as 🗂️ My beats stores it.
+// → [{ partId, beat }], beat as 🗂️ Beats stores it.
 export function makeBeats(result, { personId, sounds = {}, taken = [], newId, now = Date.now(), random = Math.random, hasClip = () => true }) {
   const parts = (result?.parts ?? []).filter(partHasHits);
   if (!parts.length) return { base: null, beats: [] };

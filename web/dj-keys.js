@@ -66,18 +66,18 @@ export function createKeysEditor({ el, deps }) {
   };
   const own = () => deps.layouts(pid()).slice().sort((a, b) => a.created - b.created);
   const mine = () => deps.savedDeck(pid())?.mine ?? null;
-  // Every layout a kid can load: ⭐ My keys, their own, then the ready-made.
+  // Every layout a kid can load: ⭐ Keys, their own, then the ready-made.
   function allLayouts() {
     const find = kitClip();
     const out = [];
-    if (mine()) out.push({ id: 'mine', label: '⭐ My keys', keys: fullKeys(mine()), mine: true });
+    if (mine()) out.push({ id: 'mine', label: '⭐ Keys', keys: fullKeys(mine()), mine: true });
     for (const l of own()) out.push({ id: l.id, label: `⭐ ${l.name}`, keys: fullKeys(l.keys), own: l });
     for (const r of READY_LAYOUTS) out.push({ id: `ready-${r.id}`, label: `${r.emoji} ${r.name}`, keys: readyKeys(r, find), ready: true });
     return out;
   }
 
   // Loads a layout. The keys as they were, when they are the kid's own
-  // arrangement, are kept as ⭐ My keys first (loading My keys itself swaps).
+  // arrangement, are kept as ⭐ Keys first (loading Keys itself swaps).
   function loadLayout(id) {
     const all = allLayouts();
     const l = all.find((x) => x.id === id);
@@ -85,7 +85,7 @@ export function createKeysEditor({ el, deps }) {
     const now = fullKeys(deps.keys());
     const kept = keepAsMine(now, all.filter((x) => !x.mine));
     if (kept && !sameKeys(kept, l.keys)) deps.saveMine(kept);
-    setKeys(l.keys, `${l.label} is on the keys.${kept && !l.mine ? ' Your own keys are kept in ⭐ My keys.' : ''}`);
+    setKeys(l.keys, `${l.label} is on the keys.${kept && !l.mine ? ' Your own keys are kept in ⭐ Keys.' : ''}`);
   }
 
   function renderLayouts() {
@@ -132,7 +132,7 @@ export function createKeysEditor({ el, deps }) {
     const mineClips = clips.filter((c) => !c.kit);
     // Always there, even before the kid has made a sound (Ben, 2026-10-11),
     // so they know their own sounds belong here.
-    out.push({ id: 'mine', label: '🎤 My sounds', clips: mineClips });
+    out.push({ id: 'mine', label: '🎤 Sounds', clips: mineClips });
     for (const g of deps.ownGroups?.(p) ?? []) out.push({ id: `own-${g.id}`, label: `${g.emoji || '📁'} ${g.name}`, clips: g.clips });
     for (const g of groupKit(clips.filter((c) => c.kit), deps.kitGroups())) {
       if (g.clips.length) out.push({ id: `kit-${g.id}`, label: `${g.emoji || '🔊'} ${g.name}`, clips: g.clips });

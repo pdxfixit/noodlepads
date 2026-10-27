@@ -821,7 +821,7 @@ export function createDJ({ el, deps }) {
   // The count-in's clicks are already booked, so the tempo waits for GO.
   // After it, the tempo can change while recording (Ben, 2026-10-11).
   function countingIn() { return !!beatRec && !(deps.now() >= beatRec.from); }
-  // The open beat (ADR 0017): a beat in 🗂️ My beats, or the scratch (ADR
+  // The open beat (ADR 0017): a beat in 🗂️ Beats, or the scratch (ADR
   // 0020). Only before a person is set is there none; then the Record deck
   // and the grid wait. Live needs none.
   function showBeat() {
@@ -836,7 +836,7 @@ export function createDJ({ el, deps }) {
     el.deck.hidden = builder && !beat && !beatRec;
     el.record.disabled = el.deck.hidden;
     // A groove just loaded into the scratch (💃, ADR 0020): a line says so,
-    // with ↩️ My beat, which undoes it. It opens stopped (Ben, 2026-10-12):
+    // with ↩️ Beat, which undoes it. It opens stopped (Ben, 2026-10-12):
     // ▶ Play plays it behind the keys. While recording onto it, ● Record's
     // own ■ Stop ends both. A scratch it replaced is said first.
     const trying = builder && deps.seq.trying?.();
@@ -1484,7 +1484,7 @@ export function createDJ({ el, deps }) {
     mode = m;
     showMode();
   }
-  // ↩️ My beat on the line under a groove just loaded: Undo of it (the beat
+  // ↩️ Beat on the line under a groove just loaded: Undo of it (the beat
   // open before, and the scratch as it was).
   el.tryingStop?.addEventListener('click', () => { deps.seq.putTrialAway?.(); renderGrid(); });
   // ▶ Play, as on Beats: the keys view's beat round and round, recording
