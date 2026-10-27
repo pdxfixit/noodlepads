@@ -385,6 +385,8 @@ test('the policy keeps the shape the privacy site builds: front matter, the shar
 });
 
 const SHARED = [
+  ['new profiles are limited 3 a day per network address, counted by a scrambled code made from the address and the date, forgotten the next day, the address never stored',
+    [/3 a day/, /scrambled code made from the address and the date/, /never the address itself/, /forgets the code the next day/, /address is never stored, logged or shown/]],
   ['the public list shows fun names, colors, whether there is a PIN, and when the look last changed',
     [/fun names?/, /colou?rs?/, /\bPIN\b/, /when (its|their) look last changed|look last changed/]],
   ['a problem report is kept 14 days', [/Problem reports[^.]*\.[^.]*14 days|14 days[^.]*report/i]],

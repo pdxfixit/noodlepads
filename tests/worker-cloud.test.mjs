@@ -883,11 +883,13 @@ test('last activity: opening, pulling and pushing mark it, at most once an hour'
   assert.equal(active(), T0 + ACTIVE_STEP_MS * 3.5);
 });
 
-// Ben, 2026-10-26: 10 new profiles a day across the site.
-test('daily caps: 10 new profiles a UTC day', async () => {
+// Ben, 2026-10-26: 50 new profiles a day across the site (3 from one address:
+// tests/worker-ip-limit.test.mjs; this env has no address key, so none here).
+test('daily caps: 50 new profiles a UTC day', async () => {
   const c = cloud();
-  for (let i = 0; i < 10; i++) await made(c, `p-day-${i}`);
-  assert.equal((await c.call('POST', 'profiles', { body: look('p-late') })).status, 429, 'the eleventh waits for tomorrow');
+  assert.equal(LIMITS.newProfilesPerDay, 50);
+  for (let i = 0; i < 50; i++) await made(c, `p-day-${i}`);
+  assert.equal((await c.call('POST', 'profiles', { body: look('p-late') })).status, 429, 'the 51st waits for tomorrow');
   c.later(86400000);
   assert.equal((await c.call('POST', 'profiles', { body: look('p-late') })).status, 201);
 });

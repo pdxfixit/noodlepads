@@ -63,7 +63,7 @@ What can go wrong on the way, and what it says:
 | No network, or the cloud resting | The switch stays off; the line under it says `cloudTrouble`'s sentence ("The cloud isn't reachable from here…"). The pending link is dropped and the PIN typed is not kept: the next try asks the sum and PIN again. |
 | They are already in the cloud (restored here from a backup, or still there from another device) | The Worker answers 409. The app never tries the PIN just picked against it: ids come from backups, which are untrusted, and a common PIN could join another family's profile. The pending link is dropped and a pad of its own opens: "Already in the cloud with a PIN. Type that one to join up." Its PIN opens them (link saved with that PIN's `check`); ✕ leaves them on this device. The first sync then merges with no base (section 8). |
 | A profile row with no PIN, made by hand in D1 | 409 on create, then 404 on the join pad's open. The switch stays off; the line says "Something in the cloud is in the way. Nothing was sent." `just cloud-profiles` marks the row 🔓 no PIN; Ben deletes it (a TODO "Ben does" line). Section 4's check before the deploy finds none today. |
-| 10 new profiles today, or 1,000 in all | 429 / 507, said as today; the switch stays off; the pending link is dropped. |
+| 50 new profiles today, 3 from this network, or 1,000 in all | 429 / 507, said as today; the switch stays off; the pending link is dropped. |
 
 ### Someone who made things before this ships
 

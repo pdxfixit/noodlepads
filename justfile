@@ -295,6 +295,7 @@ deploy:
     just stamp
     {{ids}}
     printf '%s' "$CHECKS_KEY" | "{{flarepress}}/tools/wrangler.sh" "{{site}}" secret put CHECKS_KEY
+    tools/ensure_ip_key.sh "{{flarepress}}/tools/wrangler.sh" "{{site}}"
     "{{flarepress}}/tools/wrangler.sh" "{{site}}" deploy
     just deploy-verify
     just deploy-checks

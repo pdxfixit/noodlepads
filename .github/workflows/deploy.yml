@@ -90,6 +90,16 @@ jobs:
             echo "::error title=CHECKS_KEY not put::wrangler could not put CHECKS_KEY into the Worker; nothing was uploaded. Read the wrangler lines above, fix, and push again."
             exit 1
           fi
+      # The Worker's IP_HASH_KEY (worker/cloud.js ipCounterName: the new-profile
+      # cap per address keys its counts with it). Made here from random bytes
+      # when the Worker has none, never kept anywhere else, so Ben has nothing
+      # to set (wrangler first). Left as it is once there, or every deploy
+      # would start the day's counts again. A failed put stops the deploy
+      # before the upload.
+      - name: Give the Worker its address-hash key if it lacks one
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: tools/ensure_ip_key.sh "$FLAREPRESS/tools/wrangler.sh" "$GITHUB_WORKSPACE/site"
       - uses: pdxfixit/flarepress@v1  # rolling: the owner moves v1 to release
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

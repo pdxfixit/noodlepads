@@ -1,7 +1,7 @@
 // The cloud's routes (worker/cloud.js) as functions, with `fetch` passed in so
 // the tests can point them straight at the Worker. Every failure is a
 // CloudError: `status` 0 when the network or the API isn't there, else the
-// HTTP status, with what the Worker said (`error`, `wait`, `tries`, `over`, `mine`).
+// HTTP status, with what the Worker said (`error`, `wait`, `tries`, `over`, `mine`, `network`).
 //
 // A person id goes to the cloud only when it is a random one (reid.js
 // CLOUD_ID): any other is refused here, before anything is sent, as a
@@ -139,6 +139,8 @@ export function cloudTrouble(err) {
   if (err.status === 429 && err.error === 'slow') return 'The cloud is busy right now. Try again in a minute.';
   // One profile's daily allowance (worker/cloud.js withinProfileDaily), apart from the site's.
   if (err.status === 429 && err.mine) return 'This profile has done a lot in the cloud today. It catches up tomorrow, and everything still works here.';
+  // New profiles from one network's address, 3 a day (worker/cloud.js makeProfile, `network`), apart from the site's.
+  if (err.status === 429 && err.network) return 'This network has put as many people in the cloud as it can today. Try again tomorrow.';
   if (err.status === 429) return 'The cloud is busy today. Try again tomorrow.';
   // From the 2nd wrong try the pad also says who to ask, before the wait (council, 2026-10-27).
   if (err.status === 401 && err.error === 'pin') return `That PIN isn't right. ${err.tries} ${err.tries === 1 ? 'try' : 'tries'} left.${err.tries <= 3 ? ' Ask a grown-up for the PIN.' : ''}`;

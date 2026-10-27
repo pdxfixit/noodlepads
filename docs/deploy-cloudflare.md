@@ -42,7 +42,7 @@ any `worker/migrations/*.sql` D1 lacks is applied, so a new Worker never
 meets the old tables. Up to date, it only reads. A migration that drops a
 table D1 holds rows of stops the deploy (CI has no telemetry mirror to
 prove they were copied); Ben runs that one from the Mac after `just pull`.
-Only this step, the checks' secret and the upload hold the token, which has D1 edit.
+Only this step, the checks' secret, the address-hash key and the upload hold the token, which has D1 edit.
 
 Then, still before step 3, the deploy puts the GitHub secret `CHECKS_KEY` into
 the Worker (`wrangler secret put CHECKS_KEY` through flarepress's
@@ -130,7 +130,7 @@ https://noodlepads.com, both even if one fails, in about 8 s together:
   Worker refuses the id (400 `id`); while the Worker has no `CHECKS_KEY` yet,
   the id alone passes. A check's profile gets only what a check needs
   (`CHECK_LIMITS`): a cap of their own, 100 a UTC day, so the checks
-  never use up kids' 10 new profiles a day; 64 KB of records, one sound of
+  never use up kids' 50 new profiles a day; 64 KB of records, one sound of
   at most 4 MB, one share. They never show in the public list. Deleting the
   profile deletes its share code too, and the Worker deletes any check
   profile over 10 minutes old the next time anyone makes a profile.
@@ -175,13 +175,19 @@ The site folder is `site/` in this repo since 2026-10-15 (ADR 0025).
   below); everyone else stays on their device.
 - **Before real voice recordings go into `web/clips/`**, remember they become
   public on the next deploy.
-- **The Worker has one secret, `CHECKS_KEY`** (the deploy checks' proof, put
-  in by the deploy from the GitHub secret). Clearing the GitHub secret does
+- **The Worker has two secrets.** `IP_HASH_KEY` scrambles an address for the
+  cap of 3 new profiles a day from one address. The deploy makes it when the
+  Worker lacks one (`tools/ensure_ip_key.sh`: `openssl rand -hex 32` into
+  `wrangler secret put`, in the step that holds the token) and never changes
+  one that is there; nobody keeps its value, and losing it only starts a day's
+  counts again. `CHECKS_KEY` is the deploy checks' proof, put
+  in by the deploy from the GitHub secret. Clearing the GitHub secret does
   not clear the Worker's: the deploy then leaves it as it is, and the checks,
   sending none, are refused. To go back to no secret, delete it from the
   Worker too, from the Mac's checkout: `eval "$(python3 tools/cloud_config.py --exports)" && ~/src/flarepress/tools/wrangler.sh site secret delete CHECKS_KEY`
   (`wrangler secret delete CHECKS_KEY`). The player metrics keep nothing of the IP
-  ([ADR 0016](adr/0016-player-metrics.md)). If an `IP_KEY` secret was ever
+  ([ADR 0016](adr/0016-player-metrics.md)); the one count by address is the
+  new-profile cap above. If an `IP_KEY` secret was ever
   set, nothing reads it: `npx wrangler secret delete IP_KEY` from
   `~/src/flarepress/noodlepads.com` removes it.
 - **Deploys do not harvest.** The telemetry runner (pdxfixit/telemetry) is the only

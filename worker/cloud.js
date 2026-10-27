@@ -7,7 +7,7 @@ import { PERSON_ID, PERSON_COLORS, OLD_PERSON_COLORS } from '../web/model.js';
 import { isListedEmoji } from '../web/emoji-check.js';
 import { isFunName, cutName } from '../web/names.js';
 import { CLOUD_ID } from '../web/reid.js';
-import { ORIGIN, json, fail, Refuse, readJson, readBytes, randomId, sha256Hex, toBytes, withinDaily, utcDay } from './http.js';
+import { ORIGIN, json, fail, Refuse, readJson, readBytes, randomId, sha256Hex, hmacHex, toBytes, withinDaily, utcDay } from './http.js';
 import { isPin, newSalt, hashSecret, checkSecret, OPENING, KEYED, shareCode, isShareCode, plainCode } from './pin.js';
 import { noteEvent, forgetProfile, expireReports } from './metrics.js';
 import { allowed } from './events-worker.js';
@@ -24,7 +24,8 @@ export const LIMITS = {
   profiles: 1000,                    // profiles in all
   profileBytes: 40 * 1024 * 1024,    // one profile's sounds
   totalBytes: 400 * 1024 * 1024,     // every sound
-  newProfilesPerDay: 10,             // across the site (Ben, 2026-10-26)
+  newProfilesPerDay: 50,             // across the site (Ben, 2026-10-26)
+  newProfilesPerIpPerDay: 3,         // from one address (below; Ben, 2026-10-26)
   checkProfilesPerDay: 100,          // the deploy checks' (TEST_PROFILE): two a deploy
   pushesPerDay: 5000,
   sharesPerDay: 500,
@@ -212,9 +213,38 @@ const PROFILE_COUNTER = 'profile:';
 async function withinProfileDaily(env, id, what, limit, now) {
   if (!await withinDaily(env, `${PROFILE_COUNTER}${id}:${what}`, limit, now)) throw new Refuse(429, 'busy', { mine: true });
 }
-// The rows of days before today, by the primary key's range (no table scan).
-const sweepProfileCounters = (env, now) => env.DB.prepare("DELETE FROM counters WHERE name >= ? AND name < ? AND day < ?")
-  .bind(PROFILE_COUNTER, 'profile;', utcDay(now)).run();
+// One address's new profiles a UTC day (LIMITS.newProfilesPerIpPerDay), counted
+// in `counters` as "ip:<hash>" (one row a day each). The hash is
+// HMAC(HMAC(IP_HASH_KEY, today), address): a key that is new every UTC day, so
+// a row cannot be matched to an address without the Worker's secret, and no
+// two days' rows to each other. The address itself is never stored, logged or
+// answered, and the rows of earlier days are deleted (sweepDailyCounters).
+// Without the secret (the deploy puts it in) or the header (Cloudflare always
+// sends it), nothing is counted. An IPv6 address counts as its /64, the
+// smallest network one home or phone is given, or one person would hold 2^64.
+const IP_COUNTER = 'ip:';
+export function addressGroup(ip) {
+  if (!ip.includes(':') || ip.includes('.')) return ip.toLowerCase();
+  const [head, tail] = ip.toLowerCase().split('::');
+  const first = head ? head.split(':') : [];
+  const last = tail === undefined ? [] : (tail ? tail.split(':') : []);
+  const groups = tail === undefined ? first : [...first, ...Array(Math.max(0, 8 - first.length - last.length)).fill('0'), ...last];
+  return groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':');
+}
+async function ipCounterName(request, env, now) {
+  const ip = request.headers.get('CF-Connecting-IP');
+  if (!env.IP_HASH_KEY || !ip) return null;
+  const todaysKey = await hmacHex(env.IP_HASH_KEY, utcDay(now));
+  return IP_COUNTER + await hmacHex(todaysKey, addressGroup(ip.trim()));
+}
+
+// The rows of days before today, by the primary key's range (no table scan):
+// each profile's allowances and each address's count. Also run when the list
+// is read, so no address hash waits a day for the next new profile.
+const sweepDailyCounters = (env, now) => env.DB.batch([
+  env.DB.prepare('DELETE FROM counters WHERE name >= ? AND name < ? AND day < ?').bind(PROFILE_COUNTER, 'profile;', utcDay(now)),
+  env.DB.prepare('DELETE FROM counters WHERE name >= ? AND name < ? AND day < ?').bind(IP_COUNTER, 'ip;', utcDay(now)),
+]);
 
 // The deploy checks' throwaway profiles (tools/look-cloud.mjs testId; as
 // tools/cloud_admin.py TEST_PREFIXES). Such an id gets caps of its own, just
@@ -285,7 +315,7 @@ async function makeProfile(request, env, now, seen) {
   // A profile needs a PIN: any `pin` that is not four digits is refused.
   if (!isPin(body.pin)) throw new Refuse(400, 'needs pin');
   await dropOldChecks(env, now);
-  await sweepProfileCounters(env, now);
+  await sweepDailyCounters(env, now);
   if (await env.DB.prepare('SELECT 1 AS x FROM profiles WHERE id = ?').bind(body.id).first()) throw new Refuse(409, 'exists');
   const { n } = await env.DB.prepare('SELECT COUNT(*) AS n FROM profiles').first();
   if (n >= LIMITS.profiles) throw new Refuse(507, 'full');
@@ -293,6 +323,9 @@ async function makeProfile(request, env, now, seen) {
   // they never use up kids' new profiles. A deleted profile gives no place
   // back: making and deleting can't get round either cap.
   const checks = isCheck(body.id);
+  // This address's three first, so a refused address spends none of the site's.
+  const ipName = checks ? null : await ipCounterName(request, env, now);
+  if (ipName && !await withinDaily(env, ipName, LIMITS.newProfilesPerIpPerDay, now)) throw new Refuse(429, 'busy', { network: true });
   if (!await withinDaily(env, checks ? 'check-profiles' : 'profiles', checks ? LIMITS.checkProfilesPerDay : LIMITS.newProfilesPerDay, now)) {
     throw new Refuse(429, 'busy');
   }
@@ -946,7 +979,7 @@ export async function handleCloud(request, env, now = Date.now(), ctx = null) {
     else await done;
   } else if (seen.list) {
     // Anyone looking at the list counts as the site being used.
-    const done = expireReports(env, now);
+    const done = Promise.all([expireReports(env, now), sweepDailyCounters(env, now).catch((err) => console.error('counters:', err))]);
     if (ctx?.waitUntil) ctx.waitUntil(done);
     else await done;
   }

@@ -166,7 +166,7 @@ test('GitHub applies missing migrations before the upload, and only those steps 
   assert.ok(at('run: just cloud-migrate --yes') < at('uses: pdxfixit/flarepress@'));
   const job = wf.slice(at('jobs:'), at('steps:'));
   assert.doesNotMatch(job, /CLOUDFLARE_API_TOKEN/, 'not in the whole job: the tests and the live checks run without it');
-  assert.equal(wf.match(/CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/g)?.length, 3, "the migrate step, the checks' secret and the upload");
+  assert.equal(wf.match(/CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/g)?.length, 4, "the migrate step, the checks' secret, the address-hash key and the upload");
 });
 
 // The deploy checks prove who they are (Ben, 2026-10-26): the deploy puts the

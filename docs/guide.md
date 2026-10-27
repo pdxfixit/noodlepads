@@ -1140,8 +1140,8 @@ not whole an hour after its upload started is given up, and its device
 starts it again; until then it counts in full for its own profile, and for
 everyone else only as far as it has uploaded. A push
 that adds nothing (an edit that shrinks, a delete) always lands. A day (UTC)
-allows 10 new profiles across the site (one deleted again still counts; the deploy checks'
-throwaway ones have 100 of their own), 5,000 pushes and 500 shares, and one
+allows 50 new profiles across the site, and 3 from one network address (one deleted again still counts; the deploy checks'
+throwaway ones have 100 of their own and no address count; the app says "This network has put as many people in the cloud as it can today"; the address is kept only as a scrambled code for that day and never stored plain), 5,000 pushes and 500 shares, and one
 profile at most 1,000 of the pushes, 2,000 new sounds and 50 shares, so one
 profile can't use up a day for every family. Over its own share, the app says
 "This profile has done a lot in the cloud today", and it catches up the next
