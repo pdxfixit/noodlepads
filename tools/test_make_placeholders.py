@@ -23,7 +23,7 @@ OLD_STARTERS = {"airhorn", "laser", "boing", "rimshot", "drumroll", "tada", "sli
 class Presets(unittest.TestCase):
     def test_every_preset_is_made_here_or_is_an_old_starter(self):
         kit = json.loads((WEB / "boards.json").read_text())["kit"]
-        made = set(mp.KIT) | {n for n, _, _ in mp.KIT_CALLOUTS} | {"cackle"}
+        made = set(mp.KIT) | {n for n, _, _ in mp.KIT_CALLOUTS}
         recorded = {s[0] for s in make_samples.SAMPLES} | {h[0] for h in make_samples.HITS}
         for k in kit:
             self.assertTrue((WEB / k["file"]).exists(), k["file"])

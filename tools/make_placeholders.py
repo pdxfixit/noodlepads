@@ -679,14 +679,13 @@ SHARPS_AND_FLATS = {
 KIT.update({name: make(*hz) for name, (make, hz) in SHARPS_AND_FLATS.items()})
 KIT.update(INSTRUMENT_CLIPS)
 
-# Spoken callouts in the kit: (file name, words, macOS voice).
+# Spoken callouts in the kit still voiced by macOS `say` (Apple's voices, to be
+# replaced): (file name, words, macOS voice). The other callouts, the Evil
+# laugh and the Cackle are recordings now (make_samples.py, HITS).
 KIT_CALLOUTS = [
-    ("lets-go", "Let's go!", "Fred"), ("oh-yeah", "Oh yeah!", "Ralph"), ("bruh", "Bruh.", "Albert"),
-    ("no-way", "No way!", "Samantha"), ("nice", "Nice!", "Daniel"), ("gg", "G G!", "Zarvox"),
-    ("level-up", "Level up!", "Trinoids"), ("drop-the-beat", "Drop the beat!", "Junior"),
-    ("oof", "Oof!", "Ralph"), ("wow", "Wow!", "Samantha"), ("ready", "Ready?", "Daniel"),
-    ("go", "Go!", "Fred"), ("boom-word", "Boom!", "Albert"), ("yes", "Yes!", "Junior"),
-    ("evil-laugh", "Mwa ha ha ha ha!", "Bad News"),
+    ("oh-yeah", "Oh yeah!", "Ralph"), ("bruh", "Bruh.", "Albert"),
+    ("nice", "Nice!", "Daniel"), ("gg", "G G!", "Zarvox"),
+    ("drop-the-beat", "Drop the beat!", "Junior"), ("boom-word", "Boom!", "Albert"),
 ]
 
 
@@ -714,40 +713,10 @@ def say(path, words, voice=None, rate=None):
     print("🗣️  " + path.name)
 
 
-def pitch_up(path, factor):
-    """Plays a WAV back `factor` times faster (higher and shorter, like a
-    sped-up tape), by linear interpolation. Stdlib only."""
-    with wave.open(str(path), "rb") as w:
-        rate = w.getframerate()
-        pcm = array("h", w.readframes(w.getnframes()))
-    if sys.byteorder == "big":
-        pcm.byteswap()
-    src = [s / 32768 for s in pcm]
-    out = []
-    pos = 0.0
-    while pos < len(src) - 1:
-        i = int(pos)
-        frac = pos - i
-        out.append(src[i] * (1 - frac) + src[i + 1] * frac)
-        pos += factor
-    write_wav(path, out)
-
-
-def cackle(path):
-    """A goblin cackle: a fast run of laughs from a macOS voice (Apple's, to be
-    replaced: web/clips/kit/LICENSE-samples.txt), pitched up."""
-    # [[slnc N]] is a pause of N ms in macOS speech: it keeps each laugh short
-    # and separate, which is what makes it a cackle rather than a chuckle.
-    gap = " [[slnc 45]] "
-    laughs = gap.join(["heh"] * 6) + " [[slnc 120]] " + gap.join(["hah"] * 3) + " [[slnc 90]] " + gap.join(["hee"] * 4) + " [[slnc 60]] HAH!"
-    say(path, laughs, "Junior", 280)
-    pitch_up(path, 1.4)
-
-
 def main(names):
     """Makes every clip, or only the ones named (file names without .wav):
     `make_placeholders.py roar toot` leaves every other file as it is."""
-    known = set(KIT) | {n for n, _, _ in KIT_CALLOUTS} | {"cackle"}
+    known = set(KIT) | {n for n, _, _ in KIT_CALLOUTS}
     unknown = [n for n in names if n not in known]
     if unknown:
         sys.exit("unknown clip: " + ", ".join(unknown))
@@ -758,15 +727,13 @@ def main(names):
             write_wav(KIT_OUT / (name + ".wav"), make())
             print("🥁 kit/" + name + ".wav")
     spoken = [c for c in KIT_CALLOUTS if wanted(c[0])]
-    if not spoken and not wanted("cackle"):
+    if not spoken:
         return
     if not shutil.which("say"):
         print("⚠️  macOS `say` not found; skipped the spoken callouts", file=sys.stderr)
         return
     for name, words, voice in spoken:
         say(KIT_OUT / (name + ".wav"), words, voice)
-    if wanted("cackle"):
-        cackle(KIT_OUT / "cackle.wav")
 
 
 if __name__ == "__main__":

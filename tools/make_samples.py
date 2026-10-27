@@ -4,14 +4,20 @@
 and VCSL (github.com/sgossner/VCSL), and the real drums, animals and
 effects (HITS; Ben, 2026-10-24) from VCSL, from ESC-50's clips
 (github.com/karolpiczak/ESC-50) whose Freesound originals are CC0 or CC-BY,
-and from Meta's Oculus Audio Pack 1 (CC BY 4.0, in
-github.com/facebookincubator/Meta-open-sound under corpora/oculus-audio-pack).
+from Meta's Oculus Audio Pack 1 (CC BY 4.0, in
+github.com/facebookincubator/Meta-open-sound under corpora/oculus-audio-pack),
+from Kenney's Voiceover Pack (CC0, kenney.nl; the copy in
+github.com/Boyquotes/kenney-voiceover-fighter-for-godot, folder `voice type 1`),
+and from Google's Speech Commands (CC BY 4.0; one-word clips, 16 kHz, in
+github.com/synesthesiam/google-speech-commands as one tar.gz per word).
 
 `python3 -I tools/make_samples.py SOURCE_DIR` reads the few files named in
 SAMPLES and HITS below from SOURCE_DIR (a folder holding `vsco/`, `vcsl/`,
-`esc50/` and `oculus/`, the libraries' trees as they are on GitHub, only
-those files checked out; the Oculus pack ships OGG, so decode each file to a
-WAV of the same name first: `ffmpeg -i X.ogg X.wav`, into `oculus/`) and writes each one as the
+`esc50/`, `oculus/`, `kenney/` and `speech/`, the libraries' trees as they are
+on GitHub, only those files checked out; the Oculus pack and Kenney's pack
+ship OGG, so decode each file to a WAV of the same name first:
+`ffmpeg -i X.ogg X.wav`, into `oculus/` and `kenney/`; Speech Commands clips
+go in `speech/<word>/`) and writes each one as the
 kit's clips are: mono, 22050 Hz, 16-bit, the quiet start cut off, a fixed length, faded out, peak at 85%. The
 libraries are not in this repo; web/clips/kit/LICENSE-samples.txt names what
 came from where and credits each CC-BY author.
@@ -63,18 +69,26 @@ HITS = [
     ("burp", "oculus", "HMNBurp_Burp_OS_02.wav", 0.55, 0.15, 0, None),
     ("buzz", "esc50", "audio/1-19501-A-7.wav", 1.2, 0.3, 8, 0.0),
     ("cajon", "vcsl", "Idiophones/Struck Idiophones/Cajon/Cajon_hit1_f_rr1.wav", 0.5, 0.2, 8, None),
+    ("cackle", "oculus", "VOXLaff_Female02Laugh_OS_01.wav", 1.3, 0.3, 0, None),
     ("clap", "vcsl", "Idiophones/Struck Idiophones/Claps/Clap_rr1.wav", 0.4, 0.15, 8, None),
     ("clave", "vcsl", "Idiophones/Struck Idiophones/Claves/Claves2_Hit_v3_rr1_Mid.wav", 0.3, 0.12, 8, None),
     ("conga", "vcsl", "Membranophones/Struck Membranophones/Conga/Conga_HitFM_v2_rr1_Sum.wav", 0.6, 0.25, 8, None),
     ("cowbell", "vcsl", "Idiophones/Struck Idiophones/Cowbells/Cowbell2_Normal_v3_rr1_Mid.wav", 0.5, 0.2, 8, None),
     ("crash", "vcsl", "Idiophones/Struck Idiophones/Clash Cymbals 1/cymbal_crash1_mf1.wav", 1.6, 0.533, 4, None),
+    ("evil-laugh", "oculus", "VOXLaff_EvilLaugh_OS_01.wav", 2.2, 0.4, 0, None),
+    ("go", "kenney", "go.wav", 0.55, 0.15, 0, None),
     ("hihat", "vcsl", "Idiophones/Struck Idiophones/Hi-Hat Cymbal/HiHat_Close_rr1_Mid.wav", 0.25, 0.1, 8, None),
     ("kick", "vcsl", "Membranophones/Struck Membranophones/Bass Drum 2/bassdrum_hit_f.wav", 0.6, 0.25, 8, None),
+    ("lets-go", "kenney", "war_go_go_go.wav", 1.1, 0.25, 0, None),
+    ("level-up", "kenney", "level_up.wav", 0.75, 0.2, 0, None),
     ("log-drum", "vcsl", "Idiophones/Struck Idiophones/Slit Drum/LogDrumLo_MedM_v3_rr1_Sum.wav", 0.7, 0.233, 8, None),
     ("meow", "esc50", "audio/2-110011-A-5.wav", 0.9, 0.3, 0, 0.02),
     ("moo", "esc50", "audio/1-58277-A-3.wav", 1.3, 0.3, 0, 0.0),
+    ("no-way", "speech", "no/8c7f81df_nohash_1.wav", 0.55, 0.15, 0, None),
+    ("oof", "oculus", "VOXMale_Male02Hurt_OS_01.wav", 0.45, 0.12, 0, None),
     ("open-hat", "vcsl", "Idiophones/Struck Idiophones/Hi-Hat Cymbal/HiHat_HitO_rr1_Mid.wav", 0.6, 0.2, 0, None),
     ("quack", "oculus", "BIRDFowl_Duck_OS_01.wav", 0.28, 0.1, 0, 0.55),
+    ("ready", "kenney", "ready.wav", 0.5, 0.15, 0, None),
     ("ribbit", "esc50", "audio/3-71964-C-4.wav", 0.8, 0.267, 2, 4.32),
     ("ride", "vcsl", "Idiophones/Struck Idiophones/Suspended Cymbal 1/susCymb1_hit_bell_pp1.wav", 1.2, 0.4, 0, None),
     ("rim", "vcsl", "Membranophones/Struck Membranophones/Snare Drum, Modern 3/Snare4_Xstick_v2_rr1_Mid.wav", 0.2, 0.08, 8, None),
@@ -87,7 +101,9 @@ HITS = [
     ("tom-low", "vcsl", "Membranophones/Struck Membranophones/Tom 2/Stick/TomL_HitS_v4_rr1_Mid.wav", 0.6, 0.2, 8, None),
     ("tweet", "esc50", "audio/2-122616-A-14.wav", 0.8, 0.267, 0, 2.57),
     ("woodblock", "vcsl", "Idiophones/Struck Idiophones/Woodblock/wood_click3_vl2.wav", 0.25, 0.1, 8, None),
+    ("wow", "speech", "wow/a8cb6dda_nohash_1.wav", 0.6, 0.15, 0, None),
     ("woof", "esc50", "audio/5-231762-A-0.wav", 0.7, 0.233, 0, 0.06),
+    ("yes", "speech", "yes/7211390b_nohash_3.wav", 0.7, 0.15, 0, None),
 ]
 
 
@@ -160,6 +176,10 @@ def resample(samples, rate):
         samples = [samples[int(p)] + (samples[min(int(p) + 1, len(samples) - 1)] - samples[int(p)]) * (p - int(p))
                    for p in (i * step for i in range(int(len(samples) / step)))]
         return halve(samples)
+    if rate == 16000:   # Speech Commands: up to 22050 by linear steps (nothing above 8 kHz to alias)
+        step = rate / RATE
+        return [samples[int(p)] + (samples[min(int(p) + 1, len(samples) - 1)] - samples[int(p)]) * (p - int(p))
+                for p in (i * step for i in range(int(len(samples) / step)))]
     raise ValueError(f"no resampling from {rate} Hz")
 
 

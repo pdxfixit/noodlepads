@@ -90,34 +90,50 @@ github.com/facebookincubator/Meta-open-sound (corpora/oculus-audio-pack/ogg/):
 
   burp.wav       HMNBurp_Burp_OS_02.ogg
   quack.wav      BIRDFowl_Duck_OS_01.ogg (one quack of several)
+  oof.wav        VOXMale_Male02Hurt_OS_01.ogg (a man's hurt grunt)
+  evil-laugh.wav VOXLaff_EvilLaugh_OS_01.ogg
+  cackle.wav     VOXLaff_Female02Laugh_OS_01.ogg
 
-Spoken clips: Apple system voices (to be replaced)
+Spoken clips (2026-10-27)
 
-These 16 clips are spoken by Apple's macOS system voices, through the
-macOS `say` command (tools/make_placeholders.py, KIT_CALLOUTS and
-cackle). They are Apple's voices, not recordings made for this app. They
-will be replaced, by our own recordings or by a CC0 set.
+From Kenney's Voiceover Pack, CC0 1.0 (kenney.nl; voice actors hired by
+Kenney). Read from github.com/Boyquotes/kenney-voiceover-fighter-for-godot
+(addons/kenney voiceover pack/voice type 1/). Credit is not required; Kenney
+asks for it kindly.
+
+  ready.wav      ready.ogg          says "Ready"
+  go.wav         go.ogg             says "Go"
+  level-up.wav   level_up.ogg       says "Level up"
+  lets-go.wav    war_go_go_go.ogg   says "Go, go, go"
+
+From the Google Speech Commands dataset (v0.02), CC BY 4.0: "Speech
+Commands: A Dataset for Limited-Vocabulary Speech Recognition" by Pete
+Warden and Google, with its volunteers' recordings, licensed under
+Creative Commons Attribution 4.0
+(https://creativecommons.org/licenses/by/4.0/). Read from
+github.com/synesthesiam/google-speech-commands (one tar.gz per word). Each
+is one volunteer saying one word; the file name is the dataset's own, an
+anonymous speaker code. Cut, faded and resampled for this app
+(tools/make_samples.py). One word each, so the pad's words are the clip's.
+
+  wow.wav        wow/a8cb6dda_nohash_1.wav   says "Wow"
+  yes.wav        yes/7211390b_nohash_3.wav   says "Yes"
+  no-way.wav     no/8c7f81df_nohash_1.wav    says "No" (the pad is "No way!")
+
+Spoken clips still in Apple system voices (to be replaced)
+
+These 6 clips are spoken by Apple's macOS system voices, through the
+macOS `say` command (tools/make_placeholders.py, KIT_CALLOUTS). They are
+Apple's voices, not recordings made for this app. They will be replaced, by
+our own recordings or by a CC0 or CC BY voice that says the same words.
 
   file               says                 macOS voice
-  lets-go.wav        "Let's go!"          Fred
   oh-yeah.wav        "Oh yeah!"           Ralph
   bruh.wav           "Bruh."              Albert
-  no-way.wav         "No way!"            Samantha
   nice.wav           "Nice!"              Daniel
   gg.wav             "G G!"               Zarvox
-  level-up.wav       "Level up!"          Trinoids
   drop-the-beat.wav  "Drop the beat!"     Junior
-  oof.wav            "Oof!"               Ralph
-  wow.wav            "Wow!"               Samantha
-  ready.wav          "Ready?"             Daniel
-  go.wav             "Go!"                Fred
   boom-word.wav      "Boom!"              Albert
-  yes.wav            "Yes!"               Junior
-  evil-laugh.wav     "Mwa ha ha ha ha!"   Bad News
-  cackle.wav         heh, hah, hee laughs Junior, sped up 1.4 times
-
-The first 14 are the 🗣️ callouts; the last two are the Evil laugh and
-Cackle presets.
 
 Every other clip in this folder is synthesized by
 tools/make_placeholders.py (no recording and no voice in it), or is one of
