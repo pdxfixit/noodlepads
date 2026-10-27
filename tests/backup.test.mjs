@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeBackup, readBackup, cleanBackup, personBackupLists, onePersonIn, intoPerson, namesPerson, withoutPeople, BACKUP_APP, BACKUP_FORMAT, MAX_SOUND_BYTES, refusal, beforeOne } from '../web/backup.js';
-import { buildZip, blobOf, bytes, utf8, failure } from './helpers.mjs';
+import { makeBackup, readBackup, heardWav, MAX_HEARD_BYTES, cleanBackup, personBackupLists, onePersonIn, intoPerson, namesPerson, withoutPeople, BACKUP_APP, BACKUP_FORMAT, MAX_SOUND_BYTES, refusal, beforeOne } from '../web/backup.js';
+import { buildZip, blobOf, bytes, utf8, failure, fakeBuffer } from './helpers.mjs';
 import { unzip } from '../web/zip.js';
 import { isFunName } from '../web/names.js';
 
@@ -277,12 +277,12 @@ test('clips of a person already added on this device are kept, and that person i
   assert.deepEqual(here.people, [], 'no new person for someone already here');
 });
 
-test('a backup says noodlepads, format 1.1; any 1.x loads, and so does one from before 1.0', async () => {
+test('a backup says noodlepads, format 1.2; any 1.x loads, and so does one from before 1.0', async () => {
   assert.equal(BACKUP_APP, 'noodlepads');
-  assert.equal(BACKUP_FORMAT, '1.1');
+  assert.equal(BACKUP_FORMAT, '1.2');
   const saved = JSON.parse(new TextDecoder().decode((await unzip(await makeBackup({ people: [], clips: [], overrides: [], orders: [], patterns: [], beats: [] }))).get('backup.json')));
   assert.equal(saved.app, 'noodlepads');
-  assert.equal(saved.format, '1.1');
+  assert.equal(saved.format, '1.2');
   assert.equal(refusal({ app: 'noodlepads', format: '1.0' }), null);
   assert.equal(refusal({ app: 'noodlepads', format: '1.7' }), null, 'a later 1.x only adds what this copy can skip');
   assert.equal(refusal({ app: 'noodle-pads', format: '1.1' }), null, 'a backup saved before the 1.0 rename still loads');
@@ -816,4 +816,99 @@ test('a backup can tell whether it holds anything of a person, and leave them ou
   assert.deepEqual(out.clips.map((c) => c.personId), ['p-juno-1']);
   assert.deepEqual(out.overrides.map((o) => o.id), ['p-juno-1-kick']);
   assert.deepEqual(out.settings, all.settings, 'the device\'s settings stay');
+});
+
+// ── Format 1.2: each own sound "as heard" (ADR 0001, docs/formats.md) ──
+
+const wavOf = (n) => new Blob([bytes(0x52, 0x49, 0x46, 0x46, n)], { type: 'audio/wav' });
+const heardState = () => ({
+  people: [{ id: 'p-pip-1', name: 'Pip', color: '#1F3FA8', added: true, created: 1 }],
+  orders: [], patterns: [], beats: [],
+  clips: [
+    { ...goodClip({ id: 'user-aa-1', personId: 'p-pip-1' }), blob: new Blob([bytes(1, 2)], { type: 'audio/webm' }) },
+    { ...goodClip({ id: 'user-aa-2', personId: 'p-pip-1', voice: 'normal' }), blob: new Blob([bytes(3, 4)], { type: 'audio/webm' }) },
+  ],
+});
+const docOf = async (blob) => JSON.parse(new TextDecoder().decode((await unzip(blob)).get('backup.json')));
+
+test('a 1.2 backup carries each own sound as heard, a WAV beside the original, named by the clip', async () => {
+  const zipBlob = await makeBackup(heardState(), 'dev', { heardOf: async (c) => wavOf(c.id === 'user-aa-1' ? 7 : 8) });
+  const files = await unzip(zipBlob);
+  const doc = await docOf(zipBlob);
+  assert.equal(doc.format, '1.2');
+  assert.deepEqual(doc.clips.map((c) => [c.file, c.heard]), [
+    ['sounds/user-aa-1.webm', 'sounds/user-aa-1.heard.wav'],
+    ['sounds/user-aa-2.webm', 'sounds/user-aa-2.heard.wav'],
+  ]);
+  assert.deepEqual(files.get('sounds/user-aa-1.webm'), bytes(1, 2), 'the original stays as it was recorded');
+  assert.deepEqual(files.get('sounds/user-aa-1.heard.wav'), bytes(0x52, 0x49, 0x46, 0x46, 7));
+  assert.deepEqual(files.get('sounds/user-aa-2.heard.wav'), bytes(0x52, 0x49, 0x46, 0x46, 8));
+});
+
+test('a sound whose heard copy can not be made goes without one, and the backup still saves', async () => {
+  const zipBlob = await makeBackup(heardState(), 'dev', {
+    heardOf: async (c) => { if (c.id === 'user-aa-1') throw new Error('did not decode'); return null; },
+  });
+  const doc = await docOf(zipBlob);
+  assert.equal(doc.clips.length, 2);
+  for (const c of doc.clips) assert.ok(!('heard' in c), c.id);
+  assert.equal([...(await unzip(zipBlob)).keys()].filter((n) => n.includes('.heard.')).length, 0);
+  // No heardOf at all (a test, a caller that has no audio): none, as before 1.2.
+  assert.ok(!('heard' in (await docOf(await makeBackup(heardState()))).clips[0]));
+});
+
+test('heard copies stop at MAX_HEARD_BYTES in all: a sound past it goes without one', async () => {
+  assert.ok(MAX_HEARD_BYTES > 0 && MAX_HEARD_BYTES < 300 * 1024 * 1024, 'under the 300 MB a backup may unpack to, with room for the originals');
+  const sizes = [Math.floor(MAX_HEARD_BYTES * 0.6), Math.floor(MAX_HEARD_BYTES * 0.6), 10];
+  // Real Blobs of those sizes are too big to build cheaply; a Blob whose size is claimed stands in.
+  class Sized extends Blob {
+    constructor(n) { super([]); this.n = n; }
+    get size() { return this.n; }
+    async arrayBuffer() { return new ArrayBuffer(0); }
+  }
+  const state = heardState();
+  state.clips.push({ ...goodClip({ id: 'user-aa-3', personId: 'p-pip-1' }), blob: new Blob([bytes(5)], { type: 'audio/webm' }) });
+  let k = 0;
+  const doc = await docOf(await makeBackup(state, 'dev', { heardOf: async () => new Sized(sizes[k++]) }));
+  assert.deepEqual(doc.clips.map((c) => !!c.heard), [true, false, true], 'the second would pass the cap; the small third still fits');
+});
+
+test('a 1.2 backup loads in this app: the heard copy is read past, nothing is dropped or counted', async () => {
+  const zipBlob = await makeBackup(heardState(), 'dev', { heardOf: async () => wavOf(7) });
+  const out = await readBackup(zipBlob, bundled());
+  assert.equal(out.skipped, 0);
+  assert.deepEqual(out.left, {});
+  assert.equal(out.clips.length, 2);
+  for (const c of out.clips) {
+    assert.ok(!('heard' in c) && !('file' in c), 'the app plays its own sound with its own recipe; nothing of the heard copy is stored');
+    assert.equal(c.blob.type, 'audio/webm');
+  }
+  assert.deepEqual(new Uint8Array(await out.clips[0].blob.arrayBuffer()), bytes(1, 2));
+});
+
+test('a 1.1 copy would read a 1.2 backup: the heard file and field are all it adds', async () => {
+  const doc = await docOf(await makeBackup(heardState(), 'dev', { heardOf: async () => wavOf(7) }));
+  const { heard, ...rest } = doc.clips[0];
+  assert.deepEqual(Object.keys(rest).sort(), Object.keys((await docOf(await makeBackup(heardState()))).clips[0]).sort());
+  assert.ok(heard);
+});
+
+test('heardWav is the part that plays as a 16-bit WAV, not the buffer\'s whole length', async () => {
+  const buffer = fakeBuffer([Array.from({ length: 800 }, (_, i) => (i < 400 ? 0.5 : 0.25))], 8000);
+  const wav = heardWav({ buffer, duration: 0.05 });   // 400 frames
+  assert.equal(wav.type, 'audio/wav');
+  const view = new DataView(await wav.arrayBuffer());
+  assert.equal(wav.size, 44 + 400 * 2);
+  assert.equal(String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3)), 'RIFF');
+  assert.equal(view.getUint16(22, true), 1, 'channels');
+  assert.equal(view.getUint32(24, true), 8000, 'sample rate');
+  assert.equal(view.getUint16(34, true), 16, 'bits');
+  assert.equal(view.getUint32(40, true), 800, 'data bytes');
+  assert.ok(Math.abs(view.getInt16(44, true) - Math.round(0.5 * 0x7fff)) <= 1);
+  // The whole buffer when its duration says so (or says nothing); stereo keeps both channels.
+  assert.equal(heardWav({ buffer, duration: 0.1 }).size, 44 + 800 * 2);
+  assert.equal(heardWav({ buffer, duration: 9 }).size, 44 + 800 * 2, 'never past the buffer');
+  assert.equal(heardWav({ buffer: fakeBuffer([[0, 0.1], [0, -0.1]]) , duration: 2 / 8000 }).size, 44 + 2 * 2 * 2);
+  assert.equal(heardWav(null), null);
+  assert.equal(heardWav({ buffer: fakeBuffer([[]]), duration: 0 }), null);
 });

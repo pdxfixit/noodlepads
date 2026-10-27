@@ -281,7 +281,7 @@ Three separate counters say "what is here":
 
 ### Backups (format 1.x, ADR 0011)
 
-**backup.json**: `{app: 'noodlepads', format: '1.1', exported, version, people, clips (without blob, with file), overrides, orders, patterns, beats, settings, decks, takes, songs, songbook, prefs, layouts, voices, touchLayouts}`. The audio is under `sounds/<id>.<ext>`. Never in a backup: `cloud`, `bases`, `renamedPeople`, localStorage.
+**backup.json**: `{app: 'noodlepads', format: '1.2', exported, version, people, clips (without blob, with file, and heard from 1.2), overrides, orders, patterns, beats, settings, decks, takes, songs, songbook, prefs, layouts, voices, touchLayouts}`. The audio is under `sounds/<id>.<ext>`; from 1.2 each own sound also has `sounds/<id>.heard.wav`, the sound as it plays (`backup.js heardWav`, rendered by `backup-ui.js heardOf` through `audio.load`; `makeBackup`'s `heardOf` option, capped at `MAX_HEARD_BYTES`), which loading reads past. Never in a backup: `cloud`, `bases`, `renamedPeople`, localStorage.
 
 **Accepted** (`backup.js refusal`): app `noodlepads` or `noodle-pads`, any `1.x`. A pre-1.0 file (`beforeOne`: format `1` as a number, or an app id ending `-soundboard`) loads with `oldStores`.
 

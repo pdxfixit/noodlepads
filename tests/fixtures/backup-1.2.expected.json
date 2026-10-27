@@ -1,0 +1,709 @@
+{
+ "people": [
+  {
+   "id": "p-pip-1",
+   "name": "Pip",
+   "color": "#1F3FA8",
+   "added": true,
+   "created": 1760000000000,
+   "edited": 1760000100000,
+   "avatar": "🦊"
+  },
+  {
+   "id": "p-juno-2",
+   "name": "Juno",
+   "color": "#0C5E4B",
+   "added": true,
+   "created": 1760000200000,
+   "avatar": "🐙"
+  },
+  {
+   "id": "p-wren-3",
+   "name": "Wren",
+   "color": "#8A2D2D",
+   "hidden": true,
+   "added": true,
+   "created": 1760000300000,
+   "avatar": "🐦"
+  },
+  {
+   "id": "p-toby-4",
+   "name": "Toby",
+   "color": "#5B2C83",
+   "added": true,
+   "created": 1760002000000,
+   "avatar": "🦖"
+  }
+ ],
+ "clips": [
+  {
+   "id": "user-aa11-1",
+   "personId": "p-pip-1",
+   "label": "Boing",
+   "emoji": "🪀",
+   "color": "red",
+   "voice": "chipmunk",
+   "amount": 2,
+   "trim": {
+    "start": 0.05,
+    "end": 0.4
+   },
+   "group": "g-drums-1",
+   "mime": "audio/wav",
+   "created": 1760000400000,
+   "audio": {
+    "type": "audio/wav",
+    "bytes": 8044,
+    "sum": 144261818
+   }
+  },
+  {
+   "id": "user-aa11-2",
+   "personId": "p-pip-1",
+   "label": "Honk",
+   "emoji": "📯",
+   "voice": "normal",
+   "fx": [
+    {
+     "type": "voice",
+     "voice": "robot"
+    },
+    {
+     "type": "voice",
+     "voice": "stadium"
+    }
+   ],
+   "tweaks": {
+    "pitch": -3,
+    "echo": 1
+   },
+   "mime": "audio/wav",
+   "created": 1760000500000,
+   "exact": true,
+   "audio": {
+    "type": "audio/wav",
+    "bytes": 6044,
+    "sum": 261425764
+   }
+  },
+  {
+   "id": "user-bb22-1",
+   "personId": "p-juno-2",
+   "label": "Zap",
+   "emoji": "⚡",
+   "color": "blue",
+   "voice": "normal",
+   "root": 60,
+   "mime": "audio/wav",
+   "created": 1760000600000,
+   "audio": {
+    "type": "audio/wav",
+    "bytes": 7244,
+    "sum": 610537549
+   }
+  },
+  {
+   "id": "user-cc33-1",
+   "personId": "p-toby-4",
+   "label": "Roar",
+   "emoji": "🦖",
+   "voice": "slow",
+   "amount": 6,
+   "edits": [
+    {
+     "kind": "reverse",
+     "start": 0.1,
+     "end": 0.3
+    },
+    {
+     "kind": "gain",
+     "start": 0.2,
+     "end": 0.4,
+     "amount": 2
+    }
+   ],
+   "fade": {
+    "in": 0.01,
+    "out": 0.02
+   },
+   "mime": "audio/wav",
+   "created": 1760002100000,
+   "audio": {
+    "type": "audio/wav",
+    "bytes": 8844,
+    "sum": 446789657
+   }
+  }
+ ],
+ "overrides": [
+  {
+   "id": "p-pip-1-airhorn",
+   "label": "Toot",
+   "voice": "monster",
+   "amount": 2
+  }
+ ],
+ "orders": [
+  {
+   "personId": "p-pip-1",
+   "ids": [
+    "user-aa11-1",
+    "p-pip-1-airhorn",
+    "user-aa11-2"
+   ],
+   "groups": [
+    {
+     "id": "g-drums-1",
+     "name": "Drums"
+    }
+   ]
+  }
+ ],
+ "patterns": [
+  {
+   "personId": "p-pip-1",
+   "name": "Open",
+   "bpm": 100,
+   "bars": 1,
+   "swing": 0,
+   "rows": [
+    {
+     "clipId": "user-aa11-1",
+     "steps": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+     ],
+     "accents": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+     ],
+     "rate": 1,
+     "ring": false,
+     "muted": false,
+     "collapsed": false,
+     "melody": false,
+     "notes": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    }
+   ],
+   "signature": "3/4"
+  }
+ ],
+ "beats": [
+  {
+   "id": "beat-k1-a",
+   "personId": "p-pip-1",
+   "name": "Stomp",
+   "bpm": 96,
+   "bars": 2,
+   "swing": 20,
+   "rows": [
+    {
+     "clipId": "user-aa11-1",
+     "steps": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+     ],
+     "accents": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+     ],
+     "rate": 1,
+     "ring": false,
+     "muted": false,
+     "collapsed": false,
+     "melody": false,
+     "notes": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    },
+    {
+     "clipId": "p-pip-1-laser",
+     "steps": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+     ],
+     "accents": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+     ],
+     "rate": 1,
+     "ring": false,
+     "muted": true,
+     "collapsed": false,
+     "melody": false,
+     "notes": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    }
+   ],
+   "signature": "3/4",
+   "created": 1760000700000,
+   "saved": 1760000800000
+  },
+  {
+   "id": "beat-k1-b",
+   "personId": "p-juno-2",
+   "name": "Waltz",
+   "bpm": 120,
+   "bars": 1,
+   "swing": 0,
+   "rows": [
+    {
+     "clipId": "user-bb22-1",
+     "steps": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+     ],
+     "accents": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+     ],
+     "rate": 1,
+     "ring": false,
+     "muted": false,
+     "collapsed": false,
+     "melody": false,
+     "notes": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    }
+   ],
+   "signature": "4/4",
+   "created": 1760000900000,
+   "saved": 1760001000000,
+   "pinned": 1760001100000
+  }
+ ],
+ "settings": [
+  {
+   "key": "djLayout",
+   "value": "qwerty"
+  },
+  {
+   "key": "sendLogs",
+   "value": false
+  }
+ ],
+ "decks": [
+  {
+   "personId": "p-pip-1",
+   "keys": {
+    "KeyA": "user-aa11-1",
+    "KeyS": "p-pip-1-airhorn",
+    "KeyD": null
+   }
+  }
+ ],
+ "takes": [
+  {
+   "id": "take-t1-a",
+   "personId": "p-pip-1",
+   "name": "Jam",
+   "created": 1760001200000,
+   "duration": 2.5,
+   "events": [
+    {
+     "t": 0,
+     "clipId": "user-aa11-1",
+     "kind": "hit"
+    },
+    {
+     "t": 0.5,
+     "clipId": "user-aa11-2",
+     "kind": "loop"
+    },
+    {
+     "t": 2,
+     "clipId": "user-aa11-2",
+     "kind": "stop"
+    }
+   ]
+  }
+ ],
+ "songs": [
+  {
+   "id": "song-s2-a",
+   "personId": "p-pip-1",
+   "name": "Ditty",
+   "tempo": 96,
+   "tempos": [
+    {
+     "bar": 3,
+     "bpm": 110
+    }
+   ],
+   "lanes": [
+    {
+     "name": "Drums",
+     "emoji": "🥁",
+     "muted": false,
+     "volume": 1,
+     "blocks": [
+      {
+       "beatId": "beat-k1-a",
+       "bar": 0,
+       "times": 2
+      }
+     ]
+    },
+    {
+     "name": "Bass",
+     "emoji": "🎸",
+     "muted": true,
+     "volume": 0.5,
+     "blocks": [
+      {
+       "beatId": "beat-k1-b",
+       "bar": 2,
+       "times": 1
+      }
+     ]
+    }
+   ],
+   "slots": [
+    {
+     "beatId": "beat-k1-a",
+     "times": 2
+    },
+    {
+     "beatId": "beat-k1-b",
+     "times": 1
+    }
+   ]
+  }
+ ],
+ "songbook": [
+  {
+   "id": "song-s2-a",
+   "personId": "p-pip-1",
+   "name": "Ditty",
+   "tempo": 96,
+   "tempos": [
+    {
+     "bar": 3,
+     "bpm": 110
+    }
+   ],
+   "lanes": [
+    {
+     "name": "Drums",
+     "emoji": "🥁",
+     "muted": false,
+     "volume": 1,
+     "blocks": [
+      {
+       "beatId": "beat-k1-a",
+       "bar": 0,
+       "times": 2
+      }
+     ]
+    },
+    {
+     "name": "Bass",
+     "emoji": "🎸",
+     "muted": true,
+     "volume": 0.5,
+     "blocks": [
+      {
+       "beatId": "beat-k1-b",
+       "bar": 2,
+       "times": 1
+      }
+     ]
+    }
+   ],
+   "slots": [
+    {
+     "beatId": "beat-k1-a",
+     "times": 2
+    },
+    {
+     "beatId": "beat-k1-b",
+     "times": 1
+    }
+   ],
+   "created": 1760001300000,
+   "saved": 1760001400000
+  }
+ ],
+ "prefs": [
+  {
+   "personId": "p-pip-1",
+   "values": {
+    "level": "advanced",
+    "timeSignature": "3/4",
+    "padSize": "auto"
+   }
+  },
+  {
+   "personId": "p-juno-2",
+   "values": {
+    "level": "regular"
+   }
+  }
+ ],
+ "layouts": [
+  {
+   "id": "layout-l1-a",
+   "personId": "p-pip-1",
+   "name": "Drums",
+   "created": 1760001500000,
+   "keys": {
+    "Digit1": null,
+    "Digit2": null,
+    "Digit3": null,
+    "Digit4": null,
+    "Digit5": null,
+    "Digit6": null,
+    "Digit7": null,
+    "Digit8": null,
+    "Digit9": null,
+    "Digit0": null,
+    "KeyQ": null,
+    "KeyW": null,
+    "KeyE": null,
+    "KeyR": null,
+    "KeyT": null,
+    "KeyY": null,
+    "KeyU": null,
+    "KeyI": null,
+    "KeyO": null,
+    "KeyP": null,
+    "KeyA": "user-aa11-1",
+    "KeyS": null,
+    "KeyD": null,
+    "KeyF": null,
+    "KeyG": null,
+    "KeyH": null,
+    "KeyJ": null,
+    "KeyK": null,
+    "KeyL": null,
+    "Semicolon": null,
+    "KeyZ": null,
+    "KeyX": null,
+    "KeyC": null,
+    "KeyV": null,
+    "KeyB": null,
+    "KeyN": null,
+    "KeyM": null,
+    "Comma": null,
+    "Period": null,
+    "Slash": null
+   }
+  }
+ ],
+ "voices": [
+  {
+   "id": "voice-v1-a",
+   "personId": "p-toby-4",
+   "name": "Deep",
+   "emoji": "🐻",
+   "knobs": {
+    "pitch": -6,
+    "echo": 1
+   },
+   "created": 1760002200000,
+   "used": 1760002300000
+  }
+ ],
+ "touchLayouts": [
+  {
+   "id": "touch-t1-a",
+   "personId": "p-pip-1",
+   "name": "Bands",
+   "created": 1760002400000,
+   "bands": [
+    {
+     "group": "drums",
+     "size": "m",
+     "sounds": [
+      "user-aa11-1",
+      "user-aa11-2"
+     ]
+    }
+   ]
+  }
+ ],
+ "skipped": 0,
+ "left": {},
+ "notes": {
+  "hiddenSounds": 0,
+  "players": []
+ },
+ "exported": "2026-10-11T12:00:00.000Z",
+ "version": "1.0.300"
+}

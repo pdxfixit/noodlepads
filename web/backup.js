@@ -1,13 +1,17 @@
 // Backups: everything a browser holds for the soundboard, as one zip that
 // another copy of the app (another device, or another address) can load.
 //
-//   backup.json     {app: 'noodlepads', format: '1.1', exported, version, people, clips, overrides,
+//   backup.json     {app: 'noodlepads', format: '1.2', exported, version, people, clips, overrides,
 //                    orders, patterns, beats, settings, decks, takes, songs, songbook, prefs, layouts, voices, touchLayouts}; each clip names its audio file.
 //                    `layouts` (since the DJ's key editor) is each person's saved key layouts; an older 1.x copy skips it.
 //                    `touchLayouts` (since 👆 touch layouts, ADR 0029) is each person's saved touch layouts; an older 1.x copy skips it.
 //                    `voices` (since ⭐ Save voice) is each person's own voices, knob settings with a name; an older 1.x copy skips it.
 //                    `songs` holds each person's open song, `songbook` every saved song.
-//   sounds/<id>.<ext>  the audio of each sound made in the app
+//                    `heard` (since 1.2) on a clip names its audio as heard; an older 1.x copy skips it.
+//   sounds/<id>.<ext>  the audio of each sound made in the app, as recorded
+//   sounds/<id>.heard.wav  (since 1.2) the same sound as it plays: its voice, knobs, trim, edits and fade
+//                    rendered, so a player with no voice engine (v2, ADR 0001) plays it the same.
+//                    docs/formats.md writes the whole format down.
 //
 // Format 1.0 is Noodle Pads 1.0's; from 1.0 on, a newer copy of the app must
 // still load every 1.x backup. A backup from before it (the testing copies,
@@ -24,6 +28,7 @@ import { cleanTweaks } from './tweaks.js';
 import { cleanPattern } from './beat.js';
 import { unsignedAs } from './old-beats.js';
 import { extensionFor } from './util.js';
+import { encodeWav } from './wav.js';
 import { whiteReadsOn } from './contrast.js';
 import { cleanTrim, cleanFrom, cleanEdits, cleanFade } from './cuts.js';
 import { allowedValue, inBackups, cleanPrefs } from './settings.js';
@@ -48,7 +53,9 @@ export const BACKUP_APP = 'noodlepads';
 const OUR_APPS = new Set([BACKUP_APP, 'noodle-pads']);
 // 1.1 added groups of a kid's own sounds (a clip's `group`, an order's
 // `groups`): a 1.0 copy skips them, and a 1.0 backup simply has none.
-export const BACKUP_FORMAT = '1.1';
+// 1.2 added each own sound "as heard" (a clip's `heard`, a WAV beside the
+// original): a 1.1 copy skips it, and a 1.0 or 1.1 backup simply has none.
+export const BACKUP_FORMAT = '1.2';
 
 // A backup from the app before 1.0: an app id ending in "-soundboard" (not
 // written out here: it named a person), or this app id with format 1 as a
@@ -105,17 +112,45 @@ function dropUndefined(o) {
   return o;
 }
 
+// The most the "as heard" copies add to a backup, in bytes. A backup may
+// unpack to 300 MB in all (zip.js), and the originals come first; a sound
+// that would take the heard copies past this goes without one.
+export const MAX_HEARD_BYTES = 120 * 1024 * 1024;
+
+// A sound as it plays, `{buffer, duration}` (audio.js load), as a 16-bit WAV
+// Blob: only the part that plays (`duration`), not the silent tail an effect
+// leaves in the buffer. Null for nothing to play. Pure.
+export function heardWav(loaded) {
+  const buffer = loaded?.buffer;
+  if (!buffer || !(buffer.length > 0)) return null;
+  const length = Math.max(1, Math.min(buffer.length, Math.round((Number(loaded.duration) || buffer.length / buffer.sampleRate) * buffer.sampleRate)));
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c).subarray(0, length));
+  return encodeWav({ numberOfChannels: channels.length, length, sampleRate: buffer.sampleRate, getChannelData: (c) => channels[c] });
+}
+
 // state: {people, clips, overrides, orders, patterns, beats, settings} as arrays
 // of the stored records ({key, value} for settings; `settings` may be left
-// out); clips carry their audio Blob. Returns a zip Blob.
-export async function makeBackup(state, version = 'dev') {
+// out); clips carry their audio Blob. `heardOf(clip)` (the app's: backup-ui.js)
+// gives a sound as it plays, a WAV Blob, or null/throws when it can't:
+// that sound goes without one, and the backup still saves (the original is
+// in it). Without `heardOf` no sound has one. Returns a zip Blob.
+export async function makeBackup(state, version = 'dev', { heardOf } = {}) {
   const files = [];
   const clips = [];
+  let heardBytes = 0;
   for (const c of state.clips) {
     const file = `sounds/${c.id}.${extensionFor(c.mime)}`;
     files.push({ name: file, data: new Uint8Array(await c.blob.arrayBuffer()) });
-    const { blob, ...meta } = c;
-    clips.push({ ...meta, file });
+    const { blob, heard: _stale, ...meta } = c;
+    const entry = { ...meta, file };
+    let wav = null;
+    try { wav = heardOf ? await heardOf(c) : null; } catch { wav = null; }
+    if (wav instanceof Blob && wav.size > 0 && heardBytes + wav.size <= MAX_HEARD_BYTES) {
+      heardBytes += wav.size;
+      entry.heard = `sounds/${c.id}.heard.wav`;
+      files.push({ name: entry.heard, data: new Uint8Array(await wav.arrayBuffer()) });
+    }
+    clips.push(entry);
   }
   const doc = {
     app: BACKUP_APP,

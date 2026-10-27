@@ -4,7 +4,7 @@
 import { state, readStorage, deletePerson, reIdIncoming, rememberRenames } from './state.js';
 import { db } from './store.js';
 import { audio } from './audio.js';
-import { makeBackup, readBackup, leftOutNote, personBackupLists, onePersonIn, intoPerson, namesPerson, withoutPeople } from './backup.js';
+import { makeBackup, readBackup, heardWav, leftOutNote, personBackupLists, onePersonIn, intoPerson, namesPerson, withoutPeople } from './backup.js';
 import { mergeLoaded, mergeSummary } from './merge.js';
 import { colorName, people } from './board.js';
 import { renderPeople } from './pads.js';
@@ -40,11 +40,19 @@ async function pastPins(data, hint) {
 const leftOutWords = (left) => (left.length
   ? ` Left out ${left.join(', ')}: ${left.length === 1 ? 'their PIN wasn\'t' : 'their PINs weren\'t'} typed.` : '');
 
+// A sound as it plays now (its voice, knobs, trim, edits and fade), for the
+// backup's "as heard" copy (format 1.2): the player v2 has no voice engine, so
+// it plays this. A sound that won't render goes without one; the original is
+// in the backup either way.
+async function heardOf(clip) {
+  try { return heardWav(await audio.load(clip)); } catch { return null; }
+}
+
 async function saveBackup() {
   el.save.disabled = true;
   try {
     const { data: lists, left } = await pastPins(storedLists(), 'Type their PIN to put them in the backup.');
-    const blob = await makeBackup(lists, state.version);
+    const blob = await makeBackup(lists, state.version, { heardOf });
     downloadBlob(blob, `noodlepads-backup-${localDate()}.zip`);
     logEvent('backup', { saved: true, sounds: lists.clips.length, beats: lists.beats.length, bytes: blob.size });
     showNotice(`Saved a backup: ${holdsWords(lists)}. The file is ${sizeWords(blob.size)}.${leftOutWords(left)}`);
@@ -63,7 +71,7 @@ export async function savePersonBackup(personId, name, button) {
   if (button) button.disabled = true;
   try {
     const lists = personBackupLists(storedLists(), personId);
-    const blob = await makeBackup(lists, state.version);
+    const blob = await makeBackup(lists, state.version, { heardOf });
     const slug = String(name).normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'person';
     downloadBlob(blob, `noodlepads-${slug}-${localDate()}.zip`);
     logEvent('backup', { saved: true, person: true, sounds: lists.clips.length, beats: lists.beats.length, bytes: blob.size });

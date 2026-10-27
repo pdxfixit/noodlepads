@@ -45,6 +45,7 @@ async function summary(out) {
 test('the golden backups are there: every format so far', () => {
   assert.ok(goldens.includes('backup-1.0.zip'), goldens.join());
   assert.ok(goldens.includes('backup-1.1.zip'), goldens.join());
+  assert.ok(goldens.includes('backup-1.2.zip'), goldens.join());
 });
 
 for (const name of goldens) {
@@ -71,7 +72,7 @@ for (const name of goldens) {
     const kept = (want, got, path) => {
       if (want && typeof want === 'object') {
         for (const k of Object.keys(want)) {
-          if (k === 'file' && path.startsWith('clips[')) continue;   // the audio file becomes the sound's blob
+          if ((k === 'file' || k === 'heard') && path.startsWith('clips[')) continue;   // the audio file becomes the sound's blob; the heard copy is read past (the app renders its own)
           assert.ok(got && k in got, `${path}.${k} was lost`);
           kept(want[k], got[k], `${path}.${k}`);
         }

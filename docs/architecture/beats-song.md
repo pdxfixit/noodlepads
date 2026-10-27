@@ -86,7 +86,7 @@ A beat saved before each beat had its own `signature` has none. It used to be re
 | Way in | Where it is stamped | Settings it reads |
 |---|---|---|
 | The database on this device | `store.js upgradeStores` (version 16, `STAMP_SINCE`) → `stampStored`, inside the upgrade's transaction: every record of `beats` and `patterns` without a signature | the beat's owner's `prefs`, then the device's `settings` |
-| A backup (1.0, 1.1), older sounds found, a cloud pull, a share remix | `backup.js cleanBackup`: `cleanPattern(…, unsignedFor(personId))` for `patterns` and `beats` | the document's own `prefs` and `settings`, then this device's (`backup-ui.js whatIsHere().settingsHere`) |
+| A backup (1.0 to 1.2), older sounds found, a cloud pull, a share remix | `backup.js cleanBackup`: `cleanPattern(…, unsignedFor(personId))` for `patterns` and `beats` | the document's own `prefs` and `settings`, then this device's (`backup-ui.js whatIsHere().settingsHere`) |
 | A beat file | `beat.js beatFromFile` (the 📥 handler) | the loader's, `settings.js unsignedSignature` |
 
 The owner's settings decide, not whoever is looking, so a beat sounds as it did for the person who made it. A beat made by current code with no signature is a new beat: 4/4. The backup format does not change (`signature` was already in it): a 1.x backup with an unsigned beat loads stamped. If the upgrade cannot read a store it leaves the beats as they were (the database must open), and they play as 4/4. After the upgrade each device syncs its stamped beats up like any edit. Why: [ADR 0035](../adr/0035-old-beats-stamped.md). Guard: `tests/stamp-signatures.test.mjs`, `tests/song-unsigned.test.mjs`.

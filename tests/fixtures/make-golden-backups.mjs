@@ -1,4 +1,4 @@
-// Makes the golden backups, tests/fixtures/backup-1.0.zip and backup-1.1.zip.
+// Makes the golden backups, tests/fixtures/backup-1.0.zip, 1.1 and 1.2.
 // Run once (`node tests/fixtures/make-golden-backups.mjs`); the zips are then
 // FIXED. Never regenerate one to make a test pass: a backup somebody saved is
 // kept by its owner, and every later copy of the app must keep loading it
@@ -8,7 +8,8 @@
 // Wren), tiny sounds, and every store that format had. 1.0 has no groups or
 // touch layouts, its beats have no time signature, and its open song is the
 // old slots-only shape. 1.1 adds groups, own voices
-// and touch layouts, and a song with lanes and a tempo mark.
+// and touch layouts, and a song with lanes and a tempo mark. 1.2 adds each
+// sound as heard: a `heard` field on the clip and a WAV beside the original.
 
 import { writeFileSync } from 'node:fs';
 import { zip } from '../../web/zip.js';
@@ -91,7 +92,15 @@ const doc11 = {
   touchLayouts: [{ id: 'touch-t1-a', personId: 'p-pip-1', name: 'Bands', created: 1760002400000, bands: [{ group: 'drums', size: 'm', sounds: ['user-aa11-1', 'user-aa11-2'] }] }],
 };
 
-for (const [name, doc, files] of [['1.0', doc10, files10], ['1.1', doc11, files11]]) {
+// ── 1.2 ──
+const files12 = { ...files11 };
+const doc12 = { ...doc11, format: '1.2', version: '1.0.300', clips: doc11.clips.map((c, n) => {
+  const heard = c.file.replace(/\.wav$/, '.heard.wav');
+  files12[heard] = wav(2000 + n * 500, 5000 + n * 1000);   // as heard: shorter and a different level than the original
+  return { ...c, heard };
+}) };
+
+for (const [name, doc, files] of [['1.0', doc10, files10], ['1.1', doc11, files11], ['1.2', doc12, files12]]) {
   const entries = [{ name: 'backup.json', data: new TextEncoder().encode(JSON.stringify(doc, null, 1)) },
     ...Object.entries(files).map(([n, data]) => ({ name: n, data }))];
   const blob = zip(entries, when);
