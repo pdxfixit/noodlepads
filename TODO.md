@@ -19,8 +19,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 - **Record the spoken callouts** (15 min, when you like): the 14 callouts ("Let's go!", "Level up!" …; list in `web/clips/kit/LICENSE-samples.txt`) and the evil laugh and cackle are macOS `say` voices, which may not be ours to share (Ben, 2026-10-26: replace them). Record your own (no names in them) and attach them in a chat, or say "use a CC0 voice set".
 
-- **Give the deploy checks a secret** (2 min; Ben, 2026-10-26; the Worker side is built): make a value with `openssl rand -hex 24` and add it in GitHub → Settings → Secrets → Actions as `CHECKS_KEY`. The next deploy puts it into the Worker with wrangler (wrangler first); from then on the Worker refuses a `p-smoke-`/`p-e2e-` id without it, so nobody else can use the checks' allowance. GitHub can't hand it to a Worker itself, so this one step is yours. Never paste it in a chat or a file. Put the same value in `~/.config/noodlepads/cloud.json` as `"checksKey"` (GitHub never shows it again): `just deploy` from the Mac refuses without it.
-
 - **Read the mission and make it yours** (2 min): `AGENTS.md` → Mission, drafted from your interview answers (2026-10-26). Reword anything that isn't how you'd say it; the council checks every change against it.
 
 - **Delete the old address's DNS record** (1 min): in Cloudflare, open the old address's domain → DNS and delete its `soundboard` record if it is still there (the Worker is gone and the name answers 530). The domain's apex stays. Also, if you like, delete the old address's leftover folder in `~/src/flarepress/` (only wrangler's local `.wrangler/` cache is in it).
