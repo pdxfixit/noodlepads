@@ -314,6 +314,25 @@ test('🔗 Share never puts anyone in the cloud: someone only on this device is 
   closeSheets();
 });
 
+test('a create that fails gives a typed name back: the fun name was only for the cloud', async () => {
+  const id = 'p-typed';
+  await setPersonEdit(id, { id, name: 'Typed Name', fun: false, avatar: '🦊', color: '#1F3FA8', added: true, created: 5 });
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    if (init.method === 'POST' && String(url) === '/api/profiles') throw new TypeError('Failed to fetch');
+    return realFetch(url, init);
+  };
+  try {
+    await assert.rejects(() => cloud.goUp(id, '2468'));
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  assert.equal(state.peopleEdits.get(id).name, 'Typed Name', 'still the name they typed');
+  assert.equal(state.peopleEdits.get(id).fun, false);
+  assert.equal(cloud.inCloud(id), false);
+  assert.ok(!inD1(id));
+});
+
 test('the app\'s own cloud words: the old 400 needs pin from a Worker that wants one is said plainly', async () => {
   const { CloudError, cloudTrouble } = await import('../web/cloud-api.js');
   assert.equal(cloudTrouble(new CloudError(400, { error: 'needs pin' })), 'A grown-up puts someone in the cloud, with a PIN, in their profile.');

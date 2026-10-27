@@ -616,6 +616,7 @@ async function funNamed(personId) {
 export async function goUp(personId, pin) {
   if (inCloud(personId)) return syncNow(personId);
   if (!await cloudThere()) throw new CloudError(0, { error: 'no cloud' });
+  const was = state.peopleEdits.get(personId);
   const p = await funNamed(personId);
   const check = await pinCheck(pin);
   await saveLink({ id: personId, key: null, rev: 0, sent: {}, sounds: {}, pin: true, check });
@@ -625,6 +626,9 @@ export async function goUp(personId, pin) {
   } catch (err) {
     await dropLink(personId);
     if (err instanceof CloudError && err.status === 409) return 'joins';
+    // Nothing went up, so the fun name that stood in for a typed one goes
+    // back: the name they typed is still theirs on this device.
+    if (was && (was.name !== p.name || was.fun !== p.fun)) await setPersonEdit(personId, { name: was.name, fun: was.fun });
     throw err;
   }
   await saveLink({ id: personId, key: made.key, rev: made.rev, sent: {}, sounds: {}, pin: true, check });

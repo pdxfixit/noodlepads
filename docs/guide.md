@@ -930,7 +930,8 @@ ADR 0002.
   their profile (see People above), asks the grown-up sum and a new PIN typed
   twice, and makes the profile in one request with the PIN (the Worker makes
   none without one: 400 `needs pin`). A typed name from before is swapped for
-  a fun name first, so it never leaves the device. A person never put up has
+  a fun name first, so it never leaves the device; if the cloud can't be reached
+  and nothing goes up, the name they typed comes back. A person never put up has
   no cloud backup: ⬇️ Back up is the way.
   👥 People → ☁️ Open from the cloud puts someone from the list on this device.
   A tap (after their PIN, if any) turns the sheet to them and locks it (no ✕,
