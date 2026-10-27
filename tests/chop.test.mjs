@@ -168,7 +168,12 @@ test('chop: marks where each blip starts; add, pick and remove marks; Make pads 
   await page.settle();
   const made = state.userClips.slice(before);
   assert.equal(made.length, 3);
-  for (const c of made) {
+  for (const [i, c] of made.entries()) {
+    assert.deepEqual(Object.keys(c).sort(), ['blob', 'changed', 'color', 'created', 'emoji', 'from', 'id', 'label', 'mime', 'personId', 'voice'], 'the stored record, field for field');
+    assert.match(c.id, /^user-/);
+    assert.equal(c.personId, state.personId);
+    assert.equal(c.blob.type, 'audio/wav');
+    assert.ok(i === 0 || c.created >= made[i - 1].created + 1, 'created steps on, keeping the pieces in order on the board');
     assert.deepEqual(c.from, { id, how: 'chop' });
     assert.equal(c.mime, 'audio/wav');
     assert.equal(c.voice, 'normal');

@@ -643,6 +643,9 @@ test('Record: hold the mic, let go, and it is a new pad of the kid\'s own, in th
   assert.deepEqual(mic.asked.at(-1), { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }, 'raw: no echo cancelling, noise suppression or auto-gain (Ben, 2026-10-26)');
   assert.equal(state.userClips.length, before + 1);
   const made = state.userClips.at(-1);
+  assert.deepEqual(Object.keys(made).sort(), ['amount', 'blob', 'changed', 'color', 'created', 'emoji', 'id', 'label', 'mime', 'personId', 'voice'], 'the stored record, field for field');
+  assert.match(made.id, /^user-/);
+  assert.equal(made.mime, made.blob.type);
   assert.equal(made.personId, state.personId);
   assert.equal(made.voice, 'chipmunk', '🐭 was lit');
   assert.ok(made.emoji && made.label && made.blob);

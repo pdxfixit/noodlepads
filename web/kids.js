@@ -28,6 +28,7 @@ import { countPlay } from './play-count.js';
 import { fingerTaps, isFinger } from './finger.js';
 import { remember, recall, newId, onePressOneClick } from './util.js';
 import { soundName, beatName } from './names.js';
+import { newClip } from './model.js';
 import { askSum, closeSum } from './grown-up.js';
 import { kidsBeatOf, kidsBeatId, isHiddenBeat } from './scratch.js';
 import { getSetting, setSetting, onSetting } from './settings.js';
@@ -502,17 +503,14 @@ async function keep(blob, seconds, how, { play = true, pid } = {}) {
   await deps.deletion?.(pid);
   if (!deps.isPerson(pid)) return;
   const mine = deps.clips({ includeHidden: true }, pid);
-  const clip = {
-    id: newId('user'),
+  const clip = newClip({
     personId: pid,
     label: soundName(mine.map((c) => c.label)),
     emoji: pictureFor(new Set(mine.map((c) => c.emoji))),
     color: deps.nextColor(pid),
     ...kidsVoiceFields(voice),
     blob,
-    mime: blob.type,
-    created: Date.now(),
-  };
+  });
   await deps.saveClip(clip);
   logEvent('kids', { recorded: Math.round(seconds * 10) / 10, voice: voice ?? 'normal', how });
   if (deps.personId() !== pid) return;   // another kid shows now: nothing of this one's on their screen

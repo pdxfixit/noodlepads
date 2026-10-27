@@ -92,7 +92,7 @@ const ONLY = [
   ['lift to play', /fingerTaps\(/, ['dj.js', 'finger.js', 'kids.js', 'pads.js']],
   // data.md
   ['IndexedDB is opened by the store and Older sounds only', /indexedDB\.open\(/, ['old-backup.js', 'store.js']],
-  ['own sounds added to memory', /userClips\.push\(/, ['board.js', 'bulk.js', 'chop.js', 'sheet-make.js', 'sheet.js']],
+  ['own sounds added to memory', /userClips\.push\(/, ['board.js', 'bulk.js']],
   // cloud.md
   ['the /api/ callers', /['"`]\/api/, ['cloud-api.js', 'events-client.js', 'feedback.js', 'log-send.js']],
   ['the events client is used by telemetry only', /events-client\.js'/, ['telemetry.js']],

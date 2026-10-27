@@ -18,15 +18,15 @@ import { state, persist, setOverride, deleteUserClip } from './state.js';
 import { audio, trimBounds, keptAudio, levelsOf, levelVerdict, TOO_LOUD, padTo } from './audio.js';
 import { meter, drawGrille } from './meter.js';
 import { MAX_RECORD_SECONDS, COUNT_IN, canRecord, openMicrophone, dropStream, openRecorder, openMeter } from './mic.js';
-import { currentPerson, clipsFor, colorName, nextClipColor } from './board.js';
-import { overrideFor, withHidden } from './model.js';
+import { currentPerson, clipsFor, colorName, nextClipColor, addClip } from './board.js';
+import { overrideFor, withHidden, newClip } from './model.js';
 import { applyChain, livePlan, voiceById, amountFor, amountText, chainOf, chainFields, recipeKey, surpriseShape, openVoice, stepLook, MAX_CHAIN } from './voices.js';
 import { buildLive, tailOf, liveTrim, newStep, isLive, cleanStep, kindById } from './steps.js';
 import { fromSlider, numsOf, sliderText } from './shape.js';
 import { setSetting, onSetting } from './settings.js';
 import { padFor, renderPads } from './pads.js';
 import { openDialog, setupDialog } from './dialogs.js';
-import { extensionFor, slug, newId } from './util.js';
+import { extensionFor, slug } from './util.js';
 import { soundName, cutName } from './names.js';
 import { MIX, cleanMix } from './mix.js';
 import { track } from './telemetry.js';
@@ -866,8 +866,7 @@ async function saveSheet() {
       sheetError('Record a sound, choose a file, or make one first.');
       return;
     }
-    const clip = {
-      id: newId('user'),
+    const clip = newClip({
       personId: p.id,
       label: label || el.label.placeholder || soundName(clipsFor(p.id, { includeHidden: true }).map((c) => c.label)),
       emoji: sheet.emoji,
@@ -876,10 +875,8 @@ async function saveSheet() {
       blob: sheet.pending.blob,
       mime: sheet.pending.mime,
       ...(sheet.pending.synth ? { synth: sheet.pending.synth } : {}),
-      created: Date.now(),
-    };
-    state.userClips.push(clip);
-    if (!(await persist('clips', clip))) { state.userClips = state.userClips.filter((c) => c !== clip); return keptOpen(); }
+    });
+    if (!(await addClip(clip))) { state.userClips = state.userClips.filter((c) => c !== clip); return keptOpen(); }
     saved = { ...clip, source: 'user' };
   } else if (sheet.clip.source === 'user') {
     const clip = state.userClips.find((c) => c.id === sheet.clip.id);

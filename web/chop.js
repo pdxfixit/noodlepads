@@ -16,14 +16,13 @@
 // add or remove marks, then each piece becomes a new pad with a family name
 // ("Baby Burp"). The pure parts are in cuts.js; sheet.js calls in here.
 
-import { state, persist } from './state.js';
 import { audio, slice, keptRange, keptParts } from './audio.js';
-import { currentPerson, clipsFor, nextClipColor } from './board.js';
+import { currentPerson, clipsFor, nextClipColor, addClip } from './board.js';
+import { newClip } from './model.js';
 import { renderPads } from './pads.js';
 import { encodeWav } from './wav.js';
 import { getSetting, onSetting } from './settings.js';
 import { showNotice, showBanner } from './ui.js';
-import { newId } from './util.js';
 import { chopName } from './names.js';
 import {
   cleanTrim, onsets, cleanMarks, pieces, newMark, MIN_PIECE,
@@ -383,21 +382,17 @@ export function createCut(sheet) {
       const label = chopName(now.name, taken);
       taken.push(label);
       const blob = encodeWav(slice(cut.source, start, end - start));
-      const clip = {
-        id: newId('user'),
+      const clip = newClip({
         personId: p.id,
         label,
         emoji: now.emoji,
         color: nextClipColor(p.id),
-        voice: 'normal',
         blob,
-        mime: blob.type,
         created: Date.now() + made.length,   // keeps the pieces in order on the board
-      };
-      // A saved sound is remembered as where the piece came from.
-      if (now.mode === 'edit') clip.from = { id: now.clip.id, how: 'chop' };
-      state.userClips.push(clip);
-      await persist('clips', clip);
+        // A saved sound is remembered as where the piece came from.
+        ...(now.mode === 'edit' ? { from: { id: now.clip.id, how: 'chop' } } : {}),
+      });
+      await addClip(clip);
       made.push(label);
     }
     logEvent('chop', { made: made.length });

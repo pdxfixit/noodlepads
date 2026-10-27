@@ -3,11 +3,11 @@
 // shared state in sheet-state.js. sheet.js opens the sheet and plays and saves
 // it.
 
-import { state, persist } from './state.js';
+import { state } from './state.js';
 import { audio, keptAudio } from './audio.js';
-import { currentPerson, clipsFor, nextClipColor } from './board.js';
+import { currentPerson, clipsFor, nextClipColor, addClip } from './board.js';
+import { newClip } from './model.js';
 import { renderPads } from './pads.js';
-import { newId } from './util.js';
 import { synthName, mixName } from './names.js';
 import { mixSounds } from './mix.js';
 import { showNotice } from './ui.js';
@@ -87,22 +87,17 @@ export async function makeMix() {
   if (!made) { sheetError('That mix didn’t work. Pick another sound.'); return; }
   const p = currentPerson();
   const here = sheet.clip;
-  const clip = {
-    id: newId('user'),
+  const clip = newClip({
     personId: p.id,
     label: mixName(here.label, made.other.label, clipsFor(p.id, { includeHidden: true }).map((c) => c.label)),
     emoji: here.emoji || made.other.emoji || '🎛️',
     color: nextClipColor(p.id),
-    voice: 'normal',
     blob: encodeWav(made.buffer),
-    mime: 'audio/wav',
     from: { id: here.id, how: 'mix' },
     // Two beats made into sounds: the mix keeps their length too, to loop in time.
     ...(here.exact && made.other.exact ? { exact: true } : {}),
-    created: Date.now(),
-  };
-  state.userClips.push(clip);
-  if (!(await persist('clips', clip))) {
+  });
+  if (!(await addClip(clip))) {
     state.userClips = state.userClips.filter((c) => c !== clip);
     sheetError('That mix didn’t save. Tap Make it a new sound to try again.');
     return;

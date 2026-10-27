@@ -765,6 +765,13 @@ test('✨ Make one: a starter makes a sound to try voices on, named for what it 
   await page.settle();
   const clip = state.userClips.at(-1);
   assert.equal(state.userClips.length, before + 1);
+  // The stored record, field for field (model.js newClip makes it; one of the
+  // five places that make an own sound, pinned in each: ➕ Mix, ✂️ Chop, 🧸 Kids, app.js).
+  assert.deepEqual(Object.keys(clip).sort(), ['blob', 'changed', 'color', 'created', 'emoji', 'id', 'label', 'mime', 'personId', 'synth', 'voice']);
+  assert.match(clip.id, /^user-/);
+  assert.equal(clip.personId, state.personId);
+  assert.equal(clip.voice, 'normal');
+  assert.equal(clip.blob.type, 'audio/wav');
   assert.equal(clip.mime, 'audio/wav');
   assert.equal(clip.synth.tone, 'buzzy');
   assert.equal(clip.label, $('#clip-label').placeholder || clip.label);
@@ -886,6 +893,11 @@ test('➕ Mix with another sound makes a new pad named as a blend, made from thi
   await page.settle();
   assert.equal(state.userClips.length, before + 1);
   const made = state.userClips.at(-1);
+  assert.deepEqual(Object.keys(made).sort(), ['blob', 'changed', 'color', 'created', 'emoji', 'from', 'id', 'label', 'mime', 'personId', 'voice'], 'the stored record, field for field (no `exact` unless both sounds were)');
+  assert.match(made.id, /^user-/);
+  assert.equal(made.personId, state.personId);
+  assert.equal(made.voice, 'normal');
+  assert.equal(made.blob.type, 'audio/wav');
   assert.deepEqual(made.from, { id: here.dataset.id, how: 'mix' });
   assert.equal(made.mime, 'audio/wav');
   assert.ok(made.label.length >= 3 && made.label !== hereLabel, made.label);
