@@ -76,7 +76,7 @@ export const LEVEL_NAMES = { kids: '🧸 Kids', regular: 'Regular', advanced: 'A
 export const LEVEL_HINTS = {
   kids: '🧸 Kids: big picture pads, a hold-to-record mic, a little beat and toy keys, for small kids. No deleting or editing. ⚙️ asks a grown-up sum to come back here.',
   regular: 'Regular: everything for making sounds, beats and songs.',
-  advanced: "Advanced: the extra tools too. In the beat maker: Overlap, each row's speed (½×, 1×, 2×), swing and a time signature for each beat; the sharps and flats in the presets.",
+  advanced: "Advanced: the extra tools too. In the beat maker: each row's speed (½×, 1×, 2×), swing and a time signature for each beat; the sharps and flats in the presets.",
 };
 
 // 📊 Data sharing' chip: the emoji of each one that is on, or Off.

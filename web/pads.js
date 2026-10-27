@@ -567,7 +567,7 @@ async function cornerBadge(kind, clip) {
 
 // A tap on a looping pad stops it; on any other pad, plays it once. Returns
 // true when it stopped a loop.
-// `ring`: 🎤 Live's 🔔 Overlap, the sound's earlier hits ring on under this
+// `ring`: 🎤 Live's 🔔 Let it ring, the sound's earlier hits ring on under this
 // one. A pad always restarts its sound (Ben, 2026-10-12).
 export function tapPad(clip, { ring = false } = {}) {
   if (audio.isLooping(clip.id)) {

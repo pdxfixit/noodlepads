@@ -48,7 +48,7 @@ const MUST_MENTION = [
   '👆 Select part', '🔄 Backwards', '🔇 Silence it', '🔊 Louder', '🔉 Quieter', '🔊 Even it out', '✂️ Keep only this', '🧩 Chop into pads', '🧩 Make pads',
   // Beats
   '🆕 New', '🗂️ My beats', '🗂️ My songs', '🎧 Listen', '▶ Play', '⏲️', 'Straight', 'Swing', 'Shuffle', '4/4', '+ Add a row', 'loudness', '🧹?',
-  'Who plays it?', '💃 Grooves', '📝 Into my scratch', '➕ Add to this beat', '💾 Keep', '🔊 Make the open beat a sound', '📥 Load a beat file', '🔔 Overlap', '🎹 Tune', '🎹 Add a tune', '♯ All notes', '½ Half pills', '🎚️ Mixer', 'All on',
+  'Who plays it?', '💃 Grooves', '📝 Into my scratch', '➕ Add to this beat', '💾 Keep', '🔊 Make the open beat a sound', '📥 Load a beat file', '🔔 Let it ring', '🎹 Tune', '🎹 Add a tune', '♯ All notes', '½ Half pills', '🎚️ Mixer', 'All on',
   '⌨️', '● Record', '↩️ My beat', 'tap to change it',
   // Live
   '⏲️ Click track', 'keep tapping…', '✏️ Layout', '⌨️ Keys', '👆 Pads', '↺ Reset keys', '⭐ Save this layout', '⭐ My keys', '✕ Unpick all', '🎬 Takes',
@@ -122,7 +122,7 @@ test('every button Help draws uses a label the app really has', () => {
 test('Advanced-only items say so', () => {
   const adv = HELP.flatMap((s) => shownItems(s).filter((i) => i.adv));
   assert.ok(adv.some((i) => i.pic[0].k === 'seg' && i.pic[0].t.includes('2×')), 'a row\'s speed needs Advanced');
-  // 🔔 Overlap is for every level since 2026-10-12 (Ben): on the row's line, and on Live.
+  // 🔔 Let it ring is for every level since 2026-10-12 (Ben): on the row's line, and on Live.
   const bells = HELP.flatMap((s) => shownItems(s)).filter((i) => i.pic[0].k === 'lit' && /🔔/.test(i.pic[0].t));
   assert.equal(bells.length, 2);
   assert.ok(bells.every((i) => !i.adv));

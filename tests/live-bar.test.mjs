@@ -1,7 +1,7 @@
 // 🎤 Live's controls sit on its control bar at the top, laid out as Beats'
 // (Ben, 2026-10-26: "moved to the top so that all the various views are
 // consistent"): ● Record, the click's tempo and ⏲️, what is happening, then
-// 🔔 Overlap, ✏️ Layout and 🎬 Takes. Under the keys are only their colors.
+// 🔔 Let it ring, ✏️ Layout and 🎬 Takes. Under the keys are only their colors.
 // Keyboard and screen-reader order follow the page, so the page keeps that order.
 
 import { test } from 'node:test';
@@ -14,7 +14,7 @@ const section = (open, close) => { const at = html.indexOf(open); return html.sl
 const bar = section('<div class="beat-deck deck deck-end dj-bar">', '<div class="beat-shape" id="dj-setup"');
 const tail = section('<div class="dj-tail">', '</section>');
 
-test("Live's ⏲️, 🔔 Overlap and ✏️ Layout are on the control bar, in Beats' order", () => {
+test("Live's ⏲️, 🔔 Let it ring and ✏️ Layout are on the control bar, in Beats' order", () => {
   const at = (id) => bar.indexOf(`id="${id}"`);
   const order = ['dj-record', 'dj-click-tempo', 'dj-click', 'dj-status', 'dj-overlap', 'dj-change', 'dj-takes-open'];
   for (const id of order) assert.ok(at(id) >= 0, `#${id} on the bar`);
@@ -27,7 +27,7 @@ test('under the keys, only their colors', () => {
 });
 
 test('🔔 and ✏️ say their word from 761 px; just the emoji up to 760 px, as Beats\' ✏️ on a phone', () => {
-  assert.match(bar, /id="dj-overlap" data-word="Overlap"[^>]*>🔔<\/button>/);
+  assert.match(bar, /id="dj-overlap" data-word="Let it ring"[^>]*>🔔<\/button>/);
   assert.match(bar, /id="dj-change" data-word="Layout"[^>]*>✏️<\/button>/);
   assert.match(css, /\.seq-click\.dj-word::after \{ content: " " attr\(data-word\); \}/);
   assert.match(css, /@media \(max-width: 760px\) \{\n {2}body\.screen-live \.dj-bar \.dj-word \{ width: 48px; padding: 0; font-size: 1\.2rem; \}\n {2}body\.screen-live \.dj-bar \.dj-word::after \{ content: none; \}/);

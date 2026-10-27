@@ -1,4 +1,4 @@
-// 🔔 Overlap (Ben, 2026-10-12): a sound that rings over itself keeps its
+// 🔔 Let it ring (Ben, 2026-10-12): a sound that rings over itself keeps its
 // earlier hits sounding, up to MAX_RINGING; off, its next hit cuts it off.
 // Beats has it per row on the header line (`ring`), 🎤 Live one button for
 // the visit. The rules here are pure; app.test.mjs drives the buttons.
@@ -21,7 +21,7 @@ test('ringOver: off, a hit cuts off every earlier hit still sounding; on, they r
   assert.equal(r.keep.length, MAX_RINGING - 1);
 });
 
-test('a take keeps which hits rang (🔔 Overlap on Live), and renders as heard: a hit cuts its sound\'s last unless it rang', () => {
+test('a take keeps which hits rang (🔔 Let it ring on Live), and renders as heard: a hit cuts its sound\'s last unless it rang', () => {
   const take = takeFrom([
     { at: 1, clipId: 'k', kind: 'hit' },
     { at: 1.2, clipId: 'k', kind: 'hit' },
@@ -41,11 +41,11 @@ test('a take keeps which hits rang (🔔 Overlap on Live), and renders as heard:
   ]);
 });
 
-test('the sound picker no longer has 🔔 Overlap; Live\'s sits just right of ⏲️ Click track, before ✏️ Edit keys', () => {
+test('the sound picker no longer has 🔔 Let it ring; Live\'s sits just right of ⏲️ Click track, before ✏️ Edit keys', () => {
   assert.doesNotMatch(html, /id="chooser-ring"/);
   const start = html.indexOf('<dialog id="chooser"');
   const chooser = html.slice(start, html.indexOf('</dialog>', start));
-  assert.doesNotMatch(chooser, /Overlap/);
+  assert.doesNotMatch(chooser, /Let it ring/);
   const at = (id) => html.indexOf(`id="${id}"`);
   assert.ok(at('dj-click-tempo') < at('dj-overlap') && at('dj-overlap') < at('dj-change'));
 });

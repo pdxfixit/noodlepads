@@ -46,7 +46,7 @@ export const SETTINGS = {
   // "Advanced" as it was first stored: true exactly when the level is
   // Advanced. Code that asks about Advanced still reads it, and setting it
   // sets the level. Off keeps the beat maker simple: 4/4, no per-row
-  // controls. On shows Overlap, each row's speed (½×, 1×, 2×), Swing and the
+  // controls. On shows each row's speed (½×, 1×, 2×), Swing and the
   // time signature.
   advancedBeats: { default: false, values: [false, true], scope: 'person', read: (v) => { const l = levelOf(v); return l === undefined ? undefined : l === 'advanced'; } },
   // Beats per bar over the note that gets the beat. A pill is always a

@@ -190,7 +190,7 @@ export const audio = {
   analyser: null,
   limiter: null,         // on the master output: several loud sounds at once get held under full scale instead of clipping
   playing: new Map(),    // clip id (or 'preview') -> {src, gain, t0, duration, loop}
-  ringing: new Map(),    // clip id -> its earlier hits still ringing under 🔔 Overlap: [{src, gain, end}]
+  ringing: new Map(),    // clip id -> its earlier hits still ringing under 🔔 Let it ring: [{src, gain, end}]
   originals: new Map(),  // clip id -> Promise<AudioBuffer>, decoded and trimmed
   originalTrims: new Map(),  // clip id -> cutKey() of the trim, edits and fade `originals` holds it with
   rendered: new Map(),   // `${clip id}:${recipeKey}` -> Promise<{buffer, duration}>
@@ -356,7 +356,7 @@ export const audio = {
     for (const key of [...this.rendered.keys()]) if (key.startsWith(`${id}:`) && key !== keep) this.rendered.delete(key);
   },
 
-  // `ring` (🔔 Overlap on 🎤 Live): the clip's earlier hits ring on under
+  // `ring` (🔔 Let it ring on 🎤 Live): the clip's earlier hits ring on under
   // this one instead of being cut off (rhythm.js ringOver). `rate` plays it
   // faster (higher) or slower, as a tune row's note does: 2 is an octave up
   // (🧸 Kids' high keys). `id` names what plays, when it is not the clip's own.

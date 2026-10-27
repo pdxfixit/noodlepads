@@ -82,7 +82,7 @@ const ONLY = [
   ['prepareBeats callers', /\.prepareBeats\(/, ['share-render.js', 'song.js']],
   ['the WAV encoder', /function encodeWav\b/, ['sequencer.js']],
   // keys-kids.md
-  ['🔔 Overlap: one rule, three players', /\bringOver\b/, ['audio.js', 'rhythm.js', 'sequencer.js']],
+  ['🔔 Let it ring: one rule, three players', /\bringOver\b/, ['audio.js', 'rhythm.js', 'sequencer.js']],
   ['the ✏️ Layout editors are built by the keys panel', /createKeysEditor|createTouchEditor/, ['dj-keys.js', 'dj-touch.js', 'dj.js']],
   ['the grown-up sum', /askSum\(/, ['feedback.js', 'grown-up.js', 'kids.js']],
   ['lift to play', /fingerTaps\(/, ['dj.js', 'finger.js', 'kids.js', 'pads.js']],

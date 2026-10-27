@@ -48,7 +48,7 @@ function tool(className, text, label, data, look = 'icon-btn') {
 // - canClear: the row has a pill to clear (else 🧹 waits).
 // - locked: recording into the beat: ✕ and 🧹 keep their place, unseen, so
 //   the rows don't shift, and the emoji waits.
-// - ring: the row's 🔔 Overlap, {on, data, label}: pressed, its hits ring
+// - ring: the row's 🔔 Let it ring, {on, data, label}: pressed, its hits ring
 //   over each other; else each hit cuts off the last (Ben, 2026-10-12: "per
 //   sound… next to mute, clear, etc"). First of the tools, before the speaker.
 // - speaker: the row's speaker (rowSpeaker).
@@ -75,7 +75,7 @@ export function rowParts({ asked = null, canClear = true, locked = false, emoji,
   const bell = ring && tool('row-ring', '🔔', ring.label, ring.data);
   if (bell) {
     bell.setAttribute('aria-pressed', String(!!ring.on));
-    bell.title = ring.on ? 'Overlap on: hits ring over each other' : 'Overlap off: each hit cuts off the last';
+    bell.title = ring.on ? 'Let it ring is on: hits ring over each other' : 'Let it ring is off: each hit cuts off the last';
   }
   const tools = document.createElement('div');
   tools.className = 'row-tools';
@@ -88,14 +88,14 @@ export function rowParts({ asked = null, canClear = true, locked = false, emoji,
     opens.setAttribute('aria-haspopup', 'menu');
     opens.setAttribute('aria-expanded', 'false');
     movable(change, menu.change[1]);
-    movable(bell, 'Overlap');
+    movable(bell, 'Let it ring');
     movable(sweep, 'Clear');
     movable(x, 'Remove');
     tools.append(...[speaker, change, bell, sweep, x, ...(menu.extra ?? [])].filter(Boolean));
     return { pick: opens, tools };
   }
   if (more) {
-    movable(bell, 'Overlap');
+    movable(bell, 'Let it ring');
     movable(sweep, 'Clear');
     movable(x, 'Remove');
   }

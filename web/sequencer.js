@@ -12,7 +12,7 @@
 // so a busy page can delay the tick without making the beat drag.
 //
 // When a row's sound is still playing at its next hit, it is cut off with a
-// short fade (a hard cut clicks), unless the row's 🔔 Overlap is on (`ring`,
+// short fade (a hard cut clicks), unless the row's 🔔 Let it ring is on (`ring`,
 // at every level), which lets hits overlap, up to MAX_RINGING at once.
 
 import { openDialog, setupDialog } from './dialogs.js';
@@ -110,7 +110,7 @@ export const hitGain = (row, loud) => (loud ? ACCENT_GAIN : 1) * rowLevel(row);
 // Does a row play at all: not muted, not turned all the way down, and (in
 // beat `p`) not silenced by another row's Solo (the 🎚️ Mixer, mixer.js).
 export const audible = (row, p = null) => !row.muted && rowLevel(row) > 0 && !(p && silencedBySolo(p, row));
-export { MAX_RINGING };                // overlapping hits one 🔔 Overlap row may have sounding (rhythm.js)
+export { MAX_RINGING };                // overlapping hits one 🔔 Let it ring row may have sounding (rhythm.js)
 const ARM_MS = 3000;                   // how long a Clear? or Remove? waits for its second tap
 const UNDO_MS = 8000;                  // how long a removed row can be brought back
 export const MAX_CHIPS = 8;            // pattern chips under the beat bar: 8 spots
@@ -628,7 +628,7 @@ export function createSequencer(deps) {
   const playing = () => timer !== 0;
   const baseStep = () => 60 / shape().bpm / STEPS_PER_BEAT;
   // With advanced beats off the beat maker is the simple one: 4/4, every row
-  // on the beat, whatever the rows have stored for later. 🔔 Overlap plays at
+  // on the beat, whatever the rows have stored for later. 🔔 Let it ring plays at
   // every level (Ben, 2026-10-12).
   const playMode = () => (advanced ? 'speed' : 'plain');
   // A beat plays in its own signature in either mode; only choosing one needs Advanced.
@@ -1606,7 +1606,7 @@ export function createSequencer(deps) {
 
   // A row's emoji and its 🔔 · 🔊 · 🧹 · ✕, shared with the keys view (beat-row.js). ✕ and 🧹
   // take two taps: the first asks, in red, and the question goes away after a
-  // few seconds or any other tap. ✕ has Undo. 🔔 turns the row's Overlap on
+  // few seconds or any other tap. ✕ has Undo. 🔔 turns the row's Let it ring on
   // or off at once. The emoji opens the sound chooser (with advanced beats
   // on, speed is there too); a tune row's opens 🎹 the roll, and wears a small 🎹.
   function rowTools(row, i, clip) {
@@ -1621,7 +1621,7 @@ export function createSequencer(deps) {
       title: clip ? clip.label : 'Pick a sound',
       data: { remove: { remove: i }, clear: { clear: i }, pick: { pick: i } },
       // The emoji opens the row's menu (Ben, 2026-10-25).
-      menu: { key: i, label: `Row ${i + 1}: ${name}. Menu: ${row.melody ? 'notes' : 'sound, Overlap'}, Clear, Remove, move`,
+      menu: { key: i, label: `Row ${i + 1}: ${name}. Menu: ${row.melody ? 'notes' : 'sound, Let it ring'}, Clear, Remove, move`,
         change: row.melody ? ['🎹', 'Edit notes'] : ['🔄', 'Change sound'], extra: moveButtons(i) },
       labels: {
         remove: `Remove row ${i + 1}`, removeAsk: `Tap again to remove row ${i + 1}`,
@@ -1649,21 +1649,21 @@ export function createSequencer(deps) {
     });
   }
 
-  // A row's 🔔 Overlap for beat-row.js, here and in the keys view. A tune
+  // A row's 🔔 Let it ring for beat-row.js, here and in the keys view. A tune
   // row's notes always overlap (chords), so it has none.
   function ringTool(row, i, name) {
     if (row.melody) return null;
     return { on: row.ring, data: { ring: i },
-      label: `Overlap for row ${i + 1}, ${name}: ${row.ring ? 'on, its hits ring over each other' : 'off, each hit cuts off the last'}. Tap to turn it ${row.ring ? 'off' : 'on'}.` };
+      label: `Let it ring for row ${i + 1}, ${name}: ${row.ring ? 'on, its hits ring over each other' : 'off, each hit cuts off the last'}. Tap to turn it ${row.ring ? 'off' : 'on'}.` };
   }
-  // Turns row i's 🔔 Overlap on or off: saved with the beat, heard from its next hit.
+  // Turns row i's 🔔 Let it ring on or off: saved with the beat, heard from its next hit.
   function toggleRing(i) {
     const row = pattern?.rows[i];
     if (!row || row.melody) return;
     row.ring = !row.ring;
     save();
     render();
-    deps.announce?.(`Overlap ${row.ring ? 'on' : 'off'} for row ${i + 1}.`);
+    deps.announce?.(`Let it ring ${row.ring ? 'on' : 'off'} for row ${i + 1}.`);
   }
 
   // The Clear or Remove waiting for its second tap: {row, kind}, or null.
@@ -1677,7 +1677,7 @@ export function createSequencer(deps) {
 
   // ── Chooser: the row's dialog. Tapping a sound plays it and marks it;
   // "Use" sets the row. With advanced beats on, also the row's speed (its
-  // 🔔 Overlap is on the row's header line). ──
+  // 🔔 Let it ring is on the row's header line). ──
 
   // What the chooser is choosing for: a beat row ({row: i, title}), or new
   // rows ({adding: true, title}).
@@ -3048,7 +3048,7 @@ export function createSequencer(deps) {
   // ── Save as a sound: render the beat to audio and add it as a pad ──
 
   // Plays the pattern into an OfflineAudioContext exactly as play() would:
-  // the same hits (planHits), each row's tempo, fades and Overlap, once
+  // the same hits (planHits), each row's tempo, fades and Let it ring, once
   // through the whole beat, every bar.
   async function bounce() {
     await Promise.all(pattern.rows.map((r) => prepare(deps.clipById(r.clipId))));
