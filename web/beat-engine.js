@@ -214,6 +214,20 @@ export function createBeatEngine({ audio, clipById }) {
     return sound(ctx, busFor(ctx, dest, p).input(i), list, p.rows[i], loaded, time, loud, note, len);
   }
 
+  // One thing plays at a time, and the engine is the one owner: the run that
+  // plays now is `current`. A new run takes over from it, and a run taken
+  // over is stopped through its owner (its `onStop` hook: the beat maker's
+  // stop, Kids' stopBeat, Song's stop), so what each does when it stops
+  // still happens: Beats reads a synced beat again, ⌨️ Keys' recording ends,
+  // Kids' ▶ comes back. The run itself is stopped if its owner did not.
+  let current = null;
+  function stopCurrent() {
+    const was = current;
+    current = null;
+    if (!was?.on) return;
+    try { was.hooks.onStop?.(); } finally { was.stop(); }
+  }
+
   // Loops the beat `hooks.beat()` from its first pill until the run's
   // stop(). Returns the run at once, before its sounds have loaded, so a
   // second ▶ or a ⏹ in the meantime sees it: `ready` resolves true once it
@@ -253,6 +267,7 @@ export function createBeatEngine({ audio, clipById }) {
   //   onPill(pill, at)  each pill of the beat's plain grid, as it is booked
   //   onPass(at)        each time round, as it is booked: `at` the next one's start
   //   onHit(clipId, at, hit) each hit booked
+  //   onStop()          the run is taken over by another: stop it as its owner does (it is stopped anyway if the owner does not)
   // Only the beat maker (🥁 Beats) uses these:
   //   loaded(id)        the row's sound {clip, loaded} from the caller's own
   //                     (the engine's `ready`), or null: the run loads nothing,
@@ -270,9 +285,12 @@ export function createBeatEngine({ audio, clipById }) {
   // booked, {row, step, time}, to be heard).
   function play(hooks) {
     const ctx = audio.wake();   // first, in the tap itself: iOS starts audio only there
+    stopCurrent();              // one thing plays at a time
     const clipOf = hooks.clip ?? clipById;
     const mixed = hooks.mixer !== false;
     const run = { t0: null, on: true, timer: 0, clocks: [], pass: null, voices: [], shown: [], queue: [], sounds: new Map(), loads: [], lists: new Map(), next: 0, stats: { hits: 0, late: 0, silent: 0, cuts: 0, maxRinging: 0 } };
+    run.hooks = hooks;
+    current = run;
     const stopped = new Promise((resolve) => { run.cancel = resolve; });   // a stop ends the wait for sounds that never come
     // A row's sound as it is now: {clip, loaded}, or null while it loads or when it is gone.
     const soundOf = (id, found) => {
@@ -393,6 +411,7 @@ export function createBeatEngine({ audio, clipById }) {
     run.stop = () => {
       if (!run.on) return run.stats;
       run.on = false;
+      if (current === run) current = null;
       run.cancel();
       clearInterval(run.timer);
       run.timer = 0;
@@ -434,7 +453,7 @@ export function createBeatEngine({ audio, clipById }) {
   }
 
   return {
-    preparing: () => preparing, mixes: () => liveMixes.size, has, get, drop, keep, held,
+    preparing: () => preparing, mixes: () => liveMixes.size, playing: () => (current?.on ? current : null), stop: stopCurrent, has, get, drop, keep, held,
     prepare, refresh, sound, busFor, letGo, prepareBeats, soundHit, play,
   };
 }

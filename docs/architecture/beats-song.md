@@ -244,7 +244,7 @@ Who uses what:
 
 The beat sounds the same in all of them because they share `sound()`, `busFor()` and `planHits()`. A new place that plays a beat should use `beatPlan` + `prepareBeats` + `soundHit`, and should stop the live beat first, so one thing plays at a time.
 
-**One thing plays at a time.** `seq.play` and `hearBeat` call `deps.onPlay` (`app.js`: `song.stop()`); `song.play` calls `seq.stop()`; `hearBeat` stops the beat. `app.js stopEverything` (⏹️, Space) stops all three and both clicks. Leaving Beats or Song stops it (`app.js setScreen`), and so does 🧸 Kids showing (`applyKids`).
+**One thing plays at a time, and the engine enforces it.** `beat-engine.js play` begins by taking over from the run playing (`current`): that run's owner is asked to stop it through its `onStop` hook (the beat maker's `stop`, so a sync's read-back (`readAgain`) and ⌨️ Keys' recording end still run; Kids' `stopBeat`, so ▶ comes back; Song's `stop`; a sample's `stopSample`), and the run is stopped anyway if the owner did not. `engine.stop()` does the same for whatever plays. The explicit stops stay as they were, so the old screen stops at the tap, before the new one's sounds load: `seq.play` and `hearBeat` call `deps.onPlay` (`app.js`: `song.stop()`); `song.play` calls `seq.stop()`; `hearBeat` stops the beat. Guard: `tests/one-at-a-time.test.mjs`. `app.js stopEverything` (⏹️, Space) stops all three and both clicks. Leaving Beats or Song stops it (`app.js setScreen`), and so does 🧸 Kids showing (`applyKids`).
 
 ## Save as a sound
 

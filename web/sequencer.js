@@ -586,6 +586,7 @@ export function createSequencer(deps) {
       },
       join: joinClock,
       skip: usedSkip,
+      onStop: stop,   // taken over by another run: stop as ■ does (a synced beat is read again, the keys' recording ends)
       onHit: (clipId, at) => deps.onHit?.(clipId, (at - audio.context().currentTime) * 1000),
       afterTick: () => {
         meter.run();  // the speaker grille follows the beat
@@ -2101,7 +2102,7 @@ export function createSequencer(deps) {
     // The whole pass is booked on the first tick, as one list.
     const events = plan.hits.filter((h) => h.time < seconds)
       .map((h) => ({ at: t0 + h.time, pattern: plan.pattern, row: h.row, loud: h.loud, note: h.note, len: h.len, dest: audio.master, key: h.row }));
-    mine.run = engine.play({ list: { events }, lookahead: seconds + 1 });
+    mine.run = engine.play({ list: { events }, lookahead: seconds + 1, onStop: () => { if (sample === mine) stopSample(); } });
     mine.run.tick();
     logEvent('beat', { action: 'sample', bpm: plan.pattern.bpm, bars: plan.pattern.bars, seconds: Math.round(seconds * 10) / 10 });
     mine.timer = setTimeout(() => { if (sample === mine) stopSample(); }, (seconds + 0.4) * 1000);

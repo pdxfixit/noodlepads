@@ -707,6 +707,7 @@ function playBeat({ from = null, onPass = null } = {}) {
       if (p % 2 === 0) run.queue.push({ row: 0, step: (p % barOf(beat)) / 2, time: at });
     },
     onPass,
+    onStop: () => { if (playing === run) stopBeat(); },   // taken over by another run: ▶ comes back
   });
   playing = Object.assign(run, { queue: [], shown: [-1], raf: 0, limiterDb: 0, watch: 0 });
   run.waiter = setTimeout(() => { if (playing === run && run.t0 === null) stopBeat(); }, KIDS_LOAD_WAIT.ms);

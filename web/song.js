@@ -1150,7 +1150,8 @@ export function createSong(deps) {
         const lane = song.lanes[e.lane];
         if (!lane?.muted && cleanVolume(lane?.volume) > 0) deps.onHit?.(clipId, (at - audio.context().currentTime) * 1000);
       },
-      afterTick: afterTick,
+      afterTick,
+      onStop: stop,   // taken over by another run: stop as ■ does
     });
     run.tick();
     raf = requestAnimationFrame(follow);

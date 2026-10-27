@@ -66,7 +66,7 @@ The questions agents ask most. ✅ marks a claim `tests/architecture.test.mjs` c
 | Offline renderer | **Four ✅**: `voices.js` (every voiced clip), `sequencer.js bounce`, `song.js` (Save as a sound), `share-render.js` (previews, See all, takes). `listen-input.js` makes one only to decode a song file. | sound.md |
 | WAV encoder | **One ✅**, `wav.js encodeWav`, imported by the sheet, chop, keys, song and share previews. | sound.md |
 | Microphone recorder | **Two ✅**: `sheet.js` and `kids.js`, each its own `getUserMedia` + `MediaRecorder`. 🎧 captures through an AudioWorklet ✅. | sound.md, keys-kids.md |
-| Way to stop everything | **No.** `audio.stopAll` stops only what is in `audio.playing`; the beat, the song, 🧸 Kids' beat, the click and share previews each stop themselves (`app.js stopEverything` calls several). | sound.md, shell.md |
+| Way to stop everything | **No.** `audio.stopAll` stops only what is in `audio.playing` (pads and keys). The beat engine owns its runs: one plays at a time, a new run takes over by stopping the old one through its owner (`onStop`: `seq.stop`, Kids' `stopBeat`, `song.stop`, a sample's `stopSample`; `engine.stop()` does so for whatever plays). The click and share previews each stop themselves (`app.js stopEverything` calls several). | sound.md, shell.md |
 | Database | **One**, `noodle-pads`, opened by `store.js` (and `old-backup.js` reads the old one ✅). | data.md |
 | Write path | **Mostly** `state.js persist`; `app.js`, `backup-ui.js storeLoaded` and `cloud.js` also write with `db` directly. | data.md |
 | List of stores | **No**: about ten hand-kept lists follow `store.js SCHEMA`. The person's, backup's and cloud's lists are checked ✅. | data.md |
@@ -94,8 +94,10 @@ The biggest ones. Each area file lists its own in full.
   (`cloud-sync.js CLOUD_KINDS`, `merge3.js STAMPED`, `worker/cloud.js KINDS`),
   voices and step kinds in `log-clean.js`, limits written on both sides of
   the cloud ✅.
-- **Players outside `audio.playing`:** the beat, the song, Kids' beat, the
-  click. `audio.stopAll` misses them.
+- **Players outside `audio.playing`:** the engine's runs (the beat, the
+  song, Kids' beat, a groove sample) and the click. `audio.stopAll` misses
+  them; a new run stops the old one, and `app.js stopEverything` stops the
+  rest.
 - **The look tools call into the page by name:** `tools/look.mjs` and
   `look-cloud.mjs` use web exports, `state` fields and ids as strings, and no
   test checks them (tests-tools.md).
