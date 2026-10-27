@@ -266,6 +266,11 @@ export function softEdges(buffer, seconds = EDGE_FADE_SECONDS) {
   return buffer;
 }
 
+// The fade's gain at sample `i` of `n`: up from silence over the first `fin`
+// samples, down to silence over the last `fout`; where the two overlap, the
+// lower one wins. applyFade and voices.js's Fade step both use it.
+export const fadeGain = (i, n, fin, fout) => Math.min(fin ? Math.min(1, i / fin) : 1, fout ? Math.min(1, (n - 1 - i) / fout) : 1);
+
 // Fades a buffer in place between `start` and `end` seconds: up from silence
 // over the first `fade.in` seconds, down to silence over the last
 // `fade.out`. Where the two overlap, the lower one wins.
@@ -278,11 +283,7 @@ export function applyFade(buffer, fade, start = 0, end = buffer.duration) {
   const fin = Math.round(f.in * rate), fout = Math.round(f.out * rate);
   for (let c = 0; c < buffer.numberOfChannels; c++) {
     const d = buffer.getChannelData(c);
-    for (let i = 0; i < n; i++) {
-      const up = fin ? Math.min(1, i / fin) : 1;
-      const down = fout ? Math.min(1, (n - 1 - i) / fout) : 1;
-      d[from + i] *= Math.min(up, down);
-    }
+    for (let i = 0; i < n; i++) d[from + i] *= fadeGain(i, n, fin, fout);
   }
   return buffer;
 }

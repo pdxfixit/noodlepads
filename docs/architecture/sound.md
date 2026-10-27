@@ -276,7 +276,7 @@ A chain is an array of steps. A step is `{type, …numbers, …flags, off?}`:
 | `fade` Fade in / out | no | `in`, `out` (parts of its length) | `STEP_RENDERS.fade` |
 | `reverse` Backwards | no | — | `RECIPES.backwards` |
 | `repeat` Stutter | no | `times` | `voices.js stutter` |
-| `special` (from knobs only) | no | `special`: clones, boom, walkie | `voices.js SPECIAL_RENDERS` |
+| `special` (from knobs only) | no | `special`: clones, boom, walkie | `voices.js SPECIAL_RENDERS` (boom and walkie share `boomChain` and `walkieAround` with the Monster and Walkie-talkie voices; `tests/voice-graphs.test.mjs` pins each graph) |
 
 `off: true` (🔇 on its layer) keeps a step stored but unplayed
 (`voices.js playingChain`).
@@ -638,8 +638,6 @@ by a load of its current version").
 | Seam | Where | What a fix in one place misses |
 |---|---|---|
 | The kept audio is built three times | `audio.js keptAudio`, `chop.js rebuild`, `chop.js evenOut` (all three take their range from `keptRange`: the automatic trim to the millisecond; `sheet.js acceptAudio` and `makeSound` use `keptAudio` itself) | a change to the cut order (edits → trim → fade → levelForGain → soft edges) in `keptAudio` leaves the trim editor drawing and playing something else |
-| Two fades | `cuts.js applyFade` (seconds, before voices) and `voices.js STEP_RENDERS.fade` (shares of the length, a step) | the same min-of-ramps loop is written twice |
-| Walkie and Monster written twice | `voices.js RECIPES.walkie` vs `SPECIAL_RENDERS.walkie`; `RECIPES.monster` vs `SPECIAL_RENDERS.boom` | a fix to the static burst or the bass shelf reaches old sounds or knob sounds, not both |
 | One noise maker for the tails | `steps.js noiseBuffer` (stadium hall, walkie static, Room size) | seeded (`seededRandom`, `NOISE_SEEDS`, one seed per place, another per channel), so a room or hall is the same on every load; the stadium and static use the context's channel count, Room always 2 (`tests/steps.test.mjs`) |
 | Two 🎲 families | `voices.js SURPRISE` (used by `surpriseShape`) and `voice-knobs.js FAMILIES` (`surpriseVoices`) | a new voice must be added to both |
 | A voice is listed four times | `voices.js VOICES` + `RECIPES`, `voices.js OPENED`, `voice-knobs.js MADE`, `log-clean.js VOICE_IDS` | a new voice needs a recipe, an opened form, its knobs and its report id (the last is guarded: `tests/log-clean.test.mjs` checks the lists against `VOICES` and `KINDS`) |

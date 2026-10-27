@@ -7,6 +7,7 @@ import { stretchChannels } from './stretch.js';
 import { KINDS, kindById, cleanStep, stepKey, buildLive, tailOf, splitChain, isLive, noiseBuffer, NOISE_SEEDS } from './steps.js';
 import { tweakSteps, tweakGain, tweaksKey, cleanTweaks } from './tweaks.js';
 import { softLimit } from './loudness.js';
+import { fadeGain } from './cuts.js';
 import { rateOf } from './instruments.js';
 
 export const VOICES = [
@@ -441,6 +442,35 @@ function beep(ctx, frequency, at, seconds, level) {
   osc.stop(at + seconds);
 }
 
+// Monster's bass: the low end pushed up and a little drive, at tape speed
+// `rate`. The Monster voice and the ✦ boom layer both play through it.
+function boomChain(ctx, buffer, rate = 1) {
+  const bass = filter(ctx, 'lowshelf', 220);
+  bass.gain.value = 9;
+  play(ctx, buffer, { rate }).connect(bass).connect(shaper(ctx, 1.6)).connect(ctx.destination);
+}
+
+// The walkie-talkie around a sound: a burst of static before, a roger beep
+// and a burst of static after. `through(src, ctx)` plays the sound (`src`)
+// into the destination: Tinny and crunchy for the voice, as it is for the ✦
+// layer (the knobs make that one tinny).
+function walkieAround(buffer, through) {
+  const lead = 0.14;
+  const ctx = offline(buffer, lead + buffer.duration + 0.45);
+  const staticBurst = (at, seconds, seed) => {
+    const n = ctx.createBufferSource();
+    n.buffer = noiseBuffer(ctx, seconds, 8, seed, ctx.destination.channelCount);
+    n.connect(filter(ctx, 'bandpass', 2200, 0.7)).connect(gain(ctx, 0.35)).connect(ctx.destination);
+    n.start(at);
+  };
+  staticBurst(0, lead, NOISE_SEEDS.staticLead);
+  through(play(ctx, buffer, { at: lead }), ctx);
+  const end = lead + buffer.duration;
+  beep(ctx, 1250, end + 0.04, 0.13, 0.12);
+  staticBurst(end + 0.18, 0.2, NOISE_SEEDS.staticTail);
+  return ctx.startRendering();
+}
+
 // Plays `buffer` `speed` times faster without changing its pitch: the
 // stretch in stretch.js, run in a Worker when the browser has one so the page
 // stays smooth, and on the page otherwise (or if the worker fails).
@@ -554,9 +584,7 @@ const RECIPES = {
   async monster(buffer, amount) {
     const rate = playableRate(1 / amount, buffer.duration);
     const ctx = offline(buffer, buffer.duration / rate + 0.1);
-    const bass = filter(ctx, 'lowshelf', 220);
-    bass.gain.value = 9;
-    play(ctx, buffer, { rate }).connect(bass).connect(shaper(ctx, 1.6)).connect(ctx.destination);
+    boomChain(ctx, buffer, rate);
     return ctx.startRendering();
   },
 
@@ -585,28 +613,13 @@ const RECIPES = {
   },
 
   // Tinny and crunchy, with a burst of static and a roger beep.
-  async walkie(buffer) {
-    const lead = 0.14;
-    const ctx = offline(buffer, lead + buffer.duration + 0.45);
-    const staticBurst = (at, seconds, seed) => {
-      const n = ctx.createBufferSource();
-      n.buffer = noiseBuffer(ctx, seconds, 8, seed, ctx.destination.channelCount);
-      n.connect(filter(ctx, 'bandpass', 2200, 0.7)).connect(gain(ctx, 0.35)).connect(ctx.destination);
-      n.start(at);
-    };
-    staticBurst(0, lead, NOISE_SEEDS.staticLead);
-    play(ctx, buffer, { at: lead })
-      .connect(filter(ctx, 'highpass', 650))
-      .connect(filter(ctx, 'lowpass', 2600))
-      .connect(gain(ctx, 3))
-      .connect(shaper(ctx, 3))
-      .connect(gain(ctx, 0.6))
-      .connect(ctx.destination);
-    const end = lead + buffer.duration;
-    beep(ctx, 1250, end + 0.04, 0.13, 0.12);
-    staticBurst(end + 0.18, 0.2, NOISE_SEEDS.staticTail);
-    return ctx.startRendering();
-  },
+  walkie: (buffer) => walkieAround(buffer, (src, ctx) => src
+    .connect(filter(ctx, 'highpass', 650))
+    .connect(filter(ctx, 'lowpass', 2600))
+    .connect(gain(ctx, 3))
+    .connect(shaper(ctx, 3))
+    .connect(gain(ctx, 0.6))
+    .connect(ctx.destination)),
 
   async underwater(buffer) {
     const ctx = offline(buffer, buffer.duration + 0.2);
@@ -669,29 +682,12 @@ const SPECIAL_RENDERS = {
   // (the knobs make it deeper and slower).
   async boom(buffer) {
     const ctx = offline(buffer, buffer.duration + 0.1);
-    const bass = filter(ctx, 'lowshelf', 220);
-    bass.gain.value = 9;
-    play(ctx, buffer).connect(bass).connect(shaper(ctx, 1.6)).connect(ctx.destination);
+    boomChain(ctx, buffer);
     return ctx.startRendering();
   },
   // The walkie-talkie's burst of static before, and its roger beep and static
   // after, around the sound as it is (Muffled ↔ Bright and Crunch make it tinny).
-  async walkie(buffer) {
-    const lead = 0.14;
-    const ctx = offline(buffer, lead + buffer.duration + 0.45);
-    const staticBurst = (at, seconds, seed) => {
-      const n = ctx.createBufferSource();
-      n.buffer = noiseBuffer(ctx, seconds, 8, seed, ctx.destination.channelCount);
-      n.connect(filter(ctx, 'bandpass', 2200, 0.7)).connect(gain(ctx, 0.35)).connect(ctx.destination);
-      n.start(at);
-    };
-    staticBurst(0, lead, NOISE_SEEDS.staticLead);
-    play(ctx, buffer, { at: lead }).connect(ctx.destination);
-    const end = lead + buffer.duration;
-    beep(ctx, 1250, end + 0.04, 0.13, 0.12);
-    staticBurst(end + 0.18, 0.2, NOISE_SEEDS.staticTail);
-    return ctx.startRendering();
-  },
+  walkie: (buffer) => walkieAround(buffer, (src, ctx) => src.connect(ctx.destination)),
 };
 // The voice each special layer belongs to, for the event log.
 const SPECIAL_OF = { clones: 'clones', boom: 'monster', walkie: 'walkie' };
@@ -716,11 +712,7 @@ const STEP_RENDERS = {
     const fin = Math.round(s.in * n), fout = Math.round(s.out * n);
     for (let c = 0; c < out.numberOfChannels; c++) {
       const d = out.getChannelData(c);
-      for (let i = 0; i < n; i++) {
-        const up = fin ? Math.min(1, i / fin) : 1;
-        const down = fout ? Math.min(1, (n - 1 - i) / fout) : 1;
-        d[i] *= Math.min(up, down);
-      }
+      for (let i = 0; i < n; i++) d[i] *= fadeGain(i, n, fin, fout);
     }
     return out;
   },
