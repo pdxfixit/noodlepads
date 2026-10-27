@@ -567,7 +567,7 @@ async function push(request, env, id, now, seen) {
     checkRecordKey(r);
     if (!r.body || typeof r.body !== 'object' || Array.isArray(r.body)) throw new Refuse(400, 'record');
     const text = JSON.stringify(r.body);
-    if (text.length > LIMITS.recordBytes) throw new Refuse(413, 'record size', { id: r.id });
+    if (byteLength(text) > LIMITS.recordBytes) throw new Refuse(413, 'record size', { id: r.id });
     return text;
   });
   for (const r of del) checkRecordKey(r);
@@ -838,7 +838,7 @@ async function makeShare(request, env, id, now, seen) {
   if (preview !== null) sounds.add(preview);
   await ownSounds(env, id, [...sounds]);
   const text = JSON.stringify(bundle);
-  if (text.length > LIMITS.shareBytes) throw new Refuse(413, 'bundle');
+  if (byteLength(text) > LIMITS.shareBytes) throw new Refuse(413, 'bundle');
   const hash = await sha256Hex(JSON.stringify([body.kind, title, text, preview]));
   const same = await env.DB.prepare('SELECT code FROM shares WHERE profile_id = ? AND hash = ?').bind(id, hash).first();
   Object.assign(seen, { kind: 'share', profile: id });
