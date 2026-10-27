@@ -26,7 +26,7 @@
 
 import { openDialog, setupDialog } from './dialogs.js';
 import { tempoKey } from './tempo-key.js';
-import { encodeWav, normalize, barSteps, SIGNATURES } from './sequencer.js';
+import { encodeWav, normalize, barSteps, SIGNATURES, COMMON_BPMS, tempoStops, stopFor } from './sequencer.js';
 import { fadeStop, tooLate } from './audio.js';
 import { logEvent } from './log.js';
 import { showBanner } from './ui.js';
@@ -45,12 +45,12 @@ import {
 } from './playlist.js';
 
 export const MAX_SONG_SECONDS = 180;     // the longest song that can be saved as a sound
+const TEMPO_STOPS = tempoStops(MIN_TEMPO, MAX_TEMPO);   // the slider's stops: Beats' pull toward common tempos
 const TICK_MS = 25;
 const LOOKAHEAD = 0.1;
 const ARM_MS = 3000;                     // how long a Remove? waits for its second tap
 const UNDO_MS = 8000;                    // how long a tempo change taken out can be brought back
 const MAX_UNDO = 40;                     // ↩️ Undo steps kept for the open song
-const TEMPO_STEP = 5;                    // ➖ ➕ beside the song's tempo
 export const SONG_ID = /^song-[a-z0-9-]{1,48}$/;
 
 // Pills in one pass of a saved beat: its bar (its own time signature, 4/4
@@ -152,7 +152,8 @@ export function createSong(deps) {
   const { el, audio, meter, seq } = deps;
   let song = null;
   // On a phone the song's tempo folds into one key (tempo-key.js); its line holds ➖ the tempo ➕ (with Advanced, the way into 🎼 Tempo).
-  const songKey = el.tempoKey && el.tempoBox ? tempoKey(el.tempoKey, el.tempoBox, () => song?.tempo ?? 100) : null;
+  let sliding = null;   // the tempo a slider drag is at, shown on the key until it lets go
+  const songKey = el.tempoKey && el.tempoBox ? tempoKey(el.tempoKey, el.tempoBox, () => sliding ?? song?.tempo ?? 100) : null;
 
   let timer = 0;
   let raf = 0;
@@ -356,6 +357,8 @@ export function createSong(deps) {
     if (document.activeElement !== el.tempo) el.tempo.value = String(song.tempo);
     el.tempoDown.disabled = song.tempo <= MIN_TEMPO;
     el.tempoUp.disabled = song.tempo >= MAX_TEMPO;
+    if (el.tempoSlider && document.activeElement !== el.tempoSlider) el.tempoSlider.value = stopFor(song.tempo, TEMPO_STOPS);
+    el.tempoSlider?.setAttribute('aria-valuetext', `${song.tempo} BPM`);
     renderTempoOpen();
     if (el.tempoSheet.open) renderTempoSheet();
     if (picked && !beatById(picked)) picked = null;
@@ -818,7 +821,9 @@ export function createSong(deps) {
     if (el.stepUndo.hidden) el.addLane.focus();
   });
 
-  // The song's tempo: typed (on the deck, or in 🎼 Tempo), or ➖ ➕ by 5.
+  // The song's tempo: typed (on the deck, or in 🎼 Tempo), ➖ ➕ to the next
+  // common tempo, or the slider in a phone's tempo line, the same three ways
+  // as Beats' (Ben, 2026-10-26: "exactly the same for how they manage BPM").
   // Both fields show the tempo kept, so a number out of range typed with
   // Enter (the field keeps focus) shows what it became.
   function setTempo(v) {
@@ -832,8 +837,25 @@ export function createSong(deps) {
   }
   el.tempo.addEventListener('change', () => setTempo(Number(el.tempo.value)));
   el.tempo.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.tempo.blur(); setTempo(Number(el.tempo.value)); } });
-  el.tempoDown.addEventListener('click', () => setTempo(song.tempo - TEMPO_STEP));
-  el.tempoUp.addEventListener('click', () => setTempo(song.tempo + TEMPO_STEP));
+  el.tempoDown.addEventListener('click', () => setTempo(COMMON_BPMS.findLast((t) => t < song.tempo) ?? MIN_TEMPO));
+  el.tempoUp.addEventListener('click', () => setTempo(COMMON_BPMS.find((t) => t > song.tempo) ?? MAX_TEMPO));
+  // The slider, with Beats' stops: the key reads it while it moves; the song
+  // takes it once it lets go, one ↩️ Undo step and one save for the drag.
+  if (el.tempoSlider) {
+    el.tempoSlider.min = 0;
+    el.tempoSlider.max = TEMPO_STOPS.length - 1;
+    el.tempoSlider.addEventListener('input', () => {
+      sliding = TEMPO_STOPS[Number(el.tempoSlider.value)] ?? null;
+      el.tempoSlider.setAttribute('aria-valuetext', `${sliding} BPM`);
+      songKey?.show();
+    });
+    el.tempoSlider.addEventListener('change', () => {
+      const to = sliding;
+      sliding = null;
+      if (to != null) setTempo(to);
+      songKey?.show();
+    });
+  }
 
   // ── 🎼 Tempo (Advanced): the song's own tempo and its tempo marks ──
   //

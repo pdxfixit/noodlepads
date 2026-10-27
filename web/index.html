@@ -293,6 +293,8 @@
         <button type="button" class="tempo-key" id="song-tempo-key" aria-expanded="false" aria-controls="song-tempo-box" aria-label="Tempo 100 BPM: tap to change it"><span class="tempo-key-num">100</span><span class="tempo-key-open" aria-hidden="true">▾</span></button>
         <div class="song-tempo" id="song-tempo-box" role="group" aria-label="The song's tempo: every beat in it plays this fast">
           <button type="button" class="seq-tool tempo-nudge" id="song-tempo-down" aria-label="Slower">➖</button>
+          <!-- On a phone's open tempo line (tempo-key.js): ➖ ➕ show as 🐢 🐇 either side of this slider, as on Beats. -->
+          <input type="range" class="song-tempo-slider" id="song-tempo-slider" step="1" aria-label="Song tempo">
           <label class="song-tempo-field" id="song-tempo-field"><input type="number" id="song-tempo" min="60" max="180" step="1" inputmode="numeric" aria-label="Song tempo in BPM"><span class="song-tempo-unit">BPM</span></label>
           <!-- With Advanced: the tempo says itself, and a tap opens 🎼 Tempo (its tempo changes, ADR 0031). -->
           <button type="button" class="seq-tool song-tempo-open" id="song-tempo-open" aria-label="Song tempo: tap to change it or add a tempo change" hidden>BPM</button>

@@ -1,7 +1,7 @@
 // The tempo key (docs/design/tempo-collapse.md; Ben, 2026-10-26). On a phone
-// a control bar's tempo folds into one key: the number over ▾ (BPM while open). A tap opens the
-// tempo as a line of its own under the bar (styles.css, "The tempo key": 🐢 ⌄
-// slider ⌃ 🐇 and the number to type); the key again, or Esc, closes it. The
+// a control bar's tempo folds into one key: the number over ▾ (over BPM while open). A tap opens the
+// tempo as a line of its own under the bar (styles.css, "The tempo key": 🐢
+// the slider 🐇, the animals nudging it slower or faster); the key again, or Esc, closes it. The
 // line covers nothing, so the pads and rows under the bar keep playing while
 // it is open. Wider screens never show the key: their tempo stays in the bar.
 //
@@ -11,13 +11,15 @@
 
 export function tempoKey(key, box, bpm) {
   const num = key.querySelector('.tempo-key-num');
+  const under = key.querySelector('.tempo-key-open');
   const isOpen = () => key.getAttribute('aria-expanded') === 'true';
   function show() {
     const v = String(bpm());
-    // The number, or BPM while its line is open (Ben, 2026-10-26: one of the
-    // few places those three letters show).
-    const text = isOpen() ? 'BPM' : v;
-    if (num && num.textContent !== text) num.textContent = text;
+    if (num && num.textContent !== v) num.textContent = v;
+    // Under it ▾, or BPM while its line is open, the two stacked alike (Ben,
+    // 2026-10-26: one of the few places those three letters show).
+    const mark = isOpen() ? 'BPM' : '▾';
+    if (under && under.textContent !== mark) under.textContent = mark;
     // Its name says the tempo and what a tap does (the tooltip reads it too).
     const label = `Tempo ${v} BPM: tap to ${isOpen() ? 'close it' : 'change it'}`;
     if (key.getAttribute('aria-label') !== label) key.setAttribute('aria-label', label);

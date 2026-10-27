@@ -732,19 +732,29 @@ body.keys-on .dj-bar { position: sticky; top: calc(var(--head-h, 0px) - var(--de
   .tempo-key-num { font: 800 1.1rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
   .tempo-key-open { font-size: 0.8rem; line-height: 1; }
   .tempo-key[aria-expanded="true"] { background: var(--led); border-color: var(--led); color: var(--ink); }
-  .tempo-key[aria-expanded="true"] .tempo-key-num { font-size: 0.95rem; }   /* BPM while open (tempo-key.js) */
-  .tempo-key[aria-expanded="true"] .tempo-key-open { display: none; }
+  /* Open, the number over BPM, the two the same size so they stack evenly (tempo-key.js). */
+  .tempo-key[aria-expanded="true"] .tempo-key-open { font: 800 1.1rem/1 var(--font-display); font-stretch: 87%; }   /* as wide as a three-digit tempo */
   .tempo-key + :is(.tempo-box, .song-tempo):not(.tempo-open) { display: none; }
-  /* Open: 🐢 and the slider across the whole line to 🐇 (a long slider is
-     easy to hit on a tempo), then ⌄ the number ⌃ under it. 🎼 Song's line is
-     ➖ the tempo ➕. */
-  .tempo-key + :is(.tempo-box, .song-tempo).tempo-open { display: flex; order: 9; flex: 1 1 100%; flex-wrap: wrap; justify-content: center; min-width: 0; align-items: center; gap: 8px 12px; }
-  .tempo-key + .tempo-box.tempo-open::before { content: "🐢" / ""; order: 0; flex: none; font-size: 1.4rem; }
-  .tempo-key + .tempo-box.tempo-open::after { content: "🐇" / ""; order: 2; flex: none; font-size: 1.4rem; }
-  .tempo-key + .tempo-box.tempo-open input[type="range"] { display: block; order: 1; flex: 1 1 calc(100% - 7rem); min-width: 0; min-height: 44px; }
-  .tempo-key + .tempo-box.tempo-open .tempo-step { display: grid; order: 3; margin: 0; }
-  .tempo-key + .tempo-box.tempo-open :is(output, .seq-bpm-num, .seq-bpm-type) { order: 4; margin: 0; max-width: none; white-space: nowrap; }
-  .tempo-key + .tempo-box.tempo-open .tempo-step.up { order: 5; }
+  /* Open: one row, 🐢 the slider 🐇 (Ben, 2026-10-26). 🐢 and 🐇 are the
+     tempo's own ⌄ ⌃ keys, nudging it to the next common tempo slower or
+     faster; the number is on the key above, so it isn't repeated here. */
+  .tempo-key + :is(.tempo-box, .song-tempo).tempo-open { display: flex; order: 9; flex: 1 1 100%; flex-wrap: wrap; min-width: 0; align-items: center; gap: 8px 12px; }
+  .tempo-key + .tempo-box.tempo-open input[type="range"] { display: block; order: 1; flex: 1 1 0; min-width: 0; min-height: 44px; }
+  .tempo-key + .tempo-box.tempo-open .tempo-step { display: grid; order: 0; margin: 0; }
+  .tempo-key + .tempo-box.tempo-open .tempo-step.up { order: 2; }
+  .tempo-key + .tempo-box.tempo-open .tempo-step::before { content: "🐢" / ""; position: static; width: auto; height: auto; margin: 0; border: 0; transform: none; font-size: 1.5rem; line-height: 1; }
+  .tempo-key + .tempo-box.tempo-open .tempo-step.up::before { content: "🐇" / ""; }
+  .tempo-key + .tempo-box.tempo-open :is(output, .seq-bpm-num, .seq-bpm-type) { display: none; }
+  /* 🎼 Song the same: ➖ ➕ as 🐢 🐇 either side of its slider, the typed
+     number on the key instead; with Advanced, ＋ Tempo change under them. */
+  .tempo-key + .song-tempo.tempo-open .song-tempo-field { display: none; }
+  .tempo-key + .song-tempo.tempo-open .song-tempo-slider { display: block; order: 1; flex: 1 1 0; min-width: 0; min-height: 44px; accent-color: var(--led); }
+  .tempo-key + .song-tempo.tempo-open .tempo-nudge { order: 0; flex: none; width: 44px; min-height: 44px; padding: 0; border-radius: 10px; font-size: 0; }
+  .tempo-key + .song-tempo.tempo-open #song-tempo-up { order: 2; }
+  .tempo-key + .song-tempo.tempo-open #song-tempo-down::before { content: "🐢" / ""; font-size: 1.5rem; }
+  .tempo-key + .song-tempo.tempo-open #song-tempo-up::before { content: "🐇" / ""; font-size: 1.5rem; }
+  .tempo-key + .song-tempo.tempo-open .song-tempo-open { order: 3; flex: 1 1 100%; font-size: 0; }
+  .tempo-key + .song-tempo.tempo-open .song-tempo-open::before { content: "＋ Tempo change" / ""; font-size: 1rem; }
   /* Every bar wraps, so the open line goes under the rest. */
   .beat-go, .song-deck { flex-wrap: wrap; row-gap: 10px; }
   .song-deck #song-sound { order: 10; flex-basis: 100%; }   /* its own line, under the open tempo */
@@ -1420,6 +1430,7 @@ dialog#roll :focus-visible { outline: 3px solid #fff; outline-offset: -2px; }
 .song-tempo { display: flex; align-items: center; gap: 6px; }
 .song-tempo .tempo-nudge { flex: none; width: 52px; padding: 0; }
 .song-tempo-field { display: flex; flex: 1 1 auto; align-items: center; justify-content: center; gap: 6px; font-weight: 800; }
+.song-tempo-slider { display: none; }   /* a phone's open tempo line only (The tempo key) */
 .song-tempo-field input { width: 4.2em; min-height: 52px; padding: 0 6px; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; color: #fff; font: 800 1.1rem/1 var(--font-ui); text-align: center; }
 .song-tempo-unit { font-size: 0.85rem; }
 /* The strip of your beats (the pattern chips' look): the one picked is lit. */

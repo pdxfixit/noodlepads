@@ -2256,9 +2256,9 @@ test('🎼 Song: its own tab, Advanced or not; pick a beat, then tap a spot on a
   blocksOn($, 2)[0].el.dispatch('keydown', { key: 'Delete' });
   blocksOn($, 2)[0].el.dispatch('keydown', { key: 'Delete' });
   assert.equal(blocksOn($, 2).length, 0);
-  // The tempo: ➕ by 5, typed, and kept between 60 and 180.
+  // The tempo: ➕ to the next common tempo (as Beats' ⌃; Ben, 2026-10-26), typed, and kept between 60 and 180.
   $('#song-tempo-up').dispatch('click');
-  assert.equal(songNow().tempo, 137);
+  assert.equal(songNow().tempo, 140);
   $('#song-tempo').value = '400';
   $('#song-tempo').dispatch('change');
   assert.equal($('#song-tempo').value, '180');

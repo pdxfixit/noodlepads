@@ -682,7 +682,7 @@ function makeSong() {
       songs: $('#songs'), songsList: $('#songs-list'), songsEmpty: $('#songs-empty'), songsNote: $('#songs-note'),
       play: $('#song-play'), sound: $('#song-sound'),
       tempo: $('#song-tempo'), tempoDown: $('#song-tempo-down'), tempoUp: $('#song-tempo-up'),
-      tempoField: $('#song-tempo-field'), tempoOpen: $('#song-tempo-open'), tempoKey: $('#song-tempo-key'), tempoBox: $('#song-tempo-box'),
+      tempoField: $('#song-tempo-field'), tempoOpen: $('#song-tempo-open'), tempoKey: $('#song-tempo-key'), tempoBox: $('#song-tempo-box'), tempoSlider: $('#song-tempo-slider'),
       tempoSheet: $('#tempo-sheet'), tempoTitle: $('#tempo-title'), tempoListView: $('#tempo-list-view'), tempoEditView: $('#tempo-edit-view'),
       tempoBase: $('#tempo-base'), tempoMarks: $('#tempo-marks'), tempoAdd: $('#tempo-add'),
       tempoBar: $('#tempo-bar'), tempoBpm: $('#tempo-bpm'), tempoHint: $('#tempo-hint'),

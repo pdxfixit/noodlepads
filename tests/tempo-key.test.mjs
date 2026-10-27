@@ -54,11 +54,12 @@ test('🎤 Live: a tap opens the click\'s tempo as its own line, a tap again or 
   const slider = $('#dj-click-bpm');
   slider.value = String(Number(slider.max));
   slider.dispatch('input');
-  assert.equal($(k).querySelector('.tempo-key-num').textContent, 'BPM', 'open, the key says BPM (Ben, 2026-10-26)');
+  assert.equal($(k).querySelector('.tempo-key-num').textContent, '180', 'open, the key reads the tempo the slider set…');
+  assert.equal($(k).querySelector('.tempo-key-open').textContent, 'BPM', '…over BPM (Ben, 2026-10-26)');
   assert.equal($(k).getAttribute('aria-label'), 'Tempo 180 BPM: tap to close it', 'and is named with the tempo the slider set');
   box.dispatch('keydown', { key: 'Escape' });
   assert.equal(open(k), false, 'Esc closes it');
-  assert.equal($(k).querySelector('.tempo-key-num').textContent, '180', 'closed, it reads the tempo again');
+  assert.equal($(k).querySelector('.tempo-key-open').textContent, '▾', 'closed, ▾ under the number again');
   assert.ok(!box.classList.contains('tempo-open'));
   assert.equal($(k).getAttribute('aria-label'), 'Tempo 180 BPM: tap to change it');
   $(k).dispatch('click');
@@ -115,7 +116,8 @@ test('the CSS: no key on a wide screen; on a phone the key, the closed tempo out
   assert.match(css, /\n\.tempo-key \{ display: none; \}\n@media \(max-width: 600px\) \{\n {2}\.tempo-key \{ display: grid;/);
   assert.match(css, /\.tempo-key \+ :is\(\.tempo-box, \.song-tempo\):not\(\.tempo-open\) \{ display: none; \}/);
   assert.match(css, /\.tempo-key \+ :is\(\.tempo-box, \.song-tempo\)\.tempo-open \{ display: flex; order: 9; flex: 1 1 100%;/);
-  assert.match(css, /\.tempo-key \+ \.tempo-box\.tempo-open::before \{ content: "🐢" \/ "";/);
+  assert.match(css, /\.tempo-key \+ \.tempo-box\.tempo-open \.tempo-step::before \{ content: "🐢" \/ "";/);
+  assert.match(css, /\.tempo-key \+ \.tempo-box\.tempo-open :is\(output, \.seq-bpm-num, \.seq-bpm-type\) \{ display: none; \}/, 'no number row: it is on the key');
   // Words give way by the panel's own width, showing data-icon.
   assert.match(css, /@container panel \(max-width: 22\.99rem\) \{\n {2}\.dj-bar \.dj-rec \{ padding: 0; font-size: 0; \}\n {2}\.dj-bar \.dj-rec::before \{ content: attr\(data-icon\) \/ "";/);
 });
@@ -160,4 +162,38 @@ test('the CSS: Beats\' keys on a grid, 🎤 Live at 320 px half and half, no dot
   assert.match(css, /@container panel \(max-width: 18\.6rem\) \{\n {2}body\.screen-live \.dj-bar :is\(\.dj-rec, #dj-takes-open\) \{ order: 0; flex: 1 1 calc\(50% - 3px\);/);
   assert.match(css, /body\.screen-live \.dj-bar :is\(\.tempo-key, #dj-click, #dj-overlap, #dj-change\) \{ order: 1; flex: 1 1 0; width: auto; \}/);
   assert.doesNotMatch(css, /underline dotted/, 'no dotted line under the tempo');
+});
+
+// Ben, 2026-10-26: one row, 🐢 the slider 🐇, the animals nudging the tempo;
+// and 🎼 Song "exactly the same for how they manage BPM, the tile, the slider".
+test('🐢 and 🐇 nudge the tempo to the next common one, on every bar alike', () => {
+  $('#live-tab').dispatch('click');
+  const slider = $('#dj-click-bpm');
+  slider.value = '0';
+  slider.dispatch('input');
+  slider.dispatch('change');
+  const box = $('#dj-click-tempo');
+  box.querySelector('.tempo-step.up').dispatch('click');                 // 🐇
+  assert.equal($('#dj-click-key').querySelector('.tempo-key-num').textContent, '70', 'from 60 to 70');
+  box.querySelector('.tempo-step.down').dispatch('click');               // 🐢
+  assert.equal($('#dj-click-key').querySelector('.tempo-key-num').textContent, '60');
+  $('#song-tab').dispatch('click');
+  const t = Number($('#song-tempo').value);
+  $('#song-tempo-up').dispatch('click');                                  // 🐇 on Song: the same steps
+  assert.equal(Number($('#song-tempo').value), [60, 70, 80, 90, 100, 110, 120, 128, 130, 140, 150, 160, 170, 180].find((v) => v > t) ?? 180);
+});
+
+test('🎼 Song has the same slider: the key reads it as it moves, and a drag is one Undo step', () => {
+  $('#song-tab').dispatch('click');
+  const slider = $('#song-tempo-slider');
+  assert.ok($('#song-tempo-box').contains(slider), 'in the song\'s tempo line');
+  const before = $('#song-tempo').value;
+  slider.value = String(Number(slider.max));
+  slider.dispatch('input');
+  assert.equal($('#song-tempo-key').querySelector('.tempo-key-num').textContent, '180', 'the key reads the slider');
+  assert.equal($('#song-tempo').value, before, 'the song waits for the drag to end');
+  slider.dispatch('change');
+  assert.equal($('#song-tempo').value, '180');
+  $('#song-step-undo').dispatch('click');
+  assert.equal($('#song-tempo').value, before, 'one ↩️ Undo puts the whole drag back');
 });
