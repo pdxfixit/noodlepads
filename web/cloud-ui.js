@@ -14,6 +14,7 @@ import { emojiMore, withCurrent } from './emoji-more.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { announce } from './ui.js';
 import { audio } from './audio.js';
+import { count } from './util.js';
 import { applyChain } from './voices.js';
 import { PIN_RESET_EMAIL } from './contact.js';
 import {
@@ -1008,9 +1009,8 @@ export function cameText(personId) {
   const counts = personCounts(storedLists(), personId);
   const picked = ([k, v]) => SETTINGS[k]?.scope === 'person' && !SETTINGS[k].quiet && k !== 'advancedBeats' && v !== SETTINGS[k].default;
   const settings = Object.entries(state.prefs.get(personId)?.values ?? {}).filter(picked).length;
-  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   const text = [countsText(counts), settings ? `⚙️\u00a0${settings}` : ''].filter((t) => t && t !== 'nothing yet');
-  const words = [countsWords(counts), settings ? plural(settings, 'setting', 'settings') : ''].filter((t) => t && t !== 'nothing yet');
+  const words = [countsWords(counts), settings ? count(settings, 'setting') : ''].filter((t) => t && t !== 'nothing yet');
   return { text: text.join('\u00a0· ') || 'Nothing made yet', words: words.join(', ') || 'Nothing made yet' };
 }
 

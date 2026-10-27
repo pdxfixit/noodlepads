@@ -26,8 +26,9 @@
 
 import { sources, startCapture, readFile, fileTooBig, MAX_SONG_FILE_BYTES } from './listen-input.js';
 import { createListener, fingerprint } from './listen.js';
+import { ROWS } from './listen-dsp.js';
 import {
-  ROWS, ROW_LOOK, ROW_SOUNDS, ALL_ROW_SOUNDS, clock, rollView, beatGroups, lineLabel, heardParts, partChips,
+  ROW_LOOK, ROW_SOUNDS, ALL_ROW_SOUNDS, clock, rollView, beatGroups, lineLabel, heardParts, partChips,
   tempoLine, feelLine, pickSounds, heardABeat, makeBeats, makeSong, heardSentence, partDetail, resultCounts,
 } from './listen-make.js';
 import { openDialog, setupDialog } from './dialogs.js';

@@ -9,7 +9,7 @@ import { cleanTrim, cleanEdits, cleanFade } from './cuts.js';
 import { funName, cutName } from './names.js';
 import { songHasBeats } from './playlist.js';
 import { showsFor, instrumentProblem } from './instruments.js';
-import { newId } from './util.js';
+import { newId, count } from './util.js';
 
 // Deep colors white text reads on: a board's casing. Eight that stay apart
 // for someone with deuteranopia too (Ben, 2026-10-19): the closest pair is
@@ -519,7 +519,6 @@ export const PERSON_KINDS = Object.freeze([
 ].map(Object.freeze));
 
 const listOf = (lists, name) => (Array.isArray(lists?.[name]) ? lists[name] : []);
-const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const madeOn = (t) => (Number.isFinite(t) && t > 0
   ? `Made ${new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : '');
 const newestFirst = (a, b) => (b.at - a.at) || a.name.localeCompare(b.name);
@@ -546,12 +545,12 @@ export function personThings(lists, personId, { preset = () => null, dateText = 
     sounds: mine('clips').map((c) => item('sounds', c, c.label, c.emoji, dateText(c.created))),
     beats: mine('beats').map((b) => {
       const bars = Number(b.bars) || 1;
-      return item('beats', b, scratch(b, 'beat-scratch-', 'beat') || b.name, '', `${plural(bars, 'bar', 'bars')} · ${Number(b.bpm) || 100} BPM`, b.saved ?? b.created);
+      return item('beats', b, scratch(b, 'beat-scratch-', 'beat') || b.name, '', `${count(bars, 'bar', 'bars')} · ${Number(b.bpm) || 100} BPM`, b.saved ?? b.created);
     }),
     songs: [...saved, ...open].map((s) => {
       const lanes = (Array.isArray(s.lanes) ? s.lanes : []).filter((l) => l?.blocks?.length).length;
       const tempo = Number(s.tempo) ? ` · ${Number(s.tempo)} BPM` : '';
-      return item('songs', s, scratch(s, 'song-scratch-', 'song') || s.name, '', `${plural(lanes, 'lane', 'lanes')}${tempo}`, s.saved ?? s.created);
+      return item('songs', s, scratch(s, 'song-scratch-', 'song') || s.name, '', `${count(lanes, 'lane', 'lanes')}${tempo}`, s.saved ?? s.created);
     }),
     takes: mine('takes').map((t) => {
       const sec = Math.max(0, Number(t.duration) || 0);
@@ -562,9 +561,9 @@ export function personThings(lists, personId, { preset = () => null, dateText = 
       const p = preset(o.id.slice(prefix.length));
       return item('edits', o, o.label || p?.label || o.id.slice(prefix.length), o.emoji || p?.emoji, o.hidden ? 'Preset, hidden' : 'Preset, changed', 0);
     }),
-    djKeys: deck && keys(deck.keys) ? [item('djKeys', { id: deck.personId }, 'Keys', '', plural(keys(deck.keys), 'key changed', 'keys changed'), 0)] : [],
-    layouts: mine('layouts').map((l) => item('layouts', l, l.name, '', plural(keys(l.keys), 'key', 'keys'))),
-    touchLayouts: mine('touchLayouts').map((l) => item('touchLayouts', l, l.name, '', plural(Array.isArray(l.bands) ? l.bands.length : 0, 'group', 'groups'))),
+    djKeys: deck && keys(deck.keys) ? [item('djKeys', { id: deck.personId }, 'Keys', '', count(keys(deck.keys), 'key changed', 'keys changed'), 0)] : [],
+    layouts: mine('layouts').map((l) => item('layouts', l, l.name, '', count(keys(l.keys), 'key', 'keys'))),
+    touchLayouts: mine('touchLayouts').map((l) => item('touchLayouts', l, l.name, '', count(Array.isArray(l.bands) ? l.bands.length : 0, 'group', 'groups'))),
   };
   for (const list of Object.values(out)) list.sort(newestFirst);
   return out;

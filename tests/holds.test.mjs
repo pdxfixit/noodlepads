@@ -6,7 +6,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { plural, sizeWords, holdings, holdsWords, otherCount, makeEverything, readEverything, everythingName } from '../web/old-backup.js';
+import { sizeWords, holdings, holdsWords, otherCount, makeEverything, readEverything, everythingName } from '../web/old-backup.js';
+import { count } from '../web/util.js';
 import { readBackup } from '../web/backup.js';
 import { unzip } from '../web/zip.js';
 
@@ -14,12 +15,14 @@ const bytes = (n, seed = 1) => Uint8Array.from({ length: n }, (_, i) => (i * 7 +
 const blob = (n, type = 'audio/webm', seed = 1) => new Blob([bytes(n, seed)], { type });
 
 test('one, many, and people', () => {
-  assert.equal(plural(1, 'sound'), '1 sound');
-  assert.equal(plural(2, 'sound'), '2 sounds');
-  assert.equal(plural(0, 'beat'), '0 beats');
-  assert.equal(plural(1, 'person'), '1 person');
-  assert.equal(plural(3, 'person'), '3 people');
-  assert.equal(plural(2, 'DJ key set'), '2 DJ key sets');
+  assert.equal(count(1, 'sound'), '1 sound');
+  assert.equal(count(2, 'sound'), '2 sounds');
+  assert.equal(count(0, 'beat'), '0 beats');
+  assert.equal(count(1, 'person'), '1 person');
+  assert.equal(count(3, 'person'), '3 people');
+  assert.equal(count(2, 'DJ key set'), '2 DJ key sets');
+  assert.equal(count(1, 'key changed', 'keys changed'), '1 key changed');
+  assert.equal(count(2, 'key changed', 'keys changed'), '2 keys changed');
 });
 
 test('sizes read as KB below a megabyte, MB with one place below 10, whole MB above', () => {

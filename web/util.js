@@ -33,9 +33,9 @@ export function joinNames(names) {
   return `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
 }
 
-// "1 sound", "2 sounds".
-export function count(n, word) {
-  return `${n} ${word}${n === 1 ? '' : 's'}`;
+// "1 sound", "2 sounds", "2 people"; `many` for any other plural ("keys changed").
+export function count(n, word, many = word === 'person' ? 'people' : `${word}s`) {
+  return `${n} ${n === 1 ? word : many}`;
 }
 
 // Today as YYYY-MM-DD in local time (toISOString would give UTC's date).

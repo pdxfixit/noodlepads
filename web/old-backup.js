@@ -20,15 +20,9 @@
 
 import { zip } from './zip.js';
 import { KIND_EMOJI } from './model.js';
-import { extensionFor } from './util.js';
+import { extensionFor, count } from './util.js';
 
 // ── What it holds, in words ─────────────────────────────────────────────
-
-// "1 sound", "2 sounds", "2 people".
-export function plural(n, word) {
-  if (n === 1) return `${n} ${word}`;
-  return `${n} ${word === 'person' ? 'people' : `${word}s`}`;
-}
 
 // A size people read: "800 KB", "1.4 MB", "12 MB".
 export function sizeWords(bytes) {
@@ -71,9 +65,9 @@ export function holdsWords(stores, other = 0) {
     ['sounds', 'sound'], ['beats', 'beat'], ['songs', 'song'], ['takes', 'take'], ['voices', 'voice'],
     ['people', 'person'], ['edits', 'sound edit'], ['djKeys', 'DJ key set'],
     ['layouts', 'key layout'], ['touchLayouts', 'touch layout'],
-  ].filter(([k]) => h[k] > 0).map(([k, word]) => `${KIND_EMOJI[k]} ${plural(h[k], word)}`);
+  ].filter(([k]) => h[k] > 0).map(([k, word]) => `${KIND_EMOJI[k]} ${count(h[k], word)}`);
   if (h.audio > 0) parts.push(`${sizeWords(h.audio)} of audio`);
-  if (other > 0) parts.push(plural(other, 'other saved thing'));
+  if (other > 0) parts.push(count(other, 'other saved thing'));
   return parts.length ? parts.join(' · ') : 'nothing yet';
 }
 

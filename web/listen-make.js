@@ -11,7 +11,6 @@ import { closestSound, ROWS } from './listen-dsp.js';
 import { cleanTempos, cleanLanes, newLanes, legacySlots, blockBars, MAX_SONG_BARS, MAX_BLOCKS, MAX_TIMES, BAR_STEPS } from './playlist.js';
 import { partNames, numbered } from './names.js';
 
-export { ROWS };   // the listener's three rows (listen-dsp.js), for the screens that draw them
 
 // Each row's name and picture on the screens.
 export const ROW_LOOK = {

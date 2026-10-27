@@ -251,8 +251,7 @@ test('✅ limits written on both sides of the cloud agree', async () => {
   assert.equal(feedback.MAX_BYTES, events.MAX_FEEDBACK, FIX);
 });
 
-test('✅ 🎧 From a song: its one ROWS and its FRAME agree', async () => {
-  assert.ok((await web('listen-make.js')).ROWS === (await web('listen-dsp.js')).ROWS, FIX);
+test('✅ 🎧 From a song: its one FRAME agrees', async () => {
   assert.equal((await web('listen-input.js')).FRAME, (await web('listen-worklet.js')).FRAME, FIX);
 });
 
