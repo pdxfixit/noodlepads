@@ -371,6 +371,27 @@ async function haveKey(personId, why) {
   return !!got && !got.unknown && !!keyOf(personId);
 }
 
+// 🔗 Share always asks the PIN of someone with one (Ben, 2026-10-27), even
+// on a device that remembers them: 🔑 Remember covers opening, playing and
+// syncing; a code anyone can play does not. One ask for each code made (a
+// bulk Share of several sounds is one code), on its own pad. True to go on;
+// false after ✕ (nothing is shared). A wrong PIN says so and asks again.
+// `shareAsked`: 🔗 Share… just asked the PIN to get a key, which counts for
+// the first code made before its sheet closes, so a kid types it once.
+export const SHARE_PIN_HINT = 'Type their PIN to share. Anyone with the code can play it.';
+let shareAsked = null;
+async function askToShare(personId) {
+  if (!linkOf(personId)?.pin) return true;
+  if (shareAsked === personId) { shareAsked = null; return true; }
+  shareAsked = null;
+  const p = people({ includeHidden: true }).find((x) => x.id === personId);
+  const got = await withPin((pin) => checkPin(personId, pin), {
+    title: `${p?.avatar ? `${p.avatar} ` : ''}${p ? nameOf(p) : 'PIN'}`,
+    hint: SHARE_PIN_HINT,
+  });
+  return !!got && !got.unknown;
+}
+
 // A new PIN, typed twice. A second that doesn't match says so on the pad and
 // asks again from the start, never closing on a mismatch (a tester, 2026-10-19:
 // a different second PIN "didn't do anything"). Null when the pad is closed.
@@ -460,7 +481,11 @@ export async function pinClick(personId, t, note = () => {}) {
     return true;
   }
   if (t === el.shareBtn) {
-    if (await run(() => haveKey(personId, 'Type the PIN to share from them.'))) openShareDialog(personId);
+    const asks = !keyOf(personId) && !!linkOf(personId)?.pin;
+    if (await run(() => haveKey(personId, 'Type the PIN to share from them.'))) {
+      openShareDialog(personId);
+      if (asks) shareAsked = personId;
+    }
     return true;
   }
   if (t === el.pinBtn) {
@@ -591,10 +616,12 @@ async function onShareClick(e) {
     return;
   }
   if (t.dataset.item) {
-    el.shareNote.textContent = 'Making a share code…';
+    const from = shareFrom;
     el.shareMade.hidden = true;
     try {
-      const { code, title, left } = await shareItem(shareFrom, shareKind, t.dataset.item);
+      if (!await askToShare(from)) return;
+      el.shareNote.textContent = 'Making a share code…';
+      const { code, title, left } = await shareItem(from, shareKind, t.dataset.item);
       el.shareCode.textContent = showCode(code);
       el.shareTitle.textContent = title;
       el.shareMade.hidden = false;
@@ -607,9 +634,16 @@ async function onShareClick(e) {
   }
 }
 
-// Several sounds in one code, from ✏️ Edit sounds → 🔗 Share (bulk.js): the
-// Share sheet opens and makes the code straight away; it shows like any other.
+// Several sounds in one code, from ✏️ Edit sounds → 🔗 Share (bulk.js): their
+// PIN first (askToShare), then the Share sheet opens and makes the code
+// straight away; it shows like any other. ✕ on the PIN shares nothing.
 export async function shareSounds(personId, ids) {
+  try {
+    if (!await askToShare(personId)) return;
+  } catch (err) {
+    announce(trouble(err));
+    return;
+  }
   openShareDialog(personId);
   el.shareNote.textContent = 'Making a share code…';
   try {
@@ -1029,6 +1063,7 @@ export function initCloudUI(hooks) {
   });
 
   el.shareDialog.addEventListener('click', onShareClick);
+  el.shareDialog.addEventListener('close', () => { shareAsked = null; });
   el.sharedDialog.addEventListener('click', onSharedClick);
   el.sharedDialog.addEventListener('close', stopPreview);
   el.sharedCode.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.sharedOpen.click(); } });

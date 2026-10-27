@@ -943,7 +943,12 @@ ADR 0002.
   device with everything of theirs here (unsynced work too); the cloud copy
   stays (`cloud.js` `keyRefused`, `app.js` `dropLockedPerson`).
 - **🔗 Share…** (in a person's ☁️) gives a code like `ABCD-2345` for one sound,
-  beat or song: a snapshot, read-only. Shared already lists that person's
+  beat or song: a snapshot, read-only. For someone with a PIN, every code
+  made asks it on its own pad first, even on a device that remembers them
+  (Ben, 2026-10-27: Remember covers opening, playing and syncing, not a link
+  anyone can play): one ask per code, ✏️ Edit sounds' bulk Share of several
+  sounds included; ✕ shares nothing (`cloud-ui.js` `askToShare`). A PIN
+  typed at 🔗 Share… itself, to get a key, counts for its first code. Shared already lists that person's
   codes; 🚫 Unshare (two taps) ends one for everyone (the Worker deletes it,
   and audio nothing else uses). Deleting the profile from the cloud ends
   all of them. ⚙️ Settings → 🔗 Sharing → 🔗 Shared with me

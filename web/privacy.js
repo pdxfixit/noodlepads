@@ -20,6 +20,7 @@ export const PRIVACY = [
   "Anyone who has a sound's link can play it. The links are long and random, but they are not secret.",
   'Anyone with a share code can see and play what was shared, until the sharer taps 🚫 Unshare or their profile is deleted. Remixes others made of it stay theirs. Removing it from Shared with me only takes it off your list.',
   'A PIN is not security. It only stops someone opening or changing a profile in the app.',
+  'A device that remembers a profile (🔑 Remember on this device) opens it with no PIN until someone taps Forget this device. Sharing from it still asks the PIN.',
   'The app asks for no real names, emails or accounts. Profile names are made up by the app; nobody types one.',
   'People with ☁️ In the cloud switched off stay on this device only.',
   'A song 🎧 From a song listens to is heard only in this browser, as it plays: it is never saved, synced or sent. Only the beats made from it are kept.',

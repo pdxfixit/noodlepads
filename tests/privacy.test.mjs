@@ -79,6 +79,24 @@ test('"A PIN is not security": it guards opening the records, and nothing else',
   assert.equal((await call('GET', 'profiles')).status, 200);
 });
 
+// Ben, 2026-10-27: 🔑 Remember has no day of its own; sharing still asks.
+test('"A device that remembers a profile … opens it with no PIN … Sharing from it still asks the PIN": a lasting key, and Share asks', async () => {
+  const line = claim('A device that remembers a profile');
+  assert.match(line, /until someone taps Forget this device/);
+  assert.match(line, /Sharing from it still asks the PIN/);
+  const call = cloud();
+  await call('POST', 'profiles', { body: { id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '2468' } });
+  const { key } = await (await call('POST', 'profiles/p-a/open', { body: { pin: '2468', remember: true } })).json();
+  assert.equal((await call('GET', 'profiles/p-a/records', { key })).status, 200, 'the remembered key opens it, no PIN');
+  const ui = readFileSync(new URL('../web/cloud-ui.js', import.meta.url), 'utf8');
+  for (const at of ['shareItem(from, shareKind', "shareItem(personId, 'sound', ids)"]) {
+    const made = ui.indexOf(at);
+    assert.ok(made > 0, at);
+    const body = ui.slice(ui.lastIndexOf('async function', made), made);
+    assert.match(body, /askToShare\(/, `the PIN is asked before ${at}`);
+  }
+});
+
 test('"Profile names are made up by the app; nobody types one": the Worker refuses a typed name, and People has no name field', async () => {
   claim('nobody types one');
   const call = cloud();

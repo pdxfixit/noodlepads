@@ -88,6 +88,25 @@ test('Beats Help explains 💃 Grooves with ⌨️ Keys on: a groove behind you,
   assert.match(line.text, /💾 Keep saves it, named after the groove/);
 });
 
+// 🔑 Remember on this device (Ben, 2026-10-27): no day of its own, sharing
+// still asks the PIN, and what to do about a lost device. Never "forever".
+test('Help says what 🔑 Remember does now: until Forget, sharing still asks, a lost device; never 90 days or forever', () => {
+  const items = shownItems(HELP.find((s) => s.id === 'settings'));
+  const drawing = (label) => items.find((i) => i.pic.some((p) => p.t === label));
+  const offer = drawing('🔑 Remember');
+  const part = drawing('🔑 Remember on this device');
+  assert.ok(offer && part);
+  for (const line of [offer, part]) {
+    assert.match(line.text, /until someone taps Forget this device/);
+    assert.doesNotMatch(line.text, /90 days|forever/);
+  }
+  assert.match(offer.text, /Sharing still asks it\. Anyone using this device can open them\./);
+  assert.match(part.text, /Lost this device\? Change the PIN, and every device asks it again\./);
+  assert.match(drawing('🔗 Share…').text, /Someone with a PIN types it for every code, even on a device that remembers them\./);
+  const bulk = HELP.flatMap((s) => shownItems(s)).find((i) => i.pic.some((p) => p.t === 'Share'));
+  assert.match(bulk?.text ?? '', /one share code \(their PIN first, if they have one\)/);
+});
+
 // ADR 0017: the keys are on 🎤 Live and on Beats with ⌨️ Keys; Help never
 // names DJ, Freestyle or Beat Builder again.
 test('Help names the four tabs and ⌨️ Keys, never DJ, Freestyle or Beat Builder', () => {

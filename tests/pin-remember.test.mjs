@@ -68,6 +68,12 @@ before(async () => {
       link(OFFER),
       link(DECLINE),
     ],
+    // Something of KEPT's to share: a beat, and two sounds of their own.
+    beats: [{ id: 'beat-kept', personId: KEPT, name: 'Wobbly Taco', bpm: 100, bars: 1, rows: [{ clipId: `${KEPT}-kick`, steps: [1, 0, 0, 0] }], created: 1, saved: 1 }],
+    clips: ['Burp', 'Boing'].map((label, i) => ({
+      id: `user-kept-${i + 1}`, personId: KEPT, label, emoji: '🔊', color: 'red', mime: 'audio/webm', created: 1000 + i,
+      blob: new Blob([new Uint8Array([1, 2, 3, i])], { type: 'audio/webm' }),
+    })),
   });
   globalThis.indexedDB = idb;
   page = installPage({ manifest: testManifest() });
@@ -264,4 +270,89 @@ test('changing the PIN here keeps the device remembering; removing it ends the r
   await cloud.setPin(OFFER, '1357', null);
   assert.equal(cloud.linkOf(OFFER).remembered, undefined);
   assert.equal(cloud.needsPin(OFFER), false, 'no PIN at all now');
+});
+
+// 🔗 Share always asks the PIN (Ben, 2026-10-27): Remember covers opening,
+// playing and syncing; a code anyone can play does not.
+const sharesOf = (id) => env.DB.rows('SELECT code FROM shares WHERE profile_id = ?', id);
+
+test('🔗 Share on a device that remembers them asks the PIN for each code; a wrong PIN or ✕ shares nothing', async () => {
+  const ui = await import('../web/cloud-ui.js');
+  assert.equal(cloud.isRemembered(KEPT), true);
+  await openProfileSheet(KEPT);
+  await settle();
+  assert.equal($('#pin-dialog').open, false, 'the profile opens without it');
+  $('#cloud-share').dispatch('click');
+  await settle();
+  assert.equal($('#share-dialog').open, true, 'the Share sheet opens without it');
+  assert.equal($('#pin-dialog').open, false);
+  $('#share-what').querySelector('[data-kind="beat"]').dispatch('click');
+  const pick = () => $('#share-items').querySelector('[data-item="beat-kept"]').dispatch('click');
+
+  pick();
+  await settle();
+  assert.equal($('#pin-dialog').open, true, 'making the code asks the PIN');
+  assert.equal($('#pin-hint').textContent, ui.SHARE_PIN_HINT);
+  typePin('1111');
+  await settle();
+  assert.equal($('#pin-dialog').open, true, 'a wrong one asks again');
+  assert.match($('#pin-note').textContent, /PIN/);
+  $('#pin-dialog').close();
+  await settle();
+  assert.equal($('#share-made').hidden, true, '✕ makes no code');
+  assert.equal(sharesOf(KEPT).length, 0, 'nothing shared');
+
+  pick();
+  await settle();
+  assert.equal($('#pin-dialog').open, true);
+  typePin(PIN);
+  await settle();
+  await settle();
+  assert.equal($('#pin-dialog').open, false);
+  assert.equal($('#share-made').hidden, false, $('#share-note').textContent);
+  assert.equal(sharesOf(KEPT).length, 1, 'one code');
+  assert.equal(cloud.isRemembered(KEPT), true, 'still remembered');
+
+  pick();
+  await settle();
+  assert.equal($('#pin-dialog').open, true, 'the next code asks again');
+  $('#pin-dialog').close();
+  await settle();
+  assert.equal(sharesOf(KEPT).length, 1);
+  $('#share-dialog').close();
+  $('#profile-dialog').close();
+  await settle();
+});
+
+test('✏️ Edit sounds\' bulk 🔗 Share asks the PIN once for its one code, on a device that remembers them; ✕ shares nothing', async () => {
+  const ui = await import('../web/cloud-ui.js');
+  const before = sharesOf(KEPT).length;
+  const ids = ['user-kept-1', 'user-kept-2'];
+  const cancelled = ui.shareSounds(KEPT, ids);
+  await settle();
+  assert.equal($('#pin-dialog').open, true, 'the PIN first');
+  assert.equal($('#share-dialog').open, false, 'before the Share sheet');
+  $('#pin-dialog').close();
+  await cancelled;
+  await settle();
+  assert.equal($('#share-dialog').open, false, '✕: no Share sheet');
+  assert.equal(sharesOf(KEPT).length, before, 'and nothing shared');
+
+  let asks = 0;
+  const pad = $('#pin-dialog');
+  const show = pad.showModal.bind(pad);
+  pad.showModal = () => { asks++; show(); };
+  const shared = ui.shareSounds(KEPT, ids);
+  await settle();
+  typePin(PIN);
+  await shared;
+  await settle();
+  pad.showModal = show;
+  assert.equal(asks, 1, 'one ask for the one code of two sounds');
+  assert.equal($('#share-dialog').open, true, 'the Share sheet makes it');
+  assert.equal($('#pin-dialog').open, false);
+  assert.equal($('#share-made').hidden, false, $('#share-note').textContent);
+  assert.equal(sharesOf(KEPT).length, before + 1, 'one code');
+  $('#share-dialog').close();
+  await settle();
 });
