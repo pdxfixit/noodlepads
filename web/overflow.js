@@ -9,7 +9,8 @@
 // menu lists the marked siblings as icon + word and a tap in it taps the real
 // button, so each keeps its own behavior: a toggle shows its on state, Clear
 // and Remove still ask first in red and keep their Undo. (No screen hides the
-// buttons for lack of room today; the ⋯ stays hidden, styles.css "⋯ menus".)
+// buttons for lack of room but 🎤 Live's bar, whose ⋯ folds: lines.js
+// foldLine; elsewhere the ⋯ stays hidden, styles.css "⋯ menus".)
 
 // A ⋯ button for one line. `key` names the line among its box's lines (a row
 // number), so the menu finds the line again after the screen redraws it.
@@ -40,11 +41,15 @@ export function moreItems(more) {
   const out = [];
   for (const real of more.parentElement?.querySelectorAll('[data-more-word]') ?? []) {
     if (real.hidden || real.style?.visibility === 'hidden') continue;
+    // A ⋯ that folds (data-more-fold, 🎤 Live's bar) lists only the buttons
+    // folded out of sight; the ones still on the line are not repeated.
+    if (more.hasAttribute('data-more-fold') && real.getClientRects?.()?.length) continue;
     const armed = real.classList.contains('armed');
-    const text = String(real.textContent).trim();
+    const text = real.getAttribute('data-more-icon') ?? String(real.textContent).trim();
     out.push({
       real,
       icon: armed ? text.replace(/\?$/, '') : text,
+      state: real.getAttribute('data-more-state') ?? '',   // "On", "⌨️ Keys", "3 takes": shown at the right
       word: `${real.getAttribute('data-more-word')}${armed ? '?' : ''}`,
       armed,
       pressed: real.getAttribute('aria-pressed'),
@@ -138,6 +143,12 @@ export function moreMenu(root, { opened } = {}) {
       b.disabled = it.disabled;
       b.tabIndex = -1;
       b.textContent = `${it.icon} ${it.word}`;
+      if (it.state) {
+        const st = document.createElement('span');
+        st.className = 'more-state';
+        st.textContent = it.state;
+        b.append(st);
+      }
       return b;
     });
     if (olds.length !== items.length) pop.box.replaceChildren(...btns);

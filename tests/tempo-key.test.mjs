@@ -154,14 +154,13 @@ test('🎤 Live and ⌨️ Keys: a drag of the slider brings loops in line once,
   }
 });
 
-// Ben, 2026-10-26: "the buttons should generally be on a grid"; at 320 px
-// "record and takes should have equal amount of width"; no dotted line under
-// the number. Where each key lands is layout (`just look beats keys-on live
-// --widths 320,375,430,600` measures the columns); these pin the rules.
-test('the CSS: Beats\' keys on a grid, 🎤 Live at 320 px half and half, no dotted line under the tempo', () => {
+// Ben, 2026-10-26: "the buttons should generally be on a grid"; no dotted
+// line under the number. Where each key lands is layout (`just look beats
+// keys-on live --widths 320,375,430,600` measures the columns); these pin the
+// rules. 🎤 Live at 320 px folds into its ⋯ instead of a second line (live-bar.test.mjs).
+test('the CSS: Beats\' keys on a grid, 🎤 Live on one line at 320 px, no dotted line under the tempo', () => {
   assert.match(css, /@media \(max-width: 600px\) \{\n {2}\.beat-deck \.beat-go \.seq-click, \.beat-deck \.tempo-key \{ width: 48px; padding: 0; \}\n {2}\.beat-deck > :is\(\.beat-go, \.beat-shape\) \{ gap: 8px; \}/);
-  assert.match(css, /@container panel \(max-width: 18\.6rem\) \{\n {2}body\.screen-live \.dj-bar :is\(\.dj-rec, #dj-takes-open\) \{ order: 0; flex: 1 1 calc\(50% - 3px\);/);
-  assert.match(css, /body\.screen-live \.dj-bar :is\(\.tempo-key, #dj-click, #dj-overlap, #dj-change\) \{ order: 1; flex: 1 1 0; width: auto; \}/);
+  assert.doesNotMatch(css, /@container panel \(max-width: 18\.6rem\)/, 'no second line for 🎤 Live at 320 px');
   assert.doesNotMatch(css, /underline dotted/, 'no dotted line under the tempo');
 });
 

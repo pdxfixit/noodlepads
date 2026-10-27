@@ -25,13 +25,14 @@ function apply(line, classes, n) {
 // Keeps `line` on one line by stepping through `classes`. `watch` is the box
 // whose width decides it (the line itself, unless the line sits beside other
 // controls that give way first). The line's content must start at its left
-// edge: an overflow to the left is not measured. Returns the function that
-// refits it.
-export function fitLine(line, classes, watch = line) {
+// edge: an overflow to the left is not measured. `fits`, if given, is the
+// test of a fitting line in place of "nothing overflows" (foldLine). Returns
+// the function that refits it.
+export function fitLine(line, classes, watch = line, { fits: fitsHere } = {}) {
   // The line, and each thing on it: a key can overflow inside its own box.
   // A text field scrolls its own text (a long beat name), so it never counts.
   const over = (e) => e.tagName !== 'INPUT' && e.scrollWidth > e.clientWidth + 1;
-  const fits = () => !over(line) && ![...line.children].some(over);
+  const fits = fitsHere ?? (() => !over(line) && ![...line.children].some(over));
   // A line taken off the page for good (a redrawn card) stops being watched.
   let ro = null;
   let wasOn = false;
@@ -63,6 +64,25 @@ export function fitLine(line, classes, watch = line) {
   lines.push(soon);
   run();
   return soon;
+}
+
+// Whether boxes ({top, right}, or null for one not shown) stand on one row
+// that ends by `right`: the same top, none past the edge. Pure.
+export function oneRow(boxes, right) {
+  const shown = boxes.filter(Boolean);
+  if (!shown.length) return true;
+  const top = shown[0].top;
+  return shown.every((b) => Math.abs(b.top - top) < 2 && b.right <= right + 1);
+}
+
+// A line that wraps rather than overflowing (🎤 Live's control bar): its
+// `keys()` must stand on one row, and each class in `classes` folds one more
+// of them into a ⋯ (overflow.js), the fewest first. Something else on the
+// line may take a row of its own (what is happening, an open tempo): only
+// the keys are measured.
+export function foldLine(line, classes, keys) {
+  const box = (e) => (e?.getClientRects?.()?.length ? e.getBoundingClientRect() : null);
+  return fitLine(line, classes, line, { fits: () => oneRow(keys().map(box), line.getBoundingClientRect().right) });
 }
 
 // Refits every line, for when what is on a line changes (Advanced turned on,

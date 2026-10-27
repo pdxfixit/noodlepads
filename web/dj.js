@@ -32,7 +32,7 @@ import { createPillSelect } from './pill-select.js';
 import { moreMenu } from './overflow.js';
 import { follower, keepInView } from './follow.js';
 import { tempoKey } from './tempo-key.js';
-import { refitLines } from './lines.js';
+import { refitLines, foldLine } from './lines.js';
 
 const STOPS = tempoStops();   // the click track slider's positions (see sequencer.js)
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
@@ -60,6 +60,10 @@ const FAMILY_NAMES = { notes: 'tunes', chords: 'tunes', bass: 'tunes' };
 // The rows' names for the phone's row tabs, top to bottom (rhythm.js KEY_ROWS).
 const ROW_LABELS = ['Number row', 'Top letter row', 'Middle row', 'Bottom row'];
 const HOME = 2;   // A S D F…: the drums by default
+
+// What 🎤 Live's bar folds into its ⋯ as room runs out, in order (foldLine):
+// each class folds one more button (styles.css, 🎤 Live's bar).
+export const BAR_FOLDS = ['fold-takes', 'fold-layout', 'fold-ring'];
 
 export function createDJ({ el, deps }) {
   let row = HOME;              // the row shown on phones: the home row (drums) first
@@ -557,12 +561,27 @@ export function createDJ({ el, deps }) {
     if (!el.overlap) return;
     el.overlap.hidden = mode === 'beat';
     el.overlap.setAttribute('aria-pressed', String(overlap));
+    el.overlap.setAttribute('data-more-state', overlap ? 'On' : 'Off');
   }
   el.overlap?.addEventListener('click', () => {
     overlap = !overlap;
     showOverlap();
     deps.announce?.(overlap ? 'Let it ring is on: each hit rings over the last.' : 'Let it ring is off: each hit starts its sound again.');
   });
+  // 🎤 Live's bar keeps ● Record, the tempo and ⏲️; 🔔 Let it ring, ✏️ Layout
+  // and 🎬 Takes stay beside them where they fit and fold into its ⋯ where
+  // they don't, 🎬 first and 🔔 last (lines.js foldLine; Ben, 2026-10-27:
+  // "when there is the width available, it should be showing the buttons").
+  // The ⋯'s menu (overflow.js) lists only what is folded, each with its state.
+  const barMenu = el.more ? moreMenu(el.deck, { opened: () => {
+    el.change?.setAttribute('data-more-state', touching() ? '👆 Pads' : '⌨️ Keys');
+    const n = deps.takes?.(deps.personId())?.length ?? 0;
+    el.takesOpen?.setAttribute('data-more-state', n === 0 ? 'None yet' : n === 1 ? '1 take' : `${n} takes`);
+    barMenu.refresh();
+  } }) : null;
+  const refold = el.more ? foldLine(el.deck, BAR_FOLDS,
+    () => (mode === 'beat' ? [] : [el.record, el.clickKey, el.click, el.overlap, el.change, el.takesOpen, el.more])) : null;
+  showOverlap();
   let beatRec = null;   // {copy, from, snap, rows, added, startedBeat, growing, lastBar, mirror}
   let beatTimer = 0;
   let lastShown = [];   // the step each row's playhead is on (steps), for a redrawn grid
@@ -583,6 +602,8 @@ export function createDJ({ el, deps }) {
     showOverlap();
     if (mode === 'beat') renderGrid();
     showSetup();
+    barMenu?.close();
+    refold?.();   // what fits on the bar changes with the mode
   }
   function recording() { return !!takes.rec() || !!beatRec; }
   // The count-in's clicks are already booked, so the tempo waits for GO.

@@ -42,6 +42,7 @@
 | ⏲️ Click track | `#dj-click` on the control bar, after its own tempo `#dj-click-tempo` (slider `#dj-click-bpm`; on a phone the tempo key `#dj-click-key`) | `#dj-beat-click` on the control bar |
 | Tempo | `seq.tempo()`: the sequencer's `LOOSE` tempo (100 BPM, never saved) | the open beat's, saved with it |
 | 🔔 Let it ring | `#dj-overlap`, for the visit (`overlap`, never saved) | hidden; each row's own 🔔 decides |
+| Folding into ⋯ | `lines.js foldLine(el.deck, BAR_FOLDS, keys)`: where the bar's keys don't stand on one row, `fold-takes`, `fold-layout`, `fold-ring` hide 🎬, ✏️, 🔔 in turn and show `#dj-more`, whose `overflow.js moreMenu` (`data-more-fold`) lists only the folded ones, with `data-more-state` | none (`keys()` is empty: no classes) |
 | A key with no row | nothing | `showRow` adds its row (`seq.addRowFor`) |
 
 ### State `dj.js` owns

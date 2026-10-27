@@ -180,7 +180,8 @@
       <div class="beat-chips" data-beat-chips role="group" aria-label="Your beats: tap one to open it" hidden></div>
       <!-- The same control bar as Beats': ▶ Play, ● Record, the tempo, ⏲️, the
            bars. 🎤 Live shows ● Record, the click's tempo and ⏲️, what is
-           happening, 🔔 Let it ring, ✏️ Layout and 🎬 Takes. -->
+           happening, then 🔔 Let it ring, ✏️ Layout and 🎬 Takes where they
+           fit, the rest in a ⋯. -->
       <div class="beat-deck deck deck-end dj-bar">
         <!-- .beat-run and .beat-more lay out as if they were not there, except
              on a phone with ⌨️ Keys on, where ▶ Play · ● Record (.beat-run) is
@@ -214,9 +215,11 @@
             <button type="button" class="seq-click" id="dj-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never recorded. Tap it three times in time to set the tempo." title="Click track: a tick on every beat to keep time">⏲️</button>
             <span class="dj-status" id="dj-status" role="status"></span>
             <!-- At the right, as Beats' 🎚️ ✏️ Layout ⇆: 🔔 Let it ring and ✏️ Layout (just 🔔 and ✏️ on a phone), then 🎬 Takes. -->
-            <button type="button" class="seq-click dj-word" id="dj-overlap" data-word="Let it ring" aria-pressed="false" title="Let it ring: each hit rings over the last (this visit only)" aria-label="Let it ring: each key's hits ring over each other instead of starting the sound again. For this visit only.">🔔</button>
-            <button type="button" class="seq-click dj-word" id="dj-change" data-word="Layout" aria-label="✏️ Layout: how the keys or pads are laid out" title="✏️ Layout: how the keys or pads are laid out">✏️</button>
-            <button type="button" class="seq-tool" id="dj-takes-open" data-icon="🎬" aria-label="🎬 Takes: everything you recorded">🎬 Takes</button>
+            <button type="button" class="seq-click dj-word" id="dj-overlap" data-word="Let it ring" data-more-word="Let it ring" aria-pressed="false" title="Let it ring: each hit rings over the last (this visit only)" aria-label="Let it ring: each key's hits ring over each other instead of starting the sound again. For this visit only.">🔔</button>
+            <button type="button" class="seq-click dj-word" id="dj-change" data-word="Layout" data-more-word="Layout" aria-label="✏️ Layout: how the keys or pads are laid out" title="✏️ Layout: how the keys or pads are laid out">✏️</button>
+            <button type="button" class="seq-tool" data-more-word="Takes" data-more-icon="🎬" id="dj-takes-open" data-icon="🎬" aria-label="🎬 Takes: everything you recorded">🎬 Takes</button>
+            <!-- Where they don't fit, 🎬 Takes, ✏️ Layout and 🔔 Let it ring fold into this ⋯ (dj.js, lines.js foldLine; Ben, 2026-10-27). -->
+            <button type="button" class="seq-click more-btn dj-more" id="dj-more" data-more="live" data-more-fold aria-haspopup="menu" aria-expanded="false" aria-label="More: what doesn't fit on the bar" title="More">⋯</button>
           </div>
         </div>
         <div class="beat-shape" id="dj-setup" role="group" aria-label="The beat: bars and time signature" hidden>

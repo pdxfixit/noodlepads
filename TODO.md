@@ -52,7 +52,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **🎤 Live's control bar: move 🔔 Let it ring into a ⋯ menu, and "almost everything else" with it** (Ben, 2026-10-27, from the Overlap council round: "2, as should almost everything else"). Mockup first (new layout; it replaces `docs/decisions.md` rows 206 and 277, which put 🔔 and ✏️ Layout on the bar), and ask which controls stay (▶ Record and tempo, surely; ⏲️ Click track, ✏️ Layout, 🎬 Takes?). On a phone the bar shows a bare 🔔 today, the one place it has no word. Settled the same day: Let it ring stays off for new rows, no drawn pile icon, no demo sound on tap.
 
 
 - **Toward a kid-sized music studio** (Ben, 2026-10-12; north star: ADR 0022). Done: pattern chips, mixer, four tabs, the piano roll, the playlist (ADR 0024). Next: Ben's call.

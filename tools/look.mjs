@@ -365,6 +365,9 @@ const VIEWS = {
     + `for (const [code, key] of [['KeyZ', 'z'], ['KeyQ', 'q']]) for (const type of ['keydown', 'keyup']) document.dispatchEvent(new KeyboardEvent(type, { code, key, bubbles: true }));` },
   'builder-grown': { screen: 'beats', keys: true, js: q('#dj-beatbar [data-beat-new]') + BUILDER_REC + 'await new Promise((r) => setTimeout(r, 1700));' },
   takes: { screen: 'live', js: q('#dj-takes-open') },
+  // 🎤 Live's ⋯ open, at the widths where its bar folds something into it (320 px:
+  // ✏️ Layout and 🎬 Takes); where nothing folds there is no ⋯ and it looks as `live`.
+  'live-more': { screen: 'live', js: q('#dj-more') + nap },
   // ✏️ Edit keys: as it opens, with a ready-made layout loaded, and with sounds picked.
   keys: { screen: 'live', from: 700, js: q('#ke-input [data-input="keys"]') + q('#dj-change') },
   // ⌨️ / 👆 (ADR 0029): 🎤 Live on the touch layout or on the keys (a phone's
