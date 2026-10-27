@@ -162,3 +162,14 @@ test('a groove\'s bass rows are one instrument, and load as one tune row of its 
   assert.ok(!lofi.rows.some((r) => /upright-[ef]$/.test(r.clipId)), 'no pill rows of single bass notes');
   assert.ok(lofi.rows.some((r) => r.clipId === 'juno-piano-f-chord'), 'the piano\'s chords stay rows of pills');
 });
+
+test('Lo-fi, Boom bap and Dusty lean back: they carry a swing the beat keeps (Ben, 2026-10-26)', () => {
+  for (const id of ['lofi', 'boombap', 'dusty']) {
+    const g = GROOVES.find((x) => x.id === id);
+    assert.ok(g.swing >= 10 && g.swing <= 33, `${id} swings a little, not a shuffle`);
+    assert.equal(grooveBeat(g, 'pip').swing, g.swing, `${id}'s beat swings`);
+  }
+  const straight = GROOVES.filter((g) => g.swing === undefined);
+  assert.ok(straight.length > 40 && grooveBeat(straight[0], 'pip').swing === 0, 'the rest stay straight');
+  assert.ok(GROOVES.every((g) => g.swing === undefined || (g.swing >= 0 && g.swing <= 50)), 'within a beat range');
+});

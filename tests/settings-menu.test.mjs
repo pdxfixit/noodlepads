@@ -70,15 +70,23 @@ test('Level is three keys, Regular by default; Advanced offers the time signatur
   $('#settings-open').dispatch('click');
   assert.equal(level('regular').getAttribute('aria-pressed'), 'true');
   assert.equal(level('advanced').getAttribute('aria-pressed'), 'false');
-  assert.equal($('#seq-shape').hidden, true);
+  // Regular has Swing's keys (Ben, 2026-10-26); the time signature waits for Advanced.
+  assert.equal($('#seq-shape').hidden, false);
+  assert.equal($('#seq-swing').hidden, false);
+  assert.equal(sigs.hidden, true);
+  assert.deepEqual($('#seq-swing').querySelectorAll('[data-swing]').map((b) => b.textContent), ['Straight', 'Swing', 'Shuffle']);
+  $('#seq-swing').querySelector('[data-swing="33"]').dispatch('click');
+  assert.equal($('#seq-swing').querySelector('[data-swing="33"]').getAttribute('aria-pressed'), 'true', 'a Regular person can swing a beat');
+  $('#seq-swing').querySelector('[data-swing="0"]').dispatch('click');
 
   level('advanced').dispatch('click');
   await page.settle();
   assert.equal(getSetting('level'), 'advanced');
   assert.strictEqual(getSetting('advancedBeats'), true, 'a real boolean, not "true"');
   assert.equal(level('advanced').getAttribute('aria-pressed'), 'true');
-  assert.match($('#level-hint').textContent, /swing/);
+  assert.match($('#level-hint').textContent, /time signature/);
   assert.equal($('#seq-shape').hidden, false);
+  assert.equal(sigs.hidden, false);
   // Swing: three keys, like the bars and time signature beside them.
   const swing = $('#seq-swing');
   assert.deepEqual(swing.querySelectorAll('[data-swing]').map((b) => b.textContent), ['Straight', 'Swing', 'Shuffle']);
@@ -96,7 +104,8 @@ test('Level is three keys, Regular by default; Advanced offers the time signatur
   level('regular').dispatch('click');
   await page.settle();
   assert.equal(getSetting('advancedBeats'), false);
-  assert.equal($('#seq-shape').hidden, true, 'choosing needs Advanced; the beat keeps its 6/8');
+  assert.equal(sigs.hidden, true, 'choosing needs Advanced; the beat keeps its 6/8');
+  assert.equal($('#seq-swing').hidden, false, 'swing stays');
   sigs.querySelector('[data-sig="4/4"]').dispatch('click');   // back to 4/4 for the tests after
   $('#settings-dialog').close();
 });

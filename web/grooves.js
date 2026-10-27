@@ -15,7 +15,9 @@
 //   beats. Their tempo counts quarter notes, so 168 BPM is a swung beat of 112.
 // - Bossa nova and Salsa count in cut time: one bar here is two real bars and
 //   a pill is an eighth note, so the tempo is half what a musician would say.
-// No groove uses the beat's Swing setting: it plays only with Advanced on.
+// A groove may carry `swing` (0 to 50, as a beat's Swing): how late the off-beat
+// eighth notes play. Lo-fi, Boom bap and Dusty lean back a little (Ben,
+// 2026-10-26); the 6/8 grooves above are swung by their pills already.
 //
 // A scratch beat is stored under its groove's name (scratch.js grooveOf), so
 // a renamed groove lists its old names in `was`.
@@ -96,7 +98,7 @@ export const GROOVES = [
     ['snare', '........x.......'],
     ['hihat', 'x.x.x.x.x.x.x.x.'],
     ['bass-e', 'x..x..x.x..x..x.']] },
-  { id: 'boombap', name: 'Boom bap', emoji: '📼', group: 'hiphop', bpm: 90,
+  { id: 'boombap', name: 'Boom bap', emoji: '📼', group: 'hiphop', bpm: 90, swing: 20,
     about: 'Classic 1990s New York hip hop: boom is the kick, bap is the snare.',
     rows: [
     ['kick', 'x......x..x..... x......x..x.....'],
@@ -120,7 +122,7 @@ export const GROOVES = [
     ['kick', 'x.....x...x.....'],
     ['clap', '........x.......'],
     ['hihat', 'xxxxxxxxxxxxxxxx']] },
-  { id: 'lofi', name: 'Lo-fi', emoji: '☕', group: 'hiphop', bpm: 80,
+  { id: 'lofi', name: 'Lo-fi', emoji: '☕', group: 'hiphop', bpm: 80, swing: 25,
     about: 'Sleepy study music: soft drums and cozy chords.',
     rows: [
     ['kick', 'x.....x.x....... x.....x.x.......'],
@@ -200,7 +202,7 @@ export const GROOVES = [
     ['glide', 'x.....x......... x.........x.....'],
     ['chord-am', 'x............... ................'],
     ['chord-dm', '................ x...............']] },
-  { id: 'dusty', name: 'Dusty', emoji: '🎞️', group: 'hiphop', bpm: 88,
+  { id: 'dusty', name: 'Dusty', emoji: '🎞️', group: 'hiphop', bpm: 88, swing: 20,
     about: 'Crunchy drums like an old record, with a horn and a scratch.',
     rows: [
     ['kick-dusty', 'x......x.x...... x.x....x..x.....'],

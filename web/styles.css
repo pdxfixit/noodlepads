@@ -845,7 +845,8 @@ body.keys-on .dj-bar { position: sticky; top: calc(var(--head-h, 0px) - var(--de
 /* The beat's shape: bars · time signature · swing, always on one line
    (lines.js). As room runs out: the keys tighten, "1 bar 2 bars" becomes
    "1 2 4 bars", the time signature and swing turn into pickers ("4/4 ▾"),
-   then the time signature drops out, then swing. The bars always stay. */
+   then the time signature drops out, then swing goes on a line of its own.
+   The bars always stay. */
 .seq-shape { display: contents; }
 /* A group never squeezes (its frame would clip its keys): the line overflows
    instead, which is what tells lines.js to take the next step. */
@@ -856,7 +857,19 @@ body.keys-on .dj-bar { position: sticky; top: calc(var(--head-h, 0px) - var(--de
 .seq-pick { display: none; }
 .fit-pick :is(.seq-sigs, .seq-swing, .set-keys) > button { display: none; }
 .fit-pick .seq-pick { display: block; }
-.fit-nosig .seq-sigs, .fit-noswing .seq-swing { display: none; }
+.fit-nosig .seq-sigs { display: none; }
+/* Swing is for Regular too (Ben, 2026-10-26), so when it has no room beside
+   the bars it takes a line of its own below, its three keys across the width,
+   instead of dropping out. The line wraps only at this last step, so the
+   steps before it still see an overflow. */
+.fit-noswing { flex-wrap: wrap; }
+.fit-noswing .seq-swing { order: 1; flex: 1 1 100%; }
+.fit-noswing .seq-swing > button { display: block; flex: 1 0 auto; }
+.fit-noswing .seq-swing .seq-pick { display: none; }
+/* Beside ▶ Play and the tempo there is less room still: the whole line drops below them, as on a phone. */
+.beat-deck:has(> .fit-noswing) { flex-wrap: wrap; }
+.beat-deck:has(> .fit-noswing) > .beat-go { flex: 1 1 100%; }
+.beat-deck:has(> .fit-noswing) > .beat-shape { flex: 1 1 100%; margin-left: 0; }
 /* A picker looks like the pressed key, with a ▾ drawn at its right. */
 .seq-pick {
   flex: 1 1 auto;

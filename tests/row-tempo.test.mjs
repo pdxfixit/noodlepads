@@ -130,17 +130,30 @@ test('loud hits: only a pill that is on can be loud, they play loud, and they co
   assert.ok(!samePattern(beat([{ clipId: 'a', steps: on(0) }]), beat([{ clipId: 'a', steps: on(0), accents: on(0) }])));
 });
 
-test('swing plays every second pill late, by swing/100 of a pill, and only when asked', async () => {
+test('swing plays the off-beat eighths late, by swing/100 of an eighth; the pills between move half as much', async () => {
   const { swingDelay, MAX_SWING } = await import('../web/sequencer.js');
-  assert.equal(swingDelay(0, 0.125, 50), 0);
-  assert.equal(swingDelay(1, 0.125, 50), 0.0625);
-  assert.equal(swingDelay(2, 0.125, 50), 0);
+  const dt = 0.125;   // 120 BPM: a pill (a sixteenth) is 0.125 s, an eighth 0.25 s
+  const at = (n, swing, groups) => [...Array(n).keys()].map((step) => swingDelay(step, dt, swing, groups));
+  assert.deepEqual(at(8, 0), [0, 0, 0, 0, 0, 0, 0, 0], 'straight');
+  // Shuffle (50): the "and" (pill 2) waits half an eighth; pills 1 and 3 a quarter of one.
+  assert.deepEqual(at(8, 50), [0, 0.0625, 0.125, 0.0625, 0, 0.0625, 0.125, 0.0625]);
+  assert.deepEqual(at(4, 33).map((d) => Math.round(d * 1e4) / 1e4), [0, 0.0413, 0.0825, 0.0413], 'Swing (33) is the triplet feel: the "and" lands 2/3 of the way through the beat');
+  assert.deepEqual(at(24, 50, [6, 6]).slice(0, 12), [0, 0.0625, 0, 0.0625, 0, 0.0625, 0, 0.0625, 0, 0.0625, 0, 0.0625], '6/8 groups of 6: only odd pills move, as before');
+  assert.deepEqual(at(14, 50, SIGNATURES['7/8']).slice(8), [0, 0.0625, 0, 0.0625, 0, 0.0625], '7/8: its 6-pill group is left rolling');
+  assert.deepEqual(at(12, 50, SIGNATURES['3/4']).slice(4, 8), [0, 0.0625, 0.125, 0.0625], '3/4: beats of 4');
   assert.equal(cleanPattern({ swing: 99 }, 'pip').swing, MAX_SWING);
   assert.equal(cleanPattern({ swing: 'lots' }, 'pip').swing, 0);
-  const p = beat([{ clipId: 'a', steps: on(0, 1, 2) }]);           // 120 BPM: a pill is 0.125 s
-  assert.deepEqual(times(planHits(p, 'plain', 0.4, 16, 40), 0), [0, 0.175, 0.25]);
-  assert.deepEqual(times(planHits(p, 'plain', 0.4), 0), [0, 0.125, 0.25], 'straight unless asked');
-  assert.ok(!samePattern(p, { ...p, swing: 20 }));
+});
+
+test('planHits swings eighth-note hats and sixteenth-note hats, and only when asked', () => {
+  const eighths = beat([{ clipId: 'a', steps: on(0, 2, 4, 6) }]);               // 120 BPM: a pill is 0.125 s
+  assert.deepEqual(times(planHits(eighths, 'plain', 0.9, 16, 40), 0), [0, 0.25 + 0.1, 0.5, 0.75 + 0.1], 'the "and" of each beat is 40% of an eighth late');
+  assert.deepEqual(times(planHits(eighths, 'plain', 0.9), 0), [0, 0.25, 0.5, 0.75], 'straight unless asked');
+  const sixteenths = beat([{ clipId: 'a', steps: on(0, 1, 2, 3, 4) }]);
+  const swung = times(planHits(sixteenths, 'plain', 0.6, 16, 50), 0);
+  assert.deepEqual(swung, [0, 0.1875, 0.375, 0.4375, 0.5], 'each beat bounces long-long-short-short; none lands on another');
+  assert.deepEqual(times(planHits(eighths, 'plain', 0.9, 12, 50, SIGNATURES['6/8']), 0).slice(0, 2), [0, 0.25], '6/8 pill 2 stays put');
+  assert.ok(!samePattern(eighths, { ...eighths, swing: 20 }));
 });
 
 test('an old melody row (a note per pill from the five-note scale) is read as notes a pill long, played at that pitch', async () => {

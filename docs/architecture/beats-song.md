@@ -32,7 +32,7 @@ One shape everywhere: the open beat in memory, a beat in 🗂️ My beats, the s
 | `name` | up to 24 characters | sliced; `''` when missing |
 | `bpm` | quarter notes a minute | rounded, 60–180, default 100 |
 | `bars` | 1, 2 or 4 (`BAR_CHOICES`) | else 1 |
-| `swing` | 0–50 (`MAX_SWING`): every odd pill plays late by `swing/100` of a pill | clamped; plays only with Advanced |
+| `swing` | 0–50 (`MAX_SWING`): the off-beat eighths play late by `swing/100` of an eighth (the pills between move half as much) | clamped; plays at every level |
 | `signature` | `'4/4' '3/4' '5/4' '6/8' '7/8'` (`SIGNATURES`) | **left out** when missing or unknown; see "Time signatures" |
 | `volume` | the 🎚️ master level, 0–1 | **left out** at full (ADR 0018) |
 | `fx` | the master effect id (`mixer.js MIX_FX`) | **left out** when none |
@@ -143,7 +143,7 @@ A row with no clock (added while playing, or put back by Undo) gets one from `jo
 - **Rates.** `playMode()` is `'speed'` with Advanced, else `'plain'`. In `'speed'` a row's pill is `base / row.rate`. Every row plays all `total()` pills (`countOf`), so a 2× row goes round twice per pass of the beat.
 - **Bars.** `total() = bar() × pattern.bars`. Pills past `total()` are stored but hidden (`p.hidden = s >= count`) and never played.
 - **Time signatures.** `sigOf()` is the beat's `signature`; a beat with none plays as the old person setting `timeSignature` when Advanced is on, else 4/4. `groups()` is `SIGNATURES[sig]` (the beat groups in pills), `bar()` their sum. Choosing a signature needs Advanced (`el.shape.hidden = !advanced`); playing one does not. Pills always last a sixteenth; BPM always counts quarter notes.
-- **Swing.** `swingDelay(step, dt, swing)` delays odd pills by `swing/100` of a pill. Only the sound and the playhead move; the clock does not. `swingNow()` is 0 without Advanced. A tune row's half-pill notes are not swung. The UI offers 0, 33 and 50 (`SWING_KEYS`); other stored values play as stored.
+- **Swing.** `swingDelay(step, dt, swing, groups)` delays the "and" pill of each 4-pill beat by `swing/100` of an eighth and its odd pills by half that (a 6-pill group of 6/8 or 7/8 moves only its odd pills); `groups` is the signature's. A groove may carry `swing` (Lo-fi, Boom bap, Dusty), which `grooveBeat` copies to the beat. Only the sound and the playhead move; the clock does not. `swingNow()` is the beat's swing at every level (Regular and Advanced see the keys; a beat saved with swing plays it for everyone). A tune row's half-pill notes are not swung. The UI offers 0, 33 and 50 (`SWING_KEYS`); other stored values play as stored.
 - **Tempo while playing.** `retime(oldBpm)` maps every not-yet-booked time with `retimeAt(anchor, old, new)`: `t0`, `clickNext`, every `clocks[i].next`, live-hit `skips`, and a `queued` chip switch. So `t0 + n × pill` stays pill n's time, and ⌨️ Keys' snapping stays right. The slider applies it on `input`, saves and calls `onTempo` on `change`.
 
 ### What one hit does (`sound`)
@@ -207,7 +207,7 @@ Three methods at the end of `createSequencer`:
 
 | Method | Does | Notes |
 |---|---|---|
-| `beatPlan(raw)` | `cleanPattern`, then `planHits` for one pass: `{pattern, seconds, hits: [{row, step, time, loud, note, len}]}` | uses **this device's** Advanced: `playMode()`, swing, and `oldSignature` for a beat with no signature (`barOf`) |
+| `beatPlan(raw)` | `cleanPattern`, then `planHits` for one pass: `{pattern, seconds, hits: [{row, step, time, loud, note, len}]}` | uses **this device's** Advanced: `playMode()` and `oldSignature` for a beat with no signature (`barOf`) |
 | `prepareBeats(patterns)` | loads every row's sound into `ready`, afresh (a voice may have changed) | never empties `ready` (`refresh`), so a beat or song playing keeps its sounds; a sound that is gone (`deps.clipById` finds none) is taken out, and one that fails to load this time keeps the copy it had |
 | `soundHit(ctx, dest, list, p, i, time, loud, note, len)` | `sound()` through `busFor(ctx, dest, p).input(i)` | false when the sound is not in `ready` |
 
@@ -307,7 +307,7 @@ A song from before lanes (only `slots`) becomes lane 1's blocks, back to back, a
 
 ### "Advanced" for beats
 
-The person setting `advancedBeats` (true only at the Advanced level; `settings.js`). Read three ways: the sequencer caches it (`onSetting('advancedBeats')` → `render`); `song.js advanced()` reads `getSetting` each time and re-renders on change; the roll asks `deps.advanced()`. It turns on: row rates (`playMode`), swing, choosing a signature, the old `timeSignature` fallback, ½ Half pills in the roll, groove card details, the chooser's speed keys, and 🎼 Tempo marks editing. Because `beatPlan` reads it, **a song or a share preview plays a beat by the level of the person playing it**, not the one who made it.
+The person setting `advancedBeats` (true only at the Advanced level; `settings.js`). Read three ways: the sequencer caches it (`onSetting('advancedBeats')` → `render`); `song.js advanced()` reads `getSetting` each time and re-renders on change; the roll asks `deps.advanced()`. It turns on: row rates (`playMode`), choosing a signature, the old `timeSignature` fallback, ½ Half pills in the roll, groove card details, the chooser's speed keys, and 🎼 Tempo marks editing. Because `beatPlan` reads it, **a song or a share preview plays a beat by the level of the person playing it**, not the one who made it.
 
 ### Undo, five kinds
 

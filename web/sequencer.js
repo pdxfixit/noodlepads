@@ -74,11 +74,32 @@ const MAX_BPM = 180;
 // between can still be reached (or typed).
 export const COMMON_BPMS = [60, 70, 80, 90, 100, 110, 120, 128, 130, 140, 150, 160, 170, 180];
 const TEMPO_PULL = 16;
-// Swing (advanced): every second pill (the off-beat sixteenths) plays late by
-// swing/100 of a pill. 0 is straight; MAX_SWING is a heavy shuffle.
+// Swing: the off-beat eighth notes (the "and" of each beat) play late by
+// swing/100 of an eighth, so 33 is the triplet feel and 50 the harder shuffle
+// (Ben, 2026-10-26). A beat is 4 pills; the pill between (a sixteenth) moves
+// with it, by half as much, so a hat on every pill bounces too and no two
+// pills land together. 0 is straight; MAX_SWING is a heavy shuffle.
 export const MAX_SWING = 50;
 export const BEAT_ID = /^beat-[a-z0-9-]{1,48}$/;
-export const swingDelay = (step, dt, swing) => (step % 2 === 1 ? (swing / 100) * dt : 0);
+// How late a pill sounds, in seconds: `dt` is the pill's length. `groups` is
+// the time signature's (SIGNATURES): a 4-pill group is a beat, so its pill 2
+// (the "and") moves two pills' worth and its pills 1 and 3 one. A 6-pill
+// group (6/8, 7/8) is already a rolling feel: only its odd pills move, by one.
+// No `groups` means beats of 4.
+export function swingDelay(step, dt, swing, groups) {
+  if (!swing) return 0;
+  let at = step % STEPS_PER_BEAT;
+  let size = STEPS_PER_BEAT;
+  if (groups) {
+    at = step % groups.reduce((a, b) => a + b, 0);
+    for (const g of groups) {
+      if (at < g) { size = g; break; }
+      at -= g;
+    }
+  }
+  const pills = at % 2 === 1 ? 1 : (size === STEPS_PER_BEAT && at === 2 ? 2 : 0);
+  return (swing / 100) * pills * dt;
+}
 const TICK_MS = 25;
 const LOOKAHEAD = 0.1;
 // The output's delay: how long after the audio clock's time a sound comes
@@ -236,7 +257,7 @@ export function pillHits(row, step) {
 // Every hit in the first `seconds` of a beat: [{row, step, time, loud,
 // note, len}] (len in seconds, 0 for a plain hit), in time order. Playback
 // schedules the same hits live; Save as a sound renders these.
-export function planHits(pattern, mode, seconds, bar = STEPS, swing = 0) {
+export function planHits(pattern, mode, seconds, bar = STEPS, swing = 0, groups) {
   const hits = [];
   const total = bar * (pattern.bars || 1);
   pattern.rows.forEach((row, i) => {
@@ -246,7 +267,7 @@ export function planHits(pattern, mode, seconds, bar = STEPS, swing = 0) {
     for (let n = 0, t = 0; t < seconds - 1e-9; n++, t = n * dt) {
       const step = n % count;
       for (const h of pillHits(row, step)) {
-        hits.push({ row: i, step, time: t + h.at * dt + (h.at ? 0 : swingDelay(step, dt, swing)), loud: h.loud, note: h.note, len: h.len * dt });
+        hits.push({ row: i, step, time: t + h.at * dt + (h.at ? 0 : swingDelay(step, dt, swing, groups)), loud: h.loud, note: h.note, len: h.len * dt });
       }
     }
   });
@@ -432,7 +453,7 @@ export function grooveBeat(groove, personId, hasClip = () => true) {
   }
   const line = { clipId: `${personId}-${base}`, melody: true, steps: Array(bar * bars).fill(false), tune: lineOf(bass, bar * bars) };
   const out = rows.map((r) => (r === 'bass' ? line : r)).filter((r) => hasClip(r.clipId));
-  return cleanPattern({ name: '', bpm: groove.bpm, bars, signature, rows: out }, personId);
+  return cleanPattern({ name: '', bpm: groove.bpm, bars, signature, swing: groove.swing, rows: out }, personId);
 }
 
 // Who plays a groove beyond its drums (ADR 0030), for its card's chips: each
@@ -642,7 +663,7 @@ export function createSequencer(deps) {
   const rings = (row) => row.ring;
   const total = () => bar() * shape().bars;   // the whole beat, every bar
   const countOf = () => total();   // every row has the whole beat's pills
-  const swingNow = () => (advanced && pattern ? pattern.swing || 0 : 0);  // simple mode always plays straight
+  const swingNow = () => (pattern ? pattern.swing || 0 : 0);   // every level plays a beat's swing (Ben, 2026-10-26)
   const STOPS = tempoStops();
   // Puts the slider and the number in step with the tempo (the open beat's, or the loose one).
   let beatKey = null;   // on a phone, the tempo folded into one key (tempo-key.js)
@@ -1286,7 +1307,7 @@ export function createSequencer(deps) {
       while (clock.next < until) {
         if (clock.step >= countOf(i)) clock.step = 0;  // the row got shorter while playing
         // Swing moves when a pill sounds (and lights), never the clock itself.
-        const at = clock.next + swingDelay(clock.step, stepSeconds(pattern, row, playMode()), swingNow());
+        const at = clock.next + swingDelay(clock.step, stepSeconds(pattern, row, playMode()), swingNow(), groups());
         const dt = stepSeconds(pattern, row, playMode());
         const skip = skips.findIndex((k) => k.row === i && Math.abs(k.at - clock.next) < dt / 2);
         if (skip >= 0) skips.splice(skip, 1);
@@ -1492,7 +1513,7 @@ export function createSequencer(deps) {
     showSwing();
     for (const b of el.bars.querySelectorAll('[data-bars]')) b.setAttribute('aria-pressed', String(Number(b.dataset.bars) === pattern.bars));
     for (const b of el.sigs.querySelectorAll('[data-sig]')) b.setAttribute('aria-pressed', String(b.dataset.sig === sigOf()));
-    el.shape.hidden = !advanced;   // time signature and swing: Advanced
+    el.sigs.hidden = !advanced;   // the time signature is Advanced; swing shows at Regular too (Ben, 2026-10-26)
     deps.onShape?.();
     // Rows can use any person's sounds, so the beat maker only needs one
     // sound somewhere, not on this board.
@@ -2356,8 +2377,7 @@ export function createSequencer(deps) {
     showTempo({ slider: false });
   });
   el.bpm.addEventListener('change', () => { save(); deps.onTempo?.(); });
-  // Swing (advanced): how late the off-beat pills play.
-  // Swing (Advanced): three keys beside the time signature. Beats saved with
+  // Swing: how late the off-beat eighths play. Three keys beside the time signature. Beats saved with
   // another amount keep it, and the nearest key shows lit.
   const SWING_KEYS = [0, 33, 50];
   function showSwing() {
@@ -3126,7 +3146,7 @@ export function createSequencer(deps) {
     const ctx = new OfflineAudioContext(2, Math.ceil(seconds * rate), rate);
     const lists = pattern.rows.map(() => []);
     let hits = 0;
-    for (const { row: i, time, loud, note, len } of planHits(pattern, playMode(), seconds, bar(), swingNow())) {
+    for (const { row: i, time, loud, note, len } of planHits(pattern, playMode(), seconds, bar(), swingNow(), groups())) {
       const loaded = ready.get(pattern.rows[i].clipId);
       if (!loaded) continue;
       sound(ctx, busFor(ctx, ctx.destination, pattern).input(i), lists[i], pattern.rows[i], loaded, time, loud, note, len);
@@ -3392,14 +3412,15 @@ export function createSequencer(deps) {
 
   // Pills in one bar of a saved beat: its own time signature, as sigOf()
   // reads the open beat's.
-  const barOf = (raw) => barSteps(Object.hasOwn(SIGNATURES, raw?.signature) ? raw.signature : (advanced ? oldSignature : '4/4'));
+  const sigFor = (raw) => (Object.hasOwn(SIGNATURES, raw?.signature) ? raw.signature : (advanced ? oldSignature : '4/4'));
+  const barOf = (raw) => barSteps(sigFor(raw));
   // A saved beat once through: its length in seconds (its own tempo, bars and
   // bar length) and every hit in it, as bounce() renders them.
   function beatPlan(raw) {
     const p = cleanPattern(raw, raw.personId);
     const steps = barOf(raw);
     const seconds = steps * p.bars * (60 / p.bpm / STEPS_PER_BEAT);
-    const hits = planHits(p, playMode(), seconds, steps, advanced ? p.swing || 0 : 0);
+    const hits = planHits(p, playMode(), seconds, steps, p.swing || 0, SIGNATURES[sigFor(raw)]);
     return { pattern: p, seconds, hits };
   }
   // Loads every sound the beats use (fresh: a voice may have changed),
