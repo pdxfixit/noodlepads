@@ -236,6 +236,36 @@ export function applyEdits(buffer, edits) {
   return buffer;
 }
 
+// A recording's two edges: a few milliseconds of fade in and out, so a trim
+// that lands mid-wave (or a recording that starts or stops on a loud sample)
+// never clicks. Too short to hear as a fade, long enough to take the jump out.
+export const EDGE_FADE_SECONDS = 0.003;
+
+// Fades the first and last `seconds` of one channel's samples in place, a
+// straight ramp from silence to full, never more than half the sound at each
+// end. Returns the samples.
+export function fadeEdges(samples, rate, seconds = EDGE_FADE_SECONDS) {
+  const n = Math.min(Math.round(seconds * rate), Math.floor(samples.length / 2));
+  for (let i = 0; i < n; i++) {
+    const g = i / n;
+    samples[i] *= g;
+    samples[samples.length - 1 - i] *= g;
+  }
+  return samples;
+}
+
+// Whether a clip's kept audio gets those edges: a kid's own recording or
+// sound does; a bundled preset (its loudness is measured as it is) and a beat
+// made into a sound (`exact`: it loops on a grid) do not. No clip is a new
+// recording that has no clip yet.
+export const wantsEdges = (clip) => !clip?.exact && clip?.source !== 'bundled';
+
+// A buffer's channels with fadeEdges applied, in place; returns the buffer.
+export function softEdges(buffer, seconds = EDGE_FADE_SECONDS) {
+  for (let c = 0; c < buffer.numberOfChannels; c++) fadeEdges(buffer.getChannelData(c), buffer.sampleRate, seconds);
+  return buffer;
+}
+
 // Fades a buffer in place between `start` and `end` seconds: up from silence
 // over the first `fade.in` seconds, down to silence over the last
 // `fade.out`. Where the two overlap, the lower one wins.

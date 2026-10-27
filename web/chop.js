@@ -27,7 +27,7 @@ import { newId } from './util.js';
 import { chopName } from './names.js';
 import {
   cleanTrim, onsets, cleanMarks, pieces, newMark, MIN_PIECE,
-  cleanEdits, cleanFade, addEdit, applyEdits, applyFade, GAIN_STEP, hasGain, levelForGain, editsKey,
+  cleanEdits, cleanFade, addEdit, applyEdits, applyFade, GAIN_STEP, hasGain, levelForGain, editsKey, softEdges, wantsEdges,
 } from './cuts.js';
 import { loudness, peakOf, evenGain, PRESET_LOUDNESS, EVEN_ENOUGH } from './loudness.js';
 import { logEvent } from './log.js';
@@ -67,6 +67,7 @@ export function createCut(sheet) {
     sel: null,       // trim: {start, end} seconds, the part Select part changes
     undo: [],        // trim: {trim, edits, fade} to step back to, since the sheet opened
     exact: false,    // trim: the sound is a beat made into a sound, kept whole when untrimmed
+    edges: true,     // trim: the kept audio gets soft edges (cuts.js wantsEdges), as audio.js keptAudio gives it
     source: null,    // chop: the voiced sound being cut (AudioBuffer)
     marks: [],       // chop: cut points, seconds into `source`
     picked: -1,      // chop: the mark ✕ removes
@@ -211,7 +212,7 @@ export function createCut(sheet) {
       return false;
     }
     if (!full || !sheet.now().ready) return false;
-    Object.assign(cut, { full, exact: !!clip?.exact, edits: cleanEdits(edits, full.duration), fade: cleanFade(fade) });
+    Object.assign(cut, { full, exact: !!clip?.exact, edges: wantsEdges(clip), edits: cleanEdits(edits, full.duration), fade: cleanFade(fade) });
     cut.range = rangeOf(trim);
     fitSel();
     return true;
@@ -253,6 +254,7 @@ export function createCut(sheet) {
     const edited = applyEdits(slice(cut.full, 0, cut.full.duration), cut.edits);
     let kept = applyFade(slice(edited, start, end - start), cut.fade);
     if (hasGain(cut.edits)) kept = levelForGain(kept, slice(cut.full, start, end - start));
+    if (cut.edges) softEdges(kept);
     cut.shown = applyFade(edited, cut.fade, start, end);
     sheet.wave.show(cut.shown);
     shade();

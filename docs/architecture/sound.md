@@ -312,7 +312,11 @@ without `first` or `muted`.
    copy; cut to `keptRange` (the trim; all of it for an `exact` sound; else
    `trimBounds`, the quiet ends found on the recording as stored, to the millisecond); `applyFade`.
    With a gain edit, `cuts.js levelForGain` scales by the *unedited* part's
-   peak and marks the buffer `keepLevel`.
+   peak and marks the buffer `keepLevel`. Last, `cuts.js softEdges`: 3 ms
+   (`EDGE_FADE_SECONDS`) fade in and out so a trim never clicks, for a kid's
+   own sound and a new recording only (`wantsEdges`: not a bundled preset,
+   whose loudness is measured as it is, and not an `exact` sound, which loops
+   on a grid). `chop.js rebuild` does the same (`cut.edges`).
 2. **The plan** (`voices.js renderPlan`): the playing chain (muted steps out,
    else Normal), knobs' steps before or after it (`first`), Normal dropped
    beside knobs.
@@ -623,7 +627,7 @@ by a load of its current version").
 
 | Seam | Where | What a fix in one place misses |
 |---|---|---|
-| The kept audio is built three times | `audio.js keptAudio`, `chop.js rebuild`, `chop.js evenOut` (all three take their range from `keptRange`: the automatic trim to the millisecond; `sheet.js acceptAudio` and `makeSound` use `keptAudio` itself) | a change to the cut order (edits → trim → fade → levelForGain) in `keptAudio` leaves the trim editor drawing and playing something else |
+| The kept audio is built three times | `audio.js keptAudio`, `chop.js rebuild`, `chop.js evenOut` (all three take their range from `keptRange`: the automatic trim to the millisecond; `sheet.js acceptAudio` and `makeSound` use `keptAudio` itself) | a change to the cut order (edits → trim → fade → levelForGain → soft edges) in `keptAudio` leaves the trim editor drawing and playing something else |
 | Two fades | `cuts.js applyFade` (seconds, before voices) and `voices.js STEP_RENDERS.fade` (shares of the length, a step) | the same min-of-ramps loop is written twice |
 | Walkie and Monster written twice | `voices.js RECIPES.walkie` vs `SPECIAL_RENDERS.walkie`; `RECIPES.monster` vs `SPECIAL_RENDERS.boom` | a fix to the static burst or the bass shelf reaches old sounds or knob sounds, not both |
 | Two noise tails | `voices.js noiseBuffer` and `steps.js roomTail` | same formula; `noiseBuffer` uses the context's channel count, `roomTail` always 2 |

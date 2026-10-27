@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import {
   cleanEdit, cleanEdits, cleanFade, addEdit, editsKey, fadeKey, cutKey,
   applyEdits, applyFade, MAX_EDITS, GAIN_STEP, hasGain, levelForGain,
+  fadeEdges, softEdges, wantsEdges, EDGE_FADE_SECONDS,
 } from '../web/cuts.js';
 import { fakeBuffer, FakeAudioBuffer } from './helpers.mjs';
 
@@ -154,4 +155,52 @@ test('🔊 Louder skips the evening-out: levelled by the unedited peak, and the 
   assert.ok(out[1] > 0.9 && out[1] <= 1, 'the loud part held at full scale at most, not clipped');
   assert.equal(softLimit(0.5), 0.5);
   assert.ok(softLimit(5) <= 1 && softLimit(-5) >= -1);
+});
+
+test('fadeEdges: 3 ms up from silence at the start and down to silence at the end, the middle untouched, short sounds never more than half each end', () => {
+  const rate = 8000;                       // 3 ms is 24 samples
+  const d = fadeEdges(new Float32Array(400).fill(1), rate);
+  assert.equal(EDGE_FADE_SECONDS, 0.003);
+  assert.equal(d[0], 0);
+  assert.equal(d[399], 0, 'the last sample is silent too');
+  near(d[12], 0.5, 'half way up');
+  near(d[399 - 12], 0.5, 'and half way down');
+  assert.equal(d[24], 1);
+  assert.equal(d[375], 1);
+  assert.ok(d.slice(24, 376).every((v) => v === 1), 'the middle is untouched');
+  for (let i = 1; i < 24; i++) assert.ok(d[i] > d[i - 1], 'a straight rise');
+  // A sound shorter than two fades: each end fades over half of it, no sample is boosted.
+  const tiny = fadeEdges(new Float32Array(20).fill(1), rate);
+  assert.ok(tiny.every((v) => v >= 0 && v <= 1));
+  assert.equal(tiny[0], 0);
+  assert.equal(tiny[19], 0);
+  assert.deepEqual(Array.from(fadeEdges(new Float32Array(0), rate)), []);
+  assert.deepEqual(Array.from(fadeEdges(Float32Array.of(1), rate)), [1]);
+});
+
+test('softEdges fades every channel; wantsEdges: a kid\'s own sound and a new recording, not a preset or a beat made into a sound', () => {
+  const b = fakeBuffer([new Array(400).fill(1), new Array(400).fill(0.5)], 8000);
+  assert.ok(softEdges(b) === b, 'in place');
+  assert.equal(b.getChannelData(0)[0], 0);
+  assert.equal(b.getChannelData(1)[399], 0);
+  assert.equal(b.getChannelData(1)[200], 0.5);
+  assert.equal(wantsEdges(null), true, 'a new recording has no clip yet');
+  assert.equal(wantsEdges({ source: 'user' }), true);
+  assert.equal(wantsEdges({ source: 'bundled' }), false);
+  assert.equal(wantsEdges({ source: 'user', exact: true }), false);
+});
+
+test('keptAudio: a recording\'s edges are soft (no click when a trim lands mid-wave); a preset and an exact beat keep theirs', async () => {
+  const { keptAudio } = await import('../web/audio.js');
+  const data = new Array(8000).fill(0.5);   // loud from the first sample to the last
+  const stored = () => fakeBuffer([data], RATE);
+  const own = keptAudio(stored(), { source: 'user', trim: { start: 0.1, end: 0.9 } });
+  assert.equal(own.getChannelData(0)[0], 0);
+  assert.equal(own.getChannelData(0)[own.length - 1], 0);
+  assert.equal(own.getChannelData(0)[own.length >> 1], 0.5);
+  assert.equal(keptAudio(stored(), { source: 'bundled', trim: { start: 0.1, end: 0.9 } }).getChannelData(0)[0], 0.5);
+  assert.equal(keptAudio(stored(), { source: 'user', exact: true, trim: { start: 0.1, end: 0.9 } }).getChannelData(0)[0], 0.5);
+  assert.equal(stored().getChannelData(0)[0], 0.5, 'the stored recording is never changed');
+  const fresh = keptAudio(stored(), null);
+  assert.equal(fresh.getChannelData(0)[0], 0, 'a new recording, before it has a clip');
 });

@@ -9,7 +9,7 @@
 import { applyChain, chainOf, recipeKey } from './voices.js';
 import { showNotice } from './ui.js';
 import { ringOver } from './rhythm.js';
-import { cleanTrim, cleanEdits, applyEdits, applyFade, cutKey, hasGain, levelForGain } from './cuts.js';
+import { cleanTrim, cleanEdits, applyEdits, applyFade, cutKey, hasGain, levelForGain, softEdges, wantsEdges } from './cuts.js';
 import { voicingOf, voice } from './instruments.js';
 import { softClipCurve } from './loudness.js';
 
@@ -185,15 +185,17 @@ export function keptRange(buffer, clip) {
 }
 
 // The audio a clip's voices start from, out of its whole stored recording:
-// its edits applied (to a copy), cut to keptRange(), then faded. The quiet
-// ends are found on the recording as stored, before any edit.
+// its edits applied (to a copy), cut to keptRange(), then faded, and last
+// its two edges softened by a few ms (cuts.js softEdges) so a trim never
+// clicks. The quiet ends are found on the recording as stored, before any edit.
 export function keptAudio(buffer, clip) {
   const range = keptRange(buffer, clip);
   const edits = cleanEdits(clip?.edits, buffer.duration);
   if (!edits && !clip?.fade && clip?.exact && !cleanTrim(clip?.trim, buffer.duration)) return buffer;
   const source = edits ? applyEdits(slice(buffer, 0, buffer.duration), edits) : buffer;
   const kept = applyFade(slice(source, range.start, range.end - range.start), clip?.fade);
-  return hasGain(edits) ? levelForGain(kept, slice(buffer, range.start, range.end - range.start)) : kept;
+  const out = hasGain(edits) ? levelForGain(kept, slice(buffer, range.start, range.end - range.start)) : kept;
+  return wantsEdges(clip) ? softEdges(out) : out;
 }
 
 const noop = () => {};
