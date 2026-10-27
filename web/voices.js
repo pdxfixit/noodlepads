@@ -33,6 +33,36 @@ export const VOICES = [
 // down can't run the browser out of memory. The rest is cut off.
 const MAX_RENDER_SECONDS = 180;
 
+// What a phone can play and hold. A chain multiplies its steps' speeds
+// (Chipmunk 4x, then Higher +24 notes, then Fast 8x...), so a short sound
+// could shrink to a few samples (silence) and a long one grow past memory.
+// Every speed change is therefore fitted to the sound it is about to change:
+// its result stays between MIN_RENDER_SECONDS and MAX_RENDER_SECONDS long
+// (the sliders' own extremes, 4x tape, 8x faster and 20x slower, pass on any
+// sound of a normal length: over 80 ms and under 9 s).
+export const MIN_RENDER_SECONDS = 0.01;
+
+// No render is longer than MAX_RENDER_SECONDS (an offline context is a
+// buffer the size of what it renders: a runaway chain would ask for gigabytes).
+export const renderSeconds = (seconds) => Math.min(MAX_RENDER_SECONDS, seconds);
+
+// `rate` (tape speed, or a stretch's speed: 2 is twice as fast) fitted for a
+// sound `seconds` long: no slower than fills MAX_RENDER_SECONDS, no faster
+// than leaves MIN_RENDER_SECONDS. Not a number or not above 0 is 1.
+export function playableRate(rate, seconds) {
+  if (!(rate > 0) || !Number.isFinite(rate)) return 1;
+  const slowest = Math.min(1, seconds / MAX_RENDER_SECONDS);
+  const fastest = Math.max(1, seconds / MIN_RENDER_SECONDS);
+  return Math.min(fastest, Math.max(slowest, rate));
+}
+
+// Playing a buffer faster than 2x folds what is above (sample rate / 2) / rate
+// back down as a harsh fizz (aliasing). The cutoff, in Hz, to take that off
+// first, or null when the speed is low enough to need none.
+export function aliasCutoff(rate, sampleRate) {
+  return rate > 2 ? Math.round((0.45 * sampleRate) / rate) : null;
+}
+
 export function voiceById(id) {
   return VOICES.find((v) => v.id === id) || VOICES[0];
 }
@@ -325,7 +355,17 @@ function logRender(voice, amount, seconds, out, ms) {
 
 function offline(buffer, seconds) {
   const rate = buffer.sampleRate;
-  return new OfflineAudioContext(buffer.numberOfChannels, Math.max(1, Math.ceil(seconds * rate)), rate);
+  return new OfflineAudioContext(buffer.numberOfChannels, Math.max(1, Math.ceil(renderSeconds(seconds) * rate)), rate);
+}
+
+// `buffer` ready to play at tape speed `rate`: for a fast one, with what would
+// fold back (aliasing) taken off first by two lowpass filters in a row.
+async function antiAlias(buffer, rate) {
+  const hz = aliasCutoff(rate, buffer.sampleRate);
+  if (hz === null) return buffer;
+  const ctx = offline(buffer, buffer.duration);
+  play(ctx, buffer).connect(filter(ctx, 'lowpass', hz, 0.7)).connect(filter(ctx, 'lowpass', hz, 0.7)).connect(ctx.destination);
+  return ctx.startRendering();
 }
 
 function play(ctx, buffer, { rate = 1, at = 0, offset = 0, duration } = {}) {
@@ -403,7 +443,8 @@ function beep(ctx, frequency, at, seconds, level) {
 // Plays `buffer` `speed` times faster without changing its pitch: the
 // stretch in stretch.js, run in a Worker when the browser has one so the page
 // stays smooth, and on the page otherwise (or if the worker fails).
-async function timeStretch(buffer, speed) {
+async function timeStretch(buffer, wanted) {
+  const speed = playableRate(wanted, buffer.duration);
   const rate = buffer.sampleRate;
   const channels = Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c));
   let out = null;
@@ -491,9 +532,10 @@ const RECIPES = {
 
   // Sped-up tape: higher and faster.
   async chipmunk(buffer, amount) {
-    const rate = amount;
-    const ctx = offline(buffer, buffer.duration / rate);
-    play(ctx, buffer, { rate }).connect(ctx.destination);
+    const rate = playableRate(amount, buffer.duration);
+    const source = await antiAlias(buffer, rate);
+    const ctx = offline(source, source.duration / rate);
+    play(ctx, source, { rate }).connect(ctx.destination);
     return ctx.startRendering();
   },
 
@@ -509,7 +551,7 @@ const RECIPES = {
 
   // Slowed-down tape, with the bass pushed up.
   async monster(buffer, amount) {
-    const rate = 1 / amount;
+    const rate = playableRate(1 / amount, buffer.duration);
     const ctx = offline(buffer, buffer.duration / rate + 0.1);
     const bass = filter(ctx, 'lowshelf', 220);
     bass.gain.value = 9;
@@ -658,9 +700,9 @@ const STEP_RENDERS = {
   // Higher or lower. Tape: pitch and length change together. Keep length:
   // stretched first, by as much as the tape will shorten it, then the tape.
   async pitch(buffer, s) {
-    const rate = 2 ** (s.notes / 12);
-    if (!s.keep) return renderLive(buffer, [], rate);
-    return renderLive(await timeStretch(buffer, 1 / rate), [], rate);
+    const rate = playableRate(2 ** (s.notes / 12), buffer.duration);
+    if (!s.keep) return renderLive(await antiAlias(buffer, rate), [], rate);
+    return renderLive(await antiAlias(await timeStretch(buffer, 1 / rate), rate), [], rate);
   },
   stretch: (buffer, s) => timeStretch(buffer, s.speed),
   reverse: (buffer) => RECIPES.backwards(buffer),

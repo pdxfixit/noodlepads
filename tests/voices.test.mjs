@@ -238,3 +238,58 @@ test('a preset\'s level is a turn-down in dB, and nothing else changes a sound',
   assert.equal(presetGain(-40), 1, 'out of range: left alone');
   assert.equal(presetGain('quiet'), 1);
 });
+
+// Voice extremes a phone can play (Ben's phones: a render is a buffer in memory).
+test('playableRate: the sliders\' extremes always pass; a chain\'s product is held between 10 ms and 180 s of sound', async () => {
+  const { playableRate, renderSeconds, MIN_RENDER_SECONDS } = await import('../web/voices.js');
+  // Chipmunk 4x, Fast 8x, Slow 20x and Higher +/-24 notes (4x) on a 1 s sound: as asked.
+  for (const rate of [4, 8, 1 / 4, 1 / 20, 1, 1.7]) assert.equal(playableRate(rate, 1), rate, `${rate}`);
+  assert.equal(playableRate(4, 0.1), 4, 'a short hit still goes up 4x');
+  assert.equal(playableRate(8, 0.05), 5, 'a 50 ms hit is not sped past 10 ms long');
+  assert.equal(playableRate(3, 0.005), 1, 'a hit already under 10 ms stays as it is');
+  // Past that, the result keeps 10 ms (never a few samples of silence) ...
+  assert.equal(playableRate(1000, 1), 1 / MIN_RENDER_SECONDS);
+  assert.equal(playableRate(64, 0.3), 30);
+  // ... and never runs past 180 s.
+  assert.equal(playableRate(1 / 4096, 3), 3 / 180);
+  assert.equal(playableRate(1 / 20, 20), 20 / 180, '20x slower than 20 s would be 400 s');
+  assert.equal(playableRate(0.5, 400), 1, 'a sound already past 180 s is not stretched further');
+  // Junk is no change.
+  for (const junk of [0, -2, NaN, Infinity, undefined, 'fast']) assert.equal(playableRate(junk, 1), 1, String(junk));
+  assert.equal(renderSeconds(5), 5);
+  assert.equal(renderSeconds(1e6), 180);
+});
+
+test('aliasCutoff: nothing to take off up to 2x; above it, a cutoff that falls as the speed rises', async () => {
+  const { aliasCutoff } = await import('../web/voices.js');
+  assert.equal(aliasCutoff(1, 48000), null);
+  assert.equal(aliasCutoff(1.7, 48000), null);
+  assert.equal(aliasCutoff(2, 48000), null);
+  assert.equal(aliasCutoff(0.25, 48000), null, 'slower never aliases');
+  assert.equal(aliasCutoff(4, 48000), 5400);
+  assert.ok(aliasCutoff(8, 44100) < aliasCutoff(3, 44100));
+  assert.ok(aliasCutoff(4, 48000) < 48000 / 2 / 4, 'under what folds back, which is above the new Nyquist');
+});
+
+test('a chain of extreme speeds renders every step between 10 ms and 180 s, and still sounds', async () => {
+  const { FakeAudioBuffer, FakeOfflineAudioContext, fakeBuffer } = await import('./helpers.mjs');
+  const { applyChain } = await import('../web/voices.js');
+  const had = globalThis.OfflineAudioContext;
+  const asked = [];
+  globalThis.AudioBuffer = FakeAudioBuffer;
+  globalThis.OfflineAudioContext = class extends FakeOfflineAudioContext {
+    constructor(channels, length, rate) { super(channels, length, rate); asked.push(length / rate); }
+  };
+  try {
+    const tone = (seconds) => fakeBuffer([Array.from({ length: seconds * 8000 }, (_, i) => Math.sin(i / 5) * 0.5)], 8000);
+    // Slower and lower, three times over: 4x each, 64x in all, on 20 s.
+    const slow = await applyChain(tone(20), Array.from({ length: 3 }, () => ({ type: 'voice', voice: 'monster', amount: 4 })));
+    assert.ok(asked.length >= 3 && asked.every((s) => s <= 180.01), `every render at most 180 s: ${asked.map((s) => s.toFixed(1))}`);
+    assert.ok(slow.duration > 0 && slow.duration <= 180.5);
+    // Faster and higher, five times over (4x each, 1024x in all) on 1 s: not a few samples.
+    asked.length = 0;
+    const fast = await applyChain(tone(1), Array.from({ length: 5 }, () => ({ type: 'voice', voice: 'chipmunk', amount: 4 })));
+    assert.ok(asked.every((s) => s >= 0.01 - 1e-9), `every render at least 10 ms: ${asked.map((s) => s.toFixed(4))}`);
+    assert.ok(fast.buffer.length >= 1);
+  } finally { globalThis.OfflineAudioContext = had; }
+});

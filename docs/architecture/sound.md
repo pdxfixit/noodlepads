@@ -375,7 +375,15 @@ saved.
 - A worker error marks `stretcher.broken` and fails every waiting job; every
   later stretch runs `stretch.js stretchChannels` on the page. Same result
   either way (`tests/stretch.test.mjs`).
-- `MAX_RENDER_SECONDS` (180) caps the output.
+- `MAX_RENDER_SECONDS` (180) caps the output. Every speed change is fitted to
+  the sound it changes (`voices.js playableRate`): Chipmunk, Monster, Higher or
+  lower and the stretch keep their result between `MIN_RENDER_SECONDS` (10 ms)
+  and 180 s, so a chain that multiplies speeds (4x, then 4x, then 8x...) can
+  neither shrink a sound to a few samples nor ask for a gigabyte buffer;
+  `offline()` cuts every offline render at `renderSeconds`. A tape speed over
+  2x first runs the sound through two lowpass filters (`aliasCutoff`, 0.45 of
+  the sample rate over the speed; `antiAlias`) so what would fold back down
+  as fizz is gone (`tests/voices.test.mjs`).
 - Who stretches: Fast, Slow (classic voices), the `stretch` kind, `pitch` with
   `keep`, and the speed and pitch knobs (one `stretch` step).
 
@@ -667,7 +675,7 @@ by a load of its current version").
 | A one-shot is a looping source with a scheduled stop | `loop()` can extend it without restarting | `tests/audio.test.mjs` ("a live preview…") |
 | Loops stop after `MAX_LOOP_SECONDS` (10 minutes) | a forgotten loop ends | none |
 | The sheet's `'preview'` slot is shared with chop and bulk | `start` stops whatever holds the id | none |
-| A render is capped at 180 s, a mix at 30 s, a sheet sound at 120 s, a song file at 20 MB / 15 min | memory | `tests/stretch.test.mjs`, `tests/mix.test.mjs`, `tests/listen-input.test.mjs` |
+| A render is capped at 180 s (and a speed chain at no less than 10 ms), a mix at 30 s, a sheet sound at 120 s, a song file at 20 MB / 15 min | memory | `tests/stretch.test.mjs`, `tests/mix.test.mjs`, `tests/listen-input.test.mjs` |
 | In tests, audio cannot be heard; `audio.decode` and `fetch` are stubbed | no browser | `just look` and a real device for sound |
 
 ## To change X, touch …
