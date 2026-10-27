@@ -31,7 +31,7 @@
 | `log-clean.js` | the report allowlist (`RULES`, `SETTING_VALUES`, `cleanPayload`, `redact`, `soundKind`) | `log-send.js`, `worker/clean.js`, `sequencer.js` (`soundKind`) | `agent.js` |
 | `log-send.js` | sending reports (`createLogSender`, `initLogSend`), the device code, `LIVE_HOST` | `app.js` (`initLogSend`), `feedback.js` and `settings-ui.js` (`LIVE_HOST`) | `log-clean.js`, `agent.js`, `state`, `board.js`, `settings.js` |
 | `tap-watch.js` | the silent-tap report: a finger tap on a pad, key or tile that made no voice in 3 s is logged as `tap` (`watchTaps`, `silence`, `screenOf`) | `app.js` (`watchTaps`, with `finger.js lately` and `audio.js voicesMade`) | `finger.js` |
-| `agent.js` | User-Agent → browser, OS, device-type families | `log-send.js`, `log-clean.js`, `worker/metrics.js` | nothing |
+| `agent.js` | User-Agent → browser, OS, device-type families | `log-send.js`, `log-clean.js`, `track-page.js`, `worker/metrics.js` | nothing |
 | `telemetry.js` | `EVENTS`, `cleanDetails`, the player id, `track` (page-wide) | `app.js startUsage` (`createTelemetry`, `useTelemetry`), `cloud.js`, `listen-ui.js`, `sheet.js` (direct `track`) | `events-client.js createEvents`, `usage.js` |
 | `events-client.js` | (vendored from flarepress, never edited) the record's columns, the localStorage queue, batches, `sendBeacon` | `telemetry.js` only | `fetch`, `navigator.sendBeacon` |
 | `track-page.js` | where events come from: lifecycle, screens, dialogs, one click listener, content and settings from the log, errors, speed | `app.js startUsage` (`trackPage`, `learnLabels`), `page.screen`, `page.level` | `telemetry` (passed in), `tooltips.js CONTROLS`/`tipFor`, `play-count.js takePlay`, `settings.js LEVELS` |
@@ -421,7 +421,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 | record content and hash | `cloud-sync.js canonical` + `NOT_CONTENT`, `merge3.js canon` + `NOT_CONTENT` | a new non-content field added to one makes "changed" and "same" disagree |
 | the stores as lists | `state.js storedLists` (one function over `STORE_TABLE`); `cloud.js` and `backup-ui.js` call it | the cloud's maps `prefs` through `cleanPrefs` |
 | pieces and caps | `CHUNK_BYTES` (web and worker), `CLOUD_MAX_SOUND`/`MAX_SOUND_BYTES` (tested equal), `PER_PUSH`, `RECORD_BYTES`, `PUSH_BYTES`/`LIMITS.perPush`, `recordBytes`, `pushBytes` (tested equal) | the Worker's `GET /api/cloud` already returns `chunk` and `maxSound`; the app ignores them |
-| browser and OS families | `agent.js parseAgent` (reports, metrics), `track-page.js browserOf` and `environment` `os` (usage events) | different order of checks and different case (`'Chrome'` vs `'chrome'`; `OPT/` only in `browserOf`) |
+| browser and OS families | `agent.js parseAgent` is the one reading; `track-page.js browserOf` and `environment` call it (lower-cased browser, for the events) | `tests/agent.test.mjs` keeps them equal |
 | the site's origin | `worker/http.js ORIGIN`, `worker/clean.js KNOWN.origin` (literal), `log-send.js LIVE_HOST`, `index.js EVENTS_OPTS`/`FEEDBACK_OPTS` (from `ORIGIN`) | a domain change must touch all of them |
 | kit ids | `boards.json`; `worker/clean.js KIT_IDS` is read from it; `sw.js KIT` (test-guarded by the file list) | two lists of one kit |
 | feedback limits | `feedback.js MAX_BYTES`/`appVersion` regex and `events-worker.js MAX_FEEDBACK`/`VERSION` | equal today; the device copy is hand-kept |

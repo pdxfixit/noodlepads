@@ -34,3 +34,28 @@ test('every family is on the fixed lists a report may send', () => {
   }
   assert.deepEqual(parseAgent(AGENTS[4], true), { browser: 'Samsung', os: 'Android', type: 'tablet' });
 });
+
+// Usage events (track-page.js) read the User-Agent with parseAgent too: the
+// same families, the browser in lower case.
+test('usage events and reports read a User-Agent the same way, Opera Touch included', async () => {
+  const { browserOf, environment } = await import('../web/track-page.js');
+  const ALSO = [
+    ...AGENTS,
+    'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Mobile Safari/537.36 OPT/4.5',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/131.0 Mobile/15E148 Safari/605.1.15',
+  ];
+  for (const ua of ALSO) {
+    for (const touchPoints of [0, 5]) {
+      const { browser, os } = parseAgent(ua, touchPoints > 1);
+      assert.equal(browserOf(ua), browser.toLowerCase(), `${ua}: browser`);
+      const env = environment({ navigator: { userAgent: ua, maxTouchPoints: touchPoints } }, false);
+      assert.equal(env.os, os, `${ua}: os`);
+      assert.equal(env.browser, browser.toLowerCase(), `${ua}: browser in the event`);
+    }
+  }
+  assert.equal(parseAgent(ALSO.at(-3)).browser, 'Opera', 'Opera Touch is Opera in a report');
+  assert.equal(browserOf(ALSO.at(-3)), 'opera');
+  assert.equal(environment({ navigator: { userAgent: ALSO.at(-2), maxTouchPoints: 5 } }, false).os, 'iOS', 'an iPad asking for the desktop site');
+  assert.equal(environment({ navigator: { userAgent: ALSO.at(-2), maxTouchPoints: 0 } }, false).os, 'macOS');
+});

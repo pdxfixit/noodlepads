@@ -14,7 +14,7 @@ export function parseAgent(ua, touch = false) {
   const has = (re) => re.test(s);
   const browser = has(/Edg(e|A|iOS)?\//) ? 'Edge'
     : has(/SamsungBrowser\//) ? 'Samsung'
-      : has(/OPR\/|Opera/) ? 'Opera'
+      : has(/OPR\/|OPT\/|Opera/) ? 'Opera'
         : has(/Firefox\/|FxiOS\//) ? 'Firefox'
           : has(/Chrome\/|CriOS\/|Chromium\//) ? 'Chrome'
             : has(/Safari\//) && has(/Version\//) ? 'Safari'

@@ -27,6 +27,7 @@
 import { CONTROLS, tipFor } from './tooltips.js';
 import { takePlay } from './play-count.js';
 import { LEVELS } from './settings.js';
+import { parseAgent } from './agent.js';
 
 // Play surfaces: tapped hundreds of times a visit, and play, not controls.
 export const PLAY = '.pad, .dj-key, .pill, .kids-pad, .kids-key, .kids-square, .kids-drum, .roll-hit, .lane-cell';
@@ -162,27 +163,16 @@ export function errorOf(data = {}) {
 }
 
 // The browser family from the user agent: edge, opera, samsung, firefox,
-// chrome, safari or other. Those built on Chrome say "Chrome" too, so they
-// are asked first; Safari alone says only "Safari" (with "Version/"). Nothing
-// of the version, and never the user agent itself.
-export function browserOf(ua) {
-  const s = String(ua ?? '');
-  if (/Edg(e|A|iOS)?\//.test(s)) return 'edge';
-  if (/OPR\/|OPT\/|Opera/.test(s)) return 'opera';
-  if (/SamsungBrowser\//.test(s)) return 'samsung';
-  if (/Firefox\/|FxiOS\//.test(s)) return 'firefox';
-  if (/Chrome\/|CriOS\//.test(s)) return 'chrome';
-  if (/Safari\//.test(s) && /Version\//.test(s)) return 'safari';
-  return 'other';
-}
+// chrome, safari or other: agent.js parseAgent's, in lower case. Nothing of
+// the version, and never the user agent itself.
+export const browserOf = (ua) => parseAgent(ua).browser.toLowerCase();
 
 // The environment app.open carries, from the window. Pure given `win`.
 export function environment(win, first) {
   const mq = (q) => win.matchMedia?.(q)?.matches === true;
   const ua = String(win.navigator?.userAgent ?? '');
-  const os = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && (win.navigator?.maxTouchPoints ?? 0) > 1) ? 'iOS'
-    : /Android/.test(ua) ? 'Android' : /CrOS/.test(ua) ? 'ChromeOS' : /Windows/.test(ua) ? 'Windows'
-      : /Mac OS X|Macintosh/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : 'Other';
+  // An iPad asking for the desktop site says "Macintosh"; it has a touch screen.
+  const { os, browser } = parseAgent(ua, (win.navigator?.maxTouchPoints ?? 0) > 1);
   const font = parseFloat(win.getComputedStyle?.(win.document?.documentElement)?.fontSize);
   return {
     first_run: first,
@@ -196,7 +186,7 @@ export function environment(win, first) {
     os,
     input: mq('(hover: hover) and (pointer: fine)') ? 'mouse' : (win.navigator?.maxTouchPoints ?? 0) > 0 ? 'touch' : 'mouse',
     pwa: mq('(display-mode: standalone)'),
-    browser: browserOf(ua),
+    browser: browser.toLowerCase(),
   };
 }
 
