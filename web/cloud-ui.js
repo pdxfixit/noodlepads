@@ -620,7 +620,10 @@ export async function shareSounds(personId, ids) {
 // ── 🔗 Shared with me ──
 
 let playing = null;   // {code, src}
-const previews = new Map();   // code -> Promise<AudioBuffer>
+const previews = new Map();   // code -> Promise<AudioBuffer>, the last played last
+// How many shares' decoded previews are kept: a second ▶ on one is instant,
+// and a long list played through does not fill a phone's memory.
+const KEEP_SHARE_PREVIEWS = 4;
 // The preview plays through the app's player, so stopping everything (Esc,
 // entering 🧸 Kids) stops it too, and the grille lights while it plays.
 const PREVIEW_ID = 'share-preview';
@@ -646,7 +649,11 @@ async function playPreview(code) {
       }));
       previews.get(code).catch(() => previews.delete(code));
     }
-    const buffer = await previews.get(code);
+    const job = previews.get(code);
+    previews.delete(code);
+    previews.set(code, job);   // played last: kept longest
+    for (const old of [...previews.keys()].slice(0, Math.max(0, previews.size - KEEP_SHARE_PREVIEWS))) previews.delete(old);
+    const buffer = await job;
     audio.start(PREVIEW_ID, { buffer, duration: buffer.duration });
     const { src } = audio.playing.get(PREVIEW_ID);
     src.addEventListener('ended', () => { if (playing?.src === src) { playing = null; drawShared(); } });

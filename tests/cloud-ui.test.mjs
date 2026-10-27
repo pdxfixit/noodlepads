@@ -555,6 +555,48 @@ test('▶ Play on a share plays as the app\'s sounds do: the grille wakes, and s
   }
 });
 
+// Each share played keeps its decoded preview for the visit, so a second ▶
+// is instant; only the last few are kept, so a long Shared with me list
+// played through does not fill a phone's memory.
+test('▶ Play keeps only the last few shares\' previews: an early one is fetched again', async () => {
+  const { audio } = await import('../web/audio.js');
+  const ctx = audio.context();
+  const real = { source: ctx.createBufferSource, shared: cloud.api.shared, sound: cloud.api.fetchSound, decode: audio.decode };
+  ctx.createBufferSource = () => ({ connect() {}, disconnect() {}, start() {}, stop() {}, playbackRate: { value: 1 }, addEventListener() {} });
+  const fetched = [];
+  cloud.api.shared = async (code) => ({ kind: 'sound', title: `Toot ${code.at(-1)}`, preview: `sound-${code}` });
+  cloud.api.fetchSound = async (id) => { fetched.push(id); return { arrayBuffer: async () => new ArrayBuffer(8) }; };
+  globalThis.AudioBuffer ??= FakeAudioBuffer;
+  audio.decode = async () => fakeBuffer([Array.from({ length: 200 }, (_, i) => 0.3 * Math.sin(i / 5))], 1000);
+  const codes = ['AAAA2222', 'AAAA2223', 'AAAA2224', 'AAAA2225', 'AAAA2226', 'AAAA2227'];
+  const play = async (code) => {
+    $('#shared-items').children.find((x) => x.dataset.code === code).querySelector('[data-play]').dispatch('click');
+    await settle();
+    audio.stop('share-preview');
+  };
+  try {
+    $('#shared-browse').dispatch('click');
+    for (const code of codes) {
+      $('#shared-code').value = code;
+      $('#shared-open').dispatch('click');
+      await settle();
+    }
+    for (const code of codes) await play(code);
+    assert.equal(fetched.length, codes.length);
+    await play(codes.at(-1));
+    assert.equal(fetched.length, codes.length, 'the last one played is kept');
+    await play(codes[0]);
+    assert.equal(fetched.length, codes.length + 1, 'the first one was let go, and is fetched again');
+  } finally {
+    Object.assign(ctx, { createBufferSource: real.source });
+    Object.assign(cloud.api, { shared: real.shared, fetchSound: real.sound });
+    audio.decode = real.decode;
+    audio.stop('share-preview');
+    for (const code of codes) cloud.forgetShare(code);
+    $('#shared-dialog').close();
+  }
+});
+
 test('with no /api (the dev server, a static copy) the app says so and carries on', async () => {
   apiDown = true;
   cloud.resetCloudCheck();
