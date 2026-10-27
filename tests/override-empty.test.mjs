@@ -90,11 +90,16 @@ test('a boards.json person\'s edit put back that the browser won\'t save: the wo
 
 test('an edit two people here both fit is kept, whichever of them is deleted', async () => {
   state.manifest = { kit: [{ id: 'go' }, { id: 'lets-go' }], people: [] };
-  for (const id of ['p-t', 'p-t-lets']) state.peopleEdits.set(id, { id, name: id, added: true, created: 1 });
-  await setOverride({ id: 'p-t-lets-go', label: 'Zoom' });
-  await setOverride({ id: 'p-t-lets-lets-go', label: 'Off' });   // p-t-lets's Let's go: theirs alone
-  await deletePerson('p-t-lets');
-  assert.ok(state.overrides.has('p-t-lets-go'), 'p-t\'s Let\'s go (or p-t-lets\'s Go) survives');
-  assert.equal(state.overrides.has('p-t-lets-lets-go'), false, 'theirs alone goes');
-  assert.ok(stored().some((o) => o.id === 'p-t-lets-go'));
+  // p-t-lets-go: p-t's Let's go, or p-t-lets's Go. Each has one of their own too.
+  const own = { 'p-t': 'p-t-go', 'p-t-lets': 'p-t-lets-lets-go' };
+  for (const gone of ['p-t-lets', 'p-t']) {
+    for (const id of Object.keys(own)) state.peopleEdits.set(id, { id, name: id, added: true, created: 1 });
+    for (const id of ['p-t-lets-go', ...Object.values(own)]) await setOverride({ id, label: 'Zoom' });
+    await deletePerson(gone);
+    assert.ok(state.overrides.has('p-t-lets-go'), `${gone} deleted: the edit both fit survives`);
+    assert.ok(stored().some((o) => o.id === 'p-t-lets-go'), `${gone} deleted: and stays stored`);
+    assert.equal(state.overrides.has(own[gone]), false, `${gone}'s own edit goes`);
+    const other = gone === 'p-t' ? 'p-t-lets' : 'p-t';
+    assert.ok(state.overrides.has(own[other]), `${other}'s own edit stays`);
+  }
 });

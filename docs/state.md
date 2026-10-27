@@ -94,6 +94,7 @@ Where things stand **now**. Present tense only: replace lines, never append hist
   - **By a kid:** 🧸 Kids (by a five-year-old); a new person's first steps; the four key rows on a real keyboard.
   - **Elsewhere:** the play counts (`noodlepads.play`) from 🎤 Live's keys and 👆 tiles and a pad's loop, in the usage events from a real phone; pad skins on a tablet and under a finger; the app installed, and offline; ⌨️ Keys' playhead beside the click on a real device; ☁️ Open from the cloud's bar over a slow network, and the back gesture on Android and iOS Safari suspending its fetch; two real phones or tablets syncing; Feedback sent for real.
   - **Elsewhere:** a real browser refusing a delete (another tab holding the database); pad skins on a tablet and under a finger; the app installed, and offline; ⌨️ Keys' playhead beside the click on a real device; ☁️ Open from the cloud's bar over a slow network, and the back gesture on Android and iOS Safari suspending its fetch; two real phones or tablets syncing; Feedback sent for real.
+  - **Elsewhere:** a real browser refusing a delete (another tab holding the database); the app loading on an older iPhone or iPad (Safari before 16.4: no regex lookbehind left, `tests/no-lookbehind.test.mjs`); pad skins on a tablet and under a finger; the app installed, and offline; ⌨️ Keys' playhead beside the click on a real device; ☁️ Open from the cloud's bar over a slow network, and the back gesture on Android and iOS Safari suspending its fetch; two real phones or tablets syncing; Feedback sent for real.
 
 ## Known quirks
 
