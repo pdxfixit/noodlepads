@@ -209,7 +209,7 @@ Grouped by what they guard. Files marked ▶ start the real app. A few call `ins
 | 🎹 Instruments | `instruments` (notes checked by `pitch.js findNote`), ▶`inst-picker`, ▶`inst-everywhere` |
 | 🎼 Song | `song`, `playlist`, `tempo-marks`, ▶`song-tempo-ui`, ▶`song-playhead`, ▶`song-undo-mute`, ▶`song-unsigned`, ▶`share-render-hits` (every hit a share preview books for a beat and a song, from the JSON fixture `tests/fixtures/share-render-hits.json`; `UPDATE_FIXTURES=1` rewrites it) |
 | 🎧 From a song | `listen` (on `listen-synth.mjs`), `listen-make`, `listen-input` (stand-in capture, decoder and worklet scope), ▶`listen-ui` (through `listen-ui.js listenEnv`) |
-| 🧸 Kids and levels | ▶`kids` (37), ▶`kids-hints`, `levels` |
+| 🧸 Kids and levels | ▶`kids` (37), ▶`kids-hints`, `levels`, ▶`kids-same-hits` (the 60 hits of a beat made in Kids, at the times Kids' player books them, against `tests/fixtures/kids-beat-hits.json`; the clock and the 25 ms tick are driven by hand; `UPDATE_FIXTURES=1` rewrites the file) |
 | First steps (ADR 0028) | ▶`welcome`, ▶`welcome-existing`, ▶`welcome-cloud`, ▶`tips`, ▶`nudge`, ▶`who-now` |
 | Storage and backups | `store`, `storage-wait`, `backup` (54), `zip`, `merge`, `merge3`, `holds`, ▶`leftover`, `old-device`, ▶`older-stores`, `adopt-people`, ▶`new-ids`, ▶`load-who`, ▶`delete-leftover`, ▶`delete-unsaved`, `override-empty`, `name-cut`, ▶`emoji-kit-order`, ▶`fresh-start` (the real `boards.json`) |
 | ☁️ Cloud and PINs | `cloud-sync` (two or three devices of plain arrays, through the real Worker), `sync-timing`, ▶`cloud-ui`, ▶`pin-gate`, ▶`pin-new`, `pin-wrong`, ▶`profile-sheet`, ▶`delete-cloud`, ▶`delete-shown`, ▶`delete-third-wait`, ▶`see-all` |
