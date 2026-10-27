@@ -905,7 +905,7 @@ test('a row\'s 🧹 and ✕ ask first: the second tap does it, any other tap tak
   $('#chooser').close();
 });
 
-test('🔔 Overlap is on each beat row\'s header line, at every level: a tap turns the row\'s `ring` on and off; the sound picker has none', async () => {
+test('🔔 Let it ring is on each beat row\'s header line, at every level: a tap turns the row\'s `ring` on and off; the sound picker has none', async () => {
   const { setSetting, getSetting } = await import('../web/settings.js');
   assert.equal(getSetting('advancedBeats'), false, 'Regular, not Advanced');
   const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
@@ -915,7 +915,7 @@ test('🔔 Overlap is on each beat row\'s header line, at every level: a tap tur
   assert.equal(bell().textContent, '🔔');
   assert.equal(bell().getAttribute('aria-pressed'), 'false');
   assert.equal(beat().rows[0].ring, false);
-  assert.match(bell().getAttribute('aria-label'), /^Overlap for row 1, .+: off/);
+  assert.match(bell().getAttribute('aria-label'), /^Let it ring for row 1, .+: off/);
   bell().dispatch('click');
   assert.equal(beat().rows[0].ring, true, 'saved with the beat');
   assert.equal(bell().getAttribute('aria-pressed'), 'true', 'pressed while on');
@@ -929,7 +929,7 @@ test('🔔 Overlap is on each beat row\'s header line, at every level: a tap tur
   try {
     rows()[0].querySelector('[data-pick="0"]').dispatch('click');
     assert.equal($('#chooser-ring'), null, 'no 🔔 in the sound picker');
-    assert.ok(!$('#chooser').querySelectorAll('button').some((b) => /Overlap/.test(b.textContent)));
+    assert.ok(!$('#chooser').querySelectorAll('button').some((b) => /Let it ring/.test(b.textContent)));
     $('#chooser').close();
     assert.ok(bell(), 'Advanced: still on the header line');
   } finally {
@@ -939,7 +939,7 @@ test('🔔 Overlap is on each beat row\'s header line, at every level: a tap tur
 
 // Ben, 2026-10-25: the emoji opens the row's menu, which holds what the
 // head has no room for. Each item taps the real button.
-test('a Beats row\'s menu: 🔄 🔔 🧹 ✕ ↑ ↓ from its emoji, and they still work there (Overlap on, Clear and Remove ask first, Undo)', () => {
+test('a Beats row\'s menu: 🔄 🔔 🧹 ✕ ↑ ↓ from its emoji, and they still work there (Let it ring on, Clear and Remove ask first, Undo)', () => {
   const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
   while (rows().length < 2) $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
   const beat = () => state.patterns.get(state.personId);
@@ -949,15 +949,15 @@ test('a Beats row\'s menu: 🔄 🔔 🧹 ✕ ↑ ↓ from its emoji, and they s
   const words = () => items().map((b) => b.textContent);
   assert.ok(more().classList.contains('row-emoji'), 'the emoji is the menu\'s button');
   assert.equal(more().getAttribute('aria-haspopup'), 'menu');
-  assert.deepEqual(rows()[0].querySelectorAll('[data-more-word]').map((b) => b.getAttribute('data-more-word')), ['Change sound', 'Overlap', 'Clear', 'Remove', 'Move up', 'Move down']);
+  assert.deepEqual(rows()[0].querySelectorAll('[data-more-word]').map((b) => b.getAttribute('data-more-word')), ['Change sound', 'Let it ring', 'Clear', 'Remove', 'Move up', 'Move down']);
   assert.ok(!rows()[0].querySelector('[data-speaker]').hasAttribute('data-more-word'), 'the speaker stays in the head');
   // Opens beside the emoji: icon + word for each, the focus on the first.
   more().dispatch('click');
   assert.equal(pop().hidden, false);
   assert.equal(more().getAttribute('aria-expanded'), 'true');
-  assert.deepEqual(words(), ['🔄 Change sound', '🔔 Overlap', '🧹 Clear', '✕ Remove', '↑ Move up', '↓ Move down']);
+  assert.deepEqual(words(), ['🔄 Change sound', '🔔 Let it ring', '🧹 Clear', '✕ Remove', '↑ Move up', '↓ Move down']);
   assert.equal(document.activeElement, items()[0]);
-  // 🔔 Overlap: on at once, shown checked; the menu stays open.
+  // 🔔 Let it ring: on at once, shown checked; the menu stays open.
   const was = beat().rows[0].ring;
   items()[1].dispatch('click');
   assert.equal(beat().rows[0].ring, !was);
@@ -1574,7 +1574,7 @@ test('Beats with ⌨️ Keys: a row\'s 🧹 beside ✕ asks first, then clears i
   assert.deepEqual(kids, ['dj-grid-head', 'dj-grid-pills'], 'its head at the left, then its pills, as on Beats');
   assert.deepEqual(line().querySelector('.dj-grid-head').children.map((c) => c.className.split(' ')[0]), ['row-emoji', 'dj-grid-name', 'row-tools']);
   assert.deepEqual(line().querySelector('.row-tools').children.map((c) => c.className.split(' ')[0]), ['speaker', 'row-change', 'row-ring', 'row-clear', 'row-x'], '🔊 shows; the rest are the emoji\'s menu');
-  // 🔔 on a compact row turns that row's Overlap on and off, as on Beats.
+  // 🔔 on a compact row turns that row's Let it ring on and off, as on Beats.
   const at = Number(line().dataset.row);
   const ring = () => state.patterns.get(state.personId).rows[at].ring;
   const before = ring();
@@ -2530,15 +2530,15 @@ test('Pads has a pad size: one smooth slider sizes the grid as it moves and is r
   await setSetting('padSize', 'auto');
 });
 
-// 🔔 Overlap on 🎤 Live (Ben, 2026-10-12: "next to the click track (on the
+// 🔔 Let it ring on 🎤 Live (Ben, 2026-10-12: "next to the click track (on the
 // right) as a button for the whole session"): on, a key's repeated hits ring
 // over each other; off, each hit restarts its sound. For the visit only.
-test('🎤 Live: 🔔 Overlap right of ⏲️ Click track makes every key ring over itself, for this visit only; takes keep it', async () => {
+test('🎤 Live: 🔔 Let it ring right of ⏲️ Click track makes every key ring over itself, for this visit only; takes keep it', async () => {
   const { audio } = await import('../web/audio.js');
   $('#live-tab').dispatch('click');
   const b = $('#dj-overlap');
   assert.equal(b.textContent, '🔔');
-  assert.equal(b.dataset.word, 'Overlap', 'its word where there is room (styles.css)');
+  assert.equal(b.dataset.word, 'Let it ring', 'its word where there is room (styles.css)');
   assert.ok($('.dj-bar').contains(b), 'on the control bar at the top');
   assert.equal(b.hidden, false);
   assert.equal(b.getAttribute('aria-pressed'), 'false', 'off at the start of a visit');

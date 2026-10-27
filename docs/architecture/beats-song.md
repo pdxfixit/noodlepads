@@ -56,7 +56,7 @@ Library records add three fields that `cleanPattern` drops, so every write puts 
 | `steps[]` | pills on | at least 16 (`STEPS`), at most 80 (`MAX_PILLS`). Kept longer than the beat: pills past `bars` stay stored and hidden, so 4 bars → 1 → 4 loses nothing |
 | `accents[]` | loud hits (`ACCENT_GAIN` 1.5) | only where `steps` is on; always all false on a tune row |
 | `rate` | 1, 2 or 0.5 (`ROW_RATES`) | heard only with Advanced (`playMode() === 'speed'`) |
-| `ring` | 🔔 Overlap: hits ring over each other, up to `rhythm.js MAX_RINGING` | every level |
+| `ring` | 🔔 Let it ring: hits ring over each other, up to `rhythm.js MAX_RINGING` | every level |
 | `muted` | the speaker's mute | |
 | `solo` | 🎚️ Solo | **left out** unless true |
 | `fx` | the row's 🎚️ effect id | **left out** when none |
@@ -153,7 +153,7 @@ A row with no clock (added while playing, or put back by Undo) gets one from `jo
 1. `audio.js makeVoice(ctx, buffer, dest)`; its gain is `hitGain(row, loud)` = (1.5 if loud) × the row's level. `voice.lift` is kept, so a level change can reach a hit still ringing (`applyLevel`).
 2. A tune row's note plays faster or slower (`noteRate(note + rootShift(clip.root))`, so a sound whose note 🎵 Find its note found plays its C as a C). A plain row plays at rate 1.
 3. `len > 0` (a note's length) fades it out there (`fadeStop`).
-4. `rhythm.js ringOver(list, time, ring || melody)` decides which earlier voices of the row are cut at `time` with a short fade; Overlap rows and tune rows keep up to `MAX_RINGING`.
+4. `rhythm.js ringOver(list, time, ring || melody)` decides which earlier voices of the row are cut at `time` with a short fade; Let-it-ring rows and tune rows keep up to `MAX_RINGING`.
 
 `hit(i, time, …)` is the live caller: it sends the voice to `busFor(ctx, audio.master, pattern).input(i)`, tells `deps.onHit(clipId, ms)`, and counts `stats` (logged at `stop`).
 

@@ -15,7 +15,7 @@ export const KEY_ROWS = [
 ];
 export const KEY_CODES = KEY_ROWS.flat();
 
-// 🔔 Overlap (Ben, 2026-10-12): a sound that rings over itself keeps its
+// 🔔 Let it ring (Ben, 2026-10-12): a sound that rings over itself keeps its
 // earlier hits sounding when it is hit again, up to MAX_RINGING at once;
 // one that doesn't is cut off (with a short fade) by its next hit. Beats
 // sets it per row (`ring`), 🎤 Live for every key, for the visit.
@@ -277,7 +277,7 @@ export function takeFrom(events, stopAt, { tail = 0.5 } = {}) {
   const duration = Math.min(MAX_TAKE_SECONDS, Math.max(0, Math.min(stopAt - start, lastAt + tail * 4), lastAt + tail));
   return {
     duration: Math.round(duration * 1000) / 1000,
-    // `ring`: a hit played with 🔔 Overlap on, so it rang over the sound's
+    // `ring`: a hit played with 🔔 Let it ring on, so it rang over the sound's
     // earlier hits instead of cutting them off (only stored when true).
     events: kept.map((e) => ({ t: Math.round((e.at - start) * 1000) / 1000, clipId: e.clipId, kind: e.kind, ...(e.ring && e.kind === 'hit' ? { ring: true } : {}) })),
   };
@@ -291,7 +291,7 @@ export const clockText = (seconds) => `${Math.floor(seconds / 60)}:${String(Math
 // seconds) until its stop or the end of the take. Sounds with no known
 // length are left out. Returns [{clipId, at, end?}] in time order.
 // As heard: a hit cuts off the same sound's earlier hits still sounding
-// (`end`, where it stops early), unless it rang over them (`ring`, 🔔 Overlap,
+// (`end`, where it stops early), unless it rang over them (`ring`, 🔔 Let it ring,
 // up to MAX_RINGING at once). Loops and a beat's own hits are never cut.
 export function planTake(take, lengths) {
   const plays = [];

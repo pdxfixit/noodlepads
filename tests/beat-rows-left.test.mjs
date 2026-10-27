@@ -50,12 +50,12 @@ test('with a menu, the emoji opens it and 🔊 shows alone; the rest are its ite
   const data = { remove: { remove: 0 }, clear: { clear: 0 }, pick: { pick: 0 } };
   const speaker = document.createElement('button');
   speaker.className = 'speaker';
-  const { pick, tools } = rowParts({ emoji: '🦶', data, labels, speaker, ring: { on: false, data: { ring: 0 }, label: 'Overlap' },
+  const { pick, tools } = rowParts({ emoji: '🦶', data, labels, speaker, ring: { on: false, data: { ring: 0 }, label: 'Let it ring' },
     menu: { key: 0, label: 'Row 1 menu', change: ['🔄', 'Change sound'] } });
   assert.equal(pick.dataset.more, '0', 'the emoji opens the menu');
   assert.equal(pick.dataset.pick, undefined, 'not the chooser itself');
   assert.equal(tools.children[0], speaker);
-  assert.deepEqual([...tools.children].slice(1).map((b) => b.getAttribute('data-more-word')), ['Change sound', 'Overlap', 'Clear', 'Remove']);
+  assert.deepEqual([...tools.children].slice(1).map((b) => b.getAttribute('data-more-word')), ['Change sound', 'Let it ring', 'Clear', 'Remove']);
   assert.equal(tools.querySelector('.row-change').dataset.pick, '0', 'Change sound opens the chooser');
 });
 

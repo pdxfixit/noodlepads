@@ -18,7 +18,7 @@ test('a row\'s 🔔 🔊 🧹 ✕ and ⋯ share one class, the speaker in Song\'
   const { makeSpeaker } = await import('../web/row-volume.js');
   const labels = { remove: 'Remove', removeAsk: 'Remove?', clear: 'Clear', clearAsk: 'Clear?', pick: 'Pick' };
   const data = { remove: { remove: 0 }, clear: { clear: 0 }, pick: { pick: 0 } };
-  const { tools } = rowParts({ emoji: '🦶', ring: { on: true, data: { ring: 0 }, label: 'Overlap' },
+  const { tools } = rowParts({ emoji: '🦶', ring: { on: true, data: { ring: 0 }, label: 'Let it ring' },
     speaker: rowSpeaker(0, { level: 0.5, muted: true, name: 'Kick' }), data, labels, more: { key: 0, label: 'More' } });
   const kinds = tools.children.map((c) => c.className.split(' ')[0]);
   assert.deepEqual(kinds, ['row-ring', 'speaker', 'row-clear', 'row-x', 'more-btn']);

@@ -13,7 +13,7 @@
 
 | File | Made or called by | Calls | Owns |
 |---|---|---|---|
-| `dj.js` | `app.js start` (`createDJ({ el, deps })`) | `rhythm.js`, `touch.js`, `dj-keys.js createKeysEditor`, `dj-touch.js drawBands`/`createTouchEditor`, `finger.js fingerTaps`, `beat-row.js`, `row-volume.js`, `pill-select.js`, `overflow.js moreMenu`, `follow.js`, `share-render.js renderTake`, `deps.seq.*` | mode, input, layout, takes in progress, the beat recording, the click wish, 🔔 Overlap, the grid |
+| `dj.js` | `app.js start` (`createDJ({ el, deps })`) | `rhythm.js`, `touch.js`, `dj-keys.js createKeysEditor`, `dj-touch.js drawBands`/`createTouchEditor`, `finger.js fingerTaps`, `beat-row.js`, `row-volume.js`, `pill-select.js`, `overflow.js moreMenu`, `follow.js`, `share-render.js renderTake`, `deps.seq.*` | mode, input, layout, takes in progress, the beat recording, the click wish, 🔔 Let it ring, the grid |
 | `rhythm.js` | `dj.js`, `dj-keys.js`, `keyset.js`, `audio.js` and `sequencer.js` (`ringOver`), `backup.js` (`cleanDeck`, `cleanTake`), `share-render.js` (`planTake`), `settings.js` (`LAYOUT_NAMES`) | `touch.js cleanTouch` | nothing (pure) |
 | `dj-keys.js` | `dj.js` (once) | `keyset.js`, `rhythm.js`, `inst-picker.js`, `dialogs.js` | the ✏️ Layout (⌨️ Keys) dialog's picks, undo stack, drag |
 | `keyset.js` | `dj-keys.js`, `backup.js` (`cleanLayout`) | `rhythm.js` | nothing (pure) |
@@ -40,7 +40,7 @@
 | Takes button | shown | hidden |
 | ⏲️ Click track | `#dj-click` on the control bar, after its own tempo `#dj-click-tempo` (slider `#dj-click-bpm`; on a phone the tempo key `#dj-click-key`) | `#dj-beat-click` on the control bar |
 | Tempo | `seq.tempo()`: the sequencer's `LOOSE` tempo (100 BPM, never saved) | the open beat's, saved with it |
-| 🔔 Overlap | `#dj-overlap`, for the visit (`overlap`, never saved) | hidden; each row's own 🔔 decides |
+| 🔔 Let it ring | `#dj-overlap`, for the visit (`overlap`, never saved) | hidden; each row's own 🔔 decides |
 | A key with no row | nothing | `showRow` adds its row (`seq.addRowFor`) |
 
 ### State `dj.js` owns
@@ -57,7 +57,7 @@
 | `rec`, `lastTake`, `replay`, `booked`, `replaying`, `replayRun` | a take being recorded, the last one, playback timers, the hits it booked | memory; takes in `state.takes` |
 | `beatRec` | the recording into the beat | memory |
 | `clickWanted` | the keys' ⏲️ | localStorage `dj-click` |
-| `overlap` | 🔔 Overlap on Live | memory only (off after a reload) |
+| `overlap` | 🔔 Let it ring on Live | memory only (off after a reload) |
 | `rowAsked`, `picturing`, `levelUndo` | a row's ✕/🧹 waiting for its second tap, the picture chooser, a loudness Undo | memory |
 
 ### The deck record (IndexedDB `decks`, one per person)
@@ -131,7 +131,7 @@ The footer's how-to (`app.js showHint`, `screenHint`) uses the same `pointer: fi
 2. **A key or tile tapped:** `pointerdown` on `#dj-keys [data-code]` or `#dj-touch [data-clip]` → finger: `fingers.down` (lift plays); mouse: `pointerDown` → `playTarget` → `play(code)` or `playTile(clipId)` → `hit(id)`.
 3. **`dj.js hit(id, { earlier })`:**
    1. `deps.clipById(id)` (`board.js anyClip`).
-   2. `deps.tap(clip, { ring })` = `pads.js tapPad`: a looping sound stops (returns true); else `audio.play(clip, { ring })`. `ring` is 🔔 Overlap on Live only.
+   2. `deps.tap(clip, { ring })` = `pads.js tapPad`: a looping sound stops (returns true); else `audio.play(clip, { ring })`. `ring` is 🔔 Let it ring on Live only.
    3. `countPlay('keys')` when it played.
    4. `record(...)`: into a take, if one records (kind `'hit'` or `'stop'`).
    5. `showRow(clip)`: in mode `'beat'`, a sound with no row gets one (`seq.addRowFor`). Not while a groove plays without recording.
@@ -155,7 +155,7 @@ The footer's how-to (`app.js showHint`, `screenHint`) uses the same `pointer: fi
 | `name` | ≤24 chars; `names.js takeName` |
 | `created` | ms |
 | `duration` | seconds, ≤ `MAX_TAKE_SECONDS` (180) |
-| `events` | ≤ `MAX_TAKE_EVENTS` (10 000), each `{t, clipId, kind: 'hit'\|'loop'\|'stop'\|'beat', ring?}`, `t` seconds from the first hit, to 1 ms; `ring: true` only on a hit played with 🔔 Overlap |
+| `events` | ≤ `MAX_TAKE_EVENTS` (10 000), each `{t, clipId, kind: 'hit'\|'loop'\|'stop'\|'beat', ring?}`, `t` seconds from the first hit, to 1 ms; `ring: true` only on a hit played with 🔔 Let it ring |
 
 **Play back.** `dj.js playTake` loads every sound of the take (`deps.loadSound`), then books the take as it was heard, `rhythm.js planTake` (each hit, a loop's passes up to its stop or the take's end, a hit cut where the next cut it: what 🔊 Make a sound renders), on the audio clock at once, `t0 + at` (`t0` is `REPLAY_LEAD`, 50 ms, from now), each through `deps.bookPlay` = `audio.book`, a voice of its own outside `audio.playing` (`booked`). So a pad tapped meanwhile and the take never take each other's place. Only the keys' lighting and the end run on `setTimeout`. `stopReplay` clears the timers and cuts every booked voice (`deps.cutVoice`, so a play still to come never sounds); a take stopped while loading books nothing (`replayRun`). A take's ▶ shows ■ Stop while it plays (`showPlaying`); its pads show no progress. Test: `tests/take-replay.test.mjs`.
 
@@ -349,7 +349,7 @@ One open beat per person (ADR 0017), owned by `sequencer.js` (`pattern`, `doc`, 
 
 `scratch.js` ids (`beat-scratch-<pid>`). Written by `sequencer.js save` (regular app) and `kids.js` `deps.saveBeat` (Kids). `sequencer.js show` re-reads it when `scratchSaved() !== doc.seen`. 💾 Keep (`sequencer.js keep`) and 🆕 New (`newScratch`) make a fresh one.
 
-### 🔔 Overlap: one rule, three players
+### 🔔 Let it ring: one rule, three players
 
 `rhythm.js ringOver` decides which earlier hits a new hit cuts. Users: `audio.js start` (Live keys, `ring`), `sequencer.js sound` (a row's `ring`; tune rows always ring), `rhythm.js planTake` (a take rendered). Kids' player does not use it.
 

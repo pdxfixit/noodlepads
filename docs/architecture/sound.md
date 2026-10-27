@@ -88,7 +88,7 @@ Other contexts:
 |---|---|---|---|
 | `ctx`, `master`, `limiter`, `analyser` | the output graph | `context()` | everyone above; `meter.js` (analyser); `log-send.js`, `things.js`, `wave.js` read `ctx` |
 | `playing` | Map id → `{src, gain, t0, duration, loop, clip}`: what plays through `start`/`loopInTime` | `start`, `loopInTime`, `stop`, the `onended` handlers | `meter.js run` (progress of each), `wave.js follow`, `sheet.js sheetPlaying`, `things.js`, `app.js` (any loop?) |
-| `ringing` | Map id → earlier hits still ringing under 🔔 Overlap | `start` with `ring` | `stop`, `stopAll` |
+| `ringing` | Map id → earlier hits still ringing under 🔔 Let it ring | `start` with `ring` | `stop`, `stopAll` |
 | `pending` | Map id → a loop asked for while its sound loads (`loadForLoop`) | `loop`, `loopInTime` | `stop` and `stopAll` take it back, so it never starts; `isLooping` counts it, so a tap on the pad stops it (`tests/audio.test.mjs`) |
 | `originals` | Map clip id → Promise<AudioBuffer>: the kept audio (cuts applied) | `original`, `keepOriginal`, `forget`; `sheet.js saveSheet` sets it directly for a re-made ✨ sound | `load`, `bulk.js`, `things.js` (`audio.original`) |
 | `originalTrims` | Map clip id → the `cutKey` the original was made with | `original`, `keepOriginal`, `forget` | `original` |
@@ -116,7 +116,7 @@ setProgress` ignores ids that are not a pad.
 1. `pads.js` pointer handlers: a tap calls `tapPad(clip, {ring})`; a hold of
    `HOLD_TO_LOOP_MS` (or Shift) calls `audio.loop(clip)`. 🎤 Live and 👆 bands
    reach the same `tapPad` through `dj.js hit` → `deps.tap` (with Live's 🔔
-   Overlap as `ring`), and loops through `deps.loop` → `audio.loop`.
+   Let it ring as `ring`), and loops through `deps.loop` → `audio.loop`.
 2. `tapPad`: a looping pad stops (`audio.stop`), else `audio.play(clip, {ring})`
    and `play-count.js countPlay('pads')`.
 3. `audio.play`: `wake()`, then `await load(clip)`. A failed load shows a
@@ -185,7 +185,7 @@ calls `audio.dropRendered(last.id)` (all of them) after a voice change.
 | `audio.stop(id)` | `fadeStop` it and its ringing hits now, and take back a loop of it still loading (`start` uses `cut`, which leaves that loop) | pads, sheet, chop, bulk, Kids keys, things |
 | `audio.stopAll()` | stop every id in `playing` and `ringing` | `app.js` (Esc, `stopEverything`, entering 🧸 Kids), `sheet.js`, `kids.js` |
 
-- **Ring (🔔 Overlap).** With `ring`, a hit of the same id that is still
+- **Ring (🔔 Let it ring).** With `ring`, a hit of the same id that is still
   sounding (and not looping) moves to `audio.ringing` and rings on;
   `rhythm.js ringOver` cuts the oldest past `MAX_RINGING` (8). Without it the
   earlier hit is cut with `fadeStop`. The beat maker uses the same
@@ -523,7 +523,7 @@ Row loudness in the beat maker is `row-volume.js rowLevel` (another).
 
 ### "Ring": two meanings
 
-🔔 Overlap (`ring` on a beat row, Live's `ring` option, `audio.ringing`,
+🔔 Let it ring (`ring` on a beat row, Live's `ring` option, `audio.ringing`,
 `rhythm.js ringOver`) versus the `ring` step kind (Robot's ring modulation)
 and the `robot` knob.
 

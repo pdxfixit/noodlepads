@@ -35,7 +35,7 @@ const remembered = new Map(Object.entries({
   'kids-tab': 'beats',
   'telemetry-player': 'not-a-random-id',   // replaced by a random one (telemetry.js playerId)
   'telemetry-queue': '[{"app":"noodlepads","session":"s-1","seq":0,"at":1791000000000,"event":"app.open","version":"abc","details":{}},"junk",{"event":"no.such"}]',
-  'dj-overlap': '1',   // a key nothing reads: 🎤 Live's 🔔 Overlap is for the visit (Ben, 2026-10-12)
+  'dj-overlap': '1',   // a key nothing reads: 🎤 Live's 🔔 Let it ring is for the visit (Ben, 2026-10-12)
 }));
 const storage = {
   getItem: (k) => (remembered.has(k) ? remembered.get(k) : null),
@@ -73,7 +73,7 @@ test('with every remembered choice set, the app starts on the remembered screen'
   $('#pads-tab').dispatch('click');
   assert.ok($('#pads').children.length > 0, 'and the pads are there');
   $('#live-tab').dispatch('click');
-  assert.equal($('#dj-overlap').getAttribute('aria-pressed'), 'false', '🔔 Overlap starts off on every visit');
+  assert.equal($('#dj-overlap').getAttribute('aria-pressed'), 'false', '🔔 Let it ring starts off on every visit');
   $('#pads-tab').dispatch('click');
   const open = $('#settings-dialog').querySelectorAll('.set-fold').filter((f) => !f.querySelector('.set-body').hidden).map((f) => f.id);
   assert.deepEqual(open, ['set-look'], 'the Settings sections left open (set-reports is gone)');

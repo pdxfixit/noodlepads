@@ -961,7 +961,7 @@ dialog .lib-empty { border-color: rgb(20 19 24 / 0.25); background: var(--chalk)
 /* A Beats row (Ben, 2026-10-25: the controls on the left): its head, stuck
    at the left of the rows' box, then its pills on one line. The head is ⠿
    grip · emoji · name · 🔊 with room, emoji · 🔊 on a phone; the emoji opens
-   the row's menu (🔄 Change sound, 🔔 Overlap, 🧹 Clear, ✕ Remove, ↑ ↓),
+   the row's menu (🔄 Change sound, 🔔 Let it ring, 🧹 Clear, ✕ Remove, ↑ ↓),
    whose real buttons sit in the head out of sight (beat-row.js). With ⌨️
    Keys on the compact rows keep their single line (.dj-grid). */
 .seq-row, .seq-ruler {
@@ -2712,12 +2712,12 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 .dj-beatbar[hidden] { display: none; }
 /* Beat Builder's control bar is .beat-deck (above). On 🎤 Live it is
    ● Record, the click's tempo and ⏲️, what is happening (recording, a take),
-   then at the right 🔔 Overlap, ✏️ Layout and 🎬 Takes, as Beats has its
+   then at the right 🔔 Let it ring, ✏️ Layout and 🎬 Takes, as Beats has its
    🎚️ ✏️ Layout ⇆ at the right (Ben, 2026-10-26: every view's controls at the top). */
 .dj-bar .dj-status:empty { display: none; }   /* takes no room until there is something to say */
 .dj-bar #dj-takes-open { flex: none; }
 .dj-bar #dj-overlap { margin-left: auto; }
-/* 🔔 Overlap and ✏️ Layout: the word (data-word) after the emoji where there is room, as Beats' ✏️ Layout. */
+/* 🔔 Let it ring and ✏️ Layout: the word (data-word) after the emoji where there is room, as Beats' ✏️ Layout. */
 .seq-click.dj-word { width: auto; padding: 0 12px; font: 800 1rem/1 var(--font-ui); white-space: nowrap; }
 .seq-click.dj-word::after { content: " " attr(data-word); }
 .dj-bar .dj-click-tempo { flex: 0 1 16rem; min-width: 9.5rem; min-height: 52px; font-weight: 800; }
@@ -3001,7 +3001,7 @@ body.keys-on .touch-grid { height: max(320px, calc(100dvh - var(--head-h, 64px) 
   body.keys-on .dj-bar .beat-more, body.keys-on .dj-bar > .beat-shape { gap: 6px; }
 }
 /* Under the keys, only their colors (a legend, like the periodic table's):
-   ⏲️, 🔔 Overlap and ✏️ Layout are on the control bar (Ben, 2026-10-26). */
+   ⏲️, 🔔 Let it ring and ✏️ Layout are on the control bar (Ben, 2026-10-26). */
 .dj-tail { margin-top: 16px; }
 /* S M L and Q / D: in ✏️ Layout (⌨️ Keys), over the keys (Ben, 2026-10-19). */
 .ke-look { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -3197,7 +3197,7 @@ dialog#help :focus-visible { outline-color: var(--board); }
    (beat-row.js), on Beats with ⌨️ Keys off and on, in the order of the sound
    sheet's layer rows (🔈 then ✕). Asked, ✕ and 🧹 go red and read ✕? and 🧹?. */
 .row-tools { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
-/* Each is an .icon-btn (above): 🔔 lit while Overlap is on, 🔊 lit while
+/* Each is an .icon-btn (above): 🔔 lit while Let it ring is on, 🔊 lit while
    muted, 🧹 faded with nothing to clear. */
 /* The emoji sits right next to its pills (Ben, 2026-10-12): its column is only as wide as the widest emoji. */
 .row-emoji { padding: 0; border: 0; background: transparent; color: inherit; font: 800 0.95rem/1 var(--font-ui); text-align: right; white-space: nowrap; cursor: pointer; }
@@ -5276,7 +5276,7 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
 .more-item { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: #fff; font: 800 1.05rem/1.2 var(--font-ui); text-align: left; white-space: nowrap; cursor: pointer; }
 .more-item:hover, .more-item:focus-visible { background: rgb(255 255 255 / 0.14); }
 .more-item:disabled { opacity: 0.5; cursor: default; }
-/* A toggle (🔔 Overlap) shows its on state: a ✓ after the word, as the row's lit 🔔 would. */
+/* A toggle (🔔 Let it ring) shows its on state: a ✓ after the word, as the row's lit 🔔 would. */
 .more-item[aria-checked]::after { content: ""; margin-left: auto; padding-left: 12px; }
 .more-item[aria-checked="true"]::after { content: "✓"; }
 .more-item.armed { background: #B3261E; color: #fff; }

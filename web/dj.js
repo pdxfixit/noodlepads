@@ -298,7 +298,7 @@ export function createDJ({ el, deps }) {
   function hit(id, { earlier = false } = {}) {
     const clip = deps.clipById(id);
     if (!clip) return null;
-    // 🔔 Overlap on Live: a key's repeated hits ring over each other.
+    // 🔔 Let it ring on Live: a key's repeated hits ring over each other.
     const ring = ringing();
     const stopped = deps.tap(clip, { ring });   // a tap on a looping sound stops it
     if (!stopped) countPlay('keys');
@@ -661,7 +661,7 @@ export function createDJ({ el, deps }) {
     if (button) { button.disabled = true; button.textContent = 'Making…'; }
     try {
       // Each play as it was heard: a hit the next one cut off stops there,
-      // with the same short fade (planTake `end`; 🔔 Overlap lets it ring).
+      // with the same short fade (planTake `end`; 🔔 Let it ring lets it ring).
       const out = await renderTake(take, { clipById: deps.clipById, loadSound: deps.loadSound, rate: deps.sampleRate(), channels: 2 });
       if (!out) { deps.announce?.('None of the sounds in this take are here any more.'); return null; }
       const names = deps.soundNames();
@@ -771,7 +771,7 @@ export function createDJ({ el, deps }) {
     el.clickKey && tempoKey(el.clickKey, el.clickTempo, () => deps.seq.tempo()),
   ].filter(Boolean);
   let clickWanted = recall('dj-click') === '1';
-  // 🔔 Overlap on Live (Ben, 2026-10-12: "a button for the whole session"):
+  // 🔔 Let it ring on Live (Ben, 2026-10-12: "a button for the whole session"):
   // on, every key's repeated hits ring over each other; off, a hit restarts
   // its sound. For this visit only: never saved, off again after a reload.
   // With ⌨️ Keys on Beats the keys restart (a beat row's own 🔔 sets how it plays back).
@@ -785,7 +785,7 @@ export function createDJ({ el, deps }) {
   el.overlap?.addEventListener('click', () => {
     overlap = !overlap;
     showOverlap();
-    deps.announce?.(overlap ? 'Overlap on: each hit rings over the last.' : 'Overlap off: each hit starts its sound again.');
+    deps.announce?.(overlap ? 'Let it ring is on: each hit rings over the last.' : 'Let it ring is off: each hit starts its sound again.');
   });
   let beatRec = null;   // {copy, from, snap, rows, added, startedBeat, growing, lastBar, mirror}
   let beatTimer = 0;
@@ -800,7 +800,7 @@ export function createDJ({ el, deps }) {
     // On Live, ⏲️ and its tempo sit on the control bar where Beats has its
     // own, the tempo always shown, as Beats' is. The keys view has the beat's
     // ⏲️ and one tempo (Ben, 2026-10-11, -12 and -26). ✏️ Layout and
-    // 🔔 Overlap are Live's too: the keys view has its ✏️ after 🎚️.
+    // 🔔 Let it ring are Live's too: the keys view has its ✏️ after 🎚️.
     el.click.hidden = mode === 'beat';
     el.clickTempo.hidden = mode === 'beat';
     if (el.change) el.change.hidden = mode === 'beat';
@@ -1038,7 +1038,7 @@ export function createDJ({ el, deps }) {
       // much as possible no matter the size"): the row's head stays at the
       // left, emoji · 🔊 (and its name with room), its pills on one line after
       // it, scrolling sideways with the others. The emoji opens the row's menu
-      // (beat-row.js, overflow.js): 🖼️ Change picture, 🔔 Overlap, 🧹 Clear
+      // (beat-row.js, overflow.js): 🖼️ Change picture, 🔔 Let it ring, 🧹 Clear
       // and ✕ Remove, the last two asking first (in red), with Undo. While
       // recording the menu waits. If two rows share an emoji, its key's letter
       // (or its name's first) tells them apart.
@@ -1058,7 +1058,7 @@ export function createDJ({ el, deps }) {
         title: clip?.label ?? '',
         pickable: !!clip,
         data: { remove: { removeRow: at }, clear: { clearRow: at }, pick: { picture: r.clipId ?? '' } },
-        menu: { key: at, label: `${name}: menu. Picture, ${r.melody ? '' : 'Overlap, '}Clear, Remove`, change: ['🖼️', 'Change picture'] },
+        menu: { key: at, label: `${name}: menu. Picture, ${r.melody ? '' : 'Let it ring, '}Clear, Remove`, change: ['🖼️', 'Change picture'] },
         labels: {
           remove: `Remove the ${name} row`, removeAsk: `Tap again to remove the ${name} row`,
           clear: `Clear the ${name} row`, clearAsk: `Tap again to clear the ${name} row`,
