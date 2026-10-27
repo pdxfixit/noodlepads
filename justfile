@@ -319,6 +319,16 @@ land *args:
 land-continue worktree:
     @just land --continue {{worktree}}
 
+# docs/privacy-policy.md is this app's policy; the privacy site (pdxfixit/privacy) keeps a copy of it.
+# Run this once a change to it is on main: tools/policy.sh finds the privacy checkout ($PRIVACY, else
+# ../privacy beside this repo, else ~/.cache/privacy), takes the file in a throwaway worktree there
+# (`just take`, with TAKE_SHA set to this HEAD) and runs its `just land`. --no-land (or POLICY_NO_LAND=1)
+# stops after the take and shows what would land.
+[doc("Copy docs/privacy-policy.md into the privacy site's repo and land it there (once it is on main): just policy [--no-land]")]
+[positional-arguments]
+policy *args:
+    @bash tools/policy.sh "$@"
+
 # Removes a finished agent's worktree and branch once its work is on main:
 # refuses a dirty worktree or a commit main lacks (by patch, as cherry-picks
 # land), tags the tip archive/<branch>, then removes both. On 2026-10-12 a

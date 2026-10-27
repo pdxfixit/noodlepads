@@ -6,7 +6,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import worker from '../worker/index.js';
 import { ORIGIN } from '../worker/http.js';
 import { TTL_MS } from '../worker/reports.js';
@@ -375,8 +378,8 @@ test('"A song 🎧 From a song listens to ... is never saved, synced or sent": i
 
 // The same claims are made three times: web/privacy.js (copied word for word
 // into README, checked above), and the public policy, docs/privacy-policy.md,
-// which the privacy site (pdxfixit/privacy) pulls from this repo (Ben,
-// 2026-10-26). The three are worded differently, so each claim below is a few
+// which `just policy` copies into the privacy site's repo (pdxfixit/privacy)
+// once a change to it is on main (Ben, 2026-10-27). The three are worded differently, so each claim below is a few
 // key phrases that every one of them must carry. A change to what the cloud
 // stores or shows fails here until all three say it.
 const policy = readFileSync(new URL('../docs/privacy-policy.md', import.meta.url), 'utf8');
@@ -387,12 +390,34 @@ const sources = { 'web/privacy.js': statement, 'README.md': readmePrivacy, 'docs
 const webCode = ['index.html', 'help.js', 'cloud-ui.js', 'people.js', 'settings.js']
   .map((f) => readFileSync(new URL(`../web/${f}`, import.meta.url), 'utf8')).join('\n');
 
-test('the policy keeps the shape the privacy site builds: front matter, the shared blocks, no plain address', () => {
-  const front = policy.match(/^---\nname: Noodle Pads\nblurb: .+\nupdated: \d{1,2} [A-Z][a-z]+ 20\d\d\nurl: https:\/\/noodlepads\.com\/\n---\n# Noodle Pads privacy policy\n/);
-  assert.ok(front, 'front matter and the one headline');
+// The privacy checkout, as `just policy` finds it: $PRIVACY, else `privacy` beside the main checkout.
+function privacyCheckout() {
+  if (process.env.PRIVACY) return process.env.PRIVACY;
+  try {
+    const common = execFileSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], { cwd: dirname(fileURLToPath(import.meta.url)), encoding: 'utf8' }).trim();
+    return join(dirname(dirname(common)), 'privacy');
+  } catch { return null; }
+}
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+test('the policy keeps the shape the privacy site builds: front matter with a real date, the shared blocks, no plain address', () => {
+  const front = policy.match(/^---\nname: Noodle Pads\nblurb: .+\nupdated: (\d{1,2}) ([A-Z][a-z]+) (20\d\d)\nurl: https:\/\/noodlepads\.com\/\n---\n# Noodle Pads privacy policy\n/);
+  assert.ok(front, 'front matter (name, blurb, updated, url) and the one headline');
+  const [, day, month, year] = front;
+  const m = MONTHS.indexOf(month);
+  assert.ok(m >= 0, `${month} is a month`);
+  assert.equal(new Date(Date.UTC(+year, m, +day)).getUTCDate(), +day, `updated: ${day} ${month} ${year} is a real date`);
   for (const block of ['rules', 'feedback', 'closing']) assert.match(policy, new RegExp(`^@include ${block}$`, 'm'));
   assert.ok(!/[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(policy), 'the contact address is written {contact}');
+  assert.ok(!/mailto:/i.test(policy), 'no mailto: link; the privacy site builds it from {contact}');
   assert.match(policy, /\{contact\}/);
+});
+
+test('every @include names a shared block the privacy repo has', (t) => {
+  const dir = privacyCheckout();
+  if (!dir || !existsSync(join(dir, 'src', '_shared'))) return t.skip('no privacy checkout beside this repo (set PRIVACY=/path to check the @include lines)');
+  for (const [, name] of policy.matchAll(/^@include (\S+)$/gm)) assert.ok(existsSync(join(dir, 'src', '_shared', `${name}.md`)), `${dir}/src/_shared/${name}.md exists`);
 });
 
 const SHARED = [
@@ -437,11 +462,14 @@ test('every button the policy names is a real one, and the switches it describes
   assert.match(policyText, /Share play data\*\* is on \([^)]*on to start with\)/);
 });
 
-test('a push to main that changes the policy tells the privacy site; a missing token only warns', () => {
-  const wf = readFileSync(new URL('../.github/workflows/privacy-policy.yml', import.meta.url), 'utf8');
-  assert.match(wf, /branches: \[main\]\s+paths: \[docs\/privacy-policy\.md\]/);
-  assert.match(wf, /repos\/pdxfixit\/privacy\/dispatches/);
-  assert.ok(wf.includes('noodlepads-policy') && wf.includes('event_type'), 'the event the privacy deploy listens for');
-  assert.match(wf, /secrets\.PRIVACY_DISPATCH_TOKEN/);
-  assert.match(wf, /if \[ -z "\$TOKEN" \]; then\s+echo "::warning::[^\n]+\s+exit 0/, 'no token: warn and succeed');
+test('the policy is copied to the privacy site by `just policy`, not by a workflow or a token', () => {
+  assert.ok(!existsSync(new URL('../.github/workflows/privacy-policy.yml', import.meta.url)), 'no dispatch workflow');
+  const justfile = readFileSync(new URL('../justfile', import.meta.url), 'utf8');
+  assert.match(justfile, /^policy \*args:\n\s+@bash tools\/policy\.sh "\$@"/m);
+  const script = readFileSync(new URL('../tools/policy.sh', import.meta.url), 'utf8');
+  assert.match(script, /--no-land/);
+  assert.match(script, /POLICY_NO_LAND/);
+  assert.ok(script.includes('TAKE_SHA=$sha just take') && script.includes('just land'), 'takes with the sha, then lands');
+  const agents = readFileSync(new URL('../AGENTS.md', import.meta.url), 'utf8');
+  assert.match(agents, /docs\/privacy-policy\.md[^\n]*bump `updated:`[^\n]*`just policy`/, 'AGENTS.md says to run it');
 });
