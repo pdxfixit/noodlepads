@@ -55,9 +55,10 @@ threshold -2 dB, knee 0, ratio 20, attack 2 ms, release 150 ms) ─► audio.ana
 - `audio.decode(arrayBuffer)` is `decodeAudioData` on this context. So every
   decoded clip is at the context's sample rate, whatever the file's.
 - Who connects to `audio.master` directly, outside `audio.playing`:
-  `beat-engine.js` (each beat's mix bus, built by `busFor`), `sequencer.js` (`blip`, the
+  `beat-engine.js` (each beat's mix bus, built by `busFor`; and `play`'s voices for
+  🧸 Kids, straight into the master), `sequencer.js` (`blip`, the
   click), `song.js` (`laneGainsFor(ctx, audio.master, …)`), `kids.js`
-  (`playBeat`'s voices and the count-in `beep`). `audio.stopAll()` does not reach
+  (the ● count-in `beep`). `audio.stopAll()` does not reach
   any of these; each screen stops its own (`app.js stopEverything` calls
   `audio.stopAll`, `seq.stop`, `song.stop`, the clicks off).
 - The 🎧 worklet node connects straight to `ctx.destination`
@@ -157,7 +158,8 @@ presets again. So most taps hit the `rendered` cache.
 | `audio.originals` | clip id, checked against `originalTrims` = `cuts.js cutKey(clip)` | `original` (lazily remade when `cutKey` changes), `keepOriginal` | `forget(id)` | the blob and `file`: a replaced recording must call `forget` (`sheet.js`, `bulk.js`, `backup-ui.js`, `cloud.js`, `people.js` do) |
 | `audio.rendered` | `audio.key(clip)` = `` `${id}:${recipeKey(clip)}${cutKey(clip)}` `` | `load` | `dropRendered(id, keep)` (every key of the id but `keep`), `forget(id)`, a failed load (its own key, and the kept audio it used) | `level`, `shift`, `chord`, `exact`, the blob: fixed per id, or `forget` is called |
 | `sheet.js sheet.previews` | `recipeKey({fx, tweaks})`, `head:…` for the live head, `plain` for 👂 Plain | `previewOf` (from `rendered`, `liveHead`, `plainSound`, Find its note) | the oldest past `KEEP_PREVIEWS` (6 tries) and, apart, `KEEP_HEADS` (2 `head:` keys); the one asked for now always stays; `resetPreviews()` when the sound, trim or recording changes, and on open | the trim: the whole map is of one trim |
-| `beat-engine.js ready` | clip id → loaded | `prepare` (on play, per row) | `prepareBeats` reloads it (it is never emptied) | a voice change: `prepare` re-reads `audio.load` each play |
+| `beat-engine.js ready` (behind `has`/`get`/`drop`/`keep`/`held`) | clip id → loaded | `prepare` (on play, per row) | `prepareBeats` reloads it (it is never emptied) | a voice change: `prepare` re-reads `audio.load` each play |
+| a `beat-engine.js play` run's sounds | `audio.key(clip)` → loaded | the run, each tick (`clip` hook) | the run's `stop()` | nothing: a changed voice or trim is a new key, a deleted sound is not found (🧸 Kids) |
 | `listen-ui.js prints` | `audio.key(clip)` of `` `${personId}-${kit}` `` → fingerprint | `printFor` | never (one per sound as it plays, per visit) | the blob: a kit sound's file never changes |
 | `wave.js` `cache` | the buffer drawn and the column count | `draw` | `clear`, a new buffer | — |
 
@@ -191,12 +193,12 @@ calls `audio.dropRendered(last.id)` (all of them) after a voice change.
   sounding (and not looping) moves to `audio.ringing` and rings on;
   `rhythm.js ringOver` cuts the oldest past `MAX_RINGING` (8). Without it the
   earlier hit is cut with `fadeStop`. The beat maker uses the same
-  `ringOver` per row (`beat-engine.js sound`).
+  `ringOver` per row (`beat-engine.js sound`), Kids' beat too.
 - **Rate.** `rate` sets `playbackRate`; a pass lasts `duration / rate`.
   🧸 Kids' keys use it (`kids-logic.js keyRate`, 2 is an octave up).
 - **`fadeStop(voice, at)`** ramps the voice's gain from `voice.level ?? 1` to
   0 over `FADE_SECONDS` (8 ms), then stops it. Exported with `makeVoice` and
-  used by `sequencer.js`, `song.js`, `kids.js`, `share-render.js`.
+  used by `beat-engine.js`, `sequencer.js`, `song.js`, `share-render.js`.
 
 ## Loops in time with a beat
 
@@ -503,7 +505,7 @@ What I heard: ▶ deps.seq.hearBeat · 🎼 deps.song.openSaved · 🥁 deps.seq
 ### The one context and the audio clock
 
 `audio.context().currentTime` is the clock every scheduler books on
-(`sequencer.js`, `song.js`, `kids.js`; each a 25 ms `setInterval` with
+(`sequencer.js`, `song.js` and `beat-engine.js play`, which 🧸 Kids plays through; each a 25 ms `setInterval` with
 lookahead). Each drops a hit whose moment passed more than `LATE_SECONDS`
 (20 ms) ago (`audio.js tooLate`): after a stall, or a clock that ran on
 while the timers slept, the beat goes on in time with no burst of missed
@@ -631,7 +633,7 @@ by a load of its current version").
 | `listen.js` and `listen-make.js` import `beat.js` | for `SIGNATURES`, `barSteps`, `tempoStops`, `MAX_PILLS`, `cleanPattern` | `beat.js` imports `mixer.js`, `row-volume.js`, `model.js` and `instruments.js` for its rules, so the "pure" listener still loads those (not the beat maker screen) |
 | `ROWS` twice | `listen-dsp.js ROWS` and `listen-make.js ROWS` | kept equal by hand |
 | Name clashes | `KINDS` (`steps.js` vs `listen-input.js`), `FAMILIES` (`instruments.js` vs `voice-knobs.js`), `levelOf` (`meter.js`, `listen-input.js`, the sequencer's) | a wrong import still runs |
-| Bare players outside `audio.playing` | `kids.js` beat and beeps, sequencer click | `audio.stopAll` does not stop them |
+| Bare players outside `audio.playing` | the engine's runs (`kids.js` beat), `kids.js` beeps, sequencer click | `audio.stopAll` does not stop them |
 
 ## Invariants and gotchas
 

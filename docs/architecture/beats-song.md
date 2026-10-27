@@ -1,6 +1,6 @@
 # 🥁 Beats and 🎼 Song
 
-**In one paragraph.** `sequencer.js createSequencer` is the beat maker, and `beat-engine.js createBeatEngine` is the engine under it: the sounds loaded for scheduling (`ready`), one hit (`sound`), the mix graphs (`busFor`, `letGo`) and the "play a saved beat" path (`prepareBeats`, `soundHit`), with no screen, DOM or storage. `app.js` makes the one engine and hands it to the beat maker, `createSong` and `initKids` (`deps.engine`); no player lives in it yet (the loops are still in `sequencer.js`, `song.js` and `kids.js`, [one-beat-engine.md](../design/one-beat-engine.md)). The beat maker's pure rules are in `beat.js` (a beat made safe, the hits it plans, swing, grooves as beats, beat files, tempo stops; imported by the backup gate, Kids' rules, the listener, Song and the share preview, so none of them loads the screen), and the WAV encoder in `wav.js`. The beat maker owns the open beat, its scheduler on the audio clock, the beat's mix bus, the sound chooser, 💃 Grooves, 🗂️ My beats, the pattern chips, the click, 🎚️ Mixer's wiring and 🎹 the roll's wiring. Everything else that plays a saved beat goes through three of its methods (`beatPlan`, `prepareBeats`, `soundHit`), which share the engine's `sound()` and `busFor()`. `song.js createSong` is 🎼 Song: its own record, its own 25 ms scheduler, and no sound code of its own (every hit is `seq.soundHit`). `playlist.js` and `notes.js` are the pure rules under them. 🧸 Kids plays beats with a separate scheduler (`kids.js playBeat`), and ⌨️ Keys (`dj.js`) drives the sequencer through about 40 methods of its API.
+**In one paragraph.** `sequencer.js createSequencer` is the beat maker, and `beat-engine.js createBeatEngine` is the engine under it: the sounds loaded for scheduling (`ready`), one hit (`sound`), the mix graphs (`busFor`, `letGo`) and the "play a saved beat" path (`prepareBeats`, `soundHit`), with no screen, DOM or storage. `app.js` makes the one engine and hands it to the beat maker, `createSong` and `initKids` (`deps.engine`). Its `play(hooks)` is a loop on the audio clock: 🧸 Kids plays through it today; the loops of `sequencer.js` and `song.js` move onto it in steps 6 and 8 of [one-beat-engine.md](../design/one-beat-engine.md). The sounds it holds are read through `has`/`get`/`drop`/`keep(ids)`/`held`, never as a map. The beat maker's pure rules are in `beat.js` (a beat made safe, the hits it plans, swing, grooves as beats, beat files, tempo stops; imported by the backup gate, Kids' rules, the listener, Song and the share preview, so none of them loads the screen), and the WAV encoder in `wav.js`. The beat maker owns the open beat, its scheduler on the audio clock, the beat's mix bus, the sound chooser, 💃 Grooves, 🗂️ My beats, the pattern chips, the click, 🎚️ Mixer's wiring and 🎹 the roll's wiring. Everything else that plays a saved beat goes through three of its methods (`beatPlan`, `prepareBeats`, `soundHit`), which share the engine's `sound()` and `busFor()`. `song.js createSong` is 🎼 Song: its own record, its own 25 ms scheduler, and no sound code of its own (every hit is `seq.soundHit`). `playlist.js` and `notes.js` are the pure rules under them. 🧸 Kids plays its beat through the engine's `play` (`kids.js playBeat`), and ⌨️ Keys (`dj.js`) drives the sequencer through about 40 methods of its API.
 
 ## Who is built where
 
@@ -134,7 +134,7 @@ The library is the truth. `patterns` only says which named beat is open; no reco
 | `sample.timer` | `hearBeat` | one `setTimeout` | ends a groove sample |
 | Song's `timer` | `song.js play` → `tick` | 25 ms | the next planned events before `currentTime + 0.1` |
 | Song's `raf` | `song.js follow` | every frame | the playhead line and the lit blocks |
-| 🧸 Kids' `run.timer` | `kids.js playBeat` | 25 ms | its own, 0.12 s ahead |
+| The engine's `run.timer` | `beat-engine.js play` (🧸 Kids' beat) | 25 ms (its own `TICK_MS`) | what `beat.js hitsDue` says is due before `currentTime + lookahead` (Kids: 0.12 s), dropping a hit already past; the squares, ● 's pass |
 
 `play()` waits for every row's sound (`refresh` → `audio.load`, into the `ready` map); a `stop()` meanwhile (a song or sample begins, the screen changes) makes it stand down (`playAsk`, `tests/beat-ready.test.mjs`). Then it sets `t0 = currentTime + 0.05` (plus one bar with a count-in).
 
@@ -165,12 +165,12 @@ A row with no clock (added while playing, or put back by Undo) gets one from `jo
 
 ### What one hit does (`sound`)
 
-`beat-engine.js sound(ctx, dest, list, row, loaded, time, loud, note, len)`:
+`beat-engine.js sound(ctx, dest, list, row, loaded, time, loud, note, len, opts)` (`opts`: `clipOf`, `found`, `ring`, `level`, for a player with no mixer, 🧸 Kids):
 
 1. `audio.js makeVoice(ctx, buffer, dest)`; its gain is `hitGain(row, loud)` = (1.5 if loud) × the row's level. `voice.lift` is kept, so a level change can reach a hit still ringing (`applyLevel`).
 2. A tune row's note plays faster or slower (`noteRate(note + rootShift(clip.root))`, so a sound whose note 🎵 Find its note found plays its C as a C). A plain row plays at rate 1.
 3. `len > 0` (a note's length) fades it out there (`fadeStop`).
-4. `rhythm.js ringOver(list, time, ring || melody)` decides which earlier voices of the row are cut at `time` with a short fade; Let-it-ring rows and tune rows keep up to `MAX_RINGING`.
+4. `rhythm.js ringOver(list, time, ring || row.ring || melody)` decides which earlier voices of the row are cut at `time` with a short fade; Let-it-ring rows and tune rows keep up to `MAX_RINGING`.
 
 `hit(i, time, …)` is the live caller: it sends the voice to `busFor(ctx, audio.master, pattern).input(i)`, tells `deps.onHit(clipId, ms)`, and counts `stats` (logged at `stop`).
 
@@ -424,8 +424,8 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 
 | Seam | What a fix in one place misses |
 |---|---|
-| **Four beat schedulers.** `sequencer.js schedule` (live), `song.js tick`, `kids.js playBeat`, and `hearBeat` (all at once). Kids' looks 0.12 s ahead; the others 0.1 s | Kids ignores accents, swing, signatures (always 16 pills a bar), rates, row level, mute, solo, the 🎚️ Mixer, and a tune row's `rootShift` (`noteRate(n.p)` only). A timing fix in one reaches none of the others |
-| **`TICK_MS` and `LOOKAHEAD`** are separate constants in `sequencer.js` and `song.js` | change one, the beat and the song drift apart in feel |
+| **Four beat loops.** `sequencer.js schedule` (live), `song.js tick`, `beat-engine.js play` (🧸 Kids), and `hearBeat` (all at once). Kids' looks 0.12 s ahead; the others 0.1 s | Kids plays in the beat's own bars (`hitsDue`) but, until step 5b, ignores accents, swing and a tune row's `rootShift`; it leaves out rates, row level, mute, solo and the 🎚️ Mixer for good. A timing fix in `schedule` or `tick` does not reach the others until steps 6 and 8 |
+| **`TICK_MS` and `LOOKAHEAD`** are separate constants in `beat-engine.js`, `sequencer.js` and `song.js` (`tests/architecture.test.mjs` checks all three agree) | change one, the beat and the song drift apart in feel; step 8 makes them one pair |
 | **Output latency** is summed in `beat.js outputDelay` and again in `app.js`'s `deps.latency` for `dj.js` | a change to the cap (0.2 s) or the sum must be made twice; Kids ignores latency |
 | **The beat id pattern** `/^beat-[a-z0-9-]{1,48}$/` is written in `beat.js BEAT_ID`, `playlist.js BEAT_REF`, `backup.js` (a local `BEAT_ID`) and inline in `rhythm.js` | only `playlist.js` vs `sequencer.js` is tested (`tests/playlist.test.mjs`) |
 | **Listing a person's beats** happens three ways: `sequencer.js library()` (via `beatLibrary.list`, minus hidden), `makeSong`'s `deps.beats` (its own filter and sort), `kids.js`'s `deps.beats` | a new hidden kind of beat must be filtered in each |
@@ -467,8 +467,8 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | A new field on the beat | `cleanPattern`, `samePattern`, `beatToFile` (the list is by hand), `mixKey` if it changes the sound graph, `listen-make.js` if 🎧 should set it, `grooveBeat` if grooves have it; `backup.js` gets it through `cleanPattern` |
 | A new 🎚️ effect | `mixer.js MIX_FX` (only `steps.js` kinds that run live); stored ids are checked by `cleanFx`; `tests/mixer.test.mjs` |
 | A new time signature | `beat.js SIGNATURES`; `settings.js timeSignature` values; the `[data-sig]` buttons in `index.html` (Beats and ⌨️ Keys); `song.js beatSteps` follows by itself; check `listen.js` and grooves |
-| Scheduler timing (lookahead, tick) | `sequencer.js` `TICK_MS`/`LOOKAHEAD`, `song.js` the same, `kids.js playBeat` (inline 25 ms and 0.12 s), and `hearBeat` (books at once); how late a hit may be booked is `audio.js LATE_SECONDS`, shared by all three (`tests/late-hits.test.mjs`) |
-| How a hit sounds everywhere | `beat-engine.js sound`, `hitGain`, `noteRate`, `rhythm.js ringOver`, `busFor`, `mixer.js buildMix`; then `kids.js playBeat`, which has its own |
+| Scheduler timing (lookahead, tick) | `sequencer.js` `TICK_MS`/`LOOKAHEAD`, `song.js` and `beat-engine.js` the same (Kids passes its `lookahead` 0.12 s), and `hearBeat` (books at once); how late a hit may be booked is `audio.js LATE_SECONDS`, shared by all three (`tests/late-hits.test.mjs`) |
+| How a hit sounds everywhere | `beat-engine.js sound`, `hitGain`, `noteRate`, `rhythm.js ringOver`, `busFor`, `mixer.js buildMix`; `beat-engine.js play` for 🧸 Kids (the same `sound`, with `mixer: false`) |
 | A new place that plays a saved beat | `seq.beatPlan` + `seq.prepareBeats` + `seq.soundHit`; stop the live beat first; call `deps.onPlay`-style stops so one thing plays |
 | A new groove | `grooves.js GROOVES` (a kit id that exists in `boards.json`; bass rows of one instrument); `tests/grooves.test.mjs` |
 | A new song or lane field | `playlist.js cleanLane`/`cleanBlock`, `song.js cleanSong`, `legacySlots` if older copies should see it, `listen-make.js` (builds songs), `cloud-sync.js` / `merge.js` `mapSongBeats` if it names beats; the snapshot in `song.js snapshot` if it should undo |

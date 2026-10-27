@@ -109,13 +109,13 @@ for (const [what, pattern, files] of ONLY) {
   test(`✅ ${what}: ${files.join(', ')}`, () => assert.deepEqual(webWith(pattern), files, FIX));
 }
 
-test('✅ schedulers on the audio clock: the beat maker, 🎼 Song and 🧸 Kids', () => {
+test('✅ schedulers on the audio clock: the beat engine (🧸 Kids), the beat maker and 🎼 Song; Kids has none of its own', () => {
   // sheet.js reads the clock too, but its interval is a 150 ms play watch, not a scheduler.
-  assert.deepEqual(webWith(/setInterval\(/).filter((f) => f !== 'sheet.js' && /\.currentTime\b/.test(src[f])), ['kids.js', 'sequencer.js', 'song.js'], FIX);
+  assert.deepEqual(webWith(/setInterval\(/).filter((f) => f !== 'sheet.js' && /\.currentTime\b/.test(src[f])), ['beat-engine.js', 'sequencer.js', 'song.js'], FIX);
 });
 
-test('✅ the beat maker and 🎼 Song share one tick and lookahead', () => {
-  for (const f of ['sequencer.js', 'song.js']) {
+test('✅ the beat engine, the beat maker and 🎼 Song share one tick and lookahead', () => {
+  for (const f of ['beat-engine.js', 'sequencer.js', 'song.js']) {
     assert.match(src[f], /^const TICK_MS = 25;$/m, `${f}: ${FIX}`);
     assert.match(src[f], /^const LOOKAHEAD = 0\.1;$/m, `${f}: ${FIX}`);
   }
@@ -125,9 +125,11 @@ test('✅ the keys never touch audio.js directly; they play through pads.js tapP
   assert.deepEqual(['dj.js', 'dj-keys.js', 'dj-touch.js'].filter((f) => src[f].includes("from './audio.js'")), [], FIX);
 });
 
-test('✅ 🧸 Kids takes only STEPS and noteRate from the beat rules, and none of the regular screens', () => {
+test('✅ 🧸 Kids takes only pure rules from the beat rules, plays through the engine it is handed, and none of the regular screens', () => {
   const from = (m) => [...src['kids.js'].matchAll(new RegExp(`^import .* from '\\./${m}\\.js';$`, 'gm'))].map((x) => x[0]);
-  assert.deepEqual(from('beat'), ["import { STEPS, noteRate } from './beat.js';"], FIX);
+  assert.deepEqual(from('beat'), ["import { STEPS, outputDelay } from './beat.js';"], FIX);
+  assert.match(src['kids.js'], /deps\.engine\.play\(/, FIX);
+  assert.doesNotMatch(src['kids.js'], /\bmakeVoice\b|setInterval\(/, FIX);
   assert.deepEqual(from('sequencer'), [], FIX);
   for (const m of ['dj', 'pads', 'sheet', 'song']) assert.deepEqual(from(m), [], FIX);
   assert.doesNotMatch(src['kids.js'], /createSequencer|soundHit|busFor|beatPlan/, FIX);

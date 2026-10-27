@@ -22,7 +22,7 @@ fails, fix the doc as well as the test.
 |---|---|
 | [sound.md](sound.md) | The one AudioContext and its output graph, `audio.js` state and caches, a tap to a sound, play/loop/ring/rate, loops in time with a beat, a sound's chain (cuts, steps, knobs, voices) and its render order, live preview vs render, the stretch worker, loudness, instruments, recording and capture, 🎧 From a song end to end |
 | [beats-song.md](beats-song.md) | 🥁 The beat, row, note and beat-file records; the open beat, the library and the scratch; the scheduler (clocks, rates, bars, swing, click, latency); the mix bus; the shared "play a saved beat" path; Save as a sound; 💃 Grooves; tune rows and 🎹 the roll; 🎼 Song's record, clock and undo; every `deps` callback |
-| [keys-kids.md](keys-kids.md) | ⌨️ Keys / 🎤 Live / 👆 touch layouts: the deck record, how a key finds its sound, the hit path, takes, ● Record into the beat, ✏️ Layout; 🧸 Kids: its screens, its own scheduler and recorder, the kid's beat, the grown-up gate, what it shares |
+| [keys-kids.md](keys-kids.md) | ⌨️ Keys / 🎤 Live / 👆 touch layouts: the deck record, how a key finds its sound, the hit path, takes, ● Record into the beat, ✏️ Layout; 🧸 Kids: its screens, its recorder, the kid's beat and the engine hooks it plays through, the grown-up gate, what it shares |
 | [data.md](data.md) | Every IndexedDB store and record, the in-memory `state`, how writes happen, start-up order, presets vs own sounds, ids, people, pad order and groups, levels and settings, backups, `cleanBackup`, merging, Older sounds, deleting and Undo |
 | [cloud.md](cloud.md) | Cloud profiles: keys, PINs, a sync end to end, record shapes, D1 tables, every `/api/` route and limit, shares; problem reports, usage events, metrics, feedback; the service worker, the update bar, the CSP, privacy text vs code |
 | [shell.md](shell.md) | `app.js`: start-up from module load to first paint, the composition root, who is showing, screens and views, levels, the banner and announcer, every dialog, tooltips, ❓ Help, first steps (ADR 0028), skins, the backdrop, emoji pickers, the classes JS puts on the page, keyboard, a `styles.css` map |
@@ -59,7 +59,7 @@ The questions agents ask most. ✅ marks a claim `tests/architecture.test.mjs` c
 | Is there one…? | Answer | Read |
 |---|---|---|
 | AudioContext | **One ✅**, `audio.js audio.context()`. Everything audible goes `audio.master` → limiter → analyser → speakers. 🎧 From a song captures on the same one. | sound.md |
-| Beat scheduler | **Three ✅**, each a 25 ms tick on the audio clock: `sequencer.js` (the beat, the click), `song.js` (same tick and lookahead ✅; sounds each hit with `seq.soundHit`), and `kids.js playBeat`, a separate copy that ignores row levels, mute, solo, the mixer, accents, swing, signatures and row speed. | beats-song.md, keys-kids.md |
+| Beat scheduler | **Three loops ✅**, each a 25 ms tick on the audio clock with one lookahead: `beat-engine.js play` (🧸 Kids' beat, with hooks for what Kids leaves out; `kids.js` has no scheduler of its own any more), `sequencer.js` (the beat, the click) and `song.js` (sounds each hit with `seq.soundHit`). They are two once Beats moves onto `play` (step 6) and one once Song does (step 8). | beats-song.md, keys-kids.md |
 | Path from a tap to a sound | Pads, 🎤 Live keys and 👆 bands all go through `pads.js tapPad` → `audio.play` (the keys reach it by `deps.tap`; they never import `audio.js` ✅). 🧸 Kids calls `audio.play` itself. The sound sheet, chop and bulk use `audio.start` on their own buffers. | sound.md, keys-kids.md |
 | Way to play a saved beat | **One shared path ✅**, in `beat-engine.js`: `seq.beatPlan` + `prepareBeats` + `soundHit` (the beat maker hands the engine's through `seq`), used by 🎼 Song, share previews, 🗂️ See all, 💃 Grooves' ▶ and 🎧's ▶ part. Beats' own play, bounce and the roll's preview call the engine's `sound()` + `busFor()` (`beat-engine.js`). | beats-song.md |
 | Mixer | **One per beat ✅**, built only by `beat-engine.js`: `busFor` builds `mixer.js buildMix` (each row's effect and the master) for any destination, live or offline. A row's level is applied per hit; mute and solo stop hits being booked. 🧸 Kids bypasses it. | beats-song.md |
@@ -81,8 +81,9 @@ The questions agents ask most. ✅ marks a claim `tests/architecture.test.mjs` c
 
 The biggest ones. Each area file lists its own in full.
 
-- **Two beat players:** `sequencer.js` and `kids.js`. A timing or sound fix
-  in one does not reach the other.
+- **Three beat loops:** `sequencer.js`, `song.js` and the engine's `play`
+  (Kids). A timing fix in one of the first two does not reach the others
+  until steps 6 and 8 of [one-beat-engine.md](../design/one-beat-engine.md).
 - **Two recorders:** `sheet.js` and `kids.js`.
 - **Sound helpers in the beat rules:** `noteRate` lives in `beat.js` (the
   WAV encoder and `normalize` are in `wav.js`). The semitone rate is worked out in six

@@ -4,7 +4,7 @@
 // (four drums, eight squares) and its three tempos, and the three voices.
 // kids.js draws all of it.
 
-import { cleanRow, cleanPattern, STEPS, multiplyRows } from './beat.js';
+import { cleanRow, cleanPattern, STEPS, barSteps, multiplyRows } from './beat.js';
 import { addNote } from './notes.js';
 import { chainFields, voiceStep } from './voices.js';
 import { SCRATCH_NAME } from './scratch.js';
@@ -204,12 +204,21 @@ export function newKidsBeat(personId, clipIds, id, now = Date.now()) {
   ), blank);
 }
 
+// A beat's own bar and its whole length, in pills: its signature's, so a
+// grown-up's 3/4 beat (12 a bar) is counted as it plays, not as 16.
+export const barOf = (beat) => barSteps(beat?.signature);
+export const totalOf = (beat) => barOf(beat) * (beat?.bars || 1);
+// Does square `square` (of the eight) fall inside the beat's bar? A 3/4 bar
+// has six pills' worth of squares, so the last two have no pill there.
+export const squareFits = (beat, square) => square * PER_SQUARE < barOf(beat);
+
 // The squares on screen: one line of eight per drum, read from the beat's row
-// for that drum (the first one, if a grown-up made more).
+// for that drum (the first one, if a grown-up made more). A square past the
+// end of the beat's bar is never lit.
 export function squaresOf(beat, clipIds) {
   return clipIds.map((clipId) => {
     const row = clipId ? beat?.rows?.find((r) => r.clipId === clipId) : null;
-    return Array.from({ length: KIDS_SQUARES }, (_, i) => !!row?.steps?.[i * PER_SQUARE]);
+    return Array.from({ length: KIDS_SQUARES }, (_, i) => squareFits(beat, i) && !!row?.steps?.[i * PER_SQUARE]);
   });
 }
 
@@ -219,24 +228,41 @@ export function squaresOf(beat, clipIds) {
 // read as the one pattern the grid shows.
 export function withSquare(beat, clipIds, drum, square, on, now = Date.now()) {
   const clipId = clipIds[drum];
-  if (!clipId) return beat;
+  if (!clipId || !squareFits(beat, square)) return beat;
+  const bar = barOf(beat);
   const rows = beat.rows.map((r) => ({ ...r, steps: [...r.steps], accents: [...(r.accents ?? [])], notes: [...(r.notes ?? [])] }));
   let row = rows.find((r) => r.clipId === clipId);
   if (!row) { row = cleanRow({ clipId, steps: [] }); rows.push(row); }
   const first = square * PER_SQUARE;
-  for (let pill = first; pill < Math.max(STEPS, row.steps.length); pill += STEPS) {
+  for (let pill = first; pill < Math.max(bar, row.steps.length); pill += bar) {
     row.steps[pill] = on;
     if (!on && row.accents) row.accents[pill] = false;
     if (!on && row.notes) row.notes[pill] = null;
   }
   // A tune row (🎹, ADR 0023) keeps its notes: a square is a note there.
   if (row.melody) {
-    const tune = (row.tune ?? []).filter((n) => Math.floor(n.s) % STEPS !== first);
-    if (on) for (let pill = first; pill < row.steps.length; pill += STEPS) tune.push({ p: 0, s: pill, l: 1 });
+    const tune = (row.tune ?? []).filter((n) => Math.floor(n.s) % bar !== first);
+    if (on) for (let pill = first; pill < row.steps.length; pill += bar) tune.push({ p: 0, s: pill, l: 1 });
     Object.assign(row, cleanRow({ ...row, tune }));
   }
   return { ...beat, rows, saved: now };
 }
+
+// The rows Kids plays (by index): each drum's row its squares show (the
+// first plain row with that sound) and the tune row (the first). A row a
+// grown-up added on 🥁 Beats stays quiet here, as it always has. A tune row
+// on a drum's sound is still the tune: it plays its notes, never the drum's
+// squares. `clipIds` are the four drums' sounds (null when the board has none).
+export function kidsPlayedRows(beat, clipIds) {
+  const rows = beat?.rows ?? [];
+  const at = clipIds.filter(Boolean).map((id) => rows.findIndex((r) => r?.clipId === id && !r.melody));
+  at.push(rows.findIndex((r) => r?.melody));
+  return new Set(at.filter((i) => i >= 0));
+}
+
+// How long ▶ may wait for the sounds to load before it gives itself back
+// (a ⏹ that stays silent is worse than a ▶ to tap again). Tests shorten it.
+export const KIDS_LOAD_WAIT = { ms: 2000 };
 
 // ── ● Record on the Keys screen: a tune into the kid's beat ──
 
@@ -260,11 +286,13 @@ export const pillSeconds = (bpm) => 60 / bpm / (STEPS / 4);
 export const tuneRowOf = (beat) => beat?.rows?.find((r) => r.melody) ?? null;
 
 // The beat with at least `bars` bars: each row's pills so far repeated to
-// fill them (sequencer multiplyRows). A beat with as many, or more, is left.
+// fill them (sequencer multiplyRows), in the beat's own bar. A beat with as
+// many, or more, is left.
 export function withBars(beat, bars, now = Date.now()) {
   const had = beat.bars || 1;
   if (had >= bars) return beat;
-  return { ...beat, bars, rows: multiplyRows(beat.rows, STEPS * had, STEPS * bars), saved: now };
+  const bar = barOf(beat);
+  return { ...beat, bars, rows: multiplyRows(beat.rows, bar * had, bar * bars), saved: now };
 }
 
 // The pill a key lands on: `t` seconds after the beat started round (less
@@ -284,7 +312,7 @@ export function pillAt(t, pill, total) {
 // starts the row again, on `clipId` (the instrument playing now); the row
 // is made when the beat has none. Returns the beat, saved.
 export function withTuneNote(beat, { clipId, pitch, s, l = 1, fresh = false }, now = Date.now()) {
-  const total = STEPS * (beat.bars || 1);
+  const total = totalOf(beat);
   const rows = beat.rows.map((r) => ({ ...r }));
   let row = rows.find((r) => r.melody);
   if (!row) { row = cleanRow({ clipId, melody: true, steps: Array(total).fill(false), tune: [] }); rows.push(row); }

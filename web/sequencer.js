@@ -22,7 +22,6 @@ import { openDialog, setupDialog } from './dialogs.js';
 import { tempoKey } from './tempo-key.js';
 import { newId, recall, remember, onePressOneClick } from './util.js';
 import { fadeStop, tooLate } from './audio.js';
-import { RING_MS } from './beat-engine.js';
 import { getSetting, onSetting, unsignedSignature } from './settings.js';
 import { logEvent } from './log.js';
 import { showBanner } from './ui.js';
@@ -38,7 +37,7 @@ import { follower, keepInView } from './follow.js';
 import { fitLine } from './lines.js';
 import { pillHolds } from './finger.js';
 import { encodeWav, normalize } from './wav.js';
-import { BAR_CHOICES, BEAT_BAR_STEPS, COMMON_BPMS, DEFAULT_BPM, MAX_BEAT_FILE_BYTES, MAX_BPM, MAX_PINS, MAX_ROWS, MAX_SWING, MIN_BPM, ROW_RATES, SAMPLE_SECONDS, STEPS_PER_BEAT, SIGNATURES, audible, barSteps, beatFromFile, beatToFile, chipBeats, cleanPattern, cleanRow, grooveBeat, groovePlayers, grooveShape, holdPill, isPinned, mergeGroove, moveItem, multiplyRows, nextSound, outputDelay, pillHits, pillTarget, planHits, retimeAt, rowSlot, stepSeconds, stepsHeard, stopFor, swingDelay, tapPill, tempoStops, typedBpm } from './beat.js';
+import { BAR_CHOICES, BEAT_BAR_STEPS, COMMON_BPMS, DEFAULT_BPM, MAX_BEAT_FILE_BYTES, MAX_BPM, MAX_PINS, MAX_ROWS, MAX_SWING, MIN_BPM, RING_MS, ROW_RATES, SAMPLE_SECONDS, STEPS_PER_BEAT, SIGNATURES, audible, barSteps, beatFromFile, beatToFile, chipBeats, cleanPattern, cleanRow, grooveBeat, groovePlayers, grooveShape, holdPill, isPinned, mergeGroove, moveItem, multiplyRows, nextSound, outputDelay, pillHits, pillTarget, planHits, retimeAt, rowSlot, stepSeconds, stepsHeard, stopFor, swingDelay, tapPill, tempoStops, typedBpm } from './beat.js';
 import { GROOVES, GROOVE_GROUPS } from './grooves.js';
 import { cleanFx, silencedBySolo, createMixer } from './mixer.js';
 import { addNote } from './notes.js';
@@ -87,7 +86,7 @@ export function createSequencer(deps) {
   // The one beat engine (beat-engine.js, made by app.js and shared with 🎼 Song and 🧸 Kids): the sounds
   // loaded for scheduling (`ready`), one hit (`sound`), the mix graphs (`busFor`) and the "play a saved beat" path.
   const { engine } = deps;
-  const { ready, prepare, refresh, sound, busFor, letGo, prepareBeats, soundHit } = engine;
+  const { prepare, refresh, sound, busFor, letGo, prepareBeats, soundHit } = engine;
   const pills = [];          // pills[row][step]
   const cell = { row: 0, step: 0 };  // the one pill in the Tab order; arrow keys move it
   let speakers = null;       // the rows' speakers and their loudness popover (set once the rows listen)
@@ -564,7 +563,7 @@ export function createSequencer(deps) {
     // so a sound deleted or taken off every row is not kept decoded all visit.
     if (!engine.preparing()) {
       const used = new Set(pattern.rows.map((r) => r.clipId));
-      for (const id of [...ready.keys()]) if (!used.has(id)) ready.delete(id);
+      engine.keep(used);
     }
     queue = [];
     t0 = ctx.currentTime + 0.05;
@@ -762,7 +761,7 @@ export function createSequencer(deps) {
 
   function hit(i, time, loud, note = 0, len = 0) {
     const row = pattern.rows[i];
-    const loaded = ready.get(row.clipId);
+    const loaded = engine.get(row.clipId);
     if (!loaded) return;
     const cuts = sound(audio.context(), busFor(audio.context(), audio.master, pattern).input(i), voices[i], row, loaded, time, loud, note, len);
     deps.onHit?.(row.clipId, (time - audio.context().currentTime) * 1000);
@@ -1604,7 +1603,7 @@ export function createSequencer(deps) {
     const clip = deps.clipById(row?.clipId);
     if (!row || !clip || playing()) return;
     await prepare(clip);
-    const loaded = ready.get(clip.id);
+    const loaded = engine.get(clip.id);
     if (!loaded || playing()) return;
     const ctx = audio.wake();
     sound(ctx, busFor(ctx, audio.master, pattern).input(i), previews, row, loaded, ctx.currentTime + 0.01, false, p, l * baseStep());
@@ -2507,7 +2506,7 @@ export function createSequencer(deps) {
     const lists = pattern.rows.map(() => []);
     let hits = 0;
     for (const { row: i, time, loud, note, len } of planHits(pattern, playMode(), seconds, bar(), swingNow(), groups())) {
-      const loaded = ready.get(pattern.rows[i].clipId);
+      const loaded = engine.get(pattern.rows[i].clipId);
       if (!loaded) continue;
       sound(ctx, busFor(ctx, ctx.destination, pattern).input(i), lists[i], pattern.rows[i], loaded, time, loud, note, len);
       hits++;
@@ -2800,5 +2799,5 @@ export function createSequencer(deps) {
     // For the keys' grid's mouse pick (pill-select.js in dj.js).
     putRows, paintRows, saveBeat: () => save(),
     // The sounds it holds decoded, by clip id (read only, for the tests).
-    held: () => [...ready.keys()] };
+    held: () => engine.held() };
 }

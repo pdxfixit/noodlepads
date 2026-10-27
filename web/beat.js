@@ -91,6 +91,7 @@ export const hitGain = (row, loud) => (loud ? ACCENT_GAIN : 1) * rowLevel(row);
 // Does a row play at all: not muted, not turned all the way down, and (in
 // beat `p`) not silenced by another row's Solo (the 🎚️ Mixer, mixer.js).
 export const audible = (row, p = null) => !row.muted && rowLevel(row) > 0 && !(p && silencedBySolo(p, row));
+export const RING_MS = 6000;           // a mix graph let go (and a note preview) rings out this long before it is disposed
 export const MAX_CHIPS = 8;            // pattern chips under the beat bar: 8 spots
 export const MAX_PINS = MAX_CHIPS;     // beats pinned with 📌 in 🗂️ My beats, each taking a spot
 
@@ -209,6 +210,58 @@ export function stepSeconds(pattern, row, mode) {
 export function pillHits(row, step) {
   if (row.melody) return startsIn(row.tune ?? [], step).map((n) => ({ at: n.s - step, loud: false, note: n.p, len: n.l }));
   return row.steps[step] ? [{ at: 0, loud: !!row.accents?.[step], note: 0, len: 0 }] : [];
+}
+
+// The hits of beat `p` due before `until`, from where its clocks are: pure,
+// so Node tests it and every player shares it (docs/design/one-beat-engine.md).
+// `at` is {clocks, pass}: a clock per row ({next, step, dt}) and one on the
+// beat's plain grid ({next, pill}) for the pills and passes. Returns the hits
+// ({row, at, loud, note, len}, `len` in seconds), the pills of the plain grid
+// ({pill, at}), the times a new pass starts, and the clocks moved on (new
+// objects; `at` is left as it was). A row new since the last call joins a
+// row at its speed, else the plain grid. The beat is its own bars: its
+// signature's pills a bar, its bars, its swing (`swing`, 0-50). `rows`: the
+// row indexes that play (null: all); `mixer` false plays a muted or
+// turned-down row too. A row with no pills, or a tempo that gives no pill
+// length, books nothing.
+export function hitsDue(p, at, until, { mode = 'plain', swing = 0, rows = null, mixer = true } = {}) {
+  const bars = Number.isInteger(p?.bars) && p.bars > 0 ? p.bars : 1;
+  const groups = SIGNATURES[p?.signature] || SIGNATURES['4/4'];
+  const total = barSteps(p?.signature) * bars;
+  const base = 60 / p?.bpm / STEPS_PER_BEAT;
+  const hits = [];
+  const pills = [];
+  const passes = [];
+  const pass = { ...at.pass };
+  const clocks = at.clocks.map((c) => (c ? { ...c } : c));
+  if (!(base > 0 && Number.isFinite(base))) return { hits, pills, passes, clocks, pass };
+  const solo = (p.rows ?? []).some((r) => r?.solo);   // as audible() reads it, safe for a missing row
+  (p.rows ?? []).forEach((row, i) => {
+    const dt = stepSeconds(p, row ?? {}, mode);
+    if (!(dt > 0 && Number.isFinite(dt))) return;
+    // Where it joins is read from the clocks as they came in, before this call moved any on.
+    const clock = clocks[i] ??= { ...(at.clocks.find((c) => c && (c.dt ?? dt) === dt) ?? { next: at.pass.next, step: at.pass.pill }), dt };
+    clock.dt = dt;
+    const playable = row && (row.melody || Array.isArray(row.steps)) && (!rows || rows.has(i)) && (!mixer || (!row.muted && rowLevel(row) > 0 && !(solo && !row.solo)));
+    while (clock.next < until) {
+      if (clock.step >= total) clock.step = 0;   // the beat got shorter while playing
+      // A tune row's notes start on the pill or half a pill after it (notes.js); swing moves only the pill.
+      if (playable) {
+        for (const h of pillHits(row, clock.step)) {
+          hits.push({ row: i, at: h.at ? clock.next + h.at * dt : clock.next + swingDelay(clock.step, dt, swing, groups), loud: h.loud, note: h.note, len: h.len * dt });
+        }
+      }
+      clock.next += dt;
+      clock.step = (clock.step + 1) % total;
+    }
+  });
+  while (pass.next < until) {
+    pills.push({ pill: pass.pill, at: pass.next });
+    pass.next += base;
+    pass.pill = (pass.pill + 1) % total;
+    if (pass.pill === 0) passes.push(pass.next);
+  }
+  return { hits, pills, passes, clocks, pass };
 }
 
 // Every hit in the first `seconds` of a beat: [{row, step, time, loud,

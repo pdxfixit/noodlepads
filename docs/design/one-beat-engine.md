@@ -1,6 +1,6 @@
 # One beat engine for Beats, ⌨️ Keys, 🧸 Kids and 🎼 Song
 
-Status: plan, revised after the council's first round (2026-10-26: child-psychologist ⛔, 19 seats ✏️, amateur and pre-reader ✅), and brought up to main on 2026-10-27. Ben approved the build. Steps 0–4 are done on branch `engine-1` (no behavior change in any of them). A spike proves the seam (see "The spike"); it is not for landing as it is.
+Status: plan, revised after the council's first round (2026-10-26: child-psychologist ⛔, 19 seats ✏️, amateur and pre-reader ✅), and brought up to main on 2026-10-27. Ben approved the build. Steps 0–4 are on main (no behavior change in any of them); step 5a (🧸 Kids on the engine, today's sound) is done on branch `engine-5`, 5b (Ben's sound changes) follows it. A spike proves the seam (see "The spike"); it is not for landing as it is.
 
 **What main changed since the plan was written** (2026-10-26/27): 🎷 Swing is for every level and swings the eighths (`swingNow()` has no Advanced test); Kids' drums are kick, snare, shaker, clap (`KIDS_DRUMS`); a beat's time signature is stamped (`old-beats.js`, ADR 0035), so nothing guesses it from Settings and `sigOf()` is the beat's own; the scratch re-read on leaving Kids is on main (7405e2c).
 

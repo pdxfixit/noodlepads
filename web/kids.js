@@ -19,7 +19,7 @@
 // the top bar and a pinch both move it, smoothly. An older copy kept a
 // device size in localStorage `kids-size`; it is ignored.
 
-import { audio, makeVoice, fadeStop, trimBounds, tooLate, RAW_MIC } from './audio.js';
+import { audio, trimBounds, RAW_MIC } from './audio.js';
 import { levelOf } from './meter.js';
 import { logEvent } from './log.js';
 import { countPlay } from './play-count.js';
@@ -35,15 +35,14 @@ import {
   kidsPadPx, kidsSliderAt, shareOf, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder,
   KIDS_DRUMS, drumPicture, KIDS_SQUARES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName,
   kidsVoiceFields, voiceAfter, MAX_RECORD_SECONDS, MIN_RECORD_SECONDS, pressKind, KIDS_COUNT, pictureFor, KIDS_KEYS, keyRate, keyPlayId, keyPitch, isHighKey, beatLayout, cleanTab,
-  nextKidsInstrument, keyKitId,
-  TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote, keptTune,
+  nextKidsInstrument, keyKitId, kidsPlayedRows, squareFits, barOf, totalOf, KIDS_LOAD_WAIT,
+  TUNE_BARS, TUNE_COUNT, pillSeconds, withBars, pillAt, withTuneNote, keptTune,
 } from './kids-logic.js';
-import { STEPS, noteRate } from './beat.js';
-import { startsIn } from './notes.js';
+import { STEPS, outputDelay } from './beat.js';
 import { instrumentById, PLAYED } from './instruments.js';
 
 const el = {};
-// deps: engine (the one beat engine, beat-engine.js; Kids' own loop moves onto it later), and what app.js initKids passes.
+// deps: engine (the one beat engine, beat-engine.js: Kids' beat plays through its `play`), and what app.js initKids passes.
 let deps = null;
 let showing = false;
 let tab = cleanTab(recall('kids-tab'));
@@ -589,7 +588,7 @@ function wireRecord() {
 
 // ── Beats: four drums, eight squares, always saved ──
 
-let playing = null;   // {timer, next, square, voices}
+let playing = null;   // the engine's run ({t0, stop, stats}) with the squares booked to light (`shows`) and its start (`started`)
 const drumClips = () => {
   const all = deps.clips({ includeHidden: true, allPresets: true });
   return KIDS_DRUMS.map((d) => all.find((c) => c.kitId === d) ?? null);
@@ -650,9 +649,11 @@ function tapSquare(sq) {
   const s = Number(sq.dataset.square);
   const on = sq.getAttribute('aria-pressed') !== 'true';
   const ids = drumClips().map((c) => c?.id ?? null);
-  deps.saveBeat(withSquare(kidsBeat(), ids, r, s, on));
-  sq.setAttribute('aria-pressed', String(on));
+  const beat = kidsBeat();
   boing(sq);
+  if (!squareFits(beat, s)) return;   // a grown-up's 3/4 bar has no pill under this square
+  deps.saveBeat(withSquare(beat, ids, r, s, on));
+  sq.setAttribute('aria-pressed', String(on));
   // Turning one on plays its drum, so the kid hears what it adds.
   if (on && !playing) { const clip = drumClips()[r]; if (clip) audio.play(clip); }
 }
@@ -663,76 +664,68 @@ function setTempo(which) {
   renderBeat();
 }
 
-// The sound of a clip for the player, loaded once per run; null until it is.
-function soundFor(run, clipId) {
-  if (!clipId) return null;
-  if (!run.sounds.has(clipId)) {
-    run.sounds.set(clipId, null);
-    const clip = deps.clips({ includeHidden: true, allPresets: true }).find((c) => c.id === clipId);
-    if (clip) audio.load(clip).then((got) => { if (playing === run) run.sounds.set(clipId, got); }).catch(() => {});
-  }
-  return run.sounds.get(clipId);
-}
+// A sound of the kid's board by id, hidden presets too (a drum a grown-up
+// hid still plays here); null when it is gone (a recording deleted).
+const soundOf = (id) => deps.clips({ includeHidden: true, allPresets: true }).find((c) => c.id === id) ?? null;
 
-// Plays the beat in a loop, scheduled a little ahead on the audio clock:
-// every pill of every bar, the drums' squares and the tune row's notes
-// (the tune a ● recording made, played as the regular app plays it: the
-// sound faster for a higher note, for as long as the note lasts). `from`:
-// the audio-clock time the first pill sounds (after a count); `onPass(at)`
-// is told as each time round is booked, with when it ends.
-async function playBeat({ from = null, onPass = null } = {}) {
-  if (playing) return;
-  const ctx = audio.wake();
-  const run = { t0: 0, next: 0, pill: 0, voices: new Set(), timer: 0, shows: [], sounds: new Map(), onPass };
-  const first = kidsBeat();
-  await Promise.all([...drumClips().map((c) => c?.id), tuneRowOf(first)?.clipId].filter(Boolean).map((id) => {
-    const clip = deps.clips({ includeHidden: true, allPresets: true }).find((c) => c.id === id);
-    return clip ? audio.load(clip).then((got) => run.sounds.set(id, got)).catch(() => {}) : null;
-  }));
-  if (playing || !showing) return;
-  playing = run;
-  run.t0 = from ?? ctx.currentTime + 0.06;
-  run.next = run.t0;
-  const hit = (got, at, rate, len) => {
-    if (tooLate(at, ctx.currentTime)) return;   // missed in a stall: the beat goes on in time
-    const v = makeVoice(ctx, got.buffer, audio.master);
-    if (rate !== 1) v.src.playbackRate.value = rate;
-    v.src.start(at);
-    const end = at + got.duration / rate;
-    if (len > 0 && at + len < end) fadeStop(v, at + len); else v.src.stop(end);
-    run.voices.add(v);
-    v.src.onended = () => run.voices.delete(v);
-  };
-  const tick = () => {
-    if (playing !== run) return;
-    const beat = kidsBeat();   // read each time: a square tapped, or a note landed, while it plays
-    const ids = drumClips().map((c) => c?.id ?? null);
-    const total = STEPS * (beat.bars || 1);
-    const dt = pillSeconds(beat.bpm);
-    const tune = tuneRowOf(beat);
-    while (run.next < ctx.currentTime + 0.12) {
-      const p = run.pill;
-      for (const id of ids) {
-        const row = id && beat.rows.find((r) => r.clipId === id);
-        const got = row?.steps?.[p] ? soundFor(run, id) : null;
-        if (got) hit(got, run.next, 1, 0);
-      }
-      if (tune?.tune?.length) {
-        const got = soundFor(run, tune.clipId);
-        if (got) for (const n of startsIn(tune.tune, p)) hit(got, run.next + (n.s - p) * dt, noteRate(n.p), n.l * dt);
-      }
-      if (p % 2 === 0) run.shows.push(setTimeout(() => showSquare((p % STEPS) / 2), Math.max(0, (run.next - ctx.currentTime) * 1000)));
-      if (run.shows.length > 64) run.shows.splice(0, 32);
-      run.next += dt;
-      run.pill = (p + 1) % total;
-      if (run.pill === 0) run.onPass?.(run.next);
-    }
-  };
-  run.timer = setInterval(tick, 25);
-  tick();
-  audio.on.started();
-  logEvent('kids', { play: true, bpm: first.bpm });
+// Plays the beat in a loop through the one beat engine (beat-engine.js
+// play, docs/design/one-beat-engine.md), on the audio clock: every pill of
+// every bar (the beat's own: a grown-up's 3/4 too), the drums' squares and
+// the tune row's notes (the tune a ● recording made, the sound faster for a
+// higher note, for as long as the note lasts). Kids leaves out the 🎚️ Mixer
+// (a muted or quiet row still sounds, straight into the output) and row
+// speed, plays only the rows it shows, lets each hit ring over the last
+// (at most MAX_RINGING), and books 0.12 s ahead, as it always has. A square
+// lights as its pill comes out of the speaker. `from`: the audio-clock time
+// the first pill sounds (after a count); `onPass(at)` is told as each time
+// round is booked, with when it ends.
+// The run is Kids' at once, before its sounds load: ▶ shows ⏹ on the first
+// tap, a second tap is ⏹, and ⏹ while they load calls the start off (nothing
+// is booked). Sounds that take more than KIDS_LOAD_WAIT.ms give ▶ back,
+// rather than a ⏹ that stays silent. A call with `from` or `onPass` (●)
+// always gets a run of its own: it ends a ▶ already playing first, so what
+// it records is never played by a run it cannot end. Resolves true once the
+// beat plays.
+function playBeat({ from = null, onPass = null } = {}) {
+  if (playing) {
+    if (from === null && !onPass) return playing.started;
+    stopBeat();
+  }
+  const shows = [];
+  const run = deps.engine.play({
+    beat: kidsBeat,   // read each tick: a square tapped, or a note landed, while it plays
+    clip: soundOf,
+    from: from ?? undefined,
+    startIn: 0.06,
+    lookahead: 0.12,
+    go: () => showing,
+    mode: () => 'plain',
+    ring: () => true,
+    mixer: false,
+    accents: false,    // as before the engine: a loud pill is not loud here, and a tune plays at its own pitch
+    foundNote: false,
+    rows: (beat) => kidsPlayedRows(beat, drumClips().map((c) => c?.id ?? null)),
+    onPill: (p, at) => {
+      if (p % 2) return;
+      const ctx = audio.context();
+      const bar = barOf(kidsBeat());
+      shows.push(setTimeout(() => showSquare((p % bar) / 2), Math.max(0, (at + outputDelay(ctx) - ctx.currentTime) * 1000)));
+      if (shows.length > 64) shows.splice(0, 32);
+    },
+    onPass,
+  });
+  playing = Object.assign(run, { shows });
+  run.waiter = setTimeout(() => { if (playing === run && run.t0 === null) stopBeat(); }, KIDS_LOAD_WAIT.ms);
+  run.started = run.ready.then((on) => {
+    clearTimeout(run.waiter);
+    if (playing !== run) return false;
+    if (!on) { stopBeat(); return false; }
+    audio.on.started();
+    logEvent('kids', { play: true, bpm: kidsBeat().bpm });
+    return true;
+  });
   showPlay();
+  return run.started;
 }
 
 function showSquare(s) {
@@ -743,10 +736,10 @@ function stopBeat() {
   const run = playing;
   if (!run) return;
   playing = null;
-  clearInterval(run.timer);
+  clearTimeout(run.waiter);
+  const { hits, late, silent } = run.stop();
+  if (run.t0 !== null) logEvent('kids', { stopped: true, hits, late, silent });   // how it went, once a play
   run.shows.forEach(clearTimeout);
-  const at = audio.ctx?.currentTime ?? 0;
-  for (const v of run.voices) fadeStop(v, at);
   showSquare(-1);
   if (el.play) showPlay();
 }
@@ -889,15 +882,15 @@ async function startTune() {
   showRec();
   run.timers.push(setTimeout(async () => {
     if (tuneRec !== run) return;
-    await playBeat({ from: run.t0, onPass: (at) => { if (tuneRec === run) run.timers.push(setTimeout(stopTune, Math.max(0, (at - ctx.currentTime) * 1000))); } });
+    const on = await playBeat({ from: run.t0, onPass: (at) => { if (tuneRec === run) run.timers.push(setTimeout(stopTune, Math.max(0, (at - ctx.currentTime) * 1000))); } });
     if (tuneRec !== run) return;
-    if (!playing) { stopTune(); return; }   // the sounds failed to load: nothing to play along to
+    if (!on) { stopTune(); return; }   // the sounds failed to load, or were called off: nothing to play along to
     run.mode = 'on';
     el.recFace.textContent = '●';
     showRec();
     logEvent('kids', { rec: 'start', bpm: beat.bpm });
     // The ring round ● fills as the beat goes round once.
-    const total = STEPS * (beat.bars || 1) * pillSeconds(beat.bpm);
+    const total = totalOf(beat) * pillSeconds(beat.bpm);
     const ring = () => {
       if (tuneRec !== run) return;
       el.rec.style.setProperty('--kids-rec', String(Math.min(1, (ctx.currentTime - run.t0) / total)));
@@ -915,7 +908,7 @@ function landNote(id) {
   tuneRec.held.delete(id);
   const beat = kidsBeat(tuneRec.pid);
   const dt = pillSeconds(beat.bpm);
-  const total = STEPS * (beat.bars || 1);
+  const total = totalOf(beat);
   if (got.at < tuneRec.t0 - 2 * dt) return;   // long before the beat started: not meant for it
   const s = pillAt(got.at - tuneRec.t0, dt, total);
   const l = Math.min(STEPS, Math.max(1, Math.round((audio.context().currentTime - got.at) / dt)));
