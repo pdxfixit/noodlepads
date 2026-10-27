@@ -23,6 +23,7 @@ import { logEvent } from './log.js';
 import { createSyncTiming, SYNC_DELAY_MS, ACTIVE_MS } from './sync-timing.js';
 import { appMeta } from './device-meta.js';
 import { track } from './telemetry.js';
+import { hex, hashSecret, isShareCode, plainCode } from './codes.js';
 
 // Given by app.js (initCloud), so this module never imports backup-ui.js,
 // which imports the People screen, which imports this.
@@ -36,7 +37,6 @@ export const api = createCloudApi({ fetch: (...args) => globalThis.fetch(...args
 export { cloudTrouble, CloudError };
 
 export { SYNC_DELAY_MS, ACTIVE_MS };    // when it syncs: sync-timing.js
-export const PIN_ROUNDS = 20_000;      // the device's own check of a PIN (link.check)
 const SHARED_KEY = 'shared';           // localStorage: the codes this device opened (Shared with me)
 export const MAX_SHARED = 100;
 export const NOT_IN_CLOUD = 'Put them in the cloud first to share.';
@@ -156,15 +156,9 @@ function setStatus(personId, value) { status.set(personId, { ...value, at: Date.
 
 // ── the PIN, when a person is opened ──
 
-const hex = (bytes) => [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('');
-async function pinHash(pin, saltHex) {
-  const salt = Uint8Array.from(saltHex.match(/../g).map((h) => parseInt(h, 16)));
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']);
-  return hex(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: PIN_ROUNDS }, key, 256));
-}
 async function pinCheck(pin) {
   const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
-  return { salt, hash: await pinHash(pin, salt) };
+  return { salt, hash: await hashSecret(pin, salt) };
 }
 
 // Whether this device skips their PIN (🔑 Remember on this device).
@@ -231,7 +225,7 @@ export async function unlock(personId, pin) {
       await dropLink(personId);
       throw err;
     }
-    if (!(err instanceof CloudError) || err.status !== 0 || !link.check || await pinHash(pin, link.check.salt) !== link.check.hash) throw err;
+    if (!(err instanceof CloudError) || err.status !== 0 || !link.check || await hashSecret(pin, link.check.salt) !== link.check.hash) throw err;
   }
   unlocked.add(personId);
   pinTyped.add(personId);
@@ -757,7 +751,6 @@ export function leftOutNote(left) {
 
 // A share code as people write it: ABCD-2345.
 export const showCode = (code) => (code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code);
-export const plainCode = (text) => String(text || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 // The codes this device opened (Shared with me), newest first. They stay
 // until the kid removes one. `gone`: its sharer unshared it (🚫), so it only
@@ -765,7 +758,7 @@ export const plainCode = (text) => String(text || '').toUpperCase().replace(/[^A
 export function sharedHere() {
   try {
     const list = JSON.parse(recall(SHARED_KEY) || '[]');
-    return Array.isArray(list) ? list.filter((s) => typeof s?.code === 'string' && /^[A-Z2-9]{8}$/.test(s.code)) : [];
+    return Array.isArray(list) ? list.filter((s) => typeof s?.code === 'string' && isShareCode(s.code)) : [];
   } catch { return []; }
 }
 function keepShared(list) { remember(SHARED_KEY, JSON.stringify(list.slice(0, MAX_SHARED))); }
@@ -773,7 +766,7 @@ function keepShared(list) { remember(SHARED_KEY, JSON.stringify(list.slice(0, MA
 // Opens a code: what it is joins Shared with me. Returns the share.
 export async function openShare(text) {
   const code = plainCode(text);
-  if (!/^[A-Z2-9]{8}$/.test(code)) throw new Error('A share code has 8 letters and numbers, like ABCD-2345.');
+  if (!isShareCode(code)) throw new Error('A share code has 8 letters and numbers, like ABCD-2345.');
   const share = await api.shared(code);
   keepShared([{ code, kind: share.kind, title: share.title, at: Date.now() }, ...sharedHere().filter((s) => s.code !== code)]);
   logEvent('cloud', { opened: 'share', kind: share.kind });

@@ -1,6 +1,8 @@
 // Small pieces every route shares: answers, reading a body with a cap, ids,
 // hashes, and the daily counters that keep the site on the free plan.
 
+import { hex } from '../web/codes.js';
+
 export const ORIGIN = 'https://noodlepads.com';
 export const HEADERS = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
 
@@ -90,7 +92,7 @@ export function randomId(bytes = 16) {
   return out;
 }
 
-export const hex = (bytes) => [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('');
+export { hex };
 
 // HMAC-SHA256 of `text` under `key` (a string), as hex.
 export async function hmacHex(key, text) {

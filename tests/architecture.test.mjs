@@ -172,15 +172,16 @@ test('✅ the keys and Kids rules have no DOM, storage or audio', () => {
   assert.deepEqual(pure.filter((f) => /\bdocument\.|\bwindow\.|localStorage|indexedDB|globalThis\.|AudioContext/.test(src[f])), [], FIX);
 });
 
-test('✅ only web/cloud.js and worker/pin.js run PBKDF2; only cloud-api.js sends X-Noodle-App and worker/metrics.js reads it', () => {
+test('✅ only web/codes.js runs PBKDF2 (the PIN hash of the device and the Worker); only cloud-api.js sends X-Noodle-App and worker/metrics.js reads it', () => {
   const both = [...WEB.map((f) => `web/${f}`), ...WORKER.map((f) => `worker/${f}`)];
-  assert.deepEqual(both.filter((f) => read(f).includes("'PBKDF2'")), ['web/cloud.js', 'worker/pin.js'], FIX);
+  assert.deepEqual(both.filter((f) => read(f).includes("'PBKDF2'")), ['web/codes.js'], FIX);
+  assert.deepEqual(both.filter((f) => /ABCDEFGHJKLMNPQRSTUVWXYZ23456789/.test(read(f))), ['web/codes.js'], 'the share code alphabet is written once');
   assert.deepEqual(both.filter((f) => read(f).includes("'X-Noodle-App'")), ['web/cloud-api.js', 'worker/metrics.js'], FIX);
 });
 
 test('✅ what the Worker imports from web/', () => {
   const names = new Set(WORKER.flatMap((f) => [...read(`worker/${f}`).matchAll(/from '\.\.\/web\/([\w-]+)\.js'/g)].map((m) => m[1])));
-  assert.deepEqual([...names].sort(), ['agent', 'device-meta', 'emoji-check', 'log-clean', 'model', 'names', 'reid'], FIX);
+  assert.deepEqual([...names].sort(), ['agent', 'codes', 'device-meta', 'emoji-check', 'log-clean', 'model', 'names', 'reid'], FIX);
 });
 
 test('✅ three Node tools: look.mjs and the two it loads', () => {

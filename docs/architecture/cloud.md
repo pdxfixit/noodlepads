@@ -18,6 +18,7 @@
 |---|---|---|---|
 | `cloud.js` | the links (`state.cloud`, IndexedDB `cloud`), session keys, PIN unlocks, per-person status, `syncAll`/`syncNow`, putting people up and taking them out, shares both ways | `app.js` (`initCloud`, `needsPin`, `leftPerson`, `onCloud`, `pinGuards`), `cloud-ui.js`, `people.js`, `backup-ui.js` (`pinGuards`), `who-now.js` (`linkOf`) | `cloud-api.js`, `cloud-sync.js`, `sync-timing.js`, `device-meta.js`, `backup.js cleanBackup`, `state.js`, `store.js db`, `audio.forget`, `log.js logEvent`, `telemetry.js track` |
 | `cloud-sync.js` | the sync of one profile (`syncProfile`), the push plan, record hashes, share bundles and remix docs | `cloud.js` | `merge3.js resolve`, `playlist.js`, `names.js`, `groups.js` |
+| `codes.js` | `CODE_CHARS`, `isShareCode`, `plainCode`, `hex`, `PIN_ROUNDS`, `hashSecret` (the PIN hash): the cloud's codes and PIN hash, for the device and the Worker | `cloud.js` (PIN checks, share codes), `log-send.js` (`CODE_CHARS`), `worker/pin.js`, `worker/http.js` | nothing |
 | `foreign.js` | `restoreForeign`, `foreignOf`: fields and values a newer app wrote into a synced record that this copy's checks dropped, kept in `link.foreign[k]` and put back into the body of a push | `cloud-sync.js` | `merge3.js sameContent` |
 | `merge3.js` | the three-way merge, the `changed` stamp (`STAMP`, `stampEdit`, `STAMPED`, `KEEP_BOTH`) | `cloud-sync.js`, `state.js` (`stampEdit` in `persist`), `backup.js` and `merge.js` (stamps), `sequencer.js save` (merges a save with a sync's change to the open beat) | `playlist.js legacySlots`, `firsts.js unionSeen` |
 | `cloud-api.js` | every cloud route as a function, `CloudError`, `cloudTrouble` (the kid's sentence) | `cloud.js` (one instance, `api`), `cloud-ui.js` (`api.fetchSound` for previews) | `fetch`, `reid.js isCloudId` |
@@ -49,13 +50,13 @@
 | `index.js` | routing, `EVENTS_OPTS`, `FEEDBACK_OPTS` | `reports.js`, `cloud.js`, `events-worker.js`, `http.js` |
 | `cloud.js` | every cloud route, `LIMITS`, `KINDS`, `CHUNK_BYTES`, `MAX_SOUND_BYTES`, keys, shares | `http.js`, `pin.js`, `metrics.js`, and from `web/`: `model.js` (`PERSON_ID`, `PERSON_COLORS`, `OLD_PERSON_COLORS`), `emoji-check.js`, `names.js isFunName`, `cutName`, `reid.js CLOUD_ID` |
 | `http.js` | `ORIGIN`, `reply`/`json`/`fail`, `Refuse`, `readBytes`/`readCapped`/`readJson`, `randomId`, `sha256Hex`, `toBytes`, `withinDaily` (the `counters` table) | nothing |
-| `pin.js` | PIN hash and wrong-try rule, share codes | `http.js hex` |
+| `pin.js` | the wrong-try rule, `newSalt`, `shareCode`; re-exports `hashSecret`, `ROUNDS`, `isShareCode`, `plainCode` | `web/codes.js` |
 | `metrics.js` | `devices` and `activity` rows, sweeps, `forgetProfile` | `web/device-meta.js WIDTHS`, `web/agent.js parseAgent` |
 | `reports.js` | `POST /api/log` | `clean.js`, `http.js` |
 | `clean.js` | `cleanUpload` (runs `web/log-clean.js cleanPayload`), `KIT_IDS` (the ids in `web/boards.json`, imported; wrangler bundles the JSON) | `web/log-clean.js`, `web/boards.json` |
 | `events-worker.js` | (vendored) `handleEvents`, `handleFeedback` | nothing |
 
-**The Worker pulls 19 `web/` modules in.** Through `model.js`, the Worker's import closure is `agent, contrast, cuts, device-meta, emoji-check, instruments, log-clean, log, loudness, model, names, playlist, reid, row-volume, steps, stretch, tweaks, usage, voices` (computed from the import lines). Any of them that touches `document`, `window` or an `AudioContext` at import time breaks the Worker. `tests/worker*.test.mjs` import the Worker under Node (no DOM), which catches a top-level DOM touch.
+**The Worker pulls 20 `web/` modules in.** Through `model.js`, the Worker's import closure is `agent, codes, contrast, cuts, device-meta, emoji-check, instruments, log-clean, log, loudness, model, names, playlist, reid, row-volume, steps, stretch, tweaks, usage, voices` (computed from the import lines). Any of them that touches `document`, `window` or an `AudioContext` at import time breaks the Worker. `tests/worker*.test.mjs` import the Worker under Node (no DOM), which catches a top-level DOM touch.
 
 ## Concepts
 
@@ -108,7 +109,7 @@ Readers and writers:
 
 The PIN flow on opening a person: `app.js setPerson` → `needsPin` → `cloud-ui.js askToOpen` (one ask per person at a time) → `withPin` → `cloud.js unlock` → `api.open`. Offline (`CloudError` status 0) the device checks `link.check` itself; a PIN new to the device (`newPin`) has no `check`, so only the cloud can check it. `app.js` `onCloud` re-asks when a sync finds a new PIN for the person showing.
 
-The PIN hash is done twice, the same way: `web/cloud.js pinHash` (`PIN_ROUNDS` 20,000) for the device's offline check, and `worker/pin.js hashSecret` (`ROUNDS` 20,000) for the real one. Wrong tries: `worker/pin.js checkSecret`, 5 in a row then `WAIT_MS` (10 minutes), kept in `profiles.fails`/`locked_until` for `/open` (`OPENING`) and in `profiles.key_fails`/`key_locked_until` for a request that carries a key (`KEYED`: Change PIN, Delete; migration 009), so a stranger's wrong tries at `/open` never lock Leave, Remove PIN or Change PIN on a device that has the key. Each try is counted before the compare, by one `UPDATE … SET fails = fails + 1 … RETURNING fails`, so tries sent at once get 5 compares in all; a try past the fifth starts the wait without one. Wrong PINs answer 401 `{error:'pin', tries}`; a wait answers 429 `{error:'wait', wait}`. The pad (`cloud-ui.js withPin`) shows `tries` as "N tries left" (`cloud-api.js cloudTrouble`; "Ask a grown-up for the PIN." from 3 left) and turns a 429 `wait` into its wait screen (`askWait`: no keys, the time it opens again, ⬅️ Back to Pads).
+The PIN hash is one function, `web/codes.js hashSecret` (`PIN_ROUNDS` 20,000): the device uses it for its offline check (`cloud.js pinCheck`), and `worker/pin.js` re-exports it (`ROUNDS`) for the real one (`tests/codes.test.mjs`, `tests/pin-hash-python.test.mjs`). Wrong tries: `worker/pin.js checkSecret`, 5 in a row then `WAIT_MS` (10 minutes), kept in `profiles.fails`/`locked_until` for `/open` (`OPENING`) and in `profiles.key_fails`/`key_locked_until` for a request that carries a key (`KEYED`: Change PIN, Delete; migration 009), so a stranger's wrong tries at `/open` never lock Leave, Remove PIN or Change PIN on a device that has the key. Each try is counted before the compare, by one `UPDATE … SET fails = fails + 1 … RETURNING fails`, so tries sent at once get 5 compares in all; a try past the fifth starts the wait without one. Wrong PINs answer 401 `{error:'pin', tries}`; a wait answers 429 `{error:'wait', wait}`. The pad (`cloud-ui.js withPin`) shows `tries` as "N tries left" (`cloud-api.js cloudTrouble`; "Ask a grown-up for the PIN." from 3 left) and turns a 429 `wait` into its wait screen (`askWait`: no keys, the time it opens again, ⬅️ Back to Pads).
 
 ### Who goes to the cloud
 
@@ -325,7 +326,7 @@ Any D1 error inside a cloud route answers 503 `{error: 'cloud', over}` (`over` w
 
 ## Share codes
 
-`worker/pin.js shareCode` = 8 characters from `CODE_CHARS` (no 0/O, 1/I), about 40 bits; `isShareCode` checks `[A-HJ-NP-Z2-9]{8}`; `plainCode` uppercases and drops anything not A–Z or 0–9. Shown as `ABCD-2345` (`cloud.js showCode`). The device's own check (`cloud.js openShare`, `sharedHere`) accepts `[A-Z2-9]{8}`, a little wider (an I or O passes the device and gets 404 from the Worker).
+`worker/pin.js shareCode` = 8 characters from `web/codes.js CODE_CHARS` (no 0/O, 1/I), about 40 bits; `codes.js isShareCode` checks `[A-HJ-NP-Z2-9]{8}`; `plainCode` uppercases and drops anything not A–Z or 0–9. Shown as `ABCD-2345` (`cloud.js showCode`). The device's check (`cloud.js openShare`, `sharedHere`) is the same `isShareCode`: a code with an I or O gets the device's message before the cloud is asked.
 
 ## The problem-report path
 
@@ -415,9 +416,7 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 
 | Seam | Where | What a fix in one place misses |
 |---|---|---|
-| PIN hash | `web/cloud.js pinHash`/`PIN_ROUNDS` and `worker/pin.js hashSecret`/`ROUNDS` | a change of rounds or algorithm on one side breaks offline checks (the device's `check` is its own, so only consistency within each side matters today) |
-| share code rules | `web/cloud.js plainCode` + `/^[A-Z2-9]{8}$/`, `worker/pin.js plainCode` + `isShareCode` | the device's check is wider (lets I and O through) |
-| code alphabet | `log-send.js CODE_CHARS` and `worker/pin.js CODE_CHARS` | the same 32 characters, kept by hand |
+| PIN hash, share code rules, code alphabet | one module, `web/codes.js` (✅ only it runs PBKDF2 and holds the alphabet) | none: a change of rounds still invalidates the device's stored `link.check`, since they are the same rounds as the Worker's stored hashes |
 | record kinds | `CLOUD_KINDS`, worker `KINDS`, `STAMPED`, schema comment | a new per-person store added to `reid.js PERSON_STORES` is in `CLOUD_KINDS`, `KINDS` and `STAMPED` at once (one list); only the schema comment is by hand |
 | record content and hash | `cloud-sync.js canonical` + `NOT_CONTENT`, `merge3.js canon` + `NOT_CONTENT` | a new non-content field added to one makes "changed" and "same" disagree |
 | the stores as lists | `state.js storedLists` (one function over `STORE_TABLE`); `cloud.js` and `backup-ui.js` call it | the cloud's maps `prefs` through `cleanPrefs` |

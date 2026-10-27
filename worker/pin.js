@@ -7,10 +7,11 @@
 // slow down guessing through the site: 2,000 waits of 10 minutes, about two
 // weeks, to try them all.
 
-import { hex } from './http.js';
+import { hex, hashSecret, isShareCode, plainCode, PIN_ROUNDS, CODE_CHARS } from '../web/codes.js';
 
-// The free plan gives a request 10 ms of CPU; 20,000 rounds take about 2 ms.
-export const ROUNDS = 20_000;
+// The hash, the rounds and the share code rules are web/codes.js (the device's too).
+export { hashSecret, isShareCode, plainCode };
+export const ROUNDS = PIN_ROUNDS;
 export const TRIES = 5;
 export const WAIT_MS = 10 * 60 * 1000;
 
@@ -18,12 +19,6 @@ export const isPin = (v) => typeof v === 'string' && /^\d{4}$/.test(v);
 
 export function newSalt() {
   return hex(crypto.getRandomValues(new Uint8Array(16)));
-}
-
-export async function hashSecret(secret, saltHex, rounds = ROUNDS) {
-  const salt = Uint8Array.from(saltHex.match(/../g).map((h) => parseInt(h, 16)));
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), 'PBKDF2', false, ['deriveBits']);
-  return hex(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: rounds }, key, 256));
 }
 
 // Same length, every byte compared, so the time taken says nothing.
@@ -79,8 +74,7 @@ export async function checkSecret(db, row, given, now, cols = OPENING) {
   return { ok: false, tries: TRIES - counted.fails };
 }
 
-// Codes people read off a screen: no 0/O or 1/I.
-const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+// Codes people read off a screen (web/codes.js CODE_CHARS).
 export function code(length) {
   const raw = crypto.getRandomValues(new Uint8Array(length));
   return [...raw].map((b) => CODE_CHARS[b % CODE_CHARS.length]).join('');
@@ -88,6 +82,3 @@ export function code(length) {
 
 // A share code as stored: 8 characters, about 40 bits. Shown as ABCD-2345.
 export const shareCode = () => code(8);
-export const isShareCode = (v) => typeof v === 'string' && /^[A-HJ-NP-Z2-9]{8}$/.test(v);
-// What someone typed, as stored: capitals, no spaces or dashes.
-export const plainCode = (v) => (typeof v === 'string' ? v.toUpperCase().replace(/[^A-Z0-9]/g, '') : '');

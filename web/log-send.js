@@ -17,6 +17,7 @@ import { SETTINGS, getSetting, onSetting } from './settings.js';
 import { getLog, onLog } from './log.js';
 import { cleanPayload } from './log-clean.js';
 import { parseAgent } from './agent.js';
+import { CODE_CHARS } from './codes.js';
 
 // The only host that sends. A dev copy (localhost, the Wi-Fi address) never does.
 export const LIVE_HOST = 'noodlepads.com';
@@ -29,8 +30,6 @@ export const SEND_SOON = ['error', 'tap'];
 export const MAX_BODY_BYTES = 60_000;
 
 const CODE_KEY = 'log-device';
-// No 0/O or 1/I, so a code read aloud off a tablet is copied right.
-const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 let code = null;
 
 // A new random code like "K7Q4-M2XD". `random` is for tests.
