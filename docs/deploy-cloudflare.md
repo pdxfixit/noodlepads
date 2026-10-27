@@ -114,7 +114,7 @@ https://noodlepads.com, both even if one fails, in about 8 s together:
 
 | Check | What it proves |
 |---|---|
-| `just cloud-smoke` | The API, from Node through `web/cloud-api.js`: make a profile with a fun name, picture, color and PIN; a wrong PIN is 401; open with the PIN; push a record and pull it back; a sound over 1.9 MB goes up in two pieces, is never sent twice, and reads back byte for byte; a share code reads back with no key, PIN or Origin; the public list answers and leaves the profile out; delete it; it opens 404, its sound and its share code 404. |
+| `just cloud-smoke` | The API, from Node through `web/cloud-api.js`: `/api/log`, `/api/events` and `/api/feedback` each refuse an empty post with 400 (routed, bound, the Origin let in; nothing stored); make a profile with a fun name, picture, color and PIN; a wrong PIN is 401; open with the PIN; push a record and pull it back; a sound over 1.9 MB goes up in two pieces, is never sent twice, and reads back byte for byte; a share code reads back with no key, PIN or Origin; the public list answers and leaves the profile out; delete it; it opens 404, its sound and its share code 404. |
 | `just cloud-e2e` | Two devices: two browser contexts (separate IndexedDB) in headless Chrome on the live site. A makes a person, a beat and a small WAV sound and syncs; B opens ⚙️ → People → ☁️ list, which leaves the check's profile out, so the check adds its line there and taps it, and gets the person, the beat and the sound (byte for byte); B rerolls the name (🎲) and renames the beat, and syncs; A syncs and has both, the beat edited in place (Q7). |
 
 - Every request carries `Origin: https://noodlepads.com`: the Worker refuses

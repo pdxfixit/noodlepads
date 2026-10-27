@@ -331,7 +331,11 @@ Both make one throwaway profile and delete it in a `finally`; a run killed
 before that leaves it for `just cloud-prune --smoke --yes`.
 
 - **`cloud-smoke`** (Node only): through `cloud-api.js createCloudApi` with
-  the site's `Origin`, against the live `/api`: hello, create with a PIN,
+  the site's `Origin`, against the live `/api`: hello, an empty post to
+  `/api/log`, `/api/events` and `/api/feedback` is refused with 400 (the
+  route is wired, its D1 or R2 binding is there, the Origin is let in; nothing
+  is stored, so no report, event or message of ours reaches the runner or
+  Ben's notes), create with a PIN,
   a wrong PIN refused (401), open, push a beat record, pull it, upload a
   sound over one piece (`cloud-sync.js uploadAudio`, `CHUNK_BYTES` + 54321
   bytes, so two pieces) and ask again (nothing needed), read it back byte for

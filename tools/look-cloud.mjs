@@ -5,7 +5,10 @@
 // p-e2e-…), and `just cloud-prune --smoke` removes any a killed run left.
 //
 //   cloud-smoke  the API round trip from Node, through web/cloud-api.js:
-//                make (a create with no PIN is refused), wrong PIN, open, a
+//                the other three routes answer (problem reports, usage events
+//                and feedback each refuse an empty post with 400, which proves
+//                the Worker routes them, their bindings are there and the site's
+//                Origin is let in, and stores nothing), make (a create with no PIN is refused), wrong PIN, open, a
 //                PATCH that clears the PIN is refused, push, pull, a sound in
 //                two pieces read back byte for byte, a share read with no
 //                key, the list (which leaves it out), five wrong PINs at open
@@ -115,6 +118,29 @@ function steps() {
   };
 }
 
+// The Worker's other three routes, each sent a post it refuses after the
+// checks that need its bindings: /api/log (the D1 binding), /api/events (the
+// EVENTS bucket) and /api/feedback (the FEEDBACK bucket and its rate limit).
+// A 400 means the route is wired, the site's Origin is let in and the binding
+// is there; a 503 is a missing binding and a 403 a refused Origin. Nothing is
+// stored, so no report, event or message of ours reaches the runner or Ben's
+// notes. (What the writes themselves do is tested here, in tests/*-route.)
+// These carry no proof key: they are open to the site's page anyway.
+const OTHER_ROUTES = [
+  ['/api/log', 'application/json', '{"entries":"none"}'],
+  ['/api/events', 'text/plain', 'check'],
+  ['/api/feedback', 'text/plain', 'check'],
+];
+async function otherRoutes(url) {
+  const said = [];
+  for (const [path, type, body] of OTHER_ROUTES) {
+    const res = await fetch(`${url}${path}`, { method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': type }, body });
+    must(res.status === 400, `${path} answered ${res.status}, not 400 (503: its binding is missing; 403: the Origin was refused; 404: not routed)`);
+    said.push(path);
+  }
+  return `${said.join(', ')} are routed, bound and refuse an empty post (400)`;
+}
+
 // The promise is refused with this status (and `error`), or this throws.
 async function refused(promise, status, error) {
   try {
@@ -142,6 +168,7 @@ async function smoke({ url }) {
   console.log(`☁️  cloud-smoke on ${url}: throwaway profile ${id}`);
   try {
     await s.step('the cloud is there', () => api.hello().then(() => 'the cloud is there (GET /api/cloud)'));
+    await s.step('the report, event and feedback routes answer', () => otherRoutes(url));
     await s.step('make the profile', async () => {
       key = (await api.create({ ...look, pin })).key;
       return `made ${look.avatar} ${look.name} with a PIN`;
