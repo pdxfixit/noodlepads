@@ -127,12 +127,12 @@ The library is the truth. `patterns` only says which named beat is open; no reco
 
 | Timer | Owner | Period | What it books |
 |---|---|---|---|
-| Beats' `run.timer` | `sequencer.js play` → `beat-engine.js play` | 25 ms (the engine's `TICK_MS`) | every hit `beat.js hitsDue` says is due before `currentTime + 0.1` (`LOOKAHEAD`), after the click (the `beforeRows` hook); a hit already more than 20 ms past (`audio.js tooLate`, after a stall) is dropped, its pill still counted |
+| Beats' `run.timer` | `sequencer.js play` → `beat-engine.js play` | 25 ms (the engine's `TICK_MS`) | every hit `beat.js hitsDue` says is due before `currentTime + 0.1` (`LOOKAHEAD`; `lookahead()` makes it 2.5 s, `HIDDEN_LOOKAHEAD`, while the page is hidden and the browser slows the timer to about 1 s, `tests/beat-hidden.test.mjs`), after the click (the `beforeRows` hook); a hit already more than 20 ms past (`audio.js tooLate`, after a stall) is dropped, its pill still counted |
 | `aloneTimer` | `seq.metronome(on)` | 25 ms | the click alone while the beat is stopped (⌨️ Keys / 🎤 Live's ⏲️) |
 | `raf` | `sequencer.js follow` | every frame | the playhead: pills heard so far |
 | `askTimer` | `arm` | 3 s (`ARM_MS`) | a Clear? or Remove? forgets its first tap |
 | `sample.timer` | `hearBeat` | one `setTimeout` | ends a groove sample (its run, on the same tick, booked the whole pass on its first tick) |
-| Song's `run.timer` | `song.js play` → `beat-engine.js play` (a list) | 25 ms (the same `TICK_MS`) | the next planned events before `currentTime + 0.1` (`LOOKAHEAD`), dropping a hit already past; then `song.js afterTick` (the mixes done, the meter, the end) |
+| Song's `run.timer` | `song.js play` → `beat-engine.js play` (a list) | 25 ms (the same `TICK_MS`) | the next planned events before `currentTime + 0.1` (`LOOKAHEAD`, longer while hidden as above), dropping a hit already past; then `song.js afterTick` (the mixes done, the meter, the end) |
 | Song's `raf` | `song.js follow` | every frame | the playhead line and the lit blocks |
 | Kids' `run.timer` | `beat-engine.js play` (🧸 Kids' beat) | 25 ms (the same) | what `beat.js hitsDue` says is due before `currentTime + lookahead` (Kids: 0.12 s), dropping a hit already past; the squares, ● 's pass |
 
@@ -429,7 +429,7 @@ Outside `deps`, the sequencer is read through `audio.grid = () => seq.grid()` (p
 | Seam | What a fix in one place misses |
 |---|---|
 | **One scheduler, two sources.** `beat-engine.js play` books a loop (`hitsDue`: 🥁 Beats and 🧸 Kids) or a planned list (🎼 Song, `hearBeat`). Kids looks 0.2 s ahead, a groove sample the whole pass, the others 0.1 s | Beats and Kids share `hitsDue`, `sound` and the tick, so a fix there reaches both: Kids plays in the beat's own bars, with its accents, swing and a tune row's `rootShift`; it leaves out rates, mute, solo and the 🎚️ Mixer's effects for good (row and Master volume are kept as a plain gain). A fix in the tick, the late-hit rule or `stop` reaches the list source too |
-| **`TICK_MS` and `LOOKAHEAD`** are declared once, in `beat-engine.js`; `sequencer.js` imports them for the click (`tests/architecture.test.mjs`) | the click books its own pulses on the same pair |
+| **`TICK_MS`, `LOOKAHEAD`, `HIDDEN_LOOKAHEAD` and `lookahead()`** are declared once, in `beat-engine.js`; `sequencer.js` imports `TICK_MS` and `lookahead` for the click, the bar-line switch and the next bar line (`tests/architecture.test.mjs`) | the click books its own pulses on the same pair |
 | **Output latency** is summed in `beat.js outputDelay` and again in `app.js`'s `deps.latency` for `dj.js` | a change to the cap (0.2 s) or the sum must be made twice; Kids ignores latency |
 | **The beat id pattern** `/^beat-[a-z0-9-]{1,48}$/` is written in `beat.js BEAT_ID`, `playlist.js BEAT_REF`, `backup.js` (a local `BEAT_ID`) and inline in `rhythm.js` | only `playlist.js` vs `sequencer.js` is tested (`tests/playlist.test.mjs`) |
 | **Listing a person's beats** happens three ways: `sequencer.js library()` (via `beatLibrary.list`, minus hidden), `makeSong`'s `deps.beats` (its own filter and sort), `kids.js`'s `deps.beats` | a new hidden kind of beat must be filtered in each |

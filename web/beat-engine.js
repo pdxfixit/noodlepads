@@ -19,6 +19,15 @@ import { masterLevel, mixKey, buildMix } from './mixer.js';
 // the audio clock: the one pair for the beat, 🎼 Song and the beat maker's click.
 export const TICK_MS = 25;
 export const LOOKAHEAD = 0.1;
+// A hidden page's timers are slowed by the browser to about one a second
+// (and a page that is not playing audio, to one a minute), so a run books
+// further ahead while the page is hidden: more than the slowest tick plus
+// its jitter. The audio clock plays what is booked; no hit is dropped as late
+// (audio.js tooLate). Booked hits that a stop or an edit would have changed
+// are faded or cut the same way, whatever their distance.
+export const HIDDEN_LOOKAHEAD = 2.5;
+// How far ahead to book now, given the lookahead the run asks for.
+export const lookahead = (asked = LOOKAHEAD) => (globalThis.document?.visibilityState === 'hidden' ? Math.max(asked, HIDDEN_LOOKAHEAD) : asked);
 // ▶ to the first pill, in seconds, once the sounds are loaded.
 const START_IN = 0.05;
 // Mix graphs on the live context at once (busFor); past this the idle one
@@ -285,7 +294,7 @@ export function createBeatEngine({ audio, clipById }) {
   //   from              the audio-clock time of the first pill; else
   //   startIn           seconds after the sounds have loaded (0.05)
   //   go()              asked once they have: false calls it off
-  //   lookahead         seconds booked ahead (0.1)
+  //   lookahead         seconds booked ahead (0.1; at least HIDDEN_LOOKAHEAD while the page is hidden)
   //   mode()            'plain' (every row on the beat) or 'speed' (a row's own rate)
   //   swing(beat)       0-50 (else 0)
   //   ring(row)         true: its hits never cut each other (else its 🔔); at most MAX_RINGING sound
@@ -386,7 +395,7 @@ export function createBeatEngine({ audio, clipById }) {
     };
     const tick = () => {
       if (!run.on) return;
-      const until = Math.min(ctx.currentTime + (hooks.lookahead ?? LOOKAHEAD), hooks.limit?.() ?? Infinity);
+      const until = Math.min(ctx.currentTime + lookahead(hooks.lookahead ?? LOOKAHEAD), hooks.limit?.() ?? Infinity);
       hooks.beforeRows?.(until);
       if (hooks.list) bookList(until); else bookLoop(until);
       hooks.afterTick?.();

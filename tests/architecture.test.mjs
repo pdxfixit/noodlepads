@@ -129,8 +129,9 @@ test('✅ hits are booked by one scheduler on the audio clock: the beat engine\'
 test('✅ one tick and lookahead: beat-engine.js declares them, the beat maker\'s click imports them, 🎼 Song has none of its own', () => {
   assert.match(src['beat-engine.js'], /^export const TICK_MS = 25;$/m, FIX);
   assert.match(src['beat-engine.js'], /^export const LOOKAHEAD = 0\.1;$/m, FIX);
-  assert.match(src['sequencer.js'], /^import \{ TICK_MS, LOOKAHEAD \} from '\.\/beat-engine\.js';$/m, FIX);
-  for (const f of ['sequencer.js', 'song.js']) assert.doesNotMatch(src[f], /^(export )?const (TICK_MS|LOOKAHEAD)\b/m, `${f}: ${FIX}`);
+  assert.match(src['sequencer.js'], /^import \{ TICK_MS, lookahead \} from '\.\/beat-engine\.js';$/m, FIX);
+  assert.match(src['beat-engine.js'], /^export const lookahead = /m, FIX);
+  for (const f of ['sequencer.js', 'song.js']) assert.doesNotMatch(src[f], /^(export )?const (TICK_MS|LOOKAHEAD|HIDDEN_LOOKAHEAD)\b/m, `${f}: ${FIX}`);
 });
 
 test('✅ the backup gate and the share preview load neither screen: song rules are in playlist.js (the S7 split)', () => {

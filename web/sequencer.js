@@ -13,8 +13,8 @@
 // Timing uses the Web Audio clock, not timers: the beat engine's run (this
 // file gives it the beat and its hooks, see play) ticks every 25 ms and
 // schedules every hit due in the next 100 ms at its exact time (the usual
-// lookahead pattern), so a busy page can delay the tick without making the
-// beat drag. The click is booked from that tick, by this file.
+// lookahead pattern; 2.5 s while the page is hidden, when the browser slows
+// the timer), so a busy page can delay the tick without making the beat drag. The click is booked from that tick, by this file.
 //
 // When a row's sound is still playing at its next hit, it is cut off with a
 // short fade (a hard cut clicks), unless the row's 🔔 Let it ring is on (`ring`,
@@ -48,7 +48,7 @@ import { createPillSelect } from './pill-select.js';
 import { edgeScroller } from './edge-scroll.js';
 import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
 import { cutName, MAX_LABEL } from './names.js';
-import { TICK_MS, LOOKAHEAD } from './beat-engine.js';
+import { TICK_MS, lookahead } from './beat-engine.js';
 import { merge3, sameContent } from './merge3.js';
 
 const ARM_MS = 3000;                   // how long a Clear? or Remove? waits for its second tap
@@ -464,7 +464,7 @@ export function createSequencer(deps) {
     const now = audio.context().currentTime;
     const barLen = bar() * baseStep();
     let at = grid()?.next ?? now;
-    while (at < now + LOOKAHEAD + 0.01) at += barLen;
+    while (at < now + lookahead() + 0.01) at += barLen;
     return at;
   }
   // The bar line has come: the chosen beat takes over from its first pill,
@@ -615,7 +615,7 @@ export function createSequencer(deps) {
       onHit: (clipId, at) => deps.onHit?.(clipId, (at - audio.context().currentTime) * 1000),
       afterTick: () => {
         meter.run();  // the speaker grille follows the beat
-        if (queued && audio.context().currentTime + LOOKAHEAD >= queued.at) { switchNow(); run.tick(); }
+        if (queued && audio.context().currentTime + lookahead() >= queued.at) { switchNow(); run.tick(); }
       },
     });
     deps.onTempo?.();  // before the first tick, so pads already looping join on the first "1"
@@ -701,7 +701,7 @@ export function createSequencer(deps) {
   let skips = [];   // [{row, at}]
 
   // The click follows the beat's groups (4/4: four beats; 6/8: two).
-  function scheduleClicks(on, until = audio.context().currentTime + LOOKAHEAD) {
+  function scheduleClicks(on, until = audio.context().currentTime + lookahead()) {
     const ctx = audio.context();
     // Fallen behind (the beat stopped, or the tab slept): start again now
     // rather than play every missed tick at once.
