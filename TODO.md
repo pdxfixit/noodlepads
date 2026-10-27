@@ -51,6 +51,8 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 - **First, when no other session has this repo open: rewrite git history to remove the old PIN-reset address** (Ben, 2026-10-26; the security seat found it in plain text in the first public commit). Rewriting breaks every clone and worktree, so Ben picks the moment: about ten sessions were open when he asked. Then every checkout re-clones. The app already uses a new address.
 
+- **Devices that remember a kid** (Ben, 2026-10-27; the parent, security and privacy seats): the profile's PIN part says "Remembered on N devices" and offers 🔑 Forget every other device (grown-up sum, then the PIN), so a lost tablet is cut off without changing the PIN. One small Worker route (count and delete a profile's other keys). A new control: mockup to Ben first, after the Remember and Share change lands.
+
 - **More kinds of music** (Ben, 2026-10-17; the goal is both trying many styles and learning how music works). Design review accepted with his answers (`docs/design/more-kinds-of-music.md`; decisions.md: instruments are a picker per person, 6 MB budget, Kids pentatonic, 7 groove groups, the emoji rule's exceptions). The grooves, 🧸 Kids' pentatonic toy keys and instruments' phase 1 are built; next:
   1. Instruments, phase 3 (ADR 0030; the pickers everywhere, 🧸 Kids' instrument button, the grooves' instruments and chips, Soca and Chiptune are built): one ready-made key layout per family in ✏️ Layout's keys.
 
