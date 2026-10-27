@@ -88,7 +88,7 @@ function worker({ files = {}, offline = false } = {}) {
   const ctx = vm.createContext({
     self, caches: w.caches, fetch: (r) => w.fetch(r), Request, Response, Headers, URL, TypeError, Promise,
   });
-  w.sw = vm.runInContext(`${code}\n;({ SHELL, route, keyFor, MARK, CACHE })`, ctx);
+  w.sw = vm.runInContext(`${code}\n;({ SHELL, route, keyFor, MARK, CACHE, refresh })`, ctx);
   // Fires a fetch event; resolves to the answer (or 'passed'), after its waits.
   w.request = async (path, { mode = 'cors', method = 'GET' } = {}) => {
     const waits = [];
@@ -158,21 +158,89 @@ test('keyFor: the page is one key whatever its query; files drop theirs; others 
   assert.equal(k('nope.js'), null);
 });
 
-test('install keeps the whole app and its version, then takes over at once', async () => {
+const isClip = (p) => p.startsWith('clips/');
+
+// Install, then activate, then the clips' fill that activate starts (it is
+// not waited for by the lifecycle, so the test waits for it here).
+async function installed(w) {
+  await w.lifecycle('install');
+  await w.lifecycle('activate');
+  await w.sw.refresh();
+}
+
+test('install keeps the app and its version first, then takes over at once', async () => {
   const w = worker({ files: site() });
   await w.lifecycle('install');
   const kept = w.kept();
   assert.equal(kept.get(`${SCOPE}app.js`), 'app.js @ aaa1111');
   assert.equal(kept.get(SCOPE), './ @ aaa1111');
-  assert.equal(kept.get(`${SCOPE}clips/kit/moo.wav`), 'clips/kit/moo.wav @ aaa1111');
   assert.equal(JSON.parse(kept.get(`${SCOPE}${w.sw.MARK}`)).version, 'aaa1111');
-  assert.equal(kept.size, w.sw.SHELL.length + 1);
+  const app = [...w.sw.SHELL].filter((p) => !isClip(p));
+  assert.equal(kept.size, app.length + 1, 'the app and its mark, not one clip');
+  assert.ok(![...kept.keys()].some((k) => k.includes('/clips/')), 'the clips wait for activate');
   assert.ok(w.skipped);
   await w.lifecycle('activate');
   assert.ok(w.claimed);
 });
 
-test('install fails, keeping nothing, when a file will not come', async () => {
+test('the clips come after the app, off the install, and the app is whole before the first one', async () => {
+  const w = worker({ files: site() });
+  const order = [];
+  const fetchOne = w.fetch;
+  w.fetch = async (req) => { order.push(typeof req === 'string' ? req : req.url); return fetchOne(req); };
+  await installed(w);
+  const firstClip = order.findIndex((u) => u.includes('/clips/'));
+  const lastApp = order.map((u) => !u.includes('/clips/') && !u.endsWith('version.json')).lastIndexOf(true);
+  assert.ok(firstClip > lastApp, 'every app file was asked for before the first clip');
+  assert.equal(w.kept().get(`${SCOPE}clips/kit/moo.wav`), 'clips/kit/moo.wav @ aaa1111');
+  assert.equal(w.kept().get(`${SCOPE}clips/kit/piano-61.wav`), 'clips/kit/piano-61.wav @ aaa1111');
+  assert.equal(w.kept().size, w.sw.SHELL.length + 2, 'every file, the app mark and the clips mark');
+});
+
+test('the activate event settles without waiting for the clips', async () => {
+  const w = worker({ files: site() });
+  await w.lifecycle('install');
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const fetchOne = w.fetch;
+  w.fetch = async (req) => { if ((req.url ?? req).includes('/clips/')) await gate; return fetchOne(req); };
+  await w.lifecycle('activate');           // resolves though every clip is held
+  assert.ok(w.claimed);
+  assert.equal(w.kept().has(`${SCOPE}clips/kit/moo.wav`), false);
+  release();
+  await w.sw.refresh();
+  assert.equal(w.kept().has(`${SCOPE}clips/kit/moo.wav`), true);
+});
+
+test('a clip that will not come does not fail the install; the next page load asks for the clips again', async () => {
+  const files = site();
+  delete files['clips/kit/moo.wav'];
+  const w = worker({ files });
+  await installed(w);                      // nothing rejects
+  assert.equal(w.kept().get(`${SCOPE}app.js`), 'app.js @ aaa1111', 'the app is kept');
+  assert.equal(w.kept().has(`${SCOPE}clips/kit/moo.wav`), false);
+  assert.equal(w.kept().get(`${SCOPE}clips/kit/woof.wav`), 'clips/kit/woof.wav @ aaa1111', 'the other clips are kept');
+  assert.equal(w.kept().has(`${SCOPE}__precached-clips.json`), false, 'a set that is not whole is not marked');
+  files['clips/kit/moo.wav'] = 'clips/kit/moo.wav @ aaa1111';
+  await w.request('', { mode: 'navigate' });
+  assert.equal(w.kept().get(`${SCOPE}clips/kit/moo.wav`), 'clips/kit/moo.wav @ aaa1111');
+  assert.ok(w.kept().has(`${SCOPE}__precached-clips.json`));
+});
+
+test('clips fetched offline at install time are tried again on the next visit, with the app still whole', async () => {
+  const w = worker({ files: site() });
+  await w.lifecycle('install');
+  w.offline = true;
+  await w.lifecycle('activate');
+  await w.sw.refresh();                    // quiet, as when a phone goes offline mid-fill
+  assert.equal(w.kept().get(`${SCOPE}app.js`), 'app.js @ aaa1111');
+  assert.equal(w.kept().has(`${SCOPE}clips/kit/moo.wav`), false);
+  w.offline = false;
+  await w.request('', { mode: 'navigate' });
+  assert.equal(w.kept().has(`${SCOPE}clips/kit/moo.wav`), true);
+});
+
+test('install fails, keeping nothing, when an app file will not come', async () => {
   const files = site();
   delete files['help.js'];
   const w = worker({ files });
@@ -231,6 +299,8 @@ test('offline before anything is kept, version.json fails as with no worker', as
 test('a page load after a new version went live fills the cache again; the same version does not', async () => {
   const w = worker({ files: site('aaa1111') });
   await w.lifecycle('install');
+  await w.lifecycle('activate');
+  await w.sw.refresh();
   let before = w.fetched.length;
   await w.request('', { mode: 'navigate' });
   assert.equal(w.fetched.length - before, 2, 'the page, then version.json, and no refill');

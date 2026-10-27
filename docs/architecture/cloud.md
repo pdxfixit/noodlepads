@@ -369,10 +369,11 @@ The player id is localStorage `telemetry-player` (a random UUID, `newPlayer`), n
 | `version.json` | `version` | network only; offline, the kept copy under `__precached-version.json`, marked `X-Noodle-Offline: 1` |
 | anything else | `network` | network first; a 200 `basic` answer for a `SHELL` file refreshes the kept copy (`keyFor`: the page is one key whatever its query; others drop the query); offline, the kept copy (a redirected one is copied plain) |
 
-- **Install:** `fill(true)` fetches `version.json`, `cache.addAll(SHELL)` (all or nothing, `cache: 'no-cache'`), stores the version mark, then `skipWaiting`.
-- **Activate:** deletes other `noodlepads*` caches, `clients.claim`.
-- **Refill:** a navigation that gets a good answer calls `refresh()` → `fill(false)`, which refills only when `version.json` differs from the mark. One refill at a time.
-- **`SHELL`:** the page, `styles.css`, `boards.json`, the manifest, fonts, app icons, `MODULES` (every `web/*.js` the page can load), `BG` tiles, `KIT` and `INSTRUMENT_FILES` WAVs. `tests/offline.test.mjs` fails when a file in `web/` is missing (or one listed is not there), unless named in its `NOT_LOADED`.
+- **Install:** `fill(true)` fetches `version.json`, `cache.addAll` of `SHELL` without the `clips/` files (all or nothing, `cache: 'no-cache'`), stores the version mark, then `skipWaiting`. The app installs without the 9 MB of clips.
+- **Activate:** deletes other `noodlepads*` caches, `clients.claim`, then starts `refresh()` without waiting for it (a worker's pages wait for `activate` to settle).
+- **Refill:** `refresh()` (activate, and a navigation that gets a good answer) → `fill(false)`, which refills the app only when `version.json` differs from the mark, then `fillClips`: the `clips/` files, 6 at a time, one `cache.put` each. A clip that fails is skipped (no install failure); the clips mark `__precached-clips.json` is written only when every clip was kept for that version, so an unmarked set is asked for again on the next page load (a 304 each when unchanged). One refill at a time. Offline before the clips finish, a clip not yet kept fails as with no worker.
+- **`SHELL`** (the app, then the clips; `isClip` splits them):
+  the page, `styles.css`, `boards.json`, the manifest, fonts, app icons, `MODULES` (every `web/*.js` the page can load), `BG` tiles, `KIT` and `INSTRUMENT_FILES` WAVs. `tests/offline.test.mjs` fails when a file in `web/` is missing (or one listed is not there), unless named in its `NOT_LOADED`.
 - **Registered** by `offline.js registerOffline` after `load`.
 
 ## The update bar (`update.js`)

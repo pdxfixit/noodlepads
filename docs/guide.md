@@ -1242,7 +1242,9 @@ no install button.
 installed or not: the service worker (`web/sw.js`, registered by
 `web/offline.js` once the page has loaded) keeps a copy of the whole app,
 the ready-made sounds (about 5.5 MB of the 6 MB) and the fonts and
-patterns included. Online it changes nothing: every file comes from the
+patterns included. The app is kept first and the sounds after it, a few at a
+time, so a slow connection still gets the app; a sound that has not come yet
+is tried again on the next page load. Online it changes nothing: every file comes from the
 network first, and the kept copy is used only when that fails, so a new
 version shows on the next load as before. Each file that comes in refreshes
 the kept copy, and a page load that finds a new `version.json` fetches the

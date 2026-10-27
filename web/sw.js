@@ -14,9 +14,12 @@
 //   the rest   network first; each good answer refreshes the kept copy, so
 //              the offline copy tracks the live site
 //
-// The whole app (SHELL) is fetched when the worker installs, and again when
-// a page load finds a new version.json, so a module only some screens load
-// (emoji-all.js) never stays a version behind the rest offline.
+// The app (SHELL without the clips) is fetched when the worker installs, and
+// again when a page load finds a new version.json, so a module only some
+// screens load (emoji-all.js) never stays a version behind the rest offline.
+// The kit's clips (about 9 MB) come after, one by one, off the install: the
+// app is installed and takes over without waiting for them, and a clip that
+// will not come fails nothing (the next page load tries again).
 //
 // A classic script, not a module: every browser that installs apps runs
 // these. Plain functions, so tests/offline.test.mjs can load this file and
@@ -26,6 +29,11 @@ const CACHE = 'noodlepads-app';
 // Where the cache keeps the version.json it was last filled from. Not a
 // file on the site; the worker writes and reads it only.
 const MARK = '__precached-version.json';
+// The same for the clips: written only when every clip was kept for that
+// version, so a partly filled set is tried again.
+const CLIPS_MARK = '__precached-clips.json';
+// How many clips come at once.
+const CLIPS_AT_ONCE = 6;
 
 const KIT = [
   'airhorn', 'alarm', 'bass-a', 'bass-as', 'bass-c', 'bass-cs', 'bass-d', 'bass-ds', 'bass-e', 'bass-f', 'bass-fs',
@@ -113,6 +121,10 @@ function keyFor(url, scope) {
   return SHELL.includes(path) ? new URL(path, scope).href : null;
 }
 
+// The kit's recorded sounds and the instruments' (SHELL's clips/ files):
+// the bulk of the bytes, filled after the app (fillClips).
+const isClip = (path) => path.startsWith('clips/');
+
 // Only a whole, plain same-site answer is worth keeping (not a 206 part, a
 // redirect or an error page).
 const keepable = (res) => !!res && res.ok && res.status === 200 && res.type === 'basic';
@@ -153,28 +165,70 @@ async function versionFile(event) {
   }
 }
 
-// Fills the cache with every SHELL file, all or nothing (Cache.addAll), then
-// marks it with the version.json it was filled for. `always` fills it even
-// when that version is already there (install). no-cache asks the server
-// each time; a file that has not changed costs a 304.
-async function fill(always) {
-  const scope = self.registration.scope;
+// What version.json says now, as text (null when it answers with an error).
+// Throws offline, so a refill that cannot reach the site stops there.
+async function liveVersion(scope) {
   const res = await fetch(new Request(new URL('version.json', scope).href, { cache: 'no-store' }));
-  const body = res.ok ? await res.text() : null;
-  const cache = await caches.open(CACHE);
-  const markKey = new URL(MARK, scope).href;
-  if (!always && body !== null) {
-    const had = await cache.match(markKey);
-    if (had && (await had.text()) === body) return;
-  }
-  await cache.addAll(SHELL.map((p) => new Request(new URL(p, scope).href, { cache: 'no-cache' })));
-  if (body !== null) await cache.put(markKey, new Response(body, { headers: { 'Content-Type': 'application/json' } }));
+  return res.ok ? res.text() : null;
 }
 
-// One background refill at a time; a failed one (offline) waits for the next page load.
+// True when the cache holds `markPath` and it says `body`.
+async function marked(cache, scope, markPath, body) {
+  const had = await cache.match(new URL(markPath, scope).href);
+  return !!had && (await had.text()) === body;
+}
+
+// Fills the cache with the app: every SHELL file but the clips, all or
+// nothing (Cache.addAll), then marks it with the version.json it was filled
+// for, and returns that version.json text. `always` fills it even when that
+// version is already there (install). no-cache asks the server each time; a
+// file that has not changed costs a 304.
+async function fill(always) {
+  const scope = self.registration.scope;
+  const body = await liveVersion(scope);
+  const cache = await caches.open(CACHE);
+  if (!always && body !== null && await marked(cache, scope, MARK, body)) return body;
+  await cache.addAll(SHELL.filter((p) => !isClip(p)).map((p) => new Request(new URL(p, scope).href, { cache: 'no-cache' })));
+  if (body !== null) await cache.put(new URL(MARK, scope).href, new Response(body, { headers: { 'Content-Type': 'application/json' } }));
+  return body;
+}
+
+// Then the clips for `body` (what fill returned), a few at a time. A clip
+// that will not come is skipped, not an error: the app is already kept, and a
+// set that is not whole is not marked, so the next page load fills it again.
+// Not marked for this version yet means every clip is asked for again (a 304
+// each when unchanged).
+async function fillClips(body) {
+  const scope = self.registration.scope;
+  const cache = await caches.open(CACHE);
+  if (body !== null && await marked(cache, scope, CLIPS_MARK, body)) return;
+  const todo = SHELL.filter(isClip);
+  let missed = 0;
+  async function worker() {
+    while (todo.length) {
+      const path = todo.shift();
+      try {
+        const req = new Request(new URL(path, scope).href, { cache: 'no-cache' });
+        const res = await fetch(req);
+        if (keepable(res)) await cache.put(req, res);
+        else missed++;
+      } catch (err) {
+        missed++;
+      }
+    }
+  }
+  const pool = [];
+  for (let i = 0; i < CLIPS_AT_ONCE; i++) pool.push(worker());
+  await Promise.all(pool);
+  if (!missed && body !== null) await cache.put(new URL(CLIPS_MARK, scope).href, new Response(body, { headers: { 'Content-Type': 'application/json' } }));
+}
+
+// One background refill at a time: the app if a new version is live, then the
+// clips if they are not whole for it. A failed one (offline) waits for the
+// next page load.
 let refilling = null;
 function refresh() {
-  refilling ??= fill(false).catch(() => {}).finally(() => { refilling = null; });
+  refilling ??= fill(false).then(fillClips).catch(() => {}).finally(() => { refilling = null; });
   return refilling;
 }
 
@@ -184,7 +238,10 @@ function refresh() {
 // over mid-visit changes no code the page runs. A first visit is looked
 // after from the start, so its later loads (a sheet's module, a clip) are kept too.
 // An install fails, and is tried again on the next visit, unless the whole
-// app is in the cache: a half-filled copy would open broken offline.
+// app is in the cache: a half-filled copy would open broken offline. The
+// clips are not part of it: 9 MB all or nothing would fail the install on a
+// slow connection, so they follow (activate), and a phone offline before they
+// finish plays what it has.
 self.addEventListener('install', (event) => {
   event.waitUntil(fill(true).then(() => self.skipWaiting()));
 });
@@ -196,6 +253,9 @@ self.addEventListener('activate', (event) => {
     }
     await self.clients.claim();
   })());
+  // Not waited for: a worker is not "activated" until its activate event
+  // settles, and its pages' requests wait for that. The clips fill beside it.
+  refresh();
 });
 
 self.addEventListener('fetch', (event) => {

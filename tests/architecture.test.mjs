@@ -28,7 +28,7 @@ const worker = (f) => import(new URL(`../worker/${f}`, import.meta.url));
 // Where a file name in the docs may live: a path as written, else by its bare name.
 const SEARCH = ['web', 'worker', 'tools', 'tests'];
 // Named in the docs, made outside the repo: the deploy writes version.json, sw.js keeps a copy under the other.
-const NOT_IN_REPO = new Set(['version.json', '__precached-version.json']);
+const NOT_IN_REPO = new Set(['version.json', '__precached-version.json', '__precached-clips.json']);
 function filesNamed(name) {
   if (name.includes('/')) return existsSync(join(root, name)) ? [name] : [];
   return SEARCH.map((d) => `${d}/${name}`).filter((p) => existsSync(join(root, p)));

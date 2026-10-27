@@ -377,7 +377,7 @@ Who reads the label after that:
 | Reader | Rule | Note |
 |---|---|---|
 | `update.js` | compares the live version.json with the loaded one; `dev` never asks | the 🆕 bar |
-| `sw.js` | version.json network only; the cache is marked with the version it was filled for (`MARK`) and refilled when a page load finds another | offline copy |
+| `sw.js` | version.json network only; the app is marked with the version it was filled for (`MARK`) and refilled when a page load finds another; the clips follow it off the install (`CLIPS_MARK`, only when all were kept) | offline copy |
 | `device-meta.js appMeta` | keeps `[A-Za-z0-9._-]`, 40 characters | `X-Noodle-App` on cloud calls |
 | `feedback.js appVersion` | the label with each `-` sent as `+` (`v1.0.277+b328291`), cut to 32 characters, if it then matches `^[0-9A-Za-z.+_]{1,32}$` (the Worker's `events-worker.js` rule), else `dev` | live feedback is filed under its release; a dev copy under `dev` |
 | `backup.js makeBackup` | stored as given | in every backup |
