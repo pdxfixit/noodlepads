@@ -2,14 +2,17 @@
 """Make the recorded clips in web/clips/kit/: the instruments' notes (ADR
 0030) from the CC0 sample libraries VSCO 2 CE (github.com/sgossner/VSCO-2-CE)
 and VCSL (github.com/sgossner/VCSL), and the real drums, animals and
-effects (HITS; Ben, 2026-10-24) from VCSL and from ESC-50's clips
-(github.com/karolpiczak/ESC-50) whose Freesound originals are CC0 or CC-BY.
+effects (HITS; Ben, 2026-10-24) from VCSL, from ESC-50's clips
+(github.com/karolpiczak/ESC-50) whose Freesound originals are CC0 or CC-BY,
+and from Meta's Oculus Audio Pack 1 (CC BY 4.0, in
+github.com/facebookincubator/Meta-open-sound under corpora/oculus-audio-pack).
 
 `python3 -I tools/make_samples.py SOURCE_DIR` reads the few files named in
-SAMPLES and HITS below from SOURCE_DIR (a folder holding `vsco/`, `vcsl/` and
-`esc50/`, the libraries' trees as they are on GitHub, only those files
-checked out) and writes each one as the kit's clips are: mono, 22050 Hz,
-16-bit, the quiet start cut off, a fixed length, faded out, peak at 85%. The
+SAMPLES and HITS below from SOURCE_DIR (a folder holding `vsco/`, `vcsl/`,
+`esc50/` and `oculus/`, the libraries' trees as they are on GitHub, only
+those files checked out; the Oculus pack ships OGG, so decode each file to a
+WAV of the same name first: `ffmpeg -i X.ogg X.wav`, into `oculus/`) and writes each one as the
+kit's clips are: mono, 22050 Hz, 16-bit, the quiet start cut off, a fixed length, faded out, peak at 85%. The
 libraries are not in this repo; web/clips/kit/LICENSE-samples.txt names what
 came from where and credits each CC-BY author.
 
@@ -57,6 +60,7 @@ SAMPLES = [
 HITS = [
     ("alarm", "esc50", "audio/4-209698-A-37.wav", 1.2, 0.3, 0, 0.0),
     ("bongo", "vcsl", "Membranophones/Struck Membranophones/Bongos/BongoL_Hit1_v3_rr1_Mid.wav", 0.4, 0.15, 8, None),
+    ("burp", "oculus", "HMNBurp_Burp_OS_02.wav", 0.55, 0.15, 0, None),
     ("buzz", "esc50", "audio/1-19501-A-7.wav", 1.2, 0.3, 8, 0.0),
     ("cajon", "vcsl", "Idiophones/Struck Idiophones/Cajon/Cajon_hit1_f_rr1.wav", 0.5, 0.2, 8, None),
     ("clap", "vcsl", "Idiophones/Struck Idiophones/Claps/Clap_rr1.wav", 0.4, 0.15, 8, None),
@@ -70,6 +74,7 @@ HITS = [
     ("meow", "esc50", "audio/2-110011-A-5.wav", 0.9, 0.3, 0, 0.02),
     ("moo", "esc50", "audio/1-58277-A-3.wav", 1.3, 0.3, 0, 0.0),
     ("open-hat", "vcsl", "Idiophones/Struck Idiophones/Hi-Hat Cymbal/HiHat_HitO_rr1_Mid.wav", 0.6, 0.2, 0, None),
+    ("quack", "oculus", "BIRDFowl_Duck_OS_01.wav", 0.28, 0.1, 0, 0.55),
     ("ribbit", "esc50", "audio/3-71964-C-4.wav", 0.8, 0.267, 2, 4.32),
     ("ride", "vcsl", "Idiophones/Struck Idiophones/Suspended Cymbal 1/susCymb1_hit_bell_pp1.wav", 1.2, 0.4, 0, None),
     ("rim", "vcsl", "Membranophones/Struck Membranophones/Snare Drum, Modern 3/Snare4_Xstick_v2_rr1_Mid.wav", 0.2, 0.08, 8, None),

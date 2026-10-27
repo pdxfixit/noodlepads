@@ -44,5 +44,20 @@ class Lift(unittest.TestCase):
         self.assertLess(max(abs(g1 - g0) for g0, g1 in zip(gain, gain[1:])), 0.05)
 
 
+class Credits(unittest.TestCase):
+    """A recording is credited, and its preset is no longer synthesized."""
+
+    def test_every_recording_is_credited_in_the_license_file(self):
+        credits = (Path(ms.KIT_OUT) / "LICENSE-samples.txt").read_text()
+        for name, library, rel, *_ in ms.HITS:
+            self.assertIn(f"{name}.wav ", credits.replace("\t", " "), f"{name} is not credited in LICENSE-samples.txt")
+            self.assertTrue((Path(ms.KIT_OUT) / f"{name}.wav").exists(), name)
+
+    def test_a_recorded_preset_is_not_also_made(self):
+        import make_placeholders as mp
+        both = sorted({h[0] for h in ms.HITS} & set(mp.KIT))
+        self.assertEqual(both, [], "make_placeholders.py would overwrite these recordings")
+
+
 if __name__ == "__main__":
     unittest.main()

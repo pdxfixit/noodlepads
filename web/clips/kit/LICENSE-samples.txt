@@ -80,6 +80,17 @@ and its body lifted under its peak where noted in tools/make_samples.py
 (HITS), so it plays about as loud as the other sounds; the kick, taiko and
 conga have their own overtones added so a phone speaker plays them.
 
+From Oculus Audio Pack 1, CC BY 4.0 (2026-10-27), read from Meta's
+github.com/facebookincubator/Meta-open-sound (corpora/oculus-audio-pack/ogg/):
+
+  "Oculus Audio Pack 01" by Oculus VR, LLC
+  (https://developers.meta.com/vr/downloads/package/oculus-audio-pack-1/),
+  licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+  Cut, faded and resampled for this app (tools/make_samples.py).
+
+  burp.wav       HMNBurp_Burp_OS_02.ogg
+  quack.wav      BIRDFowl_Duck_OS_01.ogg (one quack of several)
+
 Spoken clips: Apple system voices (to be replaced)
 
 These 16 clips are spoken by Apple's macOS system voices, through the

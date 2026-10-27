@@ -224,7 +224,7 @@ phone serial port="8765":
 phone-off serial port="8765":
     adb -s {{serial}} reverse --remove tcp:{{port}}
 
-# Make preset clips in web/clips/kit/: just placeholders quack roar (only those; a kid's sounds use the rest, keep them byte-identical). No names: all of them
+# Make preset clips in web/clips/kit/: just placeholders roar toot (only those; a kid's sounds use the rest, keep them byte-identical). No names: all of them
 [positional-arguments]
 placeholders *names:
     python3 tools/make_placeholders.py "$@"

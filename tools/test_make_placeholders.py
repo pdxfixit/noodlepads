@@ -57,10 +57,10 @@ class Presets(unittest.TestCase):
             old_out = mp.KIT_OUT
             mp.KIT_OUT = Path(tmp)
             try:
-                mp.main(["pop", "quack"])
+                mp.main(["pop", "roar"])
             finally:
                 mp.KIT_OUT = old_out
-            self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), ["pop.wav", "quack.wav"])
+            self.assertEqual(sorted(p.name for p in Path(tmp).iterdir()), ["pop.wav", "roar.wav"])
             self.assertEqual((Path(tmp) / "pop.wav").read_bytes(), (WEB / "clips/kit/pop.wav").read_bytes(),
                              "the same recipe makes the same bytes")
 

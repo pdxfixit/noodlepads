@@ -2,7 +2,7 @@
 """Make the synthesized clips of the presets (the shared kit) in web/clips/kit/.
 
 `python3 tools/make_placeholders.py` makes them all; with names
-(`make_placeholders.py quack roar`) it makes only those, so adding a preset
+(`make_placeholders.py roar toot`) it makes only those, so adding a preset
 never touches the others. The airhorn, laser and the rest of the old
 starter sounds are not made here: they are the old app's clips, kept as
 they were.
@@ -310,13 +310,6 @@ def tom_fill():
     return mix(hit(300, 220, 0.3), at(0.12, hit(240, 170, 0.3)), at(0.24, hit(180, 125, 0.35)), at(0.36, hit(140, 95, 0.5)))
 
 
-def quack():
-    """A duck: two short nasal quacks."""
-    one = lambda: sweep_lowpass(wobble(osc(lambda t: 620 - 400 * t, 0.16, "saw", adsr(0.01, 0.06, 0.16)), 45, 0.5),
-                                lambda t: 0.5 - 1.5 * t)
-    return one() + silence(0.08) + one()
-
-
 def roar():
     """A lion, cartoon-sized: a growl that swells and fades."""
     growl = wobble(osc(lambda t: 95 + 25 * math.sin(math.pi * t / 1.2), 1.2, "saw", adsr(0.25, 0.4, 1.2)), 23, 0.6)
@@ -379,14 +372,6 @@ def computer():
         f = rng.choice((1800, 2200, 2600, 3000, 3400))
         out += osc(lambda t, f=f: f, 0.04, "sine", lambda t: 0.8) + silence(0.015)
     return out
-
-
-def burp():
-    """A burp: a low rumbly tone with a wobbly throat."""
-    rng = random.Random(45)
-    jitter = [rng.uniform(-1, 1) for _ in range(64)]
-    tone = osc(lambda t: 85 - 20 * t + 12 * jitter[int(t * 100) % 64], 0.6, "saw", adsr(0.03, 0.15, 0.6))
-    return lowpass(wobble(tone, 18, 0.5), 0.1)
 
 
 def toot():
@@ -649,7 +634,7 @@ INSTRUMENT_CLIPS = {
 KIT = {
     # The kick, snare, hats, toms, cymbals, hand drums, animals, siren,
     # alarm and the rest of the real-world sounds are recordings now
-    # (tools/make_samples.py HITS; Ben, 2026-10-24).
+    # (tools/make_samples.py HITS; Ben, 2026-10-24), and so are the duck and the burp.
     "snap": snap, "boom": boom,
     "note-c": pluck(261.6), "note-d": pluck(293.7), "note-e": pluck(329.6), "note-g": pluck(392.0),
     "note-a": pluck(440.0), "note-c-high": pluck(523.3), "bass-c": bass(65.4), "bass-g": bass(98.0),
@@ -665,10 +650,10 @@ KIT = {
     "note-f": pluck(349.2), "note-b": pluck(493.9),
     "chord-dm": chord(293.7, 349.2, 440.0), "chord-em": chord(329.6, 392.0, 493.9),
     "chord-g7": chord(196.0, 246.9, 293.7, 349.2), "bass-d": bass(73.4), "bass-e": bass(82.4),
-    "quack": quack, "roar": roar,
+    "roar": roar,
     "warp": warp, "phaser": phaser, "robot": robot, "ufo": ufo, "beam": beam, "red-alert": red_alert,
     "computer": computer,
-    "burp": burp, "toot": toot, "splat": splat, "zip": zip_away, "kazoo": kazoo, "bonk": bonk,
+    "toot": toot, "splat": splat, "zip": zip_away, "kazoo": kazoo, "bonk": bonk,
     "squeak": squeak,
     "kick-dusty": kick_dusty, "snare-dusty": snare_dusty, "glide": glide, "hat-roll": hat_roll,
     "plink": plink, "bloop": bloop, "vinyl": vinyl, "horn-stab": horn_stab,
@@ -759,7 +744,7 @@ def cackle(path):
 
 def main(names):
     """Makes every clip, or only the ones named (file names without .wav):
-    `make_placeholders.py quack roar` leaves every other file as it is."""
+    `make_placeholders.py roar toot` leaves every other file as it is."""
     known = set(KIT) | {n for n, _, _ in KIT_CALLOUTS} | {"cackle"}
     unknown = [n for n in names if n not in known]
     if unknown:
