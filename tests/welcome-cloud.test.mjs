@@ -57,11 +57,15 @@ test("closing the cloud list with nobody opened comes back to Who's playing?", a
 
 test('opening someone from it ends the welcome: they show, and the empty first person is gone', async () => {
   const first = state.personId;
-  await cloud.api.create({ id: 'p-far', name: 'Sir Squid', avatar: '🐙', color: '#0C5E4B' });   // another device's
+  await cloud.api.create({ id: 'p-far', name: 'Sir Squid', avatar: '🐙', color: '#0C5E4B', pin: '2468' });   // another device's
   await tap($('#wl-cloud'));
   const open = $('#cloud-list-items').querySelector('[data-open="p-far"]');
   assert.ok(open, 'the profile is listed');
   await tap(open);
+  assert.equal($('#pin-dialog').open, true, 'every profile in the cloud has a PIN');
+  for (const k of '2468') $('#pin-keys').querySelector(`[data-key="${k}"]`).dispatch('click');
+  await page.settle();
+  if ($('#remember-dialog').open) await tap($('#remember-no'));
   assert.equal($('#cloud-open-line').textContent, '✓ On this device now');
   assert.ok(cloud.inCloud('p-far'));
   await tap($('#cloud-open-play'));

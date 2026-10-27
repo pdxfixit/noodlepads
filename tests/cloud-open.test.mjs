@@ -51,13 +51,17 @@ before(async () => {
 });
 
 const tap = async (el) => { el.dispatch('click'); await page.settle(); };
+// Every profile in the cloud has a PIN, so every pick asks it.
+const PIN = '2468';
+const typePin = async (digits = PIN) => { for (const k of digits) $('#pin-keys').querySelector(`[data-key="${k}"]`).dispatch('click'); await page.settle(); };
+const notNow = async () => { if ($('#remember-dialog').open) await tap($('#remember-no')); };
 const sha = async (blob) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()))].map((b) => b.toString(16).padStart(2, '0')).join('');
 
 // Another device's profile with one recorded sound, one beat, a preset edit
 // and two settings changed (beside one at its default, the level's old
 // twin, and a tip seen, none of which count).
 async function elsewhere(id, name) {
-  const { key } = await cloud.api.create({ id, name, avatar: '🐙', color: '#0C5E4B' });
+  const { key } = await cloud.api.create({ id, name, avatar: '🐙', color: '#0C5E4B', pin: PIN });
   const blob = new Blob([new Uint8Array([1, 2, 3, 4, 5, 6])], { type: 'audio/wav' });
   const up = await uploadAudio(cloud.api, id, key, blob, 'audio/wav', sha);
   await cloud.api.push(id, key, [
@@ -78,6 +82,8 @@ test('a stop locks the sheet on 🔄 Try again and ✕ Don\'t bring them; trying
   await tap($('#cloud-browse'));
   sounds = 'down';
   await tap(pick('p-far'));
+  assert.equal($('#pin-dialog').open, true, 'every profile has a PIN');
+  await typePin();
   assert.ok(shown('#cloud-open') && !shown('#cloud-list-items'), 'the sheet turns to them');
   assert.equal($('#cloud-open-name').textContent, 'Sir Squid');
   assert.equal($('#cloud-open').dataset.step, 'stopped');
@@ -91,6 +97,8 @@ test('a stop locks the sheet on 🔄 Try again and ✕ Don\'t bring them; trying
 
   sounds = 'ok';
   await tap($('#cloud-open-again'));
+  assert.equal($('#remember-dialog').open, true, 'then 🔑 Remember them here? is offered');
+  await notNow();
   assert.equal($('#cloud-open').dataset.step, 'done');
   assert.equal($('#cloud-open-line').textContent, '✓ On this device now');
   const nbsp = (t) => t.replace(/\u00a0/g, ' ');
@@ -113,6 +121,7 @@ test("✕ Don't bring them forgets the link, so they never arrive by themselves,
   await tap($('#cloud-browse'));
   sounds = 'down';
   await tap(pick('p-wren'));
+  await typePin();
   assert.equal($('#cloud-open').dataset.step, 'stopped');
   assert.ok(cloud.inCloud('p-wren'), 'opening made the link');
   sounds = 'ok';
@@ -127,7 +136,7 @@ test("✕ Don't bring them forgets the link, so they never arrive by themselves,
 
 test('nothing arriving for a while stops the open (a stalled download never ends by itself); sounds already here are kept for the next try', async () => {
   await elsewhere('p-toby', funName(['Sir Squid']));
-  await cloud.openProfile('p-toby');
+  await cloud.openProfile('p-toby', PIN);
   sounds = 'stall';
   const heard = [];
   const stopped = await cloud.bringDown('p-toby', (p) => heard.push(p), { stallMs: 50 });

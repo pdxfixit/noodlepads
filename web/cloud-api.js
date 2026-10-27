@@ -140,6 +140,8 @@ export function cloudTrouble(err) {
   if (err.status === 401 && err.error === 'pin') return `That PIN isn't right. ${err.tries} ${err.tries === 1 ? 'try' : 'tries'} left before a 10-minute wait.`;
   if (err.status === 401) return 'This device needs to open this profile again (its PIN changed).';
   if (err.status === 404 && err.error === 'profile') return "That profile isn't in the cloud any more.";
+  // The Worker makes no profile without a PIN (worker/cloud.js makeProfile): only a copy of the app from before says it.
+  if (err.status === 400 && err.error === 'needs pin') return 'A grown-up puts someone in the cloud, with a PIN, in their profile.';
   if (err.status === 404 && err.error === 'share') return 'No share has that code. Check it and try again.';
   if (err.status === 507 && err.error === 'shares full') return 'This profile has shared as much as it can.';
   if (err.status === 507 && err.error === 'records full') return "The cloud is full for this profile. Delete some takes, beats, songs or shares, then try again.";

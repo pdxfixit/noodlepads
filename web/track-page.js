@@ -149,7 +149,7 @@ export function appEventOf(entry) {
   if (entry?.kind === 'beat' && (d.action === 'groove' || d.action === 'sample')) return ['noodlepads.groove', { action: d.action === 'groove' ? 'load' : 'sample' }];
   if (entry?.kind === 'cloud') {
     const action = d.shared ? 'share' : d.remixed ? 'remix' : d.opened === 'share' ? 'share-open' : d.opened === true ? 'open'
-      : d.put ? 'put' : d.offline === true ? 'offline' : d.pin === 'set' ? 'pin-set' : d.unshared ? 'unshare' : null;
+      : d.up ? 'up' : d.left ? 'leave' : d.put ? 'put' : d.offline === true ? 'offline' : d.pin === 'set' ? 'pin-set' : d.unshared ? 'unshare' : null;
     return action ? ['noodlepads.cloud', { action }] : null;
   }
   return null;

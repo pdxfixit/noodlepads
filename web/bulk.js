@@ -28,7 +28,11 @@ import { cleanGroups, pruneGroups, moveGroup, groupName, newGroupId, MAX_GROUP_N
 
 const el = {};
 let share = async () => {};   // cloud-ui.js shareSounds
+let inCloud = () => true;     // cloud.js inCloud: Share needs the person in the cloud
 let deleteArmed = '';         // the chosen ids 🗑️ Delete is asking about, waiting for a second tap
+
+// Why Share is off for someone only on this device (their profile's ☁️ turns it on).
+export const NOT_IN_CLOUD_WHY = 'Put them in the cloud (their profile, ☁️) to share.';
 
 const make = (tag, className, text) => {
   const n = document.createElement(tag);
@@ -65,9 +69,12 @@ function drawBar() {
   el.all.hidden = own.every((c) => picked.has(c.id));
   el.all.setAttribute('aria-label', `Select all ${sounds(own.length)} you made`);
   const presets = clips.filter((c) => c.source !== 'user').length;
-  for (const what of ['move', 'share']) el.bar.querySelector(`[data-bulk="${what}"]`).disabled = presets > 0;
-  el.why.hidden = presets === 0;
-  el.why.textContent = 'Presets keep their own groups and can’t be shared.';
+  // Share never puts anyone in the cloud: only someone a grown-up put there can share.
+  const alone = !inCloud(state.personId);
+  el.bar.querySelector('[data-bulk="move"]').disabled = presets > 0;
+  el.bar.querySelector('[data-bulk="share"]').disabled = presets > 0 || alone;
+  el.why.hidden = presets === 0 && !alone;
+  el.why.textContent = presets > 0 ? 'Presets keep their own groups and can’t be shared.' : NOT_IN_CLOUD_WHY;
   const key = chosenIds().join(',');
   if (deleteArmed !== key) deleteArmed = '';
   const del = el.bar.querySelector('[data-bulk="delete"]');
@@ -533,9 +540,11 @@ function editGroup(id) {
 
 // ── Start ──────────────────────────────────────────────────────────────
 
-// hooks: {share(personId, ids)} makes one share code for several sounds.
+// hooks: {share(personId, ids)} makes one share code for several sounds;
+// {inCloud(personId)} says whether the person is in the cloud (Share needs it).
 export function initBulk(hooks = {}) {
   if (hooks.share) share = hooks.share;
+  if (hooks.inCloud) inCloud = hooks.inCloud;
   const $ = (s) => document.querySelector(s);
   Object.assign(el, {
     bar: $('#pads-chosen'), count: $('#chosen-count'), clear: $('#chosen-clear'), all: $('#chosen-all'), why: $('#chosen-why'),

@@ -5,7 +5,8 @@
 // showing and in the address. After the start, nothing on the device or in
 // the address names the old id, and nothing the app sent did. The cloud
 // renames nothing (Ben, Q27: "Drop the rename code"): the link is dropped and
-// the person goes up as new under their random id.
+// the person stays on the device under their random id; nobody goes to the
+// cloud by themselves, so they are not put back there until a grown-up does.
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -82,7 +83,7 @@ before(async () => {
     method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json', ...(key ? { Authorization: `Bearer ${key}` } : {}) },
     body: JSON.stringify(body),
   }), env)).json();
-  const legacy = async (id, name, pin) => {
+  const legacy = async (id, name, pin = '1357') => {
     const { key } = await call('profiles', { id: 'p-made-then-moved', name, avatar: '', color: '#1F3FA8', pin });
     env.DB.db.prepare('UPDATE profiles SET id = ? WHERE id = ?').run(id, 'p-made-then-moved');
     env.DB.db.prepare('UPDATE keys SET profile_id = ? WHERE profile_id = ?').run(id, 'p-made-then-moved');
@@ -149,15 +150,13 @@ test('the person showing, the address and the closed chooser sections follow', (
   assert.deepEqual(JSON.parse(remembered.get('chooser-closed')).sort(), [`person:${newId}`, `person:${OTHER}`].sort());
 });
 
-test('the person goes up as new under the random id; nothing the app sent named a plain id', async () => {
+test('the person stays on the device under the random id, not in the cloud; nothing the app sent named a plain id', async () => {
   const profiles = env.DB.rows('SELECT id FROM profiles').map((r) => r.id);
-  const lockedNow = state.settings.get('renamedPeople')[LOCKED];
-  assert.deepEqual(profiles.filter(isCloudId).sort(), [newId, OTHER, WAITING, lockedNow].sort(), 'each person who made something went up under their own id');
+  assert.deepEqual(profiles.filter(isCloudId), [], 'nobody went up by themselves, though each made something');
   assert.deepEqual(profiles.filter((id) => !isCloudId(id)).sort(), [MOVED, OLD, LOCKED].sort(), 'the plain-id profiles are left as they are');
-  const link = stored('cloud').find((l) => l.id === newId);
-  assert.equal(link.was, undefined);
-  assert.ok(!stored('cloud').some((l) => !isCloudId(l.id)), 'no link names a plain id');
-  assert.ok(env.DB.rows('SELECT COUNT(*) AS n FROM records WHERE profile_id = ?', newId)[0].n > 0, 'and synced');
+  assert.equal(stored('cloud').length, 0, 'no link is left: the plain-id ones were dropped, and nobody was linked');
+  assert.equal(cloud.inCloud(newId), false);
+  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM records')[0].n, 0, 'nothing of theirs was sent');
   assert.ok(sent.length > 0);
   for (const [, path, body] of sent) {
     const id = /^\/api\/profiles\/([^/?]+)/.exec(path)?.[1];
@@ -211,36 +210,28 @@ test('an old backup naming the old id lands on the same person, not a second one
 });
 
 // A change waits SYNC_DELAY_MS before it syncs; syncing now clears that wait,
-// so the test ends when it is done. Twice: the first puts the person the
-// last test made in the cloud, which gives them a fun name, a change too.
+// so the test ends when it is done.
 after(async () => {
-  await cloud.syncAll();
   await cloud.syncAll();
 });
 
-test('a link an older copy kept waiting for a rename is dropped, and its person goes up as new under the id they have', () => {
+test('a link an older copy kept waiting for a rename is dropped, and its person stays on the device under the id they have', () => {
   const keyPath = Object.fromEntries(SCHEMA.map((x) => [x.name, x.keyPath]));
   const one = (store, key) => stored(store).find((r) => r[keyPath[store]] === key);
   assert.equal(one('people', WAITING).name, 'Baron Bagel');
   assert.equal(stored('people').filter((p) => p.name === 'Baron Bagel').length, 1, 'one person, not two');
-  const link = one('cloud', WAITING);
-  assert.equal(link.was, undefined);
-  assert.ok(Object.keys(link.sent).includes('clips:user-3'), 'and synced under it');
-  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM records WHERE profile_id = ?', WAITING)[0].n, 2);
+  assert.equal(one('cloud', WAITING), undefined, 'no link');
+  assert.equal(cloud.inCloud(WAITING), false);
+  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM records WHERE profile_id = ?', WAITING)[0].n, 0, 'nothing was sent under it');
   assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM records WHERE profile_id = ?', MOVED)[0].n, 0, 'nothing went to the old profile');
-  // The app keeps each synced record's base for the three-way merge
-  // (IndexedDB `bases`), one per entry in `sent`, without its audio.
-  const bases = stored('bases').filter((b) => b.personId === WAITING);
-  assert.deepEqual(bases.map((b) => b.id).sort(), Object.keys(link.sent).map((k) => `${WAITING}|${k}`).sort());
-  const clip = bases.find((b) => b.id === `${WAITING}|clips:user-3`).body;
-  assert.equal(clip.id, 'user-3');
-  assert.equal(clip.blob, undefined);
+  assert.deepEqual(stored('bases').filter((b) => b.personId === WAITING), [], 'no merge bases without a link');
+  assert.ok(one('clips', 'user-3'), 'their sound is still here');
 });
 
-test('a plain-id person whose PIN this device does not remember goes up as new, with no PIN and no wait', () => {
+test('a plain-id person whose PIN this device does not remember stays on the device too, with no link and no wait', () => {
   const id = state.settings.get('renamedPeople')[LOCKED];
   assert.ok(isCloudId(id));
-  assert.equal(cloud.linkOf(id).was, undefined);
-  assert.equal(cloud.statusOf(id).state, 'ok');
-  assert.deepEqual(env.DB.rows('SELECT pin_hash IS NULL AS open FROM profiles WHERE id = ?', id), [{ open: 1 }]);
+  assert.equal(cloud.linkOf(id), null);
+  assert.equal(cloud.statusOf(id), null);
+  assert.deepEqual(env.DB.rows('SELECT id FROM profiles WHERE id = ?', id), []);
 });

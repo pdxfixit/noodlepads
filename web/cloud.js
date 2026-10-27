@@ -1,10 +1,12 @@
 // Cloud profiles on this device (docs/design/cloud-profiles.md): which people
-// are in the cloud here (IndexedDB `cloud`), putting everyone there by
-// themselves, when they sync, the PIN asked when a person is opened, Offline
-// (this device only), and share codes both ways. The rules are in
-// cloud-sync.js and the routes in cloud-api.js; this binds them to the app's
-// storage. The board never waits on any of it: everything works on the
-// device, and the cloud catches up.
+// are in the cloud here (IndexedDB `cloud`), putting a person there when a
+// grown-up turns ☁️ on with a PIN (goUp), taking them out (leaveCloud), when
+// they sync, the PIN asked when a person is opened, and share codes both
+// ways. Nobody goes to the cloud by themselves
+// (docs/design/cloud-needs-pin.md). The rules are in cloud-sync.js and the
+// routes in cloud-api.js; this binds them to the app's storage. The board
+// never waits on any of it: everything works on the device, and the cloud
+// catches up.
 
 import { state, readStorage, setPersonEdit } from './state.js';
 import { db } from './store.js';
@@ -12,7 +14,7 @@ import { audio } from './audio.js';
 import { cleanBackup } from './backup.js';
 import { followPerson, cleanPrefs } from './settings.js';
 import { createCloudApi, CloudError, cloudTrouble } from './cloud-api.js';
-import { syncProfile, shareBundle, shareDoc, uploadAudio, hasMade, syncNote, CLOUD_KINDS, CLOUD_MAX_SOUND } from './cloud-sync.js';
+import { syncProfile, shareBundle, shareDoc, uploadAudio, syncNote, CLOUD_KINDS, CLOUD_MAX_SOUND } from './cloud-sync.js';
 import { funName, isFunName } from './names.js';
 import { isHiddenBeat, isScratchSong } from './scratch.js';
 import { people } from './board.js';
@@ -37,11 +39,16 @@ export { SYNC_DELAY_MS, ACTIVE_MS };    // when it syncs: sync-timing.js
 export const PIN_ROUNDS = 20_000;      // the device's own check of a PIN (link.check)
 const SHARED_KEY = 'shared';           // localStorage: the codes this device opened (Shared with me)
 export const MAX_SHARED = 100;
+export const NOT_IN_CLOUD = 'Put them in the cloud first to share.';
 export const SHARE_TOO_LONG = `That sound is too long to share (the most is ${CLOUD_MAX_SOUND / 1048576} MB).`;
 // What the PIN pad and the profile say once the cloud refused a key this
 // device remembered (keyRefused): a PIN changed elsewhere, or 180 days unused.
 export const FORGOT_HERE = 'This device forgot them. A grown-up can type the PIN.';
 const FORGOT_HERE_STATUS = '🔒 This device forgot them. Open them and type the PIN.';
+// What a person's status says once the cloud no longer has them, and a pad's
+// say-so for a link that never synced (goUp's pending link, cut short).
+export const LEFT_ELSEWHERE = 'Taken out of the cloud on another device; everything here stays here.';
+export const NOT_YET = 'Not in the cloud yet. A grown-up can put them there.';
 
 // ── is the cloud there? ──
 
@@ -67,9 +74,12 @@ export function resetCloudCheck() { there = null; askedAt = 0; }
 // ── links and keys ──
 //
 // A link: {id, key, rev, sent, sounds, pin, check, newPin, remembered,
-// keyDropped, noOffer}. `key` is kept for a profile with no PIN, or one this
-// device remembers; any other PIN's key lives in `sessionKeys`, for this
-// page's life, so the PIN is asked on every visit. `remembered`: after the
+// keyDropped, noOffer}. `key` is kept for a profile with no PIN (a link from
+// before every profile had one), or one this device remembers; any other
+// PIN's key lives in `sessionKeys`, for this page's life, so the PIN is asked
+// on every visit. goUp saves a pending link first (the id, no key, `pin`,
+// the PIN's `check`), so a tab that dies mid-create reopens with a link that
+// asks for the PIN just picked. `remembered`: after the
 // PIN, 🔑 Remember on this device skips it here until Forget this device, a
 // PIN change, or the cloud drops the key after KEY_IDLE_MS unused (180 days;
 // worker/cloud.js). The device keeps no clock of its own (Ben, 2026-10-27:
@@ -94,7 +104,6 @@ const pinTyped = new Set();
 export const linkOf = (personId) => state.cloud.get(personId) ?? null;
 export const inCloud = (personId) => state.cloud.has(personId);
 export const keyOf = (personId) => linkOf(personId)?.key || sessionKeys.get(personId) || null;
-export const isOffline = (personId) => state.peopleEdits.get(personId)?.offline === true;
 // A PIN this device remembers (a link's `remembered`, or an older
 // `rememberUntil`, read with no end).
 const remembers = (link) => !!link?.pin && (link.remembered === true || link.rememberUntil > 0);
@@ -168,6 +177,9 @@ export function needsPin(personId) {
   return !!link?.pin && !unlocked.has(personId) && !remembers(link);
 }
 
+// A link that never synced: goUp's pending link, or a profile just opened.
+const neverSynced = (link) => !link.rev && !Object.keys(link.sent ?? {}).length && !Object.keys(link.sounds ?? {}).length;
+
 // The PIN guard: whether reading or changing anything of this person's asks
 // for their PIN first (Ben, 2026-10-24): their profile (people.js), their
 // counts and sounds on others' screens, backups (backup-ui.js). Only a person
@@ -209,6 +221,14 @@ export async function unlock(personId, pin) {
     // The cloud said no to the PIN (wrong, or too many wrong tries): a usage
     // event, no log entry. A 429 'slow' (a minute's rate limit) is no PIN at all.
     if (err instanceof CloudError && (err.status === 401 || (err.status === 429 && err.error === 'wait'))) track('noodlepads.cloud', { action: 'pin-wrong' });
+    // Not there any more (taken out on another device, or goUp's create never
+    // went through): the link goes, quietly when it never synced, and the
+    // pad says which.
+    if (err instanceof CloudError && err.status === 404 && err.error === 'profile') {
+      err.say = neverSynced(link) ? NOT_YET : LEFT_ELSEWHERE;
+      await dropLink(personId);
+      throw err;
+    }
     if (!(err instanceof CloudError) || err.status !== 0 || !link.check || await pinHash(pin, link.check.salt) !== link.check.hash) throw err;
   }
   unlocked.add(personId);
@@ -217,31 +237,20 @@ export async function unlock(personId, pin) {
   if (keyOf(personId)) syncNow(personId);
 }
 
-// A key the cloud no longer takes (401 on a sync): a PIN was set or changed
-// on another device, which closes the profile everywhere (worker/cloud.js
+// A key the cloud no longer takes (401 on a sync): a PIN was changed on
+// another device, which closes the profile everywhere (worker/cloud.js
 // changeProfile), Ben gave a forgotten one a new random PIN
-// (`just cloud-reset-pin`), or
-// the key went unused for KEY_IDLE_MS (worker/cloud.js keyProfile). The
-// public list says which, without spending a wrong try: no PIN now, and it
-// opens again at once; else the PIN is new here and must be typed before the
-// person opens (Ben, 2026-10-19). 🔑 Remember ends either way; a device that
-// remembered them says it forgot them (`keyDropped`), since it can't tell a
-// new PIN from a key that idled out.
+// (`just cloud-reset-pin`), or the key went unused for KEY_IDLE_MS
+// (worker/cloud.js keyProfile). Every profile has a PIN, so the PIN is new
+// here and must be typed before the person opens (Ben, 2026-10-19). 🔑
+// Remember ends; a device that remembered them says it forgot them
+// (`keyDropped`), since it can't tell a new PIN from a key that idled out.
 async function keyRefused(personId) {
   sessionKeys.delete(personId);
   unlocked.delete(personId);
   pinTyped.delete(personId);
   const link = linkOf(personId);
   if (!link) return;
-  const listed = (await api.list().catch(() => null))?.profiles?.find((p) => p.id === personId);
-  if (listed && !listed.pin) {
-    try {
-      const opened = await api.open(personId);
-      await saveLink({ ...link, key: opened.key, pin: false, check: undefined, newPin: undefined, remembered: undefined, rememberUntil: undefined, keyDropped: undefined });
-      setStatus(personId, { state: 'ok', text: 'Opened again: its PIN was cleared.' });
-      return;
-    } catch { /* a PIN came meanwhile: as below */ }
-  }
   const dropped = remembers(link) || !!link.keyDropped;
   await saveLink({ ...link, key: null, pin: true, check: undefined, newPin: true, remembered: undefined, rememberUntil: undefined, keyDropped: dropped || undefined });
   setStatus(personId, { state: 'locked', text: dropped ? FORGOT_HERE_STATUS : '🔒 They have a new PIN. Open them and type it.' });
@@ -444,11 +453,12 @@ export function syncNow(personId, { onProgress } = {}) {
     } catch (err) {
       logEvent('cloud', { sync: false, status: err?.status ?? 0, error: String(err?.error ?? err?.message ?? err) });
       if (err instanceof CloudError && err.status === 404 && err.error === 'profile') {
-        // Taken out of the cloud elsewhere (set Offline there, or pruned):
-        // this device keeps it, and does not put it back by itself.
+        // Taken out of the cloud elsewhere (left there, or pruned): this device
+        // keeps every record and sound, and does not put it back by itself. A
+        // link that never synced (goUp cut short) drops quietly.
+        const quiet = neverSynced(linkOf(id) ?? {});
         await dropLink(id);
-        await setPersonEdit(id, { offline: true });
-        setStatus(id, { state: 'trouble', text: 'Taken out of the cloud on another device. It stays here, offline. Switch Offline off to put it back.' });
+        if (!quiet) setStatus(id, { state: 'trouble', text: LEFT_ELSEWHERE });
       } else if (err instanceof CloudError && err.status === 401) {
         await keyRefused(id);
       } else if (err?.name === 'QuotaExceededError') {
@@ -517,12 +527,6 @@ export async function leaveInCloud(personId) {
 // it pulled, their own record among it, would be stored again after the delete.
 export const syncEnded = (personId) => running.get(personId) ?? Promise.resolve(null);
 
-// Everyone on the device is in the cloud (Ben, 2026-10-11), except people set
-// Offline, and anyone who has made nothing yet (a new device's empty "Me"
-// would otherwise fill the public list).
-export const wantsCloud = (p) => p.added && !p.hidden && !isOffline(p.id) && !inCloud(p.id)
-  && hasMade(storedLists(), p.id, kitIds());
-
 // One syncAll at a time: two at once (the start-up one, and one after a
 // change) both made a new person's profile, and the loser said "resting".
 // A call while one runs gets one more run after it, shared by every caller.
@@ -541,13 +545,7 @@ export function syncAll() {
 async function syncEveryone() {
   timing.ran();
   if (!await cloudThere()) return;
-  for (const p of people({ includeHidden: true }).filter(wantsCloud)) {
-    try {
-      await putInCloud(p.id);
-    } catch (err) {
-      setStatus(p.id, { state: 'trouble', text: err instanceof CloudError ? cloudTrouble(err) : String(err?.message || err) });
-    }
-  }
+  // Only people a grown-up put in the cloud sync: nobody goes up by themselves.
   for (const id of [...state.cloud.keys()]) await syncNow(id);
 }
 
@@ -572,66 +570,70 @@ async function funNamed(personId) {
   return state.peopleEdits.get(personId);
 }
 
-// Makes the person's profile. The same person already there (from a backup
-// on another device) is opened instead; one with a PIN waits, locked, for it,
-// as a PIN new to this device.
-async function putInCloud(personId) {
+// ☁️ In the cloud switched on in their profile sheet, after the grown-up sum
+// and a new PIN typed twice (cloud-ui.js): the only way a person goes to the
+// cloud (docs/design/cloud-needs-pin.md). Saves a pending link first (the id,
+// no key, `pin`, the PIN's `check`), makes the profile with the PIN in one
+// request, saves the key and syncs at once. A tab that dies in between
+// reopens with a link that asks for the PIN just picked: if the profile was
+// made, that PIN opens it; if not, the open gets 404 on a link that never
+// synced, which drops quietly (unlock).
+//
+// The same person already there (409: a backup restored here, or still there
+// from another device) is never tried with the PIN just picked: ids come from
+// backups, which are untrusted, and a common PIN could join another family's
+// profile. The pending link goes and it returns 'joins', for the join pad:
+// the PIN they have opens them (openProfile) and the first sync merges with
+// no base. Throws a CloudError when the cloud isn't reachable from here (the
+// pending link is dropped and the PIN is not kept).
+export async function goUp(personId, pin) {
+  if (inCloud(personId)) return syncNow(personId);
+  if (!await cloudThere()) throw new CloudError(0, { error: 'no cloud' });
   const p = await funNamed(personId);
+  const check = await pinCheck(pin);
+  await saveLink({ id: personId, key: null, rev: 0, sent: {}, sounds: {}, pin: true, check });
+  let made;
   try {
-    const made = await api.create({ id: p.id, name: p.name, avatar: p.avatar ?? '', color: p.color, edited: p.edited ?? Date.now() });
-    await saveLink({ id: personId, key: made.key, rev: made.rev, sent: {}, sounds: {}, pin: false });
-    logEvent('cloud', { put: true });
+    made = await api.create({ id: p.id, name: p.name, avatar: p.avatar ?? '', color: p.color, edited: p.edited ?? Date.now(), pin });
   } catch (err) {
-    if (!(err instanceof CloudError && err.status === 409)) throw err;
-    try {
-      const opened = await api.open(personId);
-      await saveLink({ id: personId, key: opened.key, rev: 0, sent: {}, sounds: {}, pin: !!opened.pin });
-    } catch (e2) {
-      if (!(e2 instanceof CloudError && e2.status === 401)) throw e2;
-      await saveLink({ id: personId, key: null, rev: 0, sent: {}, sounds: {}, pin: true, newPin: true });
-      setStatus(personId, { state: 'locked', text: '🔒 Already in the cloud with a PIN. Open them to join up.' });
-    }
+    await dropLink(personId);
+    if (err instanceof CloudError && err.status === 409) return 'joins';
+    throw err;
   }
-}
-
-// ☁️ In the cloud switched on (or a PIN set) in their profile sheet: they go
-// in the cloud now, even with nothing made yet, and sync. Back from 📴 Offline
-// too. Throws a CloudError when the cloud isn't reachable from here.
-export async function putUpNow(personId) {
-  if (isOffline(personId)) await setPersonEdit(personId, { offline: false });
-  if (!inCloud(personId)) {
-    if (!await cloudThere()) throw new CloudError(0, { error: 'no cloud' });
-    await putInCloud(personId);
-  }
+  await saveLink({ id: personId, key: made.key, rev: made.rev, sent: {}, sounds: {}, pin: true, check });
+  unlocked.add(personId);
+  pinTyped.add(personId);
   status.delete(personId);
-  logEvent('cloud', { offline: false });
+  logEvent('cloud', { up: true });
   return syncNow(personId);
 }
 
 // Opens a profile from the list on this device (with its PIN, if it has one):
 // the link and its key. Its person arrives with the first sync (bringDown).
 export async function openProfile(profileId, pin) {
-  const opened = await api.open(profileId, pin, !pin);
+  const opened = await api.open(profileId, pin, false);
   const before = linkOf(profileId);
   await saveLink({
     id: profileId, key: opened.key, rev: before?.rev ?? 0, sent: before?.sent ?? {}, sounds: before?.sounds ?? {},
     pin: !!opened.pin, check: pin ? await pinCheck(pin) : undefined,
   });
   if (pin) { unlocked.add(profileId); pinTyped.add(profileId); }
-  if (isOffline(profileId)) await setPersonEdit(profileId, { offline: false });
   logEvent('cloud', { opened: true });
 }
 
+// Changes the PIN (the current one, then the new). There is no way to remove a
+// PIN: a profile in the cloud always has one, and leaving is leaveCloud.
 export async function setPin(personId, current, next) {
   // A sync still running (typing the PIN just now starts one) finishes first:
   // the change closes every key, and that sync would answer it with a stale PIN.
   await running.get(personId);
   const link = linkOf(personId);
-  const res = await api.change(personId, keyOf(personId), { pin: current || undefined, newPin: next });
-  // A PIN changed here stays remembered here; a removed one has nothing to remember.
-  await saveLink({ ...link, key: res.key, pin: !!next, check: next ? await pinCheck(next) : undefined, newPin: undefined, remembered: next && remembers(link) ? true : undefined, rememberUntil: undefined, keyDropped: undefined });
-  if (next) { unlocked.add(personId); pinTyped.add(personId); }
-  logEvent('cloud', { pin: next ? 'set' : 'removed' });
+  const res = await api.change(personId, keyOf(personId), { pin: current, newPin: next });
+  // A PIN changed here stays remembered here.
+  await saveLink({ ...link, key: res.key, pin: true, check: await pinCheck(next), newPin: undefined, remembered: remembers(link) ? true : undefined, rememberUntil: undefined, keyDropped: undefined });
+  unlocked.add(personId);
+  pinTyped.add(personId);
+  logEvent('cloud', { pin: 'set' });
 }
 
 // Deletes a profile from the cloud with `key`, or with a key opened by the
@@ -653,31 +655,17 @@ async function bringLatest(personId, pin) {
   if (!await syncNow(personId)) throw new Error(LATEST_TEXT);
 }
 
-// Deletes the profile from the cloud (its key, and its PIN if it has one).
-// This device keeps everything, and has their latest first (bringLatest).
-export async function deleteFromCloud(personId, pin) {
+// ☁️ off, or Remove PIN (the same thing, with the same words), after the red
+// second tap and the PIN (cloud-ui.js): brings their latest here, then deletes
+// the cloud copy and every share code they made, and drops the link and the
+// merge bases. This device keeps every record and sound. A wrong PIN throws
+// the Worker's 401 (nothing is deleted); a sync that fails throws LATEST_TEXT.
+export async function leaveCloud(personId, pin) {
+  if (!inCloud(personId)) return;
   await bringLatest(personId, pin);
   await removeProfile(personId, keyOf(personId), pin);
   await dropLink(personId);
-}
-
-// 📴 Offline (this device only). On: the cloud copy is deleted first (it asks
-// twice, and wants the PIN), after their latest is brought here, and the
-// person is never put back by itself.
-// Off: they go to the cloud on the next sync, which starts now.
-export async function setOffline(personId, on, pin) {
-  if (on) {
-    if (inCloud(personId)) await deleteFromCloud(personId, pin);
-    await setPersonEdit(personId, { offline: true });
-    status.delete(personId);
-    tell();
-    logEvent('cloud', { offline: true });
-    return null;
-  }
-  await setPersonEdit(personId, { offline: false });
-  status.delete(personId);
-  logEvent('cloud', { offline: false });
-  return syncAll();
+  logEvent('cloud', { left: true });
 }
 
 // ── sharing: a code anyone can open, read-only, until its sharer unshares it ──
@@ -696,9 +684,9 @@ export function shareable(personId) {
 // is in the cloud, then puts up a recording of it as it plays (the preview
 // anyone can play) and the snapshot. Returns {code, title}.
 export async function shareItem(personId, kind, itemId) {
-  if (isOffline(personId)) throw new Error('This person is offline (this device only). Switch Offline off to share.');
-  if (!inCloud(personId)) await syncAll();
-  if (!inCloud(personId) || !keyOf(personId)) throw new CloudError(0, { error: 'offline' });
+  // Sharing never puts anyone in the cloud: that is a grown-up's switch.
+  if (!inCloud(personId)) throw new Error(NOT_IN_CLOUD);
+  if (!keyOf(personId)) throw new CloudError(0, { error: 'offline' });
   await syncNow(personId);
   const s = statusOf(personId);
   if (s?.state === 'trouble' || s?.state === 'locked') throw new Error(s.text);

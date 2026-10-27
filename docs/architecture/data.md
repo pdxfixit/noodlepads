@@ -48,7 +48,7 @@
 | `orders` | `personId` | 2 | `{personId, ids: [clipId], groups?: [{id, name}], changed?}` | pads.js `saveOrder`, bulk.js `saveGroups` and Undo | yes | yes (one each) |
 | `patterns` | `personId` | 3 | the person's one open beat (ADR 0017): `cleanPattern` shape `{id?, personId, name, bpm, bars, swing, rows, signature?, volume?, fx?}` | app.js `makeSequencer` `setOpen` | yes | yes (one each) |
 | `beats` | `id` (`beat-…`, scratch `beat-scratch-<person>`) | 4 | a pattern plus `{id, name, created, saved, pinned?}` | app.js `beatLibrary`, `adoptKidsBeat`, Kids `saveBeat` | yes | yes |
-| `people` | `id` | 5 | boards.json person: `{id, name?, color?, hidden?}` (only what differs). Added person: `{id, name, color, avatar, added: true, created, edited?, fun?, solo?, hidden?, offline?}` | `state.js setPersonEdit`, people.js `addPerson`, `app.js settlePeople`, `adoptStoredPeople` | yes | person record, not a `CLOUD_KINDS` kind (cloud area) |
+| `people` | `id` | 5 | boards.json person: `{id, name?, color?, hidden?}` (only what differs). Added person: `{id, name, color, avatar, added: true, created, edited?, fun?, solo?, hidden?, offline? (old, ignored)}` | `state.js setPersonEdit`, people.js `addPerson`, `app.js settlePeople`, `adoptStoredPeople` | yes | person record, not a `CLOUD_KINDS` kind (cloud area) |
 | `settings` | `key` | 6 | `{key, value}`: device settings, older person choices from before `prefs`, and `renamedPeople` (not declared in `SETTINGS`) | `settings.js setSetting`, `state.js rememberRenames`, `reIdStoredPeople` | declared keys only (`inBackups`) | no |
 | `decks` | `personId` | 7 | `{personId, keys: {KeyA: clipId\|null}, mine?, touch?, touchMine?, beatId? (old, dropped on next save)}` | app.js dj `saveDeck` | yes | yes (one each) |
 | `takes` | `id` (`take-…`) | 7 | `{id, personId, name, created, duration, events}` | app.js dj `saveTake` / `deleteTake` | yes | yes |
@@ -80,7 +80,7 @@ The comments on `state` in `state.js` give older shapes for `patterns` (`rows: [
 | `orders` (Map personId→) | `orders` | pads.js `saveOrder`, bulk.js `saveGroups` / Undo | board.js `clipsFor`, pads.js `ownGroups`, app.js (`ownGroups` dep) |
 | `patterns` (Map) | `patterns` | app.js `setOpen` | sequencer via `opened` |
 | `savedBeats` | `beats` | app.js `beatLibrary`, `adoptKidsBeat`, Kids `saveBeat` | sequencer, song, kids, things |
-| `peopleEdits` (Map) | `people` | `state.js setPersonEdit`, `adoptStoredPeople`, `deletePerson`; people.js `addPerson`; app.js `settlePeople` | board.js `people` (`mergePeople`), cloud.js `isOffline`, backup-ui.js |
+| `peopleEdits` (Map) | `people` | `state.js setPersonEdit`, `adoptStoredPeople`, `deletePerson`; people.js `addPerson`; app.js `settlePeople` | board.js `people` (`mergePeople`), backup-ui.js |
 | `settings` (Map key→value) | `settings` | settings.js `setSetting`, `state.js rememberRenames` | settings.js, `state.js renamedId` |
 | `decks` (Map) | `decks` | app.js `saveDeck` | dj.js via `savedDeck` |
 | `takes` | `takes` | app.js `saveTake`, `deleteTake` | dj.js, things |
@@ -192,7 +192,7 @@ An override holds only what differs from boards.json (`model.js overrideFor`; th
 
 `board.js people()` is `model.js mergePeople`: boards.json people (edits applied, each with their clips plus kit), then added people by `created`, hidden left out unless asked.
 
-- **Fields on an added person:** `name` (a fun name from `names.js`, max `MAX_PERSON` 20), `fun` (the name is generated, so it syncs), `avatar` (one of `model.js PICTURES` or any listed emoji), `color` (one of `PERSON_COLORS`), `created`, `edited` (set by `personEditRecord`; merges keep the newer), `solo`, `hidden`, `offline` (kept out of the cloud).
+- **Fields on an added person:** `name` (a fun name from `names.js`, max `MAX_PERSON` 20), `fun` (the name is generated, so it syncs), `avatar` (one of `model.js PICTURES` or any listed emoji), `color` (one of `PERSON_COLORS`), `created`, `edited` (set by `personEditRecord`; merges keep the newer), `solo`, `hidden`, `offline` (an old 📴 Offline: still read and kept in backups, ignored since the cloud needs a PIN).
 - **Two palettes.** Person colors are dark hex values white text reads on (`PERSON_COLORS`; old ones moved by `personColor` / `OLD_PERSON_COLORS` on every read). Pad colors are boards.json `palette` names (`red`, `blue`…), with `OLD_COLOR_NAMES` for older names. `board.js padColor` turns a name into CSS.
 - **Default person.** `model.js isDefaultPerson`: an added solo (or "Me") person, never edited, not hidden, owning nothing. `merge.js` drops an incoming one always, and the device's once someone else arrives.
 - **Adopting.** `model.js adoptPeople`: any person id that stored data names (`personIdsIn`) without a record becomes an added person with a fun name, a free color and picture. A hidden record with nothing stored is dropped. Used at start (`state.js adoptStoredPeople`) and for pre-1.0 data (`cleanBackup` with `oldStores`).

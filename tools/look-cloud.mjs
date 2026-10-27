@@ -5,16 +5,21 @@
 // p-e2e-…), and `just cloud-prune --smoke` removes any a killed run left.
 //
 //   cloud-smoke  the API round trip from Node, through web/cloud-api.js:
-//                make, wrong PIN, open, push, pull, a sound in two pieces
-//                read back byte for byte, a share read with no key, the
-//                list (which leaves it out), delete, and everything gone,
-//                its share code too.
+//                make (a create with no PIN is refused), wrong PIN, open, a
+//                PATCH that clears the PIN is refused, push, pull, a sound in
+//                two pieces read back byte for byte, a share read with no
+//                key, the list (which leaves it out), five wrong PINs at open
+//                that do not lock the key's delete, delete, and everything
+//                gone, its share code too.
 //   cloud-e2e    two devices (two browser contexts: separate IndexedDB) in
 //                headless Chrome on the live site: A makes a person, a beat
-//                and a sound and syncs; B opens the profile from the ☁️ list
-//                (a check's profile isn't listed, so its line is added there)
-//                and gets them; B rerolls the name and renames the beat; A
-//                syncs and has both, the beat edited in place (Q7).
+//                and a sound, syncs, and is NOT in the cloud (nobody goes up
+//                by themselves); a grown-up's switch puts A up with a PIN
+//                (web/cloud.js goUp); B opens the profile from the ☁️ list (a
+//                check's profile isn't listed, so its line is added there),
+//                types the PIN on the real pad and says Not now to 🔑
+//                Remember, and gets them; B rerolls the name and renames the
+//                beat; A syncs and has both, the beat edited in place (Q7).
 //
 // Each step prints ✅ or ❌ with its time; the exit code is 1 on any ❌.
 //
@@ -327,6 +332,8 @@ async function e2e({ url }) {
   const api = apiFor(url);
   const s = steps();
   const pid = testId('e2e');
+  // Every profile in the cloud has a PIN; this one's is made up for the run.
+  const pin = String(crypto.randomInt(10000)).padStart(4, '0');
   console.log(`☁️  cloud-e2e on ${url}: two devices, throwaway profile ${pid}`);
   const devices = [];
   let made = null;
@@ -337,7 +344,7 @@ async function e2e({ url }) {
       return 'two devices (separate storage) opened the live app';
     }).then(() => devices);
 
-    made = await s.step('A: make a person, a beat and a sound, and sync', async () => {
+    made = await s.step('A: make a person, a beat and a sound; syncing puts nobody in the cloud', async () => {
       const r = await a.run(`${MODULES}
         const { funName, beatName, soundName } = await import('/names.js');
         const { PICTURES, PERSON_COLORS } = await import('/model.js');
@@ -371,12 +378,27 @@ async function e2e({ url }) {
         const hex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
         return { name: person.name, beat: { id: beat.id, name: beat.name }, clip: { id: clip.id, bytes: blob.size,
           sha: hex(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer())) },
-          status: cloud.statusOf(id), sound: cloud.linkOf(id)?.sounds?.[clip.id]?.sound ?? null, key: cloud.keyOf(id) };`);
-      if (r.key) made = r;   // the key, for the clean-up, even if a check below fails
+          inCloud: cloud.inCloud(id), link: !!cloud.linkOf(id) };`);
+      // The rule itself, checked live: nobody goes up by themselves, whatever they made.
+      must(!r.inCloud && !r.link, 'A person who made things went to the cloud by themselves');
+      await refused(api.open(pid, pin), 404, 'profile');
+      made = r;
+      return `A: made ${r.name} with beat “${r.beat.name}” and a sound; syncing sent nothing (the cloud has no such profile)`;
+    }).then(() => made);
+
+    // What the ☁️ switch does after the grown-up sum and the PIN pads (cloud-ui.js putUp).
+    await s.step('A: a grown-up puts them in the cloud with a PIN', async () => {
+      const r = await a.run(`${MODULES}
+        const id = ${JSON.stringify(pid)};
+        await cloud.goUp(id, ${JSON.stringify(pin)});
+        const clip = state.userClips.find((c) => c.personId === id);
+        return { status: cloud.statusOf(id), pin: cloud.linkOf(id)?.pin, sound: cloud.linkOf(id)?.sounds?.[clip.id]?.sound ?? null, key: cloud.keyOf(id) };`);
+      if (r.key) made = { ...made, key: r.key };   // the key, for the clean-up, even if a check below fails
+      must(r.pin === true, 'A is in the cloud with no PIN');
       must(r.status?.state === 'ok', `A's sync says ${JSON.stringify(r.status)}`);
       must(r.sound, 'the sound has no cloud id');
-      return `A: made ${r.name} with beat “${r.beat.name}” and a sound, synced (no PIN)`;
-    }).then(() => made);
+      return 'A: in the cloud with a PIN (goUp), synced: the beat and the sound are up';
+    });
 
     await s.step('B: open it from the ☁️ list', async () => {
       const r = await b.run(`${MODULES}
@@ -396,12 +418,18 @@ async function e2e({ url }) {
         const pick = document.createElement('button');
         pick.type = 'button';
         pick.dataset.open = id;
-        pick.dataset.pin = 'false';
+        pick.dataset.pin = 'true';
         li.append(pick);
         document.querySelector('#cloud-list-items').append(li);
         pick.click();
+        // Every profile has a PIN: the real pad asks it, and the keys are typed.
+        await until('the PIN pad', () => document.querySelector('#pin-dialog').open);
+        for (const k of ${JSON.stringify(pin)}) document.querySelector('#pin-keys [data-key="' + k + '"]').click();
         // The sheet turns to them and locks, then ends on ✓ or a stop.
         await until('the open', () => ['done', 'stopped'].includes(document.querySelector('#cloud-open').dataset.step) && !document.querySelector('#cloud-open').hidden && cloud.statusOf(id)?.state !== 'syncing');
+        // Then 🔑 Remember them here? is offered: Not now.
+        await until('the Remember offer', () => document.querySelector('#remember-dialog').open);
+        document.querySelector('#remember-no').click();
         const clip = state.userClips.find((c) => c.personId === id);
         const hex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
         const bar = document.querySelector('#cloud-open-bar');
@@ -460,33 +488,23 @@ async function e2e({ url }) {
   } catch (err) {
     if (!err?.said) s.fail(err?.message || String(err));   // a step says its own
   } finally {
-    // Every profile either device put in the cloud is a throwaway (both
-    // started empty), so all go: the test profile, and any other a device made.
-    const links = new Map();
-    if (made?.key) links.set(pid, made.key);
-    for (const d of devices) {
-      try {
-        const got = await d.run(`const { state } = await import('/state.js'); const cloud = await import('/cloud.js');
-          return [...state.cloud.keys()].map((id) => [id, cloud.keyOf(id)]);`);
-        for (const [id, key] of got) if (key && !links.has(id)) links.set(id, key);
-      } catch { /* that device is gone; the key from A is enough for the test profile */ }
+    // The only profile a check puts in the cloud is the test profile (nobody
+    // goes up by themselves). Its key is A's, or the PIN opens one (a crash
+    // mid-step); the delete needs the PIN too.
+    let key = made?.key;
+    if (!key) {
+      try { key = (await api.open(pid, pin)).key; } catch { /* not there: nothing to delete */ }
     }
-    // A device made the profile but never said its key (a crash mid-step):
-    // it has no PIN, so opening it gives one to delete it with.
-    if (!links.has(pid)) {
-      try { links.set(pid, (await api.open(pid)).key); } catch { /* not there: nothing to delete */ }
-    }
-    for (const [id, key] of links) {
+    if (key) {
       try {
-        await api.remove(id, key);
-        console.log(`🧹 deleted ${id}${id === pid ? '' : ' (a device\'s own first person went to the cloud too)'}`);
+        await api.remove(pid, key, pin);
+        console.log(`🧹 deleted ${pid}`);
       } catch (err) {
-        if (err instanceof CloudError && err.status === 404) continue;
-        s.fail(`could not delete ${id} (${err?.message}). Remove it: just cloud-prune --smoke --yes`);
+        if (!(err instanceof CloudError && err.status === 404)) s.fail(`could not delete ${pid} (${err?.message}). Remove it: just cloud-prune --smoke --yes`);
       }
     }
     try {
-      await api.open(pid);
+      await api.open(pid, pin);
       s.fail(`${pid} is still in the cloud after the delete. It goes by itself 10 minutes after it was made`);
     } catch (err) {
       if (!(err instanceof CloudError && err.status === 404)) console.log(`⚠️  could not check ${pid} is gone (${err?.message})`);

@@ -58,7 +58,7 @@ const MUST_MENTION = [
   // Settings
   '💾 Save a backup', '📂 Load a backup', 'Advanced', '🧸 Kids', 'Regular', '📮 Send problem reports', 'Kids mode',
   // The cloud
-  '☁️ Open from the cloud', '☁️ In the cloud', '🎲 Pick a name', '🔒 Set a PIN', '🔒 PIN on', 'Change PIN', 'Remove PIN',
+  '☁️ Open from the cloud', '☁️ In the cloud', '🎲 Pick a name', '🔒 PIN on', 'Change PIN', 'Remove PIN',
   "🤷 I don't know the PIN", '🔄 Sync now', '🔗 Share…', '🔗 Shared with me', 'Privacy policy',
   // About
   'Feedback', 'Send feedback',

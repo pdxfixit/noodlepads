@@ -1979,7 +1979,11 @@ button.sa-row { cursor: pointer; }
 .pf-row { display: flex; align-items: center; gap: 12px; }
 .pf-grow { flex: 1 1 auto; min-width: 0; }
 .pf-cloud-text.danger { color: #B3261E; font-weight: 700; }
-#profile-cloud-tools[hidden], #profile-pin-tools[hidden], .pf-wide[hidden], .pf-pill[hidden], .pf-switch[hidden] { display: none; }
+#profile-cloud-tools[hidden], #profile-pin-tools[hidden], #profile-pin-part[hidden], .pf-wide[hidden], .pf-pill[hidden], .pf-switch[hidden], .pf-leave-note[hidden] { display: none; }
+/* The whole ☁️ In the cloud row turns the switch (people.js), at least 44 px tall. */
+.pf-row-switch { min-height: 44px; cursor: pointer; }
+/* Under the red Remove PIN, once it asks "Leave the cloud?": what leaving does. */
+.pf-leave-note { color: #B3261E; font-weight: 700; }
 /* ☁️ In the cloud: a switch, 44 px tall to tap, its track 56 × 32. */
 .pf-switch {
   position: relative;
@@ -3322,6 +3326,11 @@ dialog.np-dialog .set-buttons .quiet { justify-content: center; }
 .pin-dots span { width: 22px; height: 22px; border: 3px solid var(--ink); border-radius: 50%; }
 .pin-dots span.on { background: var(--ink); }
 .pin-note { text-align: center; }
+/* The first PIN pad of putting someone in the cloud (cloud-ui.js): what becomes
+   public, in a chalk box of its own over the dots. Kept short and small so the
+   dots and all ten keys stay on a 320 × 680 phone. */
+.pin-public { margin: 0 0 6px; padding: 8px 10px; border-radius: 12px; background: var(--chalk); color: var(--ink); font-size: 0.82rem; font-weight: 700; line-height: 1.3; text-align: center; }
+.pin-public[hidden] { display: none; }
 /* The pad saying no: a wrong PIN, or two new ones that didn't match. */
 .pin-wrong .pin-note { color: #B3261E; }
 .pin-wrong .pin-dots { animation: pin-shake 360ms ease-out; }
@@ -5228,6 +5237,9 @@ dialog.kids-sum::backdrop { background: rgb(20 19 24 / 0.7); }
 .kids-sum-zero { grid-column: 2; }
 /* The sum's card is light: its focus rings (the keys, ✕ Back) are dark. */
 dialog.kids-sum :focus-visible { outline: 4px solid var(--ink); outline-offset: 3px; }
+/* ☁️ In the cloud's sum: who it is for, under the title (grown-up.js). */
+.kids-sum-why { margin: -6px 0 12px; text-align: center; font-weight: 800; overflow-wrap: anywhere; }
+.kids-sum-why[hidden] { display: none; }
 /* Feedback's sum: a wrong answer says so above the keys, and asks another (grown-up.js). */
 .kids-sum-note { margin: -4px 0 14px; text-align: center; font-weight: 800; }
 .kids-sum-note[hidden] { display: none; }

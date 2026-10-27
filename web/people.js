@@ -18,7 +18,7 @@ import { people, person } from './board.js';
 import { PERSON_COLORS, PERSON_COLOR_NAMES, nextPersonColor, freePicture, personCounts, countsText, countsWords, KIND_EMOJI } from './model.js';
 import { newId } from './util.js';
 import { funName, nameChoices, isFunName } from './names.js';
-import { inCloud, isOffline, dropLink, restoreLink, forgetBases, linkOf, keyOf, pinGuards, onCloud, syncEnded } from './cloud.js';
+import { inCloud, dropLink, restoreLink, forgetBases, linkOf, keyOf, pinGuards, onCloud, syncEnded } from './cloud.js';
 import { avatarBadge, openAvatar, cloudLabel, askEditPin, drawPin, pinClick, disarmCloud, deleteLeftCloud } from './cloud-ui.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { announce, showNotice } from './ui.js';
@@ -48,7 +48,8 @@ export const storedLists = () => ({
 
 const anyone = (id) => people({ includeHidden: true }).find((x) => x.id === id);
 
-// The ☁️ state on a line: ☁️✓, ☁️, 📴 or ☁️⚠️, with 🔒 when they have a PIN.
+// The ☁️ state on a line: ☁️✓ or ☁️⚠️ (nothing for someone only on this
+// device), with 🔒 when they have a PIN.
 function cloudBits(p) {
   const info = cloudLabel(p);
   if (!info) return null;
@@ -265,7 +266,7 @@ function renderProfile(fresh = false) {
   // Someone in the cloud has the same here and there, so the line says only
   // what they have; 📴 says it is on this device alone (Ben, 2026-10-24).
   const counts = personCounts(storedLists(), p.id);
-  const alone = isOffline(p.id);
+  const alone = !inCloud(p.id);
   el.profileCountsText.textContent = `${alone ? '📴 This device only: ' : ''}${countsText(counts)}`;
   el.profileCounts.setAttribute('aria-label', `See all: everything ${p.name} has${alone ? ', on this device only' : ''}: ${countsWords(counts)}`);
   el.profileFace.replaceChildren(avatarBadge(p, 'pf-face'));
@@ -410,11 +411,12 @@ const stopHold = () => { clearTimeout(holdTimer); holdTimer = null; };
 
 async function onProfileClick(e) {
   const id = profileFor;
-  const t = e.target.closest('button');
+  // The whole ☁️ In the cloud row turns the switch, not only the switch itself.
+  const t = e.target.closest('button') ?? (e.target.closest('.pf-row-switch') ? document.getElementById('profile-cloud') : null);
   if (!id || !t) return;
   if (t === el.profileKeep) { el.profile.close(); return; }   // ✕ does the same
   if (t !== el.profileDelete) disarmDelete();
-  if (t.id !== 'profile-cloud') disarmCloud(id);
+  if (t.id !== 'profile-cloud' && t.id !== 'cloud-pin-off') disarmCloud(id);
   if (t === el.profileCounts) { openThings(id, { opener: t }); return; }
   const swatch = t.closest('[data-color]');
   if (swatch) {

@@ -22,9 +22,9 @@ let $;
 let state;
 const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') } };
 const idb = fakeIndexedDB();
-const OPEN = 'p-open-1';     // in the cloud, no PIN
-const LOCKED = 'p-locked-1'; // in the cloud with a PIN
-const KEPT = 'p-kept-1';     // in the cloud, no PIN: ✕ after the second tap
+const OPEN = 'p-open-1';     // in the cloud, its PIN remembered on this device
+const LOCKED = 'p-locked-1'; // in the cloud, its PIN asked on every open
+const KEPT = 'p-kept-1';     // in the cloud: ✕ after the second tap
 const HERE = 'p-here-1';     // on this device only
 const call = async (path, body) => (await worker.fetch(new Request(`https://noodlepads.com/api/${path}`, {
   method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ORIGIN }, body: JSON.stringify(body),
@@ -33,16 +33,16 @@ const inD1 = (id) => env.DB.rows('SELECT COUNT(*) AS n FROM profiles WHERE id = 
 
 before(async () => {
   console.error = () => {};
-  const open = await call('profiles', { id: OPEN, name: 'Admiral Acorn', avatar: '', color: '#304A00' });
+  const open = await call('profiles', { id: OPEN, name: 'Admiral Acorn', avatar: '', color: '#304A00', pin: '1357' });
   await call('profiles', { id: LOCKED, name: 'Baron Bagel', avatar: '', color: '#B3141C', pin: '2468' });
-  const kept = await call('profiles', { id: KEPT, name: 'Count Cupcake', avatar: '', color: '#5A2050' });
+  const kept = await call('profiles', { id: KEPT, name: 'Count Cupcake', avatar: '', color: '#5A2050', pin: '1357' });
   const person = (id, name, created) => ({ id, name, fun: true, avatar: '🦉', color: '#304A00', added: true, created });
   idb.seed(DB_NAME, DB_VERSION, SCHEMA, {
     people: [person(OPEN, 'Admiral Acorn', 1), person(LOCKED, 'Baron Bagel', 2), person(KEPT, 'Count Cupcake', 3), person(HERE, 'Duke Dumpling', 4)],
     cloud: [
-      { id: OPEN, key: open.key, rev: 0, sent: {}, sounds: {} },
+      { id: OPEN, key: open.key, rev: 0, sent: {}, sounds: {}, pin: true, remembered: true },
       { id: LOCKED, key: null, rev: 0, sent: {}, sounds: {}, pin: true },
-      { id: KEPT, key: kept.key, rev: 0, sent: {}, sounds: {} },
+      { id: KEPT, key: kept.key, rev: 0, sent: {}, sounds: {}, pin: true, remembered: true },
     ],
   });
   globalThis.indexedDB = idb;
@@ -68,7 +68,7 @@ const closeSheets = () => { $('#profile-dialog').close(); $('#people-dialog').cl
 const del = () => $('#profile-delete');
 const tap = async () => { del().dispatch('click'); await settle(); };
 
-test('in the cloud with no PIN: the second tap deletes them here and keeps the sheet; the cloud button asks, then deletes the cloud copy', async () => {
+test('in the cloud: the second tap deletes them here and keeps the sheet; the cloud button asks, then the PIN, then deletes the cloud copy', async () => {
   sheetOf(OPEN);
   assert.match($('#profile-delete-hint').textContent, /Then they can delete their cloud copy too/);
   assert.equal($('#profile-keep').hidden, true, 'no Keep before the second tap');
@@ -94,6 +94,10 @@ test('in the cloud with no PIN: the second tap deletes them here and keeps the s
   assert.ok(del().classList.contains('armed'));
   assert.ok(inD1(OPEN), 'nothing gone on the first tap');
   await tap();
+  assert.equal($('#pin-dialog').open, true, 'then the PIN, though this device remembered them');
+  assert.ok(inD1(OPEN));
+  typePin('1357');
+  await settle();
   assert.equal(inD1(OPEN), false, 'the cloud copy is gone');
   assert.equal($('#profile-dialog').open, false);
   closeSheets();

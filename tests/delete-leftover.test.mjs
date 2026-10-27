@@ -37,16 +37,22 @@ const edit = (id) => ({ id: `${id}-${KIT}`, color: 'pink', label: 'Mine' });
 
 before(async () => {
   console.error = () => {};
-  const made = await (await worker.fetch(new Request('https://noodlepads.com/api/profiles', {
+  // Nobody goes to the cloud by themselves: both were put there with a PIN (this device remembers it).
+  const put = async (id, name, color) => (await worker.fetch(new Request('https://noodlepads.com/api/profiles', {
     method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ORIGIN },
-    body: JSON.stringify({ id: SYNCING, name: 'Count Cupcake', avatar: '', color: '#B3141C' }),
+    body: JSON.stringify({ id, name, avatar: '', color, pin: '2468' }),
   }), env)).json();
+  const made = await put(SYNCING, 'Count Cupcake', '#B3141C');
+  const kept = await put(KEPT, 'Sir Squid', '#304A00');
   idb.seed(DB_NAME, DB_VERSION, SCHEMA, {
-    people: [person(SHOWN, 'Admiral Acorn', 1), person(OTHER, 'Baron Bagel', 2), person(SYNCING, 'Count Cupcake', 3), { ...person(REFUSED, 'Duke Dumpling', 4), offline: true }, person(KEPT, 'Earl Eggplant', 5)],
+    people: [person(SHOWN, 'Admiral Acorn', 1), person(OTHER, 'Baron Bagel', 2), person(SYNCING, 'Count Cupcake', 3), { ...person(REFUSED, 'Duke Dumpling', 4), offline: true }, person(KEPT, 'Sir Squid', 5)],
     overrides: [edit(SHOWN), edit(OTHER), edit(REFUSED), edit(KEPT)],
     beats: [{ id: 'beat-refused', personId: REFUSED, name: 'Wobbly Taco', bpm: 100, bars: 1, swing: 0, rows: [], created: 4, saved: 4 }],
     orders: [{ personId: REFUSED, ids: [] }],
-    cloud: [{ id: SYNCING, key: made.key, rev: 0, sent: {}, sounds: {} }],
+    cloud: [
+      { id: SYNCING, key: made.key, rev: 0, sent: {}, sounds: {}, pin: true, remembered: true },
+      { id: KEPT, key: kept.key, rev: 0, sent: {}, sounds: {}, pin: true, remembered: true },
+    ],
     settings: [{ key: 'person', value: SHOWN }],
   });
   globalThis.indexedDB = idb;

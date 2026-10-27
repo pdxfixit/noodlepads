@@ -52,9 +52,25 @@ test('every kind of entry the app logs has a rule, and so does every field it lo
   assert.deepEqual(missing, [], 'add these to RULES in web/log-clean.js');
 });
 
-test('every field the cloud entry keeps is one the app logs (no dead allowlist entries)', () => {
+// `put` and `offline` were logged until the cloud needed a PIN (`up` and `left`
+// replace them, docs/design/cloud-needs-pin.md); logs already kept still carry
+// them, so they stay readable. `pin: 'removed'` is a value, not a field.
+const OLD_LOGS = new Set(['put', 'offline']);
+test('every field the cloud entry keeps is one the app logs, or an old log\'s (no dead allowlist entries)', () => {
   const logged = new Set(logCalls().filter((c) => c.kind === 'cloud').flatMap((c) => c.keys));
-  assert.deepEqual(Object.keys(RULES.cloud).filter((k) => !logged.has(k)), [], 'drop these from RULES.cloud in web/log-clean.js');
+  assert.deepEqual(Object.keys(RULES.cloud).filter((k) => !logged.has(k) && !OLD_LOGS.has(k)), [], 'drop these from RULES.cloud in web/log-clean.js');
+  for (const k of OLD_LOGS) assert.ok(RULES.cloud[k], `${k} stays readable for old logs`);
+  assert.ok(logged.has('up') && logged.has('left'), 'goUp and leaveCloud log what they did');
+  assert.ok(!logged.has('put') && !logged.has('offline'), 'and nothing writes the old ones');
+});
+
+test('the cloud events of a cloud that needs a PIN pass the cleaner, and the old ones still do', () => {
+  const clean = (data) => cleanEntry({ t: 1, kind: 'cloud', data })?.data;
+  assert.deepEqual(clean({ up: true }), { up: true });
+  assert.deepEqual(clean({ left: true }), { left: true });
+  assert.deepEqual(clean({ put: true }), { put: true });
+  assert.deepEqual(clean({ offline: true }), { offline: true });
+  assert.deepEqual(clean({ pin: 'removed' }), { pin: 'removed' });
 });
 
 test("the report's fixed lists match the app's", () => {

@@ -10,7 +10,7 @@ import { ORIGIN } from '../worker/http.js';
 import { FakeD1 } from './fake-d1.mjs';
 import { createCloudApi, CloudError, cloudTrouble } from '../web/cloud-api.js';
 import {
-  syncProfile, recordsOf, planPush, decideRecord, hashOf, pieces, shareBundle, shareDoc, hasMade, syncNote, pushSlices, CHUNK_BYTES, CLOUD_MAX_SOUND, keyOf,
+  syncProfile, recordsOf, planPush, decideRecord, hashOf, pieces, shareBundle, shareDoc, syncNote, pushSlices, CHUNK_BYTES, CLOUD_MAX_SOUND, keyOf,
   progressShare, soundBytes, newProgress,
 } from '../web/cloud-sync.js';
 import { LIMITS } from '../worker/cloud.js';
@@ -527,13 +527,6 @@ test('a share code: anyone with it gets the snapshot, and a copy lands as their 
   assert.equal(env.DB.rows("SELECT COUNT(*) AS n FROM records WHERE profile_id = 'p-c'")[0].n, 0, 'reading a share writes nothing');
 });
 
-test('only someone who has made something goes to the cloud by themselves', () => {
-  const lists = { clips: [], beats: [], prefs: [{ personId: 'p-me', values: { padSize: 0.66 } }], orders: [{ personId: 'p-me', ids: [] }] };
-  assert.equal(hasMade(lists, 'p-me', KIT), false, 'settings and a pad order are not something made');
-  assert.equal(hasMade({ ...lists, overrides: [{ id: 'p-me-kick', label: 'Boom' }] }, 'p-me', KIT), true, 'a kit edit is');
-  assert.equal(hasMade({ ...lists, beats: [{ id: 'beat-1', personId: 'p-me' }] }, 'p-me', KIT), true);
-});
-
 test('pure rules: plan, sort, pieces', () => {
   const local = new Map([[keyOf('beats', 'b1'), { kind: 'beats', id: 'b1', record: { id: 'b1', bpm: 1 } }]]);
   assert.deepEqual(planPush(local, {}).put.map((r) => r.id), ['b1']);
@@ -691,7 +684,7 @@ test('saved DJ key layouts sync with their person, and the app and the Worker ag
   assert.deepEqual(pulledDoc('p-a', null, [{ kind: 'gadgets', id: 'g-1', body: { id: 'g-1' } }]).gadgets, undefined);
 });
 
-test('👆 touch layouts sync with their person, and count as something made (ADR 0029)', async () => {
+test('👆 touch layouts sync with their person (ADR 0029)', async () => {
   const { api } = server();
   const { a, link } = await startA(api);
   const saved = { id: 'touch-1', personId: 'p-a', name: 'Jam pads', created: 7, bands: [{ group: 'mine', size: 'l', sounds: ['user-1'] }] };
@@ -700,7 +693,6 @@ test('👆 touch layouts sync with their person, and count as something made (AD
   const { d: b, link: bl } = await openOn(api, 'p-a');
   await syncProfile(bl, b.deps(api));
   assert.deepEqual(b.stores.touchLayouts, [saved]);
-  assert.equal(hasMade({ touchLayouts: [saved] }, 'p-a'), true, 'a saved touch layout takes its person to the cloud');
 });
 
 test("a kid's own voices sync with their person: made, used, renamed and deleted on one device, the same on the other", async () => {
@@ -726,12 +718,6 @@ test("a kid's own voices sync with their person: made, used, renamed and deleted
   await syncProfile(link, a.deps(api));
   await syncProfile(bl, b.deps(api));
   assert.deepEqual(b.stores.voices, []);
-});
-
-test("a person whose only own thing is a voice has made something, so they go to the cloud", async () => {
-  const lists = { people: [{ id: 'p-x' }], voices: [{ id: 'voice-1', personId: 'p-x', name: 'Mine', emoji: '', knobs: { pitch: 2 } }] };
-  assert.equal(hasMade(lists, 'p-x'), true);
-  assert.equal(hasMade({ ...lists, voices: [] }, 'p-x'), false);
 });
 
 // ── three-way merging (merge3.js), through the real Worker ──
@@ -907,6 +893,28 @@ test('a device synced before bases were kept still merges safely: unchanged side
   await syncA(); await syncB(); await syncA();
   assert.deepEqual(beatOf(a).map((x) => x.bpm).sort(), [111, 99], 'no base, both changed: both kept, as before');
   assert.deepEqual(contentOf(a), contentOf(b));
+});
+
+// docs/design/cloud-needs-pin.md section 8: leaving drops the merge bases with
+// the link, so a later go-up that joins a profile already there (409, then its
+// PIN) syncs with no base: what differs is kept as two, never one side dropped.
+test('a join after leaving has no base: a beat changed on both sides is kept as two, and an unchanged one stays one', async () => {
+  const { api, a, b, syncB } = await twoDevices();
+  a.bases.clear();   // A left the cloud (the link and the bases went); this device keeps every record
+  await a.put('beats', { ...beatOf(a)[0], bpm: 111 });
+  await b.put('beats', { ...beatOf(b)[0], bpm: 99 });
+  await syncB();
+  const joined = await api.open('p-a', PIN);   // the PIN they have opens it: a fresh link, rev 0
+  let link = { id: 'p-a', key: joined.key, rev: 0 };
+  for (let round = 0; round < 3; round++) {
+    await syncProfile(link, a.deps(api));
+    link = { ...a.link, key: joined.key };
+    await syncB();
+  }
+  assert.deepEqual(beatOf(a).map((x) => x.bpm).sort(), [111, 99], 'both kept on the device that joined');
+  assert.deepEqual(beatOf(b).map((x) => x.bpm).sort(), [111, 99], 'and on the other');
+  assert.deepEqual(beatOf(a).map((x) => [x.id, x.bpm]).sort(), beatOf(b).map((x) => [x.id, x.bpm]).sort(), 'the same two on both');
+  assert.equal(a.stores.clips.length, 1, 'the sound that is the same on both sides stays one');
 });
 
 // ☁️ Open from the cloud's bar (Ben, 2026-10-26: a real one, never 0 then 100).

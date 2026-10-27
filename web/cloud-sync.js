@@ -20,9 +20,6 @@ import { songBeatIds, mapSongBeats } from './playlist.js';
 // prefs (the person's settings) hold one record per person, keyed by personId.
 export const CLOUD_KINDS = ['clips', 'overrides', 'orders', 'patterns', 'beats', 'decks', 'takes', 'songs', 'songbook', 'prefs', 'layouts', 'voices', 'touchLayouts'];
 export const ONE_EACH = new Set(['orders', 'patterns', 'decks', 'songs', 'prefs']);
-// What counts as a person having made something: a person with none of these
-// (a new device's empty "Me") never goes to the cloud by itself.
-const MADE = new Set(['clips', 'overrides', 'beats', 'takes', 'songbook', 'layouts', 'voices', 'touchLayouts']);
 export const CHUNK_BYTES = 1_900_000;
 // The biggest sound the cloud keeps (worker/cloud.js MAX_SOUND_BYTES). The
 // app makes longer ones (a 3-minute song as a sound); those stay on the
@@ -74,12 +71,6 @@ export function recordsOf(lists, personId, kitIds = []) {
     if (typeof o?.id === 'string' && o.id.startsWith(`${personId}-`) && kit.has(o.id.slice(personId.length + 1))) add('overrides', o.id, o);
   }
   return out;
-}
-
-// Whether `personId` has made anything yet (MADE).
-export function hasMade(lists, personId, kitIds = []) {
-  for (const { kind } of recordsOf(lists, personId, kitIds).values()) if (MADE.has(kind)) return true;
-  return false;
 }
 
 // Fields that are not the record's content: the audio and where it is kept,

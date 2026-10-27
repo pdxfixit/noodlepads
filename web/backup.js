@@ -345,7 +345,7 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
       edited: added ? num(p.edited) : undefined,   // when the name, color or avatar last changed (merge.js)
       avatar,                                                                // one emoji from the picture chooser's full list
       fun: blank || (added && p.fun === true && isFunName(name)) ? true : undefined,   // the name came from the generator
-      offline: added && p.offline === true ? true : undefined,               // kept out of the cloud (cloud.js)
+      offline: added && p.offline === true ? true : undefined,               // read and kept, ignored since the cloud needs a PIN (an old 📴 Offline)
       solo: added && p.solo === true ? true : undefined,                     // the device's own first person (model.js isDefaultPerson)
     });
   }, toClean);

@@ -40,7 +40,7 @@ import { initWhoNow, openWhoNow, closeWhoNow, whoNowOpen } from './who-now.js';
 import { initTips, tipsScreen } from './tips.js';
 import { initNudge } from './nudge.js';
 import { beatHasHits } from './firsts.js';
-import { initCloud, needsPin, leftPerson, onCloud, pinGuards } from './cloud.js';
+import { initCloud, needsPin, leftPerson, onCloud, pinGuards, inCloud } from './cloud.js';
 import { initCloudUI, askToOpen, shareSounds } from './cloud-ui.js';
 import { renderPreview, renderAudio } from './share-render.js';
 import { initBackups, storeLoaded, whatIsHere, savePersonBackup } from './backup-ui.js';
@@ -892,7 +892,7 @@ async function start() {
 
   initPads({ openSheet, onPerson: setPerson, onLooping: (id, on) => dj?.looping(id, on) });
   initSheet();
-  initBulk({ share: shareSounds });   // ✏️ Edit sounds with sounds chosen: Move, Color · picture, Voice, Share, Delete
+  initBulk({ share: shareSounds, inCloud });   // ✏️ Edit sounds with sounds chosen: Move, Color · picture, Voice, Share, Delete
   initPeople({ showPerson: setPerson, startOver, letGoOf });
   initWhoNow({ pick: pickWhoNow, someoneNew: addPerson });
   // 🗂️ See all, from a profile's count line: everything of one person's,

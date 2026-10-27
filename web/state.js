@@ -133,7 +133,7 @@ export async function adoptStoredPeople() {
 // beats, DJ keys, takes, songs and settings. The cloud renames nothing (Ben,
 // Q27: "Drop the rename code"), so this device's cloud link to a profile
 // under the old id is dropped, and the person goes up as new under their
-// random id with the next sync (cloud.js wantsCloud). None are left live;
+// random id (it is not put in the cloud until a grown-up does it, cloud.js goUp). None are left live;
 // both such profiles were moved by hand. It is one IndexedDB transaction: a start that stops halfway
 // leaves the old ids whole, and the next start does it again. The old id is
 // remembered on this device only (settings `renamedPeople`, never in a

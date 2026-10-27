@@ -1,6 +1,6 @@
 // The cloud's screens: the PIN pad (with 🤷 I don't know the PIN for a PIN new
 // to this device), the avatar picker, the PIN part of a person's profile
-// sheet (set, change, remove; the guard on their name, picture and color),
+// sheet (change, remove = leave; the guard on their name, picture and color),
 // a person's ☁️ Cloud switch with 🔄 Sync now and 🔗 Share (🚫 Unshare), ☁️ Open from the cloud, 🔗 Shared
 // with me (▶ Play, 🎛️ Remix, ✕ Remove). The work is in cloud.js.
 
@@ -17,8 +17,8 @@ import { audio } from './audio.js';
 import { applyChain } from './voices.js';
 import { PIN_RESET_EMAIL } from './contact.js';
 import {
-  api, CloudError, cloudTrouble, cloudThere, inCloud, linkOf, keyOf, isOffline, statusOf, syncNow,
-  openProfile, unlock, pinIsNew, checkPin, setPin, setOffline, removeProfile, putUpNow, wantsCloud, shareable, shareItem, showCode,
+  api, CloudError, cloudTrouble, cloudThere, inCloud, linkOf, keyOf, statusOf, syncNow,
+  openProfile, unlock, pinIsNew, checkPin, setPin, goUp, leaveCloud, removeProfile, shareable, shareItem, showCode,
   sharedHere, openShare, forgetShare, remixShare, fetchShare, checkShared, mySharesOf, unshareItem, listProfiles,
   rememberHere, declineRemember, offersRemember, forgetHere, isRemembered, keyWasDropped, FORGOT_HERE, bringDown, leaveInCloud,
 } from './cloud.js';
@@ -64,7 +64,8 @@ function disarm(b) {
   b.classList.remove('armed');
   b.textContent = b.dataset.was;
 }
-const trouble = (err) => (err instanceof CloudError ? cloudTrouble(err) : String(err?.message || err));
+// A CloudError may carry its own sentence (`say`, cloud.js unlock).
+const trouble = (err) => err?.say ?? (err instanceof CloudError ? cloudTrouble(err) : String(err?.message || err));
 
 // The round picture: the avatar, else the name's first letter, on the color.
 export function avatarBadge(p, className = 'cl-badge') {
@@ -100,11 +101,15 @@ function pinKey(k) {
 // Asks for four digits. Resolves with them, null when closed, 'new' for
 // 👋 Someone new, or 'unknown' for 🤷 I don't know the PIN (two taps), which
 // `unknown` shows. `forgot` shows the line on what to do about a forgotten PIN.
-export function askPin({ title = 'PIN', hint = '', note = '', forgot = false, someoneNew = false, unknown = false } = {}) {
+// `shown`: a line in a box of its own over the dots (what putting someone in
+// the cloud makes public), none when empty.
+export function askPin({ title = 'PIN', hint = '', note = '', shown = '', forgot = false, someoneNew = false, unknown = false } = {}) {
   pinDigits = '';
   drawDots();
   el.pinTitle.textContent = title;
   el.pinHint.textContent = hint;
+  el.pinPublic.textContent = shown;
+  el.pinPublic.hidden = !shown;
   el.pinNote.textContent = note;
   // A note is trouble (a wrong PIN, two that didn't match): red, and the dots
   // shake once, so the pad says no out loud (a tester, 2026-10-19).
@@ -190,7 +195,7 @@ async function askOnce(personId, { locked = false } = {}) {
 // keeps the choice. Not now has the focus, as big as Remember: a kid tapping
 // on through gets the safe one. Exported for `just look remember`.
 let rememberDone = null;
-export const REMEMBER_SUB = 'This device opens them without the PIN until someone taps Forget this device. Sharing still asks it. Anyone using this device can open them.';
+export const REMEMBER_SUB = 'Anyone using this device can open them. This device skips the PIN until someone taps Forget this device. Sharing still asks it.';
 export async function offerRemember(personId, pin) {
   if (!offersRemember(personId)) return;
   const p = people({ includeHidden: true }).find((x) => x.id === personId);
@@ -276,13 +281,18 @@ async function chooseAvatar(avatar) {
 }
 
 // ── a person's ☁️ Cloud and 🔒 PIN, in their profile sheet ──
-// ☁️ In the cloud is a switch (Ben, 2026-10-19): on puts them in the cloud
-// now, even with nothing made; off deletes the cloud copy (two taps, and the
-// PIN if they have one) and keeps them on this device only (📴 Offline).
-// Under it, 🔄 Sync now and 🔗 Share… (in the cloud) and ⬇️ Back up (always). The PIN part says at a glance whether
-// a PIN is on (its pill), with 🔒 Set a PIN, or Change PIN and Remove PIN.
-// What a PIN button just did shows in the pill for a while, then the pill
-// fades back to saying what is on (Ben: "PIN set appears where PIN on is").
+// ☁️ In the cloud is a switch, the whole row its target
+// (docs/design/cloud-needs-pin.md). Nobody goes to the cloud by themselves.
+// On asks the grown-up sum, a new PIN typed twice (the first pad says what
+// becomes public) and puts them there, then offers 🔑 Remember them here?.
+// Off (and Remove PIN, the same thing, with the same words) asks first, then
+// the PIN; their latest is brought here and their cloud copy and shared links are
+// deleted, and this device keeps everything (cloud.js leaveCloud). Under the
+// switch, 🔄 Sync now and 🔗 Share… (in the cloud) and ⬇️ Back up (always).
+// The PIN part shows only in the cloud: its pill says a PIN is on, with
+// Change PIN and Remove PIN. What a PIN button just did shows in the pill for
+// a while, then the pill fades back to saying what is on (Ben: "PIN set
+// appears where PIN on is").
 
 export const PIN_FLASH_MS = 3000;
 let flash = null;   // {id, text, until}: what the pill says just after a change
@@ -295,18 +305,29 @@ export const LOST_DEVICE = 'Lost this device? Change the PIN, and every device a
 // (cloudLabel), and the same ⚠️ before what is wrong in their profile sheet.
 const warns = (s) => s?.state === 'trouble' || s?.state === 'locked';
 
+// What the switch's line says about someone only on this device.
+export const ONLY_HERE = 'Only on this device. A grown-up can put them in the cloud with a PIN, to open them on any phone or tablet.';
+// What putting someone in the cloud makes public: on the first PIN pad, and
+// the same as the privacy statement (web/privacy.js), voices included.
+export const PIN_PUBLIC = 'Their sounds, beats and recorded voices are stored on noodlepads.com. Anyone can see their fun name and picture, and play a sound of theirs if they have its link.';
+export const PICK_PIN_HINT = 'A grown-up picks this PIN. Four numbers, asked each time they are opened, on every device.';
+// Leaving the cloud: Remove PIN's red button asks this, with the note under it.
+export const LEAVE_ASK = 'Leave the cloud?';
+export const LEAVE_NOTE = 'Tap again, then type the PIN: their cloud copy is deleted for every device, and links you shared stop working. This device keeps everything.';
+export const IN_THE_WAY = 'Something in the cloud is in the way. Nothing was sent.';
+
 // What the Cloud part says about a person.
 function cloudText(p) {
-  if (isOffline(p.id)) return '📴 Off: everything of theirs stays on this device only.';
   if (!inCloud(p.id)) {
-    return wantsCloud(p) ? 'They go up with the next sync.'
-      : `Off for now: they go up by themselves once they make something (a ${KIND_EMOJI.sounds} sound, a ${KIND_EMOJI.beats} beat, a ${KIND_EMOJI.songs} song or a ${KIND_EMOJI.takes} take), or now with the switch.`;
+    // Taken out on another device, said where they are: the switch's line.
+    const s = statusOf(p.id);
+    return s?.state === 'trouble' ? `⚠️ ${s.text}` : ONLY_HERE;
   }
   const s = statusOf(p.id);
   if (warns(s)) return `⚠️ ${s.text.replace(/^🔒 /, '')}`;
   if (s?.text) return s.text;
   if (!keyOf(p.id)) return '🔒 Syncs once they are opened with their PIN.';
-  return 'In the cloud ✓ Opens on any phone or tablet.';
+  return 'In the cloud ✓ Opens on any phone or tablet, with their PIN.';
 }
 
 // Draws the Cloud and PIN parts for `personId`.
@@ -315,9 +336,8 @@ export function drawPin(personId) {
   if (!p) return;
   const link = linkOf(personId);
   const linked = inCloud(personId);
-  const switchOn = p.added && !isOffline(personId) && (linked || wantsCloud(p));
   el.cloudSwitch.hidden = !p.added;
-  el.cloudSwitch.setAttribute('aria-checked', String(switchOn));
+  el.cloudSwitch.setAttribute('aria-checked', String(p.added && linked));
   if (!el.cloudSwitch.classList.contains('armed')) {
     el.cloudText.textContent = p.added ? cloudText(p) : "Someone from the app's own list stays on this device.";
   }
@@ -327,25 +347,26 @@ export function drawPin(personId) {
   el.shareBtn.hidden = !linked;
   el.backupBtn.setAttribute('aria-label', `Back up ${nameOf(p)}: one file of everything of theirs`);
 
+  // A PIN now means the cloud, so there is nothing to set on its own: the
+  // PIN part shows once they are in the cloud.
+  el.pinPart.hidden = !p.added || !linked;
   const hasPin = !!link?.pin;
   const kept = hasPin && !pinIsNew(personId) && isRemembered(personId);
   const now = flash && flash.id === personId && flash.until > Date.now() ? flash : null;
-  el.pinState.hidden = !p.added;
   el.pinState.textContent = now ? now.text : hasPin ? '🔒 PIN on' : '🔓 No PIN';
   el.pinState.classList.toggle('on', hasPin);
   el.pinState.classList.toggle('flash', !!now);
-  el.pinBtn.hidden = !p.added || hasPin;
-  el.pinTools.hidden = !p.added || !hasPin;
+  el.pinTools.hidden = !linked;
   el.pinRemember.hidden = !p.added || !hasPin || pinIsNew(personId);
   el.pinRemember.textContent = kept ? 'Forget this device' : '🔑 Remember on this device';
-  el.pinPartHint.textContent = !p.added ? "Someone from the app's own list can't have a PIN."
-    : hasPin ? (pinIsNew(personId)
+  const asked = hasPin
+    ? (pinIsNew(personId)
       ? (keyWasDropped(personId) ? `This device forgot ${nameOf(p)}. Open them and type the PIN.` : `They got a new PIN on another device. Open ${nameOf(p)} and type it.`)
       : kept
         ? `This device opens ${nameOf(p)} without it until someone taps Forget this device. Sharing still asks it. Anyone using this device can open them. ${LOST_DEVICE}`
         : `Asked every time ${nameOf(p)} is opened, on every device, and before the name, picture or color changes.`)
-      : linked ? `Anyone on any device can open ${nameOf(p)}.`
-        : 'A PIN needs the cloud. Setting one turns it on.';
+    : `Anyone on any device can open ${nameOf(p)}.`;
+  el.pinPartHint.textContent = `${asked} Removing it takes ${nameOf(p)} out of the cloud.`;
 }
 
 // The pill says `text` for PIN_FLASH_MS, then fades back to the PIN's state.
@@ -397,10 +418,10 @@ async function askToShare(personId) {
 // asks again from the start, never closing on a mismatch (a tester, 2026-10-19:
 // a different second PIN "didn't do anything"). Null when the pad is closed.
 export const PIN_MISMATCH = "Those two didn't match. Pick a new PIN again.";
-async function askNewPin(hint) {
+async function askNewPin(hint, { title = 'A new PIN', shown = '' } = {}) {
   let note = '';
   for (;;) {
-    const next = await askPin({ title: 'A new PIN', hint, note });
+    const next = await askPin({ title, hint, note, shown });
     if (next === null) return null;
     const again = await askPin({ title: 'Once more', hint: 'Type the same four numbers again.' });
     if (again === null) return null;
@@ -416,21 +437,91 @@ async function currentPin(personId, hint) {
   return got?.result ?? null;
 }
 
-// Takes the switch back to resting: a half-done "Tap again" is dropped, and
-// the line under it says what it said before. Any other tap in the sheet
-// does this (people.js), as a sheet's Delete is taken back.
+// Leaving the cloud asks twice: the first tap (on the switch, or on Remove
+// PIN) turns it red and says what leaving does; the second asks the PIN.
+// `leaveArmed`: which one asked, or null.
+let leaveArmed = null;
+
+// Takes the switch and Remove PIN back to resting: a half-done "Tap again" is
+// dropped, and the line under the switch says what it said before. Any other
+// tap in the sheet does this (people.js), as a sheet's Delete is taken back.
 export function disarmCloud(personId) {
+  leaveArmed = null;
+  el.pinOffNote.hidden = true;
+  disarm(el.pinOff);
   if (!el.cloudSwitch.classList.contains('armed')) return;
   el.cloudSwitch.classList.remove('armed');
   el.cloudText.classList.remove('danger');
   if (personId) drawPin(personId);
 }
 
+// The first tap of leaving: red, with the words.
+function armLeave(from, personId) {
+  disarmCloud(personId);
+  leaveArmed = from;
+  if (from === el.cloudSwitch) {
+    el.cloudSwitch.classList.add('armed');
+    el.cloudText.classList.add('danger');
+    el.cloudText.textContent = `${LEAVE_ASK} ${LEAVE_NOTE}`;
+    announce(el.cloudText.textContent);
+  } else {
+    armed(el.pinOff, LEAVE_ASK);
+    el.pinOffNote.textContent = LEAVE_NOTE;
+    el.pinOffNote.hidden = false;
+    announce(`${LEAVE_ASK} ${LEAVE_NOTE}`);
+  }
+}
+
+// The grown-up sum for putting `p` in the cloud (Ben, 2026-10-27: the usual
+// sum, no stronger gate), with who it is for under its title. A wrong answer
+// says so and asks another; true after the right one, false after ✕ or Esc.
+function askPutUpSum(p) {
+  return new Promise((resolve) => askSum({
+    owner: 'cloud-up', stay: true,
+    why: `☁️ To put ${p.avatar ? `${p.avatar} ` : ''}${p.name} in the cloud`,
+    right: () => resolve(true), cancel: () => resolve(false),
+  }));
+}
+
+// Already in the cloud with a PIN (goUp's 409): their own PIN, not the one
+// just picked, joins them up. ✕ leaves them on this device.
+async function joinPad(personId, p) {
+  let got;
+  try {
+    got = await withPin(async (pin) => { await openProfile(personId, pin); return pin; }, {
+      title: `${p.avatar ? `${p.avatar} ` : ''}${p.name}`,
+      hint: 'Already in the cloud with a PIN. Type that one to join up.',
+    });
+  } catch (err) {
+    // A row with no PIN, made by hand: the Worker has no such profile to open.
+    if (err instanceof CloudError && err.status === 404) throw new Error(IN_THE_WAY);
+    throw err;
+  }
+  if (!got) return null;
+  refresh();
+  syncNow(personId);
+  return got.result;
+}
+
+// ☁️ In the cloud switched on: the sum, a new PIN twice, then the cloud.
+// Nothing is sent before the second pad is answered; ✕ anywhere leaves them
+// on this device. Returns the PIN once they are in, else null.
+async function putUp(personId, p) {
+  if (!await cloudThere()) throw new CloudError(0, { error: 'no cloud' });
+  if (!await askPutUpSum(p)) return null;
+  const next = await askNewPin(PICK_PIN_HINT, { title: '☁️ Pick their PIN', shown: PIN_PUBLIC });
+  if (next === null) return null;
+  el.cloudText.textContent = 'Putting them in the cloud…';
+  const went = await goUp(personId, next);
+  if (went === 'joins') return joinPad(personId, p);
+  return next;
+}
+
 // A tap in the Cloud or PIN part: true when it was one of their buttons.
 // `note` says what went wrong (in the PIN part); the pill says what went right.
 export async function pinClick(personId, t, note = () => {}) {
-  const parts = [el.cloudSwitch, el.syncBtn, el.shareBtn, el.backupBtn, el.pinBtn, el.pinChange, el.pinOff, el.pinRemember];
-  if (t !== el.cloudSwitch) disarmCloud(personId);
+  const parts = [el.cloudSwitch, el.syncBtn, el.shareBtn, el.backupBtn, el.pinChange, el.pinOff, el.pinRemember];
+  if (t !== el.cloudSwitch && t !== el.pinOff) disarmCloud(personId);
   if (!parts.includes(t)) return false;
   const p = people({ includeHidden: true }).find((x) => x.id === personId);
   el.pinPartNote.textContent = '';
@@ -451,24 +542,21 @@ export async function pinClick(personId, t, note = () => {}) {
     }
   };
 
-  if (t === el.cloudSwitch) {
-    if (el.cloudSwitch.getAttribute('aria-checked') !== 'true') {
-      el.cloudText.textContent = 'Putting them in the cloud…';
-      await run(() => putUpNow(personId));
-      return true;
+  if (t === el.cloudSwitch && el.cloudSwitch.getAttribute('aria-checked') !== 'true') {
+    const pin = await run(() => putUp(personId, p));
+    if (pin) {
+      flashPin(personId, '✅ In the cloud, PIN set');
+      refresh();
+      await offerRemember(personId, pin);
     }
-    if (inCloud(personId) && !el.cloudSwitch.classList.contains('armed')) {
-      el.cloudSwitch.classList.add('armed');
-      el.cloudText.classList.add('danger');
-      el.cloudText.textContent = 'Tap again to take them out of the cloud: their cloud copy is deleted. This device keeps everything.';
-      announce(el.cloudText.textContent);
-      return true;
-    }
+    return true;
+  }
+  // Leaving: ☁️ off and Remove PIN are the same thing, with the same words.
+  if (t === el.cloudSwitch || t === el.pinOff) {
+    if (leaveArmed !== t) { armLeave(t, personId); return true; }
     disarmCloud(personId);
-    const off = (pin) => setOffline(personId, true, pin);
-    await run(() => (inCloud(personId) && linkOf(personId)?.pin
-      ? withPin(off, { title: '📴 Out of the cloud', hint: 'Type the PIN. Their cloud copy is deleted; this device keeps everything.' })
-      : off()));
+    const leave = (pin) => leaveCloud(personId, pin);
+    await run(() => withPin(leave, { title: '☁️ Leave the cloud', hint: 'Type the PIN. Their cloud copy is deleted for every device; this device keeps everything.' }));
     return true;
   }
   // ⬇️ Back up: one file of just them, as 🗂️ See all's ⬇️ Export a backup
@@ -487,16 +575,6 @@ export async function pinClick(personId, t, note = () => {}) {
       openShareDialog(personId);
       if (asks) shareAsked = personId;
     }
-    return true;
-  }
-  if (t === el.pinBtn) {
-    const next = await askNewPin(`Pick four numbers. They are asked each time ${nameOf(p)} is opened.`);
-    if (next === null) return true;
-    await run(async () => {
-      if (!inCloud(personId)) await putUpNow(personId);   // a PIN needs the cloud
-      await setPin(personId, null, next);
-      flashPin(personId, '✅ PIN set');
-    });
     return true;
   }
   // 🔑 Remember on this device asks the PIN (the cloud gives a key that
@@ -528,10 +606,7 @@ export async function pinClick(personId, t, note = () => {}) {
     await run(async () => { await setPin(personId, current, next); flashPin(personId, '✅ PIN changed'); });
     return true;
   }
-  const current = await currentPin(personId, 'Type the PIN it has now to remove it.');
-  if (current === null) return true;
-  await run(async () => { await setPin(personId, current, null); flashPin(personId, '🔓 PIN removed'); });
-  return true;
+  return false;
 }
 
 // ── 🔗 Share ──
@@ -985,14 +1060,14 @@ export function initCloudUI(hooks) {
   if (hooks.dropPerson) dropPerson = hooks.dropPerson;
   if (hooks.backup) backup = hooks.backup;
   Object.assign(el, {
-    pin: $('#pin-dialog'), pinTitle: $('#pin-title'), pinHint: $('#pin-hint'), pinNote: $('#pin-note'), pinDots: $('#pin-dots'), pinKeys: $('#pin-keys'),
+    pin: $('#pin-dialog'), pinTitle: $('#pin-title'), pinHint: $('#pin-hint'), pinNote: $('#pin-note'), pinPublic: $('#pin-public'), pinDots: $('#pin-dots'), pinKeys: $('#pin-keys'),
     pinForgot: $('#pin-forgot'), pinNew: $('#pin-new'), pinUnknown: $('#pin-unknown'),
     remember: $('#remember-dialog'), rememberTitle: $('#remember-title'), rememberSub: $('#remember-sub'), rememberYes: $('#remember-yes'), rememberNo: $('#remember-no'),
     avatar: $('#avatar-dialog'), avatarGrid: $('#avatar-grid'),
     cloudSwitch: $('#profile-cloud'), cloudText: $('#profile-cloud-text'), cloudTools: $('#profile-cloud-tools'),
     syncBtn: $('#cloud-sync'), shareBtn: $('#cloud-share'), backupBtn: $('#cloud-backup'),
     pinState: $('#profile-pin-state'), pinPartHint: $('#profile-pin-hint'), pinPartNote: $('#profile-pin-note'),
-    pinBtn: $('#cloud-pin'), pinTools: $('#profile-pin-tools'), pinChange: $('#cloud-pin-change'), pinOff: $('#cloud-pin-off'),
+    pinPart: $('#profile-pin-part'), pinTools: $('#profile-pin-tools'), pinChange: $('#cloud-pin-change'), pinOff: $('#cloud-pin-off'), pinOffNote: $('#cloud-pin-off-note'),
     pinRemember: $('#cloud-pin-remember'),
     list: $('#cloud-list'), listNote: $('#cloud-list-note'), listItems: $('#cloud-list-items'), listHint: $('#cloud-list-hint'),
     open: $('#cloud-open'), openPic: $('#cloud-open-pic'), openName: $('#cloud-open-name'),
@@ -1081,9 +1156,9 @@ export function initCloudUI(hooks) {
 // For the People rows: what the ☁️ button says.
 export function cloudLabel(p) {
   if (!p.added) return null;
+  // Someone only on this device shows no ☁️ at all.
+  if (!inCloud(p.id)) return null;
   const s = statusOf(p.id);
-  if (isOffline(p.id)) return { text: '📴', label: `Cloud for ${p.name}: offline, this device only` };
-  if (!inCloud(p.id)) return { text: '☁️', label: `Cloud for ${p.name}: not in the cloud yet` };
   if (warns(s)) return { text: '☁️⚠️', label: `Cloud for ${p.name}: ${s.text}` };
   if (s?.state === 'waiting') return { text: '☁️✓', label: `Cloud for ${p.name}: in the cloud, synced once opened with their PIN` };
   return { text: '☁️✓', label: `Cloud for ${p.name}: in the cloud` };

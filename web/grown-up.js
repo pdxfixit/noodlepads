@@ -2,13 +2,16 @@
 // (kids-logic.js makeSum), answered on big number keys, so a young kid can't
 // get past it by tapping. After three wrong answers in a row each next try
 // waits 30 s (kids-logic.js sumWait): the keys dim and ⏳ counts down, no
-// words; a right answer ends it. Three places ask it:
+// words; a right answer ends it. Four places ask it:
 //   🧸 Kids' ⚙️ (kids.js): a wrong answer goes quietly back to the kid's
 //     screens (ADR 0019).
 //   ⚙️ Settings → About → Feedback (feedback.js), at every level (Ben,
 //     2026-10-19): a wrong answer says so and asks another sum.
 //   A profile's Forget this device (cloud-ui.js), at every level (Ben,
 //     2026-10-27): the same as Feedback; ✕ forgets nothing.
+//   A profile's ☁️ In the cloud switched on (cloud-ui.js), at every level
+//     (Ben, 2026-10-27: the usual sum, no stronger gate): the same, with a
+//     line under the title saying who it is for; ✕ leaves the switch off.
 // The dialog closes as every dialog does (✕, the backdrop, Esc).
 
 import { setupDialog, openDialog } from './dialogs.js';
@@ -16,7 +19,7 @@ import { makeSum, typeDigit, sumWait } from './kids-logic.js';
 import { onePressOneClick } from './util.js';
 
 const el = {};
-// What is being asked: { sum, typed, right(), wrong(), stay, owner }, or null.
+// What is being asked: { sum, typed, right(), wrong(), cancel(), stay, owner }, or null.
 let ask = null;
 // Wrong answers in a row (whoever asked), and the time the next try may
 // come (Date.now() ms; 0: no wait). Kept until the page reloads.
@@ -94,11 +97,18 @@ function wire() {
   const q = (s) => document.querySelector(s);
   Object.assign(el, {
     dialog: q('#kids-sum'), box: q('#kids-sum-box'), a: q('#kids-sum-a'), b: q('#kids-sum-b'),
-    typed: q('#kids-sum-typed'), keys: q('#kids-sum-keys'), note: q('#kids-sum-note'),
+    typed: q('#kids-sum-typed'), keys: q('#kids-sum-keys'), note: q('#kids-sum-note'), why: q('#kids-sum-why'),
     wait: q('#kids-sum-wait'), left: q('#kids-sum-left'),
   });
   setupDialog(el.dialog);
-  el.dialog.addEventListener('close', () => { ask = null; clearInterval(ticker); });
+  el.dialog.addEventListener('close', () => {
+    // Closed with no answer (✕, the backdrop, Esc): whoever asked hears it.
+    // A right answer or a wrong one that closes the dialog cleared `ask` first.
+    const given = ask;
+    ask = null;
+    clearInterval(ticker);
+    given?.cancel?.();
+  });
   onePressOneClick(el.keys);   // a held Enter would type its digit again
   el.keys.addEventListener('click', (e) => {
     const k = e.target.closest?.('[data-digit]');
@@ -107,11 +117,15 @@ function wire() {
 }
 
 // Asks a new sum. `right()` runs after the right answer closes it; `wrong()`
-// after each wrong one. `stay`: a wrong answer says so and asks another
-// (else the dialog closes). `owner` names who asked, for closeSum.
-export function askSum({ right, wrong, stay = false, owner = '' } = {}) {
+// after each wrong one; `cancel()` when it is closed with no answer. `stay`: a
+// wrong answer says so and asks another (else the dialog closes). `owner`
+// names who asked, for closeSum. `why`: a line under the title saying what it
+// is for (set as text, since it can hold a name from a record); none when empty.
+export function askSum({ right, wrong, cancel, stay = false, owner = '', why = '' } = {}) {
   if (!el.dialog) wire();
-  ask = { right, wrong, stay, owner };
+  ask = { right, wrong, cancel, stay, owner };
+  el.why.textContent = why;
+  el.why.hidden = !why;
   newSum();
   el.note.textContent = '';
   el.note.hidden = true;

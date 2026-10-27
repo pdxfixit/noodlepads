@@ -22,7 +22,7 @@ let state;
 let persist;
 const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') } };
 const idb = fakeIndexedDB();
-const ID = 'p-edits-1';   // in the cloud, no PIN
+const ID = 'p-edits-1';   // in the cloud, its PIN remembered here
 let key;
 let hold = null;          // while set, a pull waits for it
 let pulls = 0;
@@ -33,10 +33,10 @@ const beat = (id) => ({ id, personId: ID, name: `Taco ${id.slice(5)}`, bpm: 100,
 
 before(async () => {
   console.error = () => {};
-  ({ key } = await call('profiles', { id: ID, name: 'Admiral Acorn', avatar: '', color: '#304A00' }));
+  ({ key } = await call('profiles', { id: ID, name: 'Admiral Acorn', avatar: '', color: '#304A00', pin: '2468' }));
   idb.seed(DB_NAME, DB_VERSION, SCHEMA, {
     people: [{ id: ID, name: 'Admiral Acorn', fun: true, avatar: '🦉', color: '#304A00', added: true, created: 1 }],
-    cloud: [{ id: ID, key, rev: 0, sent: {}, sounds: {} }],
+    cloud: [{ id: ID, key, rev: 0, sent: {}, sounds: {}, pin: true, remembered: true }],
   });
   globalThis.indexedDB = idb;
   page = installPage({ manifest: testManifest() });

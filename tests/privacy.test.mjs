@@ -16,7 +16,6 @@ import { FakeD1 } from './fake-d1.mjs';
 import { PRIVACY, PRIVACY_TITLE, PRIVACY_URL } from '../web/privacy.js';
 import { cleanPayload } from '../web/log-clean.js';
 import { HELP } from '../web/help.js';
-import { hasMade } from '../web/cloud-sync.js';
 import { SETTINGS } from '../web/settings.js';
 
 const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8').replace(/\s+/g, ' ');
@@ -29,7 +28,7 @@ const claim = (words) => {
 
 function cloud() {
   const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('') } };
-  return (method, path, { body, key, origin = ORIGIN } = {}) => {
+  const call = (method, path, { body, key, origin = ORIGIN } = {}) => {
     const headers = {};
     if (origin) headers.Origin = origin;
     if (key) headers.Authorization = `Bearer ${key}`;
@@ -38,6 +37,8 @@ function cloud() {
       method, headers, body: body === undefined ? undefined : typeof body === 'string' || body instanceof Uint8Array ? body : JSON.stringify(body),
     }), env);
   };
+  call.env = env;
+  return call;
 }
 
 test('README carries every line of the statement, word for word; Help points at the Privacy policy, not at it', () => {
@@ -72,8 +73,8 @@ test('"Anyone who has a sound\'s link can play it": even a profile with a PIN', 
   assert.equal(played.status, 200);
 });
 
-test('"A PIN is not security": it guards opening the records, and nothing else', async () => {
-  claim('A PIN is not security');
+test('"It is not security": a PIN guards opening the records, and nothing else', async () => {
+  claim('Everyone in the cloud has a PIN. It is not security');
   const call = cloud();
   await call('POST', 'profiles', { body: { id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '1234' } });
   assert.equal((await call('POST', 'profiles/p-a/open', { body: {} })).status, 401);
@@ -197,31 +198,43 @@ test('"Feedback is sent only when a grown-up answers a sum and taps Send": alway
   assert.ok(!JSON.stringify(put).includes('192.0.2.44') && !JSON.stringify(put).includes('iPhone'));
 });
 
-test('"To delete a profile": the steps name real buttons, and switching the cloud off or ☁️ Delete their cloud copy too deletes the cloud copy', async () => {
+test('"To delete a profile": the steps name real buttons, and Remove PIN, switching the cloud off or ☁️ Delete their cloud copy too deletes the cloud copy', async () => {
   const line = claim('To delete a profile');
+  assert.ok(line.includes('Remove PIN') && html.includes('id="cloud-pin-off">Remove PIN<'), 'the button the steps name');
+  assert.ok(line.includes('Each asks for their PIN'));
   assert.ok(line.includes('☁️ In the cloud') && html.includes('☁️ In the cloud'));
   assert.ok(html.includes('👥 People'));
   assert.ok(line.includes('tap Delete twice, then ☁️ Delete their cloud copy too twice') && html.includes('id="profile-delete" data-remove aria-describedby="profile-delete-hint">🗑️ Delete<'));
   const people = readFileSync(new URL('../web/people.js', import.meta.url), 'utf8');
   assert.ok(people.includes("'☁️ Delete their cloud copy too'"), 'the button the steps name');
   const js = readFileSync(new URL('../web/cloud.js', import.meta.url), 'utf8');
-  assert.match(js, /if \(inCloud\(personId\)\) await deleteFromCloud\(personId, pin\)/, 'Offline deletes the profile first');
+  assert.match(js, /export async function leaveCloud\(personId, pin\) \{[\s\S]*?await bringLatest\(personId, pin\);\s*await removeProfile\(personId, keyOf\(personId\), pin\);/, 'leaving brings their latest here, then deletes the profile (tests/cloud-leave.test.mjs runs it)');
   const ui = readFileSync(new URL('../web/cloud-ui.js', import.meta.url), 'utf8');
   assert.match(ui, /const go = \(pin\) => removeProfile\(left\.id, left\.key, pin\)/, '☁️ Delete their cloud copy too deletes the profile (tests/delete-cloud.test.mjs runs it)');
 });
 
-test('"Everyone on this device goes to the cloud once they make something, unless … Offline"', () => {
-  claim('once they make something');
+test('"Nobody goes to the cloud by themselves": the Worker refuses a profile with no PIN, and the app\'s only create is the switch\'s goUp', async () => {
+  claim('Nobody goes to the cloud by themselves');
+  const call = cloud();
+  for (const pin of [undefined, null, '', '123']) {
+    const res = await call('POST', 'profiles', { body: { id: 'p-a', name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin } });
+    assert.deepEqual([res.status, (await res.json()).error], [400, 'needs pin'], JSON.stringify(pin));
+  }
+  assert.equal(call.env.DB.rows('SELECT COUNT(*) AS n FROM profiles')[0].n, 0, 'nothing is made without a PIN');
   const js = readFileSync(new URL('../web/cloud.js', import.meta.url), 'utf8');
-  assert.match(js, /wantsCloud = \(p\) => p\.added && !p\.hidden && !isOffline\(p\.id\) && !inCloud\(p\.id\)\s*&& hasMade/);
-  assert.equal(hasMade({ prefs: [{ personId: 'p-a', values: {} }] }, 'p-a'), false, 'settings alone are not something made');
+  assert.equal(js.match(/api\.create\(/g).length, 1, 'one place makes a profile');
+  assert.match(js, /export async function goUp\(personId, pin\) \{[\s\S]*?await api\.create\(\{[^}]*pin \}\)/, 'and it sends the PIN');
+  assert.doesNotMatch(js, /wantsCloud|hasMade|putInCloud/, 'no sync puts anyone up (tests/cloud-ui.test.mjs syncs a person who made things)');
 });
 
-test('"the list of the newest 300 profiles": no other filter, newest first, 300 at most', async () => {
+test('"the list of the newest 300 profiles": everyone in the cloud has a PIN and is listed; a row with none is not; newest first, 300 at most', async () => {
   claim(`the newest ${LIMITS.listed} profiles`);
   const call = cloud();
   for (const id of ['p-a', 'p-b']) await call('POST', 'profiles', { body: { id, name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '1234' } });
-  assert.equal((await (await call('GET', 'profiles?family=PLUM-7K3Q', { origin: null })).json()).profiles.length, 2);
+  call.env.DB.db.prepare("INSERT INTO profiles (id, name, color, edited, created) VALUES ('p-none', 'Lady Lemon', '#1F3FA8', 0, ?)").run(Date.now() + 5000);
+  const listed = (await (await call('GET', 'profiles?family=PLUM-7K3Q', { origin: null })).json()).profiles;
+  assert.deepEqual(listed.map((p) => p.id).sort(), ['p-a', 'p-b'], 'a profile with no PIN is not there');
+  assert.ok(listed.every((p) => p.pin === true));
   assert.equal(LIMITS.listed, 300);
 });
 

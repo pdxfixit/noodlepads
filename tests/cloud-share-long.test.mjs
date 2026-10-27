@@ -25,11 +25,11 @@ before(async () => {
   console.error = () => {};
   const made = await (await worker.fetch(new Request('https://noodlepads.com/api/profiles', {
     method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ORIGIN },
-    body: JSON.stringify({ id: ID, name: 'Admiral Acorn', avatar: '', color: '#304A00' }),
+    body: JSON.stringify({ id: ID, name: 'Admiral Acorn', avatar: '', color: '#304A00', pin: '2468' }),
   }), env)).json();
   idb.seed(DB_NAME, DB_VERSION, SCHEMA, {
     people: [{ id: ID, name: 'Admiral Acorn', fun: true, avatar: '🦉', color: '#304A00', added: true, created: 1 }],
-    cloud: [{ id: ID, key: made.key, rev: 0, sent: {}, sounds: {} }],
+    cloud: [{ id: ID, key: made.key, rev: 0, sent: {}, sounds: {}, pin: true, remembered: true }],   // every profile has a PIN; this device remembers it
     clips: [clip('user-long', CLOUD_MAX_SOUND + 1, 'Long Song'), clip('user-hush', 0, 'Hush'), clip('user-burp', 8, 'Burp')],
     beats: [{ id: 'beat-mix', personId: ID, name: 'Mix Taco', bpm: 100, bars: 1, swing: 0, created: 3, saved: 3,
       rows: [{ clipId: 'user-burp', steps: [1, 0, 0, 0] }, { clipId: 'user-long', steps: [0, 1, 0, 0] }] }],
@@ -117,7 +117,11 @@ test('the public preview never holds a sound the share left out', async () => {
 
 test('✏️ Edit sounds → 🔗 Share shows the left-out line under the code', async () => {
   const ui = await import('../web/cloud-ui.js');
-  await ui.shareSounds(ID, ['user-burp', 'user-long']);
+  const shared = ui.shareSounds(ID, ['user-burp', 'user-long']);
+  await page.settle();
+  assert.equal(page.$('#pin-dialog').open, true, '🔗 Share asks the PIN, even on a device that remembers them');
+  for (const k of '2468') page.$('#pin-keys').querySelector(`[data-key="${k}"]`).dispatch('click');
+  await shared;
   assert.equal(page.$('#share-note').textContent, 'Left out, too long for the cloud: Long Song.');
   assert.equal(page.$('#share-made').hidden, false);
   page.$('#share-dialog').close();

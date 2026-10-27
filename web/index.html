@@ -415,13 +415,16 @@
   <!-- The grown-up sum (grown-up.js). 🧸 Kids' ⚙️: right opens Settings and
        the regular app for this visit; wrong goes quietly back (kids.js).
        ⚙️ Settings → About → Feedback: right opens Feedback; wrong says so
-       (the note) and asks another (feedback.js). -->
+       (the note) and asks another (feedback.js). A profile's ☁️ In the cloud
+       switched on asks it too, with the line under the title saying who it is
+       for (cloud-ui.js). -->
   <dialog id="kids-sum" class="kids-sum" aria-labelledby="kids-sum-title">
     <div class="kids-sum-box" id="kids-sum-box">
       <div class="sheet-head">
         <h2 id="kids-sum-title">For grown-ups</h2>
         <button type="button" class="close" data-close aria-label="Back">✕</button>
       </div>
+      <p class="kids-sum-why" id="kids-sum-why" hidden></p>
       <p class="kids-sum-q" aria-live="polite"><span id="kids-sum-a"></span> + <span id="kids-sum-b"></span> = <span class="kids-sum-typed" id="kids-sum-typed"></span></p>
       <p class="kids-sum-note" id="kids-sum-note" role="status" hidden></p>
       <p class="kids-sum-wait" id="kids-sum-wait" role="timer" aria-label="Wait, then try again" hidden><span aria-hidden="true">⏳</span> <span id="kids-sum-left"></span></p>
@@ -621,8 +624,9 @@
     </div>
   </dialog>
 
-  <!-- 👥 People → tap someone: their profile sheet (people.js). With a PIN,
-       a change to the name, picture or color asks for it once per visit. -->
+  <!-- 👥 People → tap someone: their profile sheet (people.js). In the cloud
+       (which always means a PIN), a change to the name, picture or color asks
+       for it once per visit. -->
   <dialog id="profile-dialog" class="np-dialog" aria-labelledby="profile-title">
     <div class="chooser-body">
       <div class="sheet-head">
@@ -644,9 +648,11 @@
         </div>
         <h3 class="cl-head" id="profile-color-title">🎨 Color</h3>
         <div class="pf-colors" id="profile-colors" role="group" aria-labelledby="profile-color-title"></div>
-        <!-- ☁️ In the cloud is a switch; 🔒 PIN says at a glance whether one is on (cloud-ui.js drawPin). -->
+        <!-- ☁️ In the cloud is a switch, the whole row its target: on asks the
+             grown-up sum, a new PIN twice and puts them there; off (or Remove
+             PIN) leaves. 🔒 PIN shows only in the cloud (cloud-ui.js drawPin). -->
         <section class="pf-part" aria-labelledby="profile-cloud-title">
-          <div class="pf-row">
+          <div class="pf-row pf-row-switch">
             <h3 class="cl-head pf-grow" id="profile-cloud-title">☁️ In the cloud</h3>
             <button type="button" class="pf-switch" role="switch" id="profile-cloud" aria-checked="false" aria-label="☁️ In the cloud"></button>
           </div>
@@ -657,17 +663,17 @@
             <button type="button" class="chip-dark" id="cloud-backup">⬇️ Back up</button>
           </div>
         </section>
-        <section class="pf-part" aria-labelledby="profile-pin-title">
+        <section class="pf-part" id="profile-pin-part" aria-labelledby="profile-pin-title" hidden>
           <div class="pf-row">
             <h3 class="cl-head pf-grow" id="profile-pin-title">PIN</h3>
             <span class="pf-pill" id="profile-pin-state" role="status"></span>
           </div>
           <p class="field-hint" id="profile-pin-hint"></p>
-          <button type="button" class="primary pf-wide" id="cloud-pin">🔒 Set a PIN</button>
           <div class="pf-two" id="profile-pin-tools" hidden>
             <button type="button" class="secondary" id="cloud-pin-change">Change PIN</button>
             <button type="button" class="secondary pf-danger" id="cloud-pin-off">Remove PIN</button>
           </div>
+          <p class="field-hint pf-leave-note" id="cloud-pin-off-note" hidden></p>
           <button type="button" class="secondary pf-wide pf-remember" id="cloud-pin-remember" hidden>🔑 Remember on this device</button>
           <p class="set-note" id="profile-pin-note" role="status"></p>
         </section>
@@ -835,6 +841,7 @@
         <button type="button" class="close" data-close aria-label="Close">✕</button>
       </div>
       <p class="field-hint" id="pin-hint"></p>
+      <p class="pin-public" id="pin-public" hidden></p>
       <div class="pin-dots" id="pin-dots" aria-live="polite"><span></span><span></span><span></span><span></span></div>
       <p class="set-note pin-note" id="pin-note" role="status"></p>
       <div class="pin-keys" id="pin-keys" role="group" aria-label="Number keys"></div>
@@ -849,7 +856,7 @@
       <h2 class="sheet-warn-title" id="remember-title">🔑 Remember them here?</h2>
       <p class="sheet-warn-sub" id="remember-sub"></p>
       <div class="sheet-warn-buttons">
-        <button type="button" class="chain-tool" id="remember-no" data-close>Not now</button>
+        <button type="button" class="chain-tool" id="remember-no" data-close autofocus>Not now</button>
         <button type="button" class="chain-tool remember-yes" id="remember-yes">🔑 Remember</button>
       </div>
     </div>

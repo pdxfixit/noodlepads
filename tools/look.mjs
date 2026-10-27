@@ -424,8 +424,12 @@ const VIEWS = {
     ${q('#listen-stop')} await new Promise((r) => setTimeout(r, 300));` },
   // Cloud profiles (cloud-ui.js). The look server has no /api, so these show
   // the screens as a device sees them with the cloud out of reach, and
-  // cloud and cloud-in: a profile sheet scrolled to its ☁️ In the cloud and
-  // 🔒 PIN parts; cloud-in fakes this device's link (with a PIN) to draw them on.
+  // cloud and cloud-off: a profile sheet of someone only on this device,
+  // scrolled to its ☁️ In the cloud switch (off); cloud-in fakes this device's
+  // link (with a PIN) to draw the PIN part on. cloud-sum, cloud-pin,
+  // cloud-pin-again and cloud-remember are the four dialogs of turning ☁️ on
+  // (docs/design/cloud-needs-pin.md), opened by their own code since there is
+  // no cloud to reach; cloud-leave is Remove PIN after its first tap.
   avatar: { screen: 'pads', js: q('#people-open') + q('#people-edit [data-profile]') + q('#profile-picture') },
   // All emoji (the "…" at the end of a picture chooser), opened and loaded:
   // the round picture's and the sound sheet's. Add a state with --js, e.g.
@@ -433,8 +437,19 @@ const VIEWS = {
   'avatar-all': { screen: 'pads', js: `${q('#people-open') + q('#people-edit [data-profile]') + q('#profile-picture') + q('#avatar-grid .emoji-more')} ${nap} ${nap}` },
   'sheet-all': { screen: 'pads', js: `${q('.pad-add')} ${nap} ${q('#emoji-grid .emoji-more')} ${nap} ${nap}` },
   cloud: { screen: 'pads', js: `${q('#people-open') + q('#people-edit [data-profile]')} ${nap} document.querySelector('#profile-cloud').scrollIntoView();` },
+  'cloud-off': { screen: 'pads', js: `${q('#people-open') + q('#people-edit [data-profile]')} ${nap} document.querySelector('#profile-cloud').scrollIntoView();` },
+  'cloud-sum': { screen: 'pads', js: `${q('#people-open') + q('#people-edit [data-profile]')} ${nap}
+    (await import('/grown-up.js')).askSum({ stay: true, owner: 'cloud-up', why: '☁️ To put 🔔 Happy Giraffe in the cloud' }); ${nap}` },
+  'cloud-pin': { screen: 'pads', js: `${q('#people-open') + q('#people-edit [data-profile]')} ${nap}
+    const ui = await import('/cloud-ui.js'); ui.askPin({ title: '☁️ Pick their PIN', hint: ui.PICK_PIN_HINT, shown: ui.PIN_PUBLIC }); ${nap}` },
+  'cloud-pin-again': { screen: 'pads', js: `${q('#people-open') + q('#people-edit [data-profile]')} ${nap}
+    (await import('/cloud-ui.js')).askPin({ title: 'Once more', hint: 'Type the same four numbers again.' }); ${nap}` },
+  'cloud-remember': { screen: 'pads', js: `${PIN_LINK} (await import('/cloud-ui.js')).offerRemember(pinId, null); ${nap}` },
+  'cloud-leave': { screen: 'pads', js: `const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()][0];
+    state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true, remembered: true });
+    ${q('#people-open') + q('#people-edit [data-profile]')} ${nap} ${q('#cloud-pin-off')} document.querySelector('#cloud-pin-off').scrollIntoView({ block: 'center' }); ${nap}` },
   'cloud-in': { screen: 'pads', js: `const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()][0];
-    state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true });
+    state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true, remembered: true });
     ${q('#people-open') + q('#people-edit [data-profile]')} ${nap} document.querySelector('#profile-cloud').scrollIntoView();` },
   // who-now: 👋 Who's playing now? with four people, two with a PIN (faked
   // links), as it comes up after the person on show is deleted.

@@ -69,7 +69,7 @@ const hasSound = (id) => state.userClips.some((c) => c.id === `user-${id}` && c.
 test('leaving brings a sound only device B pushed here first, then deletes the cloud copy and keeps everything', async () => {
   await pushedFromB(GOOD);
   assert.equal(hasSound(GOOD), false, 'only the cloud has it');
-  await cloud.setOffline(GOOD, true, '2468');
+  await cloud.leaveCloud(GOOD, '2468');
   assert.equal(hasSound(GOOD), true, 'it is here now');
   assert.equal(inD1(GOOD), false, 'the cloud copy is gone');
   assert.equal(cloud.inCloud(GOOD), false);
@@ -79,14 +79,14 @@ test("when their latest can't be brought, nothing is deleted: the link, the key 
   await pushedFromB(BAD);
   failPull = true;
   const before = deletes.length;
-  await assert.rejects(() => cloud.setOffline(BAD, true, '2468'), { message: "Couldn't bring their latest here; try again." });
+  await assert.rejects(() => cloud.leaveCloud(BAD, '2468'), { message: "Couldn't bring their latest here; try again." });
   failPull = false;
   assert.equal(deletes.length, before, 'no DELETE was sent');
   assert.equal(inD1(BAD), true, 'the cloud copy stays');
   assert.equal(cloud.inCloud(BAD), true, 'the link stays');
   assert.equal(cloud.keyOf(BAD), keys[BAD], 'and its key');
   assert.equal(hasSound(BAD), false);
-  await cloud.setOffline(BAD, true, '2468');
+  await cloud.leaveCloud(BAD, '2468');
   assert.equal(hasSound(BAD), true, 'trying again brings it, then deletes');
   assert.equal(inD1(BAD), false);
 });

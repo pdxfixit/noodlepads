@@ -1,10 +1,12 @@
 // The cloud's screens on the real app (stand-in page), against the real
 // Worker and a fake D1: People lines that open a profile sheet with no name
 // field, 🎲, the picture and the color, its PIN guard once per visit;
-// everyone who made something goes to the cloud by themselves (a typed name
-// never reaches it); the PIN asked each time a person is opened, a PIN new to
-// this device (🤷 I don't know the PIN); 📴 Offline; 🔗 Share and Shared with
-// me; and the app with no /api at all (the dev server, a static copy).
+// nobody goes to the cloud by themselves (a grown-up's switch does it, with a
+// PIN: tests/cloud-needs-pin.test.mjs has that flow, and `goUp` stands in for
+// it here; a typed name never reaches the cloud); the PIN asked each time a
+// person is opened, a PIN new to this device (🤷 I don't know the PIN); the
+// switch off; 🔗 Share and Shared with me; and the app with no /api at all
+// (the dev server, a static copy).
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
@@ -76,11 +78,14 @@ const closeSheets = () => { $('#profile-dialog').close(); $('#people-dialog').cl
 // counts both (tests/fake-dom.mjs, "Work in flight").
 const settle = () => page.settle();
 const typePin = (digits) => { for (const k of digits) $('#pin-keys').querySelector(`[data-key="${k}"]`).dispatch('click'); };
+// What the switch does after the sum and the pads: the person goes up with this PIN.
+const UP_PIN = '2468';
+const up = async (id) => { if (!cloud.inCloud(id)) await cloud.goUp(id, UP_PIN); };
 const choose = (id) => $(`.person-list [data-person="${id}"]`).dispatch('click');
-// Something made, so the person goes to the cloud by themselves.
+// Something made: a person who made something still stays on the device.
 const makeBeat = (personId) => state.savedBeats.push({ id: `beat-${personId}`, personId, name: 'Wobbly Taco', bpm: 100, bars: 1, rows: [{ clipId: `${personId}-kick`, steps: [1, 0, 0, 0] }], created: 1, saved: 1 });
 
-test('People: no name field; each line has a picture, its made-up name and (for people added here) ☁️; its profile has 🎲, the picture and ☁️', async () => {
+test('People: no name field; each line has a picture and its made-up name; its profile has 🎲, the picture and ☁️ (off: only on this device)', async () => {
   $('#people-open').dispatch('click');
   $('#person-add').dispatch('click');
   await settle();
@@ -89,16 +94,16 @@ test('People: no name field; each line has a picture, its made-up name and (for 
   added = row.dataset.person;
   assert.ok(isFunName(row.querySelector('.pe-name').textContent));
   assert.ok(row.querySelector('.pe-badge'));
-  assert.equal(row.querySelector('.pe-cloud').textContent, '☁️', 'not in the cloud yet');
+  assert.equal(row.querySelector('.pe-cloud'), null, 'only on this device: no ☁️ on the line');
   assert.equal(rows()[0].querySelector('.pe-cloud'), null, "boards.json's own people can't go in the cloud");
   const sheet = profile(4);
   assert.equal(sheet.querySelectorAll('input').length, 0);
   assert.ok(sheet.querySelector('[data-avatar]') && sheet.querySelector('[data-reroll]'));
   assert.equal($('#profile-cloud').hidden, false);
   assert.equal($('#profile-cloud').getAttribute('aria-checked'), 'false', 'not in the cloud yet');
-  assert.equal($('#profile-pin-state').textContent, '🔓 No PIN');
-  assert.match($('#profile-pin-hint').textContent, /A PIN needs the cloud\. Setting one turns it on/);
-  assert.equal($('#cloud-pin').hidden, false, 'a PIN can be set before the cloud: it puts them there');
+  assert.match($('#profile-cloud-text').textContent, /^Only on this device\. A grown-up can put them in the cloud with a PIN/);
+  assert.equal($('#profile-pin-part').hidden, true, 'a PIN now means the cloud: nothing to set on its own');
+  assert.equal($('#cloud-pin'), null, 'no 🔒 Set a PIN');
   profile(0);
   assert.equal($('#profile-cloud').hidden, true);
   $('#profile-dialog').close();
@@ -166,24 +171,19 @@ test('the picture picker sets the avatar, and the corner shows it', async () => 
   assert.equal($('.person-menu-btn').children[0].textContent, '🦖', 'the new person is the one showing');
 });
 
-test('everyone goes to the cloud by themselves once they make something; a typed name is swapped for a fun one first', async () => {
+test('nobody goes to the cloud by themselves, even after making something', async () => {
   const id = added;
   await setPersonEdit(id, { name: 'Typed Name', fun: false });
   await cloud.syncAll();
-  assert.equal(cloud.inCloud(id), false, 'nothing made yet: an empty person never fills the public list');
+  assert.equal(cloud.inCloud(id), false, 'nothing made yet');
+  makeBeat(id);
+  await Promise.all([cloud.syncAll(), cloud.syncAll()]);
+  assert.equal(cloud.inCloud(id), false, 'made something: still only on this device');
+  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM profiles')[0].n, 0, 'nothing was sent');
   sheetOf(id);
-  assert.match($('#profile-cloud-text').textContent, /once they make something/);
+  assert.match($('#profile-cloud-text').textContent, /^Only on this device/);
   assert.equal($('#profile-cloud').getAttribute('aria-checked'), 'false');
   closeSheets();
-  makeBeat(id);
-  await cloud.syncAll();
-  const [row] = env.DB.rows('SELECT * FROM profiles');
-  assert.equal(row.id, id);
-  assert.ok(isFunName(row.name), row.name);
-  assert.equal(row.avatar, '🦖');
-  assert.ok(!JSON.stringify(env.DB.rows('SELECT * FROM profiles')).includes('Typed Name'));
-  assert.equal(state.peopleEdits.get(id).name, row.name, 'the device shows the same fun name');
-  assert.ok(cloud.inCloud(id));
 });
 
 // Ben, 2026-10-19: "an actual button on the left mirroring the add a person".
@@ -268,11 +268,11 @@ test('a PIN is asked each time the person is opened, every time, unless 🔑 Rem
 // A person in the cloud with a PIN this device has not had typed on this visit,
 // holding a key (as one opened earlier in the visit does).
 async function personWithPin(id, pin) {
-  await setPersonEdit(id, { id, name: funName(names()), fun: true, avatar: '🐙', color: '#1F3FA8', added: true, created: 3 });
+  const name = funName(names());
+  await setPersonEdit(id, { id, name, fun: true, avatar: '🐙', color: '#1F3FA8', added: true, created: 3 });
   makeBeat(id);
-  await cloud.syncAll();
-  const { key } = await cloud.api.change(id, cloud.keyOf(id), { newPin: pin });
-  state.cloud.set(id, { ...cloud.linkOf(id), key, pin: true, remember: true });
+  const { key } = await cloud.api.create({ id, name, avatar: '🐙', color: '#1F3FA8', pin });
+  state.cloud.set(id, { id, key, rev: 0, sent: {}, sounds: {}, pin: true, remember: true });
   renderPeople();
   (await import('../web/people.js')).renderPeopleEditor();
 }
@@ -327,8 +327,7 @@ test('a PIN guards the profile: asked before it opens, once per visit; a wrong o
   $('#profile-dialog').close();
 });
 
-test('without a PIN anyone opens the profile and changes the color at once; five wrong PINs mean the 10-minute wait, said plainly', async () => {
-  assert.equal(cloud.pinGuards(added), false, 'no PIN, no guard');
+test('someone only on this device opens their profile and changes the color at once; five wrong PINs mean the 10-minute wait, said plainly', async () => {
   profile(lineOf(added));
   swatch(4).dispatch('click');
   await settle();
@@ -363,16 +362,31 @@ test('the guard is a gate on this device\'s screens only: a sync that changes a 
   $('#people-dialog').close();
 });
 
-// Ben, 2026-10-19: "Let Cloud be a toggle".
-test('☁️ In the cloud switched off asks twice, deletes the cloud copy, keeps everything here, and is never put back by itself', async () => {
+// Ben, 2026-10-19: "Let Cloud be a toggle"; 2026-10-26: leaving asks the PIN, and nothing is put back by itself.
+test('a grown-up puts them up (a typed name is swapped for a fun one); ☁️ off asks twice, then the PIN, deletes the cloud copy, keeps everything here, and is never put back by itself', async () => {
   const id = added;
+  await setPersonEdit(id, { name: 'Typed Name', fun: false });
+  await cloud.goUp(id, UP_PIN);
+  const [row] = env.DB.rows('SELECT * FROM profiles WHERE id = ?', id);
+  assert.ok(isFunName(row.name), row.name);
+  assert.equal(row.avatar, '🦖');
+  assert.ok(row.pin_hash, 'with a PIN');
+  assert.ok(!JSON.stringify(env.DB.rows('SELECT * FROM profiles')).includes('Typed Name'));
+  assert.equal(state.peopleEdits.get(id).name, row.name, 'the device shows the same fun name');
+  assert.equal(cloud.linkOf(id).pin, true);
+  assert.equal(cloud.linkOf(id).key, null, "a PIN's key is not kept on the device");
+  assert.ok(cloud.keyOf(id), 'but held for this visit');
+
   sheetOf(id);
   const sw = $('#profile-cloud');
   assert.equal(sw.getAttribute('aria-checked'), 'true');
   assert.equal($('#profile-cloud-tools').hidden, false, '🔄 Sync now and 🔗 Share… under it');
+  assert.equal($('#profile-pin-part').hidden, false, 'the PIN part shows in the cloud');
+  assert.match($('#profile-pin-hint').textContent, /Removing it takes .* out of the cloud\./);
   sw.dispatch('click');
-  assert.match($('#profile-cloud-text').textContent, /Tap again to take them out of the cloud/);
+  assert.match($('#profile-cloud-text').textContent, /^Leave the cloud\? Tap again, then type the PIN: their cloud copy is deleted for every device, and links you shared stop working\. This device keeps everything\./);
   assert.ok(cloud.inCloud(id), 'one tap does nothing yet');
+  assert.equal($('#pin-dialog').open, false);
   // Leaving brings their latest here first, and a sync needs storage, which this page has not got until now.
   const { db } = await import('../web/store.js');
   globalThis.indexedDB = fakeIndexedDB();
@@ -382,31 +396,38 @@ test('☁️ In the cloud switched off asks twice, deletes the cloud copy, keeps
   for (const r of state.savedBeats) await db.put('beats', r);
   sw.dispatch('click');
   await settle();
+  assert.equal($('#pin-dialog').open, true, 'the second tap asks the PIN');
+  typePin('1111');
+  await settle();
+  assert.equal($('#pin-dialog').open, true, 'a wrong PIN asks again');
+  assert.match($('#pin-note').textContent, /3 tries left|4 tries left/);
+  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM profiles WHERE id = ?', id)[0].n, 1, 'nothing deleted by a wrong PIN');
+  typePin(UP_PIN);
+  await settle();
   db.handle = null;
   delete globalThis.indexedDB;
   assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM profiles WHERE id = ?', id)[0].n, 0, `gone from the cloud: ${$('#profile-cloud-text').textContent}`);
   assert.ok(state.savedBeats.some((b) => b.personId === id), 'still here');
-  assert.equal(state.peopleEdits.get(id).offline, true);
+  assert.equal(state.peopleEdits.get(id).offline, undefined, 'no 📴 Offline is written any more');
   assert.equal(sw.getAttribute('aria-checked'), 'false');
-  assert.match($('#profile-cloud-text').textContent, /Off: everything of theirs stays on this device only/);
+  assert.match($('#profile-cloud-text').textContent, /^Only on this device/);
+  assert.equal($('#profile-pin-part').hidden, true);
   await cloud.syncAll();
   assert.equal(cloud.inCloud(id), false, 'not put back by itself');
-  sw.dispatch('click');
-  await settle();
-  await settle();
-  assert.ok(cloud.inCloud(id), 'switched on: back in the cloud');
-  assert.equal(sw.getAttribute('aria-checked'), 'true');
   closeSheets();
 });
 
 test('🔗 Share gives a code; Shared with me opens it, offers 🎛️ Remix, and removes it with two taps', async () => {
   const id = added;
+  await up(id);
   sheetOf(id);
   $('#cloud-share').dispatch('click');
   await settle();
   assert.equal($('#share-dialog').open, true);
   $('#share-what').querySelector('[data-kind="beat"]').dispatch('click');
   $('#share-items').querySelector(`[data-item="beat-${id}"]`).dispatch('click');
+  await settle();
+  typePin(UP_PIN);   // 🔗 Share always asks the PIN
   await settle();
   await settle();
   assert.equal($('#share-made').hidden, false, $('#share-note').textContent);
@@ -490,16 +511,16 @@ test('Settings has no 🔓 What\'s private; the PIN pad still says where a forgo
 });
 
 // Found by `just cloud-e2e` (2026-10-11): the start-up sync and one right
-// after a change both made the profile, and the loser said "resting".
-test('two syncs at once make a new person\'s profile once, and neither says trouble', async () => {
+// after a change both made the profile. Syncs make no profile at all now
+// (docs/design/cloud-needs-pin.md): only goUp, from a grown-up's switch.
+test('syncs at once make no profile for a person who made something, and say no trouble', async () => {
   const id = 'p-twice';
   await setPersonEdit(id, { name: 'Sir Squid', fun: true, avatar: '🐙', color: '#0C5E4B', added: true, created: 1 });
   makeBeat(id);
   await Promise.all([cloud.syncAll(), cloud.syncAll(), cloud.syncAll()]);
-  assert.equal(env.DB.rows("SELECT COUNT(*) AS n FROM profiles WHERE id = 'p-twice'")[0].n, 1);
-  // (This stand-in page has no IndexedDB, so the record sync after it waits.)
-  assert.notEqual(cloud.statusOf(id)?.state, 'trouble', JSON.stringify(cloud.statusOf(id)));
-  assert.ok(cloud.keyOf(id), 'linked, with its key');
+  assert.equal(env.DB.rows("SELECT COUNT(*) AS n FROM profiles WHERE id = 'p-twice'")[0].n, 0);
+  assert.equal(cloud.inCloud(id), false);
+  assert.equal(cloud.statusOf(id), null);
 });
 
 // ▶ Play in 🔗 Shared with me plays through the app's player (audio.start):
@@ -622,7 +643,7 @@ test('with no /api (the dev server, a static copy) the app says so and carries o
   assert.match($('#shared-note').textContent, /isn't reachable from here/);
   $('#shared-dialog').close();
   assert.equal(await cloud.syncNow('p-none'), null, 'a sync without storage or cloud does nothing, and throws nothing');
-  // In someone's profile: the switch and 🔒 Set a PIN say so where they were tapped, and nothing changes.
+  // In someone's profile: the switch says so where it was tapped (before any sum or PIN is asked), and nothing changes.
   await setPersonEdit('p-nocloud', { id: 'p-nocloud', name: 'Duke Dumpling', fun: true, avatar: '🥟', color: '#5A2050', added: true, created: 8 });
   renderPeople();
   sheetOf('p-nocloud');
@@ -630,13 +651,7 @@ test('with no /api (the dev server, a static copy) the app says so and carries o
   await settle();
   assert.match($('#profile-cloud-text').textContent, /isn't reachable from here/);
   assert.equal($('#profile-cloud').getAttribute('aria-checked'), 'false');
-  $('#cloud-pin').dispatch('click');
-  await settle();
-  typePin('1212');
-  await settle();
-  typePin('1212');
-  await settle();
-  assert.match($('#profile-pin-note').textContent, /isn't reachable from here/);
-  assert.equal($('#profile-pin-state').textContent, '🔓 No PIN');
+  assert.equal($('#kids-sum').open, false, 'no sum is asked for a cloud that is not there');
+  assert.equal($('#pin-dialog').open, false);
   closeSheets();
 });

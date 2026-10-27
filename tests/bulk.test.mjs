@@ -179,7 +179,20 @@ test('Select all: one tap on a pad, then Select all chooses every sound you made
   $('#chosen-all').dispatch('click');
   assert.equal($('#chosen-count').textContent, `${mine().length} selected`);
   assert.equal($('#chosen-all').hidden, true, 'nothing more to select');
-  assert.equal(bar('share').disabled, false, 'all yours, so Share is open');
+  assert.equal(bar('share').disabled, true, 'all yours, but they are only on this device: Share is off');
+  assert.equal($('#chosen-why').textContent, 'Put them in the cloud (their profile, ☁️) to share.');
+  assert.equal($('#chosen-why').hidden, false);
+  // In the cloud (a grown-up put them there), Share opens.
+  state.cloud.set(state.personId, { id: state.personId, key: 'k'.repeat(32), rev: 0, sent: {}, sounds: {}, pin: true });
+  try {
+    $('#chosen-clear').dispatch('click');
+    pad('user-t-2').dispatch('click');
+    $('#chosen-all').dispatch('click');
+    assert.equal(bar('share').disabled, false, 'in the cloud, so Share is open');
+    assert.equal($('#chosen-why').hidden, true);
+  } finally {
+    state.cloud.delete(state.personId);
+  }
   $('#chosen-clear').dispatch('click');
   assert.equal($('#pads-chosen').hidden, true);
   const id = state.orders.get(state.personId).groups[0].id;

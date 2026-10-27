@@ -166,7 +166,7 @@ export const RULES = {
   },
   cloud: {
     sync: bool, pulled: num, pushed: num, deleted: num, sounds: num, merged: num, clashes: num, kept: num, status: num, error: text,
-    put: bool, opened: oneOf([true, 'share', 'left']), removed: bool, pin: oneOf(['set', 'removed']),
+    put: bool, up: bool, left: bool, opened: oneOf([true, 'share', 'left']), removed: bool, pin: oneOf(['set', 'removed']),   // `put`, `offline` and pin 'removed' are old logs'; `up` and `left` replace them
     unlocked: bool, remember: bool, offline: bool, unlinked: num,
     kind: oneOf(['sound', 'beat', 'song']), shared: oneOf(['sound', 'beat', 'song']), remixed: oneOf(['sound', 'beat', 'song']), unshared: bool,
   },

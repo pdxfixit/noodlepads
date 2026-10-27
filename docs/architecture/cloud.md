@@ -8,7 +8,7 @@
 - **Four things leave the device besides cloud profiles:** problem reports (on by default since 2026-10-26, `sendLogs`), usage events (on by default, `sendUsage`), device metrics (the `X-Noodle-App` header on cloud calls, also behind `sendUsage`), and feedback (typed by a grown-up). Each has its own sender, its own cap and its own home.
 - **One problem-report allowlist, run twice.** `web/log-clean.js` `cleanPayload` cleans the report on the device, and `worker/clean.js` runs the same function again on arrival. The only hand-kept copy is `worker/clean.js` `KIT_IDS` (the kit's ids).
 - **The service worker only routes.** Online, every answer comes from the network; the cache answers only when the network fails. `/api/` is never touched. `version.json` is network-only.
-- **"Offline" means three different things** here: 📴 Offline (a person kept out of the cloud), no network (the sync waits, the PIN is checked on the device), and the service worker's copy (the app opens with no network). See "Concepts".
+- **"Offline" means two different things** here: no network (the sync waits, the PIN is checked on the device), and the service worker's copy (the app opens with no network). See "Concepts". (📴 Offline, a person kept out of the cloud, is gone: nobody goes up by themselves.)
 
 ## Files and who calls whom
 
@@ -67,34 +67,33 @@ Shape (as written by `cloud.js saveLink`):
 | Field | Meaning |
 |---|---|
 | `id` | the person id = the profile id (`p-…`) |
-| `key` | the device key; stored only when the profile has no PIN, or this device remembers the PIN (`keepsKey`). Any other PIN profile's key lives in `cloud.js sessionKeys` for this page's life |
+| `key` | the device key; stored only when this device remembers the PIN (`keepsKey`; a link from before every profile had a PIN may hold one with no PIN). Any other key lives in `cloud.js sessionKeys` for this page's life |
 | `rev` | the profile `rev` this device has caught up to |
 | `sent` | `{"<kind>:<id>": hash}`: each record as the cloud has it (`cloud-sync.js hashOf`) |
 | `sounds` | `{<clip id>: {sha256, sound, print?}}`: the cloud's audio for the clip (its hash and sound id), and `print` (`<blob size>:<changed stamp>`) of the device's blob last hashed equal to it, so an unchanged clip is not hashed again (`cloud-sync.js hashAudio`) |
-| `pin` | the profile has a PIN |
+| `pin` | the profile has a PIN (always, now: the Worker serves no other) |
 | `check` | `{salt, hash}`: PBKDF2 of the PIN, so the device can check it with no network |
 | `newPin` | the profile got a PIN this device never had typed; until typed, the person can't open, and 🤷 I don't know the PIN deletes them here |
-| `remembered` | true: 🔑 Remember on this device skips the PIN here, with no end of its own (Ben, 2026-10-27). Set by `cloud.js rememberHere`; cleared by `forgetHere`, a removed PIN, or a key the cloud refused (`keyRefused`: a PIN changed elsewhere, or `KEY_IDLE_MS` unused); a PIN changed on this device keeps it |
+| `remembered` | true: 🔑 Remember on this device skips the PIN here, with no end of its own (Ben, 2026-10-27). Set by `cloud.js rememberHere`; cleared by `forgetHere` or a key the cloud refused (`keyRefused`: a PIN changed elsewhere, or `KEY_IDLE_MS` unused); a PIN changed on this device keeps it |
 | `rememberUntil` | ms, from before 2026-10-27 (90 days on): read as `remembered`, whatever its day (`cloud.js remembers`); cleared as `remembered` is |
 | `keyDropped` | true: the cloud refused a key this device remembered (`keyRefused`), so the PIN pad and the profile say "This device forgot them"; cleared when the PIN is typed |
 | `noOffer` | they said Not now to the offer, so `offersRemember` stops offering it on this device |
 
 Readers and writers:
 
-- Written only through `cloud.js saveLink` (and `dropLink`, which deletes; `restoreLink` saves a just-dropped link again when `people.js deleteHere` could not delete the person after all). `deps.saveLink` inside a sync re-reads the live link so a key, PIN or drop that happened mid-sync is kept.
+- Written only through `cloud.js saveLink` (`goUp` first saves a pending link: the id, `key: null`, `pin: true` and the PIN's `check`, before the create goes out, so a tab that dies in between reopens with a link that asks for the PIN just picked; `unlock` drops it quietly on a 404 for a link that never synced), and `dropLink`, which deletes ( `restoreLink` saves a just-dropped link again when `people.js deleteHere` could not delete the person after all). `deps.saveLink` inside a sync re-reads the live link so a key, PIN or drop that happened mid-sync is kept.
 - `state.js readStorage` loads it; `state.js reIdStoredPeople` deletes links whose id is not a `CLOUD_ID` (logs `cloud {unlinked}`).
 - Read by `cloud.js` (`linkOf`, `inCloud`, `keyOf`, `pinIsNew`, `needsPin`, `pinGuards`), `people.js` (`linkOf`, `keyOf` when deleting), `who-now.js` (`linkOf(...).pin`).
 - Backups never carry it (`backup-ui.js storedLists` has no `cloud`).
 
 ### Keys: remembered and session
 
-- A no-PIN profile gets a remembered key (`keys.session = 0`): `putInCloud` (create, or open after a 409) and `openProfile` with no PIN (`remember = !pin`).
-- A PIN profile gets a session key (`session = 1`): `unlock` calls `api.open(id, pin, remembers(link))`, so `false` unless this device remembers them. The key goes in `sessionKeys`, never IndexedDB.
+- Every profile has a PIN, so every key is a session key (`session = 1`) unless this device remembers them: `goUp`'s create, `openProfile` (`remember: false`) and `unlock` call `api.open(id, pin, remembers(link))`, so `false` unless this device remembers them. The key goes in `sessionKeys`, never IndexedDB.
 - 🔑 Remember on this device (Ben, 2026-10-26): after a PIN opens someone, `cloud-ui.js offerRemember` asks once (`cloud.js offersRemember`); their profile's PIN part offers it too. 🔗 Share always asks the PIN of someone with one (`cloud-ui.js askToShare`, `withPin` + `checkPin`), remembered or not: once before each `shareItem`, the Share sheet's item tap and `shareSounds` (bulk) alike; a PIN typed at 🔗 Share… for a key counts for its first code (`shareAsked`, cleared when the sheet closes). `rememberHere(personId, pin)` opens again with `remember: true`, keeps that lasting key in the link, drops the visit's key (`api.forget` on the old one) and sets `remembered`. While it holds (`isRemembered`), `needsPin` and `pinGuards` are false. It has no day of its own: it ends with `forgetHere` (Forget this device, behind `grown-up.js askSum` with `stay: true`; ✕ forgets nothing), which deletes the key here and in the cloud, or with `keyRefused`, once the Worker drops the key (a new PIN, or `KEY_IDLE_MS` unused).
 - `unlock` deletes the device's previous key in the cloud (`api.forget`), so a device holds one key per profile.
 - The Worker deletes session keys older than `SESSION_KEY_MS` (7 days) only when that profile is next opened (`openProfile`). That is why a remembered PIN asks for a lasting key.
 - Any key unused for `KEY_IDLE_MS` (180 days) stops working: `keyProfile` deletes it when it is next sent, and `openProfile` sweeps the profile's. `keys.used` is marked at most once an hour (0 on a key an older Worker made: its `created` counts). A profile keeps its `KEYS_PER_PROFILE` (20) most recently used keys: `newKey` drops the one unused longest. A device whose key went gets 401 like any other refused key (`keyRefused`).
-- A new PIN, or a PIN reset by Ben, deletes every key of the profile (`changeProfile`). The next sync gets 401 → `cloud.js keyRefused` asks the public list: no PIN now → opens again by itself; a PIN → `newPin: true`, `rememberUntil` cleared, status `locked`; a link that was remembered gets `keyDropped`, and its status and PIN pad say "This device forgot them" (it can't tell a new PIN from an idle key). A PIN changed on this device keeps `remembered`.
+- A new PIN, or a PIN reset by Ben, deletes every key of the profile (`changeProfile`). The next sync gets 401 → `cloud.js keyRefused`: `newPin: true`, `rememberUntil` cleared, status `locked`; a link that was remembered gets `keyDropped`, and its status and PIN pad say "This device forgot them" (it can't tell a new PIN from an idle key). A PIN changed on this device keeps `remembered`.
 - `initCloud` moves a stored key of a PIN profile this device doesn't remember (from the retired Remember, before 2026-10-19) into `sessionKeys` for this visit.
 
 ### PINs (and the three PIN sets in `cloud.js`)
@@ -111,13 +110,13 @@ The PIN hash is done twice, the same way: `web/cloud.js pinHash` (`PIN_ROUNDS` 2
 
 ### Who goes to the cloud
 
-`cloud.js wantsCloud(p)`: `p.added && !p.hidden && !isOffline(p.id) && !inCloud(p.id) && hasMade(...)`. `cloud-sync.js hasMade` counts only `MADE` kinds: `clips, overrides, beats, takes, songbook, layouts, voices, touchLayouts`. An open beat (`patterns`), DJ keys, an open song or settings alone do not count. ☁️ In the cloud switched on (`putUpNow`) or setting a PIN puts a person up at once, made or not.
+Nobody, by themselves (docs/design/cloud-needs-pin.md). `syncAll` puts no one up and `cloud-sync.js` has no "made something" rule any more (`wantsCloud` and `hasMade` are gone). A grown-up turns a person's ☁️ In the cloud on in their profile sheet (`cloud-ui.js pinClick` → `putUp`): `grown-up.js askSum` (the usual sum, with `why` naming who; ✕ cancels), `askNewPin` (the first pad shows `PIN_PUBLIC`, then "Once more"), then `cloud.js goUp(personId, pin)`: `funNamed`, the pending link, `api.create` with the PIN in one request, the key saved (session only), `unlocked` and `pinTyped` set, then `syncNow`; then `offerRemember`. A 409 (already in the cloud) drops the pending link and returns `'joins'`: the app never tries the PIN just picked against it, `cloud-ui.js joinPad` asks the PIN they have (`openProfile`), and the first sync merges with no base. Leaving is `cloud.js leaveCloud(personId, pin)` (☁️ off and Remove PIN, one red second tap and the PIN): a key if none, `syncNow` (`bringLatest`; a failed sync deletes nothing), `removeProfile`, then `dropLink` (the link and the bases). A person on this device only has no ☁️ on their line in 👥 People and no PIN part in their profile.
 
 Before the first upload, `cloud.js funNamed` gives a typed name a fun name (`names.js funName`), so a typed person name never leaves. The Worker refuses any name `isFunName` rejects and any avatar not in `emoji-check.js`.
 
 ### Per-person cloud status
 
-`cloud.js status` (Map person → `{state, text, at}`), `state` one of `syncing`, `ok`, `trouble`, `locked`, `waiting`. Written by `syncNow`, `keyRefused`, `putInCloud`, `syncEveryone`. Read by `statusOf`, `cloud-ui.js cloudText`/`cloudLabel`/`drawPin`, and through `onCloud(fn)` watchers (`app.js`, `people.js`). `trouble` and `locked` show ⚠️.
+`cloud.js status` (Map person → `{state, text, at}`), `state` one of `syncing`, `ok`, `trouble`, `locked`, `waiting`. Written by `syncNow` and `keyRefused`. Read by `statusOf`, `cloud-ui.js cloudText`/`cloudLabel`/`drawPin`, and through `onCloud(fn)` watchers (`app.js`, `people.js`). `trouble` and `locked` show ⚠️.
 
 ### The record kinds (one list, kept four times)
 
@@ -162,15 +161,16 @@ The 13 per-person stores that sync: `clips, overrides, orders, patterns, beats, 
 - **Receiving:** `openShare` (localStorage `shared`, at most `MAX_SHARED` 100, `{code, kind, title, at, gone?}`), `checkShared` marks unshared ones `gone`, `fetchShare`, ▶ Play (`cloud-ui.js playPreview`: decodes the preview, levels it to peak 0.9 as a pad is (`voices.js applyChain` in Normal), and plays it with `audio.start` as `'share-preview'`), 🎛️ Remix (`remixShare`: `shareDoc` with fresh ids → `cleanBackup` → `storeLoaded`).
 - **Unsharing:** `DELETE /api/profiles/:id/shares/:code` deletes the share, its `share_sounds`, and audio nothing else uses. Deleting the profile (`deleteProfile`, and `cloud_admin.py delete_profile_sql` for a prune) deletes all its shares and sounds: 🚫 Unshare needs the profile's key, so a share left behind could never be ended. Shares of profiles deleted before 2026-10-26 still stand, with their sounds under profile_id `''`.
 
-### Three meanings of "offline"
+### Two meanings of "offline"
 
 | Word | Where | What it does |
 |---|---|---|
-| 📴 Offline (this device only) | `peopleEdits` record `offline: true`; `cloud.js isOffline`, `setOffline` | the person never goes up; switching it on syncs first (`bringLatest`), then deletes the cloud copy; a failed sync deletes nothing |
 | no network | `CloudError` status 0 (`cloud-api.js`) | syncs wait; `unlock` checks the PIN on the device; `cloudThere` re-asks after 60 s |
 | the offline copy | `sw.js`, `offline.js` | the app opens with no network after one visit |
 
-A 404 `profile` on sync (deleted or pruned elsewhere) drops the link and sets the person 📴 Offline here (`cloud.js syncNow`).
+(📴 Offline, a person kept out of the cloud, is gone: nobody goes up by themselves. An old record's `offline: true` is read, kept in backups and ignored.)
+
+A 404 `profile` on sync (the person left the cloud on another device, or was pruned) drops the link and keeps every record and sound here (`cloud.js syncNow`): it says "Taken out of the cloud on another device; everything here stays here." (`LEFT_ELSEWHERE`), and drops quietly for a link that never synced. It is not put back by itself.
 
 ### The two switches (device settings)
 
@@ -198,9 +198,9 @@ Three things send only from noodlepads.com, each checked on its own: `log-send.j
 | focus, blur, visibility, pagehide | `timing.transition()` | gathered for `TRANSITION_MS` 1.5 s; skipped if a sync ran within `MIN_GAP_MS` 10 s and nothing changed; hiding with a change waiting syncs at once |
 | active | `timing.arm()` | every `ACTIVE_MS` 5 min, only while shown and focused (`pageActive`) |
 | slowed down | `syncNow` on a 429 `slow` → `timing.slow()` | `SLOW_MS` 1 minute later, if shown and focused; else on the next focus |
-| by hand | `syncNow` from `unlock`, `openProfile`, `putUpNow`, 🔄 Sync now, `shareItem` | at once, one person |
+| by hand | `syncNow` from `unlock`, `openProfile`, `goUp`, `leaveCloud` (`bringLatest`), 🔄 Sync now, `shareItem` | at once, one person |
 
-`syncAll` runs one at a time; a call while one runs queues one more run, shared by every caller. `syncEveryone` calls `timing.ran()`, checks `cloudThere()` (`GET /api/cloud`), puts up everyone `wantsCloud`, then `syncNow` for each link in turn. `syncNow` runs one sync per person at a time (`running`), and needs a key (else status `waiting`).
+`syncAll` runs one at a time; a call while one runs queues one more run, shared by every caller. `syncEveryone` calls `timing.ran()`, checks `cloudThere()` (`GET /api/cloud`), then `syncNow` for each link in turn (it puts nobody up). `syncNow` runs one sync per person at a time (`running`), and needs a key (else status `waiting`).
 
 ### Pull (`cloud-sync.js pullOnce`)
 
@@ -392,17 +392,17 @@ Applied to every static file (the Worker's own answers set `Cache-Control: no-st
 
 | Line says | Code does | Verdict |
 |---|---|---|
-| everyone goes up once they make something, unless ☁️ is off | `wantsCloud`: added, not hidden, not Offline, `hasMade` (`MADE` kinds only) | true |
-| Cloudflare stores fun name, avatar, color, sounds, beats, songs, settings, the names given | records also hold takes, kit edits, pad order and groups, DJ keys, layouts, own voices; and `activity`/`devices` rows per profile (country, browser, OS, device type, width, app version) while `sendUsage` is on | incomplete; the metrics are left to the shared policy on purpose (`tests/privacy.test.mjs`: no usage words in the lines) |
+| nobody goes to the cloud by themselves; a grown-up puts someone there with a sum and a PIN | `goUp` is the only `api.create`; the Worker refuses a create with no PIN (400 `needs pin`) and serves, lists and opens only profiles with one | true |
+| Cloudflare stores fun name, avatar, color, sounds, beats, songs, recorded voices, settings, the names given | records also hold takes, kit edits, pad order and groups, DJ keys, layouts, own voices; and `activity`/`devices` rows per profile (country, browser, OS, device type, width, app version) while `sendUsage` is on | incomplete; the metrics are left to the shared policy on purpose (`tests/privacy.test.mjs`: no usage words in the lines) |
 | the list shows the newest 300 profiles: fun names, avatars, colors, whether each has a PIN, and when its look last changed | the list also carries the id; `edited` is the day the look last changed, rounded down (`LIMITS.listed` 300, `CLOUD_ID` ids only, in the SQL) | true |
 | a sound's link plays for anyone | `getSound` needs no key | true |
 | a share code works until 🚫 Unshare or its profile is deleted | `deleteProfile` deletes its shares and sounds (`dropProfileData`); a remix's audio is its maker's own | true |
-| a PIN is not security | 4 digits, PBKDF2, waits; audio needs no PIN | true |
+| everyone in the cloud has a PIN; it is not security | 4 digits, PBKDF2, waits; audio needs no PIN | true |
 | nobody types a profile name | `funNamed` before upload; Worker `isFunName` | true |
-| ☁️ off stays on this device | `isOffline` keeps them out; usage events are still sent from the device (not per person) | true for their things |
+| everyone else stays on this device; Remove PIN or ☁️ off deletes the cloud copy and keeps this device's, and links they shared stop working | `leaveCloud` syncs first, then `removeProfile` (`deleteProfile` deletes records, keys, shares and audio); usage events are still sent from the device (not per person) | true for their things |
 | problem reports: cleaned log, settings, counts, browser/system/type, screen size, time zone, sound timing, the app's version, random codes for this device and this visit; deleted about 14 days later, once the site is next used | the payload also holds the send time and the device pixel ratio (part of the screen size). Expired reports are deleted when the next report arrives, or on a make, open, pull, push, share or PIN change, or a look at the profile list | true: nothing is scheduled (no Cron Triggers, Ben 2026-10-26), so the line says "about" and "once the site is next used" |
 | feedback: only what was typed and the app's version; no name or IP | as typed; `X-App-Version` is the live label with its dash sent as `+` (`v1.0.277+b328291`), since the Worker allows `[0-9A-Za-z.+_]{1,32}` only. Checked: the telemetry runner's reader (`SUGGEST_KEY` in pdxfixit/telemetry's telemetry.py) matches the version part with the same `[0-9A-Za-z.+_]{1,32}`, so a `+` label is harvested; 90 days is the runner's job | true |
-| deleting a profile: gone from the cloud at once, with every share code it made | `deleteProfile` deletes records, keys, shares, audio, profile, and `forgetProfile` its metrics | true |
+| deleting a profile: gone from the cloud at once, with every share code it made; each way asks the PIN | `deleteProfile` deletes records, keys, shares, audio, profile, and `forgetProfile` its metrics; `removeProfile` is called with the PIN from `leaveCloud` and `deleteLeftCloud` | true |
 
 ## Seams (one job done twice, or in an odd home)
 

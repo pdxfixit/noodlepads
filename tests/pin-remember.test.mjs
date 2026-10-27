@@ -195,7 +195,7 @@ test('after a PIN opens someone, 🔑 Remember them here? is offered, Not now fo
   assert.equal($('#remember-no').className, 'chain-tool', 'the same size of button as Remember');
   assert.equal($('#remember-dialog').open, false);
   assert.match(title, /Remember Friendly Sloth here\?/);
-  assert.equal(sub, 'This device opens them without the PIN until someone taps Forget this device. Sharing still asks it. Anyone using this device can open them.');
+  assert.equal(sub, 'Anyone using this device can open them. This device skips the PIN until someone taps Forget this device. Sharing still asks it.');
   assert.doesNotMatch(sub, /days|forever/);
   assert.equal(cloud.isRemembered(OFFER), true);
   assert.equal(cloud.linkOf(OFFER).remembered, true);
@@ -238,7 +238,7 @@ test('the profile\'s PIN part: Forget this device asks the grown-up sum first (a
   const btn = $('#cloud-pin-remember');
   assert.equal(btn.hidden, false);
   assert.equal(btn.textContent, 'Forget this device');
-  assert.equal($('#profile-pin-hint').textContent, 'This device opens Friendly Sloth without it until someone taps Forget this device. Sharing still asks it. Anyone using this device can open them. Lost this device? Change the PIN, and every device asks it again.');
+  assert.equal($('#profile-pin-hint').textContent, 'This device opens Friendly Sloth without it until someone taps Forget this device. Sharing still asks it. Anyone using this device can open them. Lost this device? Change the PIN, and every device asks it again. Removing it takes Friendly Sloth out of the cloud.');
   btn.dispatch('click');
   await settle();
   assert.equal($('#kids-sum').open, true, 'Forget asks the sum');
@@ -287,14 +287,14 @@ test('the profile\'s PIN part: Forget this device asks the grown-up sum first (a
   await settle();
 });
 
-test('changing the PIN here keeps the device remembering; removing it ends the remembering', async () => {
+test('changing the PIN here keeps the device remembering; the PIN cannot be removed', async () => {
   await cloud.setPin(OFFER, PIN, '1357');
   assert.equal(cloud.isRemembered(OFFER), true);
   assert.ok(cloud.linkOf(OFFER).key, 'the new key is kept');
   assert.deepEqual(keyRows(OFFER).map((r) => r.session), [0]);
-  await cloud.setPin(OFFER, '1357', null);
-  assert.equal(cloud.linkOf(OFFER).remembered, undefined);
-  assert.equal(cloud.needsPin(OFFER), false, 'no PIN at all now');
+  await assert.rejects(cloud.setPin(OFFER, '1357', null), (err) => err.status === 400 && err.error === 'needs pin', 'the Worker refuses Remove PIN through the API');
+  assert.equal(cloud.isRemembered(OFFER), true, 'nothing changed');
+  assert.equal(cloud.linkOf(OFFER).pin, true);
 });
 
 // 🔗 Share always asks the PIN (Ben, 2026-10-27): Remember covers opening,

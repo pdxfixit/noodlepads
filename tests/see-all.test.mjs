@@ -45,8 +45,8 @@ test('the count line is a button that opens See all for that person', async () =
   openProfile('juno');
   const line = $('#profile-counts');
   assert.equal(line.tagName.toLowerCase(), 'button');
-  assert.equal($('#profile-counts-text').textContent.replace(/\u00a0/g, ' '), '🔊 4 · ✏️ 1 · ⌨️ 1', 'no "on this device": the cloud has the same');
-  assert.equal(line.getAttribute('aria-label'), 'See all: everything Juno has: 4 sounds, 1 preset edit, 1 key layout');
+  assert.equal($('#profile-counts-text').textContent.replace(/\u00a0/g, ' '), '📴 This device only: 🔊 4 · ✏️ 1 · ⌨️ 1', 'Juno is not in the cloud: only here');
+  assert.equal(line.getAttribute('aria-label'), 'See all: everything Juno has, on this device only: 4 sounds, 1 preset edit, 1 key layout');
   line.dispatch('click');
   await page.settle();
   assert.ok($('#things-dialog').open);
@@ -105,12 +105,18 @@ test('closing See all stops what it plays and goes back to the profile', async (
   assert.ok($('#profile-dialog').open, 'the profile is still open under it');
 });
 
-test('someone switched off the cloud: the count line says it is this device only', async () => {
+test('someone only on this device (not in the cloud): the count line says it is this device only', async () => {
   $('#profile-dialog').close();
-  state.peopleEdits.set('toby', { id: 'toby', offline: true });
+  state.peopleEdits.set('toby', { id: 'toby' });
   openProfile('toby');
   assert.match($('#profile-counts-text').textContent, /^📴 This device only: /);
   assert.match($('#profile-counts').getAttribute('aria-label'), /^See all: everything Toby has, on this device only: /);
+  // In the cloud (a grown-up put them there), they have the same here and there.
+  state.cloud.set('toby', { id: 'toby', key: 'k'.repeat(32), rev: 0, sent: {}, sounds: {}, pin: true, remembered: true });
+  $('#profile-dialog').close();
+  openProfile('toby');
+  assert.doesNotMatch($('#profile-counts-text').textContent, /This device only/);
+  state.cloud.delete('toby');
   state.peopleEdits.delete('toby');
 });
 

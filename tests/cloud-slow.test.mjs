@@ -45,7 +45,7 @@ test('a sync the minute limit stops says busy right now, and is due again in a m
   const beat = (n) => ({ id: `beat-${id}-${n}`, personId: id, name: 'Wobbly Taco', bpm: 100, bars: 1, rows: [{ clipId: `${id}-kick`, steps: [1, 0, 0, 0] }], created: n, saved: n });
   const add = async (n) => { const b = beat(n); state.savedBeats = [...state.savedBeats, b]; await persist('beats', structuredClone(b)); };
   await add(1);
-  await cloud.syncAll();
+  await cloud.goUp(id, '2468');   // a grown-up put them in the cloud
   await page.settle();
   assert.ok(cloud.keyOf(id), 'in the cloud');
   assert.notEqual(cloud.statusOf(id)?.state, 'trouble', JSON.stringify(cloud.statusOf(id)));

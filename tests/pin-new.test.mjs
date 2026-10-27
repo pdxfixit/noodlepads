@@ -1,8 +1,8 @@
 // A PIN new to this device (Ben, 2026-10-19): set or changed on another
 // device, it closes the person here until it is typed; 🤷 I don't know the
-// PIN deletes them from this device and the cloud keeps its copy; a PIN Ben
-// cleared opens again by itself; a key "Remember on this device" kept (before
-// 2026-10-19) serves one visit only. The real app with a stand-in IndexedDB
+// PIN deletes them from this device and the cloud keeps its copy; someone taken
+// out of the cloud on another device is dropped here with everything kept; a
+// key "Remember on this device" kept (before 2026-10-19) serves one visit only. The real app with a stand-in IndexedDB
 // (so syncs run), against the real Worker and a fake D1.
 
 import { test, before } from 'node:test';
@@ -21,6 +21,7 @@ let $;
 let state;
 let cloud;
 let setPersonEdit;
+let persist;
 let renderPeople;
 const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') } };
 const idb = fakeIndexedDB();
@@ -48,7 +49,7 @@ before(async () => {
     return pageFetch(url, init);
   };
   await (await import('../web/app.js')).ready;
-  ({ state, setPersonEdit } = await import('../web/state.js'));
+  ({ state, setPersonEdit, persist } = await import('../web/state.js'));
   ({ renderPeople } = await import('../web/pads.js'));
   cloud = await import('../web/cloud.js');
   await page.settle();
@@ -58,21 +59,30 @@ const settle = () => page.settle();
 const typePin = (digits) => { for (const k of digits) $('#pin-keys').querySelector(`[data-key="${k}"]`).dispatch('click'); };
 const choose = (id) => $(`.person-list [data-person="${id}"]`).dispatch('click');
 const names = () => [...state.peopleEdits.values()].map((p) => p.name).filter(Boolean);
-const makeBeat = (personId) => state.savedBeats.push({ id: `beat-${personId}`, personId, name: 'Wobbly Taco', bpm: 100, bars: 1, rows: [{ clipId: `${personId}-kick`, steps: [1, 0, 0, 0] }], created: 1, saved: 1 });
+// Something made, stored as the app stores it, so the sync has it to send.
+const makeBeat = async (personId) => {
+  const beat = { id: `beat-${personId}`, personId, name: 'Wobbly Taco', bpm: 100, bars: 1, rows: [{ clipId: `${personId}-kick`, steps: [1, 0, 0, 0] }], created: 1, saved: 1 };
+  state.savedBeats = [...state.savedBeats, beat];
+  await persist('beats', structuredClone(beat));
+};
 
-// Someone on this device, in the cloud with no PIN, showing; then another
-// device (its own key) sets `pin` on them.
-async function pinSetElsewhere(id, pin) {
+// Someone on this device, put in the cloud by a grown-up with a PIN and
+// showing; then another device (its own key) changes their PIN to `pin`.
+const FIRST_PIN = '1212';
+async function personUp(id) {
   await setPersonEdit(id, { id, name: funName(names()), fun: true, avatar: '🦊', color: '#1F3FA8', added: true, created: 4 });
-  makeBeat(id);
-  await cloud.syncAll();
-  assert.ok(cloud.inCloud(id) && cloud.linkOf(id).key, 'in the cloud, no PIN: the key is kept');
+  await makeBeat(id);
+  await cloud.goUp(id, FIRST_PIN);
+  assert.ok(cloud.inCloud(id) && cloud.keyOf(id), 'in the cloud, the key held for this visit');
   renderPeople();
   choose(id);
   await settle();
   assert.equal(state.personId, id);
-  const other = await cloud.api.open(id);
-  await cloud.api.change(id, other.key, { newPin: pin });
+}
+async function pinSetElsewhere(id, pin) {
+  await personUp(id);
+  const other = await cloud.api.open(id, FIRST_PIN);
+  await cloud.api.change(id, other.key, { pin: FIRST_PIN, newPin: pin });
 }
 
 // Ben, 2026-10-19: "if a user has obtained a PIN since the last time they
@@ -128,17 +138,22 @@ test('🤷 I don\'t know the PIN asks first, then deletes them from this device;
   assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM profiles WHERE id = ?', id)[0].n, 1, 'the cloud keeps its copy');
 });
 
-test('a PIN removed on another device: this device opens them again by itself, no PIN asked', async () => {
-  const id = 'p-reset';
-  await pinSetElsewhere(id, '1470');
-  await env.DB.exec(`UPDATE profiles SET pin_hash = NULL, pin_salt = NULL WHERE id = '${id}'; DELETE FROM keys WHERE profile_id = '${id}';`);
+test('taken out of the cloud on another device: this device drops the link, says so, and keeps every record', async () => {
+  const id = 'p-left';
+  await personUp(id);
+  const other = await cloud.api.open(id, FIRST_PIN);
+  await cloud.api.remove(id, other.key, FIRST_PIN);
   await cloud.syncNow(id);
   await settle();
-  assert.equal($('#pin-dialog').open, false);
-  assert.equal(cloud.pinIsNew(id), false);
-  assert.equal(cloud.needsPin(id), false);
-  assert.ok(cloud.linkOf(id).key, 'a new key, kept: no PIN');
-  assert.equal(state.personId, id);
+  assert.equal(cloud.inCloud(id), false, 'the link is gone');
+  assert.equal(cloud.statusOf(id).text, 'Taken out of the cloud on another device; everything here stays here.');
+  assert.ok(state.peopleEdits.has(id), 'still here');
+  assert.equal(state.peopleEdits.get(id).offline, undefined, 'no 📴 Offline is written any more');
+  assert.ok(state.savedBeats.some((b) => b.personId === id), 'with everything of theirs');
+  assert.equal(state.personId, id, 'and still showing');
+  await cloud.syncAll();
+  assert.equal(cloud.inCloud(id), false, 'not put back by itself');
+  assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM profiles WHERE id = ?', id)[0].n, 0);
 });
 
 test('a key "Remember on this device" kept is held for this visit only: the PIN is asked to open them', async () => {
