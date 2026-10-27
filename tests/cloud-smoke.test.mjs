@@ -13,7 +13,7 @@ test('cloud-smoke passes against the Worker, checks a deleted sound frees its au
   const stored = [];
   const bucket = { put: async (key) => { stored.push(key); } };
   const env = {
-    DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') },
+    DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') }, ALLOW_UNPROVEN_CHECKS: 'tests',
     EVENTS: bucket, FEEDBACK: bucket, FEEDBACK_LIMITER: { limit: async () => ({ success: true }) },
   };
   const realFetch = globalThis.fetch;

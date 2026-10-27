@@ -265,11 +265,13 @@ const sweepDailyCounters = (env, now) => env.DB.batch([
 export const TEST_PROFILE = /^p-(smoke|e2e)-/;
 export const CHECKS_HEADER = 'X-Checks-Key';
 // The secret, compared in time that does not depend on where it differs
-// (events-worker.js allowed). Until the deploy has put CHECKS_KEY in the
-// Worker (it does once the GitHub secret is set), the id alone passes, as
-// before, so the checks keep working while it is unset.
-export const provenCheck = (request, env) => !env.CHECKS_KEY
-  || allowed(request, env, { key: { header: CHECKS_HEADER, secret: 'CHECKS_KEY' } });
+// (events-worker.js allowed). A Worker without CHECKS_KEY refuses every check
+// id (fails closed): the id alone would let anyone skip the kids' caps. Only
+// the tests' own env opts out, with ALLOW_UNPROVEN_CHECKS = 'tests', a
+// variable the Worker's config never sets.
+export const provenCheck = (request, env) => env.CHECKS_KEY
+  ? allowed(request, env, { key: { header: CHECKS_HEADER, secret: 'CHECKS_KEY' } })
+  : env.ALLOW_UNPROVEN_CHECKS === 'tests';
 const needProvenCheck = (request, env, id) => { if (isCheck(id) && !provenCheck(request, env)) throw new Refuse(400, 'id'); };
 export const CHECK_LIMITS = { recordBytes: 64 * 1024, soundBytes: 4 * 1024 * 1024, sounds: 1, shares: 1 };
 export const CHECK_MS = 10 * 60 * 1000;

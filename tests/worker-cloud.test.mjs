@@ -15,7 +15,7 @@ import { CLOUD_MAX_SOUND } from '../web/cloud-sync.js';
 const T0 = Date.parse('2026-10-11T12:00:00Z');
 
 function cloud() {
-  const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') } };
+  const env = { DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') }, ALLOW_UNPROVEN_CHECKS: 'tests' };
   let now = T0;
   const realNow = Date.now;
   // The routes read the time from Date.now(); each call runs at the test's clock.

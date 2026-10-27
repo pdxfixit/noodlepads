@@ -70,11 +70,17 @@ test('an ordinary profile needs no secret, and the secret earns it nothing', asy
   assert.deepEqual(c.env.DB.rows('SELECT name, n FROM counters'), [{ name: 'profiles', n: 2 }], "kids' cap, both");
 });
 
-test('until the Worker holds the secret, a check runs as before', async () => {
+test('a Worker without the secret fails closed: a check id is refused, whatever the request carries; only a test env opts out', async () => {
   for (const secret of [null, '']) {
     const c = cloud(secret);
+    for (const proof of [undefined, '', 'wrong']) {
+      const r = await c.call('POST', 'profiles', { body: look(SMOKE), proof });
+      assert.deepEqual([r.status, r.data.error], [400, 'id'], `CHECKS_KEY ${JSON.stringify(secret)}, proof ${JSON.stringify(proof)}`);
+    }
+    assert.equal(c.env.DB.rows('SELECT COUNT(*) AS n FROM profiles')[0].n, 0, 'nothing made');
+    c.env.ALLOW_UNPROVEN_CHECKS = 'tests';
     const r = await c.call('POST', 'profiles', { body: look(SMOKE) });
-    assert.equal(r.status, 201, `CHECKS_KEY ${JSON.stringify(secret)}`);
+    assert.equal(r.status, 201, 'the tests\' own env opts out');
     assert.equal((await c.call('GET', `profiles/${SMOKE}/records`, { key: r.data.key })).status, 200);
   }
 });

@@ -48,7 +48,7 @@ Then, still before step 3, the deploy puts the GitHub secret `CHECKS_KEY` into
 the Worker (`wrangler secret put CHECKS_KEY` through flarepress's
 `tools/wrangler.sh`, the value from stdin, trimmed at both ends as
 `tools/look-cloud.mjs` trims what it sends), every deploy, so a new value takes
-at once. While the GitHub secret is empty the step prints a notice and goes on.
+at once. While the GitHub secret is empty the step prints a notice and goes on, and the Worker then refuses every check id: the live cloud checks fail until the secret is set.
 If wrangler fails, the step fails and the deploy stops there, before the
 upload: the live Worker keeps its old code and secret, so the live checks are
 never sent against a Worker that lacks it.
@@ -127,8 +127,8 @@ https://noodlepads.com, both even if one fails, in about 8 s together:
   GitHub secret; on the Mac, `cloud.json`'s `"checksKey"`, read by
   `just deploy`, `just deploy-checks`, `just cloud-smoke` and
   `just cloud-e2e`). Without it the
-  Worker refuses the id (400 `id`); while the Worker has no `CHECKS_KEY` yet,
-  the id alone passes. A check's profile gets only what a check needs
+  Worker refuses the id (400 `id`); a Worker with no `CHECKS_KEY` refuses every
+  check id too (it fails closed). A check's profile gets only what a check needs
   (`CHECK_LIMITS`): a cap of their own, 100 a UTC day, so the checks
   never use up kids' 50 new profiles a day; 64 KB of records, one sound of
   at most 4 MB, one share. They never show in the public list. Deleting the
