@@ -329,6 +329,29 @@ async function forgetKey(request, env, id, now) {
   return json(200, { ok: true });
 }
 
+// How many devices remember this profile: the lasting keys (a session key is
+// one visit's), not idle for KEY_IDLE_MS. This device counts when it holds one.
+async function countKeys(request, env, id, now) {
+  await needKey(request, env, id, now);
+  const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM keys WHERE profile_id = ? AND session = 0 AND MAX(used, created) >= ?')
+    .bind(id, now - KEY_IDLE_MS).first();
+  return json(200, { count: row?.n ?? 0 });
+}
+
+// "Forget all devices": every key of the profile is deleted, this request's
+// too, so every device asks the PIN next time. The PIN is asked like Leave's
+// and Delete's (a request with a key: `key_fails`), so a stranger's tries at
+// /open never lock it, and a key alone can't cut the other devices off.
+async function forgetAllKeys(request, env, id, now) {
+  if (request.headers.get('Origin') !== ORIGIN) throw new Refuse(403, 'origin');
+  const body = await readJson(request);
+  await needKey(request, env, id, now);
+  const p = await getProfile(env, id);
+  await needPin(env, p, body.pin, now, true);
+  await env.DB.prepare('DELETE FROM keys WHERE profile_id = ?').bind(id).run();
+  return json(200, { ok: true });
+}
+
 async function changeProfile(request, env, id, now, seen) {
   const body = await readJson(request);
   await needKey(request, env, id, now);
@@ -944,6 +967,8 @@ async function route(request, env, now, seen) {
         if (parts.length === 2 && m === 'DELETE') return await deleteProfile(request, env, b, now);
         if (parts.length === 3 && c === 'open' && m === 'POST') return await openProfile(request, env, b, now, seen);
         if (parts.length === 3 && c === 'key' && m === 'DELETE') return await forgetKey(request, env, b, now);
+        if (parts.length === 3 && c === 'keys' && m === 'GET') return await countKeys(request, env, b, now);
+        if (parts.length === 3 && c === 'keys' && m === 'DELETE') return await forgetAllKeys(request, env, b, now);
         if (parts.length === 3 && c === 'records' && m === 'GET') return await pull(request, url, env, b, now, seen);
         if (parts.length === 3 && c === 'records' && m === 'POST') return await push(request, env, b, now, seen);
         if (parts.length === 3 && c === 'sounds' && m === 'POST') return await startSound(request, env, b, now);

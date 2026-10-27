@@ -448,6 +448,17 @@ const VIEWS = {
   'cloud-leave': { screen: 'pads', js: `const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()][0];
     state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true, remembered: true });
     ${q('#people-open') + q('#people-edit [data-profile]')} ${nap} ${q('#cloud-pin-off')} document.querySelector('#cloud-pin-off').scrollIntoView({ block: 'center' }); ${nap}` },
+  // devices: the PIN part of a profile this device remembers, the cloud's count
+  // stubbed to 3: Forget this device, then 🔑 Forget all 3 devices. `devices-one`:
+  // the count fails (offline), so only Forget this device.
+  devices: { screen: 'pads', js: `const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()][0];
+    state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true, remembered: true });
+    (await import('/cloud.js')).api.keyCount = async () => ({ count: 3 });
+    ${q('#people-open') + q('#people-edit [data-profile]')} ${nap} document.querySelector('#profile-pin-part').scrollIntoView(); ${nap}` },
+  'devices-one': { screen: 'pads', js: `const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()][0];
+    state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true, remembered: true });
+    (await import('/cloud.js')).api.keyCount = async () => { throw new Error('offline'); };
+    ${q('#people-open') + q('#people-edit [data-profile]')} ${nap} document.querySelector('#profile-pin-part').scrollIntoView(); ${nap}` },
   'cloud-in': { screen: 'pads', js: `const { state } = await import('/state.js'); const id = [...state.peopleEdits.keys()][0];
     state.cloud.set(id, { id, key: 'x', rev: 0, sent: {}, sounds: {}, pin: true, remembered: true });
     ${q('#people-open') + q('#people-edit [data-profile]')} ${nap} document.querySelector('#profile-cloud').scrollIntoView();` },

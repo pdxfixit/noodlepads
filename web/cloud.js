@@ -294,7 +294,8 @@ export const offersRemember = (personId) => {
 // the next time they are opened. The key that lasts is deleted here and in
 // the cloud, so syncs wait for that PIN.
 const forgetting = new Set();
-export async function forgetHere(personId) {
+// `inCloud: false` when the cloud already deleted this device's key (Forget all devices).
+export async function forgetHere(personId, { inCloud: keyThere = true } = {}) {
   const link = linkOf(personId);
   if (!remembers(link) || forgetting.has(personId)) return;
   forgetting.add(personId);
@@ -302,12 +303,38 @@ export async function forgetHere(personId) {
     const key = link.key || sessionKeys.get(personId);
     sessionKeys.delete(personId);
     await saveLink({ ...link, key: link.pin ? null : link.key, remembered: undefined, rememberUntil: undefined });
-    if (key && link.pin) api.forget(personId, key).catch(() => {});
+    if (key && link.pin && keyThere) api.forget(personId, key).catch(() => {});
     logEvent('cloud', { remember: false });
     tell();
   } finally {
     forgetting.delete(personId);
   }
+}
+
+// How many devices remember them, this one included, asked of the cloud: null
+// when this device doesn't remember them, or the cloud can't say (offline, an
+// error), and the profile's PIN part then offers only Forget this device.
+export async function deviceCount(personId) {
+  const key = keyOf(personId);
+  if (!key || !remembers(linkOf(personId))) return null;
+  try {
+    const { count } = await api.keyCount(personId, key);
+    return Number.isInteger(count) && count > 0 ? count : null;
+  } catch {
+    return null;
+  }
+}
+
+// Forget all devices (behind the grown-up sum and the PIN, cloud-ui.js): the
+// cloud deletes every key of the profile after a right PIN, so every device,
+// this one too, asks the PIN the next time they are opened; this device then
+// forgets them as Forget this device does. A wrong PIN throws the Worker's 401
+// and nothing changes.
+export async function forgetAllDevices(personId, pin) {
+  const key = keyOf(personId);
+  if (!key || !remembers(linkOf(personId))) return;
+  await api.forgetAll(personId, key, pin);
+  await forgetHere(personId, { inCloud: false });
 }
 
 // ── sync ──

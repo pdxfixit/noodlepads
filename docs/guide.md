@@ -973,7 +973,13 @@ ADR 0002.
   again." Forget this device asks the grown-up sum first (`web/grown-up.js`,
   as Feedback does: a wrong answer asks another, ✕ forgets nothing; Ben,
   2026-10-27: a kid can't lock themselves out by a slip). Forget
-  drops the key here and in the cloud; a
+  drops the key here and in the cloud. When the cloud counts more than this
+  device remembering them (asked when the sheet opens: `GET …/keys`; none
+  offline or on an error), a stacked 🔑 Forget all N devices sits under it
+  (Ben, 2026-10-27): the sum, then the PIN (a wrong PIN asks again, ✕ changes
+  nothing), then the cloud deletes every key of the profile and this device
+  forgets them too, so every device asks the PIN next time and a lost tablet
+  is cut off without changing the PIN. A
   key the cloud refused (a PIN changed elsewhere, or 180 days unused) ends it
   too, and the PIN pad then says "This device forgot them. A grown-up can
   type the PIN." (`keyDropped`), so the PIN is asked again (`cloud-ui.js`

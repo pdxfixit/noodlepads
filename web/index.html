@@ -674,7 +674,11 @@
             <button type="button" class="secondary pf-danger" id="cloud-pin-off">Remove PIN</button>
           </div>
           <p class="field-hint pf-leave-note" id="cloud-pin-off-note" hidden></p>
-          <button type="button" class="secondary pf-wide pf-remember" id="cloud-pin-remember" hidden>🔑 Remember on this device</button>
+          <!-- DRAFT (mockup, no Worker route yet): the device buttons in one row (stacked when too narrow); the second says how many devices it forgets, this one included. -->
+          <div class="pf-devices-row">
+            <button type="button" class="secondary pf-remember" id="cloud-pin-remember" hidden>🔑 Remember on this device</button>
+            <button type="button" class="secondary pf-forget-all" id="cloud-pin-forget-all" hidden>🔑 Forget all 3 devices</button>
+          </div>
           <p class="set-note" id="profile-pin-note" role="status"></p>
         </section>
       </div>

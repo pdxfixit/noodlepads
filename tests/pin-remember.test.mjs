@@ -381,3 +381,82 @@ test('✏️ Edit sounds\' bulk 🔗 Share asks the PIN once for its one code, o
   $('#share-dialog').close();
   await settle();
 });
+
+// 🔑 Forget all N devices (Ben, 2026-10-27): the cloud counts the keys that
+// remember a profile; the button shows only for more than this device, asks the
+// grown-up sum, then the PIN, and deletes every key, this device's too.
+test('🔑 Forget all N devices: shown for N above 1 only; the sum, then the PIN; every key goes, this device forgets them too', async () => {
+  const forgetAll = $('#cloud-pin-forget-all');
+  // One device (this one): no count to forget, only Forget this device.
+  await openProfileSheet(OFFER);
+  await settle();
+  assert.equal(keyRows(OFFER).length, 1);
+  assert.equal(forgetAll.hidden, true, 'one device: only Forget this device');
+  assert.equal($('#cloud-pin-remember').textContent, 'Forget this device');
+  $('#profile-dialog').close();
+  await settle();
+
+  // The cloud can't say (offline, an error): the same.
+  await call(`profiles/${KEPT}/open`, { pin: PIN, remember: true });
+  const count = cloud.api.keyCount;
+  cloud.api.keyCount = async () => { throw new Error('offline'); };
+  await openProfileSheet(KEPT);
+  await settle();
+  assert.equal(forgetAll.hidden, true, 'no count: only Forget this device');
+  $('#profile-dialog').close();
+  await settle();
+  cloud.api.keyCount = count;
+
+  // A second device remembers KEPT: the count is 2, and the button says so.
+  await openProfileSheet(KEPT);
+  await settle();
+  assert.equal(keyRows(KEPT).length, 2);
+  assert.equal(forgetAll.hidden, false);
+  assert.equal(forgetAll.textContent, '🔑 Forget all 2 devices');
+  assert.equal($('#cloud-pin-remember').textContent, 'Forget this device', 'beside it');
+
+  // A wrong sum, then ✕: nothing changes.
+  forgetAll.dispatch('click');
+  await settle();
+  assert.equal($('#kids-sum').open, true, 'the sum first');
+  typeSum(sum() % 10 === 9 ? sum() - 1 : sum() + 1);
+  await settle();
+  assert.equal($('#kids-sum').open, true, 'a wrong answer asks another');
+  $('#kids-sum').close();
+  await settle();
+  assert.equal(keyRows(KEPT).length, 2, '✕ at the sum deletes nothing');
+  assert.equal(cloud.isRemembered(KEPT), true);
+
+  // The right sum, then the PIN: a wrong one asks again, ✕ changes nothing.
+  forgetAll.dispatch('click');
+  await settle();
+  typeSum(sum());
+  await settle();
+  assert.equal($('#pin-dialog').open, true, 'then the PIN');
+  typePin('1111');
+  await settle();
+  assert.equal($('#pin-dialog').open, true, 'a wrong PIN asks again');
+  assert.equal(keyRows(KEPT).length, 2, 'and deletes nothing');
+  $('#pin-dialog').close();
+  await settle();
+  assert.equal(keyRows(KEPT).length, 2, '✕ at the PIN deletes nothing');
+  assert.equal(cloud.isRemembered(KEPT), true);
+  assert.ok(cloud.linkOf(KEPT).key);
+
+  // The right PIN: every key goes, and this device forgets them.
+  forgetAll.dispatch('click');
+  await settle();
+  typeSum(sum());
+  await settle();
+  typePin(PIN);
+  await settle();
+  assert.equal(keyRows(KEPT).length, 0, "every device's key is deleted, this one's too");
+  assert.equal(cloud.isRemembered(KEPT), false);
+  assert.equal(cloud.linkOf(KEPT).key, null);
+  assert.equal($('#profile-pin-state').textContent, '🔒 Forgotten on every device');
+  assert.equal(forgetAll.hidden, true);
+  assert.equal($('#cloud-pin-remember').textContent, '🔑 Remember on this device');
+  assert.equal(keyRows(OFFER).length, 1, "nobody else's keys");
+  $('#profile-dialog').close();
+  await settle();
+});

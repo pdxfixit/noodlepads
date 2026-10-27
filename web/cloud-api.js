@@ -72,6 +72,9 @@ export function createCloudApi({ fetch, base = '/api', meta = null }) {
     // `remember: false` gets a key this device keeps in memory only.
     open: (id, pin, remember = true) => checked('POST', () => `profiles/${pid(id)}/open`, { body: { ...(pin ? { pin } : {}), remember } }),
     forget: (id, key) => checked('DELETE', () => `profiles/${pid(id)}/key`, { key }),
+    // How many devices remember the profile: {count}. Forget all devices deletes every key, this one's too, after the PIN.
+    keyCount: (id, key) => checked('GET', () => `profiles/${pid(id)}/keys`, { key }),
+    forgetAll: (id, key, pin) => checked('DELETE', () => `profiles/${pid(id)}/keys`, { key, body: { pin } }),
     change: (id, key, changes) => checked('PATCH', () => `profiles/${pid(id)}`, { key, body: changes }),
     remove: (id, key, pin) => checked('DELETE', () => `profiles/${pid(id)}`, { key, body: pin ? { pin } : {} }),
     pull: (id, key, since, signal) => checked('GET', () => `profiles/${pid(id)}/records?since=${since}`, { key, signal }),

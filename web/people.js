@@ -19,7 +19,7 @@ import { PERSON_COLORS, PERSON_COLOR_NAMES, nextPersonColor, freePicture, person
 import { newId } from './util.js';
 import { funName, nameChoices, isFunName } from './names.js';
 import { inCloud, dropLink, restoreLink, forgetBases, linkOf, keyOf, pinGuards, onCloud, syncEnded } from './cloud.js';
-import { avatarBadge, openAvatar, cloudLabel, askEditPin, drawPin, pinClick, disarmCloud, deleteLeftCloud } from './cloud-ui.js';
+import { avatarBadge, openAvatar, cloudLabel, askEditPin, drawPin, loadDevices, pinClick, disarmCloud, deleteLeftCloud } from './cloud-ui.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { announce, showNotice } from './ui.js';
 import { logEvent } from './log.js';
@@ -279,6 +279,7 @@ function renderProfile(fresh = false) {
   }
   if (fresh) disarmCloud();
   drawPin(p.id);
+  if (fresh) loadDevices(p.id, () => { if (profileFor === p.id) renderProfile(); });
 
   // Everyone can be deleted, with what is theirs, except the last on show.
   const n = state.userClips.filter((c) => c.personId === p.id).length;

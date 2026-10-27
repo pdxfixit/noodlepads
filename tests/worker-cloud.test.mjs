@@ -794,6 +794,42 @@ test('a key not remembered is a session key, deleted after a week; Forget on thi
   assert.equal((await c.call('GET', 'profiles/p-a/records', { key: kept })).status, 401, 'forgotten');
 });
 
+test('GET keys counts the devices that remember a profile; Forget all devices (DELETE keys) needs the key and the PIN, then every device asks the PIN again', async () => {
+  const c = cloud();
+  const mine = await made(c, 'p-a', { pin: '1111' });
+  const tablet = (await c.call('POST', 'profiles/p-a/open', { body: { pin: '1111' } })).data.key;
+  const visit = (await c.call('POST', 'profiles/p-a/open', { body: { pin: '1111', remember: false } })).data.key;
+  const other = await made(c, 'p-b', { name: 'Sir Squid', pin: '2222' });
+  assert.equal((await c.call('GET', 'profiles/p-a/keys')).status, 401, 'a key is needed');
+  assert.equal((await c.call('GET', 'profiles/p-a/keys', { key: other })).status, 401, "another profile's key opens nothing here");
+  const counted = await c.call('GET', 'profiles/p-a/keys', { key: mine });
+  assert.deepEqual([counted.status, counted.data], [200, { count: 2 }], 'two lasting keys; a visit key is not a device that remembers');
+  // Keys unused for half a year are not counted.
+  c.later(KEY_IDLE_MS - 1);
+  assert.equal((await c.call('GET', 'profiles/p-a/keys', { key: mine })).data.count, 2, 'still in the half year');
+  c.later(2);
+  assert.equal((await c.call('GET', 'profiles/p-a/keys', { key: tablet })).status, 401, 'the idle one is gone');
+  const fresh = (await c.call('POST', 'profiles/p-a/open', { body: { pin: '1111' } })).data.key;
+  assert.equal((await c.call('GET', 'profiles/p-a/keys', { key: fresh })).data.count, 2, 'this device (used lately) and the new one; the idle one is not counted');
+  const again = (await c.call('POST', 'profiles/p-a/open', { body: { pin: '1111' } })).data.key;
+  const elsewhere = (await c.call('POST', 'profiles/p-b/open', { body: { pin: '2222' } })).data.key;
+
+  // Forget all devices: origin, key and PIN.
+  assert.equal((await c.call('DELETE', 'profiles/p-a/keys', { key: fresh, body: { pin: '1111' }, origin: null })).status, 403);
+  assert.equal((await c.call('DELETE', 'profiles/p-a/keys', { body: { pin: '1111' } })).status, 401, 'no key');
+  const wrong = await c.call('DELETE', 'profiles/p-a/keys', { key: fresh, body: { pin: '0000' } });
+  assert.deepEqual([wrong.status, wrong.data.tries], [401, 4], 'a wrong PIN, on the keyed count');
+  assert.equal((await c.call('DELETE', 'profiles/p-a/keys', { key: fresh, body: {} })).status, 401, 'no PIN');
+  assert.equal((await c.call('GET', 'profiles/p-a/keys', { key: again })).data.count, 3, 'a wrong PIN changed nothing');
+  assert.equal((await c.call('DELETE', 'profiles/p-a/keys', { key: fresh, body: { pin: '1111' } })).status, 200);
+  for (const k of [mine, fresh, again, visit]) assert.equal((await c.call('GET', 'profiles/p-a/records', { key: k })).status, 401, 'every key is gone, this one too');
+  assert.equal(c.env.DB.rows("SELECT COUNT(*) AS n FROM keys WHERE profile_id = 'p-a'")[0].n, 0);
+  assert.equal(c.env.DB.rows("SELECT COUNT(*) AS n FROM keys WHERE profile_id = 'p-b'")[0].n, 1, "nobody else's key");
+  assert.equal((await c.call('GET', 'profiles/p-b/records', { key: elsewhere })).status, 200);
+  assert.equal(c.env.DB.rows("SELECT COUNT(*) AS n FROM profiles WHERE id = 'p-a'")[0].n, 1, 'the profile and its PIN stay');
+  assert.equal((await c.call('POST', 'profiles/p-a/open', { body: { pin: '1111' } })).status, 200, 'the same PIN opens it again');
+});
+
 // The council's review, 2026-10-26: every open made a key that lasted
 // forever, as many as anyone asked for.
 test('a profile keeps the keys of its 20 most recently used devices; opening on one more drops the one unused longest', async () => {
@@ -1097,6 +1133,8 @@ test('a profile with no PIN (only by hand in D1) is not there: open, pull, push,
     patch: await c.call('PATCH', 'profiles/p-a', { key, body: { name: 'Duke Dumpling' } }),
     del: await c.call('DELETE', 'profiles/p-a', { key, body: { pin: PIN } }),
     forget: await c.call('DELETE', 'profiles/p-a/key', { key }),
+    count: await c.call('GET', 'profiles/p-a/keys', { key }),
+    forgetAll: await c.call('DELETE', 'profiles/p-a/keys', { key, body: { pin: PIN } }),
   };
   for (const [name, r] of Object.entries(answers)) assert.deepEqual([name, r.status, r.data.error], [name, 404, 'profile']);
   assert.equal(c.env.DB.rows("SELECT COUNT(*) AS n FROM records WHERE profile_id = 'p-a'")[0].n, 0);

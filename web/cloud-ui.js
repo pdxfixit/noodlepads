@@ -20,7 +20,7 @@ import {
   api, CloudError, cloudTrouble, cloudThere, inCloud, linkOf, keyOf, statusOf, syncNow,
   openProfile, unlock, pinIsNew, checkPin, setPin, goUp, leaveCloud, removeProfile, shareable, shareItem, showCode,
   sharedHere, openShare, forgetShare, remixShare, fetchShare, checkShared, mySharesOf, unshareItem, listProfiles,
-  rememberHere, declineRemember, offersRemember, forgetHere, isRemembered, keyWasDropped, FORGOT_HERE, bringDown, leaveInCloud,
+  rememberHere, declineRemember, offersRemember, forgetHere, deviceCount, forgetAllDevices, isRemembered, keyWasDropped, FORGOT_HERE, bringDown, leaveInCloud,
 } from './cloud.js';
 import { newProgress, progressShare } from './cloud-sync.js';
 import { askSum } from './grown-up.js';
@@ -330,6 +330,22 @@ function cloudText(p) {
   return 'In the cloud ✓ Opens on any phone or tablet, with their PIN.';
 }
 
+// How many devices remember the person whose sheet is open: {id, n}, from the
+// cloud (loadDevices), or null when unknown.
+let devices = null;
+
+// Asked once when a profile sheet opens: the count behind 🔑 Forget all N
+// devices. Offline or on an error there is no count and the sheet offers only
+// Forget this device. `redraw` runs when the count arrives and the sheet still
+// shows them.
+export async function loadDevices(personId, redraw = () => {}) {
+  if (devices?.id !== personId) devices = null;
+  const n = await deviceCount(personId);
+  const was = devices?.n ?? null;
+  devices = n ? { id: personId, n } : null;
+  if ((n ?? null) !== was) redraw();
+}
+
 // Draws the Cloud and PIN parts for `personId`.
 export function drawPin(personId) {
   const p = people({ includeHidden: true }).find((x) => x.id === personId);
@@ -359,6 +375,13 @@ export function drawPin(personId) {
   el.pinTools.hidden = !linked;
   el.pinRemember.hidden = !p.added || !hasPin || pinIsNew(personId);
   el.pinRemember.textContent = kept ? 'Forget this device' : '🔑 Remember on this device';
+  // 🔑 Forget all N devices: N is the cloud's count, asked when the sheet
+  // opens (loadDevices); it shows only when this device remembers them and
+  // the count is more than this device.
+  const n = kept && devices?.id === personId ? devices.n : 1;
+  el.pinForgetAll.hidden = n < 2;
+  el.pinForgetAll.textContent = `🔑 Forget all ${n} devices`;
+  el.pinForgetAll.setAttribute('aria-label', `Forget all ${n} devices that remember ${nameOf(p)}, this one too. A grown-up types the PIN.`);
   const asked = hasPin
     ? (pinIsNew(personId)
       ? (keyWasDropped(personId) ? `This device forgot ${nameOf(p)}. Open them and type the PIN.` : `They got a new PIN on another device. Open ${nameOf(p)} and type it.`)
@@ -520,7 +543,7 @@ async function putUp(personId, p) {
 // A tap in the Cloud or PIN part: true when it was one of their buttons.
 // `note` says what went wrong (in the PIN part); the pill says what went right.
 export async function pinClick(personId, t, note = () => {}) {
-  const parts = [el.cloudSwitch, el.syncBtn, el.shareBtn, el.backupBtn, el.pinChange, el.pinOff, el.pinRemember];
+  const parts = [el.cloudSwitch, el.syncBtn, el.shareBtn, el.backupBtn, el.pinChange, el.pinOff, el.pinRemember, el.pinForgetAll];
   if (t !== el.cloudSwitch && t !== el.pinOff) disarmCloud(personId);
   if (!parts.includes(t)) return false;
   const p = people({ includeHidden: true }).find((x) => x.id === personId);
@@ -595,6 +618,22 @@ export async function pinClick(personId, t, note = () => {}) {
         hint: 'Type their PIN. This device then opens them without it until someone taps Forget this device. Sharing still asks it.',
       });
       if (got) flashPin(personId, '🔑 Remembered here');
+    });
+    return true;
+  }
+  // 🔑 Forget all N devices: the grown-up sum, then the PIN (a wrong PIN asks
+  // again; ✕ at either changes nothing). Every device, this one too, asks the
+  // PIN next time.
+  if (t === el.pinForgetAll) {
+    askSum({
+      owner: 'forget-all', stay: true, why: `🔑 To forget every device that remembers ${nameOf(p)}`,
+      right: () => run(async () => {
+        const got = await withPin((pin) => forgetAllDevices(personId, pin), {
+          title: `${p?.avatar ? `${p.avatar} ` : ''}${nameOf(p)}`,
+          hint: 'Type their PIN. Every device, this one too, asks it again the next time they are opened.',
+        });
+        if (got) { devices = null; flashPin(personId, '🔒 Forgotten on every device'); }
+      }),
     });
     return true;
   }
@@ -1068,7 +1107,7 @@ export function initCloudUI(hooks) {
     syncBtn: $('#cloud-sync'), shareBtn: $('#cloud-share'), backupBtn: $('#cloud-backup'),
     pinState: $('#profile-pin-state'), pinPartHint: $('#profile-pin-hint'), pinPartNote: $('#profile-pin-note'),
     pinPart: $('#profile-pin-part'), pinTools: $('#profile-pin-tools'), pinChange: $('#cloud-pin-change'), pinOff: $('#cloud-pin-off'), pinOffNote: $('#cloud-pin-off-note'),
-    pinRemember: $('#cloud-pin-remember'),
+    pinRemember: $('#cloud-pin-remember'), pinForgetAll: $('#cloud-pin-forget-all'),
     list: $('#cloud-list'), listNote: $('#cloud-list-note'), listItems: $('#cloud-list-items'), listHint: $('#cloud-list-hint'),
     open: $('#cloud-open'), openPic: $('#cloud-open-pic'), openName: $('#cloud-open-name'),
     openSpin: $('#cloud-open-spin'), openBar: $('#cloud-open-bar'), openFill: $('#cloud-open-fill'), openLine: $('#cloud-open-line'),
