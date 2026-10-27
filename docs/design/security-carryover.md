@@ -194,7 +194,7 @@ Read this cold. Each section gives the noodlepads commits and files, the threat 
 
 ## Gaps and things to check first
 
-1. **The edge rule's figures disagree.** The old TODO asked for 100 requests per 10 s. The current row in `docs/decisions.md` says 300 per 10 s, block 10 s, "live 2026-10-26". Ben set the live rule. Read it in the dashboard before copying the figures.
+1. **The edge rule is 300 requests per 10 s per IP, block 10 s** (Ben confirmed and deployed it, 2026-10-26). An older TODO line said 100; 300 is the live figure.
 2. **`handleEvents` has no rate limit.** `worker/events-worker.js` is flarepress's shared file, vendored into both apps. It checks the origin and the 64 KB size, and nothing else. Its `handleFeedback` takes an optional `limiter`, and `handleEvents` does not. The fix goes in pdxfixit/flarepress first (add the same optional `limiter`), then both apps re-vendor the file with `just events-vendor`. Until then, the edge rule in section 1 is the only flood guard on `/api/events`. Effort M, flarepress.
 3. **A device keeps a PIN check it can be guessed against.** A device that remembers a PIN keeps `check`: the PIN's salt and PBKDF2 hash (`web/cloud.js`; `docs/architecture/cloud.md`, "PINs"). A 4-digit PIN has 10,000 values, so anyone with that browser's storage can try them all in a short run. The PIN keeps other people on a shared device out of the app. It does not protect the device's storage. Do not copy this design for a secret that matters.
 4. **The rate limit fails open** (section 2). Decide per route.
