@@ -52,8 +52,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
 
-- **First, when no other session has this repo open: rewrite git history to remove the old PIN-reset address** (Ben, 2026-10-26; the security seat found it in plain text in the first public commit). Rewriting breaks every clone and worktree, so Ben picks the moment: about ten sessions were open when he asked. Then every checkout re-clones. The app already uses a new address.
-
 - **🎤 Live's control bar: move 🔔 Let it ring into a ⋯ menu, and "almost everything else" with it** (Ben, 2026-10-27, from the Overlap council round: "2, as should almost everything else"). Mockup first (new layout; it replaces `docs/decisions.md` rows 206 and 277, which put 🔔 and ✏️ Layout on the bar), and ask which controls stay (▶ Record and tempo, surely; ⏲️ Click track, ✏️ Layout, 🎬 Takes?). On a phone the bar shows a bare 🔔 today, the one place it has no word. Settled the same day: Let it ring stays off for new rows, no drawn pile icon, no demo sound on tap.
 
 
