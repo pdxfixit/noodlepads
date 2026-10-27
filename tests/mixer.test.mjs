@@ -232,19 +232,78 @@ test('a voice that ends early (a stop fades it) lets its graph go then, once; a 
   });
 });
 
-test('at most 8 graphs stand on the live context; the one used longest ago is let go', async () => {
+test('at most 16 graphs stand on the live context (more than a song\'s 8 lanes); the idle one used longest ago is let go', async () => {
   const { ctx, dest, engine, beat, pass, watch } = mixEngine();
   await held(() => {
     const seen = [];
-    for (let i = 0; i < 8; i++) seen.push(watch(engine.busFor(ctx, dest, beat(`beat-${i}`))));
-    assert.equal(engine.mixes(), 8);
+    for (let i = 0; i < 16; i++) seen.push(watch(engine.busFor(ctx, dest, beat(`beat-${i}`))));
+    assert.equal(engine.mixes(), 16);
     engine.busFor(ctx, dest, beat('beat-0'));   // used again: not the oldest now
-    engine.busFor(ctx, dest, beat('beat-8'));
-    assert.equal(engine.mixes(), 8, 'a ninth let one go');
+    engine.busFor(ctx, dest, beat('beat-16'));
+    assert.equal(engine.mixes(), 16, 'a 17th let one go');
     pass(0.1);
-    assert.deepEqual(seen.map((s) => s.disposed), [0, 1, 0, 0, 0, 0, 0, 0], 'beat-1, used longest ago');
-    for (let i = 9; i < 40; i++) engine.busFor(ctx, dest, beat(`beat-${i}`));
-    assert.equal(engine.mixes(), 8, 'however many beats play through it');
+    assert.deepEqual(seen.map((s) => s.disposed), [0, 1, ...Array(14).fill(0)], 'beat-1, used longest ago');
+    for (let i = 17; i < 60; i++) engine.busFor(ctx, dest, beat(`beat-${i}`));
+    assert.equal(engine.mixes(), 16, 'however many beats play through it');
+  });
+});
+
+test('a graph with a voice booked ahead is never let go for the cap; a song of 8 lanes changing beats keeps every lane\'s mix', async () => {
+  const { ctx, dest, engine, beat, hit, pass, watch } = mixEngine();
+  await held(() => {
+    const lanes = Array.from({ length: 8 }, (_, i) => ({ kind: 'lane', i, out: [] }));
+    const playing = lanes.map((lane, i) => { const p = beat(`beat-lane-${i}`); const w = watch(engine.busFor(ctx, lane, p)); hit(p, 5, lane); return w; });
+    // Each lane moves to a second beat: 16 mixes, then a third for lane 0.
+    lanes.forEach((lane, i) => engine.busFor(ctx, lane, beat(`beat-next-${i}`)));
+    engine.busFor(ctx, lanes[0], beat('beat-third'));
+    pass(0.5);
+    assert.deepEqual(playing.map((w) => w.disposed), Array(8).fill(0), 'every mix still sounding is kept');
+    assert.equal(engine.mixes(), 16, 'an idle one went for the third');
+    const busy = [];
+    for (let i = 0; i < 20; i++) { const p = beat(`beat-busy-${i}`); const w = watch(engine.busFor(ctx, dest, p)); hit(p, 5); busy.push(w); }
+    assert.ok(engine.mixes() > 16, 'booked-ahead voices keep their mixes past the cap');
+    assert.deepEqual(busy.map((w) => w.disposed), Array(20).fill(0));
+    pass(6);
+    engine.busFor(ctx, dest, beat('beat-after'));
+    assert.equal(engine.mixes(), 16, 'once they have sounded the cap holds again');
+  });
+});
+
+test('a graph with no effect is not disposed while the fade that cuts its hit is still going', async () => {
+  const { ctx, dest, engine, beat, pass, watch } = mixEngine();
+  await held(() => {
+    const p = beat('beat-fade');
+    const seen = watch(engine.busFor(ctx, dest, p));
+    const list = [];
+    engine.sound(ctx, engine.busFor(ctx, dest, p).input(0), list, p.rows[0], { buffer: {}, duration: 10 }, ctx.currentTime, false, 0, 1);   // cut after 1 s
+    engine.letGo(() => true);
+    ctx.currentTime = 1.004;
+    mock.timers.tick(1100);
+    assert.equal(seen.disposed, 0, 'the 8 ms fade runs to 1.008 s');
+    ctx.currentTime = 1.1;
+    mock.timers.tick(200);
+    assert.equal(seen.disposed, 1);
+  });
+});
+
+test('rung resolves once every mix it asks about is disposed, its Echo tail included', async () => {
+  const { ctx, dest, engine, beat, hit, pass } = mixEngine();
+  await held(async () => {
+    const p = beat('beat-rung', { row: { fx: 'echo' } });
+    hit(p, 2);
+    engine.letGo(() => true);
+    let rung = false;
+    const waiting = engine.rung((m) => m.dest === dest).then(() => { rung = true; });
+    pass(1);
+    await Promise.resolve();
+    assert.equal(rung, false, 'the voice still sounds');
+    pass(2);   // 3 s: the voice ended at 2, the Echo tail (1.2 s) has not
+    await Promise.resolve();
+    assert.equal(rung, false, 'the tail still rings');
+    pass(0.5);
+    await waiting;
+    assert.equal(rung, true);
+    await engine.rung(() => true);   // nothing left ringing: at once
   });
 });
 

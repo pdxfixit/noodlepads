@@ -189,3 +189,53 @@ test('a 🎹 note heard with the roll left open: its Robot stops 6 s after the l
   }
   $('#roll').close();
 });
+
+// A song with ⛪ Hall on the Master: the song stops, and Hall's tail (about
+// 2.4 s) rings out through the lane gains, which stay connected until the
+// mix behind them is gone. They were disconnected a second after the stop.
+test('a song with Hall: its lane gains stay connected past 1 s so the tail rings, and go once the mix has', async () => {
+  const gains = [];
+  const made = ctx.createGain;
+  ctx.createGain = () => {
+    const g = { disconnected: false, connect() {}, disconnect() { g.disconnected = true; }, gain: { value: 1, setValueAtTime() {}, linearRampToValueAtTime() {}, cancelScheduledValues() {}, setTargetAtTime() {} } };
+    gains.push(g);
+    return g;
+  };
+  try {
+    $('#beats-toggle').dispatch('click');
+    newBeatWithRow(page);
+    $('#seq-rows').querySelectorAll('.pill')[0].dispatch('click');
+    document.querySelectorAll('[data-mixer]')[0].dispatch('click');
+    const master = $('#mixer-strips').children.find((c) => c.dataset.strip === 'master').querySelector('[data-fx]');
+    master.value = 'hall';
+    master.dispatch('change');
+    $('#mixer').close();
+    $('#song-tab').dispatch('click');
+    dropBeat($);
+    ctx.currentTime = 60;
+    gains.length = 0;
+    $('#song-play').dispatch('click');
+    await page.settle();
+    const lanes = [...gains];   // the song's lane gains: all it has made so far, one a lane
+    assert.ok(lanes.length > 0 && lanes.every((g) => !g.disconnected));
+    ctx.currentTime = 60.5;   // its first bar is due
+    await wait();
+    mock.timers.enable({ apis: ['setTimeout'] });
+    try {
+      $('#song-play').dispatch('click');   // stop
+      ctx.currentTime = 61.7;
+      mock.timers.tick(1200);
+      await Promise.resolve();
+      assert.ok(lanes.every((g) => !g.disconnected), 'past 1 s, Hall still rings');
+      ctx.currentTime = 66;
+      mock.timers.tick(5000);
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+      assert.ok(lanes.every((g) => g.disconnected), 'gone once the mix is');
+    } finally {
+      mock.timers.reset();
+    }
+  } finally {
+    ctx.createGain = made;
+    ctx.currentTime = 0;
+  }
+});

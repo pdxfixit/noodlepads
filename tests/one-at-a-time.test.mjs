@@ -12,7 +12,7 @@ import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { installPage } from './fake-dom.mjs';
 import { testManifest } from './test-board.mjs';
-import { newBeatWithRow } from './new-beat.mjs';
+import { newBeatWithRow, keysOn, keysOff } from './new-beat.mjs';
 import { dropBeat } from './song-ui.mjs';
 import { createBeatEngine } from '../web/beat-engine.js';
 import { cleanRow } from '../web/beat.js';
@@ -82,18 +82,39 @@ test('a loop run is taken over the same way, while its sounds still load', async
   assert.equal(await loop.ready, false, 'it never began');
 });
 
+test('an owner whose onStop throws does not keep the new run from starting; the old run is stopped anyway', async () => {
+  const t = fakeAudio();
+  const engine = createBeatEngine({ audio: t.audio, clipById: (id) => ({ id }) });
+  const pattern = { bpm: 100, bars: 1, rows: [cleanRow({ clipId: 'kick', steps: [true] })] };
+  await engine.prepareBeats([pattern]);
+  const was = console.error;
+  const said = [];
+  console.error = (...a) => said.push(a);
+  try {
+    const broken = listRun(engine, pattern, { onStop: () => { throw new Error('owner broke'); } });
+    const next = listRun(engine, pattern);
+    assert.equal(broken.on, false, 'stopped by the engine');
+    assert.equal(next.on, true, 'the new run started');
+    assert.equal(engine.playing(), next);
+    assert.equal(said.length, 1, 'and the failure was said');
+  } finally {
+    console.error = was;
+  }
+});
+
 // ── The app ──
 
 let page;
 let $;
 let seq;
+let theEngine;
 let state;
 let ctx;
 let audio;
 
 before(async () => {
   console.error = () => {};
-  globalThis.noodleTestSeq = (s) => { seq = s; };
+  globalThis.noodleTestSeq = (s, e) => { seq = s; theEngine = e; };
   page = installPage({ manifest: testManifest() });
   $ = page.$;
   await (await import('../web/app.js')).ready;
@@ -175,3 +196,44 @@ test('🧸 Kids\' ▶ comes back when another run takes over', async () => {
   await setSetting('level', 'regular');
   await page.settle();
 });
+
+// ⌨️ Keys records into the beat while it plays. Whatever takes over, the beat
+// stops through the beat maker's stop, which tells ⌨️ Keys (dj.beatStopped),
+// so the recording ends and its notes are kept, with their Undo.
+async function recordOneNote(at) {
+  keysOn(page);
+  $('#dj-beatbar').querySelector('[data-beat-new]').dispatch('click');
+  $('#dj-bars').querySelector('[data-bars="1"]').dispatch('click');
+  ctx.currentTime = at;
+  $('#dj-record').dispatch('click');
+  await page.settle();
+  ctx.currentTime = at + 0.05 + 16 * 0.15;
+  await new Promise((r) => setTimeout(r, 60));
+  page.key('a', { code: 'KeyA' });
+  assert.equal($('#dj-record').textContent, '■ Stop', 'recording');
+}
+const scratchHits = () => {
+  const b = state.savedBeats.find((x) => x.id.startsWith('beat-scratch-') && x.personId === state.personId);
+  return b?.rows.reduce((n, r) => n + r.steps.filter(Boolean).length, 0) ?? 0;
+};
+
+for (const [what, takeOver] of [
+  ['a run of the engine (what Song and 🧸 Kids start)', () => theEngine.play({ list: { events: [] } })],
+  ['a groove\'s sample', () => seq.hearBeat('keys', { ...openBeat() }, { seconds: 1 })],
+]) {
+  test(`a ⌨️ Keys recording is kept when ${what} takes over`, async () => {
+    const { getLog } = await import('../web/log.js');
+    await recordOneNote(5000);
+    await takeOver();
+    await page.settle();
+    assert.equal($('#dj-record').textContent, '● Record', 'the recording ended');
+    assert.equal(seq.playing(), false);
+    assert.equal(getLog().filter((e) => e.kind === 'dj').at(-1).data.why, 'stopped');
+    assert.equal(scratchHits(), 1, 'its note is kept');
+    assert.match($('#banner-text').textContent, /^Added 1 note/);
+    seq.stopHearing();
+    theEngine.stop();
+    keysOff(page);
+    ctx.currentTime = 0;
+  });
+}

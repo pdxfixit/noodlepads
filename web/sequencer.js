@@ -305,6 +305,10 @@ export function createSequencer(deps) {
   // Saves the open beat into the library and keeps it as the open one (the
   // scratch is open when `patterns` has no record). Any change ends a
   // groove's "just loaded" line: the kid has started on it.
+  // Keep it synchronous: the library and `doc` are updated before it returns.
+  // A run taken over by another (beat-engine.js stopCurrent) is stopped
+  // through stop(), whose read-back (`readAgain`) reads the library at once;
+  // a save that finished later would be read before it landed.
   function save() {
     if (!pattern) return;
     loaded = null;

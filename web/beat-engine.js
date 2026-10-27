@@ -9,7 +9,7 @@
 // (docs/design/one-beat-engine.md). The pure rule for which hits are due is
 // beat.js hitsDue.
 
-import { makeVoice, fadeStop, tooLate } from './audio.js';
+import { makeVoice, fadeStop, tooLate, FADE_SECONDS } from './audio.js';
 import { ACCENT_GAIN, hitGain, hitsDue, moveItem, noteRate } from './beat.js';
 import { rootShift } from './pitch.js';
 import { ringOver } from './rhythm.js';
@@ -21,9 +21,11 @@ export const TICK_MS = 25;
 export const LOOKAHEAD = 0.1;
 // ▶ to the first pill, in seconds, once the sounds are loaded.
 const START_IN = 0.05;
-// Mix graphs on the live context at once (busFor); past this the one used
-// longest ago is let go.
-const MAX_MIXES = 8;
+// Mix graphs on the live context at once (busFor); past this the idle one
+// used longest ago is let go (a mix with voices booked ahead is never). More
+// than the 8 lanes of a song, so a song changing beats on every lane keeps
+// the mixes it is playing.
+const MAX_MIXES = 16;
 
 // deps: audio (audio.js's), clipById(id) (any board's sound, or null).
 export function createBeatEngine({ audio, clipById }) {
@@ -79,7 +81,7 @@ export function createBeatEngine({ audio, clipById }) {
     voice.end = time + loaded.duration / rate;
     if (len > 0 && time + len < voice.end) {
       fadeStop(voice, time + len);
-      voice.end = time + len;
+      voice.end = time + len + FADE_SECONDS;   // silent only once the fade is over
     }
     if (ctx === audio.context()) track(voice, inputs.get(dest));
     const { keep: kept, cut } = ringOver(list, time, ring || row.ring || row.melody);
@@ -141,12 +143,34 @@ export function createBeatEngine({ audio, clipById }) {
       else pending = Math.max(pending, v.end);
     }
     const at = pending >= 0 ? pending : mix.over + mix.tail;
-    if (pending < 0 && now >= at) { mix.bus.dispose(); return; }
+    if (pending < 0 && now >= at) { dispose(mix); return; }
     mix.timer = setTimeout(() => ringOut(mix), Math.max(0.05, at - now) * 1000);
+  }
+  // The mixes let go and not yet disposed, and who waits for some of them.
+  const ringing = new Set();
+  const waiting = [];
+  function dispose(mix) {
+    mix.bus.dispose();
+    ringing.delete(mix);
+    for (const w of [...waiting]) {
+      if ([...ringing].some(w.which)) continue;
+      waiting.splice(waiting.indexOf(w), 1);
+      w.resolve();
+    }
+  }
+  // Resolves once every mix `which({id, dest, p})` picks, let go already or
+  // later, is disposed: its last voice ended and its tail rung. 🎼 Song waits
+  // on it to disconnect its lane gains, so an effect's tail is not cut.
+  function rung(which) {
+    return new Promise((resolve) => {
+      if (![...ringing].some(which)) { resolve(); return; }
+      waiting.push({ which, resolve });
+    });
   }
   function release(mix) {
     if (mix.released) return;
     mix.released = true;
+    ringing.add(mix);
     liveMixes.delete(mix);
     const held = buses.get(mix.dest);
     if (held && mix.id !== null && held.ids.get(mix.id) === mix) held.ids.delete(mix.id);
@@ -170,8 +194,14 @@ export function createBeatEngine({ audio, clipById }) {
           bus.input = (i) => { const node = own(i); inputs.set(node, mix); return node; };
         }
         liveMixes.add(mix);
+        // Past the cap the idle mix used longest ago is let go; one with voices
+        // booked ahead (a song's lane) is kept, and the cap waits.
+        const now = ctx.currentTime;
+        const idle = (m) => m !== mix && ![...m.voices].some((v) => !v.done && v.end > now);
         while (liveMixes.size > MAX_MIXES) {
-          release([...liveMixes].filter((m) => m !== mix).reduce((a, b) => (b.used < a.used ? b : a)));
+          const spare = [...liveMixes].filter(idle);
+          if (!spare.length) break;
+          release(spare.reduce((a, b) => (b.used < a.used ? b : a)));
         }
       }
     }
@@ -225,7 +255,8 @@ export function createBeatEngine({ audio, clipById }) {
     const was = current;
     current = null;
     if (!was?.on) return;
-    try { was.hooks.onStop?.(); } finally { was.stop(); }
+    // A failing owner must not keep the new run from starting: say so and carry on.
+    try { was.hooks.onStop?.(); } catch (err) { console.error('A run could not be stopped by its owner:', err); } finally { was.stop(); }
   }
 
   // Loops the beat `hooks.beat()` from its first pill until the run's
@@ -453,7 +484,7 @@ export function createBeatEngine({ audio, clipById }) {
   }
 
   return {
-    preparing: () => preparing, mixes: () => liveMixes.size, playing: () => (current?.on ? current : null), stop: stopCurrent, has, get, drop, keep, held,
+    preparing: () => preparing, mixes: () => liveMixes.size, rung, playing: () => (current?.on ? current : null), stop: stopCurrent, has, get, drop, keep, held,
     prepare, refresh, sound, busFor, letGo, prepareBeats, soundHit, play,
   };
 }

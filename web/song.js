@@ -1205,8 +1205,12 @@ export function createSong(deps) {
     raf = 0;
     run.stop();   // its timer, and its voices fade
     run = null;
-    for (const g of laneGains) setTimeout(() => { try { g.disconnect?.(); } catch { /* gone */ } }, 1000);
-    seq.endMix?.(laneGains);   // its mix graphs, and their 〰️ 🤖 oscillators, go too
+    // Its mix graphs, and their 〰️ 🤖 oscillators, go too. The lane gains stay
+    // connected until they have: a 🔁 Echo or ⛪ Hall tail rings out through them.
+    const gains = laneGains;
+    seq.endMix?.(gains);
+    Promise.all([engine.rung((m) => gains.includes(m.dest)), new Promise((resolve) => setTimeout(resolve, 1000))])
+      .then(() => { for (const g of gains) { try { g.disconnect?.(); } catch { /* gone */ } } });
     laneGains = [];
     mixEnds = [];
     shown = new Set();
