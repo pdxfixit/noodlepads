@@ -191,7 +191,7 @@ test('real instruments play Detroit soul, Lo-fi, Reggae, Gospel and R&B; Soca ha
   assert.ok(players('chiptune').includes('chip'));
   assert.ok(groove('chiptune').rows.some(([k]) => groupOf(k) === 'game'), 'with a game sound');
   assert.deepEqual(players('halftime'), [], 'drums alone: no one to name');
-  assert.deepEqual(players('soca'), ['steel'], 'each once; the default ⚡ Synth bass gets no chip');
+  assert.deepEqual(players('soca'), ['steel'], 'each once; the default 🎛️ Synth bass gets no chip');
   assert.deepEqual(players('dembow'), [], 'synth chords and bass alone: no chip');
   const [steel] = groovePlayers(groove('soca'), kitOf);
   assert.equal(steel.name, 'Steel drum');

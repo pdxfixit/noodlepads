@@ -1,5 +1,5 @@
 // No product, brand or label name in the app's words (docs/decisions.md,
-// Product; Ben, 2026-10-26): "808" is Boom bass, "Motown" is Detroit soul.
+// Product; Ben, 2026-10-26): "808" is Boom, "Motown" is Detroit soul.
 // Ids a saved beat, setting or backup points at may keep such a name
 // (`snare-808`, the instrument `808`, the groove `motown`); only what a
 // person reads is checked here: the kit's labels and groups, the grooves'
@@ -57,12 +57,12 @@ test('no product, brand or label name in any label a person reads', () => {
 test('the check catches the names it is for', () => {
   for (const w of ['808 snare', 'sliding 808 bass', 'Motown', 'a TR-909 beat', 'on YouTube', 'spotify'])
     assert.ok(NAMED.test(w), w);
-  for (const w of ['Boom bass', 'Detroit soul', 'Bass C', '1-up', 'snare-808 x', 'Chip'])
+  for (const w of ['Boom', 'Detroit soul', 'Bass C', '1-up', 'snare-808 x', 'Chip'])
     assert.ok(!NAMED.test(w), w);
 });
 
 test('the renamed ones keep their ids, so saved beats and picks still find them', () => {
-  assert.equal(INSTRUMENTS.find((i) => i.id === '808')?.name, 'Boom bass');
+  assert.equal(INSTRUMENTS.find((i) => i.id === '808')?.name, 'Boom');
   assert.equal(GROOVES.find((g) => g.id === 'motown')?.name, 'Detroit soul');
   const kit = Object.fromEntries(board.kit.map((c) => [c.id, c.label]));
   assert.equal(kit['snare-808'], 'Electro snare');

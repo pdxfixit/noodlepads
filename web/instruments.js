@@ -24,13 +24,13 @@ export const FAMILIES = [
 // presets carry no `inst` in boards.json.
 export const INSTRUMENTS = [
   { id: 'pluck', name: 'Pluck', emoji: '💧', family: 'keys', groups: ['notes'] },
-  { id: 'synth', name: 'Synth', emoji: '⚡', family: 'keys', groups: ['chords', 'bass'] },
+  { id: 'synth', name: 'Synth', emoji: '🎛️', family: 'keys', groups: ['chords', 'bass'] },
   { id: 'piano', name: 'Piano', emoji: '🎹', family: 'keys', groups: ['notes', 'chords'] },
   { id: 'organ', name: 'Organ', emoji: '⛪', family: 'keys', groups: ['notes', 'chords'] },
   { id: 'chip', name: 'Chip', emoji: '🎮', family: 'keys', groups: ['notes'] },
-  // Boom bass keeps the id `808`: saved picks (`instBass`), backups and the
+  // Boom keeps the id `808`: saved picks (`instBass`), backups and the
   // presets `808-c`… point at it. Only its name changed (no product names).
-  { id: '808', name: 'Boom bass', emoji: '🌋', family: 'keys', groups: ['bass'] },
+  { id: '808', name: 'Boom', emoji: '🌋', family: 'keys', groups: ['bass'] },
   { id: 'marimba', name: 'Marimba', emoji: '🪵', family: 'mallets', groups: ['notes'] },
   { id: 'steel', name: 'Steel drum', emoji: '🛢️', family: 'mallets', groups: ['notes'] },
   { id: 'kalimba', name: 'Kalimba', emoji: '✨', family: 'mallets', groups: ['notes'] },

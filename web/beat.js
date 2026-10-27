@@ -452,7 +452,7 @@ export function grooveBeat(groove, personId, hasClip = () => true) {
 // instrument once, in the order its rows come, with its family. `kitOf`
 // finds a kit preset by its kit id (null when the board lacks it); rows of
 // sounds no instrument plays (drums, game sounds) are left out, and so are
-// the default sounds (💧 Pluck, ⚡ Synth): on nearly every card, a chip of
+// the default sounds (💧 Pluck, 🎛️ Synth): on nearly every card, a chip of
 // them hid the grooves that have a real instrument.
 const DEFAULT_PLAYERS = new Set(Object.values(PLAYED).map((p) => p.default));
 export function groovePlayers(groove, kitOf) {
