@@ -184,6 +184,7 @@ Ben: *"Optimizing the user interface for a variety of screens is very important.
 - Ben often answers mid-task. Fold the answer in and say how.
 
 **Doing the work**
+- **Use the cheapest model that does the job** (Ben, 2026-10-27): Haiku for searches, docs and small reviews; Sonnet for code and council seats; the strongest model only for design or a hard bug. Pass `model` when starting an agent.
 - **Delegate independent work to background agents** in their own worktrees (Ben prefers it: he keeps talking while work runs). Brief each with what to read and what not to touch, then land their commits with `just land` from the main checkout and archive their branches.
 - **Record every request the moment it arrives:** a line in [TODO.md](TODO.md) "Agents do", or in [docs/state.md](docs/state.md) "In flight" if you start at once. A request said only in chat is lost when the session ends. Delete the line when the work lands.
 - When your task is done, work down "Agents do", quickest first, one commit each.

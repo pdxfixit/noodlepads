@@ -109,7 +109,8 @@ for (const [what, pattern, files] of ONLY) {
 }
 
 test('✅ schedulers on the audio clock: the beat maker, 🎼 Song and 🧸 Kids', () => {
-  assert.deepEqual(webWith(/setInterval\(/).filter((f) => /\.currentTime\b/.test(src[f])), ['kids.js', 'sequencer.js', 'song.js'], FIX);
+  // sheet.js reads the clock too, but its interval is a 150 ms play watch, not a scheduler.
+  assert.deepEqual(webWith(/setInterval\(/).filter((f) => f !== 'sheet.js' && /\.currentTime\b/.test(src[f])), ['kids.js', 'sequencer.js', 'song.js'], FIX);
 });
 
 test('✅ the beat maker and 🎼 Song share one tick and lookahead', () => {

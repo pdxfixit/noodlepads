@@ -82,7 +82,7 @@ test("every 'Escape' handler in web/ calls preventDefault, so the page's Stop al
       // up to the closing brace.
       const rest = line.slice(at);
       let body;
-      if (line.includes("!== 'Escape'")) body = lines.slice(i + 1, i + 3);
+      if (line.includes("!== 'Escape'")) body = lines.slice(i + 1, i + 7);   // a guard, then up to five more guards
       else if (rest.split('{').length === rest.split('}').length && rest.includes('{')) body = [line];
       else {
         const end = lines.findIndex((l, k) => k > i && /^\s*}/.test(l));
@@ -98,8 +98,10 @@ test("every 'Escape' handler in web/ calls preventDefault, so the page's Stop al
 // go off, as ⏹️ and Space do (app.js stopEverything).
 test('Esc stops a playing song and turns both click tracks off', async () => {
   const { dropBeat } = await import('./song-ui.mjs');
+  const { newBeatWithRow } = await import('./new-beat.mjs');
   const on = (sel) => page.$(sel).getAttribute('aria-pressed') === 'true';
   page.$('#beats-toggle').dispatch('click');
+  newBeatWithRow(page);   // a beat of its own for the song's strip
   if (!on('#seq-click')) page.$('#seq-click').dispatch('click');
   if (!on('#dj-click')) page.$('#dj-click').dispatch('click');
   assert.ok(on('#seq-click') && on('#dj-click'), 'both click tracks on');
