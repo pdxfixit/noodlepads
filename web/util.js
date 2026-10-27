@@ -105,3 +105,12 @@ export function recall(key) {
 export function forget(key) {
   try { localStorage.removeItem(key); } catch { /* per-viewer nicety only */ }
 }
+
+// A pad, key or tile whose sound loops: lit, and pressed for a screen reader
+// ("Kick, toggle button, pressed"), so it is heard that a tap stops it. One
+// that is not looping says nothing, as a tap only plays it.
+export function showLooping(button, on) {
+  button.classList.toggle('looping', on);
+  if (on) button.setAttribute('aria-pressed', 'true');
+  else button.removeAttribute('aria-pressed');
+}

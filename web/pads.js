@@ -9,7 +9,7 @@ import { people, person, clipsFor, findClip, padColor } from './board.js';
 import { voiceById, amountText, chainOf, chainText, stepLook } from './voices.js';
 import { announce } from './ui.js';
 import { isKitClip, ownSoundsTitle, groupKit, openKitGroups, withHidden } from './model.js';
-import { remember, recall, onePressOneClick } from './util.js';
+import { remember, recall, onePressOneClick, showLooping } from './util.js';
 import { countPlay } from './play-count.js';
 import { groupOwn, cleanGroups, UNGROUPED } from './groups.js';
 import { SETTINGS, getSetting, setSetting, onSetting } from './settings.js';
@@ -233,7 +233,7 @@ export function renderPads() {
     const b = makePad(clip);
     b.dataset.id = clip.id;
     if (clip.hidden) b.classList.add('hidden-clip');
-    if (audio.isLooping(clip.id)) b.classList.add('looping');
+    if (audio.isLooping(clip.id)) showLoopingPad(b, true);
     if (i < 9 && !state.editing) {
       const key = document.createElement('span');
       key.className = 'pad-key';
@@ -567,6 +567,13 @@ async function cornerBadge(kind, clip) {
   renderPads();
 }
 
+// In ✏️ Edit sounds a pad's aria-pressed is its "chosen" state (editCell),
+// so a loop there is only lit.
+function showLoopingPad(pad, on) {
+  if (state.editing) pad.classList.toggle('looping', on);
+  else showLooping(pad, on);
+}
+
 // A tap on a looping pad stops it; on any other pad, plays it once. Returns
 // true when it stopped a loop.
 // `ring`: 🎤 Live's 🔔 Let it ring, the sound's earlier hits ring on under this
@@ -834,7 +841,8 @@ export function initPads(hooks) {
 
   audio.on.progress = setProgress;
   audio.on.looping = (id, on) => {
-    padFor(id)?.classList.toggle('looping', on);
+    const pad = padFor(id);
+    if (pad) showLoopingPad(pad, on);
     onLooping(id, on);
   };
   audio.on.broken = (id, on = true) => padFor(id)?.classList.toggle('broken', on);

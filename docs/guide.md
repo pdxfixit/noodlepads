@@ -1115,7 +1115,7 @@ ADR 0002.
 
 Every control is a real button or field. On the board: Tab to a pad and Enter or
 Space plays it; **Shift+Enter** (or Shift-click) keeps it repeating (Enter again stops it);
-a key does the same. Shift does what a hold does wherever there is one: a
+a key does the same. A pad, key or tile whose sound loops is also `aria-pressed="true"` (and has no `aria-pressed` otherwise), so a screen reader says it is pressed and a tap stops it; in Edit sounds `aria-pressed` is the pad's chosen state. Shift does what a hold does wherever there is one: a
 row's speaker opens its slider, a voice chip shows its recipe, 🎲 opens Pick a
 name, a pill turns loud. 1–9
 play the first nine pads on 🔊 Pads (where the keys show, the number row plays them), ← → change person, Space or Esc stops everything (⏹️ Stop all). The exact rules: Esc first lets go

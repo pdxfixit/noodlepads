@@ -14,7 +14,7 @@
 
 import { countAt, KEY_ROWS, KEY_CODES, keyboardOrder, defaultDeck, fallbackLabel, layoutLabel, detectLayout, LAYOUTS, LAYOUT_NAMES, keyFor, clockText, createSnapper, tapTempo, TAP_GAP_MAX } from './rhythm.js';
 import { SIGNATURES, COMMON_BPMS, tempoStops, stopFor, typedBpm } from './beat.js';
-import { recall, remember, onePressOneClick } from './util.js';
+import { recall, remember, onePressOneClick, showLooping } from './util.js';
 import { PICTURES, pictureTakenBy } from './model.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
 import { openDialog, setupDialog, openerOf } from './dialogs.js';
@@ -189,7 +189,7 @@ export function createDJ({ el, deps }) {
           name.textContent = 'No sound';
         }
         b.setAttribute('aria-label', `${letterFor(code)}: ${clip ? clip.label : 'no sound'}`);
-        if (clip && deps.isLooping?.(clip.id)) b.classList.add('looping');
+        if (clip && deps.isLooping?.(clip.id)) showLooping(b, true);
         b.append(sym, emoji, name, fam);
         return b;
       }));
@@ -276,8 +276,8 @@ export function createDJ({ el, deps }) {
   }
   // A sound started or stopped looping: its keys and tiles glow while it loops.
   function looping(clipId, on) {
-    for (const [code, id] of Object.entries(deck())) if (id === clipId) keyEl(code)?.classList.toggle('looping', on);
-    for (const t of tilesOf(clipId)) t.classList.toggle('looping', on);
+    for (const [code, id] of Object.entries(deck())) if (id === clipId) { const k = keyEl(code); if (k) showLooping(k, on); }
+    for (const t of tilesOf(clipId)) showLooping(t, on);
   }
 
   // A key: its sound, and its tile lit with a ripple.
