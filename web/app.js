@@ -29,7 +29,7 @@ import { validateManifest, isKitClip, boardTitle, soloPerson, SOLO_NAME, groupKi
 const COMMON_COLOR = '#333040';
 import { createDJ } from './dj.js';
 import { createSong } from './song.js';
-import { initPads, renderPads, renderPeople, makePad, makeAddPad, padFor, setProgress, tapPad, flash, hasChosen, clearChosen, cancelDrag, kitOpen, toggleKitGroup, setPadHooks } from './pads.js';
+import { initPads, renderPads, renderPeople, makePad, makeAddPad, padFor, setProgress, fillPad, sweepFills, tapPad, flash, hasChosen, clearChosen, cancelDrag, kitOpen, toggleKitGroup, setPadHooks } from './pads.js';
 import { createWarmer } from './warm.js';
 import { initBulk } from './bulk.js';
 import { initSheet, openSheet, setBeatTempo, isRecording } from './sheet.js';
@@ -874,6 +874,8 @@ async function start() {
 
   meter.grille = el.grille;
   meter.setProgress = setProgress;
+  meter.fill = fillPad;
+  meter.sweep = sweepFills;
   audio.on.started = () => meter.run();
   meter.onLevel = (l) => { if (keysShow()) dj?.level(l); };
 

@@ -32,6 +32,10 @@ export const meter = {
   grille: null,
   sheetGrille: null,
   setProgress: () => {},
+  // The fill across a pad is an animation started once (pad-fill.js). fill()
+  // draws a playing sound's and says true; false: write its progress each frame.
+  fill: () => false,
+  sweep: () => {},      // lets go of the fills of sounds no longer playing
   onLevel: () => {},   // the level each frame (DJ mode's glow follows it)
   sheetOpen: () => false,
   recording: () => false,
@@ -41,9 +45,11 @@ export const meter = {
     const step = () => {
       const ctx = audio.context();
       for (const [id, e] of audio.playing) {
+        if (this.fill(id, e, ctx.currentTime)) continue;
         const t = Math.max(0, (ctx.currentTime - e.t0) / e.duration);  // a loop waiting for its bar starts at 0
         this.setProgress(id, e.loop ? t % 1 : Math.min(1, t));
       }
+      this.sweep(audio.playing);
       this.level = Math.max(levelOf(audio.analyser, this.scratch), this.level * 0.86);
       drawGrille(this.grille, this.level);
       this.onLevel(this.level);

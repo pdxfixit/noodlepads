@@ -14,7 +14,7 @@ beats and a song) that only ends in the app's normal beat and song saving.
 | Layer | Files | Pure? | Who calls it |
 |---|---|---|---|
 | Output and playing | `audio.js` | no (Web Audio) | `app.js`, `pads.js`, `sheet.js`, `chop.js`, `bulk.js`, `things.js`, `kids.js`, `wave.js`, `meter.js`; `sequencer.js` and `song.js` through `deps.audio` |
-| Grille and pad fill | `meter.js` | no (rAF) | `app.js` sets its hooks; `audio.on.started`, `sequencer.js`, `song.js` start it |
+| Grille and pad fill | `meter.js`, `pad-fill.js` | no (rAF; Web Animations) | `app.js` sets its hooks; `audio.on.started`, `sequencer.js`, `song.js` start it |
 | Warming | `warm.js` | yes (the loads and the idle clock are handed in) | `app.js` makes the one warmer; `pads.js renderPads` → `onShown` → `now`; `app.js showPerson` → `later` |
 | The render | `voices.js` | no (OfflineAudioContext, Worker) | `audio.js load`, `sheet.js`, `bulk.js`, `things.js` |
 | Building blocks | `steps.js` | yes (builds nodes on any ctx it is given) | `voices.js`, `tweaks.js`, `mixer.js`, `sheet.js`, `shape.js` |
@@ -118,8 +118,20 @@ The ids in `audio.playing` are a shared namespace:
 | `'see-all'` | 🗂️ See all's row ▶ (`things.js PLAY_ID`) |
 | `'share-preview'` | 🔗 Shared with me's ▶ Play (`cloud-ui.js playPreview`, levelled to peak 0.9; the last `KEEP_SHARE_PREVIEWS` (4) decoded previews kept) |
 
-`meter.js run` calls `setProgress(id, …)` for every entry; `pads.js
-setProgress` ignores ids that are not a pad.
+`meter.js run` asks `meter.fill` (`pads.js fillPad` → `pad-fill.js draw`) for
+every entry. A pad's fill is one animation of its `::before` (`transform:
+scaleX`, off the main thread), started the first time a sound is seen playing and
+only checked against the audio clock after (moved when it drifts over 120 ms; a
+new entry, a sound turned into a loop or a redrawn board starts a fresh one).
+`draw` answers false for the skins whose CSS reads `--progress` (`PROGRESS_SKINS`:
+Slam, Spinner; `tests/pad-progress.test.mjs` keeps the list true against
+`styles.css`) and for a browser that cannot animate `::before`, and then `meter.js`
+calls `setProgress(id, …)` each frame as before (cached pad, a value already shown
+not written again). `audio.on.progress(id, 0)` (a stop or the end) clears the
+fill; `meter.sweep` clears the fill of any sound no longer in `playing`. Why: a
+per-frame inline-style write cost a style recalc of every pad playing (about
+1 ms each on a phone four times slower). `pads.js setProgress` ignores ids that
+are not a pad.
 
 ## From a tap to a sound
 

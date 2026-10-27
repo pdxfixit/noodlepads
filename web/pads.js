@@ -5,6 +5,7 @@
 
 import { state, persist, setOverride } from './state.js';
 import { audio } from './audio.js';
+import { createPadFill } from './pad-fill.js';
 import { people, person, clipsFor, findClip, padColor } from './board.js';
 import { voiceById, amountText, chainOf, chainText, stepLook } from './voices.js';
 import { announce } from './ui.js';
@@ -33,19 +34,38 @@ export function padFor(id) {
   return el.pads.querySelector(`[data-id="${CSS.escape(id)}"]`);
 }
 
+// The fill across a pad while it plays is an animation started once, not a
+// write each frame (pad-fill.js); meter.js asks fillPad first and falls back
+// to setProgress for the skins that draw --progress themselves.
+const fill = createPadFill({ padFor });
+export const fillPad = fill.draw;
+export const sweepFills = fill.sweep;
+
 // How far through its sound a pad is, 0 to 1 (meter.js, each frame), and
 // `playing` while it is part way: the skins that show playing (Switch, Lit
 // pads; styles.css "Pad skins") key on it. A stop or the end sets 0, which
 // clears it.
+// It runs every frame for every sound playing, so the pad is remembered (a
+// search of the page each frame is the cost of a tap's whole board), and a
+// value the pad already shows is not written again (a write restyles it).
+const drawn = new Map();   // sound id -> { pad, p }: the pad last drawn for it, and the value it shows
 export function setProgress(id, p) {
-  const pad = padFor(id);
-  if (!pad) return;
-  pad.style.setProperty('--progress', p);
+  if (p === 0) fill.clear(id);   // a sound ended or was stopped
+  let d = drawn.get(id);
+  if (!d?.pad.isConnected) {   // not drawn yet, or the board was redrawn since
+    const pad = padFor(id);
+    if (!pad) { drawn.delete(id); return; }
+    d = { pad, p: undefined };
+    drawn.set(id, d);
+  }
+  if (d.p === p) return;
+  d.p = p;
+  d.pad.style.setProperty('--progress', p);
   const playing = p > 0 && p < 1;
   // A short sound that loops would light and unlight its pad many times a
   // second (Switch, Lit pads): past three a second it stays as it was.
-  if (playing && !pad.classList.contains('playing') && !mayFlash(pad)) return;
-  pad.classList.toggle('playing', playing);
+  if (playing && !d.pad.classList.contains('playing') && !mayFlash(d.pad)) return;
+  d.pad.classList.toggle('playing', playing);
 }
 
 // Whose sounds: a round button in the top right corner, like an account
