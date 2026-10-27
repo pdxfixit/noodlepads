@@ -34,3 +34,22 @@ test('an old beat saved with Shuffle plays swung at Regular, on its eighths and 
   assert.deepEqual(times(plan(50, 0, 1, 2, 3)).slice(0, 4), [0, 0.1875, 0.375, 0.4375], 'sixteenths bounce too');
   assert.deepEqual(times(plan(0, 0, 2, 4, 6)).slice(0, 4), [0, 0.25, 0.5, 0.75], 'straight stays straight');
 });
+
+test('on a phone the bars and swing share one row as pickers: each has a select twin that presses its key', async () => {
+  const { document } = globalThis;
+  const pick = (id) => document.querySelector(`#${id} .seq-pick`);
+  document.querySelectorAll('.beat-bar')[0].querySelector('[data-beat-new]').dispatch('click');   // nothing is open until 🆕 New
+  await page.settle();
+  assert.deepEqual(pick('seq-bars').querySelectorAll('option').map((o) => o.textContent), ['1 bar', '2 bars', '4 bars']);
+  assert.deepEqual(pick('seq-swing').querySelectorAll('option').map((o) => o.textContent), ['Straight', 'Swing', 'Shuffle']);
+  const swing = pick('seq-swing');
+  swing.value = '33';
+  swing.dispatch('change');
+  assert.equal(document.querySelector('#seq-swing [data-swing="33"]').getAttribute('aria-pressed'), 'true', 'the picker presses the key');
+  const bars = pick('seq-bars');
+  bars.value = '2';
+  bars.dispatch('change');
+  assert.equal(document.querySelector('#seq-bars [data-bars="2"]').getAttribute('aria-pressed'), 'true');
+  document.querySelector('#seq-swing [data-swing="0"]').dispatch('click');
+  document.querySelector('#seq-bars [data-bars="1"]').dispatch('click');
+});

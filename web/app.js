@@ -391,7 +391,7 @@ function setKeys(on) {
 function fitLines() {
   for (const sel of document.querySelectorAll('.seq-pick')) pickerFor(sel.closest('.seq-barsel'), sel);
   fitLine(document.querySelector('.toolbar'), ['fit-tight', 'fit-short', 'fit-stack']);
-  fitLine($('#seq-shape-line'), ['fit-tight', 'fit-short', 'fit-pick', 'fit-nosig', 'fit-noswing'], $('#seq-deck'));
+  fitLine($('#seq-shape-line'), ['fit-tight', 'fit-short', 'fit-pick', 'fit-nosig'], $('#seq-deck'));
   const deck = document.querySelector('.dj-bar');
   fitLine(deck.querySelector('.beat-shape'), ['fit-tight', 'fit-short', 'fit-pick', 'fit-nosig'], deck);
   fitLine($('#groove-how'), ['fit-stack']);   // keeps its padding: stacks before it hugs the frame
