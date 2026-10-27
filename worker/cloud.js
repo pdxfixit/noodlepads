@@ -960,16 +960,17 @@ async function slowDown(env, binding, profileId) {
 
 // Every /api/ path but /api/log. Returns a Response. A route that makes,
 // opens, pulls, pushes, shares or changes a PIN fills `seen`, and the event
-// goes in the metrics (worker/metrics.js) once it has worked, or when a PIN
-// was wrong; with `ctx`, after the answer is sent.
+// goes in the metrics (worker/metrics.js) once it has worked, with `ctx`
+// after the answer is sent. A refused PIN writes nothing: anyone can send
+// those, and each row is a write against the database's daily limit (the app
+// counts a wrong PIN itself, web/cloud.js).
 export async function handleCloud(request, env, now = Date.now(), ctx = null) {
   const seen = {};
   const res = await route(request, env, now, seen);
-  const pinWrong = res.status === 401 || res.status === 429;
-  if (seen.kind && (res.ok || (seen.kind === 'open' && pinWrong))) {
-    const event = res.ok ? seen : { kind: 'pin-wrong', profile: seen.profile };
+  if (seen.kind && res.ok) {
+    const event = seen;
     const done = (async () => {
-      if (res.ok && !event.device) {
+      if (!event.device) {
         const key = bearer(request);
         if (key) event.device = await sha256Hex(key);
       }

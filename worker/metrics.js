@@ -24,7 +24,7 @@ import { parseAgent } from '../web/agent.js';
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const KEEP_MS = 14 * DAY_MS;          // activity
 export const DEVICE_KEEP_MS = 90 * DAY_MS;   // a device's row: its first-seen and sync count
-export const KINDS = ['make', 'open', 'pull', 'push', 'share', 'pin', 'pin-wrong'];
+export const KINDS = ['make', 'open', 'pull', 'push', 'share', 'pin'];
 // The events that also delete old rows: every one but a pull, the most
 // common, so the delete runs often but not on every sync.
 const SWEEPS = new Set(['make', 'open', 'push', 'share', 'pin']);
@@ -78,7 +78,7 @@ async function quietly(env, statements, why) {
 // key before a new PIN gave it another, so it stays one device.
 export async function noteEvent(env, request, seen, now) {
   if (!KINDS.includes(seen?.kind) || typeof seen.profile !== 'string') return false;
-  if (seen.kind !== 'pin-wrong') await expireReports(env, now);
+  await expireReports(env, now);
   // Switched off: nothing noted, but old rows still go on time.
   if (!optedIn(request)) return SWEEPS.has(seen.kind) ? quietly(env, () => sweep(env, now), 'sweep') : false;
   const place = placeOf(request);

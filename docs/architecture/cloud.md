@@ -353,7 +353,7 @@ The player id is localStorage `telemetry-player` (a random UUID, `newPlayer`), n
 
 ## Player metrics (D1)
 
-`worker/cloud.js handleCloud` fills `seen` for make, open, pull, push, share and PIN change; a wrong PIN on open becomes `pin-wrong`. After the answer (`ctx.waitUntil`), `metrics.js noteEvent`:
+`worker/cloud.js handleCloud` fills `seen` for make, open, pull, push, share and PIN change, only when the call worked: a refused PIN writes no row, since anyone can send those and each row is a write against D1's daily limit (the app counts a wrong PIN itself, `cloud.js unlock`; old `pin-wrong` rows age out). After the answer (`ctx.waitUntil`), `metrics.js noteEvent`:
 
 - Nothing is noted when the request has no `X-Noodle-App` (the device's `sendUsage` is off: `device-meta.js appMeta` returns null and `cloud-api.js` leaves the header out). Old rows are still swept.
 - A `devices` row per key hash: first/last seen, pull count (`syncs`), app version, browser, OS, type (`agent.js parseAgent`), width bucket (`WIDTHS`). A new PIN renames the row to the new key (`seen.was`).

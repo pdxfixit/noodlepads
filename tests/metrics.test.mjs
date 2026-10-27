@@ -111,15 +111,16 @@ test('nothing stored holds the IP, a hash of it, or the User-Agent', async () =>
   assert.ok(!dump.includes('iPhone OS'), 'no User-Agent');
 });
 
-test('a wrong PIN is logged with no device; a refused key logs nothing', async () => {
+test('a refused PIN or key writes nothing: a stranger cannot spend the database\'s daily writes', async () => {
   const { env, call } = cloud();
   await make(call, 'p-a', '1234');
-  assert.equal((await call('POST', 'profiles/p-a/open', { body: { pin: '0000' }, cf: VANCOUVER })).status, 401);
+  for (let i = 0; i < 4; i++) assert.equal((await call('POST', 'profiles/p-a/open', { body: { pin: '0000' }, cf: VANCOUVER })).status, 401);
+  assert.equal((await call('POST', 'profiles/p-a/open', { body: { pin: '0000' }, cf: VANCOUVER })).status, 429, 'the fifth wrong PIN locks');
+  assert.equal((await call('POST', 'profiles/p-a/open', { body: { pin: '0000' }, cf: VANCOUVER })).status, 429, 'a locked try is refused');
   assert.equal((await call('GET', 'profiles/p-a/records?since=0', { key: 'a'.repeat(32) })).status, 401);
   assert.equal((await call('POST', 'profiles/p-zz/open', { body: {} })).status, 404);
   assert.deepEqual(env.DB.rows('SELECT kind, device, country FROM activity ORDER BY id'), [
     { kind: 'make', device: env.DB.rows('SELECT hash FROM keys')[0].hash, country: 'US' },
-    { kind: 'pin-wrong', device: null, country: 'CA' },
   ]);
 });
 

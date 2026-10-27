@@ -1079,7 +1079,7 @@ ADR 0002.
 - **Player metrics** (Ben, ADR 0016, narrowed by ADR 0027), for people in the
   cloud only: the cloud notes each device that uses a profile (type, browser,
   OS, screen width, app version, syncs, first and last seen) and each make,
-  open, pull, push, share, PIN change and wrong PIN with the country it came
+  open, pull, push, share and PIN change with the country it came
   from. D1 keeps events 14 days (a device's row 90). The telemetry runner
   (pdxfixit/telemetry) harvests them daily, with Cloudflare's stats for the
   site, and keeps them (ids a year at most). `just cloud-stats` reads only its
