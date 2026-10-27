@@ -18,7 +18,9 @@
 // starts.
 
 import { cleanVolume } from './row-volume.js';
-import { cutName } from './names.js';
+import { cutName, MAX_LABEL } from './names.js';
+import { barSteps } from './old-beats.js';
+import { newId } from './util.js';
 
 export const MAX_LANES = 8;
 export const START_LANES = 4;            // a new song's lanes; ➕ Add a lane adds up to MAX_LANES
@@ -33,6 +35,8 @@ export const MIN_TEMPO = 60;
 export const MAX_TEMPO = 180;
 export const DEFAULT_TEMPO = 100;
 export const MAX_TEMPO_MARKS = 32;       // tempo changes in one song
+export const MAX_SONG_SECONDS = 180;     // the longest song that can be saved as a sound
+export const SONG_ID = /^song-[a-z0-9-]{1,48}$/;
 // Older copies read `slots` (ADR 0006, 0007): a song saves a list of its
 // blocks in that shape too, at most this many, each played at most 4 times.
 const LEGACY_SLOTS = 16;
@@ -370,3 +374,92 @@ export function mapSongBeats(song, fn) {
 
 // Does a stored song have anything in it?
 export const songHasBeats = (song) => songBeatIds(song).length > 0;
+
+// ── A song as a record, and planned to play ──
+
+// Pills in one pass of a saved beat: its bar (its own time signature, 4/4
+// when it has none) times its bars, so a pass is as long as its plan (the beat
+// maker's barOf). Null when the beat is gone. A beat saved before each had a
+// signature was stamped with its old one as it was stored (old-beats.js).
+export function beatSteps(beat) {
+  if (!beat) return null;
+  return barSteps(beat.signature) * ([1, 2, 4].includes(beat.bars) ? beat.bars : 1);
+}
+
+// A song as stored (or read from a backup), made safe to use: {id?,
+// personId, name, tempo, tempos?, lanes, slots}. `tempos` (its tempo marks,
+// ADR 0031) is left out when there are none, as a song from before them is.
+// Null when it belongs to nobody. A song from before the playlist has only
+// slots: they become blocks on lane 1, one after another, and the song's
+// tempo is its first beat's.
+// `beatOf(beatId)` finds a saved beat, for those lengths and that tempo.
+// `slots` is written for older copies of the app (playlist.js legacySlots).
+// A song from before the list (one per person) has no id; linkSong gives it one.
+export function cleanSong(raw, nameFor = () => 'Song', beatOf = () => null) {
+  if (typeof raw?.personId !== 'string' || !raw.personId) return null;
+  const name = typeof raw.name === 'string' && raw.name.trim() ? cutName(raw.name.trim()) : nameFor();
+  let lanes;
+  let tempo;
+  if (Array.isArray(raw.lanes)) {
+    lanes = cleanLanes(raw.lanes);
+    tempo = cleanTempo(raw.tempo);
+  } else {
+    lanes = slotsToLanes(raw.slots, (id) => beatSteps(beatOf(id)));
+    const first = lanes[0].blocks[0];
+    tempo = cleanTempo(Number(beatOf(first?.beatId)?.bpm) || DEFAULT_TEMPO);
+  }
+  const tempos = cleanTempos(raw.tempos, raw);
+  const song = { personId: raw.personId.slice(0, 64), name, tempo, ...(tempos.length ? { tempos } : {}), lanes, slots: legacySlots(lanes) };
+  return SONG_ID.test(raw.id) ? { id: raw.id, ...song } : song;
+}
+
+// The open song with an id: its own, else the saved song of the same name
+// (a song kept before songs were a list, already in the list), else a new id.
+export function linkSong(song, list, makeId = () => newId('song')) {
+  if (song.id) return song;
+  const same = list.find((s) => s.name.toLowerCase() === song.name.toLowerCase());
+  return { id: same?.id ?? makeId(), ...song };
+}
+
+// A name no other song in `list` has (except the song `exceptId`): "Ditty 2".
+export function uniqueSongName(name, list, exceptId) {
+  const taken = new Set(list.filter((s) => s.id !== exceptId).map((s) => s.name.toLowerCase()));
+  if (!taken.has(name.toLowerCase())) return name;
+  for (let n = 2; ; n++) {
+    const tail = ` ${n}`;
+    const candidate = cutName(name, MAX_LABEL - tail.length) + tail;
+    if (!taken.has(candidate.toLowerCase())) return candidate;
+  }
+}
+
+// The song planned to play: each beat it uses planned once at the song's
+// tempo (`seq.beatPlan`), its parts, and its hits from `from` seconds on,
+// every bar at the tempo marked for it (`clock`, playlist.js songClock).
+// `beatOf(beatId)` finds a saved beat. Used to play, to save as a sound,
+// and for a share's preview (share-render.js).
+export function planSong(song, beatOf, seq, { from = 0, skipMuted = false } = {}) {
+  const plans = new Map();
+  for (const lane of song.lanes) {
+    for (const b of lane.blocks) {
+      const beat = beatOf(b.beatId);
+      if (beat && !plans.has(beat.id)) plans.set(beat.id, seq.beatPlan({ ...beat, bpm: song.tempo }));
+    }
+  }
+  const clock = songClock(song);
+  const { parts, seconds, barSeconds } = playParts(song.lanes, (id) => (plans.has(id) ? beatSteps(beatOf(id)) : null), clock);
+  const skipLanes = new Set(skipMuted ? song.lanes.flatMap((l, i) => (l.muted || cleanVolume(l.volume) === 0 ? [i] : [])) : []);
+  return { plans, parts, seconds, barSeconds, clock, events: playEvents(parts, plans, { from, skipLanes, clock }) };
+}
+
+// Sounds every event of a planned song into `dest` from `t0`, each lane
+// through `laneGains[lane]`. Returns how many hits sounded.
+export function soundSong(ctx, laneGains, planned, seq, t0 = 0) {
+  const lists = new Map();
+  let hits = 0;
+  for (const e of planned.events) {
+    const key = `${e.lane}:${e.beatId}:${e.row}`;
+    if (!lists.has(key)) lists.set(key, []);
+    if (seq.soundHit(ctx, laneGains[e.lane], lists.get(key), planned.plans.get(e.beatId).pattern, e.row, t0 + e.time, e.loud, e.note, e.len)) hits++;
+  }
+  return hits;
+}

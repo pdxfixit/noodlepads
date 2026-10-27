@@ -18,17 +18,16 @@
 // song bar renames it, starts a 🆕 New one, or 🗂️ Songs opens another (⧉
 // duplicate, 🗑️ delete).
 //
-// Playback uses the Web Audio clock with the same lookahead as the beat
-// maker: the whole song is planned up front as a list of timed hits, and a
-// 25 ms tick schedules those due in the next 100 ms. Each lane plays through
-// a gain of its own (its volume, or silent when muted), so a lane's speaker
-// works while the song plays.
+// Playback uses the Web Audio clock through the beat engine (beat-engine.js
+// play): the whole song is planned up front as a list of timed hits, and the
+// engine's 25 ms tick books those due in the next 100 ms. Each lane plays
+// through a gain of its own (its volume, or silent when muted), so a lane's
+// speaker works while the song plays.
 
 import { openDialog, setupDialog } from './dialogs.js';
 import { tempoKey } from './tempo-key.js';
 import { encodeWav, normalize } from './wav.js';
-import { barSteps, COMMON_BPMS, tempoStops, stopFor, outputDelay } from './beat.js';
-import { fadeStop, tooLate } from './audio.js';
+import { COMMON_BPMS, tempoStops, stopFor, outputDelay } from './beat.js';
 import { logEvent } from './log.js';
 import { showBanner } from './ui.js';
 import { countPlay } from './play-count.js';
@@ -43,131 +42,38 @@ import {
   cleanTempo, cleanLanes, defaultLane, slotsToLanes, legacySlots, blockSpan, blockAt, placeBlock, setTimes, maxTimes,
   timesForEnd, removeBlock, viewBars, playParts, playEvents, playingAt, MAX_SONG_BARS,
   cleanTempos, tempoAt, putTempo, removeTempo, songClock, MAX_TEMPO_MARKS,
+  MAX_SONG_SECONDS, beatSteps, cleanSong, linkSong, uniqueSongName, planSong, soundSong,
 } from './playlist.js';
 import { cutName, MAX_LABEL } from './names.js';
 
-export const MAX_SONG_SECONDS = 180;     // the longest song that can be saved as a sound
 const TEMPO_STOPS = tempoStops(MIN_TEMPO, MAX_TEMPO);   // the slider's stops: Beats' pull toward common tempos
-const TICK_MS = 25;
-const LOOKAHEAD = 0.1;
 const ARM_MS = 3000;                     // how long a Remove? waits for its second tap
 const UNDO_MS = 8000;                    // how long a tempo change taken out can be brought back
 const MAX_UNDO = 40;                     // ↩️ Undo steps kept for the open song
-export const SONG_ID = /^song-[a-z0-9-]{1,48}$/;
-
-// Pills in one pass of a saved beat: its bar (its own time signature, 4/4
-// when it has none) times its bars, so a pass is as long as its plan (the beat
-// maker's barOf). Null when the beat is gone. A beat saved before each had a
-// signature was stamped with its old one as it was stored (old-beats.js).
-export function beatSteps(beat) {
-  if (!beat) return null;
-  return barSteps(beat.signature) * ([1, 2, 4].includes(beat.bars) ? beat.bars : 1);
-}
-
-// A song as stored (or read from a backup), made safe to use: {id?,
-// personId, name, tempo, tempos?, lanes, slots}. `tempos` (its tempo marks,
-// ADR 0031) is left out when there are none, as a song from before them is.
-// Null when it belongs to nobody. A song from before the playlist has only
-// slots: they become blocks on lane 1, one after another, and the song's
-// tempo is its first beat's.
-// `beatOf(beatId)` finds a saved beat, for those lengths and that tempo.
-// `slots` is written for older copies of the app (playlist.js legacySlots).
-// A song from before the list (one per person) has no id; linkSong gives it one.
-export function cleanSong(raw, nameFor = () => 'Song', beatOf = () => null) {
-  if (typeof raw?.personId !== 'string' || !raw.personId) return null;
-  const name = typeof raw.name === 'string' && raw.name.trim() ? cutName(raw.name.trim()) : nameFor();
-  let lanes;
-  let tempo;
-  if (Array.isArray(raw.lanes)) {
-    lanes = cleanLanes(raw.lanes);
-    tempo = cleanTempo(raw.tempo);
-  } else {
-    lanes = slotsToLanes(raw.slots, (id) => beatSteps(beatOf(id)));
-    const first = lanes[0].blocks[0];
-    tempo = cleanTempo(Number(beatOf(first?.beatId)?.bpm) || DEFAULT_TEMPO);
-  }
-  const tempos = cleanTempos(raw.tempos, raw);
-  const song = { personId: raw.personId.slice(0, 64), name, tempo, ...(tempos.length ? { tempos } : {}), lanes, slots: legacySlots(lanes) };
-  return SONG_ID.test(raw.id) ? { id: raw.id, ...song } : song;
-}
-
-// The open song with an id: its own, else the saved song of the same name
-// (a song kept before songs were a list, already in the list), else a new id.
-export function linkSong(song, list, makeId = () => newId('song')) {
-  if (song.id) return song;
-  const same = list.find((s) => s.name.toLowerCase() === song.name.toLowerCase());
-  return { id: same?.id ?? makeId(), ...song };
-}
-
-// A name no other song in `list` has (except the song `exceptId`): "Ditty 2".
-export function uniqueSongName(name, list, exceptId) {
-  const taken = new Set(list.filter((s) => s.id !== exceptId).map((s) => s.name.toLowerCase()));
-  if (!taken.has(name.toLowerCase())) return name;
-  for (let n = 2; ; n++) {
-    const tail = ` ${n}`;
-    const candidate = cutName(name, MAX_LABEL - tail.length) + tail;
-    if (!taken.has(candidate.toLowerCase())) return candidate;
-  }
-}
 
 const blockCount = (song) => song.lanes.reduce((n, l) => n + l.blocks.length, 0);
 
-// The song planned to play: each beat it uses planned once at the song's
-// tempo (`seq.beatPlan`), its parts, and its hits from `from` seconds on,
-// every bar at the tempo marked for it (`clock`, playlist.js songClock).
-// `beatOf(beatId)` finds a saved beat. Used to play, to save as a sound,
-// and for a share's preview (share-render.js).
-export function planSong(song, beatOf, seq, { from = 0, skipMuted = false } = {}) {
-  const plans = new Map();
-  for (const lane of song.lanes) {
-    for (const b of lane.blocks) {
-      const beat = beatOf(b.beatId);
-      if (beat && !plans.has(beat.id)) plans.set(beat.id, seq.beatPlan({ ...beat, bpm: song.tempo }));
-    }
-  }
-  const clock = songClock(song);
-  const { parts, seconds, barSeconds } = playParts(song.lanes, (id) => (plans.has(id) ? beatSteps(beatOf(id)) : null), clock);
-  const skipLanes = new Set(skipMuted ? song.lanes.flatMap((l, i) => (l.muted || cleanVolume(l.volume) === 0 ? [i] : [])) : []);
-  return { plans, parts, seconds, barSeconds, clock, events: playEvents(parts, plans, { from, skipLanes, clock }) };
-}
-
-// Sounds every event of a planned song into `dest` from `t0`, each lane
-// through `laneGains[lane]`. Returns how many hits sounded.
-export function soundSong(ctx, laneGains, planned, seq, t0 = 0) {
-  const lists = new Map();
-  let hits = 0;
-  for (const e of planned.events) {
-    const key = `${e.lane}:${e.beatId}:${e.row}`;
-    if (!lists.has(key)) lists.set(key, []);
-    if (seq.soundHit(ctx, laneGains[e.lane], lists.get(key), planned.plans.get(e.beatId).pattern, e.row, t0 + e.time, e.loud, e.note, e.len)) hits++;
-  }
-  return hits;
-}
-
 // deps: el (the screen's elements), audio, meter, engine (the one beat engine,
-// beat-engine.js; Song books through seq.soundHit, which is the engine's, until
-// its loop moves onto it), seq (the beat maker: its
-// beatPlan, prepareBeats, soundHit, endMix and stop), beats(personId)
+// beat-engine.js: Song's ▶ is a run of its `play` on the planned list), seq
+// (the beat maker: its beatPlan, prepareBeats, endMix and stop), beats(personId)
 // (saved beats a song can use), load(personId) -> the stored open song or
 // undefined, save(song) (as the open song), close(personId) (nothing open),
 // songs: {list(personId), put(song), remove(id)} (every saved song),
 // songName(taken) (a fun name), soundLabel(name) (a label for the new pad),
 // addClip({label, blob}), beatColor(beat) (its chip's color), announce(text).
 export function createSong(deps) {
-  const { el, audio, meter, seq } = deps;
+  const { el, audio, meter, seq, engine } = deps;
   let song = null;
   // On a phone the song's tempo folds into one key (tempo-key.js); its line holds ➖ the tempo ➕ (with Advanced, the way into 🎼 Tempo).
   let sliding = null;   // the tempo a slider drag is at, shown on the key until it lets go
   const songKey = el.tempoKey && el.tempoBox ? tempoKey(el.tempoKey, el.tempoBox, () => sliding ?? song?.tempo ?? 100) : null;
 
-  let timer = 0;
+  let run = null;            // the engine's run of the song while it plays (beat-engine.js play)
   let raf = 0;
   let starting = false;
   let t0 = 0;
   let from = 0;              // where this play started, in seconds
   let planned = null;        // {plans, parts, events, seconds, barSeconds, clock} while playing
-  let next = 0;
-  let voices = new Map();    // `${lane}:${beatId}:${row}` -> its sounding voices
   let laneGains = [];
   let mixEnds = [];          // {lane, beatId, end}: when each lane is done with a beat, to let its mix go
   let shown = new Set();     // the blocks lit as playing
@@ -181,7 +87,7 @@ export function createSong(deps) {
   const cursor = new Map();  // lane -> the bar the keyboard is on
 
   let personId = null;
-  const playing = () => timer !== 0 || starting;
+  const playing = () => !!run || starting;
   const beats = () => deps.beats(personId);
   const beatById = (id) => beats().find((b) => b.id === id);
   const stepsOf = (id) => beatSteps(beatById(id));
@@ -1224,8 +1130,6 @@ export function createSong(deps) {
     if (!starting) return;   // stopped while loading
     starting = false;
     planned = plan;
-    next = 0;
-    voices = new Map();
     shown = new Set();
     laneGains = laneGainsFor(ctx, audio.master, { live: true });
     mixEnds = [];
@@ -1235,9 +1139,20 @@ export function createSong(deps) {
       else mixEnds.push({ lane: part.lane, beatId: part.beatId, end: part.end });
     }
     t0 = ctx.currentTime + 0.1;
+    // Each event with the beat it plays, the lane's gain it goes through, and
+    // the key of the hits it may cut (the same row of the same beat on a lane).
+    const events = plan.events.map((e) => ({ ...e, at: t0 + e.time, pattern: plan.plans.get(e.beatId).pattern, dest: laneGains[e.lane], key: `${e.lane}:${e.beatId}:${e.row}` }));
     logEvent('song', { action: 'play', lanes: song.lanes.length, blocks: blockCount(song), marks: tempoMarks().length, seconds: Math.round((plan.seconds - from) * 10) / 10 });
-    timer = setInterval(tick, TICK_MS);
-    tick();
+    run = engine.play({
+      list: { events },
+      // A muted lane sounds at no loudness, so lights and flashes keep to the lanes heard.
+      onHit: (clipId, at, e) => {
+        const lane = song.lanes[e.lane];
+        if (!lane?.muted && cleanVolume(lane?.volume) > 0) deps.onHit?.(clipId, (at - audio.context().currentTime) * 1000);
+      },
+      afterTick: afterTick,
+    });
+    run.tick();
     raf = requestAnimationFrame(follow);
     laneFollow.start();
     el.play.setAttribute('aria-pressed', 'true');
@@ -1245,20 +1160,9 @@ export function createSong(deps) {
     showPlayhead();
   }
 
-  function tick() {
+  // After each tick of the engine's run.
+  function afterTick() {
     const ctx = audio.context();
-    const events = planned.events;
-    while (next < events.length && t0 + events[next].time < ctx.currentTime + LOOKAHEAD) {
-      const e = events[next++];
-      if (tooLate(t0 + e.time, ctx.currentTime)) continue;   // missed in a stall: the song goes on in time
-      const key = `${e.lane}:${e.beatId}:${e.row}`;
-      if (!voices.has(key)) voices.set(key, []);
-      const pattern = planned.plans.get(e.beatId).pattern;
-      if (seq.soundHit(ctx, laneGains[e.lane], voices.get(key), pattern, e.row, t0 + e.time, e.loud, e.note, e.len)) {
-        const lane = song.lanes[e.lane];
-        if (!lane?.muted && cleanVolume(lane?.volume) > 0) deps.onHit?.(pattern.rows[e.row].clipId, (t0 + e.time - ctx.currentTime) * 1000);
-      }
-    }
     // A lane's last block of a beat is over: that beat's mix there goes
     // (a 〰️ Warble or 🤖 Robot in it stops), not only at the song's end.
     const at = ctx.currentTime - t0 + from;
@@ -1295,14 +1199,11 @@ export function createSong(deps) {
 
   function stop() {
     starting = false;
-    if (!timer) return;
-    clearInterval(timer);
+    if (!run) return;
     cancelAnimationFrame(raf);
-    timer = 0;
     raf = 0;
-    const now = audio.context().currentTime;
-    for (const list of voices.values()) for (const v of list) fadeStop(v, now);
-    voices = new Map();
+    run.stop();   // its timer, and its voices fade
+    run = null;
     for (const g of laneGains) setTimeout(() => { try { g.disconnect?.(); } catch { /* gone */ } }, 1000);
     seq.endMix?.(laneGains);   // its mix graphs, and their 〰️ 🤖 oscillators, go too
     laneGains = [];

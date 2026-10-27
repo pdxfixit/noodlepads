@@ -4,8 +4,8 @@
 // `soundHit`) that 🎼 Song, the share preview, 🗂️ See all and 💃 Grooves'
 // ▶ book through. It knows no screen, DOM or storage: app.js makes the one
 // engine and hands it to the beat maker (sequencer.js), 🎼 Song and 🧸 Kids.
-// Its player (`play`) loops a beat on the audio clock for 🥁 Beats and 🧸
-// Kids; the loop in song.js still books its own hits until it moves onto it
+// Its player (`play`) books a beat's hits on the audio clock: a loop for 🥁
+// Beats and 🧸 Kids, and a planned list for 🎼 Song and 💃 Grooves' sample
 // (docs/design/one-beat-engine.md). The pure rule for which hits are due is
 // beat.js hitsDue.
 
@@ -16,9 +16,9 @@ import { ringOver } from './rhythm.js';
 import { masterLevel, mixKey, buildMix } from './mixer.js';
 
 // How often a run books the hits due, and how many seconds it books ahead of
-// the audio clock; the beat maker and 🎼 Song keep the same pair.
-const TICK_MS = 25;
-const LOOKAHEAD = 0.1;
+// the audio clock: the one pair for the beat, 🎼 Song and the beat maker's click.
+export const TICK_MS = 25;
+export const LOOKAHEAD = 0.1;
 // ▶ to the first pill, in seconds, once the sounds are loaded.
 const START_IN = 0.05;
 // Mix graphs on the live context at once (busFor); past this the one used
@@ -205,10 +205,13 @@ export function createBeatEngine({ audio, clipById }) {
   // Sounds row i of beat `p` at `time` into `dest`, cutting off or
   // overlapping the row's earlier hits in `list`. False if its sound is gone.
   function soundHit(ctx, dest, list, p, i, time, loud, note, len = 0) {
+    return hitCuts(ctx, dest, list, p, i, time, loud, note, len) !== null;
+  }
+  // The same, answering how many earlier hits it cut off, or null when the sound is gone.
+  function hitCuts(ctx, dest, list, p, i, time, loud, note, len) {
     const loaded = ready.get(p.rows[i]?.clipId);
-    if (!loaded) return false;
-    sound(ctx, busFor(ctx, dest, p).input(i), list, p.rows[i], loaded, time, loud, note, len);
-    return true;
+    if (!loaded) return null;
+    return sound(ctx, busFor(ctx, dest, p).input(i), list, p.rows[i], loaded, time, loud, note, len);
   }
 
   // Loops the beat `hooks.beat()` from its first pill until the run's
@@ -223,6 +226,14 @@ export function createBeatEngine({ audio, clipById }) {
   // again each tick (`clip`) and kept by how it sounds now (audio.key: its
   // voice, trim, edits), so a sound changed or deleted while the screen was
   // away plays as it is now, or not at all.
+  // A planned list in place of the loop (🎼 Song, 💃 Grooves' sample): pass
+  // `hooks.list` = {events} instead of `beat`. Each event is {at (audio-clock
+  // time), pattern (the planned beat), row, loud, note, len, dest (where it
+  // sounds: a lane's gain, the master), key (which earlier hits it may cut)},
+  // in time order. Its sounds are the caller's (prepareBeats); the run starts
+  // at once and its first tick is the caller's (`run.tick()`). The tick, the
+  // lookahead, the late-hit rule, the cuts, `onHit`, `afterTick`, `lookahead`,
+  // the stats and `stop()` are the loop's. `onHit(clipId, at, event)`.
   // hooks (only `beat` is needed):
   //   beat()            the beat to play now: rows, bpm, bars, signature, swing
   //   clip(id)          a row's sound, or null when it is gone (else the engine's clipById)
@@ -241,7 +252,7 @@ export function createBeatEngine({ audio, clipById }) {
   //                     at ACCENT_GAIN times that)
   //   onPill(pill, at)  each pill of the beat's plain grid, as it is booked
   //   onPass(at)        each time round, as it is booked: `at` the next one's start
-  //   onHit(clipId, at) each hit booked
+  //   onHit(clipId, at, hit) each hit booked
   // Only the beat maker (🥁 Beats) uses these:
   //   loaded(id)        the row's sound {clip, loaded} from the caller's own
   //                     (the engine's `ready`), or null: the run loads nothing,
@@ -261,7 +272,7 @@ export function createBeatEngine({ audio, clipById }) {
     const ctx = audio.wake();   // first, in the tap itself: iOS starts audio only there
     const clipOf = hooks.clip ?? clipById;
     const mixed = hooks.mixer !== false;
-    const run = { t0: null, on: true, timer: 0, clocks: [], pass: null, voices: [], shown: [], queue: [], sounds: new Map(), loads: [], stats: { hits: 0, late: 0, silent: 0, cuts: 0, maxRinging: 0 } };
+    const run = { t0: null, on: true, timer: 0, clocks: [], pass: null, voices: [], shown: [], queue: [], sounds: new Map(), loads: [], lists: new Map(), next: 0, stats: { hits: 0, late: 0, silent: 0, cuts: 0, maxRinging: 0 } };
     const stopped = new Promise((resolve) => { run.cancel = resolve; });   // a stop ends the wait for sounds that never come
     // A row's sound as it is now: {clip, loaded}, or null while it loads or when it is gone.
     const soundOf = (id, found) => {
@@ -278,11 +289,15 @@ export function createBeatEngine({ audio, clipById }) {
       const loaded = run.sounds.get(key);
       return loaded ? { clip, loaded } : null;
     };
-    const tick = () => {
-      if (!run.on) return;
-      const now = ctx.currentTime;
-      const until = Math.min(now + (hooks.lookahead ?? LOOKAHEAD), hooks.limit?.() ?? Infinity);
-      hooks.beforeRows?.(until);
+    // A hit booked: counted, and told to onHit.
+    const booked = (cuts, list, clipId, at, hit) => {
+      run.stats.hits++;
+      run.stats.cuts += cuts;
+      run.stats.maxRinging = Math.max(run.stats.maxRinging, list.length);
+      hooks.onHit?.(clipId, at, hit);
+    };
+    // The loop: every hit hitsDue says is due before `until`.
+    const bookLoop = (until) => {
       const p = hooks.beat();
       // A row new since the last tick joins where the caller says (before hitsDue moves any clock on).
       if (hooks.join) p.rows.forEach((_, i) => { run.clocks[i] ??= hooks.join(i); });
@@ -291,17 +306,14 @@ export function createBeatEngine({ audio, clipById }) {
       run.pass = due.pass;
       const found = new Map();
       for (const h of due.hits) {
-        if (tooLate(h.at, now)) { run.stats.late++; continue; }   // missed in a stall: the beat goes on in time
+        if (tooLate(h.at, ctx.currentTime)) { run.stats.late++; continue; }   // missed in a stall: the beat goes on in time
         const row = p.rows[h.row];
         const got = hooks.loaded ? hooks.loaded(row.clipId) : soundOf(row.clipId, found);
         if (!got) { run.stats.silent++; continue; }
         const list = run.voices[h.row] ??= [];
         const dest = mixed ? busFor(ctx, audio.master, p).input(h.row) : audio.master;
         const cuts = sound(ctx, dest, list, row, got.loaded, h.at, h.loud, h.note, h.len, { clipOf: () => got.clip, ring: hooks.ring?.(row), level: mixed ? null : hitGain(row, h.loud) * masterLevel(p) });
-        run.stats.hits++;
-        run.stats.cuts += cuts;
-        run.stats.maxRinging = Math.max(run.stats.maxRinging, list.length);
-        hooks.onHit?.(row.clipId, h.at);
+        booked(cuts, list, row.clipId, h.at, h);
       }
       if (due.steps.length) {
         run.queue.push(...due.steps);
@@ -309,6 +321,25 @@ export function createBeatEngine({ audio, clipById }) {
       }
       for (const { pill, at } of due.pills) hooks.onPill?.(pill, at);
       for (const at of due.passes) hooks.onPass?.(at);
+    };
+    // The list: every event due before `until`, through its beat's mix into its destination.
+    const bookList = (until) => {
+      const { events } = hooks.list;
+      while (run.next < events.length && events[run.next].at < until) {
+        const e = events[run.next++];
+        if (tooLate(e.at, ctx.currentTime)) { run.stats.late++; continue; }   // missed in a stall: the song goes on in time
+        if (!run.lists.has(e.key)) run.lists.set(e.key, []);
+        const list = run.lists.get(e.key);
+        const cuts = hitCuts(ctx, e.dest, list, e.pattern, e.row, e.at, e.loud, e.note, e.len);
+        if (cuts === null) { run.stats.silent++; continue; }
+        booked(cuts, list, e.pattern.rows[e.row].clipId, e.at, e);
+      }
+    };
+    const tick = () => {
+      if (!run.on) return;
+      const until = Math.min(ctx.currentTime + (hooks.lookahead ?? LOOKAHEAD), hooks.limit?.() ?? Infinity);
+      hooks.beforeRows?.(until);
+      if (hooks.list) bookList(until); else bookLoop(until);
       hooks.afterTick?.();
     };
     run.tick = tick;
@@ -366,12 +397,19 @@ export function createBeatEngine({ audio, clipById }) {
       clearInterval(run.timer);
       run.timer = 0;
       const now = ctx.currentTime;
-      for (const list of run.voices) for (const v of list ?? []) fadeStop(v, now);
+      for (const list of [...run.voices, ...run.lists.values()]) for (const v of list ?? []) fadeStop(v, now);
       run.voices = [];
+      run.lists = new Map();
       run.queue = [];
       run.shown = run.shown.map(() => -1);
       return run.stats;
     };
+    if (hooks.list) {
+      // A planned list on the caller's own sounds: going at once, its first tick the caller's.
+      run.timer = setInterval(tick, TICK_MS);
+      run.ready = Promise.resolve(true);
+      return run;
+    }
     if (hooks.loaded) {
       // The caller's own sounds are there: the run is going at once, and its
       // first tick is the caller's to call (run.tick()).

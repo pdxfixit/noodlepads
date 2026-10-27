@@ -5,7 +5,7 @@
 
 import { audio, makeVoice, fadeStop } from './audio.js';
 import { encodeWav, normalize } from './wav.js';
-import { cleanSong, planSong, soundSong, MAX_SONG_SECONDS } from './song.js';
+import { cleanSong, planSong, soundSong, MAX_SONG_SECONDS } from './playlist.js';
 import { planTake, MAX_TAKE_SECONDS } from './rhythm.js';
 
 export const PREVIEW_RATE = 22_050;

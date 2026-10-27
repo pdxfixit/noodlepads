@@ -724,6 +724,7 @@ function makeSong() {
     },
     audio,
     meter,
+    engine,
     seq,
     // Beats a song can use: not the scratch (ADR 0020: 💾 Keep it first).
     beats: (personId) => state.savedBeats.filter((b) => b.personId === personId && !isHiddenBeat(b)).sort((a, b) => b.saved - a.saved),

@@ -79,7 +79,7 @@ const ONLY = [
   // beats-song.md
   ['the mix bus is built only by the beat engine', /import \{[^}]*\bbuildMix\b[^}]*\} from '\.\/mixer\.js'/, ['beat-engine.js']],
   ['what is due is worked out by the engine alone', /import \{[^}]*\bhitsDue\b[^}]*\} from '\.\/beat\.js'/, ['beat-engine.js']],
-  ['the shared "play a saved beat" path', /soundHit\(/, ['beat-engine.js', 'sequencer.js', 'share-render.js', 'song.js']],
+  ['the shared "play a saved beat" path', /soundHit\(/, ['beat-engine.js', 'playlist.js', 'share-render.js']],
   ['prepareBeats callers', /\.prepareBeats\(/, ['share-render.js', 'song.js']],
   ['the WAV encoder', /function encodeWav\b/, ['wav.js']],
   // keys-kids.md
@@ -110,24 +110,32 @@ for (const [what, pattern, files] of ONLY) {
   test(`✅ ${what}: ${files.join(', ')}`, () => assert.deepEqual(webWith(pattern), files, FIX));
 }
 
-test('✅ hits are booked by two loops on the audio clock: the beat engine (🥁 Beats, 🧸 Kids) and 🎼 Song; the beat maker keeps only the click\'s own timer', () => {
+test('✅ hits are booked by one scheduler on the audio clock: the beat engine\'s play (🥁 Beats, 🧸 Kids, 🎼 Song, 💃 Grooves\' sample); the beat maker keeps only the click\'s own timer', () => {
   // sheet.js reads the clock too, but its interval is a 150 ms play watch, not a scheduler.
-  assert.deepEqual(webWith(/setInterval\(/).filter((f) => f !== 'sheet.js' && /\.currentTime\b/.test(src[f])), ['beat-engine.js', 'sequencer.js', 'song.js'], FIX);
+  assert.deepEqual(webWith(/setInterval\(/).filter((f) => f !== 'sheet.js' && /\.currentTime\b/.test(src[f])), ['beat-engine.js', 'sequencer.js'], FIX);
   // sequencer.js: its one interval is the click while the beat is stopped; the beat is the engine's run.
   assert.equal(src['sequencer.js'].match(/setInterval\(/g).length, 1, FIX);
   assert.match(src['sequencer.js'], /aloneTimer = setInterval\(/, FIX);
   assert.match(src['sequencer.js'], /engine\.play\(/, FIX);
   assert.doesNotMatch(src['sequencer.js'], /\bmakeVoice\b|\btooLate\b|\bhitsDue\b/, FIX);
+  // 🎼 Song's ▶ is a run of the engine on a planned list; it has no timer or voice code of its own.
+  assert.match(src['song.js'], /engine\.play\(/, FIX);
+  assert.doesNotMatch(src['song.js'], /\bmakeVoice\b|\btooLate\b|\bfadeStop\b|setInterval\(|\bsoundHit\b/, FIX);
   // Its row edits while the beat plays go through the run, which keeps the per-row lists in step.
   assert.doesNotMatch(src['sequencer.js'], /\brun\.(voices|clocks|shown)\.splice|\brun\.queue = /, FIX);
   for (const m of ['moveRow', 'removeRow', 'insertRow', 'retime', 'restart']) assert.match(src['sequencer.js'], new RegExp(`run\\.${m}\\(`), `${m}: ${FIX}`);
 });
 
-test('✅ the beat engine, the beat maker (its click) and 🎼 Song share one tick and lookahead', () => {
-  for (const f of ['beat-engine.js', 'sequencer.js', 'song.js']) {
-    assert.match(src[f], /^const TICK_MS = 25;$/m, `${f}: ${FIX}`);
-    assert.match(src[f], /^const LOOKAHEAD = 0\.1;$/m, `${f}: ${FIX}`);
-  }
+test('✅ one tick and lookahead: beat-engine.js declares them, the beat maker\'s click imports them, 🎼 Song has none of its own', () => {
+  assert.match(src['beat-engine.js'], /^export const TICK_MS = 25;$/m, FIX);
+  assert.match(src['beat-engine.js'], /^export const LOOKAHEAD = 0\.1;$/m, FIX);
+  assert.match(src['sequencer.js'], /^import \{ TICK_MS, LOOKAHEAD \} from '\.\/beat-engine\.js';$/m, FIX);
+  for (const f of ['sequencer.js', 'song.js']) assert.doesNotMatch(src[f], /^(export )?const (TICK_MS|LOOKAHEAD)\b/m, `${f}: ${FIX}`);
+});
+
+test('✅ the backup gate and the share preview load neither screen: song rules are in playlist.js (the S7 split)', () => {
+  for (const f of ['backup.js', 'share-render.js']) assert.doesNotMatch(src[f], /from '\.\/(song|sequencer)\.js'/, `${f}: ${FIX}`);
+  assert.deepEqual(webWith(/from '\.\/song\.js'/), ['app.js'], FIX);
 });
 
 test('✅ the keys never touch audio.js directly; they play through pads.js tapPad', () => {

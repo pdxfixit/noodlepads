@@ -48,9 +48,8 @@ import { createPillSelect } from './pill-select.js';
 import { edgeScroller } from './edge-scroll.js';
 import { hasPicker, pickerButton, pickerList, pickInstrument } from './inst-picker.js';
 import { cutName, MAX_LABEL } from './names.js';
+import { TICK_MS, LOOKAHEAD } from './beat-engine.js';
 
-const TICK_MS = 25;
-const LOOKAHEAD = 0.1;
 const ARM_MS = 3000;                   // how long a Clear? or Remove? waits for its second tap
 const UNDO_MS = 8000;                  // how long a removed row can be brought back
 
@@ -2062,7 +2061,7 @@ export function createSequencer(deps) {
   // a groove or closing the dialog ends it.
   // 🎧 From a song's ▶ on each part plays a beat of its own the same way
   // (hearBeat): one thing at a time, and its `onEnd` hears when it stops.
-  let sample = null;   // {id, voices: Map(row → list), timer, onEnd, pattern (the beat heard)}
+  let sample = null;   // {id, run (the engine's, on a planned list), timer, onEnd, pattern (the beat heard)}
   function showHearKey(b) {
     const g = GROOVES.find((x) => x.id === b.dataset.hear);
     const on = sample?.id === b.dataset.hear;
@@ -2074,8 +2073,7 @@ export function createSequencer(deps) {
   function stopSample() {
     if (!sample) return;
     clearTimeout(sample.timer);
-    const now = audio.context().currentTime;
-    for (const list of sample.voices.values()) for (const v of list) fadeStop(v, now);
+    sample.run?.stop();   // its voices fade
     const { onEnd, pattern: heard } = sample;
     if (heard) letGo((m) => m.p === heard);
     sample = null;
@@ -2090,7 +2088,7 @@ export function createSequencer(deps) {
     if (again) return;   // ■: the same ▶ again stops it
     stop();              // the beat, or a ▶ still loading its sounds
     deps.onPlay?.();     // a song playing stops
-    const mine = { id, voices: new Map(), timer: 0, onEnd };
+    const mine = { id, run: null, timer: 0, onEnd };
     sample = mine;
     showHearKeys();
     const plan = beatPlan(raw);
@@ -2100,11 +2098,11 @@ export function createSequencer(deps) {
     const ctx = audio.wake();
     const t0 = ctx.currentTime + 0.05;
     const seconds = Math.min(plan.seconds, most);
-    for (const h of plan.hits) {
-      if (h.time >= seconds) continue;
-      if (!mine.voices.has(h.row)) mine.voices.set(h.row, []);
-      soundHit(ctx, audio.master, mine.voices.get(h.row), plan.pattern, h.row, t0 + h.time, h.loud, h.note, h.len);
-    }
+    // The whole pass is booked on the first tick, as one list.
+    const events = plan.hits.filter((h) => h.time < seconds)
+      .map((h) => ({ at: t0 + h.time, pattern: plan.pattern, row: h.row, loud: h.loud, note: h.note, len: h.len, dest: audio.master, key: h.row }));
+    mine.run = engine.play({ list: { events }, lookahead: seconds + 1 });
+    mine.run.tick();
     logEvent('beat', { action: 'sample', bpm: plan.pattern.bpm, bars: plan.pattern.bars, seconds: Math.round(seconds * 10) / 10 });
     mine.timer = setTimeout(() => { if (sample === mine) stopSample(); }, (seconds + 0.4) * 1000);
   }

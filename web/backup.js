@@ -36,7 +36,7 @@ import { cleanDeck, cleanTake } from './rhythm.js';
 import { cleanLayout } from './keyset.js';
 import { cleanTouchLayout, MAX_TOUCH_LAYOUTS } from './touch.js';
 import { cleanMyVoice } from './voice-knobs.js';
-import { cleanSong, SONG_ID } from './song.js';
+import { cleanSong, SONG_ID } from './playlist.js';
 import { cleanSynth } from './synth.js';
 import { adoptPeople, nextPersonColor, freePicture, PERSON_ID, isEmptyOverride } from './model.js';
 import { isListedEmoji } from './emoji-check.js';

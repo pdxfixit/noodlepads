@@ -11,8 +11,7 @@ import {
   heardABeat, makeBeats, makeSong, heardSentence, partDetail, barTime, clock, resultCounts,
 } from '../web/listen-make.js';
 import { partNames } from '../web/names.js';
-import { cleanSong, beatSteps } from '../web/song.js';
-import { blockSpan } from '../web/playlist.js';
+import { cleanSong, beatSteps, blockSpan } from '../web/playlist.js';
 
 const cells = (p, upto = 99) => [...p].map((c, i) => (i > upto ? -1 : c === 'x' ? 2 : c === 'o' ? 1 : 0));
 const K = ['x.......x.......', 'x.....x.x.......', 'x.......x...o...'];

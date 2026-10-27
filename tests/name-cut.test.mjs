@@ -13,8 +13,7 @@ import { touchName } from '../web/touch.js';
 import { cleanMyVoice } from '../web/voice-knobs.js';
 import { cleanTake, cleanDeck } from '../web/rhythm.js';
 import { cleanPattern } from '../web/beat.js';
-import { cleanSong, uniqueSongName } from '../web/song.js';
-import { cleanLane } from '../web/playlist.js';
+import { cleanSong, uniqueSongName, cleanLane } from '../web/playlist.js';
 import { cleanBackup } from '../web/backup.js';
 import { adoptPeople } from '../web/model.js';
 

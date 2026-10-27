@@ -14,7 +14,7 @@ import {
 } from '../web/scratch.js';
 import { keptName, MAX_LABEL } from '../web/names.js';
 import { BEAT_ID } from '../web/beat.js';
-import { SONG_ID } from '../web/song.js';
+import { SONG_ID } from '../web/playlist.js';
 import { makeBackup, readBackup } from '../web/backup.js';
 import { recordsOf } from '../web/cloud-sync.js';
 import { GROOVES } from '../web/grooves.js';
