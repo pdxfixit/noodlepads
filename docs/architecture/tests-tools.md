@@ -270,10 +270,18 @@ to check `--bg` and `--skin`.
 6. Print the table, then each failing row's reasons and every `console.log`
    (📝); exit 1 on any failure.
 
+`--landscape` runs the windows `LANDSCAPE` lists (667×375, 740×360, 844×390,
+932×430; `--widths 667x375` for one), a phone held sideways (`mobile`, each at
+its own height); `--height` overrides it. `--plan PATH` writes the windows and
+`CONTROLS` as JSON and stops (`tests/look-landscape.test.mjs`).
+
 **What `MEASURE` fails.** Page wider than the width asked; an open dialog
-wider than itself; controls (`button`, `[role=button]`, `summary`, `select`,
-range, checkbox and radio, a checkbox measured by its label) under 44 px
-tall **or wide**; two controls in the same fixed or sticky layer overlapping
+wider than itself; controls (`CONTROLS`: `button`, `[role=button]`, `summary`,
+`select`, `textarea`, text-like `input`s, `a[href]` (not one in a line of
+text: WCAG 2.5.8), `[tabindex]` boxes, range, checkbox and radio, a checkbox
+measured by its label) under 44 px tall **or wide**; in 🧸 Kids, which never
+scrolls, any control the window cuts off (`cutoff`; the other pages of pads
+are meant to be off to the side); two controls in the same fixed or sticky layer overlapping
 by more than 2 px both ways; console errors and exceptions; CSP blocks; and
 zero controls found ("the page did not render"). Only the top modal dialog is
 measured when one is open. Exempt by design: the `exempt` selector in

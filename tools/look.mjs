@@ -15,6 +15,10 @@
 //   --reduced-motion: the device asks for less motion (prefers-reduced-motion: reduce).
 //   --cpu RATE: the page's CPU RATE times slower, as a slow device runs it (timing checks with --js).
 //   --height PX: a window PX tall instead of 800: a phone with its browser bar showing (Firefox for Android leaves about 680 px).
+//   --landscape: a phone held sideways: width and height swapped, at 667×375, 740×360, 844×390 and 932×430
+//     (or --widths 667x375,844x390: each WxH is that window). Page and sheets must still not scroll sideways, and
+//     in 🧸 Kids (a fixed frame that never scrolls) no control may be cut off by the window's edge.
+//   --plan PATH: writes the windows and the controls selector as JSON and stops (tests/look-landscape.test.mjs).
 //   A new person's first steps (the welcome, tips, hint dots, the nudge; ADR 0028) stay off,
 //   as a fresh device always looked, except in the views that show them (welcome, …).
 //   node tools/look.mjs cloud-smoke|cloud-e2e [--url URL]   the live cloud checks (look-cloud.mjs)
@@ -549,10 +553,20 @@ for (const tab of ['pads', 'sounds', 'beats', 'song', 'live', 'settings']) {
 }
 const MIN_TAP = 44;
 
+// What the tap-size check measures: anything a finger taps or types in. Links
+// in a line of text are left out where they are measured (WCAG 2.5.8's inline
+// exception), and a [tabindex="-1"] is reached by script, not by a finger.
+const CONTROLS = 'button, [role="button"], summary, select, textarea, a[href], [tabindex]:not([tabindex="-1"]), '
+  + 'input[type="range"], input[type="checkbox"], input[type="radio"], input:not([type]), '
+  + ['text', 'number', 'search', 'email', 'url', 'tel', 'password'].map((t) => `input[type="${t}"]`).join(', ');
+
+// Phones held sideways, [width, height]: an iPhone SE/8, a common Android, an iPhone 14, an iPhone 14 Pro Max.
+const LANDSCAPE = [[667, 375], [740, 360], [844, 390], [932, 430]];
+
 function usage(msg) {
   if (msg) console.error(`🛑 ${msg}`);
   console.error(`views: ${Object.keys(VIEWS).join(' ')}`);
-  console.error('usage: just look [pads|beats|keys-on|song|live|VIEW ...] [--advanced] [--top PX] [--scroll PX | --scroll-to SELECTOR] [--js CODE | --js-file PATH] [--url URL] [--out DIR] [--widths 320,375,...] [--wide] [--bg NAME,...|all|none] [--skin ID,...|all] [--reduced-motion] [--cpu RATE] [--height PX]');
+  console.error('usage: just look [pads|beats|keys-on|song|live|VIEW ...] [--advanced] [--top PX] [--scroll PX | --scroll-to SELECTOR] [--js CODE | --js-file PATH] [--url URL] [--out DIR] [--widths 320,375,... | 667x375,...] [--wide] [--landscape] [--bg NAME,...|all|none] [--skin ID,...|all] [--reduced-motion] [--cpu RATE] [--height PX]');
   console.error(`skins: ${SKIN_IDS.join(' ')}`);
   process.exit(2);
 }
@@ -564,7 +578,7 @@ if (process.argv[2] === '--views') {
   process.exit(0);
 }
 
-const opts = { screens: [], js: '', url: '', out: '', advanced: false, reduced: false, cpu: 1, height: 800, top: 0, scroll: null, scrollTo: '', widths: [320, 375, 700, 900, 1100], bgs: [''], skins: [''] };
+const opts = { screens: [], js: '', url: '', out: '', advanced: false, reduced: false, cpu: 1, height: 800, top: 0, scroll: null, scrollTo: '', widths: [320, 375, 700, 900, 1100], bgs: [''], skins: [''], landscape: false, sized: false, heights: {}, plan: '' };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
@@ -574,15 +588,17 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === '--js-file') opts.js = fs.readFileSync(val(), 'utf8');
   else if (a === '--url') opts.url = val();
   else if (a === '--out') opts.out = val();
-  else if (a === '--widths') opts.widths = val().split(',').map(Number);
-  else if (a === '--wide') opts.widths = [320, 375, 700, 900, 1100, 1366, 1920, 2560, 3440];   // phones to ultrawide
+  else if (a === '--widths') { opts.sized = true; opts.widths = val().split(',').map((x) => { const [w, h] = x.split('x').map(Number); if (h) opts.heights[w] = h; return w; }); }
+  else if (a === '--landscape') opts.landscape = true;
+  else if (a === '--plan') opts.plan = val();
+  else if (a === '--wide') { opts.sized = true; opts.widths = [320, 375, 700, 900, 1100, 1366, 1920, 2560, 3440]; }   // phones to ultrawide
   else if (a === '--advanced') opts.advanced = true;
   // The device asks for less motion (prefers-reduced-motion: reduce): what still moves, and what shows instead.
   else if (a === '--reduced-motion') opts.reduced = true;
   // A slow device: the page's CPU this many times slower, so a --js timing script shows what a slower phone or laptop would.
   else if (a === '--cpu') opts.cpu = Number(val());
   // A shorter window: a phone with its browser bar showing (Firefox for Android leaves about 680 px, 2026-10-22). The fixed screens (🧸 Kids) must still fit it.
-  else if (a === '--height') opts.height = Number(val());
+  else if (a === '--height') { opts.height = Number(val()); opts.heightGiven = true; }
   else if (a === '--top') opts.top = Number(val());
   else if (a === '--scroll') opts.scroll = Number(val());
   // An 800 px window with this element 200 px from the top (clear of the
@@ -605,6 +621,18 @@ for (let i = 0; i < argv.length; i++) {
   else usage(`unknown argument: ${a}`);
 }
 if (!opts.screens.length) opts.screens.push('pads');
+// --landscape: the phones held sideways, each at its own height (unless --widths or --height says otherwise).
+if (opts.landscape && !opts.sized) {
+  opts.widths = LANDSCAPE.map(([w]) => w);
+  for (const [w, h] of LANDSCAPE) opts.heights[w] ??= h;
+}
+// The window at width `w`: its height (an explicit --height wins over a landscape phone's), and whether it is a phone.
+const heightOf = (w) => (opts.heightGiven ? opts.height : opts.heights[w] ?? opts.height);
+const mobileAt = (w) => opts.landscape || w < 768;
+if (opts.plan) {
+  fs.writeFileSync(opts.plan, JSON.stringify({ sizes: opts.widths.map((w) => ({ width: w, height: heightOf(w), mobile: mobileAt(w) })), controls: CONTROLS }));
+  process.exit(0);
+}
 if (!fs.existsSync(CHROME)) usage(`no Chrome at ${CHROME}; set CHROME=/path/to/chrome`);
 
 // Everything started here is stopped on any exit, Ctrl-C included (Chrome
@@ -677,7 +705,7 @@ const MEASURE = (width) => `(() => {
   const boxes = [];   // [control, rect, in a fixed layer?] for the overlap check
   let checked = 0;
   const seen = new Set();
-  const controls = 'button, [role="button"], summary, select, input[type="range"], input[type="checkbox"], input[type="radio"]';
+  const controls = ${JSON.stringify(CONTROLS)};
   // The beat grid's pills, the piano roll's squares and notes are exempt: their width is the
   // grid's (16 a bar, a decision in docs/decisions.md), and they are 64 px tall.
   const exempt = '.pill, .note-cell, .roll-note, .dj-grid-row .row-x, .dj-grid-row .row-clear, .dj-grid-row .row-ring, .dj-grid-row > .row-emoji, .dj-grid-row .row-vol, .ke-key';   // Beat Builder's row ✕ and picture: Ben chose the ✕ as small as the emoji beside it (2026-10-11), so the pair keeps the row's height; its 🧹 clear (Ben, 2026-10-12) and 🔔 Let it ring are the ✕'s size, and its speaker matches them (provisional, questions.md); the three sit in .row-tools at the row's right
@@ -687,6 +715,8 @@ const MEASURE = (width) => `(() => {
   const scope = [...document.querySelectorAll('dialog[open]')].filter((d) => d.matches(':modal')).at(-1) || document;
   for (const el of scope.querySelectorAll(controls)) {
     if (el.matches(exempt) || !reachable(el)) continue;
+    // A link in a line of text is as big as its words (WCAG 2.5.8, the inline exception).
+    if (el.matches('a[href]') && getComputedStyle(el).display === 'inline') continue;
     const box = el.matches('input[type="checkbox"], input[type="radio"]') ? (el.closest('label') || el) : el;
     if (seen.has(box)) continue;
     seen.add(box);
@@ -731,7 +761,28 @@ const MEASURE = (width) => `(() => {
       if (x > 2 && y > 2) overlaps.push(name(a) + ' ↔ ' + name(b) + ' (' + Math.round(Math.min(x, y)) + 'px)');
     }
   }
+  // 🧸 Kids is one fixed frame that never scrolls, so a control past the
+  // window's edge, or clipped by a box, cannot be reached at all (a phone held
+  // sideways cut the tabs off, 2026-10-27). Kids' other pages of pads are
+  // meant to be off to the side; every other control must be fully in the window.
+  const cutoff = [];
+  if (document.body.classList.contains('kids')) {
+    for (const el of document.querySelectorAll(controls)) {
+      if (!reachable(el) || el.closest('.kids-page:not([data-page="0"]), dialog')) continue;
+      const r = el.getBoundingClientRect();
+      let v = { left: Math.max(r.left, 0), top: Math.max(r.top, 0), right: Math.min(r.right, ${width}), bottom: Math.min(r.bottom, innerHeight) };
+      for (let e = el.parentElement; e; e = e.parentElement) {
+        const cs = getComputedStyle(e);
+        if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+        const c = e.getBoundingClientRect();
+        v = { left: Math.max(v.left, c.left), top: Math.max(v.top, c.top), right: Math.min(v.right, c.right), bottom: Math.min(v.bottom, c.bottom) };
+      }
+      const shown = Math.max(0, v.right - v.left) * Math.max(0, v.bottom - v.top);
+      if (shown < r.width * r.height * 0.97) cutoff.push(name(el) + ' (' + Math.round(100 * shown / Math.max(1, r.width * r.height)) + '% shows)');
+    }
+  }
   return {
+    cutoff,
     // Against the width asked for, not innerWidth: a phone (and mobile
     // emulation) zooms out to fit a too-wide page, so innerWidth grows with it.
     sideways: Math.max(document.documentElement.scrollWidth, innerWidth) > ${width},
@@ -767,7 +818,7 @@ const rows = [];
 // One page load at one width, measured and photographed.
 async function lookOnce(screen, w, bg = '', skin = '') {
     errors = []; csp = []; logs = [];
-    await send('Emulation.setDeviceMetricsOverride', { width: w, height: opts.height, deviceScaleFactor: 1, mobile: w < 768 });
+    await send('Emulation.setDeviceMetricsOverride', { width: w, height: heightOf(w), deviceScaleFactor: 1, mobile: mobileAt(w) });
     const loaded = new Promise((r) => listeners.push(function once(m) {
       if (m.method === 'Page.loadEventFired') { listeners.splice(listeners.indexOf(once), 1); r(); }
     }));
@@ -779,7 +830,8 @@ async function lookOnce(screen, w, bg = '', skin = '') {
     await loaded;
     await send('Page.removeScriptToEvaluateOnNewDocument', { identifier: hook.identifier });
     await sleep(400);
-    const row = { screen: [screen, bg, skin].filter(Boolean).join(' '), w, extra: [] };
+    const size = opts.landscape || opts.heights[w] ? `${w}x${heightOf(w)}` : w;   // a phone held sideways is told apart by its height too
+    const row = { screen: [screen, bg, skin].filter(Boolean).join(' '), w: size, extra: [] };
     try {
       if (page) {
         if (VIEWS[screen].js) await evaluate(`(async () => { ${VIEWS[screen].js} })()`);
@@ -810,7 +862,7 @@ async function lookOnce(screen, w, bg = '', skin = '') {
     }
     await sleep(400);
     const m = await evaluate(MEASURE(w));
-    const shot = path.join(out, `${screen}-${w}${bg ? `-${bg}` : ''}${skin ? `-${skin}` : ''}.png`);
+    const shot = path.join(out, `${screen}-${size}${bg ? `-${bg}` : ''}${skin ? `-${skin}` : ''}.png`);
     // A full-page shot grows the window to the page's height first, as a
     // phone scrolled to the end would show it: capturing beyond an 800 px
     // window leaves the fixed toolbar mid-picture, over the page foot.
@@ -820,7 +872,7 @@ async function lookOnce(screen, w, bg = '', skin = '') {
     if (opts.scrollTo) await evaluate(`{ const e = document.querySelector(${JSON.stringify(opts.scrollTo)}); if (e) scrollTo(0, e.getBoundingClientRect().top + scrollY - 200); }`);
     else if (opts.scroll !== null) await evaluate(`scrollTo(0, ${opts.scroll}); for (const d of document.querySelectorAll('dialog[open]')) d.scrollTop = ${opts.scroll};`);
     else if (VIEWS[screen].still) { /* a popover open where its view put it: a scroll or resize would close it */ }
-    else await send('Emulation.setDeviceMetricsOverride', { width: w, height: Math.min(Math.max(m.height, opts.height), 8000), deviceScaleFactor: 1, mobile: w < 768 });
+    else await send('Emulation.setDeviceMetricsOverride', { width: w, height: Math.min(Math.max(m.height, heightOf(w)), 8000), deviceScaleFactor: 1, mobile: mobileAt(w) });
     await sleep(200);
     // --top keeps only the top of the page: cheaper to read when the change is there.
     const clip = opts.top ? { clip: { x: 0, y: 0, width: w, height: Math.min(opts.top, m.height), scale: 1 } } : {};
@@ -830,6 +882,7 @@ async function lookOnce(screen, w, bg = '', skin = '') {
     // Zero buttons means the page never drew, not that every button passed.
     for (const d of m.dialogSideways) row.extra.push(`${d} scrolls sideways`);
     for (const o of m.overlaps) row.extra.push(`overlap: ${o}`);
+    for (const c of m.cutoff) row.extra.push(`cut off by the window: ${c}`);
     // A view of a sheet locked with no button on purpose says so (`noButtons`).
     if (!m.checked && !VIEWS[screen]?.noButtons) row.extra.push('no buttons found: the page did not render');
     row.ok = !m.sideways && !row.errors.length && !row.csp.length && !m.small.length && !row.extra.length;
@@ -861,9 +914,9 @@ for (const screen of opts.screens) {
 
 const pad = (s, n) => String(s).padEnd(n);
 const W = Math.max(7, ...rows.map((r) => r.screen.length + 1));
-console.log(`${pad('screen', W)}${pad('width', 6)}${pad('sideways', 10)}${pad('errors', 7)}${pad('csp', 5)}${pad('<44px', 6)}${pad('buttons', 8)}result`);
+console.log(`${pad('screen', W)}${pad('width', 9)}${pad('sideways', 10)}${pad('errors', 7)}${pad('csp', 5)}${pad('<44px', 6)}${pad('buttons', 8)}result`);
 for (const r of rows) {
-  console.log(pad(r.screen, W) + pad(r.w, 6) + pad(r.sideways ? `yes ${r.scrollWidth}` : 'no', 10)
+  console.log(pad(r.screen, W) + pad(r.w, 9) + pad(r.sideways ? `yes ${r.scrollWidth}` : 'no', 10)
     + pad(r.errors.length, 7) + pad(r.csp.length, 5) + pad(r.small.length, 6) + pad(r.checked, 8) + (r.ok ? '✅' : '❌'));
 }
 for (const r of rows.filter((x) => !x.ok)) {
