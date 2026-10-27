@@ -15,6 +15,7 @@ beats and a song) that only ends in the app's normal beat and song saving.
 |---|---|---|---|
 | Output and playing | `audio.js` | no (Web Audio) | `app.js`, `pads.js`, `sheet.js`, `chop.js`, `bulk.js`, `things.js`, `kids.js`, `wave.js`, `meter.js`; `sequencer.js` and `song.js` through `deps.audio` |
 | Grille and pad fill | `meter.js` | no (rAF) | `app.js` sets its hooks; `audio.on.started`, `sequencer.js`, `song.js` start it |
+| Warming | `warm.js` | yes (the loads and the idle clock are handed in) | `app.js` makes the one warmer; `pads.js renderPads` → `onShown` → `now`; `app.js showPerson` → `later` |
 | The render | `voices.js` | no (OfflineAudioContext, Worker) | `audio.js load`, `sheet.js`, `bulk.js`, `things.js` |
 | Building blocks | `steps.js` | yes (builds nodes on any ctx it is given) | `voices.js`, `tweaks.js`, `mixer.js`, `sheet.js`, `shape.js` |
 | Pitch-keeping stretch | `stretch.js`, `stretch-worker.js` | yes | `voices.js timeStretch` only |
@@ -153,9 +154,16 @@ setProgress` ignores ids that are not a pad.
    and 🎤 Live's glow (`meter.onLevel` → `dj.level`) each animation frame,
    until nothing plays and the level falls under 0.02.
 
-Warming: `app.js setPerson` calls `audio.load` for every clip of the person
-shown; changing an instrument setting (`instNotes`…) loads that group's
-presets again. So most taps hit the `rendered` cache.
+Warming (`warm.js`, made once by `app.js`): `pads.js renderPads` hands the
+pads that are on the page (the open groups) to `onShown` → `warm.now`, which
+calls `audio.load` for each at once; so a group opened later loads its sounds
+at that tap. `app.js showPerson` then gives the person's whole list to
+`warm.later`: one sound per idle slot (`requestIdleCallback`; a 50 ms timer in
+Safari), skipping what is loaded, and a new person replaces the queue. Nothing
+else decodes at start-up, so a first tap does not wait behind a hundred
+renders. Changing an instrument setting (`instNotes`…) loads that group's
+presets again at once. So most taps hit the `rendered` cache; a tap on a
+sound not yet warmed loads it as any tap does. Tests: `tests/warm.test.mjs`.
 
 ## Caches and when they are invalidated
 

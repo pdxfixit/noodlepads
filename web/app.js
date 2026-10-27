@@ -29,7 +29,8 @@ import { validateManifest, isKitClip, boardTitle, soloPerson, SOLO_NAME, groupKi
 const COMMON_COLOR = '#333040';
 import { createDJ } from './dj.js';
 import { createSong } from './song.js';
-import { initPads, renderPads, renderPeople, makePad, makeAddPad, padFor, setProgress, tapPad, flash, hasChosen, clearChosen, cancelDrag, kitOpen, toggleKitGroup } from './pads.js';
+import { initPads, renderPads, renderPeople, makePad, makeAddPad, padFor, setProgress, tapPad, flash, hasChosen, clearChosen, cancelDrag, kitOpen, toggleKitGroup, setPadHooks } from './pads.js';
+import { createWarmer } from './warm.js';
 import { initBulk } from './bulk.js';
 import { initSheet, openSheet, setBeatTempo, isRecording } from './sheet.js';
 import { initUpdate } from './update.js';
@@ -80,6 +81,8 @@ let seq = null;
 let engine = null;  // the one beat engine (beat-engine.js): shared by Beats, 🎼 Song and 🧸 Kids
 let song = null;  // 🎼 Song's screen
 let dj = null;   // The keys: 🎤 Live's screen, and Beats' ⌨️ Keys (dj.js)
+// Which sounds are prepared before a tap, and when (warm.js).
+const warm = createWarmer({ load: (clip) => audio.load(clip), loaded: (clip) => audio.rendered.has(audio.key(clip)) });
 
 // ── Who is showing, Edit sounds, Beats ─────────────────────────────────
 
@@ -194,7 +197,7 @@ function showPerson(p, { behind = false } = {}) {
   if (keysShow()) dj?.render();
   applyKids();
   refreshKids();
-  for (const clip of clipsFor(p.id)) audio.load(clip).catch(() => {});
+  warm.later(clipsFor(p.id));   // the pads on show were loaded by renderPads (onShown); the rest wait for idle
 }
 
 // 🧸 Kids' own beat from before ADR 0020 (`beat-kids-…`) becomes the
@@ -875,6 +878,7 @@ async function start() {
   meter.onLevel = (l) => { if (keysShow()) dj?.level(l); };
 
   initPads({ openSheet, onPerson: setPerson, onLooping: (id, on) => dj?.looping(id, on) });
+  setPadHooks({ onShown: (clips) => warm.now(clips) });
   initSheet();
   initBulk({ share: shareSounds, inCloud });   // ✏️ Edit sounds with sounds chosen: Move, Color · picture, Voice, Share, Delete
   initPeople({ showPerson: setPerson, startOver, letGoOf });

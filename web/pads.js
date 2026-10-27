@@ -282,6 +282,7 @@ export function renderPads() {
     ...(kit.length ? [sectionHeading('Presets', kit.every((c) => c.hidden)), ...kitParts] : []),
   );
   onChosen();
+  onShown(all.filter((c) => el.pads.contains(pads.get(c.id))));   // closed groups' pads are not on the page
 
   if (focusedId) {
     const cell = el.pads.querySelector(`[data-cell="${CSS.escape(focusedId)}"]`);
@@ -374,12 +375,14 @@ function editBadge(clip) {
 
 const chosen = new Set();   // pad ids chosen in Edit sounds, in the order they were tapped
 let onChosen = () => {};    // bulk.js redraws its bar
+let onShown = () => {};     // app.js warms the sounds of the pads on show (warm.js)
 
 // What bulk.js does for the pads: delete sounds (with Undo) and open a
 // group's ✏️ sheet. Set by setPadHooks.
 const bulk = { remove: async () => {}, editGroup: () => {} };
 export function setPadHooks(hooks) {
   if (hooks.onChosen) onChosen = hooks.onChosen;
+  if (hooks.onShown) onShown = hooks.onShown;
   if (hooks.remove) bulk.remove = hooks.remove;
   if (hooks.editGroup) bulk.editGroup = hooks.editGroup;
 }
