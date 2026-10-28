@@ -211,7 +211,7 @@ test('"To delete a profile": the steps name real buttons, and Remove PIN, switch
   const people = readFileSync(new URL('../web/people.js', import.meta.url), 'utf8');
   assert.ok(people.includes("'☁️ Delete their cloud copy too'"), 'the button the steps name');
   const js = readFileSync(new URL('../web/cloud.js', import.meta.url), 'utf8');
-  assert.match(js, /export async function leaveCloud\(personId, pin\) \{[\s\S]*?await bringLatest\(personId, pin\);\s*await removeProfile\(personId, keyOf\(personId\), pin\);/, 'leaving brings their latest here, then deletes the profile (tests/cloud-leave.test.mjs runs it)');
+  assert.match(js, /export async function leaveCloud\(personId, pin, \{ knowing = false \} = \{\}\) \{[\s\S]*?await bringLatest\(personId, pin\);[\s\S]*?if \(unheld && !knowing\) throw[^\n]*\n\s*await removeProfile\(personId, keyOf\(personId\), pin\);/, 'leaving brings their latest here, then deletes the profile (tests/cloud-leave.test.mjs runs it)');
   const ui = readFileSync(new URL('../web/cloud-ui.js', import.meta.url), 'utf8');
   assert.match(ui, /const go = \(pin\) => removeProfile\(left\.id, left\.key, pin\)/, '☁️ Delete their cloud copy too deletes the profile (tests/delete-cloud.test.mjs runs it)');
 });
