@@ -21,7 +21,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 - **Listen to the 10 new voice clips** (CC0 or CC BY): the 8 callouts, the Evil laugh and the Cackle (2026-10-27). Then a family member records the last six, which are still macOS `say` voices and may not be ours to share: "Oh yeah!", "Bruh.", "Nice!", "G G!", "Drop the beat!" and "Boom!" (list in `web/clips/kit/LICENSE-samples.txt`). Attach each in a chat; each file is one short clip, no names in it.
 
-- **Isopix: set its name hashes** (in the isopix repo, TODO "The owner does"): run `just names-secret`, then `gh secret set ISOPIX_NAME_HASHES`.
+- **Isopix: set its name hashes** (in the isopix repo, TODO "The owner does"): run its names-secret recipe in the isopix checkout, then `gh secret set ISOPIX_NAME_HASHES`.
 
 - **Isopix: approve the history rewrite** (in the isopix repo): it is ready and verified; say yes and the force-push goes.
 

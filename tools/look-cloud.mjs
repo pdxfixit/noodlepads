@@ -72,10 +72,27 @@ function sayProof() {
 }
 
 // The API from Node: every request carries the site's Origin, and the checks' proof.
+// web/cloud-api.js turns a fetch that throws into "0 offline" and drops the
+// reason, so the last one is kept here (what Node said and its cause, such as
+// ECONNRESET) for `refused` to print: the 2026-10-28 deploy failed a step
+// with "got 0 offline" and nothing said why.
+let lastFetchError = null;
+const sayFetchError = (method, url, err) => {
+  const cause = err?.cause;
+  const why = [err?.message, cause?.code, cause?.message].filter(Boolean).join(': ');
+  lastFetchError = `${method} ${new URL(url).pathname} threw ${err?.name ?? 'Error'}: ${why}`;
+};
 function apiFor(base) {
   return createCloudApi({
     base: `${base}/api`,
-    fetch: (url, init = {}) => fetch(url, { ...init, headers: { ...init.headers, Origin: ORIGIN, ...checksHeaders() } }),
+    fetch: async (url, init = {}) => {
+      try {
+        return await fetch(url, { ...init, headers: { ...init.headers, Origin: ORIGIN, ...checksHeaders() } });
+      } catch (err) {
+        sayFetchError(init.method || 'GET', url, err);
+        throw err;
+      }
+    },
   });
 }
 
@@ -109,7 +126,8 @@ function steps() {
         return said;
       } catch (err) {
         failed++;
-        console.log(`❌ ${what}: ${err?.message || err}`);
+        const reason = err?.status === 0 && lastFetchError ? ` (${lastFetchError})` : '';
+        console.log(`❌ ${what}: ${err?.message || err}${reason}`);
         throw Object.assign(err instanceof Error ? err : new Error(String(err)), { said: true });
       }
     },
@@ -148,7 +166,8 @@ async function refused(promise, status, error) {
     await promise;
   } catch (err) {
     if (err instanceof CloudError && err.status === status && (!error || err.error === error)) return err;
-    throw new Error(`expected ${status} ${error ?? ''}, got ${err?.status ?? ''} ${err?.error ?? err?.message}`);
+    const reason = err?.status === 0 && lastFetchError ? ` (${lastFetchError})` : '';
+    throw new Error(`expected ${status} ${error ?? ''}, got ${err?.status ?? ''} ${err?.error ?? err?.message}${reason}`);
   }
   throw new Error(`expected ${status} ${error ?? ''}, but it was allowed`);
 }

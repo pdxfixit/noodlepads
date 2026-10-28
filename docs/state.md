@@ -87,7 +87,7 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 
 ## Waits on Ben
 
-- Isopix: run `just names-secret` and `gh secret set ISOPIX_NAME_HASHES` (TODO "The owner does" in that repo).
+- Isopix: run its names-secret recipe in the isopix checkout, then `gh secret set ISOPIX_NAME_HASHES` (TODO "The owner does" in that repo).
 - Isopix history rewrite: ready and verified, waiting on Ben's OK to force-push.
 - The cloud session setup: add `f=/home/user/noodlepads/tools/cloud_setup.sh; [ -f "$f" ] && bash "$f" || true` to the cloud environment's setup script, or add a .claude SessionStart hook.
 - Telemetry: land branch `land/noodlepads-cloud-actions` from a session with `gh`.

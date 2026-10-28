@@ -42,3 +42,37 @@ test('cloud-smoke passes against the Worker, checks a deleted sound frees its au
   assert.equal(env.DB.rows('SELECT COUNT(*) AS n FROM sounds')[0].n, 0, 'nothing left in the cloud');
   assert.equal(env.DB.rows("SELECT COUNT(*) AS n FROM profiles WHERE id LIKE 'p-smoke-%'")[0].n, 0);
 });
+
+// A fetch that throws reaches web/cloud-api.js as "0 offline" with no reason
+// (2026-10-28: "expected 401 pin, got 0 offline" on a deploy, cause unknown).
+// The smoke keeps what Node said and prints it, so the next one names its cause.
+test('cloud-smoke names the cause when a request throws instead of answering', async () => {
+  const env = {
+    DB: new FakeD1(), ASSETS: { fetch: async () => new Response('asset') }, ALLOW_UNPROVEN_CHECKS: 'tests',
+    EVENTS: { put: async () => {} }, FEEDBACK: { put: async () => {} }, FEEDBACK_LIMITER: { limit: async () => ({ success: true }) },
+  };
+  const realFetch = globalThis.fetch;
+  const log = console.log;
+  const said = [];
+  let opens = 0;
+  globalThis.fetch = (url, init = {}) => {
+    // The fourth open is the step's second wrong PIN: the connection is reset.
+    if (String(url).endsWith('/open') && ++opens === 4) {
+      return Promise.reject(new TypeError('fetch failed', { cause: Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' }) }));
+    }
+    return worker.fetch(new Request(String(url), { ...init, duplex: 'half' }), env);
+  };
+  console.log = (...args) => said.push(args.join(' '));
+  let code;
+  try {
+    code = await main('cloud-smoke', ['--url', 'https://noodlepads.com']);
+  } finally {
+    globalThis.fetch = realFetch;
+    console.log = log;
+  }
+  assert.equal(code, 1, said.join('\n'));
+  const line = said.find((l) => l.startsWith('❌ wrong PINs at open do not lock the key'));
+  assert.ok(line, said.join('\n'));
+  assert.match(line, /got 0 offline \(POST \/api\/profiles\/p-smoke-[^/]+\/open threw TypeError: fetch failed: ECONNRESET: read ECONNRESET\)/, line);
+  assert.equal(env.DB.rows("SELECT COUNT(*) AS n FROM profiles WHERE id LIKE 'p-smoke-%'")[0].n, 0, 'the throwaway profile is still deleted');
+});
