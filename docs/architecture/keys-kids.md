@@ -24,6 +24,8 @@
 | `finger.js` | `dj.js`, `dj-keys.js`, `dj-touch.js` (`holdToDrag`), `kids.js`, `pads.js`, `sequencer.js` (`pillHolds`) | none | one follower per caller; one drag press per ✏️ Layout drag (`pads.js` has its own for Edit sounds) |
 | `kids.js` | `app.js` (`initKids`, `showKids`, `refreshKids`, `kidsPersonLeaving`, `kidsShowing`, `kidsBusy`, `askGrownUp`, `kidsKeydown`, `kidsKeyup`) | `audio.js`, `kids-logic.js`, `grown-up.js`, `scratch.js`, `settings.js`, `skins.js`, `tips.js`, `finger.js`, `meter.js levelOf`, `notes.js startsIn`, `beat.js` (`STEPS`, `noteRate`), `instruments.js` | the tab, the page, the recorder, the beat player, held toy keys, the tune recording |
 | `kids-logic.js` | `kids.js`, `grown-up.js` (`makeSum`, `typeDigit`) | `beat.js` (`cleanRow`, `STEPS`, `multiplyRows`), `notes.js addNote`, `voices.js` (`chainFields`, `voiceStep`), `scratch.js SCRATCH_NAME`, `instruments.js versionFor` | nothing (pure) |
+| `kids-prompts.js` | `kids.js`, `kids-say.js` (nothing imports it but them), `tools/kids_prompts.py` (reads its lines), tests | none | nothing (pure): the spoken prompts' list (id, screen, words, `level`), `RECORDED` (the ids with a file), `promptClip` |
+| `kids-say.js` | `kids.js initKids` (`createSay(sayHost())`) | none (a host passed in) | the one prompt waiting or speaking: `maybe(prompt)` after a screen shows, `hush()` on any touch |
 | `grown-up.js` | `kids.js askGrownUp`, `feedback.js`, `cloud-ui.js` (Forget this device) | `kids-logic.js`, `dialogs.js` | the one `#kids-sum` dialog and who asked it (`ask`) |
 
 `dj.js` imports no `audio.js`. Every sound it makes goes through `deps`: `tap`, `loop`, `playOnce`, `stopClip`, `loadSound`, `isLooping`, `now`, `latency`, `sampleRate`.
@@ -336,6 +338,10 @@ Kids writes it with `deps.saveBeat` (`state.savedBeats` + `persist('beats')`). I
 | Playhead | `stepsHeard` with `outputDelay` | the same, over the squares (`kids.js follow`) |
 | `onHit` to the keys, meter | yes | `audio.on.started()` once |
 
+### Spoken prompts
+
+`setTab` ends with `say.maybe(promptFor(tab))` (`kids-say.js`). The player says nothing unless `kids-prompts.js RECORDED` holds the screen's id, `kidsHint('say-<id>')` is true (Kids level, first steps on, `kids-say-<id>` not yet in the person's `seen`; Pads also needs `kidsHint('pad')` and Record `kidsHint('mic')`), and, 400 ms later, nothing is sounding (`audio.playing`, `pending`, `ringing`, `kidsBusy()`), the page is visible and a tap has woken audio (`audio.ctx` running or `navigator.userActivation.isActive`). Then `audio.load` and `audio.start` play it as a bundled sound (`promptClip`: id `kids-say-<id>`, `file` `clips/kids-prompts/<id>.wav`, its `level`), and only then is `kids-say-<id>` marked seen, so a skipped prompt comes back next time. `say.hush()` runs on any `pointerdown` or `keydown` in `#kids` (capture), ⏹️, leaving Kids and a hidden page. The files are kept offline by `sw.js KIDS_PROMPTS`, which `tests/kids-say.test.mjs` holds equal to `RECORDED`; `just kids-prompts --fix` writes both (and each `level`).
+
 ### The toy keys and ● tune
 
 - `KIDS_KEYS`: C D E G A, then high C D E (pentatonic). A high key plays its low note at `keyRate` (2×) under its own play id (`keyPlayId`, `<clipId>+12`), so both can sound.
@@ -482,6 +488,7 @@ More gotchas:
 | The grown-up sum | `grown-up.js`, `kids-logic.js makeSum`; three askers (`kids.js`, `feedback.js`, `cloud-ui.js` Forget this device). |
 | Who sees Kids | `app.js applyKids`, `enterKids`, `grownUp`/`kidsVisit`; `settings.js` `level`. |
 | A recorder fix | `kids.js` (`listen`, `keep`) and `sheet.js` (`startRecording`, `acceptAudio`). |
+| A spoken prompt (new, reworded or recorded) | `kids-prompts.js KIDS_PROMPTS` (id, tab, words, one line each: `tools/kids_prompts.py` reads them), the recording `web/clips/kids-prompts/<id>.wav`, then `just kids-prompts --fix`; the words in TODO "Ben does" and docs/guide.md. |
 
 ## ✅ Checked by tests
 

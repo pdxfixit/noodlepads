@@ -89,7 +89,7 @@ the cloud database show what they would do, or ask, before they do it.
 | Problem reports | `just logs`, `--errors`, `--digest` read them from that copy |
 | Move the old Mac archives into the runner (once) | `just runner-export all LOGS METRICS OUT` (both in the one file to import), `just runner-export check FILE` (docs/how-to.md, "Retire the old Mac archives") |
 | Has a council seat stopped finding things? | `just council-tripwire` (a seat whose last 10 reviews were all a plain pass; `docs/council.md`) |
-| Make sounds and emoji lists | `just placeholders`, `just emoji`, `just preset-loudness` (how loud each preset plays on a phone; `--fix` evens them out) |
+| Make sounds and emoji lists | `just placeholders`, `just emoji`, `just preset-loudness` (how loud each preset plays on a phone; `--fix` evens them out), `just kids-prompts` (checks the recordings of 🧸 Kids' spoken prompts; `--fix` wires them in) |
 
 Agents use the rest: `just setup` (the git hooks, once per clone), `just ship`, `just land`, `just land-continue`, `just ci-wait` (waits for a commit's GitHub runs), `just policy` (copies
 `docs/privacy-policy.md` to the privacy site's repo once a change to it is on main; `--dry-run` stops before landing),

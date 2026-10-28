@@ -57,6 +57,10 @@ const INSTRUMENT_FILES = [
   '808-40', 'brass-67', 'chip-66', 'flute-64', 'guitar-57', 'guitar-66', 'kalimba-66', 'marimba-66', 'organ-63',
   'piano-61', 'piano-69', 'steel-66', 'strings-62', 'strings-69', 'upright-40',
 ];
+// 🧸 Kids' spoken prompts that have a recording (web/kids-prompts.js
+// RECORDED, which `just kids-prompts --fix` writes with this line): each is
+// clips/kids-prompts/<id>.wav. tests/kids-say.test.mjs holds the two equal.
+const KIDS_PROMPTS = [];
 const BG = [
   'bolts', 'bubbles', 'checks', 'confetti', 'diamonds', 'dots', 'drops', 'flowers', 'grid', 'hearts', 'moons',
   'noodles', 'notes', 'plus', 'rings', 'scales', 'smiles', 'sparkles', 'stars', 'stripes', 'triangles', 'waves',
@@ -65,7 +69,7 @@ const BG = [
 const MODULES = [
   'agent', 'app', 'audio', 'backdrop', 'backup', 'backup-ui', 'beat', 'beat-chooser', 'beat-engine', 'beat-grooves', 'beat-library', 'beat-row', 'board', 'bulk', 'chop', 'cloud', 'cloud-api', 'cloud-sync', 'cloud-ui', 'codes', 'contact', 'contrast', 'cuts', 'device-meta', 'dialogs', 'dj', 'dj-keys', 'dj-takes', 'dj-touch',
   'download', 'edge-scroll', 'emoji-all', 'emoji-check', 'emoji-more', 'events-client', 'feedback', 'finger', 'firsts', 'follow', 'foreign', 'grooves', 'groups', 'grown-up', 'help', 'inst-picker', 'instruments',
-  'keyset', 'kids-logic', 'kids', 'leftover', 'lines', 'listen-dsp', 'listen-input', 'listen-make', 'listen-ui', 'listen-worklet', 'listen', 'log-clean', 'log-send', 'log', 'loudness', 'merge', 'merge3', 'meter', 'mic', 'mini-deck',
+  'keyset', 'kids-logic', 'kids-prompts', 'kids-say', 'kids', 'leftover', 'lines', 'listen-dsp', 'listen-input', 'listen-make', 'listen-ui', 'listen-worklet', 'listen', 'log-clean', 'log-send', 'log', 'loudness', 'merge', 'merge3', 'meter', 'mic', 'mini-deck',
   'mix', 'mixer', 'model', 'names', 'notes', 'nudge', 'offline', 'old-backup', 'old-beats', 'overflow', 'pad-fill', 'pad-size', 'pads', 'people',
   'pill-select', 'pitch', 'play-count', 'playhead', 'playlist', 'reid', 'rhythm', 'roll', 'row-volume', 'scratch', 'sequencer',
   'settings-ui', 'settings', 'shape', 'share-render', 'sheet-make', 'sheet-state', 'sheet-voices', 'sheet', 'skins', 'slide', 'song', 'starters', 'state', 'steps',
@@ -91,6 +95,7 @@ const SHELL = [
   ...BG.map((b) => `bg/${b}.svg`),
   ...KIT.map((k) => `clips/kit/${k}.wav`),
   ...INSTRUMENT_FILES.map((k) => `clips/kit/${k}.wav`),
+  ...KIDS_PROMPTS.map((k) => `clips/kids-prompts/${k}.wav`),
 ];
 
 // What to do with a request. Pure.

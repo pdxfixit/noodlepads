@@ -243,6 +243,11 @@ placeholders *names:
 preset-loudness *args:
     python3 tools/preset_loudness.py "$@"
 
+# Checks the recordings in web/clips/kids-prompts/ for 🧸 Kids' spoken prompts (format, length, quiet at the start, loudness): ✅ / ⏳ no file yet / ❌ with the fix. --fix then wires the good ones in (RECORDED, levels, sw.js)
+[positional-arguments]
+kids-prompts *args:
+    python3 tools/kids_prompts.py "$@"
+
 # Remake web/emoji-all.js and web/emoji-check.js (every emoji behind the pickers' "…") from this Python's Unicode data; prints sizes
 emoji:
     python3 tools/make_emoji.py

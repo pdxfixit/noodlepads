@@ -23,6 +23,17 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 - **Telemetry: land the branch `land/noodlepads-cloud-actions`** from a session with `gh` (`just land 6c2c032` in the telemetry checkout): it adds the cloud events `up` and `leave`, then run `just test` in the main checkout here.
 
+- **A family member records the 🧸 Kids prompts** (about 10 min, on any phone; Ben, 2026-10-28: the app is ready, the voice is a family member's). Say each line once, cheerful and clear, close to the microphone, with the words right at the start and no more than about 2 seconds:
+
+  | File (in `web/clips/kids-prompts/`) | Say exactly |
+  |---|---|
+  | `pads.wav` | Tap a pad! |
+  | `record.wav` | Hold to talk! |
+  | `beats.wav` | Tap the squares! |
+  | `keys.wav` | Tap the keys! |
+
+  Each file is a WAV, mono, 16-bit, 22050 Hz (from a phone's m4a: `ffmpeg -i in.m4a -ac 1 -ar 22050 -sample_fmt s16 web/clips/kids-prompts/pads.wav`). Check them with `just kids-prompts` (✅ / ⏳ no file yet / ❌ with the fix); when none fails, `just kids-prompts --fix` wires them in and an agent commits the WAVs with the changed `web/kids-prompts.js` and `web/sw.js`. Until then the app says nothing. The recordings become public (anyone can play them at noodlepads.com), so say nothing else on them and no names.
+
 ### v1: prove out the interface
 
 - [ ] Attach any real sound clips in chat (5 min) 🔼
@@ -66,5 +77,4 @@ Agents suggested these; nothing happens until Ben says yes.
 - **Song's "On the beat" Echo follows tempo marks** (audio seat, 2026-10-27): a Song mix is built at the song's tempo, so an Echo set to a note length keeps that gap after a tempo mark changes the speed.
 
 - **Test files that end by themselves** (offered 2026-10-19, about 60–90 min): the app's test files never exit without `--test-force-exit`, and that flag cuts a parallel run's last reports, here and on GitHub (`ℹ tests` drops below the full count; `just test` prints ⚠️ and runs a cut file again alone). Find what holds them open (`process.getActiveResourcesInfo()` after the last test; a first try at unref-ing the app's timers in `tests/fake-dom.mjs` was not enough), make `installPage` release it, then drop the flag. Saves: a test count you can trust, and no file run twice.
-- **Spoken prompts in 🧸 Kids** (a recorded "tap a pad!" for kids who can't read yet; the clip would be public). Ben, 2026-10-16: "Maybe… some of it should just be found by poking. I'm not closed to it."
 

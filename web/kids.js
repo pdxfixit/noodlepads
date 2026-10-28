@@ -14,7 +14,9 @@
 // A new kid's first steps have no words (ADR 0028, tips.js kidsHint): a 👆
 // hand pulses over the first pad until a pad is tapped, and the mic wiggles
 // until the first recording; both stay still when the device asks for less
-// motion, and each shows once per person.
+// motion, and each shows once per person. A recorded word or two can say the
+// same (kids-say.js, kids-prompts.js): "Tap a pad!" once per screen, only
+// when its recording is in web/clips/kids-prompts/, so with none Kids is as it was.
 //
 // Remembered on the device: the tab (`kids-tab`). The pad size is the
 // person's own `kidsPadSize` (Pads keeps its own `padSize`): the slider in
@@ -34,6 +36,8 @@ import { kidsBeatOf, kidsBeatId, isHiddenBeat } from './scratch.js';
 import { getSetting, setSetting, onSetting } from './settings.js';
 import { SKINS, nextSkin } from './skins.js';
 import { kidsHint, markSeen } from './tips.js';
+import { createSay } from './kids-say.js';
+import { RECORDED, promptFor, promptClip, seenId } from './kids-prompts.js';
 import {
   kidsPadPx, kidsSliderAt, shareOf, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder,
   KIDS_DRUMS, drumPicture, KIDS_SQUARES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName,
@@ -51,6 +55,7 @@ let deps = null;
 let showing = false;
 let tab = cleanTab(recall('kids-tab'));
 let live = null;   // the size under a finger (the slider moving, a pinch) before it is kept
+let say = null;    // the spoken prompts' player (initKids)
 
 const make = (tag, className, props = {}) => Object.assign(document.createElement(tag), { className, ...props });
 const reduced = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
@@ -85,6 +90,7 @@ function setTab(name) {
   if (showing) {
     logEvent('kids', { tab: name });
     render();
+    say?.maybe(promptFor(name));
   }
 }
 
@@ -1017,6 +1023,7 @@ export function kidsKeyup(e) {
 // is called off; then the whole app's Stop all (app.js stopEverything: the
 // beat, the song, a take playing back, every ⏲️ off).
 function stopAll() {
+  say?.hush();
   stopTune();
   stopBeat();
   stopRecording({ quiet: true });
@@ -1045,6 +1052,7 @@ export function showKids(on) {
   showing = on;
   el.root.hidden = !on;
   if (!on) {
+    say?.hush();
     stopTune();
     stopBeat();
     stopRecording();
@@ -1080,8 +1088,29 @@ export function refreshKids() {
 export const kidsShowing = () => showing;
 export const kidsBusy = () => !!playing || !!rec.mode || !!tuneRec;
 
+// What the spoken prompts need of the app (kids-say.js): a prompt plays as a
+// bundled sound, once per person (their `seen`), only in a visible page whose
+// audio a tap has woken, and never over a sound or a recording in progress.
+function sayHost() {
+  const sounding = () => audio.playing.size > 0 || audio.pending.size > 0 || [...audio.ringing.values()].some((v) => v.length > 0);
+  return {
+    recorded: () => RECORDED,
+    wanted: (p) => kidsHint(`say-${p.id}`) && (p.id !== 'pads' || kidsHint('pad')) && (p.id !== 'record' || kidsHint('mic')),
+    mark: (p) => markSeen(seenId(p)),
+    busy: () => !showing || sounding() || kidsBusy(),
+    ready: () => document.visibilityState !== 'hidden' && (audio.ctx?.state === 'running' || navigator.userActivation?.isActive === true),
+    load: (p) => audio.load(promptClip(p)),
+    start: (p, loaded) => {
+      const clip = promptClip(p);
+      audio.start(clip.id, loaded, { clip });
+      return { stop: () => audio.stop(clip.id) };
+    },
+  };
+}
+
 export function initKids(d) {
   deps = d;
+  say = createSay(sayHost());
   const q = (s) => document.querySelector(s);
   Object.assign(el, {
     root: q('#kids'),
@@ -1095,6 +1124,8 @@ export function initKids(d) {
     keys: q('#kids-keys'), inst: q('#kids-inst'), rec: q('#kids-rec'), recFace: q('#kids-rec-face'),
   });
   for (const b of el.tabs) b.addEventListener('click', () => { boing(b); setTab(b.dataset.kidsTab); });
+  // Any touch ends a prompt that is speaking or waiting: the kid is already doing something (kids-say.js).
+  for (const type of ['pointerdown', 'keydown']) el.root.addEventListener(type, () => say.hush(), true);
   onePressOneClick(el.root);   // a held Enter: a pad would play on and on, the mic toggle on and off
   el.stop.addEventListener('click', stopAll);
   el.skin.addEventListener('click', nextLook);
@@ -1113,6 +1144,6 @@ export function initKids(d) {
   wireRec();
   // Out of sight a beat would play on, unseen: a hidden page (a locked phone, another app or tab) stops it, as it does the other screens.
   globalThis.document?.addEventListener?.('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && showing) { stopTune(); stopBeat(); }
+    if (document.visibilityState === 'hidden' && showing) { say.hush(); stopTune(); stopBeat(); }
   });
 }

@@ -134,11 +134,10 @@ def kit():
     return json.loads(BOARDS.read_text(encoding="utf-8"))["kit"]
 
 
-def measure(presets=None):
-    """[(dB from the middle as it plays now, dB from the middle with no
-    level, preset)] for every preset. The middle is the median of the
-    presets shown with Advanced off, one per file, with no level: the
-    yardstick web/loudness.js PRESET_LOUDNESS is too."""
+def raw_and_middle(presets=None):
+    """({(file, voicing): dB as heard, with no level}, the middle: the median
+    of the presets shown with Advanced off, one per file, with no level: the
+    yardstick web/loudness.js PRESET_LOUDNESS is too)."""
     presets = presets if presets is not None else kit()
     files, raw = {}, {}
     for k in presets:
@@ -149,9 +148,22 @@ def measure(presets=None):
             samples, rate = files[k["file"]]
             raw[key] = heard(voiced(samples, key[1]) if key[1] else samples, rate)
     shown = {k["file"]: raw[(k["file"], None)] for k in presets if not k.get("advanced") and not k.get("inst")}
-    middle = statistics.median(shown.values())
+    return raw, statistics.median(shown.values())
+
+
+def measure(presets=None):
+    """[(dB from the middle as it plays now, dB from the middle with no
+    level, preset)] for every preset."""
+    presets = presets if presets is not None else kit()
+    raw, middle = raw_and_middle(presets)
     return [(raw[(k["file"], voicing(k))] - middle + k.get("level", 0.0), raw[(k["file"], voicing(k))] - middle, k)
             for k in presets]
+
+
+def level_for(over):
+    """The `level` that brings a sound `over` dB above the middle down to it
+    (0 when it is within EVEN): levels() works a preset's the same way."""
+    return -round(over / STEP) * STEP if over > EVEN else 0
 
 
 def levels(rows):
@@ -160,7 +172,7 @@ def levels(rows):
     turn-down below the middle."""
     want = {}
     for _, over, k in rows:
-        v = (-round(over / STEP) * STEP if over > EVEN else 0) + BY_EAR.get(k["id"], 0)
+        v = level_for(over) + BY_EAR.get(k["id"], 0)
         if v:
             want[k["id"]] = max(-24, v)
     return {i: int(v) if v == int(v) else v for i, v in want.items()}

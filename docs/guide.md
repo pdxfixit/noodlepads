@@ -230,6 +230,21 @@ ten keys go five across (`just look kids-pads --landscape`).
   read a "Kept as …" line. A grown-up finds the latest tune at once in
   🗂️ Beats, where it is a beat with a tune row and opens in 🎹 the piano roll.
 
+A kid who can't read yet can hear a few recorded words (Ben, 2026-10-28;
+`kids-prompts.js`, played by `kids-say.js`): "Tap a pad!" on Pads, "Hold to
+talk!" on Record, "Tap the squares!" on Beats, "Tap the keys!" on Keys. Each
+plays once per kid, a moment after its screen first shows, on the Kids level
+only, and not at all where the kid has already tapped a pad or recorded
+(Pads, Record). It never plays over a pad, a beat, a recording or a tune
+sounding, a touch ends it, and a page that is hidden or whose sound a tap has
+not yet woken says nothing and tries again next time. It plays only when its
+file `web/clips/kids-prompts/<id>.wav` exists and is listed as recorded, so
+until a family member records them Kids is exactly as it was. Kids has no
+mute setting, so ⏹️ and the device's volume are the way to quiet it. The
+recordings are public like every clip. `just kids-prompts` checks the
+recordings (WAV, mono, 22050 Hz, 0.3 to 2.5 s, speaking within 0.25 s, how
+loud) and `--fix` wires the good ones in.
+
 ⏹️ (or Esc, or Space) stops everything, the whole app's sounds too: every
 sound, the beat, a ● tune and a mic recording, which is kept as its pad
 without playing (a 3, 2, 1 is called off). The grown-up's ⏲️ Click track
