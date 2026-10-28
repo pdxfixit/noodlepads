@@ -20,6 +20,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import './fake-dom.mjs';   // at the top, so its end-of-file clean-up covers the whole file (tests/fake-dom-exit.test.mjs)
 import { cleanRow, hitsDue, moveItem } from '../web/beat.js';
 import { createBeatEngine } from '../web/beat-engine.js';
 

@@ -6,6 +6,7 @@
 // element that was never looked up, a handler wired to nothing).
 
 import { readFileSync } from 'node:fs';
+import { onFileEnd } from './file-end.mjs';
 
 const webDir = new URL('../web/', import.meta.url);
 
@@ -263,6 +264,19 @@ const CAP_MS = 10_000;
 const realSetTimeout = globalThis.setTimeout;
 const realClearTimeout = globalThis.clearTimeout;
 const realSetInterval = globalThis.setInterval;
+// ── Letting the file end ──
+//
+// The app starts intervals (the sequencer's tick, the play watch, update
+// checks, the nudge) and one-shot timers (holds, fades, an Undo offer) that
+// nothing in a test stops, and Node waits for every timer. Every timer set
+// while the page is installed is kept here, and tests/file-end.mjs clears them
+// when the file's tests are done, so the file ends by itself.
+const liveTimers = new Set();
+export function teardown() {
+  for (const t of liveTimers) realClearTimeout(t);   // also stops an interval
+  liveTimers.clear();
+}
+onFileEnd(teardown);
 const work = { pending: new Map(), begun: 0, next: 1, periodic: 0 };
 
 function begin(label) {
@@ -289,31 +303,41 @@ function watchWork() {
   if (watching) return;
   watching = true;
   const timers = new Map();   // Node's Timeout -> work id
+  // A timer that has fired is forgotten, so a long file keeps no pile of them.
+  const kept = (t) => { liveTimers.add(t); return t; };
+  const once = (fn) => function fired(...a) { liveTimers.delete(this); return fn.apply(this, a); };
   globalThis.setTimeout = function setTimeout(fn, ms, ...args) {
-    if (work.periodic > 0 || typeof fn !== 'function') return realSetTimeout(fn, ms, ...args);
+    if (work.periodic > 0 || typeof fn !== 'function') return kept(realSetTimeout(typeof fn === 'function' ? once(fn) : fn, ms, ...args));
     const trace = new Error();
     const delay = Number(ms) || 0;
-    if (delay > WORK_MS && !/\/tests\/fake-[^/]*\.mjs/.test(caller(trace))) return realSetTimeout(fn, ms, ...args);
+    if (delay > WORK_MS && !/\/tests\/fake-[^/]*\.mjs/.test(caller(trace))) return kept(realSetTimeout(once(fn), ms, ...args));
     const id = begin({ toString: () => `a ${delay} ms timer set at ${caller(trace)}` });
-    const t = realSetTimeout((...a) => {
+    const t = realSetTimeout(function fired(...a) {
       timers.delete(t);
-      try { fn(...a); } finally { end(id); }
+      liveTimers.delete(t);
+      try { fn.apply(this, a); } finally { end(id); }
     }, ms, ...args);
     timers.set(t, id);
-    return t;
+    return kept(t);
   };
   globalThis.clearTimeout = function clearTimeout(t) {
     for (const [timer, id] of timers) {
       if (timer === t || (typeof t === 'number' && +timer === t)) { timers.delete(timer); end(id); }
     }
+    liveTimers.delete(t);
     return realClearTimeout(t);
   };
+  const realClearInterval = globalThis.clearInterval;
+  globalThis.clearInterval = function clearInterval(t) {
+    liveTimers.delete(t);
+    return realClearInterval(t);
+  };
   globalThis.setInterval = function setInterval(fn, ms, ...args) {
-    if (typeof fn !== 'function') return realSetInterval(fn, ms, ...args);
-    return realSetInterval((...a) => {
+    if (typeof fn !== 'function') return kept(realSetInterval(fn, ms, ...args));
+    return kept(realSetInterval((...a) => {
       work.periodic++;
       try { fn(...a); } finally { work.periodic--; }
-    }, ms, ...args);
+    }, ms, ...args));
   };
   // fetch: tracked whatever function a test puts there later.
   const wrapFetch = (fn) => {

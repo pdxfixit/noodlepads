@@ -28,8 +28,8 @@ setup:
 [doc("Check syntax, then run the tests (Node's built-in runner, then the tools' and the noodlepads-logs skill's unittest; no install step). Judge by the exit code")]
 test:
     @sh tools/syntax_check.sh
-    @# The spec reporter, as on GitHub; a file whose test --test-force-exit cut
-    @# short ("▶") runs again alone, and its exit code counts (tools/node_tests.sh).
+    @# The spec reporter, as on GitHub; every file ends by itself, or fails
+    @# naming itself after 10 s (tests/file-end.mjs, tools/node_tests.sh).
     @sh tools/node_tests.sh
     python3 -m unittest discover -s tools -p 'test_*.py'
     python3 -m unittest discover -s skills/noodlepads-logs -p 'test_*.py'
@@ -186,7 +186,6 @@ logs *args:
 runner-export *args:
     @python3 tools/runner_export.py "$@"
 
-# (--test-force-exit, as in `just test`: app.test.mjs otherwise never exits and the proof hangs)
 [doc("Prove a test needs your change: it must fail on the committed copies of the files and pass on yours (PROVE_BASE=main for a branch's commits). A tools/test_*.py runs under unittest")]
 prove test +files:
     #!/usr/bin/env bash
@@ -207,7 +206,7 @@ prove test +files:
     # A Python test (tools/test_*.py) runs under unittest from its own folder, as `just test` runs it.
     case "{{test}}" in
       *.py) run() { (cd "$(dirname "{{test}}")" && python3 -m unittest "$(basename "{{test}}" .py)"); } ;;
-      *) run() { node --test --test-force-exit --test-reporter=spec {{test}}; } ;;
+      *) run() { node --test --test-reporter=spec {{test}}; } ;;
     esac
     if run > "$keep/out" 2>&1; then
       echo "❌ {{test}} passes without your change to {{files}}" >&2

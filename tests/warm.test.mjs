@@ -6,6 +6,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import './fake-dom.mjs';   // at the top, so its end-of-file clean-up covers the whole file (tests/fake-dom-exit.test.mjs)
 import { createWarmer } from '../web/warm.js';
 
 const clips = (...ids) => ids.map((id) => ({ id }));

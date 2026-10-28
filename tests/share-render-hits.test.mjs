@@ -12,7 +12,7 @@
 // song plays both at its own tempo, one lane louder than the other.
 // Not tested here: how it sounds (the context records, it does not render).
 // To rewrite the fixture after a change meant to alter the sound:
-// UPDATE_FIXTURES=1 node --test --test-force-exit tests/share-render-hits.test.mjs
+// UPDATE_FIXTURES=1 node --test tests/share-render-hits.test.mjs
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';

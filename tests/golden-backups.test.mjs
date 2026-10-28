@@ -7,7 +7,7 @@
 //
 // A change that moves a summary on purpose (a beat stamped with its time
 // signature, ADR 0035) is a reviewed edit of the expected file:
-// `GOLDEN_WRITE=1 node --test --test-force-exit tests/golden-backups.test.mjs`
+// `GOLDEN_WRITE=1 node --test tests/golden-backups.test.mjs`
 // rewrites them, and the diff is what to read. The .zip files themselves are
 // never regenerated.
 

@@ -6,7 +6,7 @@
 // The noise is seeded, so the log is exact. This holds the recipes still while
 // shared parts move between them. Not tested here: how they sound (Ben's ears,
 // as he goes). To record the log again after a voice is changed on purpose:
-// `GOLDEN=1 node --test --test-force-exit tests/voice-graphs.test.mjs`.
+// `GOLDEN=1 node --test tests/voice-graphs.test.mjs`.
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
