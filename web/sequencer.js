@@ -49,7 +49,7 @@ import { edgeScroller } from './edge-scroll.js';
 import { pickerList, pickInstrument } from './inst-picker.js';
 import { cutName, MAX_NAME, numbered } from './names.js';
 import { TICK_MS, lookahead } from './beat-engine.js';
-import { merge3, sameContent } from './merge3.js';
+import { merge3, sameContent, canon } from './merge3.js';
 import { createChooser } from './beat-chooser.js';
 import { createGrooves } from './beat-grooves.js';
 import { createLibrary } from './beat-library.js';
@@ -2117,8 +2117,13 @@ export function createSequencer(deps) {
     // A beat in 🗂️ Beats opened by id (🎧 From a song's 🥁 Open part A); false when it is not there.
     openSaved,
     // 🥁 Make a beat (a take's, take-beat.js): joins 🗂️ Beats under `made.name` (a name no beat has) and opens, stopped.
-    // Returns {id, name, undo}; undo takes it out again and opens what was open before.
+    // A groove being tried (💃, its ↩️ Beat line) is put away first, as ↩️ Beat does, so no trial is left pending behind the new beat.
+    // Returns {id, name, undo}. `undo()` takes the beat out again and opens what was open before, and returns true;
+    // it returns false and deletes nothing when the beat has been changed since (a pill, the tempo, its name: the kid
+    // has started on it, so it is theirs now), is gone already, or the person is not the one who made it.
     openMade: (made) => {
+      if (grooves.trying()) grooves.putTrialAway();
+      const owner = personId;
       const prior = doc?.pattern && !isScratch(doc.pattern) ? doc.pattern.id : null;
       stop();
       queued = null;
@@ -2127,13 +2132,20 @@ export function createSequencer(deps) {
       const now = Date.now();
       deps.library.put({ ...cleanPattern(made, personId), id, name, created: now, saved: now });
       openSaved(id);
+      // What it was when made, without the stamps: opening it saves it again, which only moves `saved`.
+      const stored = () => library().find((b) => b.id === id);
+      const shapeOf = (record) => canon(cleanPattern(record, owner));
+      const was = shapeOf(stored());
       return {
         id, name,
         undo: () => {
+          const now = personId === owner && stored();
+          if (!now || shapeOf(now) !== was) return false;
           stop();
           deps.library.remove(id);
           closeEverywhere(id);
           if (prior) openSaved(prior);
+          return true;
         },
       };
     },

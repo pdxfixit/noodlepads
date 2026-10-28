@@ -2885,6 +2885,22 @@ body.screen-live .dj-bar.fold-ring #dj-overlap { display: none; }
 .dj-take-line[hidden] { display: none; }
 .take-rename { flex: 0 1 auto; width: auto; min-width: 4ch; max-width: 14em; font-size: 1rem; field-sizing: content; }   /* as wide as the name (older browsers: dj.js fitTakeName sets size) */
 .dj-done-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+/* On a phone the take card is a two-column grid (council, kids-ux, 2026-10-28): the name and length with ✕ beside
+   them on the top line, ▶ Play across the card as the one lead key (Beats' Play look), then the tools two by two:
+   🔊 Make a sound · 🥁 Make a beat, ✏️ Rename · ↩️ Undo. No tool is left alone on a line. From 700 px it stays one line. */
+@media (max-width: 699px) {
+  .dj-done { display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; gap: 8px; padding: 8px 8px 12px 16px; }
+  .dj-done[hidden] { display: none; }
+  .dj-done-buttons { display: contents; }
+  .dj-done .dj-take-line { grid-area: 1 / 1 / 2 / 4; }
+  .dj-done #dj-done-close { grid-area: 1 / 4; justify-self: end; }
+  .dj-done .dj-done-buttons .seq-tool { grid-column: span 2; width: 100%; min-height: 48px; padding: 0 8px; }
+  .dj-done #dj-done-play {
+    grid-column: 1 / -1; min-height: 52px; border: 0; border-radius: 12px; background: var(--led); color: var(--ink);
+    box-shadow: 0 5px 0 color-mix(in srgb, var(--led) 50%, black); font-size: 1.15rem; margin-bottom: 5px;
+  }
+  .dj-done #dj-done-play[aria-pressed="true"] { transform: translateY(4px); box-shadow: 0 1px 0 color-mix(in srgb, var(--led) 50%, black); }
+}
 /* A take's name is a text field, so tapping it renames the take. */
 .take { grid-template-columns: 1fr auto auto auto; }
 .take-name { min-height: 40px; min-width: 0; width: 100%; padding: 0 8px; border: 2px solid transparent; border-radius: 8px; background: transparent; color: var(--ink); font: 800 1rem/1 var(--font-ui); }

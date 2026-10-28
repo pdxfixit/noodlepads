@@ -74,3 +74,74 @@ test('the beat is made safe by the beat maker\'s own cleaning', async () => {
   assert.equal(p.rows[0].steps.length, 32);
   assert.equal(p.signature, '4/4');
 });
+
+// Steady playing with each hit up to 40 ms early or late, from a seeded
+// generator so a run is the same every time. Council (producer, 2026-10-28):
+// the best fit used to land on 3/4 or 1/2 of the real tempo (quarters at 120
+// fit 90 BPM just as well, on every third pill).
+const seeded = (seed) => () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const steady = (bpm, every, count, seed) => {
+  const rnd = seeded(seed);
+  const pill = 60 / bpm / 4;
+  const times = Array.from({ length: count }, (_, i) => i * every * pill + (rnd() - 0.5) * 0.08);
+  return times.map((t) => Math.max(0, t - times[0]));
+};
+
+test('steady quarters and eighths, up to 40 ms loose, are fitted to their own tempo', () => {
+  const cases = [['quarters@120', 120, 4, 16], ['eighths@120', 120, 2, 24], ['eighths@140', 140, 2, 24], ['quarters@90', 90, 4, 16], ['eighths@100', 100, 2, 24], ['quarters@80', 80, 4, 12]];
+  for (const [name, bpm, every, count] of cases) {
+    for (let seed = 1; seed <= 25; seed++) {
+      const got = bestTempo(steady(bpm, every, count, seed * 7919));
+      assert.ok(Math.abs(got - bpm) <= 2, `${name}, seed ${seed}: found ${got}`);
+    }
+  }
+});
+
+test('the kick, snare and hat take of the mockup, 35 ms loose, is found at 104', () => {
+  const rnd = seeded(7);
+  const pill = 60 / 104 / 4;
+  const on = { kick: [0, 6, 8, 14, 16, 22, 24, 30], snare: [4, 12, 20, 28], hat: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30] };
+  const events = Object.entries(on).flatMap(([clipId, ps]) => ps.map((p) => ({ clipId, kind: 'hit', t: p * pill + (rnd() - 0.5) * 0.07 })));
+  events.sort((a, b) => a.t - b.t);
+  const base = events[0].t;
+  for (const e of events) e.t = Math.max(0, e.t - base);
+  const b = beatFromTake({ events, duration: 5 });
+  assert.ok(Math.abs(b.bpm - 104) <= 2, `found ${b.bpm}`);
+  assert.equal(b.bars, 2);
+  assert.deepEqual(b.rows.map((r) => on[r.clipId].length), b.rows.map((r) => r.steps.filter(Boolean).length), 'every hit on its own pill');
+});
+
+test('the grid starts at the first hit, not at the take\'s zero: a loop or stop before it moves nothing', () => {
+  const events = [
+    { clipId: 'kick', kind: 'loop', t: 0 },
+    { clipId: 'kick', kind: 'stop', t: 0.4 },
+    hit('snare', 0, 0.9), hit('snare', 4, 0.9), hit('snare', 8, 0.9), hit('hat', 8, 0.9),
+  ];
+  const b = beatFromTake({ events, duration: 4 }, { bpm: BPM });
+  assert.deepEqual(b.rows.map((r) => r.clipId), ['snare', 'hat']);
+  assert.deepEqual(on(b.rows[0]), [0, 4, 8], 'the first hit is pill 0');
+  assert.deepEqual(on(b.rows[1]), [8]);
+  const more = events.concat(hit('snare', 12, 0.9), hit('snare', 16, 0.9), hit('snare', 20, 0.9));
+  const guessed = beatFromTake({ events: more, duration: 4 });
+  assert.ok(Math.abs(guessed.bpm - BPM) <= 3, `found ${guessed.bpm}`);
+  assert.deepEqual(on(guessed.rows[0]), [0, 4, 8, 12, 16, 20]);
+});
+
+test('two hits of one sound on one pill are counted as merged, and none are merged otherwise', () => {
+  const b = beatFromTake(take([hit('kick', 0), hit('kick', 0, 0.02), hit('kick', 4), hit('snare', 4), hit('snare', 4, -0.01)]), { bpm: BPM });
+  assert.equal(b.merged, 2);
+  assert.deepEqual(on(b.rows[0]), [0, 4]);
+  assert.equal(beatFromTake(take([hit('kick', 0), hit('kick', 4)]), { bpm: BPM }).merged, 0);
+});
+
+test('the beat is straight and 4/4, with swing 0 said outright', () => {
+  const b = beatFromTake(take([hit('kick', 0), hit('kick', 4)]), { bpm: BPM });
+  assert.equal(b.swing, 0);
+  assert.equal(b.signature, '4/4');
+});
+
+test('half a pill rounds up', () => {
+  const half = (60 / 120 / 4) * 4.5;   // pill 4.5 at 120 BPM
+  const b = beatFromTake(take([hit('kick', 0), { clipId: 'kick', kind: 'hit', t: half }]), { bpm: 120 });
+  assert.deepEqual(on(b.rows[0]), [0, 5]);
+});

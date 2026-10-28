@@ -147,7 +147,7 @@ A song from before 1.0's playlist (no `lanes`, only `slots`) is read as lane 1: 
 
 ## takes
 
-A take is a performance on 🎤 Live: `{id, personId, name, created, duration, events, bpm?}`. `duration` is seconds (up to 180). `events` is `[{t, clipId, kind, ring?}]` in time order, `t` in seconds from the start, to a millisecond. `bpm` is optional: the ⏲️ Click track's tempo when it was on for the whole take, a whole number from 60 to 180; a take without it (or with one out of range) has no known tempo, and a reader that wants one finds the tempo whose sixteenths the `hit` times sit nearest.
+A take is a performance on 🎤 Live: `{id, personId, name, created, duration, events, bpm?}`. `duration` is seconds (up to 180). `events` is `[{t, clipId, kind, ring?}]` in time order, `t` in seconds from the start, to a millisecond. `bpm` is optional: the ⏲️ Click track's tempo, the same at both ends of the take (on when it started and the same tempo when it ended), a whole number from 60 to 180; a take without it, or with one out of range, has no known tempo (see "A take as a beat" below for finding one).
 
 | `kind` | Meaning |
 |---|---|
@@ -157,6 +157,16 @@ A take is a performance on 🎤 Live: `{id, personId, name, created, duration, e
 | `beat` | A hit of the beat that was playing under the take. |
 
 A loop that is never stopped ends at `duration`.
+
+### A take as a beat
+
+🥁 Make a beat on the take card makes a beat from a take; v2 makes the same one. Only `hit` events of sounds that still exist count; loops, stops and `beat` events are left out. Let `first` be the smallest `t` among those hits and every hit's time `h = t - first` (the beat's first pill is the first *hit*, not the take's zero, which a loop or stop can precede).
+
+1. **Tempo.** The take's `bpm` when it has one. Otherwise, with fewer than two hits, 100. Otherwise scan every whole `bpm` from 60 to 180, in that order. For each, `pill = 60 / bpm / 4` seconds, and each hit goes to `x = h / pill`, `n = round(x)` (round half up: JavaScript's `Math.round`, Kotlin's `roundToInt`). The tempo's cost is the mean over all the hits of `|x - n|`, plus 0.3 if `n % 4 != 0`, plus another 0.3 if `n % 2 != 0` (so a hit on an odd pill costs 0.6 and one on pill 2 of a quarter costs 0.3), and then plus `0.0008 × |bpm - 100|`. The lowest cost wins; on an exact tie the tempo scanned first (the lowest) stays.
+2. **Pills.** With that tempo, each hit's pill is `n = round(h / pill)`, half up.
+3. **Bars.** `ceil((last + 1) / 16)` where `last` is the largest `n`, taken up to the next of 1, 2 or 4 bars (more than 4 is 4). The signature is 4/4, so a bar is 16 pills, and the beat is straight: `swing` 0.
+4. **Rows.** One row per sound, in the order of its first hit (hits in time order), at most 16 rows. A row's `steps` has `bars × 16` booleans, all off, then `true` at each of the sound's pills. A hit whose pill is `bars × 16` or more is left out (dropped, as is every hit of a 17th sound). A hit on a pill its row already has changes nothing (merged; the app says "N hits shared a step"). No accents, no rate, no effect, no volume.
+5. **Name and tempo.** The beat is `bpm` as found, named `<take name> beat` (made unique among the person's beats).
 
 ## decks, layouts, touchLayouts, voices
 

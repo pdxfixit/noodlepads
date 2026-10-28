@@ -199,7 +199,7 @@ Latency is summed in one place, `beat.js outputDelay` (Beats, 🎼 Song's line a
 
 ### Live hits recorded into the beat (for ⌨️ Keys)
 
-`beatClock()` gives `{t0, step, total, rates}` (`t0` the run's) for snapping. `rowFor` / `addRowFor` find or make the row for a sound (`rowSlot` reuses an empty row; while recording, before adding one). `addSnaps(snaps, {skipAfter, draw})` turns pills on (never off), adds a one-pill note on a tune row, and pushes `skips` so the beat does not play again a pill the kid just played live. `snapshot()` / `restore(copy)` are ⌨️ Keys' own Undo. `openMade(made)` is 🥁 Make a beat on a take's card (`take-beat.js`, via `app.js openMadeBeat`): the beat joins 🗂️ Beats under a free name and opens; the `undo` it returns takes it out and reopens the one that was open.
+`beatClock()` gives `{t0, step, total, rates}` (`t0` the run's) for snapping. `rowFor` / `addRowFor` find or make the row for a sound (`rowSlot` reuses an empty row; while recording, before adding one). `addSnaps(snaps, {skipAfter, draw})` turns pills on (never off), adds a one-pill note on a tune row, and pushes `skips` so the beat does not play again a pill the kid just played live. `snapshot()` / `restore(copy)` are ⌨️ Keys' own Undo. `openMade(made)` is 🥁 Make a beat on a take's card (`take-beat.js`, via `app.js openMadeBeat`): the beat joins 🗂️ Beats under a free name and opens; the `undo` it returns takes it out and reopens the one that was open, only while its content is as made (else it returns false and keeps the beat).
 
 ## The mix bus (ADR 0015, 0018)
 

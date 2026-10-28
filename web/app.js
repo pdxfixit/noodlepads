@@ -127,6 +127,7 @@ async function dropLockedPerson(id) {
 function letGoOf(id) {
   if (id !== state.personId) return;
   dj?.personLeft();
+  endMadeBeatLine();
   kidsPersonLeaving();
 }
 
@@ -154,6 +155,7 @@ function startOver(note) {
   if (state.personId) {
     const keep = !!person(state.personId);
     dj?.personLeft({ keep });
+    endMadeBeatLine();
     kidsPersonLeaving({ keep });
   }
   state.personId = null;
@@ -178,6 +180,7 @@ function showPerson(p, { behind = false } = {}) {
   delete document.body.dataset.locked;
   if (state.personId && state.personId !== p.id) {
     dj?.personLeft();   // a take or a recording into the beat ends as the person's own
+    endMadeBeatLine();   // and a made beat's ↩️ Undo, which is the first person's
     kidsPersonLeaving();   // and 🧸 Kids' mic or tune
     leftPerson(state.personId);
   }
@@ -702,12 +705,21 @@ function clearBack() {
 }
 // 🥁 Make a beat on a take's card: the beat joins 🗂️ Beats and opens there, with a line that says
 // what it is and ↩️ Undo, which takes it out and goes back to 🎤 Live.
+// ↩️ Undo takes the beat out only while it is as it was made; one the kid has changed stays, theirs now.
+let madeBeatLine = null;   // the banner with that ↩️ Undo, until its time is up or the person changes
+function endMadeBeatLine() { madeBeatLine?.close(); madeBeatLine = null; }
 function openMadeBeat(beat, name) {
+  endMadeBeatLine();
   const made = seq.openMade({ ...beat, name });
   setScreen('beats');
-  showBanner(`Made “${made.name}” from your take: ${beat.bpm} BPM, ${beat.bars} ${beat.bars === 1 ? 'bar' : 'bars'}.`, {
-    action: { label: '↩️ Undo', fn: () => { made.undo(); setScreen('live'); } },
+  const shared = beat.merged ? ` ${beat.merged} ${beat.merged === 1 ? 'hit' : 'hits'} shared a step.` : '';
+  madeBeatLine = showBanner(`Made “${made.name}” from your take: ${beat.bpm} BPM, ${beat.bars} ${beat.bars === 1 ? 'bar' : 'bars'}.${shared}`, {
+    action: { label: '↩️ Undo', fn: () => {
+      if (made.undo()) setScreen('live');
+      else announce(`${made.name} stays: you have changed it.`);
+    } },
     focusBack: () => document.querySelector('#seq-add'),
+    onClose: () => { madeBeatLine = null; },
   });
   announce(`Made ${made.name}. Undo is available.`);
 }
