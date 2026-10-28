@@ -9,6 +9,7 @@ on:
   pull_request:
 permissions:
   contents: read
+  actions: read
 jobs:
   test:
     runs-on: ubuntu-24.04
@@ -34,3 +35,12 @@ jobs:
           CHROME: /usr/bin/google-chrome
         # One retry, said out loud: headless audio on a shared runner can stall. A real fault fails both.
         run: just taps || { echo "↻ just taps failed once; trying again"; just taps; }
+      - name: Report
+        if: always()
+        continue-on-error: true
+        uses: pdxfixit/flarepress/ci@v1
+        with:
+          status: ${{ job.status }}
+          endpoint: ${{ vars.CI_ENDPOINT }}
+          key: ${{ secrets.CI_EVENTS_KEY }}
+          ntfy-topic: ${{ secrets.NTFY_TOPIC }}

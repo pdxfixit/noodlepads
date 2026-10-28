@@ -16,6 +16,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 # One deploy at a time: a newer push waits rather than cancels the running
 # one. Of several waiting, GitHub keeps only the newest (it cancels the
 # others), which deploys main with their commits in it.
@@ -108,3 +109,12 @@ jobs:
           CHROME: /usr/bin/google-chrome
           CHECKS_KEY: ${{ secrets.CHECKS_KEY }}   # their proof (tools/look-cloud.mjs); empty until Ben adds it
         run: just deploy-checks
+      - name: Report
+        if: always()
+        continue-on-error: true
+        uses: pdxfixit/flarepress/ci@v1
+        with:
+          status: ${{ job.status }}
+          endpoint: ${{ vars.CI_ENDPOINT }}
+          key: ${{ secrets.CI_EVENTS_KEY }}
+          ntfy-topic: ${{ secrets.NTFY_TOPIC }}
