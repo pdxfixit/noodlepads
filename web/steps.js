@@ -96,9 +96,25 @@ export const KINDS = [
       input.connect(delay);
       delay.connect(warm).connect(fb).connect(delay);
       warm.connect(wet).connect(out);
+      let gap = s.gap;
+      let repeats = s.repeats;
+      // A new gap at a time still ahead (🎼 Song's tempo mark, mixer.js) moves
+      // the delay in one jump, so the echoes in flight are not zipped or run
+      // backwards by a glide: the echoes' level dips just before, the gap
+      // switches at the bottom of the dip, and the level comes back after.
+      // A slider (`at` not given, or now) keeps the glide.
       const set = (step, at) => {
-        param(delay.delayTime, step.gap, ctx, at);
-        param(fb.gain, echoFeedback(step.repeats), ctx, at);
+        const ahead = at !== undefined && at > ctx.currentTime + 0.001;
+        if (ahead && step.gap !== gap) {
+          const from = Math.max(ctx.currentTime, at - ECHO_DIP);
+          wet.gain.setValueAtTime(ECHO_WET, from);
+          wet.gain.linearRampToValueAtTime(0, at);
+          delay.delayTime.setValueAtTime(step.gap, at);
+          wet.gain.linearRampToValueAtTime(ECHO_WET, at + ECHO_RETURN);
+        } else if (step.gap !== gap || !ahead) param(delay.delayTime, step.gap, ctx, at);
+        if (!ahead || step.repeats !== repeats) param(fb.gain, echoFeedback(step.repeats), ctx, at);
+        gap = step.gap;
+        repeats = step.repeats;
       };
       set(s);
       return { output: out, set };
@@ -238,6 +254,10 @@ export const kindById = (id) => KINDS.find((k) => k.id === id);
 // Make it echo's mix: each echo comes back at ECHO_WET of what went in, and
 // after `repeats` echoes the sound is down to about a tenth.
 const ECHO_WET = 0.6;
+// The echoes' level dips this long before a gap switched at a tempo mark and
+// comes back this long after it (seconds).
+const ECHO_DIP = 0.015;
+const ECHO_RETURN = 0.06;
 const echoFeedback = (repeats) => 0.1 ** (1 / repeats);
 
 // The gain a live loop plays its live steps at, after `seconds` of sound,

@@ -8,6 +8,7 @@
 import { test, before, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { MIX_FX, cleanFx, fxSteps, masterLevel, silencedBySolo, mixKey, buildMix, followChanges } from '../web/mixer.js';
+import { buildLive } from '../web/steps.js';
 import { cleanSong, planSong, soundSong } from '../web/playlist.js';
 import { gainAt } from '../web/row-volume.js';
 import { cleanRow, cleanPattern, planHits, audible, beatToFile, beatFromFile } from '../web/beat.js';
@@ -98,7 +99,14 @@ test('a beat file, a backup and a share code carry the mix', async () => {
 // A context that records its nodes: what connects to what.
 function recordingContext() {
   const nodes = [];
-  const param = (value = 0) => ({ value, setValueAtTime() {}, setTargetAtTime(v, at) { this.initial ??= this.value; this.value = v; (this.sets ??= []).push([at, v]); }, cancelScheduledValues() {}, linearRampToValueAtTime() {} });
+  // Every scheduled change is kept, in the order asked: `events` is [kind, value, time].
+  const param = (value = 0) => ({
+    value, events: [],
+    setValueAtTime(v, at) { this.events.push(['set', v, at]); },
+    setTargetAtTime(v, at) { this.initial ??= this.value; this.value = v; (this.sets ??= []).push([at, v]); this.events.push(['glide', v, at]); },
+    cancelScheduledValues() {},
+    linearRampToValueAtTime(v, at) { this.events.push(['ramp', v, at]); },
+  });
   const node = (kind, extra = {}) => {
     const n = { kind, out: [], stopped: false, connect(next) { n.out.push(next); return next; }, disconnect() { n.out = []; },
       start() {}, stop() { n.stopped = true; }, gain: param(1), frequency: param(), Q: param(), delayTime: param(), threshold: param(), ratio: param(),
@@ -440,12 +448,12 @@ test('buildMix: the Echo delay starts at the tempo heard first and is set again 
   const plain = recordingContext();
   buildMix(plain, dest, p);
   assert.equal(delayOf(plain).value, 0.25, 'an eighth at 120 BPM');
-  assert.equal(delayOf(plain).sets, undefined, 'no marks: nothing scheduled, as before');
+  assert.deepEqual(delayOf(plain).events, [], 'no marks: nothing scheduled, as before');
 
   const ctx = recordingContext();
   const bus = buildMix(ctx, dest, { ...p, follow: { start: 100, marks: [{ time: 2, bpm: 60 }, { time: 6, bpm: 150 }], origin: 10 } });
-  assert.equal(delayOf(ctx).initial, 0.3, 'it starts at the tempo heard first (an eighth at 100 BPM)');
-  assert.deepEqual(delayOf(ctx).sets, [[12, 0.5], [16, 0.2]], 'two and six seconds after the song began sounding at 10 s');
+  assert.equal(delayOf(ctx).value, 0.3, 'it starts at the tempo heard first (an eighth at 100 BPM)');
+  assert.deepEqual(delayOf(ctx).events, [['set', 0.5, 12], ['set', 0.2, 16]], 'two and six seconds after the song began sounding at 10 s');
   assert.ok(bus.tail >= 0.5 * 3 + 0.3, 'the tail is rung out at the slowest tempo it plays at');
   assert.notEqual(mixKey(p), mixKey({ ...p, follow: { start: 100, marks: [], origin: 0 } }));
   const start = { ...p, follow: { start: 100, marks: [], origin: 10 } };
@@ -477,18 +485,80 @@ function songWithEcho(tempos, plan = {}) {
 test('a song with a tempo mark: its Echo on the beat is set to the new tempo at the mark, from the start or from a bar', async () => {
   // 120 BPM a bar is 2 s; from bar 3 it is 60 BPM. An eighth is 0.25 s at 120 and 0.5 s at 60.
   const marked = await songWithEcho([{ bar: 3, bpm: 60 }]).play(0.1);
-  assert.equal(marked.initial, 0.25);
-  assert.deepEqual(marked.sets.map(([at, gap]) => [+at.toFixed(3), gap]), [[4.1, 0.5]], 'at the mark, 4 s in');
+  assert.equal(marked.value, 0.25);
+  assert.deepEqual(marked.events.map(([kind, gap, at]) => [kind, gap, +at.toFixed(3)]), [['set', 0.5, 4.1]], 'at the mark, 4 s in');
   // Begun past the mark: the Echo starts at the new gap and nothing is set later.
   const late = songWithEcho([{ bar: 3, bpm: 60 }], { from: 6 });
   assert.deepEqual(late.planned.follow, { start: 60, marks: [], origin: 0 });
   const after = await late.play();
   assert.equal(after.value, 0.5);
-  assert.equal(after.sets, undefined);
+  assert.deepEqual(after.events, []);
   // No marks: the song plays as it always did.
   const steady = songWithEcho(undefined);
   assert.equal(steady.planned.follow, null);
   const flat = await steady.play();
   assert.equal(flat.value, 0.25);
-  assert.equal(flat.sets, undefined);
+  assert.deepEqual(flat.events, []);
+});
+
+// ── The switch at a tempo mark is quiet (audio seat, 2026-10-28) ──
+// A glide of the delay at a mark zips or runs the echoes in flight backwards,
+// so the echoes dip, the gap switches at the bottom of the dip, and they come
+// back. A slider keeps the glide. How it sounds is untried on a phone.
+
+// The Echo's graph in a mix: the delay and its wet gain (the second gain after the delay: feedback, then wet).
+function echoNodes(ctx) {
+  const at = ctx.nodes.findIndex((n) => n.kind === 'delay');
+  const gains = ctx.nodes.slice(at + 1).filter((n) => n.kind === 'gain');
+  return { delay: ctx.nodes[at], fb: gains[0], wet: gains[1] };
+}
+const echoBeat = (follow) => ({ ...cleanPattern({ bpm: 120, rows: [{ clipId: 'a', fx: 'echo' }] }, 'p'), follow });
+
+test('at a tempo mark the echoes dip, the gap switches with setValueAtTime at the bottom of the dip, and they come back', () => {
+  const ctx = recordingContext();
+  buildMix(ctx, { kind: 'dest', out: [] }, echoBeat({ start: 120, marks: [{ time: 2, bpm: 60 }], origin: 10 }));
+  const { delay, wet } = echoNodes(ctx);
+  assert.deepEqual(delay.delayTime.events, [['set', 0.5, 12]], 'a jump at the mark, never a glide');
+  assert.equal(wet.gain.value, 0.6, 'the echoes start at their usual level');
+  const [anchor, down, up] = wet.gain.events;
+  assert.deepEqual([anchor[0], down[0], up[0]], ['set', 'ramp', 'ramp']);
+  assert.deepEqual([down[1], up[1]], [0, 0.6], 'down to nothing, then back to the level');
+  assert.ok(Math.abs(down[2] - 12) < 1e-9, 'the dip ends at the mark, where the gap switches');
+  assert.ok(Math.abs(12 - anchor[2] - 0.015) < 1e-9, 'about 15 ms down');
+  assert.ok(Math.abs(up[2] - 12 - 0.06) < 1e-9, 'about 60 ms back');
+});
+
+test('a slider moving the Echo keeps its glide, and a mark that keeps the gap schedules nothing', () => {
+  const ctx = recordingContext();
+  ctx.currentTime = 5;
+  const live = buildLive(ctx, ctx.createGain(), fxSteps('echo', 120));
+  const { delay, wet } = echoNodes(ctx);
+  live.set(0, fxSteps('echo', 60)[0]);   // at: now
+  assert.deepEqual(delay.delayTime.events.map((e) => e[0]), ['glide'], 'at now: the old glide');
+  assert.deepEqual(wet.gain.events, [], 'no dip for a slider');
+  live.set(0, fxSteps('echo', 60)[0], 9);   // the same gap, ahead
+  assert.deepEqual(delay.delayTime.events.map((e) => e[0]), ['glide'], 'the gap did not change: nothing more');
+  assert.deepEqual(wet.gain.events, []);
+});
+
+test('a mix built after a mark has passed (its events in the past) still ends at the right gap', () => {
+  // The first hit of a lane's beat can come after a mark: the graph is built then, with every mark behind it.
+  // Each past mark is a glide that has finished by the time it is heard; the last one wins. Keep it so: a dip
+  // or a switch scheduled in the past would leave the Echo at the starting gap.
+  const follow = { start: 100, marks: [{ time: 2, bpm: 60 }, { time: 6, bpm: 150 }], origin: 10 };
+  const ctx = recordingContext();
+  ctx.currentTime = 20;
+  buildMix(ctx, { kind: 'dest', out: [] }, echoBeat(follow));
+  const { delay, wet } = echoNodes(ctx);
+  assert.deepEqual(delay.delayTime.events, [['glide', 0.5, 12], ['glide', 0.2, 16]]);
+  assert.equal(delay.delayTime.value, 0.2, 'the gap at 150 BPM');
+  assert.deepEqual(wet.gain.events, [], 'no dip for a mark already gone');
+  // One mark gone and one still ahead: the first holds, the second is switched quietly.
+  const half = recordingContext();
+  half.currentTime = 14;
+  buildMix(half, { kind: 'dest', out: [] }, echoBeat(follow));
+  const mixed = echoNodes(half);
+  assert.deepEqual(mixed.delay.delayTime.events.map((e) => e[0]), ['glide', 'set']);
+  assert.equal(mixed.delay.delayTime.value, 0.5, 'the mark behind it already holds');
+  assert.ok(Math.abs(mixed.wet.gain.events[0][2] - 15.985) < 1e-9, 'the dip comes before the mark at 16 s');
 });
