@@ -105,6 +105,7 @@ Two beats per person have a reserved `id` and are hidden in the app, not listed 
 | `volume`, `fx` | The mixer's master: loudness 0 to 1, the gain itself (full when missing), and one effect id (`room hall echo muffled bright crunch warble robot louder`). The effects are the app's own; v2 may skip them. |
 | `rows` | Up to 16, below. |
 | `created`, `saved`, `pinned` | Saved beats only: when made and last saved; when pinned (only while pinned). |
+| `kidsTune` | Only on a ● tune 🧸 Kids kept (Ben, 2026-10-28): the exact name Kids gave it (`🧸 …`), present only while `name` is still that. Kids keeps the newest 20 of these per person and removes older ones; a beat without it is never removed. A reader may ignore it; older copies drop it. |
 
 **A pill** is a sixteenth note. A bar has the signature's pills in groups: 4/4 `[4,4,4,4]`, 3/4 `[4,4,4]`, 5/4 `[4,4,4,4,4]`, 6/8 `[6,6]`, 7/8 `[4,4,6]`. A pill lasts `60 / bpm / 4` seconds. A beat is `bars` bars long and then starts over; pill `i` of a row plays at `i × pill length`.
 

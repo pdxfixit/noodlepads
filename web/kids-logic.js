@@ -348,9 +348,34 @@ export function withTuneNote(beat, { clipId, pitch, s, l = 1, fresh = false }, n
 // 🗂️ Beats from their own; a long name is cut to leave room for it.
 export const KIDS_TUNE_MARK = '🧸 ';
 export const kidsTuneName = (name) => KIDS_TUNE_MARK + cutName(String(name ?? '').trim(), MAX_NAME - KIDS_TUNE_MARK.length);
+// The record carries `kidsTune`: the exact name Kids gave it. That is how
+// Kids tells its own kept tunes from a beat a person made (a name starting
+// with 🧸 proves nothing: anyone can type one). A grown-up's rename makes the
+// two differ; an edit in the beat maker rebuilds the record without the field.
 export function keptTune(beat, { id, name }, now = Date.now()) {
   if (!tuneRowOf(beat)?.tune?.length) return null;
-  return { ...cleanPattern(beat, beat.personId), id, name: kidsTuneName(name), created: now, saved: now };
+  const made = kidsTuneName(name);
+  return { ...cleanPattern(beat, beat.personId), id, name: made, kidsTune: made, created: now, saved: now };
+}
+
+// Only the newest this many kept Kids tunes stay for a person (Ben,
+// 2026-10-28); keeping another removes the oldest.
+export const MAX_KEPT_TUNES = 20;
+
+// Is `beat` still a Kids tune nobody has touched? It has the mark, its name
+// is the one Kids gave it, and it is not 📌 pinned.
+export const isKeptKidsTune = (beat) => typeof beat?.kidsTune === 'string' && beat.kidsTune === beat.name && !(beat.pinned > 0);
+
+// The ids of the kept Kids tunes of person `pid` to remove so no more than
+// `keep` are left: the oldest first. `inUse(id)` says a beat is on a 🎼 Song
+// lane; a grown-up has put it to use, so it stays whatever its age and is
+// not counted among the `keep`.
+// Another person's beats, a renamed, pinned or edited one, and every beat a
+// person made are never named.
+export function keptTunesToRemove(beats, pid, inUse = () => false, keep = MAX_KEPT_TUNES) {
+  const tunes = beats.filter((b) => b.personId === pid && isKeptKidsTune(b) && !inUse(b.id))
+    .sort((a, b) => (b.created ?? 0) - (a.created ?? 0) || (a.id < b.id ? 1 : -1));   // newest first
+  return tunes.slice(keep).map((b) => b.id);
 }
 
 // Do two beats hold the same tune (the same notes on the same sound)? Their

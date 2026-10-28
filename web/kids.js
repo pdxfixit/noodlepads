@@ -40,7 +40,7 @@ import {
   kidsVoiceFields, voiceAfter, MIN_RECORD_SECONDS, pressKind, pictureFor, KIDS_KEYS, keyRate, keyPlayId, keyPitch, isHighKey, beatLayout, cleanTab,
   nextKidsInstrument, keyKitId, kidsPlayedRows, squareFits, barOf, totalOf, KIDS_LOAD_WAIT,
   padPicture, instPicture, KIDS_PLAY_FACES, KIDS_MIC_FACE,
-  TUNE_BARS, TUNE_COUNT, pillSeconds, withBars, pillAt, withTuneNote, keptTune, sameTune,
+  TUNE_BARS, TUNE_COUNT, pillSeconds, withBars, pillAt, withTuneNote, keptTune, sameTune, keptTunesToRemove,
 } from './kids-logic.js';
 import { STEPS, MAX_SWING, outputDelay, stepsHeard } from './beat.js';
 import { instrumentById, PLAYED } from './instruments.js';
@@ -925,6 +925,11 @@ function keepTune(pid) {
   const kept = keptTune(kidsBeat(pid), { id: newId('beat'), name: beatName(mine.map((b) => b.name)) });
   if (!kept || mine.some((b) => !isHiddenBeat(b) && sameTune(b, kept))) return;
   deps.saveBeat(kept);
+  // Only the newest 20 kept tunes stay (Ben, 2026-10-28): the oldest go
+  // through the library's own delete, which syncs as a delete. A tune on a
+  // 🎼 Song lane, one a grown-up renamed, pinned or edited, and every beat a
+  // person made stay (kids-logic.js keptTunesToRemove).
+  for (const id of keptTunesToRemove(deps.beats(pid), pid, deps.beatInUse)) deps.removeBeat(id);
 }
 
 // Done: as the beat comes round, at the next tap, with ⏹️, or on leaving.

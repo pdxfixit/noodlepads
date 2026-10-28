@@ -74,3 +74,25 @@ test('a share code carries the beat, not its 📌: the pin is the sharer\'s own,
   const { doc } = shareDoc({ ...bundle, beats: [{ ...bundle.beats[0], pinned: 9 }] }, 'p-c', ['kick'], newId, { kind: 'beat', title: 'Wobbly Taco' });
   assert.ok(!('pinned' in doc.beats[0]), 'even from a code made by an older copy');
 });
+
+// Ben, 2026-10-28: Kids keeps only its newest 20 tunes. The mark that says a
+// beat is one (`kidsTune`, the name Kids gave it) travels in a backup while
+// the name still matches, and never in a share code or a remix.
+test('a kept Kids tune\'s mark goes in a backup while the beat keeps its name; a renamed one loses it', async () => {
+  const bundled = { peopleIds: new Set(['pip']), clipIds: new Set(['pip-kick']), colorOk: () => true };
+  const beat = (id, name, extra) => ({ id, personId: 'pip', name, bpm: 90, rows: [{ clipId: 'pip-kick', steps: [true] }], created: 1, saved: 2, ...extra });
+  const state = { people: [{ id: 'pip', name: 'Pip', color: '#1F3FA8' }], clips: [], beats: [beat('beat-a', '🧸 Funky Moose', { kidsTune: '🧸 Funky Moose' }), beat('beat-b', 'My song', { kidsTune: '🧸 Funky Moose' }), beat('beat-c', 'Plain')] };
+  const out = await readBackup(await makeBackup(state), bundled);
+  const by = (id) => out.beats.find((b) => b.id === id);
+  assert.equal(by('beat-a').kidsTune, '🧸 Funky Moose');
+  assert.ok(!('kidsTune' in by('beat-b')), 'renamed: a beat of its own');
+  assert.ok(!('kidsTune' in by('beat-c')));
+});
+
+test('a share code and a remix carry no Kids tune mark', () => {
+  const lists = { clips: [], beats: [{ id: 'beat-1', personId: 'p-a', name: '🧸 Wobbly Taco', kidsTune: '🧸 Wobbly Taco', bpm: 90, rows: [{ clipId: 'p-a-kick', steps: [true] }], created: 1, saved: 2 }] };
+  const { bundle } = shareBundle('beat', 'beat-1', lists, 'p-a', ['kick']);
+  assert.ok(!('kidsTune' in bundle.beats[0]));
+  const { doc } = shareDoc({ ...bundle, beats: [{ ...bundle.beats[0], kidsTune: '🧸 Wobbly Taco' }] }, 'p-c', ['kick'], newId, { kind: 'beat', title: 'Wobbly Taco' });
+  assert.ok(!('kidsTune' in doc.beats[0]), 'even from a code made by another copy');
+});

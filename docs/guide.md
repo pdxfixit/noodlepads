@@ -221,7 +221,12 @@ ten keys go five across (`just look kids-pads --landscape`).
   name with 🧸 in front (so a grown-up can find it), as 🆕 New keeps a beat
   (`kids-logic.js` `keptTune`); a tune already kept (the same notes on the
   same sound, `sameTune`) is not kept twice when the next recording replaces
-  it. Nothing shows on the kid's screen: Kids has no Undo, and a kid can't
+  it. Only the newest 20 kept tunes stay for a person (Ben, 2026-10-28):
+  keeping another removes the oldest, as 🗂️ Beats' delete does (so it syncs).
+  Kids marks its tunes (`kidsTune` on the beat, the name it gave); a tune on
+  a 🎼 Song lane, one a grown-up renamed, 📌 pinned or edited, a beat a
+  grown-up made and a tune kept before the mark are never removed
+  (`kids-logic.js` `keptTunesToRemove`). Nothing shows on the kid's screen: Kids has no Undo, and a kid can't
   read a "Kept as …" line. A grown-up finds the latest tune at once in
   🗂️ Beats, where it is a beat with a tune row and opens in 🎹 the piano roll.
 

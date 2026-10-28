@@ -12,7 +12,7 @@ import { testManifest } from './test-board.mjs';
 import {
   makeSum, typeDigit, sumWait, SUM_WAIT, kidsRange, kidsAutoPx, kidsPadPx, kidsShare, shareOf, kidsSliderAt, pageShape, pagesOf, pageAt, pinchShare, kidsPadOrder, KIDS_PADS,
   KIDS_STARTLES, newKidsBeat, squaresOf, withSquare, tempoAfter, tempoName, KIDS_TEMPOS,
-  TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote, keptTune, sameTune,
+  TUNE_BARS, TUNE_COUNT, pillSeconds, tuneRowOf, withBars, pillAt, withTuneNote, keptTune, sameTune, keptTunesToRemove, isKeptKidsTune, MAX_KEPT_TUNES,
   KIDS_DRUMS, drumPicture, kidsVoiceFields, voiceAfter, pictureFor, KIDS_EMOJI, beatLayout, cleanTab, KIDS_KEYS, keyPitch, keyRate, keyPlayId, isHighKey, instPicture,
 } from '../web/kids-logic.js';
 import { MELODY_NOTES } from '../web/notes.js';
@@ -286,6 +286,29 @@ test('● a tune: a new recording keeps the beat with the tune it replaces, as a
   assert.ok(!sameTune(kept, withTuneNote(tuned, { clipId: 'p-a-piano-c', pitch: 7, s: 5, l: 1 })), 'one more note is another tune');
   assert.ok(!sameTune(kept, withTuneNote(tuned, { clipId: 'p-a-marimba-c', pitch: 4, s: 2, l: 1, fresh: true })), 'the same notes on another sound are another tune');
   assert.ok(sameTune(kept, { ...tuned, rows: tuned.rows.filter((r) => r.melody) }), 'its drums do not matter');
+});
+
+// Ben, 2026-10-28: only the newest 20 kept tunes stay, the oldest go.
+test('● kept tunes: the 21st keeps 20 and names the oldest; a renamed, pinned, in-use or edited one and another person\'s are never named', () => {
+  const tune = (n, over = {}) => ({ id: `beat-t${n}`, personId: 'p-a', name: `🧸 Tune ${n}`, kidsTune: `🧸 Tune ${n}`, created: 100 + n, ...over });
+  const twenty = Array.from({ length: 20 }, (_, i) => tune(i));
+  assert.equal(MAX_KEPT_TUNES, 20);
+  assert.deepEqual(keptTunesToRemove(twenty, 'p-a'), [], '20 stay');
+  assert.deepEqual(keptTunesToRemove([...twenty, tune(20)], 'p-a'), ['beat-t0'], 'the 21st: the oldest goes');
+  assert.deepEqual(keptTunesToRemove([...twenty, tune(20), tune(21)].reverse(), 'p-a'), ['beat-t1', 'beat-t0'], 'two over: the two oldest, whatever the list order');
+  const plus = [...twenty, tune(20)];
+  assert.deepEqual(keptTunesToRemove(plus, 'p-a', (id) => id === 'beat-t0'), [], 'in use on a song: kept, and not counted');
+  assert.deepEqual(keptTunesToRemove([...plus, tune(21)], 'p-a', (id) => id === 'beat-t0'), ['beat-t1'], 'the next oldest goes instead');
+  assert.deepEqual(keptTunesToRemove([...plus.slice(1), tune(0, { name: 'My song' })], 'p-a'), [], 'renamed: a beat of its own now');
+  assert.deepEqual(keptTunesToRemove([...plus.slice(1), tune(0, { pinned: 5 })], 'p-a'), [], 'pinned: kept');
+  assert.deepEqual(keptTunesToRemove([...plus.slice(1), { ...tune(0), kidsTune: undefined }], 'p-a'), [], 'no mark (a beat a person made, or an edited one): kept');
+  assert.deepEqual(keptTunesToRemove([...plus, ...Array.from({ length: 30 }, (_, i) => tune(50 + i, { personId: 'p-b' }))], 'p-a'), ['beat-t0'], 'only this person\'s');
+  assert.ok(isKeptKidsTune(tune(1)) && !isKeptKidsTune({ ...tune(1), name: '🧸 Tune 1 2' }));
+  const beat = withTuneNote(withBars(newKidsBeat('p-a', ['p-kick'], kidsBeatId('p-a'), 5), TUNE_BARS), { clipId: 'p-a-piano-c', pitch: 4, s: 2, l: 1, fresh: true });
+  const kept = keptTune(beat, { id: 'beat-x', name: 'Funky Moose' });
+  assert.equal(kept.kidsTune, kept.name, 'a kept tune carries the name Kids gave it');
+  assert.ok(isKeptKidsTune(kept));
+  assert.ok(!('kidsTune' in cleanPattern(kept, 'p-a')), 'a grown-up\'s edit in the beat maker rebuilds the record without the mark');
 });
 
 test('the voices: 🤖 Robot, 🐭 Tiny (Chipmunk), 👻 Spooky (Monster with an echo); tap again for Normal', () => {
@@ -1217,4 +1240,60 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   delete ctx.currentTime;
   ctx.currentTime = 0;
   assert.equal(getSetting('level'), 'regular');
+});
+
+// Ben, 2026-10-28: each ● recording is kept, the oldest kept tunes go.
+test('● a tune: keeping the 21st drops the oldest of the kid\'s kept tunes; a renamed, pinned or in-use one, a beat a person made and another person\'s stay', async () => {
+  const { audio } = await import('../web/audio.js');
+  const { setSetting } = await import('../web/settings.js');
+  await setLevel('regular');
+  await setSetting('kidsInstNotes', 'piano');
+  await toKids();
+  const pid = state.personId;
+  state.savedBeats = state.savedBeats.filter((b) => !b.kidsTune);   // the earlier test's kept tunes
+  const tune = (n, over = {}) => ({ id: `beat-kt${n}`, personId: pid, name: `🧸 Seed ${n}`, kidsTune: `🧸 Seed ${n}`, bpm: 100, bars: 1, swing: 0, rows: [], created: 1000 + n, saved: 1000 + n, ...over });
+  const seeded = [
+    tune(100, { created: 2, saved: 2 }),   // the oldest, on a song
+    ...Array.from({ length: 19 }, (_, i) => tune(i)),
+    tune(200, { name: 'My own song', created: 3 }),   // renamed
+    tune(201, { pinned: 9, created: 3 }),
+    { ...tune(202, { created: 3 }), name: '🧸 Mine', kidsTune: undefined },   // made by a person, typed with a 🧸
+    ...Array.from({ length: 25 }, (_, i) => tune(300 + i, { personId: 'p-someone-else', created: 1 })),
+  ];
+  state.savedBeats.push(...seeded);
+  state.songbook.push({ id: 'song-kt', personId: pid, name: 'Song', tempo: 100, lanes: [{ name: 'A', emoji: '🥁', blocks: [{ beatId: 'beat-kt100', bar: 0, times: 1 }] }], slots: [], created: 1, saved: 1 });
+  const ids = () => new Set(state.savedBeats.map((b) => b.id));
+  const mine = () => state.savedBeats.filter((b) => b.personId === pid && isKeptKidsTune(b));
+  assert.equal(mine().length, 20, '19 and the one on a song');
+  // A running audio clock, and sounds that "load" and play silently.
+  const ctx = audio.context();
+  const t0 = performance.now();
+  Object.defineProperty(ctx, 'currentTime', { configurable: true, get: () => (performance.now() - t0) / 1000 });
+  ctx.createBufferSource = () => ({ connect() {}, start() {}, stop() {}, playbackRate: { value: 1 }, buffer: null });
+  const plainLoad = audio.load;
+  audio.load = async () => ({ buffer: {}, duration: 0.2 });
+  $('[data-kids-tab="beats"]').dispatch('click');
+  $('[data-kids-tab="keys"]').dispatch('click');
+  const rec = $('#kids-rec');
+  rec.dispatch('click');
+  await page.settle();
+  await until(() => rec.classList.contains('recording'), 'recording');
+  const keys = $('#kids-keys').querySelectorAll('.kids-key');
+  keys[0].dispatch('pointerdown', { pointerId: 21 });
+  await new Promise((r) => setTimeout(r, 120));
+  keys[0].dispatch('pointerup', { pointerId: 21 });
+  rec.dispatch('click');   // stop: the tune is kept
+  assert.equal(mine().length, 21, '20 not on a song (the earlier tune is kept as the first note lands, the new one as it stops, the oldest dropped), and the one on a song');
+  assert.ok(!ids().has('beat-kt0'), 'the oldest plain one went');
+  assert.ok(ids().has('beat-kt1') && ids().has('beat-kt18'), 'the rest stay');
+  assert.ok(ids().has('beat-kt100'), 'the one on a song stays, however old');
+  assert.ok(ids().has('beat-kt200') && ids().has('beat-kt201') && ids().has('beat-kt202'), 'renamed, pinned and a person\'s own stay');
+  assert.equal(state.savedBeats.filter((b) => b.personId === 'p-someone-else').length, 25, 'another person\'s are untouched');
+  assert.ok(mine().some((b) => b.name.startsWith('🧸 ') && !b.id.startsWith('beat-kt')), 'the new one is there');
+  state.savedBeats = state.savedBeats.filter((b) => b.personId !== 'p-someone-else' && !b.id.startsWith('beat-kt'));
+  state.songbook = state.songbook.filter((s) => s.id !== 'song-kt');
+  audio.load = plainLoad;
+  delete ctx.currentTime;
+  ctx.currentTime = 0;
+  await setLevel('regular');
 });

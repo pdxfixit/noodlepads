@@ -217,7 +217,7 @@ export function shareBundle(kind, id, lists, personId, kitIds = []) {
   const addBeat = (b) => {
     if (!b || out.beats.some((x) => x.id === b.id)) return;
     const rows = (b.rows ?? []).map((r) => ({ ...r, clipId: clipRef(r.clipId) })).filter((r) => r.clipId);
-    const { personId: _who, pinned: _pin, ...beat } = b;   // a 📌 is the sharer's own, not the beat's
+    const { personId: _who, pinned: _pin, kidsTune: _kid, ...beat } = b;   // a 📌 and a Kids tune's mark are the sharer's own, not the beat's
     out.beats.push({ ...beat, rows });
   };
   let title = '';
@@ -289,7 +289,7 @@ export function shareDoc(bundle, toId, kitIds, newId, { kind, title } = {}) {
     const id = newId('beat');
     beatIds.set(b.id, id);
     const rows = (Array.isArray(b.rows) ? b.rows : []).map((r) => ({ ...r, clipId: clipFor(r.clipId) })).filter((r) => r.clipId);
-    const { pinned: _pin, ...beat } = b;   // a remix starts unpinned
+    const { pinned: _pin, kidsTune: _kid, ...beat } = b;   // a remix starts unpinned, and is nobody's Kids tune
     doc.beats.push({ ...beat, id, personId: toId, rows, created: Date.now(), saved: Date.now() });
   }
   for (const s of list(bundle, 'songs')) {

@@ -489,6 +489,8 @@ export function cleanBackup(doc, audioOf, bundled, { oldStores = false } = {}) {
       saved: num(b.saved) ?? Date.now(),
       // 📌 pinned to the pattern chips: when, only while pinned (ADR 0021).
       ...(num(b.pinned) > 0 ? { pinned: num(b.pinned) } : {}),
+      // 🧸 a ● tune Kids kept: the name it gave it (kids-logic.js keptTune), only while the beat still has that name.
+      ...(b.kidsTune && b.kidsTune === b.name && title(b.kidsTune, MAX_NAME) === b.kidsTune ? { kidsTune: b.kidsTune } : {}),
     }
     : null));
 

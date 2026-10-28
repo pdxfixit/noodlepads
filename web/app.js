@@ -66,6 +66,7 @@ import { initMiniDeck } from './mini-deck.js';
 import { db } from './store.js';
 import { newId, versionLabel, remember, recall, forget } from './util.js';
 import { beatName, remixName, songName, funName, keptName } from './names.js';
+import { songBeatIds } from './playlist.js';
 import { adoptKidsBeats, isHiddenBeat, scratchOf } from './scratch.js';
 import { onSetting, followPerson, getSetting } from './settings.js';
 import { fitLine, pickerFor, refitLines } from './lines.js';
@@ -1058,6 +1059,8 @@ async function start() {
     // with every other beat but never listed.
     beats: (pid) => state.savedBeats.filter((b) => b.personId === pid),
     saveBeat: beatLibrary.put,
+    removeBeat: beatLibrary.remove,   // the oldest kept ● tunes go (kids.js keepTune)
+    beatInUse: (id) => state.songbook.some((s) => songBeatIds(s).includes(id)) || [...state.patterns.values()].some((p) => p?.id === id),
     // The sum ends a visit into Kids as well: then no grown-up is "in", so a
     // later change of level to Kids shows Kids at once.
     grownUp: () => { grownUp = !kidsVisit; kidsVisit = false; applyKids(); showSettings(); },
