@@ -318,7 +318,17 @@ function watchWork() {
   // fetch: tracked whatever function a test puts there later.
   const wrapFetch = (fn) => {
     if (typeof fn !== 'function' || fn.tracked) return fn;
-    const wrapped = (url, ...rest) => track(fn(url, ...rest), `a fetch of ${String(url).slice(0, 80)}`);
+    // The body is work too: `await res.json()` after the answer reads a stream,
+    // which takes event-loop turns of its own. Untracked, a page that was
+    // descheduled for 20 ms right there looked settled before it went on.
+    const wrapped = (url, ...rest) => track(Promise.resolve(fn(url, ...rest)).then((res) => {
+      for (const read of ['json', 'text', 'arrayBuffer', 'blob', 'formData']) {
+        if (typeof res?.[read] !== 'function') continue;
+        const real = res[read].bind(res);
+        res[read] = (...a) => track(real(...a), `a ${read}() of ${String(url).slice(0, 60)}`);
+      }
+      return res;
+    }), `a fetch of ${String(url).slice(0, 80)}`);
     wrapped.tracked = true;
     return wrapped;
   };
