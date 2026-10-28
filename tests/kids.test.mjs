@@ -617,6 +617,30 @@ function fakeMicrophone() {
   navigator.mediaDevices = { getUserMedia: async (constraints) => { mic.asked.push(constraints); const s = { stopped: 0, getTracks() { return [{ stop: () => { s.stopped += 1; } }]; } }; mic.streams.push(s); return s; } };
 }
 
+// A tap on the mic is a press under TAP_MS (kids-logic.js pressKind), measured
+// on performance.now. A test's settle() between the press and the lift can run
+// past that on a loaded machine and turn the tap into a hold, so a tap's press
+// and lift are read off a clock the test holds still (2026-10-27).
+let heldClock = null;
+async function pressMic(el, pointerId) {
+  const real = performance.now;
+  const t = real.call(performance);
+  heldClock = { real, t };
+  performance.now = () => t;
+  el.dispatch('pointerdown', { pointerId });
+  await page.settle();
+}
+function liftMic(el, pointerId) {
+  const { real, t } = heldClock;
+  performance.now = () => t + 50;
+  try { el.dispatch('pointerup', { pointerId }); } finally { performance.now = real; heldClock = null; }
+}
+// A whole tap, when nothing is asserted between the press and the lift.
+async function tapMic(el, pointerId) {
+  await pressMic(el, pointerId);
+  liftMic(el, pointerId);
+}
+
 test('Record: a refused microphone shows 🚫 over 🎤; once it is allowed, the mic is itself again', async () => {
   fakeMicrophone();
   const allow = navigator.mediaDevices.getUserMedia;
@@ -625,9 +649,7 @@ test('Record: a refused microphone shows 🚫 over 🎤; once it is allowed, the
   $('[data-kids-tab="record"]').dispatch('click');
   const m = $('#kids-mic');
   assert.equal(m.classList.contains('blocked'), false, 'a microphone to ask for');
-  m.dispatch('pointerdown', { pointerId: 30 });
-  await page.settle();
-  m.dispatch('pointerup', { pointerId: 30 });
+  await tapMic(m, 30);
   await page.settle();
   assert.ok(m.classList.contains('blocked'), 'refused: 🚫 over 🎤');
   assert.match(m.getAttribute('aria-label'), /microphone is off/);
@@ -697,10 +719,9 @@ test('Record: a tap counts 3, 2, 1 on the mic, then it listens until the next ta
   const face = () => $('#kids-mic-face').textContent;
   const before = state.userClips.length;
   played.length = 0;
-  $('#kids-mic').dispatch('pointerdown', { pointerId: 2 });
-  await page.settle();
+  await pressMic($('#kids-mic'), 2);
   assert.ok($('#kids-mic').classList.contains('recording'), 'a press listens at once, in case it is a hold');
-  $('#kids-mic').dispatch('pointerup', { pointerId: 2 });   // a quick lift: a tap
+  liftMic($('#kids-mic'), 2);   // a quick lift: a tap
   assert.equal($('#kids-mic').classList.contains('recording'), false, 'the hold\'s first moments are thrown away');
   assert.equal(state.userClips.length, before, 'nothing kept from them');
   assert.ok($('#kids-mic').classList.contains('counting'));
@@ -725,9 +746,7 @@ test('Record: a tap counts 3, 2, 1 on the mic, then it listens until the next ta
 test('Record: a tap during 3, 2, 1 calls it off, and nothing is kept', async () => {
   fakeMicrophone();
   const before = state.userClips.length;
-  $('#kids-mic').dispatch('pointerdown', { pointerId: 4 });
-  await page.settle();
-  $('#kids-mic').dispatch('pointerup', { pointerId: 4 });
+  await tapMic($('#kids-mic'), 4);
   assert.equal($('#kids-mic-face').textContent, '3');
   $('#kids-mic').dispatch('pointerdown', { pointerId: 5 });
   $('#kids-mic').dispatch('pointerup', { pointerId: 5 });
@@ -740,9 +759,7 @@ test('Record: a tap during 3, 2, 1 calls it off, and nothing is kept', async () 
   assert.equal($('#kids-mic').classList.contains('recording'), false, 'the count stays called off');
   assert.equal(state.userClips.length, before);
   // Leaving the screen while it counts calls it off too.
-  $('#kids-mic').dispatch('pointerdown', { pointerId: 6 });
-  await page.settle();
-  $('#kids-mic').dispatch('pointerup', { pointerId: 6 });
+  await tapMic($('#kids-mic'), 6);
   assert.ok($('#kids-mic').classList.contains('counting'));
   $('[data-kids-tab="pads"]').dispatch('click');
   assert.equal($('#kids-mic').classList.contains('counting'), false);
