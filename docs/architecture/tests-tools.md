@@ -178,7 +178,7 @@ what it forces an agent to do.
 | `justfile.test.mjs` | every public recipe has a `just --list` line that does not start mid-sentence; every recipe is named in AGENTS.md, README.md, how-to, deploy-cloudflare or layout; every `just <recipe>` that AGENTS.md, README.md, TODO.md, `docs/*.md` and `docs/architecture/` name exists (`ELSEWHERE` lists other repos' recipes); every tool in `tools/` is named there; deploy runs flarepress's check, stamp and verify; `site.conf committed=` holds web, worker and site; `wrangler.toml` holds no ids; deploy.yml runs the tests and the release checks before the action and the live checks after | document the recipe or tool; fix a doc that names a gone recipe |
 | `look-views.test.mjs` | `tools/look.mjs VIEWS` (through `--views PATH`): each view name taken once; `beat` is Beats, `dj` is Live; every `web/` export, `state` field, id, class and `data-` attribute the views and `look-cloud.mjs` name still exists; `look-cloud.mjs` loads | rename the new view; rename it in `tools/` too |
 | `tools/test_justfile.py` | every recipe has a doc; README "Running it yourself" names exactly the recipes; `test-quiet` prints only the failures and keeps the log | add the recipe to README |
-| `tools/test_node_tests.py`, `unended-reporter.test.mjs` | a file a cut run left a test unreported in runs again alone, and fails the run when it fails there; a "▶" with no file named fails | — |
+| `file-end.test.mjs` | a file that imports `fake-dom.mjs` ends by itself with the app's timers running; a file that cannot end fails naming itself (through `tools/node_tests.sh`); a file that imports `fake-dom.mjs` inside a test also imports it at its top | add `import './fake-dom.mjs'` at the top of the file |
 | `headers.test.mjs` | `web/_headers`: the CSP closed by default, no inline or eval, no outside origin but Cloudflare's beacon, fonts only from `web/fonts/`, microphone and screen share for this site | change the CSP line on purpose |
 | `colors.test.mjs`, `contrast.test.mjs` | 4.5:1 for the pairs they list, with colors read from `styles.css` tokens, `boards.json` and `model.js` | a new pair needs a new line: a new color nobody lists is not checked |
 | `css-braces.test.mjs` | every `{` in `styles.css` has its `}` | fix the brace |
@@ -233,11 +233,19 @@ yourself" lists them all.
 (and so `chrome.mjs`), so a missing import from `web/` fails there too. No
 test runs Chrome.
 
-The Node tests run through `node_tests.sh`: the spec reporter to the screen,
-and `tests/unended-reporter.mjs` to a file, listing the test files with a
-started test whose end never came (`--test-force-exit` cut it). Each such
-file runs again alone, and its exit code counts; a "▶" with no file named
-fails the run.
+The Node tests run through `node_tests.sh`: `node --test` with the spec
+reporter, and `tests/file-end.mjs` preloaded into every file. Each file ends
+by itself: the app starts timers nothing in a test stops, so `fake-dom.mjs`
+keeps every timer it sees and clears them in a root `after` hook
+(`onFileEnd`, `file-end.mjs`) when the file's tests are done. A file still
+alive 10 s later (an open server or socket) fails, naming itself and what
+holds it, so a hang is a failure with a name. There is no `--test-force-exit`:
+it cut the last reports of a parallel run (2026-10-19), which is why `just
+test` once had a second reporter and reran such files; with every file
+ending by itself nothing is cut, and the reporter is gone (2026-10-28). The
+hook must be registered at a file's top level (`after()` inside a test is
+tied to that one test), so a file that imports `fake-dom.mjs` inside a test
+also imports it at its top.
 
 ## `just look`
 
@@ -516,7 +524,7 @@ them, once older than `TEST_GRACE_MS`, for `cloud-prune --smoke`.
 | A stand-in that sets long timers lives in `tests/fake-*.mjs`, or `settle()` will not wait for it | none |
 | `web/version.js` holds exactly one quoted `X.Y.Z`; the deploy reads the first | site.sh stops on none |
 | A shallow clone cannot bump, check or restamp: `git fetch --unshallow` first (a cloud session's clone is shallow) | `bump_version.py refuse_shallow`, `version_bumped.sh` |
-| `--test-force-exit` is needed for app files (their intervals never end); it can cut the last reports of a parallel run | `just test` prints ⚠️ for a started test with no end and reruns its file alone (`node_tests.sh`) |
+| A test file's tests end but its timers (the app's intervals) keep Node alive: `fake-dom.mjs` clears the timers it saw at the file's end; anything else a test opens (a server, a socket) needs its own `after()` | `file-end.mjs` fails the file after 10 s, naming what holds it |
 | Every `web/` file is in `sw.js SHELL` or `NOT_LOADED` | `offline.test.mjs` |
 | `just look --js` sets state, never toggles it: widths share storage | none |
 | A `just look` view name is taken once | `look.mjs more`, `look-views.test.mjs` |
@@ -526,7 +534,7 @@ them, once older than `TEST_GRACE_MS`, for `cloud-prune --smoke`.
 
 | Change | Touch |
 |---|---|
-| Add a test that drives the app | the four steps above; `testManifest()`; helpers from `new-beat.mjs`, `song-ui.mjs`, `banner.mjs`; `node --test --test-force-exit tests/<file>`; `just prove` |
+| Add a test that drives the app | the four steps above; `testManifest()`; helpers from `new-beat.mjs`, `song-ui.mjs`, `banner.mjs`; `node --test tests/<file>`; `just prove` |
 | A test on a device with data | `fakeIndexedDB().seed(DB_NAME, DB_VERSION, SCHEMA, …)` before `installPage` |
 | A test through the cloud | `FakeD1`, `worker/index.js` default export, `http.js ORIGIN`, a `globalThis.fetch` router after `installPage` |
 | Teach the stand-in page something | `fake-dom.mjs` (`FakeElement`, `matcher`, `installPage`'s globals); run the whole suite, since over 70 files start the app on it |
