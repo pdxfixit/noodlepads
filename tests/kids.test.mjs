@@ -858,12 +858,15 @@ test('three wrong answers in a row: the next try waits, the keys dim and ⏳ cou
   const wrong = () => String(Number($('#kids-sum-a').textContent) + Number($('#kids-sum-b').textContent) === 19 ? 20 : 19);
   const keys = () => $('#kids-sum-keys').querySelectorAll('[data-digit]');
   const plain = SUM_WAIT.ms;
-  // The wait is read off Date.now. A long one that the test then moves the
-  // clock past by hand: a short one really ran out while a loaded machine
-  // slept through the test's own pauses (2026-10-27). A wrong answer closes
-  // the sum on a timer of its own, so the test waits for that close, not a time.
+  // The wait is read off Date.now. A short one really ran out while a loaded
+  // machine slept through the test's own pauses (2026-10-27), so the test's
+  // clock runs ten minutes behind and the wait is ten minutes long: it ends at
+  // the third wrong answer on the real clock, and shows as running on the
+  // test's. The test moves its clock past it by hand, and puts the real one
+  // back at the end with the wait already over. A wrong answer closes the sum
+  // on a timer of its own, so the test waits for that close, not a time.
   const realNow = Date.now;
-  let skew = 0;
+  let skew = -600_000;
   Date.now = () => realNow() + skew;
   SUM_WAIT.ms = 600_000;
   try {
@@ -884,13 +887,12 @@ test('three wrong answers in a row: the next try waits, the keys dim and ⏳ cou
     for (const d of answer) keys().find((k) => k.dataset.digit === d).dispatch('click');
     assert.equal($('#kids-sum').open, true, 'still waiting');
     assert.equal($('#kids-sum-typed').textContent, '?');
-    skew += 600_000;   // the wait runs out; the dialog's own 250 ms tick shows it
+    skew += 600_001;   // the wait runs out; the dialog's own 250 ms tick shows it
     await until(() => $('#kids-sum-wait').hidden, 'the wait to end', 3000);
     assert.ok(keys().every((k) => !k.disabled), 'the keys wake');
     $('#kids-sum').close();
   } finally {
-    // Date.now stays that far ahead for the rest of the file: put back, the
-    // wait this test ended would be running again.
+    Date.now = realNow;
     SUM_WAIT.ms = plain;
   }
 });
