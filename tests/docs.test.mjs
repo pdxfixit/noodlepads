@@ -32,6 +32,34 @@ test('every relative link in the docs points at a file that exists', () => {
   assert.deepEqual(broken, []);
 });
 
+// A link like (docs/how-to.md#ship) or (#ship) must land on a real heading:
+// the file can exist and the section still be renamed away. GitHub's anchors:
+// lowercase, punctuation dropped, spaces to hyphens.
+export const slug = (h) => h.trim().toLowerCase().replace(/[^\p{L}\p{N} _-]/gu, '').replace(/ /g, '-');
+export const anchorsOf = (md) => new Set([...md.replace(/^```[\s\S]*?^```/gm, '').matchAll(/^#{1,6} (.+)$/gm)].map((m) => slug(m[1])));
+
+test('the anchor check reads headings the way GitHub does', () => {
+  assert.equal(slug('Deploy, live checks and rollback'), 'deploy-live-checks-and-rollback');
+  assert.equal(slug('Ship'), 'ship');
+  assert.ok(anchorsOf('# A title\n\n```\n# not a heading\n```\n## Second part\n').has('second-part'));
+  assert.ok(!anchorsOf('# A title\n\n```\n# not a heading\n```\n').has('not-a-heading'));
+});
+
+test('every #heading link in the docs points at a heading that exists', () => {
+  const bad = [];
+  for (const doc of docs) {
+    const prose = readFileSync(join(root, doc), 'utf8').replace(/```[\s\S]*?```/g, '');
+    for (const [, target] of prose.matchAll(/\]\(([^)\s]*#[^)\s]+)\)/g)) {
+      if (/^https?:/.test(target)) continue;
+      const [file, anchor] = target.split('#');
+      const abs = file ? join(root, dirname(doc), file) : join(root, doc);
+      if (!abs.endsWith('.md') || !existsSync(abs)) continue;   // a missing file is the link test's finding
+      if (!anchorsOf(readFileSync(abs, 'utf8')).has(anchor)) bad.push(`${doc} → ${target}`);
+    }
+  }
+  assert.deepEqual(bad, []);
+});
+
 // AGENTS.md and how-to point at files in backticks too (`tests/lines.test.mjs`):
 // a cold start opens them. Until 2026-10-26 AGENTS.md cited a test file that
 // never existed.
