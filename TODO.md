@@ -17,17 +17,11 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 ## Ben does
 
-- **Add the new cloud events to the telemetry runner** (2 min, on the Mac): in `../telemetry/events.toml` (the pdxfixit/telemetry repo beside this checkout) add `up` and `leave` under `noodlepads.cloud` (what `web/track-page.js` now sends in place of `put` and `offline`), then run `just test` in the main checkout, since `tests/telemetry.test.mjs` checks it only there.
-
 - **Isopix: its one old tag** (optional, 2 min, on the Mac; its history was rewritten 2026-10-28): push the rewritten tag the session could not: `git push --force origin 999605f55f7a1926e3504b51dde7b1c4a2b986ea:refs/tags/v1.0.1` in the isopix clone, after moving it onto the new history (`git fetch origin && git checkout -B main origin/main`, also in every noodlepads clone).
-
-- **Isopix: approve the history rewrite** (in the isopix repo): it is ready and verified; say yes and the force-push goes.
 
 - **Cloud session setup**: add `f=/home/user/noodlepads/tools/cloud_setup.sh; [ -f "$f" ] && bash "$f" || true` to the cloud environment's setup script, or add a .claude SessionStart hook (`tools/cloud_setup.sh`, 6fadfb8).
 
-- **Telemetry: land the branch `land/noodlepads-cloud-actions`** from a session with `gh`.
-
-- **Read the mission and make it yours** (2 min): `AGENTS.md` → Mission, drafted from your interview answers (2026-10-26). Reword anything that isn't how you'd say it; the council checks every change against it.
+- **Telemetry: land the branch `land/noodlepads-cloud-actions`** from a session with `gh` (`just land 6c2c032` in the telemetry checkout): it adds the cloud events `up` and `leave`, then run `just test` in the main checkout here.
 
 ### v1: prove out the interface
 
