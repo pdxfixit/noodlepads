@@ -90,8 +90,8 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 
 ## Waits on Ben
 
-- Isopix (optional; history rewritten 2026-10-28): push the rewritten tag the session could not: `git push --force origin 999605f55f7a1926e3504b51dde7b1c4a2b986ea:refs/tags/v1.0.1` in the isopix clone, after moving it onto the new history (`git fetch origin && git checkout -B main origin/main`, also in every noodlepads clone).
-- The cloud session setup: add `f=/home/user/noodlepads/tools/cloud_setup.sh; [ -f "$f" ] && bash "$f" || true` to the cloud environment's setup script, or add a .claude SessionStart hook.
+- Ben's Mac clones of noodlepads and isopix move onto the rewritten history (`git fetch origin && git checkout -B main origin/main`).
+- The cloud session setup: one line in the environment's setup script runs `tools/cloud_setup.sh` in noodlepads and isopix (TODO.md "Ben does").
 - Telemetry: land branch `land/noodlepads-cloud-actions` from a session with `gh`.
 
 ## Not yet tried by a person

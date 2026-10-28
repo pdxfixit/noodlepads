@@ -17,9 +17,9 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 ## Ben does
 
-- **Isopix: its one old tag** (optional, 2 min, on the Mac; its history was rewritten 2026-10-28): push the rewritten tag the session could not: `git push --force origin 999605f55f7a1926e3504b51dde7b1c4a2b986ea:refs/tags/v1.0.1` in the isopix clone, after moving it onto the new history (`git fetch origin && git checkout -B main origin/main`, also in every noodlepads clone).
+- **Your Mac clones onto the rewritten history** (1 min each, once; noodlepads and isopix were rewritten 2026-10-28): `git fetch origin && git checkout -B main origin/main` in each clone, so nothing from the old history is pushed back.
 
-- **Cloud session setup**: add `f=/home/user/noodlepads/tools/cloud_setup.sh; [ -f "$f" ] && bash "$f" || true` to the cloud environment's setup script, or add a .claude SessionStart hook (`tools/cloud_setup.sh`, 6fadfb8).
+- **Cloud session setup** (2 min): in the cloud environment's settings → Edit → Setup script, add `for f in /home/user/noodlepads/tools/cloud_setup.sh /home/user/isopix/tools/cloud_setup.sh; do [ -f "$f" ] && bash "$f"; done; true`. A new session then has `just`, the git hooks and full history; check with `git -C /home/user/noodlepads config core.hooksPath` (prints `.githooks`).
 
 - **Telemetry: land the branch `land/noodlepads-cloud-actions`** from a session with `gh` (`just land 6c2c032` in the telemetry checkout): it adds the cloud events `up` and `leave`, then run `just test` in the main checkout here.
 
