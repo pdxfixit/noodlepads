@@ -208,7 +208,10 @@ def buzzer():
 
 
 def heartbeat():
-    thump = lambda: osc(lambda t: 55 + 25 * math.exp(-20 * t), 0.18, "sine", lambda t: math.exp(-18 * t))
+    """Lub-dub. Each thump is a low sine pushed hard (drive 8), which gives it
+    overtones a phone plays, and lets it ring a little longer: a plain sine
+    played 10 dB under the middle (loudness floor, 2026-10-28)."""
+    thump = lambda: drive(osc(lambda t: 55 + 25 * math.exp(-20 * t), 0.3, "sine", lambda t: math.exp(-10 * t)), 8)
     return carry(mix(thump(), at(0.24, thump()), silence(0.9)))
 
 
@@ -230,8 +233,9 @@ def snap():
 
 
 def boom():
-    """An 808-style long, deep kick."""
-    return carry(osc(lambda t: 42 + 90 * math.exp(-22 * t), 1.0, "sine", lambda t: math.exp(-2.6 * t)))
+    """An 808-style long, deep kick, saturated (drive 8) the way 808s are, so
+    its overtones carry on a phone (loudness floor, 2026-10-28)."""
+    return carry(lowpass(drive(osc(lambda t: 42 + 90 * math.exp(-22 * t), 1.0, "sine", lambda t: math.exp(-2.6 * t)), 8), 0.35))
 
 
 def chord(*freqs):
@@ -429,7 +433,7 @@ def kick_dusty():
     """A boom bap kick: short and punchy, a little crushed, the top rolled off."""
     body = osc(lambda t: 52 + 140 * math.exp(-40 * t), 0.32, "sine", lambda t: math.exp(-11 * t))
     knock = noise(0.02, lambda t: 0.8 * math.exp(-220 * t), seed=50)
-    return carry(lowpass(drive(mix(body, knock), 2.2), 0.35))
+    return carry(lowpass(drive(mix(body, knock), 12), 0.35))   # crushed hard: loudness floor, 2026-10-28
 
 
 def snare_dusty():
@@ -465,11 +469,11 @@ def bloop():
 def vinyl():
     """A record's crackle: soft hiss with pops, for lo-fi beats."""
     rng = random.Random(53)
-    hiss = lowpass(noise(2.0, lambda t: 0.12, seed=54), 0.3)
+    hiss = lowpass(noise(2.0, lambda t: 0.18, seed=54), 0.3)   # hiss up, pops down: loudness floor, 2026-10-28
     pops = [0.0] * len(hiss)
     for _ in range(40):
         i = rng.randrange(len(pops) - 40)
-        size = rng.uniform(0.2, 0.7)
+        size = rng.uniform(0.15, 0.52)
         for j in range(30):
             pops[i + j] += size * rng.uniform(-1, 1) * math.exp(-j / 4)
     return mix(hiss, pops)
@@ -516,7 +520,7 @@ def djembe_slap():
 
 def dhol():
     """A dhol's big side, hit with a bent stick: dhuk."""
-    return carry(drive(skin(120, 68, 0.6, 6, slap=0.6, seed=66), 1.8))
+    return carry(drive(skin(120, 68, 0.6, 6, slap=0.6, seed=66), 8))   # struck hard: loudness floor, 2026-10-28
 
 
 def dhol_high():

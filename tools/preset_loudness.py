@@ -50,6 +50,15 @@ BY_EAR = {
 }
 
 
+# The quietest a preset may play, in dB from the middle (2026-10-28). `--fix`
+# cannot turn a sound up, so a sound under this is remade (tools/make_placeholders.py).
+# Chosen from the spread: after heartbeat, boom, kick-dusty, dhol and vinyl were
+# remade, the quietest recordings are upright-c at -8.1 and kick at -8.0, so
+# -8.5 leaves them and catches anything below. BY_EAR presets are turned down on
+# purpose and are exempt.
+FLOOR = -8.5
+
+
 def _highpass(x, rate, hz):
     a = math.exp(-2 * math.pi * hz / rate)
     for _ in range(2):

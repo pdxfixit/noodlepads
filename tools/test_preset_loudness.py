@@ -13,6 +13,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import preset_loudness as pl  # noqa: E402
 
+# Presets allowed under pl.FLOOR, each with why. A real recording cannot be
+# remade without its source library (tools/make_samples.py downloads it), and a
+# bass drum is mostly under what a phone speaker plays.
+UNDER_THE_FLOOR = {
+    "taiko": "a VCSL bass-drum recording (make_samples.py HITS), -9.3 dB; its energy is below 180 Hz",
+}
+
 
 class Loudness(unittest.TestCase):
     @classmethod
@@ -22,6 +29,17 @@ class Loudness(unittest.TestCase):
     def test_no_preset_plays_louder_than_the_middle(self):
         loud = sorted((round(d, 1), k["id"]) for d, _, k in self.rows if d > pl.EVEN + pl.STEP / 2)
         self.assertEqual(loud, [], "run `just preset-loudness --fix`: these play louder than the other presets")
+
+    def test_no_preset_plays_far_under_the_middle(self):
+        quiet = sorted((round(d, 1), k["id"]) for d, _, k in self.rows
+                       if d < pl.FLOOR and k["id"] not in pl.BY_EAR and k["id"] not in UNDER_THE_FLOOR)
+        self.assertEqual(quiet, [], "these play more than %s dB under the middle: remake the sound in "
+                         "tools/make_placeholders.py (a level cannot turn one up), or list it in UNDER_THE_FLOOR with why" % -pl.FLOOR)
+
+    def test_the_allow_list_has_only_presets_still_under_the_floor(self):
+        by_id = {k["id"]: d for d, _, k in self.rows}
+        for i in UNDER_THE_FLOOR:
+            self.assertLess(by_id[i], pl.FLOOR, i + " is above the floor now: take it off UNDER_THE_FLOOR")
 
     def test_boards_json_has_the_levels_the_tool_works_out(self):
         text = pl.BOARDS.read_text(encoding="utf-8")

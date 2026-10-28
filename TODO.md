@@ -58,8 +58,6 @@ Other work:
 - [ ] Move `skills/noodlepads-logs` to `~/src/skills/noodlepads-logs` and link it (the skills workspace convention); the recurrent routine's leg is now named `noodlepads-logs`, and its state file `~/.local/state/skills/noodlepads-logs.state.json`
 
 - **Apple voices out** (Ben, 2026-10-26), once Ben's recordings or another CC0 voice set arrive ("Ben does"): they replace the 6 Apple-voice clips that `web/clips/kit/LICENSE-samples.txt` lists (`tools/make_placeholders.py` `KIT_CALLOUTS`: oh-yeah, bruh, nice, gg, drop-the-beat, boom-word), and that file's Apple section goes. A CC0 voice that says the same words is better than a near word: no GitHub set searched on 2026-10-27 had "Oh yeah", "Nice", "Boom" or "Drop the beat" (Kenney's Voiceover Pack and Google's Speech Commands gave the other eight).
-- **Council round 1, next fixes** (each one approved by Ben, 2026-10-26). Most urgent first:
-  1. Sound designer ✏️: add a loudness floor to `tools/test_preset_loudness.py` (8 presets sit 8–10 dB under the middle). (Roar, Heartbeat, Djembe, Djembe slap, Dhol and Dhol tik stay synthesized, decided 2026-10-27: see decisions.md.)
 
 ### Offered, not approved
 
