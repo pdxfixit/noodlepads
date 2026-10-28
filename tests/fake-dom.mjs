@@ -273,8 +273,10 @@ const realSetInterval = globalThis.setInterval;
 // when the file's tests are done, so the file ends by itself.
 const liveTimers = new Set();
 export function teardown() {
+  const stopped = [...liveTimers].map((t) => `${t._repeat ? 'an interval' : 'a timer'} of ${t._idleTimeout} ms`);
   for (const t of liveTimers) realClearTimeout(t);   // also stops an interval
   liveTimers.clear();
+  return stopped.length ? `${stopped.length} page timer${stopped.length > 1 ? 's' : ''} (${[...new Set(stopped)].slice(0, 4).join(', ')})` : '';
 }
 onFileEnd(teardown);
 const work = { pending: new Map(), begun: 0, next: 1, periodic: 0 };

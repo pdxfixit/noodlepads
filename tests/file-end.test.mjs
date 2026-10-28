@@ -41,6 +41,34 @@ test('a file that starts the app\'s kind of timers ends by itself when its tests
   assert.ok(Date.now() - t0 < 8_000, 'it did not wait for the minute-long timer');
 });
 
+test('a timer the page sets after the last test is stopped with a note, and the file ends', () => {
+  // The real setTimeout, kept before the page replaces it, fires after the
+  // tests are done and starts an interval the stand-in has no later cleanup for.
+  const file = scratchFile('late.test.mjs', `
+    import { installPage } from ${JSON.stringify(fakeDom)};
+    const realSetTimeout = setTimeout;
+    test('a continuation still to come', () => {
+      installPage({});
+      realSetTimeout(() => { setInterval(() => {}, 1000); }, 300);
+    });`);
+  const r = run('sh', ['tools/node_tests.sh', file], { NOODLE_EXIT_MS: '1000' });
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout + r.stderr, /late\.test\.mjs: stopped 1 page timer \(an interval of 1000 ms\), set after its last test/);
+});
+
+test('a real handle outside the stand-in still fails the file, even with the page up', () => {
+  const file = scratchFile('real.test.mjs', `
+    import { installPage } from ${JSON.stringify(fakeDom)};
+    const realSetInterval = setInterval;
+    test('page up, then a real interval nobody clears', () => {
+      installPage({});
+      realSetInterval(() => {}, 1000);
+    });`);
+  const r = run('sh', ['tools/node_tests.sh', file], { NOODLE_EXIT_MS: '400' });
+  assert.notEqual(r.status, 0);
+  assert.match(r.stdout + r.stderr, /real\.test\.mjs did not end 0\.4 s after its last test: still open: Timeout/);
+});
+
 test('a file that cannot end fails by name, through the runner `just test` uses', () => {
   const file = scratchFile('stuck.test.mjs', `test('leaves an interval nobody clears', () => { setInterval(() => {}, 1000); });`);
   const r = run('sh', ['tools/node_tests.sh', file], { NOODLE_EXIT_MS: '400' });
@@ -54,6 +82,9 @@ test('the runner passes a file that ends, and does not use --test-force-exit', (
   const file = scratchFile('fine.test.mjs', `test('ends', () => {});`);
   const r = run('sh', ['tools/node_tests.sh', file]);
   assert.equal(r.status, 0, r.stdout + r.stderr);
+  for (const f of ['tools/stress.sh', 'justfile']) {
+    assert.ok(/node --test[^\n]*file-end\.mjs/.test(readFileSync(join(root, f), 'utf8')), `${f} runs node --test with the file-end watchdog`);
+  }
   for (const f of ['tools/node_tests.sh', 'tools/stress.sh', 'justfile']) {
     assert.ok(!readFileSync(join(root, f), 'utf8').split('\n').some((l) => /--test-force-exit/.test(l) && !/^\s*#/.test(l)),
       `${f} runs node without --test-force-exit`);

@@ -20,7 +20,7 @@ trap 'kill $pids 2>/dev/null' EXIT INT TERM
 fails=0
 n=1
 while [ "$n" -le "$runs" ]; do
-  if node --test "$@" > "$out/run$n.txt" 2>&1; then
+  if node --test --import "$(dirname "$0")/../tests/file-end.mjs" "$@" > "$out/run$n.txt" 2>&1; then
     rm -f "$out/run$n.txt"
     echo "run $n/$runs ✅"
   else

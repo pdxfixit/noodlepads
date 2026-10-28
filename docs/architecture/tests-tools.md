@@ -238,8 +238,10 @@ reporter, and `tests/file-end.mjs` preloaded into every file. Each file ends
 by itself: the app starts timers nothing in a test stops, so `fake-dom.mjs`
 keeps every timer it sees and clears them in a root `after` hook
 (`onFileEnd`, `file-end.mjs`) when the file's tests are done. A file still
-alive 10 s later (an open server or socket) fails, naming itself and what
-holds it, so a hang is a failure with a name. There is no `--test-force-exit`:
+alive 10 s later runs the clean-ups once more: timers the page set after the
+last test are cleared, with a one-line note, and the file ends; anything else
+(an open server or socket, an interval outside the stand-in) fails the file,
+naming itself and what holds it, so a hang is a failure with a name. There is no `--test-force-exit`:
 it cut the last reports of a parallel run (2026-10-19), which is why `just
 test` once had a second reporter and reran such files; with every file
 ending by itself nothing is cut, and the reporter is gone (2026-10-28). The

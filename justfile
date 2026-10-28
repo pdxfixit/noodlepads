@@ -206,7 +206,7 @@ prove test +files:
     # A Python test (tools/test_*.py) runs under unittest from its own folder, as `just test` runs it.
     case "{{test}}" in
       *.py) run() { (cd "$(dirname "{{test}}")" && python3 -m unittest "$(basename "{{test}}" .py)"); } ;;
-      *) run() { node --test --test-reporter=spec {{test}}; } ;;
+      *) run() { node --test --test-reporter=spec --import ./tests/file-end.mjs {{test}}; } ;;
     esac
     if run > "$keep/out" 2>&1; then
       echo "❌ {{test}} passes without your change to {{files}}" >&2

@@ -22,7 +22,9 @@ export function stubBanner() {
   const box = el({ querySelector: (s) => parts[s] ?? null, append() {}, parentElement: null });
   // A notice fades away on a 10 s timer (ui.js fadeAway) that nothing in such a
   // test stops, and the file would wait for it: stop it when the file's tests are done.
-  onFileEnd(async () => (await import('../web/ui.js')).stopFade(box));
+  let stopFade = null;
+  import('../web/ui.js').then((ui) => { stopFade = ui.stopFade; });
+  onFileEnd(() => { stopFade?.(box); });
   globalThis.document ??= { querySelector: (s) => (s === '#banner' ? box : null), querySelectorAll: () => [], activeElement: null };
   return { box, text: parts['#banner-text'] };
 }

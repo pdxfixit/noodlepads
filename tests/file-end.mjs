@@ -8,7 +8,10 @@
 //   - a test helper that starts something calls onFileEnd(fn) with the call
 //     that stops it (tests/fake-dom.mjs clears the page's timers);
 //   - when the file's tests are done, the root `after` below runs them;
-//   - then a watchdog waits EXIT_MS. A file that is still alive after that
+//   - then a watchdog waits EXIT_MS and runs them once more. A timer set
+//     after the last test (a late continuation of a test) is cleared then,
+//     with a one-line note naming it, and the file ends. A file that is still
+//     alive after that (a server, a socket, an interval outside the stand-in)
 //     fails, naming itself and what holds it, never a silent hang. The
 //     watchdog's own timer is unref'd, so it never keeps a file alive.
 // tools/node_tests.sh preloads this module (--import) into every file, so
@@ -24,7 +27,8 @@ export const EXIT_MS = Number(process.env.NOODLE_EXIT_MS) || 10_000;   // the en
 const realSetTimeout = globalThis.setTimeout;   // not a stand-in's, whenever this runs
 const cleanups = [];
 
-// `fn` runs once, after the file's last test.
+// `fn` runs after the file's last test, and again when the watchdog fires; it
+// may return a short text saying what it stopped that time (the late timers).
 export function onFileEnd(fn) { cleanups.push(fn); }
 
 // What still holds the process open, leaving out the pipes that carry the
@@ -35,9 +39,15 @@ export function holdingOpen() {
 }
 
 after(() => {
-  for (const fn of cleanups.splice(0)) fn();
+  for (const fn of cleanups) fn();
   const watchdog = realSetTimeout(() => {
+    const late = cleanups.map((fn) => fn()).filter((r) => typeof r === 'string' && r);
     const held = holdingOpen();
+    if (!held.length) {
+      // Only what the page set after the last test was left, and it is stopped.
+      if (late.length) console.error(`ℹ ${process.argv[1] ?? 'a test file'}: stopped ${late.join('; ')}, set after its last test`);
+      return;
+    }
     console.error(`✖ ${process.argv[1] ?? 'a test file'} did not end ${EXIT_MS / 1000} s after its last test: `
       + `still open: ${held.join(', ') || 'nothing listed'}. Stop it in an after() hook (onFileEnd in tests/file-end.mjs).`);
     process.exit(1);
