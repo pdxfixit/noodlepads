@@ -19,9 +19,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 - **Add the new cloud events to the telemetry runner** (2 min, on the Mac): in `../telemetry/events.toml` (the pdxfixit/telemetry repo beside this checkout) add `up` and `leave` under `noodlepads.cloud` (what `web/track-page.js` now sends in place of `put` and `offline`), then run `just test` in the main checkout, since `tests/telemetry.test.mjs` checks it only there.
 
-- **Listen to the 10 new voice clips** (CC0 or CC BY): the 8 callouts, the Evil laugh and the Cackle (2026-10-27). Then a family member records the last six, which are still macOS `say` voices and may not be ours to share: "Oh yeah!", "Bruh.", "Nice!", "G G!", "Drop the beat!" and "Boom!" (list in `web/clips/kit/LICENSE-samples.txt`). Attach each in a chat; each file is one short clip, no names in it.
-
-- **Isopix: set its name hashes** (in the isopix repo, TODO "The owner does"): run its names-secret recipe in the isopix checkout, then `gh secret set ISOPIX_NAME_HASHES`.
+- **Isopix: names secret and its one tag** (5 min, on the Mac; its history was rewritten 2026-10-28): in the OLD isopix clone, before fetching, run its names-secret recipe with `--from-commit 6e42f34` into `~/.config/isopix/names.json`, then `gh secret set ISOPIX_NAME_HASHES -R pdxfixit/isopix < ~/.config/isopix/names.json`. Then move every isopix and noodlepads clone onto the new history (`git fetch origin && git checkout -B main origin/main`), and push the tag the session could not: `git push --force origin 999605f55f7a1926e3504b51dde7b1c4a2b986ea:refs/tags/v1.0.1` (in the isopix clone).
 
 - **Isopix: approve the history rewrite** (in the isopix repo): it is ready and verified; say yes and the force-push goes.
 
@@ -30,9 +28,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 - **Telemetry: land the branch `land/noodlepads-cloud-actions`** from a session with `gh`.
 
 - **Read the mission and make it yours** (2 min): `AGENTS.md` → Mission, drafted from your interview answers (2026-10-26). Reword anything that isn't how you'd say it; the council checks every change against it.
-
-
-- **Delete the old address's DNS record** (1 min): in Cloudflare, open the old address's domain → DNS and delete its `soundboard` record if it is still there (the Worker is gone and the name answers 530). The domain's apex stays. Also, if you like, delete the old address's leftover folder in `~/src/flarepress/` (only wrangler's local `.wrangler/` cache is in it).
 
 ### v1: prove out the interface
 
@@ -59,8 +54,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 ## Agents do
 
 Approved work, in order. Record a request here the moment Ben makes it; delete the line when the work lands (the commit is the record).
-
-
 
 - **Toward a kid-sized music studio** (Ben, 2026-10-12; north star: ADR 0022). Done: pattern chips, mixer, four tabs, the piano roll, the playlist (ADR 0024), ✏️ on a song block into Beats with ↩ Back to song (2026-10-28).
 

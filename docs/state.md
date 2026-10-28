@@ -87,12 +87,9 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 
 ## Waits on Ben
 
-- Isopix: run its names-secret recipe in the isopix checkout, then `gh secret set ISOPIX_NAME_HASHES` (TODO "The owner does" in that repo).
-- Isopix history rewrite: ready and verified, waiting on Ben's OK to force-push.
+- Isopix, on the Mac (its history was rewritten 2026-10-28): in the OLD isopix clone, before fetching, build its names secret from the old test with its names-secret recipe (`--from-commit 6e42f34`) into `~/.config/isopix/names.json` and `gh secret set ISOPIX_NAME_HASHES`; then move every isopix and noodlepads clone onto the new history (`git fetch origin && git checkout -B main origin/main`); then push the rewritten tag the session's proxy refused: `git push --force origin 999605f55f7a1926e3504b51dde7b1c4a2b986ea:refs/tags/v1.0.1`.
 - The cloud session setup: add `f=/home/user/noodlepads/tools/cloud_setup.sh; [ -f "$f" ] && bash "$f" || true` to the cloud environment's setup script, or add a .claude SessionStart hook.
 - Telemetry: land branch `land/noodlepads-cloud-actions` from a session with `gh`.
-- Listen to the 10 new voice clips (CC0 or CC BY); a family member records the last six (Oh yeah, Bruh, Nice, G G, Drop the beat, Boom).
-- Old domain's DNS record (or drop that TODO line).
 
 ## Not yet tried by a person
 
