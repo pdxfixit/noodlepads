@@ -1175,7 +1175,8 @@ profile at most 1,000 of the pushes, 2,000 new sounds and 50 shares, so one
 profile can't use up a day for every family. A profile made and never used (no
 records, sounds or shares, and no open, pull or push for a day) is deleted the
 next time anyone is put in the cloud, and counts for nothing against the 1,000
-profiles; the public list shows the 300 most recently used first. Over its own share, the app says
+profiles; the public list shows the 300 most recently used first, and is kept for a minute
+(Cloudflare's cache), so someone just put in the cloud can take a minute to show. Over its own share, the app says
 "This profile has done a lot in the cloud today", and it catches up the next
 day.
 Opening a profile is also limited a minute: 10 for one profile, and 60 for one address together (`OPEN_SITE_LIMITER`, counted under a keyed hash that changes daily, never the address itself), checked before the PIN, so one client can't try the PINs of every listed profile. Over either, the app says the cloud is busy for a minute.

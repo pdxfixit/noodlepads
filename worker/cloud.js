@@ -297,6 +297,37 @@ async function listProfiles(env) {
   });
 }
 
+// The list is public and anyone can ask for it, so Cloudflare's Cache API
+// keeps the answer 60 seconds, under one key whatever the query string says.
+// A kept answer reads nothing from D1 and does none of the sweeps that
+// looking at the list stands for (handleCloud `seen.list`). No Cache API (the
+// tests' Node), or one that fails: the list is read as before. What the
+// browser gets is still `no-store`.
+const LIST_KEPT_S = 60;
+const listKey = (request) => { const u = new URL(request.url); return new Request(`${u.origin}${u.pathname}`); };
+async function listFromCache(request) {
+  try {
+    const hit = await globalThis.caches?.default?.match(listKey(request));
+    return hit ? json(200, await hit.json()) : null;
+  } catch (err) {
+    console.error('cloud: list cache', err);
+    return null;
+  }
+}
+async function keepList(request, res) {
+  try {
+    const cache = globalThis.caches?.default;
+    if (cache && res.ok) {
+      await cache.put(listKey(request), new Response(await res.clone().text(), {
+        headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': `public, max-age=${LIST_KEPT_S}` },
+      }));
+    }
+  } catch (err) {
+    console.error('cloud: list cache', err);
+  }
+  return res;
+}
+
 // Everything of a profile, gone: its shares and sounds, records, keys, the
 // profile and its metrics.
 async function wipeProfile(env, id) {
@@ -1049,7 +1080,12 @@ async function route(request, env, now, seen) {
     if (a === 'cloud' && parts.length === 1 && m === 'GET') return json(200, { ok: true, chunk: CHUNK_BYTES, maxSound: MAX_SOUND_BYTES });
     if (a === 'profiles') {
       if (parts.length === 1) {
-        if (m === 'GET') { seen.list = true; return await listProfiles(env); }
+        if (m === 'GET') {
+          const kept = await listFromCache(request);
+          if (kept) return kept;
+          seen.list = true;
+          return await keepList(request, await listProfiles(env));
+        }
         if (m === 'POST') return await makeProfile(request, env, now, seen);
       } else if (typeof b === 'string' && PERSON_ID.test(b)) {
         needProvenCheck(request, env, b);

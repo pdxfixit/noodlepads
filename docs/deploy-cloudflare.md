@@ -108,7 +108,7 @@ just rollback         # prints the revert steps for a bad deploy (below)
 GitHub's deploy is the pipeline. GitHub also runs `just test` on every push
 (`.github/workflows/test.yml`) and one daily read-only check,
 `just live-check` (`.github/workflows/live.yml`): the site answers, `/api/cloud`
-says ok and `/api/profiles` lists (it reads D1); which commit is live is the deploy run's job. Once `deploy-verify` sees
+says ok and `/api/profiles` lists (it reads D1, or the 60-second Cache API copy of it); which commit is live is the deploy run's job. Once `deploy-verify` sees
 the new version live, `just deploy-checks` runs two checks against
 https://noodlepads.com, both even if one fails, in about 8 s together:
 
