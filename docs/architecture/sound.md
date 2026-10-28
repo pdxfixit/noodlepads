@@ -640,6 +640,8 @@ into `gap`. `sheet.js` reads the tempo from `setBeatTempo`, which `app.js`
 wires to `seq.beat()?.bpm`. The tempo is fixed on the step when the switch is
 turned on.
 
+The 🎚️ Mixer's Echo (`mixer.js MIX_FX`, on a row or the master) is the same step at the beat's tempo; a step baked into a pad's sound keeps its own `bpm` forever. In 🎼 Song the mixer's Echo follows tempo marks: [beats-song.md](beats-song.md) "The song's clock".
+
 ### Broken sounds
 
 `audio.load`'s failure adds the id to `audio.broken` and calls

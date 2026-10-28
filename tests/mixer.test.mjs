@@ -7,7 +7,8 @@
 
 import { test, before, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { MIX_FX, cleanFx, fxSteps, masterLevel, silencedBySolo, mixKey, buildMix } from '../web/mixer.js';
+import { MIX_FX, cleanFx, fxSteps, masterLevel, silencedBySolo, mixKey, buildMix, followChanges } from '../web/mixer.js';
+import { cleanSong, planSong, soundSong } from '../web/playlist.js';
 import { gainAt } from '../web/row-volume.js';
 import { cleanRow, cleanPattern, planHits, audible, beatToFile, beatFromFile } from '../web/beat.js';
 import { samePattern, on } from './helpers.mjs';
@@ -97,7 +98,7 @@ test('a beat file, a backup and a share code carry the mix', async () => {
 // A context that records its nodes: what connects to what.
 function recordingContext() {
   const nodes = [];
-  const param = (value = 0) => ({ value, setValueAtTime() {}, setTargetAtTime(v) { this.value = v; }, cancelScheduledValues() {}, linearRampToValueAtTime() {} });
+  const param = (value = 0) => ({ value, setValueAtTime() {}, setTargetAtTime(v, at) { this.initial ??= this.value; this.value = v; (this.sets ??= []).push([at, v]); }, cancelScheduledValues() {}, linearRampToValueAtTime() {} });
   const node = (kind, extra = {}) => {
     const n = { kind, out: [], stopped: false, connect(next) { n.out.push(next); return next; }, disconnect() { n.out = []; },
       start() {}, stop() { n.stopped = true; }, gain: param(1), frequency: param(), Q: param(), delayTime: param(), threshold: param(), ratio: param(),
@@ -417,4 +418,77 @@ test('Beats with ⌨️ Keys has the same 🎚️, on the open beat, and its gri
   $('#mixer').close();
   keysOff(page);
   $('#pads-tab').dispatch('click');
+});
+
+// ── 🎼 Song's tempo marks and an Echo on the beat (Ben, 2026-10-28) ──
+// An Echo set to a note length keeps that gap when a mark changes the tempo,
+// in a song that plays, in 🔊 and ⬇️ (an offline render), and in a share's preview.
+
+test('followChanges: only a step set on the beat changes at a mark, to the gap the new tempo gives', () => {
+  const follow = { start: 120, marks: [{ time: 2, bpm: 60 }, { time: 5, bpm: 60 }, { time: 8, bpm: 90 }], origin: 0 };
+  // An eighth note: 0.25 s at 120 BPM, 0.5 s at 60, 1/3 s at 90.
+  assert.deepEqual(followChanges('echo', follow).map((c) => [c.time, c.step.gap]), [[2, 0.5], [8, 0.333]], 'a mark that keeps the tempo changes nothing');
+  assert.deepEqual(followChanges('room', follow), [], 'a room has no note length');
+  assert.deepEqual(followChanges('echo', null), [], 'a song with one tempo: nothing to follow');
+  assert.deepEqual(followChanges('echo', { start: 120, marks: [], origin: 0 }), []);
+});
+
+test('buildMix: the Echo delay starts at the tempo heard first and is set again at each mark, on the clock', () => {
+  const dest = { kind: 'dest', out: [] };
+  const p = cleanPattern({ bpm: 120, rows: [{ clipId: 'a', fx: 'echo' }, { clipId: 'b' }] }, 'p');
+  const delayOf = (ctx) => ctx.nodes.find((n) => n.kind === 'delay').delayTime;
+  const plain = recordingContext();
+  buildMix(plain, dest, p);
+  assert.equal(delayOf(plain).value, 0.25, 'an eighth at 120 BPM');
+  assert.equal(delayOf(plain).sets, undefined, 'no marks: nothing scheduled, as before');
+
+  const ctx = recordingContext();
+  const bus = buildMix(ctx, dest, { ...p, follow: { start: 100, marks: [{ time: 2, bpm: 60 }, { time: 6, bpm: 150 }], origin: 10 } });
+  assert.equal(delayOf(ctx).initial, 0.3, 'it starts at the tempo heard first (an eighth at 100 BPM)');
+  assert.deepEqual(delayOf(ctx).sets, [[12, 0.5], [16, 0.2]], 'two and six seconds after the song began sounding at 10 s');
+  assert.ok(bus.tail >= 0.5 * 3 + 0.3, 'the tail is rung out at the slowest tempo it plays at');
+  assert.notEqual(mixKey(p), mixKey({ ...p, follow: { start: 100, marks: [], origin: 0 } }));
+  const start = { ...p, follow: { start: 100, marks: [], origin: 10 } };
+  assert.notEqual(mixKey(start), mixKey({ ...start, follow: { start: 100, marks: [], origin: 11 } }), 'a song begun at another moment builds a new graph');
+});
+
+// A song of one beat with an Echo on its row, planned and sounded as the player and the renders do.
+function songWithEcho(tempos, plan = {}) {
+  const ctx = recordingContext();
+  ctx.createBufferSource = () => ({ connect() {}, start() {}, stop() {}, playbackRate: { value: 1 } });
+  const lane = { kind: 'lane', out: [] };
+  const audio = { master: lane, context: () => null, wake: () => ctx, load: async () => ({ buffer: {}, duration: 0.2 }), key: (c) => c.id };
+  const engine = createBeatEngine({ audio, clipById: (id) => ({ id }) });
+  const beat = cleanPattern({ id: 'beat-e', personId: 'pip', bpm: 90, bars: 1, rows: [{ clipId: 'kick', fx: 'echo', steps: on(0, 8) }] }, 'pip');
+  const seq = {
+    beatPlan: (raw) => { const p = cleanPattern(raw, raw.personId); const seconds = 16 * (60 / p.bpm / 4); return { pattern: p, seconds, hits: planHits(p, 'plain', seconds, 16) }; },
+    soundHit: engine.soundHit,
+  };
+  const song = cleanSong({ personId: 'pip', tempo: 120, tempos, lanes: [{ blocks: [{ beatId: 'beat-e', bar: 0, times: 4 }] }] });
+  const planned = planSong(song, () => beat, seq, plan);
+  return { ctx, planned, play: async (origin = 0) => {
+    await engine.prepareBeats([beat]);
+    if (planned.follow) planned.follow.origin = origin;
+    soundSong(ctx, [lane], planned, seq, origin);
+    return ctx.nodes.find((n) => n.kind === 'delay').delayTime;
+  } };
+}
+
+test('a song with a tempo mark: its Echo on the beat is set to the new tempo at the mark, from the start or from a bar', async () => {
+  // 120 BPM a bar is 2 s; from bar 3 it is 60 BPM. An eighth is 0.25 s at 120 and 0.5 s at 60.
+  const marked = await songWithEcho([{ bar: 3, bpm: 60 }]).play(0.1);
+  assert.equal(marked.initial, 0.25);
+  assert.deepEqual(marked.sets.map(([at, gap]) => [+at.toFixed(3), gap]), [[4.1, 0.5]], 'at the mark, 4 s in');
+  // Begun past the mark: the Echo starts at the new gap and nothing is set later.
+  const late = songWithEcho([{ bar: 3, bpm: 60 }], { from: 6 });
+  assert.deepEqual(late.planned.follow, { start: 60, marks: [], origin: 0 });
+  const after = await late.play();
+  assert.equal(after.value, 0.5);
+  assert.equal(after.sets, undefined);
+  // No marks: the song plays as it always did.
+  const steady = songWithEcho(undefined);
+  assert.equal(steady.planned.follow, null);
+  const flat = await steady.play();
+  assert.equal(flat.value, 0.25);
+  assert.equal(flat.sets, undefined);
 });

@@ -45,8 +45,36 @@ export const anySolo = (p) => !!p?.rows?.some((r) => r.solo);
 // Silent because another row is soloed and this one is not.
 export const silencedBySolo = (p, row) => anySolo(p) && !row.solo;
 
-// The mix's shape: when it changes, the graph is built again.
-export const mixKey = (p) => [p.fx ?? '', p.bpm, ...p.rows.map((r) => r.fx ?? '')].join('|');
+// The mix's shape: when it changes, the graph is built again. A song's tempo
+// follow (below) is part of it.
+export const mixKey = (p) => [p.fx ?? '', p.bpm, followKey(p.follow), ...p.rows.map((r) => r.fx ?? '')].join('|');
+
+// 🎼 Song's tempo marks and an Echo on the beat (Ben, 2026-10-28). A beat in
+// a song is planned at the song's own tempo; `follow` ({start, marks, origin},
+// playlist.js tempoFollow) says what the tempo is where the song starts being
+// heard (`start`, a BPM), when it changes (`marks`: {time, bpm}, seconds from
+// the song's first heard moment) and when that moment is on the context's
+// clock (`origin`, 0 offline). An effect set on the beat keeps its note
+// length, so its gap changes with each mark.
+const followKey = (f) => (f ? `${f.start}@${f.origin}:${f.marks.map((m) => `${+m.time.toFixed(4)}=${m.bpm}`).join(',')}` : '');
+const bpmsOf = (p) => [p.follow?.start ?? p.bpm, ...(p.follow?.marks ?? []).map((m) => m.bpm)];
+
+// What effect `fxId` changes at each mark: {index (its step), time, step}
+// for every step set on the beat (Echo's 🥁 On the beat) whose gap the new
+// tempo changes. A step in a fixed time (a Room) never appears.
+export function followChanges(fxId, follow) {
+  const out = [];
+  if (!follow) return out;
+  let last = fxSteps(fxId, follow.start);
+  for (const m of follow.marks) {
+    const now = fxSteps(fxId, m.bpm);
+    now.forEach((s, i) => { if (s.beat && s.gap !== last[i]?.gap) out.push({ index: i, time: m.time, step: s }); });
+    last = now;
+  }
+  return out;
+}
+// How long effect `fxId` rings on at the slowest of the tempos it plays at.
+const tailAt = (fxId, p) => Math.max(...bpmsOf(p).map((bpm) => tailOf(fxSteps(fxId, bpm))));
 
 // The graph for beat `p` on `ctx`, into `dest`: each row with an effect goes
 // through it, every row then through the master's effect (if any) and its
@@ -68,19 +96,26 @@ export function buildMix(ctx, dest, p) {
   const master = ctx.createGain();
   master.gain.value = masterLevel(p);
   master.connect(dest);
+  // Effect `id` into `out`, starting at the tempo heard first and set again
+  // at each tempo mark that changes it.
+  const build = (id, input, out) => {
+    const live = buildLive(tracked, input, fxSteps(id, p.follow?.start ?? p.bpm));
+    live.output.connect(out);
+    for (const c of followChanges(id, p.follow)) live.set(c.index, c.step, p.follow.origin + c.time);
+  };
   let head = master;
   if (p.fx) {
     head = ctx.createGain();
-    buildLive(tracked, head, fxSteps(p.fx, p.bpm)).output.connect(master);
+    build(p.fx, head, master);
   }
   const inputs = p.rows.map((r) => {
     if (!r.fx) return head;
     const input = ctx.createGain();
-    buildLive(tracked, input, fxSteps(r.fx, p.bpm)).output.connect(head);
+    build(r.fx, input, head);
     return input;
   });
-  const tail = (p.fx ? tailOf(fxSteps(p.fx, p.bpm)) : 0)
-    + Math.max(0, ...p.rows.map((r) => (r.fx ? tailOf(fxSteps(r.fx, p.bpm)) : 0)));
+  const tail = (p.fx ? tailAt(p.fx, p) : 0)
+    + Math.max(0, ...p.rows.map((r) => (r.fx ? tailAt(r.fx, p) : 0)));
   return {
     key: mixKey(p),
     tail,

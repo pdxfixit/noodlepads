@@ -186,6 +186,23 @@ export function songClock(song) {
   return { steady: false, pill, barSeconds, tempoOf, barStart, at, barAt };
 }
 
+// What a mix needs to keep an Echo on the beat in time across the marks
+// (mixer.js followChanges): `start`, the BPM at `from` seconds into the song;
+// `marks`, each later mark as {time (seconds after `from`), bpm}; `origin`,
+// where `from` sits on the audio clock (the player sets it; 0 offline). Null
+// when the song has no marks, so a song with one tempo plays as it always did.
+export function tempoFollow(song, from = 0, clock = songClock(song)) {
+  const marks = cleanTempos(song?.tempos);
+  if (!marks.length) return null;
+  let start = cleanTempo(song?.tempo);
+  const later = [];
+  for (const m of marks) {
+    const time = clock.barStart(m.bar - 1) - from;
+    if (time > 1e-9) later.push({ time, bpm: m.bpm }); else start = m.bpm;
+  }
+  return { start, marks: later, origin: 0 };
+}
+
 // ── Time ──
 
 const passSteps = (stepsOf, beatId) => {
@@ -446,9 +463,13 @@ export function planSong(song, beatOf, seq, { from = 0, skipMuted = false } = {}
     }
   }
   const clock = songClock(song);
+  // Every beat's mix keeps its Echo on the beat in time with the marks. One
+  // object, so the player can say where the song starts on the clock (`origin`).
+  const follow = tempoFollow(song, from, clock);
+  if (follow) for (const plan of plans.values()) plan.pattern.follow = follow;
   const { parts, seconds, barSeconds } = playParts(song.lanes, (id) => (plans.has(id) ? beatSteps(beatOf(id)) : null), clock);
   const skipLanes = new Set(skipMuted ? song.lanes.flatMap((l, i) => (l.muted || cleanVolume(l.volume) === 0 ? [i] : [])) : []);
-  return { plans, parts, seconds, barSeconds, clock, events: playEvents(parts, plans, { from, skipLanes, clock }) };
+  return { plans, parts, seconds, barSeconds, clock, follow, events: playEvents(parts, plans, { from, skipLanes, clock }) };
 }
 
 // Sounds every event of a planned song into `dest` from `t0`, each lane

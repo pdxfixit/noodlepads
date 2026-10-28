@@ -1225,6 +1225,7 @@ export function createSong(deps) {
       else mixEnds.push({ lane: part.lane, beatId: part.beatId, end: part.end });
     }
     t0 = ctx.currentTime + 0.1;
+    if (plan.follow) plan.follow.origin = t0;   // the Echo on the beat follows the marks from here
     // Each event with the beat it plays, the lane's gain it goes through, and
     // the key of the hits it may cut (the same row of the same beat on a lane).
     const events = plan.events.map((e) => ({ ...e, at: t0 + e.time, pattern: plan.plans.get(e.beatId).pattern, dest: laneGains[e.lane], key: `${e.lane}:${e.beatId}:${e.row}` }));

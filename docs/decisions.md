@@ -320,6 +320,7 @@ Sections: [Product](#product) · [Hosting and data](#hosting-and-data) · [Peopl
 | 🎧 From a song ships once its synthesized tests pass; Ben then tries real songs and reports what it gets wrong. (to build) | Ben, 2026-10-18: agents can't test on real songs in a public repo. | 2026-10-18 |
 | A 🎼 Song can change tempo with marks on its timeline (from a bar on, every lane plays at the new tempo). [ADR 0031](adr/0031-tempo-marks-in-songs.md) | Ben chose marks over each block keeping its beat's tempo: bars stay lined up. | 2026-10-18 |
 | A tempo mark shows as a BPM chip above its bar in 🎼 Song's ruler. With Advanced, the song's tempo (on a phone, inside its tempo key's line) offers ＋ Tempo change (a bar and a BPM), and a chip taps to change or remove (asks first, Undo). | Ben, 2026-10-18: everyone hears marks; only Advanced edits them. 2026-10-26: the same tempo key on Song too. | 2026-10-26 |
+| In 🎼 Song, an Echo set to a note length (the 🎚️ Mixer's Echo, on a row or the master) keeps that gap across tempo marks: its delay changes where each mark changes the tempo, in ▶, 🔊 As a sound, ⬇️ Audio file and a share's preview. An Echo baked into a pad's sound stays as recorded. | Ben, 2026-10-28: approved the audio seat's offer; an echo "on the beat" should stay on the beat. | 2026-10-28 |
 
 ## Screens
 

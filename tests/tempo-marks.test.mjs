@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MAX_SONG_BARS, MAX_TEMPO_MARKS, newLanes, legacySlots,
-  cleanTempos, tempoAt, putTempo, removeTempo, songClock, playParts, playEvents, cleanSong, planSong,
+  cleanTempos, tempoAt, tempoFollow, putTempo, removeTempo, songClock, playParts, playEvents, cleanSong, planSong,
 } from '../web/playlist.js';
 import { cleanPattern, planHits } from '../web/beat.js';
 import { merge3, resolve } from '../web/merge3.js';
@@ -165,4 +165,36 @@ test('backups carry marks; a 1.x song without them still loads; bad marks are dr
   assert.deepEqual(byId('song-q-3').tempos, [{ bar: 6, bpm: 70 }]);
   const old = await readBackup(oldBackup({ songbook: [plain] }), bundled());
   assert.deepEqual(old.songbook, [plain], 'a 1.0 backup (ADR 0011) loads, with no marks');
+});
+
+test('tempoFollow: the tempo heard first, and each later mark by seconds after it; none without marks', () => {
+  const song = { tempo: 120, tempos: [{ bar: 3, bpm: 60 }, { bar: 5, bpm: 90 }], lanes: [] };   // 2 s bars, then 4 s bars at 60, then 90 from bar 5
+  assert.equal(tempoFollow({ tempo: 120, lanes: [] }), null);
+  assert.deepEqual(tempoFollow(song), { start: 120, marks: [{ time: 4, bpm: 60 }, { time: 12, bpm: 90 }], origin: 0 });
+  assert.deepEqual(tempoFollow(song, 4), { start: 60, marks: [{ time: 8, bpm: 90 }], origin: 0 }, 'begun at the mark: it is already the tempo');
+  assert.deepEqual(tempoFollow(song, 14), { start: 90, marks: [], origin: 0 }, 'begun past every mark');
+});
+
+test('planSong gives every planned beat the one follow, so Echo on the beat keeps its note length across the marks', () => {
+  const seq = { beatPlan: (raw) => ({ pattern: cleanPattern(raw, raw.personId), seconds: 1, hits: [] }) };
+  const beats = { [A]: { id: A, personId: 'pip', bpm: 90, bars: 1, rows: [{ clipId: 'kick' }] }, [C]: { id: C, personId: 'pip', bpm: 90, bars: 1, rows: [{ clipId: 'kick' }] } };
+  const lanes = [{ blocks: [{ beatId: A, bar: 0, times: 1 }, { beatId: C, bar: 1, times: 1 }] }];
+  const marked = planSong(cleanSong({ personId: 'pip', tempo: 120, tempos: [{ bar: 2, bpm: 60 }], lanes }), (id) => beats[id], seq);
+  assert.deepEqual(marked.follow, { start: 120, marks: [{ time: 2, bpm: 60 }], origin: 0 });
+  assert.ok([...marked.plans.values()].every((pl) => pl.pattern.follow === marked.follow), 'one object: the player sets where the song starts on the clock once');
+  const steady = planSong(cleanSong({ personId: 'pip', tempo: 120, lanes }), (id) => beats[id], seq);
+  assert.equal(steady.follow, null);
+  assert.ok([...steady.plans.values()].every((pl) => !('follow' in pl.pattern)));
+});
+
+// The live player cannot run in the stand-in page (it has no delay nodes), so
+// this reads the one line that matters: ▶ says where the song starts on the
+// audio clock before the first hit is booked, or every Echo would be set
+// against clock time 0, in the past.
+test('song.js play tells the follow where the song starts on the clock, before it books the events', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const src = await readFile(new URL('../web/song.js', import.meta.url), 'utf8');
+  const set = src.indexOf('plan.follow.origin = t0');
+  assert.ok(set > src.indexOf('t0 = ctx.currentTime + 0.1'), 'after t0 is chosen');
+  assert.ok(set < src.indexOf('engine.play({'), 'before the engine books a hit');
 });

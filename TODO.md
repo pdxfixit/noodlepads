@@ -74,7 +74,5 @@ Other work:
 
 Agents suggested these; nothing happens until Ben says yes.
 
-- **Song's "On the beat" Echo follows tempo marks** (audio seat, 2026-10-27): a Song mix is built at the song's tempo, so an Echo set to a note length keeps that gap after a tempo mark changes the speed.
-
 - **Test files that end by themselves** (offered 2026-10-19, about 60–90 min): the app's test files never exit without `--test-force-exit`, and that flag cuts a parallel run's last reports, here and on GitHub (`ℹ tests` drops below the full count; `just test` prints ⚠️ and runs a cut file again alone). Find what holds them open (`process.getActiveResourcesInfo()` after the last test; a first try at unref-ing the app's timers in `tests/fake-dom.mjs` was not enough), make `installPage` release it, then drop the flag. Saves: a test count you can trust, and no file run twice.
 

@@ -349,7 +349,7 @@ export function splitChain(chain) {
 }
 
 // Builds `steps` (all live) after `input` on `ctx` (live or offline).
-// Returns the last node, the seconds they ring on for, and set(i, step) to
+// Returns the last node, the seconds they ring on for, and set(i, step, at?) to
 // move step i's sliders while it plays.
 export function buildLive(ctx, input, steps) {
   let node = input;
@@ -361,7 +361,7 @@ export function buildLive(ctx, input, steps) {
   return {
     output: node,
     tail: steps.reduce((t, s) => t + kindById(s.type).tail(s), 0),
-    set: (i, s) => built[i]?.set(s, ctx.currentTime),
+    set: (i, s, at = ctx.currentTime) => built[i]?.set(s, at),
   };
 }
 
