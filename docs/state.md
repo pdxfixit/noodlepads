@@ -91,7 +91,7 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 - Isopix history rewrite: ready and verified, waiting on Ben's OK to force-push.
 - The cloud session setup: add `f=/home/user/noodlepads/tools/cloud_setup.sh; [ -f "$f" ] && bash "$f" || true` to the cloud environment's setup script, or add a .claude SessionStart hook.
 - Telemetry: land branch `land/noodlepads-cloud-actions` from a session with `gh`.
-- Listen to the 10 new voice clips (CC0 or CC BY); Craig records the last six (Oh yeah, Bruh, Nice, G G, Drop the beat, Boom).
+- Listen to the 10 new voice clips (CC0 or CC BY); a family member records the last six (Oh yeah, Bruh, Nice, G G, Drop the beat, Boom).
 - Old domain's DNS record (or drop that TODO line).
 
 ## Not yet tried by a person

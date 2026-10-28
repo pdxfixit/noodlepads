@@ -19,7 +19,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 - **Add the new cloud events to the telemetry runner** (2 min, on the Mac): in `../telemetry/events.toml` (the pdxfixit/telemetry repo beside this checkout) add `up` and `leave` under `noodlepads.cloud` (what `web/track-page.js` now sends in place of `put` and `offline`), then run `just test` in the main checkout, since `tests/telemetry.test.mjs` checks it only there.
 
-- **Listen to the 10 new voice clips** (CC0 or CC BY): the 8 callouts, the Evil laugh and the Cackle (2026-10-27). Then Craig records the last six, which are still macOS `say` voices and may not be ours to share: "Oh yeah!", "Bruh.", "Nice!", "G G!", "Drop the beat!" and "Boom!" (list in `web/clips/kit/LICENSE-samples.txt`). Attach each in a chat; each file is one short clip, no names in it.
+- **Listen to the 10 new voice clips** (CC0 or CC BY): the 8 callouts, the Evil laugh and the Cackle (2026-10-27). Then a family member records the last six, which are still macOS `say` voices and may not be ours to share: "Oh yeah!", "Bruh.", "Nice!", "G G!", "Drop the beat!" and "Boom!" (list in `web/clips/kit/LICENSE-samples.txt`). Attach each in a chat; each file is one short clip, no names in it.
 
 - **Isopix: set its name hashes** (in the isopix repo, TODO "The owner does"): run `just names-secret`, then `gh secret set ISOPIX_NAME_HASHES`.
 
