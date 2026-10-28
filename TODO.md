@@ -19,10 +19,6 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 - **Your Mac clones onto the rewritten history** (1 min each, once; noodlepads and isopix were rewritten 2026-10-28): `git fetch origin && git checkout -B main origin/main` in each clone, so nothing from the old history is pushed back.
 
-- **Cloud session setup** (2 min): in the cloud environment's settings → Edit → Setup script, add `for f in /home/user/noodlepads/tools/cloud_setup.sh /home/user/isopix/tools/cloud_setup.sh; do [ -f "$f" ] && bash "$f"; done; true`. A new session then has `just`, the git hooks and full history; check with `git -C /home/user/noodlepads config core.hooksPath` (prints `.githooks`).
-
-- **Telemetry: land the branch `land/noodlepads-cloud-actions`** from a session with `gh` (`just land 6c2c032` in the telemetry checkout): it adds the cloud events `up` and `leave`, then run `just test` in the main checkout here.
-
 - **A family member records the 🧸 Kids prompts** (about 10 min, on any phone; Ben, 2026-10-28: the app is ready, the voice is a family member's). Say each line once, cheerful and clear, close to the microphone, with the words right at the start and no more than about 2 seconds:
 
   | File (in `web/clips/kids-prompts/`) | Say exactly |

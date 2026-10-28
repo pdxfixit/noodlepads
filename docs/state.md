@@ -91,8 +91,6 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 ## Waits on Ben
 
 - Ben's Mac clones of noodlepads and isopix move onto the rewritten history (`git fetch origin && git checkout -B main origin/main`).
-- The cloud session setup: one line in the environment's setup script runs `tools/cloud_setup.sh` in noodlepads and isopix (TODO.md "Ben does").
-- Telemetry: land branch `land/noodlepads-cloud-actions` from a session with `gh`.
 
 ## Not yet tried by a person
 
