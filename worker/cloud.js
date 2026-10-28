@@ -287,9 +287,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 async function listProfiles(env) {
   // Check profiles and old plain ids are left out in the SQL, before the
   // LIMIT, so any number of them can't push kids out of the 300. Only profiles
-  // with a PIN are listed (one with none, made by hand, is not there). Anyone can
+  // with a PIN are listed (one with none, made by hand, is not there), the most recently
+  // used first, so unused ones sink and can't push the used out of the 300. Anyone can
   // read the list, so it says only which day a look last changed.
-  const rows = await env.DB.prepare(`SELECT * FROM profiles WHERE pin_hash IS NOT NULL AND ${NOT_CHECK} AND ${IS_CLOUD_ID} ORDER BY created DESC LIMIT ?`).bind(LIMITS.listed).all();
+  const rows = await env.DB.prepare(`SELECT * FROM profiles WHERE pin_hash IS NOT NULL AND ${NOT_CHECK} AND ${IS_CLOUD_ID} ORDER BY active DESC, created DESC LIMIT ?`).bind(LIMITS.listed).all();
   return json(200, {
     profiles: rows.results.filter((r) => CLOUD_ID.test(r.id) && !isCheck(r.id))
       .map((r) => ({ ...looks(r), edited: Math.floor((Number(r.edited) || 0) / DAY_MS) * DAY_MS })),
@@ -317,6 +318,30 @@ async function dropOldChecks(env, now) {
   for (const { id } of old) await wipeProfile(env, id);
 }
 
+// A profile nobody used: with a PIN, not a deploy check's, nothing in it
+// (no records, share or sound), and no open, pull or push for a day (`active`
+// is the hour of the last). Made and left, it only takes up one of the 1,000
+// places and a place in the public list.
+const JUNK = `pin_hash IS NOT NULL AND ${NOT_CHECK} AND rev = 0 AND record_bytes = 0 AND active < ? AND created < ?
+  AND NOT EXISTS (SELECT 1 FROM sounds WHERE sounds.profile_id = profiles.id)
+  AND NOT EXISTS (SELECT 1 FROM shares WHERE shares.profile_id = profiles.id)`;
+
+// Deletes up to 100 of them, oldest first, with their keys and metrics: when
+// a profile is made, so nothing is scheduled. A device that held one hears
+// 404 'profile' next time, as for any profile that is gone.
+async function dropJunkProfiles(env, now) {
+  const cutoff = now - DAY_MS;
+  const gone = (await env.DB.prepare(`DELETE FROM profiles WHERE id IN (SELECT id FROM profiles WHERE ${JUNK} ORDER BY created LIMIT 100) RETURNING id`)
+    .bind(cutoff, cutoff).all()).results.map((r) => r.id);
+  if (!gone.length) return;
+  const list = JSON.stringify(gone);
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM keys WHERE profile_id IN (SELECT value FROM json_each(?))').bind(list),
+    env.DB.prepare('DELETE FROM activity WHERE profile_id IN (SELECT value FROM json_each(?))').bind(list),
+    env.DB.prepare('DELETE FROM devices WHERE profile_id IN (SELECT value FROM json_each(?))').bind(list),
+  ]).catch((err) => console.error('cloud: junk profiles', err));
+}
+
 async function makeProfile(request, env, now, seen) {
   const body = await readJson(request);
   if (typeof body.id !== 'string' || !CLOUD_ID.test(body.id)) throw new Refuse(400, 'id');
@@ -326,9 +351,11 @@ async function makeProfile(request, env, now, seen) {
   if (!isPin(body.pin)) throw new Refuse(400, 'needs pin');
   if (obviousPin(body.pin)) throw new Refuse(400, 'pin', { obvious: true });
   await dropOldChecks(env, now);
+  await dropJunkProfiles(env, now);
   await sweepDailyCounters(env, now);
   if (await env.DB.prepare('SELECT 1 AS x FROM profiles WHERE id = ?').bind(body.id).first()) throw new Refuse(409, 'exists');
-  const { n } = await env.DB.prepare('SELECT COUNT(*) AS n FROM profiles').first();
+  // Junk (above) is out of the count even when more of it is left than one pass takes.
+  const { n } = await env.DB.prepare(`SELECT COUNT(*) AS n FROM profiles WHERE NOT (${JUNK})`).bind(now - DAY_MS, now - DAY_MS).first();
   if (n >= LIMITS.profiles) throw new Refuse(507, 'full');
   // The deploy checks' throwaway profiles have a daily cap of their own, so
   // they never use up kids' new profiles. A deleted profile gives no place
@@ -354,7 +381,6 @@ async function makeProfile(request, env, now, seen) {
 async function openProfile(request, env, id, now, seen) {
   const body = await readJson(request);
   const p = await getProfile(env, id);
-  // A wrong PIN is noted too (handleCloud): someone else trying the profile.
   Object.assign(seen, { kind: 'open', profile: id });
   await needPin(env, p, body.pin, now);
   await env.DB.batch([

@@ -16,7 +16,7 @@ export const PRIVACY_URL = 'https://privacy.pdxfixit.com/noodlepads/';
 export const PRIVACY = [
   'Nobody goes to the cloud by themselves. A grown-up puts someone there: ☁️ In the cloud in their profile, a sum, then a PIN for them.',
   'In the cloud, Cloudflare stores for noodlepads.com: each profile\'s fun name, avatar and color, their sounds, beats, songs, recorded voices and settings, and the names you give them.',
-  'Anyone who opens noodlepads.com sees the list of the newest 300 profiles: their fun names, avatars and colors, whether each has a PIN, and when its look last changed.',
+  'Anyone who opens noodlepads.com sees the list of the 300 most recently used profiles: their fun names, avatars and colors, whether each has a PIN, and when its look last changed.',
   "Anyone who has a sound's link can play it. The links are long and random, but they are not secret.",
   'Anyone with a share code can see and play what was shared, until the sharer taps 🚫 Unshare or their profile is deleted. Remixes others made of it stay theirs. Removing it from Shared with me only takes it off your list.',
   'Everyone in the cloud has a PIN. It is not security: it only stops someone opening or changing a profile in the app.',

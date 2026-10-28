@@ -53,7 +53,7 @@ test('README carries every line of the statement, word for word; Help points at 
 });
 
 test('"Anyone who opens noodlepads.com sees the list": the list needs no key, no PIN, no Origin', async () => {
-  claim('sees the list of the newest');
+  claim('sees the list of the 300 most recently used');
   const call = cloud();
   await call('POST', 'profiles', { body: { id: 'p-a', name: 'Sir Squid', avatar: '🐙', color: '#1F3FA8', pin: '7413' } });
   const res = await call('GET', 'profiles', { origin: null });
@@ -62,7 +62,7 @@ test('"Anyone who opens noodlepads.com sees the list": the list needs no key, no
   assert.deepEqual([p.name, p.avatar, p.color, p.pin], ['Sir Squid', '🐙', '#1F3FA8', true]);
   // Besides its random id, the list holds what the line names, and no more (`edited`: when its look last changed).
   assert.deepEqual(Object.keys(p).sort(), ['avatar', 'color', 'edited', 'id', 'name', 'pin']);
-  for (const words of ['fun names', 'avatars', 'colors', 'has a PIN', 'when its look last changed', `newest ${LIMITS.listed}`]) assert.ok(claim('sees the list of').includes(words), `the list line names: ${words}`);
+  for (const words of ['fun names', 'avatars', 'colors', 'has a PIN', 'when its look last changed', `${LIMITS.listed} most recently used`]) assert.ok(claim('sees the list of').includes(words), `the list line names: ${words}`);
 });
 
 test('"Anyone who has a sound\'s link can play it": even a profile with a PIN', async () => {
@@ -230,8 +230,8 @@ test('"Nobody goes to the cloud by themselves": the Worker refuses a profile wit
   assert.doesNotMatch(js, /wantsCloud|hasMade|putInCloud/, 'no sync puts anyone up (tests/cloud-ui.test.mjs syncs a person who made things)');
 });
 
-test('"the list of the newest 300 profiles": everyone in the cloud has a PIN and is listed; a row with none is not; newest first, 300 at most', async () => {
-  claim(`the newest ${LIMITS.listed} profiles`);
+test('"the list of the 300 most recently used profiles": everyone in the cloud has a PIN and is listed; a row with none is not; 300 at most', async () => {
+  claim(`the ${LIMITS.listed} most recently used profiles`);
   const call = cloud();
   for (const id of ['p-a', 'p-b']) await call('POST', 'profiles', { body: { id, name: 'Sir Squid', avatar: '', color: '#1F3FA8', pin: '7413' } });
   call.env.DB.db.prepare("INSERT INTO profiles (id, name, color, edited, created) VALUES ('p-none', 'Lady Lemon', '#1F3FA8', 0, ?)").run(Date.now() + 5000);

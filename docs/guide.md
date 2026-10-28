@@ -1172,7 +1172,10 @@ that adds nothing (an edit that shrinks, a delete) always lands. A day (UTC)
 allows 50 new profiles across the site, and 3 from one network address (one deleted again still counts; the deploy checks'
 throwaway ones have 100 of their own and no address count; the app says "This network has put as many people in the cloud as it can today"; the address is kept only as a scrambled code for that day and never stored plain), 5,000 pushes and 500 shares, and one
 profile at most 1,000 of the pushes, 2,000 new sounds and 50 shares, so one
-profile can't use up a day for every family. Over its own share, the app says
+profile can't use up a day for every family. A profile made and never used (no
+records, sounds or shares, and no open, pull or push for a day) is deleted the
+next time anyone is put in the cloud, and counts for nothing against the 1,000
+profiles; the public list shows the 300 most recently used first. Over its own share, the app says
 "This profile has done a lot in the cloud today", and it catches up the next
 day.
 Opening a profile is also limited a minute: 10 for one profile, and 60 for one address together (`OPEN_SITE_LIMITER`, counted under a keyed hash that changes daily, never the address itself), checked before the PIN, so one client can't try the PINs of every listed profile. Over either, the app says the cloud is busy for a minute.
