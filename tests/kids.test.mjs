@@ -858,28 +858,41 @@ test('three wrong answers in a row: the next try waits, the keys dim and ⏳ cou
   const wrong = () => String(Number($('#kids-sum-a').textContent) + Number($('#kids-sum-b').textContent) === 19 ? 20 : 19);
   const keys = () => $('#kids-sum-keys').querySelectorAll('[data-digit]');
   const plain = SUM_WAIT.ms;
-  SUM_WAIT.ms = 1200;
-  // One wrong answer already (the test before): two more.
-  for (let i = 0; i < 2; i++) {
+  // The wait is read off Date.now. A long one that the test then moves the
+  // clock past by hand: a short one really ran out while a loaded machine
+  // slept through the test's own pauses (2026-10-27). A wrong answer closes
+  // the sum on a timer of its own, so the test waits for that close, not a time.
+  const realNow = Date.now;
+  let skew = 0;
+  Date.now = () => realNow() + skew;
+  SUM_WAIT.ms = 600_000;
+  try {
+    // One wrong answer already (the test before): two more.
+    for (let i = 0; i < 2; i++) {
+      $('#settings-open').dispatch('click');
+      assert.equal($('#kids-sum-wait').hidden, true, `no wait yet (${i + 2} of 3)`);
+      for (const d of wrong()) $('#kids-sum-keys').querySelector(`[data-digit="${d}"]`).dispatch('click');
+      await until(() => !$('#kids-sum').open, 'a wrong answer to close the sum');   // it closes itself after 400 ms
+    }
     $('#settings-open').dispatch('click');
-    assert.equal($('#kids-sum-wait').hidden, true, `no wait yet (${i + 2} of 3)`);
-    for (const d of wrong()) $('#kids-sum-keys').querySelector(`[data-digit="${d}"]`).dispatch('click');
-    await new Promise((r) => setTimeout(r, 450));
+    assert.equal($('#kids-sum').open, true);
+    assert.equal($('#kids-sum-wait').hidden, false, '⏳ shows');
+    assert.ok(Number($('#kids-sum-left').textContent) >= 1, `seconds left: ${$('#kids-sum-left').textContent}`);
+    assert.ok(keys().every((k) => k.disabled), 'the keys dim');
+    // A digit tapped now does nothing, not even the right answer.
+    const answer = String(Number($('#kids-sum-a').textContent) + Number($('#kids-sum-b').textContent));
+    for (const d of answer) keys().find((k) => k.dataset.digit === d).dispatch('click');
+    assert.equal($('#kids-sum').open, true, 'still waiting');
+    assert.equal($('#kids-sum-typed').textContent, '?');
+    skew += 600_000;   // the wait runs out; the dialog's own 250 ms tick shows it
+    await until(() => $('#kids-sum-wait').hidden, 'the wait to end', 3000);
+    assert.ok(keys().every((k) => !k.disabled), 'the keys wake');
+    $('#kids-sum').close();
+  } finally {
+    // Date.now stays that far ahead for the rest of the file: put back, the
+    // wait this test ended would be running again.
+    SUM_WAIT.ms = plain;
   }
-  $('#settings-open').dispatch('click');
-  assert.equal($('#kids-sum').open, true);
-  assert.equal($('#kids-sum-wait').hidden, false, '⏳ shows');
-  assert.ok(Number($('#kids-sum-left').textContent) >= 1, `seconds left: ${$('#kids-sum-left').textContent}`);
-  assert.ok(keys().every((k) => k.disabled), 'the keys dim');
-  // A digit tapped now does nothing, not even the right answer.
-  const answer = String(Number($('#kids-sum-a').textContent) + Number($('#kids-sum-b').textContent));
-  for (const d of answer) keys().find((k) => k.dataset.digit === d).dispatch('click');
-  assert.equal($('#kids-sum').open, true, 'still waiting');
-  assert.equal($('#kids-sum-typed').textContent, '?');
-  await until(() => $('#kids-sum-wait').hidden, 'the wait to end', 3000);
-  assert.ok(keys().every((k) => !k.disabled), 'the keys wake');
-  $('#kids-sum').close();
-  SUM_WAIT.ms = plain;
 });
 
 test('the right answer opens Settings and the regular app; the level stays Kids', async () => {
