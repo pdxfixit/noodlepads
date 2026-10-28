@@ -27,8 +27,8 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
   | File (in `web/clips/kids-prompts/`) | Say exactly |
   |---|---|
-  | `pads.wav` | Tap a pad! |
-  | `record.wav` | Hold to talk! |
+  | `pads.wav` | Tap a picture! |
+  | `record.wav` | Tap the mic and talk! |
   | `beats.wav` | Tap the squares! |
   | `keys.wav` | Tap the keys! |
 

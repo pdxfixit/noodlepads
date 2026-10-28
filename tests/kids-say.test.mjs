@@ -1,4 +1,4 @@
-// 🧸 Kids' spoken prompts (Ben, 2026-10-28): "Tap a pad!" for a kid who can't
+// 🧸 Kids' spoken prompts (Ben, 2026-10-28): "Tap a picture!" for a kid who can't
 // read yet, played only when its recording is in web/clips/kids-prompts/,
 // once per person per screen, never over sound. The player on stand-ins, the
 // list against sw.js and tools/kids_prompts.py, then the real app on the
@@ -207,6 +207,34 @@ test('app: a recorded prompt plays once when its screen shows, then never again 
   assert.equal(s.log.filter((l) => l.startsWith('start')).length, 1, 'once per kid per place');
 });
 
+test('app: Record says nothing while the mic is missing or refused, and speaks once there is one', async () => {
+  const s = spy();
+  await setSetting('seen', '');
+  RECORDED.splice(0, RECORDED.length, 'record');
+  await tab('record');
+  assert.equal($('#kids-mic').disabled, true, 'the stand-in page has no microphone');
+  assert.deepEqual(s.log, [], 'a blocked mic: nothing to tap, nothing said');
+  assert.ok(!seenSet(getSetting('seen')).has('kids-say-record'));
+  window.MediaRecorder = class {};
+  navigator.mediaDevices = { getUserMedia: async () => ({ getTracks: () => [] }) };
+  await tab('pads');
+  await tab('record');
+  assert.equal($('#kids-mic').disabled, false);
+  assert.deepEqual(s.log, ['load kids-say-record clips/kids-prompts/record.wav', 'start kids-say-record']);
+  s.restore();
+  delete window.MediaRecorder;
+  delete navigator.mediaDevices;
+});
+
+test('the player asks again when the prompt is due: a mic refused while it waited stays unspoken', async () => {
+  let ok = true;
+  const h = host({ wanted: () => ok });
+  createSay(h, 20).maybe(pads);
+  ok = false;
+  await wait(50);
+  assert.deepEqual(h.log, []);
+});
+
 test('app: a touch ends a prompt that is waiting, and a Regular person is never spoken to', async () => {
   const s = spy();
   await setSetting('seen', '');
@@ -215,12 +243,12 @@ test('app: a touch ends a prompt that is waiting, and a Regular person is never 
   $('#kids').dispatch('pointerdown');   // the kid is already doing something
   await wait(450);
   await page.settle();
-  assert.deepEqual(s.log, [], 'cancelled by the touch');
+  assert.deepEqual(s.log.filter((l) => !l.startsWith('stop')), [], 'cancelled by the touch');
   assert.ok(!seenSet(getSetting('seen')).has('kids-say-keys'), 'so it tries again next time');
   await setSetting('level', 'regular');
   await tab('pads');
   await tab('keys');
-  assert.deepEqual(s.log, [], 'not for a grown-up on a Kids visit');
+  assert.deepEqual(s.log.filter((l) => !l.startsWith('stop')), [], 'not for a grown-up on a Kids visit');
   await setSetting('level', 'kids');
   s.restore();
 });

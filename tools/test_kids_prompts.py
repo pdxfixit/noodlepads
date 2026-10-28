@@ -78,7 +78,7 @@ class Listed(unittest.TestCase):
     def test_the_prompts_are_read_from_the_web_file(self):
         found = kp.prompts()
         self.assertEqual([p["id"] for p in found], ["pads", "record", "beats", "keys"])
-        self.assertEqual(found[0]["words"], "Tap a pad!")
+        self.assertEqual(found[0]["words"], "Tap a picture!")
         self.assertTrue(all(len(p["words"]) < 40 for p in found), "short, kid words")
 
 

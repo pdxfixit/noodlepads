@@ -1,5 +1,5 @@
 // 🧸 Kids' spoken prompts: a few recorded words for a kid who can't read yet
-// ("Tap a pad!"), one per Kids screen. This file owns which prompts there
+// ("Tap a picture!"), one per Kids screen. This file owns which prompts there
 // are, the exact words a family member records for each, and which of them
 // have a recording yet. Pure: no DOM, no audio (kids-say.js plays them).
 //
@@ -14,8 +14,8 @@
 // Kids screen it plays on (kids-logic.js KIDS_TABS); `words` is exactly
 // what is said, short and in kid words.
 export const KIDS_PROMPTS = [
-  { id: 'pads', tab: 'pads', words: 'Tap a pad!', level: 0 },
-  { id: 'record', tab: 'record', words: 'Hold to talk!', level: 0 },
+  { id: 'pads', tab: 'pads', words: 'Tap a picture!', level: 0 },
+  { id: 'record', tab: 'record', words: 'Tap the mic and talk!', level: 0 },
   { id: 'beats', tab: 'beats', words: 'Tap the squares!', level: 0 },
   { id: 'keys', tab: 'keys', words: 'Tap the keys!', level: 0 },
 ];

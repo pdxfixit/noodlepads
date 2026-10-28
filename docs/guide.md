@@ -231,11 +231,11 @@ ten keys go five across (`just look kids-pads --landscape`).
   🗂️ Beats, where it is a beat with a tune row and opens in 🎹 the piano roll.
 
 A kid who can't read yet can hear a few recorded words (Ben, 2026-10-28;
-`kids-prompts.js`, played by `kids-say.js`): "Tap a pad!" on Pads, "Hold to
+`kids-prompts.js`, played by `kids-say.js`): "Tap a picture!" on Pads, "Tap the mic and
 talk!" on Record, "Tap the squares!" on Beats, "Tap the keys!" on Keys. Each
 plays once per kid, a moment after its screen first shows, on the Kids level
 only, and not at all where the kid has already tapped a pad or recorded
-(Pads, Record). It never plays over a pad, a beat, a recording or a tune
+(Pads, Record), nor on Record when the mic is missing or refused (🚫). It never plays over a pad, a beat, a recording or a tune
 sounding, a touch ends it, and a page that is hidden or whose sound a tap has
 not yet woken says nothing and tries again next time. It plays only when its
 file `web/clips/kids-prompts/<id>.wav` exists and is listed as recorded, so

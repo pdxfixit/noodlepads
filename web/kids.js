@@ -15,7 +15,7 @@
 // hand pulses over the first pad until a pad is tapped, and the mic wiggles
 // until the first recording; both stay still when the device asks for less
 // motion, and each shows once per person. A recorded word or two can say the
-// same (kids-say.js, kids-prompts.js): "Tap a pad!" once per screen, only
+// same (kids-say.js, kids-prompts.js): "Tap a picture!" once per screen, only
 // when its recording is in web/clips/kids-prompts/, so with none Kids is as it was.
 //
 // Remembered on the device: the tab (`kids-tab`). The pad size is the
@@ -305,12 +305,15 @@ let micRefused = false;
 const MIC_LABEL = 'Record: tap for 3, 2, 1 and talk, tap again to stop; or hold and talk';
 const MIC_OFF = 'The microphone is off: a grown-up can allow it in the browser';
 
+// The mic can't record here: none, or the browser refused it (🚫 on the mic).
+const micBlocked = () => !canRecord() || micRefused;
+
 // No microphone here, or it was refused: 🚫 over 🎤 (styles.css
 // .kids-mic.blocked), no words, and the first-steps wiggle stops, since
 // a tap can't record. Without a microphone at all the mic is off too.
 function showMic() {
   const can = canRecord();
-  const blocked = !can || micRefused;
+  const blocked = micBlocked();
   el.mic.disabled = !can;
   el.mic.classList.toggle('blocked', blocked);
   el.mic.setAttribute('aria-label', blocked ? MIC_OFF : MIC_LABEL);
@@ -1095,7 +1098,7 @@ function sayHost() {
   const sounding = () => audio.playing.size > 0 || audio.pending.size > 0 || [...audio.ringing.values()].some((v) => v.length > 0);
   return {
     recorded: () => RECORDED,
-    wanted: (p) => kidsHint(`say-${p.id}`) && (p.id !== 'pads' || kidsHint('pad')) && (p.id !== 'record' || kidsHint('mic')),
+    wanted: (p) => kidsHint(`say-${p.id}`) && (p.id !== 'pads' || kidsHint('pad')) && (p.id !== 'record' || (kidsHint('mic') && !micBlocked())),
     mark: (p) => markSeen(seenId(p)),
     busy: () => !showing || sounding() || kidsBusy(),
     ready: () => document.visibilityState !== 'hidden' && (audio.ctx?.state === 'running' || navigator.userActivation?.isActive === true),

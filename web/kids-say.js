@@ -39,7 +39,7 @@ export function createSay(host, delay = SAY_DELAY_MS) {
     const mine = turn;
     timer = setTimeout(async () => {
       timer = null;
-      if (mine !== turn || host.busy() || !host.ready()) return;
+      if (mine !== turn || host.busy() || !host.ready() || !host.wanted(p)) return;   // wanted again: a mic found refused meanwhile
       let loaded;
       try { loaded = await host.load(p); } catch { return; }   // a file that will not load says nothing
       if (mine !== turn || host.busy()) return;                // the kid moved on while it loaded
