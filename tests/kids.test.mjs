@@ -1135,6 +1135,59 @@ test('a Kids visit leaves the grown-up\'s pad size, skin and instrument as they 
 // on how fast this machine is, so the checks are relative: the notes come
 // in the order played, and the second right after the first was let go
 // (on GitHub's loaded runner the first landed on pill 5, 2026-10-23).
+// Timers and an audio clock that only move when a test moves them. ● Record
+// books its beeps, its start and its stop on the audio clock, a few pills
+// (25 ms each at the test's tempo) apart, so a test that waited on the real
+// clock lost on a slow machine: the beat came round before its keys were
+// played (2026-10-27). `advance(ms)` runs every timer due inside those ms, in
+// order, as a browser would, and the clock reads the time it reaches.
+function virtualTime() {
+  const real = { setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout, setInterval: globalThis.setInterval, clearInterval: globalThis.clearInterval };
+  const timers = new Map();
+  let now = 0;
+  let seq = 0;
+  const turn = () => new Promise((resolve) => setImmediate(resolve));
+  const add = (fn, ms, every, args) => {
+    // To a microsecond: a delay worked out on the audio clock (0.3 - 0.2) is 100.00000000000003 ms.
+    const t = { id: ++seq, at: now + Math.round(Math.max(0, Number(ms) || 0) * 1000) / 1000, fn, args, every };
+    timers.set(t.id, t);
+    return t;
+  };
+  const clear = (realClear) => (t) => { if (t && timers.has(t.id)) timers.delete(t.id); else realClear(t); };
+  const fake = {
+    setTimeout: (fn, ms, ...args) => add(fn, ms, 0, args),
+    setInterval: (fn, ms, ...args) => add(fn, ms, Math.max(1, Number(ms) || 1), args),
+    clearTimeout: clear(real.clearTimeout),
+    clearInterval: clear(real.clearInterval),
+  };
+  const clock = {
+    seconds: () => now / 1000,
+    install() { Object.assign(globalThis, fake); },
+    async advance(ms) {
+      const end = now + ms;
+      for (;;) {
+        let next = null;
+        for (const t of timers.values()) if (t.at <= end && (!next || t.at < next.at || (t.at === next.at && t.id < next.id))) next = t;
+        if (!next) break;
+        now = Math.max(now, next.at);
+        if (next.every) next.at += next.every; else timers.delete(next.id);
+        next.fn(...next.args);
+        await turn();
+      }
+      now = end;
+      for (let i = 0; i < 3; i++) await turn();
+    },
+    async until(fn, what, within = 5000) {
+      for (let waited = 0; !fn(); waited += 5) {
+        if (waited > within) throw new Error(`still waiting for ${what} after ${within} ms of the test's clock`);
+        await clock.advance(5);
+      }
+    },
+    restore() { Object.assign(globalThis, real); timers.clear(); },
+  };
+  return clock;
+}
+
 test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes round once, and the regular app shows the tune row', async () => {
   const { audio } = await import('../web/audio.js');
   const { getSetting, setSetting } = await import('../web/settings.js');
@@ -1145,8 +1198,8 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   await toKids();
   // A running audio clock, and sounds that "load" and play silently.
   const ctx = audio.context();
-  const t0 = performance.now();
-  Object.defineProperty(ctx, 'currentTime', { configurable: true, get: () => (performance.now() - t0) / 1000 });
+  const clock = virtualTime();   // installed around the recording, below
+  Object.defineProperty(ctx, 'currentTime', { configurable: true, get: () => clock.seconds() });
   ctx.createBufferSource = () => ({ connect() {}, start() {}, stop() {}, playbackRate: { value: 1 }, buffer: null });
   const plainLoad = audio.load;
   audio.load = async () => ({ buffer: {}, duration: 0.2 });
@@ -1162,81 +1215,91 @@ test('● a tune: 3, 2, 1, the keys land in the kid\'s beat as the beat goes rou
   const face = () => $('#kids-rec-face').textContent;
   assert.equal(rec.closest('.kids-top').classList.contains('kids-keys-top'), true, 'in the Keys screen\'s top bar');
   assert.equal(face(), '●');
-  rec.dispatch('click');
-  await page.settle();
-  assert.equal(rec.classList.contains('counting'), true);
-  assert.equal(mine().bars, 4, 'the beat grew to four bars for the tune');
-  assert.equal(mine().rows[0].steps.length, 4 * STEPS);
-  await until(() => face() === '3', '3');
-  await until(() => face() === '2', '2');
-  await until(() => face() === '1', '1');
-  await until(() => rec.classList.contains('recording'), 'recording');
-  assert.equal(face(), '●');
-  assert.equal($('#kids-play').getAttribute('aria-pressed'), 'true', 'the beat goes round');
-  const keys = $('#kids-keys').querySelectorAll('.kids-key');
-  const dt = pill(600) * 1000;
-  await new Promise((r) => setTimeout(r, dt * 2.2));
-  keys[0].dispatch('pointerdown', { pointerId: 11 });   // C, held about two pills
-  await new Promise((r) => setTimeout(r, dt * 2));
-  keys[0].dispatch('pointerup', { pointerId: 11 });
-  keys[4].dispatch('pointerdown', { pointerId: 12 });   // A, a tap
-  keys[4].dispatch('pointerup', { pointerId: 12 });
-  const tune = tuneOf(mine());
-  assert.ok(tune, 'a tune row');
-  assert.ok(tune.clipId.endsWith('-piano-c'), `the instrument's C: ${tune.clipId}`);
-  assert.deepEqual(tune.tune.map((n) => n.p), [0, 9], 'C then A');
-  const [c, a] = tune.tune;
-  assert.ok(c.l >= 2 && c.s >= 0 && c.s < 4 * STEPS, `the C held about two pills: ${JSON.stringify(tune.tune)}`);
-  assert.ok(Math.abs(a.s - (c.s + c.l)) <= 1 && a.l === 1, `the A right after the C was let go, a tap: ${JSON.stringify(tune.tune)}`);
-  assert.equal(mine().rows.length, 5, 'the four drums and the tune');
-  await until(() => !rec.classList.contains('recording'), 'the beat came round', 6000);
-  assert.equal($('#kids-play').getAttribute('aria-pressed'), 'true', 'the beat plays on, with the tune');
-  assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [0, 9], 'the tune stays');
-  // The tune is kept when the recording stops (Ben, 2026-10-27), a beat of
-  // its own in 🗂️ Beats, as 🆕 New keeps a beat: Kids has no Undo, and a kid
-  // can't read a line. A new recording then replaces it without keeping it twice.
-  const kept = () => state.savedBeats.filter((b) => b.personId === state.personId && !isHiddenBeat(b) && tuneOf(b));
-  const keptBefore = kept().length;
-  assert.equal(keptBefore, 1, 'kept as the recording stopped, at once');
-  assert.deepEqual(tuneOf(kept()[0]).tune.map((n) => n.p), [0, 9]);
-  rec.dispatch('click');
-  await page.settle();
-  await until(() => rec.classList.contains('recording'), 'recording again');
-  assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [0, 9], 'the old tune stays until a key lands');
-  assert.equal(kept().length, keptBefore, 'nothing kept until a key lands');
-  await new Promise((r) => setTimeout(r, dt * 1.5));
-  keys[2].dispatch('pointerdown', { pointerId: 13 });
-  keys[2].dispatch('pointerup', { pointerId: 13 });
-  assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [4], 'started again, with the E');
-  assert.equal(kept().length, keptBefore, 'the earlier tune is already kept: no second copy');
-  const earlier = kept()[0];
-  assert.deepEqual(tuneOf(earlier).tune.map((n) => n.p), [0, 9], 'C then A, as it was');
-  assert.equal(earlier.rows.length, 5, 'with the drums');
-  assert.ok(earlier.name && earlier.name !== 'Scratch beat', `a fun name: ${earlier.name}`);
-  assert.ok(earlier.name.startsWith('🧸 '), `🧸 marks a kid's tune in 🗂️ Beats: ${earlier.name}`);
-  rec.dispatch('click');
-  assert.equal(rec.classList.contains('recording'), false, 'stopped early');
-  assert.equal(rec.getAttribute('aria-pressed'), 'false');
-  assert.equal(kept().length, keptBefore + 1, 'the new tune is kept as it stops');
-  assert.deepEqual(tuneOf(kept().find((b) => b !== earlier && b.id !== earlier.id)).tune.map((n) => n.p), [4]);
-  // A tap during the count calls it off, its beeps still to come go quiet,
-  // and the tune and the beat are left as they were.
-  $('#kids-stop').dispatch('click');
-  assert.equal($('#kids-play').getAttribute('aria-pressed'), 'false');
-  const beeps = [];
-  const plainOsc = ctx.createOscillator;
-  ctx.createOscillator = () => { const o = { connect() {}, start() {}, stop() { o.stopped = true; }, frequency: { value: 0 } }; beeps.push(o); return o; };
-  rec.dispatch('click');
-  await page.settle();
-  assert.equal(rec.classList.contains('counting'), true);
-  assert.equal(beeps.length, 3, 'three beeps booked on the audio clock');
-  rec.dispatch('click');
-  ctx.createOscillator = plainOsc;
-  assert.equal(rec.classList.contains('counting'), false);
-  assert.ok(beeps.every((o) => o.stopped), 'the beeps are stopped');
-  await new Promise((r) => setTimeout(r, dt * 6));
-  assert.equal($('#kids-play').getAttribute('aria-pressed'), 'false', 'nothing started');
-  assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [4]);
+  let earlier;
+  clock.install();
+  try {
+    rec.dispatch('click');
+    await clock.advance(0);
+    assert.equal(rec.classList.contains('counting'), true);
+    assert.equal(mine().bars, 4, 'the beat grew to four bars for the tune');
+    assert.equal(mine().rows[0].steps.length, 4 * STEPS);
+    const step = 60 / 600 * 1000;   // a beat at 600 bpm: the count's 3, 2, 1 are one beat apart
+    assert.equal(face(), '3');
+    await clock.advance(step);
+    assert.equal(face(), '2');
+    await clock.advance(step);
+    assert.equal(face(), '1');
+    await clock.advance(step);
+    await clock.until(() => rec.classList.contains('recording'), 'recording');
+    assert.equal(face(), '●');
+    assert.equal($('#kids-play').getAttribute('aria-pressed'), 'true', 'the beat goes round');
+    const keys = $('#kids-keys').querySelectorAll('.kids-key');
+    const dt = pill(600) * 1000;
+    await clock.advance(dt * 2.2);
+    keys[0].dispatch('pointerdown', { pointerId: 11 });   // C, held about two pills
+    await clock.advance(dt * 2);
+    keys[0].dispatch('pointerup', { pointerId: 11 });
+    keys[4].dispatch('pointerdown', { pointerId: 12 });   // A, a tap
+    keys[4].dispatch('pointerup', { pointerId: 12 });
+    const tune = tuneOf(mine());
+    assert.ok(tune, 'a tune row');
+    assert.ok(tune.clipId.endsWith('-piano-c'), `the instrument's C: ${tune.clipId}`);
+    assert.deepEqual(tune.tune.map((n) => n.p), [0, 9], 'C then A');
+    const [c, a] = tune.tune;
+    assert.ok(c.l >= 2 && c.s >= 0 && c.s < 4 * STEPS, `the C held about two pills: ${JSON.stringify(tune.tune)}`);
+    assert.ok(Math.abs(a.s - (c.s + c.l)) <= 1 && a.l === 1, `the A right after the C was let go, a tap: ${JSON.stringify(tune.tune)}`);
+    assert.equal(mine().rows.length, 5, 'the four drums and the tune');
+    await clock.until(() => !rec.classList.contains('recording'), 'the beat came round', 6000);
+    assert.equal($('#kids-play').getAttribute('aria-pressed'), 'true', 'the beat plays on, with the tune');
+    assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [0, 9], 'the tune stays');
+    // The tune is kept when the recording stops (Ben, 2026-10-27), a beat of
+    // its own in 🗂️ Beats, as 🆕 New keeps a beat: Kids has no Undo, and a kid
+    // can't read a line. A new recording then replaces it without keeping it twice.
+    const kept = () => state.savedBeats.filter((b) => b.personId === state.personId && !isHiddenBeat(b) && tuneOf(b));
+    const keptBefore = kept().length;
+    assert.equal(keptBefore, 1, 'kept as the recording stopped, at once');
+    assert.deepEqual(tuneOf(kept()[0]).tune.map((n) => n.p), [0, 9]);
+    rec.dispatch('click');
+    await clock.advance(0);
+    await clock.until(() => rec.classList.contains('recording'), 'recording again');
+    assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [0, 9], 'the old tune stays until a key lands');
+    assert.equal(kept().length, keptBefore, 'nothing kept until a key lands');
+    await clock.advance(dt * 1.5);
+    keys[2].dispatch('pointerdown', { pointerId: 13 });
+    keys[2].dispatch('pointerup', { pointerId: 13 });
+    assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [4], 'started again, with the E');
+    assert.equal(kept().length, keptBefore, 'the earlier tune is already kept: no second copy');
+    earlier = kept()[0];
+    assert.deepEqual(tuneOf(earlier).tune.map((n) => n.p), [0, 9], 'C then A, as it was');
+    assert.equal(earlier.rows.length, 5, 'with the drums');
+    assert.ok(earlier.name && earlier.name !== 'Scratch beat', `a fun name: ${earlier.name}`);
+    assert.ok(earlier.name.startsWith('🧸 '), `🧸 marks a kid's tune in 🗂️ Beats: ${earlier.name}`);
+    rec.dispatch('click');
+    assert.equal(rec.classList.contains('recording'), false, 'stopped early');
+    assert.equal(rec.getAttribute('aria-pressed'), 'false');
+    assert.equal(kept().length, keptBefore + 1, 'the new tune is kept as it stops');
+    assert.deepEqual(tuneOf(kept().find((b) => b !== earlier && b.id !== earlier.id)).tune.map((n) => n.p), [4]);
+    // A tap during the count calls it off, its beeps still to come go quiet,
+    // and the tune and the beat are left as they were.
+    $('#kids-stop').dispatch('click');
+    assert.equal($('#kids-play').getAttribute('aria-pressed'), 'false');
+    const beeps = [];
+    const plainOsc = ctx.createOscillator;
+    ctx.createOscillator = () => { const o = { connect() {}, start() {}, stop() { o.stopped = true; }, frequency: { value: 0 } }; beeps.push(o); return o; };
+    rec.dispatch('click');
+    await clock.advance(0);
+    assert.equal(rec.classList.contains('counting'), true);
+    assert.equal(beeps.length, 3, 'three beeps booked on the audio clock');
+    rec.dispatch('click');
+    ctx.createOscillator = plainOsc;
+    assert.equal(rec.classList.contains('counting'), false);
+    assert.ok(beeps.every((o) => o.stopped), 'the beeps are stopped');
+    await clock.advance(dt * 6);
+    assert.equal($('#kids-play').getAttribute('aria-pressed'), 'false', 'nothing started');
+    assert.deepEqual(tuneOf(mine()).tune.map((n) => n.p), [4]);
+  } finally {
+    clock.restore();
+  }
   // A grown-up finds the kept tune on 🥁 Beats (the drums and a 🎹 tune row,
   // four bars); their own scratch beat is untouched.
   await setLevel('regular');
