@@ -130,7 +130,7 @@ export const HELP = [
       { pic: [lit('🔔 Let it ring')], text: 'On the bar at the top, right of ⏲️ Click track (just 🔔 on a phone; in ⋯ where the bar runs out of room). On, every key’s hits ring over each other instead of starting its sound again, and a take keeps them that way. Holding a key still loops it. Just for this visit: it is off again next time.' },
       { pic: [tool('⏲️ Click track'), word('👆 96')], text: 'Tap ⏲️ three times or more in time to set the speed: it says “keep tapping…”, then 👆 and the tempo. One or two taps just turn the click on or off.' },
       { pic: [rec('● Record')], text: 'Records what you play, exactly when you play it. It starts at your first hit.' },
-      { pic: [tool('▶ Play'), tool('🔊 Make a sound'), tool('✏️ Rename'), tool('↩️ Undo')], text: 'After a take: play it, make it a pad, rename it, or undo it (↩️ Undo in the banner brings it back). Making a second pad asks “Make another?” first.' },
+      { pic: [tool('▶ Play'), tool('🔊 Make a sound'), tool('🥁 Make a beat'), tool('✏️ Rename'), tool('↩️ Undo')], text: 'After a take: play it, make it a pad, make it a beat (each sound you played gets a row, and the hits snap to the beat), rename it, or undo it (↩️ Undo in the banner brings it back). Making a second pad asks “Make another?” first.' },
       { pic: [tool('🎬 Takes')], text: 'Everything you recorded. Play, rename or delete one, or make it a sound.' },
       { pic: [tool('⋯')], text: 'Where the bar runs out of room, 🎬 Takes, then ✏️ Layout, then 🔔 Let it ring move into ⋯ at its end. Tap ⋯ to reach them: each says how it is set (🔔 On or Off, ⌨️ Keys or 👆 Pads, how many takes). ● Record, the tempo and ⏲️ always stay on the bar.' },
     ],

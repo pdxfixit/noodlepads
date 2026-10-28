@@ -2105,12 +2105,38 @@ export function createSequencer(deps) {
   // 🎼 Song is done with these graphs: those into its lanes' gains `dests`
   // (only beat `p`'s, when given). They go once they ring out.
   const endMix = (dests, p) => letGo((m) => dests.includes(m.dest) && (!p || m.p === p));
+  function openSaved(id) {
+    const saved = library().find((b) => b.id === id);
+    if (saved) openBeat(cleanPattern(saved, personId), { resume: false });
+    return !!saved;
+  }
   return { setPerson, show, tempo: () => shape().bpm, render, play, stop, playing, grid, beatClock, rowFor, addRowFor, addSnaps, snapshot, restore, setClick, beat,
     cyclePill, clearRow, dropRow, toggleRing, ringTool, openLibrary: lib.openLibrary, metronome, clickAt, setGrow, setTempo, setBars, setSignature, signature: () => sigOf(), advanced: () => advanced,
     beatPlan, prepareBeats, soundHit, endMix, thumbnail: lib.thumbnail, levelOf, setLevel, putLevel, toggleMute, levelState,
     trying: grooves.trying, putTrialAway: grooves.putTrialAway, keep, keepScratch, onScratch, sampling: () => grooves.sample()?.id ?? null, hearBeat: grooves.hearBeat, stopHearing: grooves.stopSample,
     // A beat in 🗂️ Beats opened by id (🎧 From a song's 🥁 Open part A); false when it is not there.
-    openSaved: (id) => { const saved = library().find((b) => b.id === id); if (saved) openBeat(cleanPattern(saved, personId), { resume: false }); return !!saved; },
+    openSaved,
+    // 🥁 Make a beat (a take's, take-beat.js): joins 🗂️ Beats under `made.name` (a name no beat has) and opens, stopped.
+    // Returns {id, name, undo}; undo takes it out again and opens what was open before.
+    openMade: (made) => {
+      const prior = doc?.pattern && !isScratch(doc.pattern) ? doc.pattern.id : null;
+      stop();
+      queued = null;
+      const id = newId('beat');
+      const name = uniqueName(made.name || freshName());
+      const now = Date.now();
+      deps.library.put({ ...cleanPattern(made, personId), id, name, created: now, saved: now });
+      openSaved(id);
+      return {
+        id, name,
+        undo: () => {
+          stop();
+          deps.library.remove(id);
+          closeEverywhere(id);
+          if (prior) openSaved(prior);
+        },
+      };
+    },
     // A saved beat copied under a name of its own, for 🎼 Song's ✏️ Edit a copy: the copy's id, or null.
     copySaved: (id) => {
       const beat = library().find((b) => b.id === id);

@@ -4,7 +4,7 @@
 // replays on the audio clock (deps.bookPlay), lighting the keys on timers.
 // The take rules (takeFrom, planTake) are in rhythm.js.
 
-import { takeFrom, planTake, clockText, MAX_TAKE_SECONDS } from './rhythm.js';
+import { takeFrom, planTake, cleanTakeBpm, clockText, MAX_TAKE_SECONDS } from './rhythm.js';
 import { encodeWav } from './wav.js';
 import { newId } from './util.js';
 import { takeName, soundName, cutName, MAX_NAME } from './names.js';
@@ -12,14 +12,15 @@ import { openDialog, setupDialog } from './dialogs.js';
 import { showBanner } from './ui.js';
 import { logEvent } from './log.js';
 import { renderTake } from './share-render.js';
+import { beatFromTake } from './take-beat.js';
 
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
 
 // `deck`, `light` and `lightTiles` are the keys panel's (a take lights its keys
 // as it plays back), `showRec` redraws ● Record's line, `lineMs` is how long a
-// line with Undo stays.
-export function createTakes({ el, deps, deck, light, lightTiles, showRec, lineMs: LINE_MS }) {
-  let rec = null;        // {started: bool, events: [{at, clipId, kind, ring?}]} while recording
+// line with Undo stays, `clickBpm` the ⏲️ Click track's tempo while it is on (else null).
+export function createTakes({ el, deps, deck, light, lightTiles, showRec, lineMs: LINE_MS, clickBpm }) {
+  let rec = null;        // {started: bool, events: [{at, clipId, kind, ring?}], bpm} while recording: bpm the Click track's tempo at its start, or null
   let recTimer = 0;
   let lastTake = null;   // the take just made, for the take card (#dj-done)
   let replay = [];       // timers of a take being played back
@@ -41,7 +42,7 @@ export function createTakes({ el, deps, deck, light, lightTiles, showRec, lineMs
   }
   function startRec() {
     stopReplay();
-    rec = { started: false, events: [] };
+    rec = { started: false, events: [], bpm: clickBpm?.() ?? null };
     lastTake = null;
     el.done.hidden = true;
     logEvent('take', { rec: 'start' });
@@ -55,6 +56,8 @@ export function createTakes({ el, deps, deck, light, lightTiles, showRec, lineMs
     if (!rec) return;
     clearInterval(recTimer);
     const made = takeFrom(rec.events, deps.now());
+    // The Click track's tempo, kept with the take only when it was on and the same at both ends.
+    const bpm = cleanTakeBpm(rec.bpm) && rec.bpm === (clickBpm?.() ?? null) ? rec.bpm : 0;
     rec = null;
     showRec();
     logEvent('take', { rec: 'stop', made: !!made, seconds: made?.duration ?? 0 });
@@ -66,6 +69,7 @@ export function createTakes({ el, deps, deck, light, lightTiles, showRec, lineMs
       name: takeName(deps.takes(pid).map((t) => t.name)),
       created: Date.now(),
       ...made,
+      ...(bpm ? { bpm } : {}),
     };
     deps.saveTake(lastTake);
     showTake(lastTake);
@@ -81,6 +85,7 @@ export function createTakes({ el, deps, deck, light, lightTiles, showRec, lineMs
     el.takeLength.textContent = `(${clockText(take.duration)})`;
     el.donePlay.hidden = false;
     el.doneSound.hidden = false;
+    el.doneBeat.hidden = false;
     el.doneRename.hidden = false;
     el.done.hidden = false;
     showPlaying();
@@ -176,6 +181,16 @@ export function createTakes({ el, deps, deck, light, lightTiles, showRec, lineMs
     } finally {
       if (button) { button.disabled = false; button.textContent = button.dataset.idle || '🔊 Make a sound'; }
     }
+  }
+
+  // 🥁 Make a beat: the take's hits on a beat's grid (take-beat.js), opened in
+  // Beats by deps.beatMade, which says so and offers ↩️ Undo. The take's own
+  // tempo (the Click track's, when it was on), else the tempo the hits fit best.
+  function makeBeat(take) {
+    stopReplay();
+    const beat = beatFromTake(take, { has: (id) => !!deps.clipById(id) });
+    if (!beat) { deps.announce?.('There are no hits in this take to make a beat from.'); return; }
+    deps.beatMade(beat, `${take.name} beat`);
   }
 
   // Takes already made into a sound this visit: Make a sound again asks
@@ -279,6 +294,7 @@ export function createTakes({ el, deps, deck, light, lightTiles, showRec, lineMs
   el.doneRename.addEventListener('click', () => { el.takeName.focus(); el.takeName.select?.(); });
   el.takeName.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.takeName.blur(); } });
   el.takeName.addEventListener('input', fitTakeName);
+  el.doneBeat.addEventListener('click', () => lastTake?.id && makeBeat(lastTake));
   el.doneSound.dataset.idle = el.doneSound.textContent;
   el.doneSound.addEventListener('click', () => lastTake?.id && askThenMake(lastTake, el.doneSound, el.takeLine));
   // The take card's ↩️ Undo takes the take out at once, and the banner's

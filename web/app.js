@@ -61,7 +61,7 @@ import { createTelemetry, useTelemetry } from './telemetry.js';
 import { trackPage, learnLabels } from './track-page.js';
 import { setUsage } from './usage.js';
 import { clearPlay } from './play-count.js';
-import { $, showNotice, announce, fadeAway, trackSlimHead } from './ui.js';
+import { $, showNotice, showBanner, announce, fadeAway, trackSlimHead } from './ui.js';
 import { initMiniDeck } from './mini-deck.js';
 import { db } from './store.js';
 import { newId, versionLabel, remember, recall, forget } from './util.js';
@@ -700,6 +700,17 @@ function clearBack() {
   songBack = null;
   showBack();
 }
+// 🥁 Make a beat on a take's card: the beat joins 🗂️ Beats and opens there, with a line that says
+// what it is and ↩️ Undo, which takes it out and goes back to 🎤 Live.
+function openMadeBeat(beat, name) {
+  const made = seq.openMade({ ...beat, name });
+  setScreen('beats');
+  showBanner(`Made “${made.name}” from your take: ${beat.bpm} BPM, ${beat.bars} ${beat.bars === 1 ? 'bar' : 'bars'}.`, {
+    action: { label: '↩️ Undo', fn: () => { made.undo(); setScreen('live'); } },
+    focusBack: () => document.querySelector('#seq-add'),
+  });
+  announce(`Made ${made.name}. Undo is available.`);
+}
 function editBeatFromSong(beatId, back) {
   if (!seq.openSaved(beatId)) return;
   setScreen('beats');
@@ -993,7 +1004,7 @@ async function start() {
       touchEdit: { dialog: $('#touch-edit'), layouts: $('#te-layouts'), saveLine: $('#te-save-line'), saveName: $('#te-save-name'), saveOk: $('#te-save-ok'), saveCancel: $('#te-save-cancel'),
         ownLine: $('#te-own-line'), rename: $('#te-rename'), remove: $('#te-delete'), bands: $('#te-bands'), bandsTitle: $('#te-bands-title'), grids: $('#te-grids'), note: $('#te-note'), undo: $('#te-undo'), add: $('#te-add'), addHint: $('#te-add-hint') },
       record: $('#dj-record'), status: $('#dj-status'), done: $('#dj-done'), nameFlash: $('#dj-name-flash'),
-      donePlay: $('#dj-done-play'), doneUndo: $('#dj-done-undo'), doneSound: $('#dj-done-sound'),
+      donePlay: $('#dj-done-play'), doneUndo: $('#dj-done-undo'), doneSound: $('#dj-done-sound'), doneBeat: $('#dj-done-beat'),
       trying: $('#dj-trying'), tryingText: $('#dj-trying-text'), tryingStop: $('#dj-trying-stop'),
       takeLine: $('#dj-take-line'), doneRename: $('#dj-done-rename'), doneClose: $('#dj-done-close'), takeName: $('#dj-take-name'), takeLength: $('#dj-take-length'),
       takesOpen: $('#dj-takes-open'), takes: $('#takes'), pictures: $('#pictures'), picturesTitle: $('#pictures-title'), picturesGrid: $('#pictures-grid'), picturesNote: $('#pictures-note'), takesList: $('#takes-list'), takesEmpty: $('#takes-empty'),
@@ -1017,6 +1028,7 @@ async function start() {
       sampleRate: () => audio.context().sampleRate,
       loadSound: (clip) => audio.load(clip),
       addSound: (made) => addMadeSound({ emoji: '🎛️', ...made }),
+      beatMade: (beat, name) => openMadeBeat(beat, name),
       soundNames: () => clipsFor(state.personId, { includeHidden: true }).map((c) => c.label),
       playOnce: (clip, opts) => audio.play(clip, opts),
       stopClip: (clip) => audio.stop(clip.id),

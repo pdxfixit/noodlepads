@@ -54,6 +54,23 @@ const KEYS = (on) => `if (document.body.classList.contains('keys-on') !== ${on})
 const q = (sel) => `document.querySelector(${JSON.stringify(sel)}).click();`;
 // ✏️ Layout with 👆 Pads open: Two and one, then Drums, Chords and Bass into its blocks, in order.
 const GRID_FILL = ['[data-shape="two-one"]', '[data-add-group="drums"]', '[data-add-group="chords"]', '[data-add-group="bass"]'].map(q).join('');
+// A loose take on 🎤 Live: a kick, snare and hat pattern two bars long at about 104 BPM, each hit
+// a few hundredths of a second early or late, then ■ Stop. The take card shows (🥁 Make a beat is on it).
+// Headless Chrome's audio clock has no sound card to run it and moves in lumps of 100 ms or more, so the
+// clock is the page's own for the take: the hits land when the script played them.
+const TAKE_REC = `Object.defineProperty(BaseAudioContext.prototype, 'currentTime', { configurable: true, get: () => performance.now() / 1000 });
+  ${q('#dj-record')}
+  { const step = 60 / 104 / 4, keys = { kick: 'KeyA', snare: 'KeyS', hat: 'KeyD' };
+    const pattern = { kick: [0, 6, 8, 14, 16, 22, 24, 30], snare: [4, 12, 20, 28], hat: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30] };
+    const jitter = [0.012, -0.021, 0.034, -0.008, 0.027, -0.031, 0.004, 0.019, -0.016, 0.029, -0.026, 0.009];
+    const plays = Object.entries(pattern).flatMap(([name, at]) => at.map((p, i) => [Math.max(0, p * step + jitter[(p + i) % jitter.length]), keys[name]])).sort((a, b) => a[0] - b[0]);
+    const started = performance.now();
+    for (const [at, code] of plays) {
+      await new Promise((r) => setTimeout(r, Math.max(0, started + at * 1000 - performance.now())));
+      for (const type of ['keydown', 'keyup']) document.dispatchEvent(new KeyboardEvent(type, { code, key: code.slice(3).toLowerCase(), bubbles: true }));
+    }
+    await new Promise((r) => setTimeout(r, 400)); }
+  ${q('#dj-record')} await new Promise((r) => setTimeout(r, 300));`;
 // 🆕 New in a beat bar, then a 24-character name typed into its title (the scratch holds it).
 const LONG_NAME = (bar) => `${q(`${bar} [data-beat-new]`)} { const n = document.querySelector(${JSON.stringify(`${bar} [data-beat-name]`)});
   n.value = 'Wobbly Noodle Jamboree 9'; n.dispatchEvent(new Event('change')); } await new Promise((r) => setTimeout(r, 300));`;
@@ -365,6 +382,10 @@ const VIEWS = {
     + `for (const [code, key] of [['KeyZ', 'z'], ['KeyQ', 'q']]) for (const type of ['keydown', 'keyup']) document.dispatchEvent(new KeyboardEvent(type, { code, key, bubbles: true }));` },
   'builder-grown': { screen: 'beats', keys: true, js: q('#dj-beatbar [data-beat-new]') + BUILDER_REC + 'await new Promise((r) => setTimeout(r, 1700));' },
   takes: { screen: 'live', js: q('#dj-takes-open') },
+  // The take card after a loose take (🥁 Make a beat beside 🔊 Make a sound), and Beats after that
+  // button: the beat made from the take, with its line and ↩️ Undo (real time: about 6 s each).
+  'take-card': { screen: 'live', js: TAKE_REC },
+  'take-beat': { screen: 'live', js: TAKE_REC + q('#dj-done-beat') + nap },
   // 🎤 Live's ⋯ open, at the widths where its bar folds something into it (320 px:
   // ✏️ Layout and 🎬 Takes); where nothing folds there is no ⋯ and it looks as `live`.
   'live-more': { screen: 'live', js: q('#dj-more') + nap },

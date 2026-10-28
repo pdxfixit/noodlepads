@@ -4,6 +4,7 @@
 
 import { cleanTouch } from './touch.js';
 import { cutName, nameLength, MAX_NAME } from './names.js';
+import { MIN_BPM, MAX_BPM } from './beat.js';
 
 // The number row and the three letter rows of a keyboard, by physical
 // position (KeyboardEvent.code), so a key stays put whatever the layout.
@@ -223,6 +224,13 @@ export function cleanDeck(d) {
   return out;
 }
 
+// A take's tempo: the ⏲️ Click track's, when it was on for the whole take. A
+// whole number in the beat maker's range, else 0 (the take has none).
+export function cleanTakeBpm(bpm) {
+  const n = Number(bpm);
+  return typeof bpm === 'number' && Number.isInteger(n) && n >= MIN_BPM && n <= MAX_BPM ? n : 0;
+}
+
 // A take: a safe id, a name, a length, and its events in time order.
 // `name` falls back to `fallbackName()` when missing.
 export function cleanTake(t, fallbackName = () => 'Take') {
@@ -241,6 +249,7 @@ export function cleanTake(t, fallbackName = () => 'Take') {
     created: Number.isFinite(Number(t.created)) ? Number(t.created) : Date.now(),
     duration: Number.isFinite(duration) ? Math.min(MAX_TAKE_SECONDS, Math.max(0, duration)) : 0,
     events,
+    ...(cleanTakeBpm(t.bpm) ? { bpm: cleanTakeBpm(t.bpm) } : {}),
   };
 }
 

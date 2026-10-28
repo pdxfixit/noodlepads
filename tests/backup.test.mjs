@@ -487,6 +487,15 @@ test('a backup carries DJ decks and takes for known people, and drops strangers\
   assert.deepEqual([old.decks, old.takes], [[], []], 'a backup from before DJ mode loads');
 });
 
+test('a take\'s tempo (the Click track\'s) travels in a backup; one out of range is dropped, one from before it still loads', async () => {
+  const take = { id: 'take-t-1', personId: 'pip', name: 'Tempo Jam', created: 1, duration: 3, events: [{ t: 0.5, clipId: 'pip-airhorn', kind: 'hit' }] };
+  const out = await read({ takes: [{ ...take, bpm: 96 }, { ...take, id: 'take-t-2' }, { ...take, id: 'take-t-3', bpm: 9000 }, { ...take, id: 'take-t-4', bpm: 96.5 }] });
+  assert.deepEqual(out.takes.map((t) => [t.id, t.bpm]), [['take-t-1', 96], ['take-t-2', undefined], ['take-t-3', undefined], ['take-t-4', undefined]]);
+  assert.ok(out.takes.slice(1).every((t) => !('bpm' in t)), 'dropped, not set to anything');
+  const again = await readBackup(await makeBackup({ people: [], clips: [], overrides: [], orders: [], patterns: [], beats: [], takes: out.takes }), bundled());
+  assert.equal(again.takes.find((t) => t.id === 'take-t-1').bpm, 96, 'written and read again');
+});
+
 test('the open beat round-trips in a backup (patterns); an older copy\'s Beat Builder id on the deck (ADR 0008) still loads, read by nobody since ADR 0017', async () => {
   const beat = { id: 'beat-q-1', personId: 'pip', name: 'Groove', bpm: 100, bars: 1, swing: 0, rows: [], signature: '4/4' };
   const state = { people: [], clips: [], overrides: [], orders: [], patterns: [beat], beats: [{ ...beat, created: 1, saved: 2 }],

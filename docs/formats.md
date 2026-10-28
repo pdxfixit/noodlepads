@@ -147,7 +147,7 @@ A song from before 1.0's playlist (no `lanes`, only `slots`) is read as lane 1: 
 
 ## takes
 
-A take is a performance on 🎤 Live: `{id, personId, name, created, duration, events}`. `duration` is seconds (up to 180). `events` is `[{t, clipId, kind, ring?}]` in time order, `t` in seconds from the start, to a millisecond.
+A take is a performance on 🎤 Live: `{id, personId, name, created, duration, events, bpm?}`. `duration` is seconds (up to 180). `events` is `[{t, clipId, kind, ring?}]` in time order, `t` in seconds from the start, to a millisecond. `bpm` is optional: the ⏲️ Click track's tempo when it was on for the whole take, a whole number from 60 to 180; a take without it (or with one out of range) has no known tempo, and a reader that wants one finds the tempo whose sixteenths the `hit` times sit nearest.
 
 | `kind` | Meaning |
 |---|---|

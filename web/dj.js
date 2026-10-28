@@ -308,14 +308,18 @@ export function createDJ({ el, deps }) {
   const playTarget = (t, opts) => (t.code ? play(t.code, opts) : playTile(t.clip, opts));
   // A sound played from the keys or a tile: tapped (a looping one stops),
   // recorded into a take, given a row and a hit on the beat.
-  function hit(id, { earlier = false } = {}) {
+  // `pressed`: the audio-clock time of the press, when the caller read it before a delay of its own.
+  function hit(id, { earlier = false, pressed: at } = {}) {
     const clip = deps.clipById(id);
     if (!clip) return null;
     // 🔔 Let it ring on Live: a key's repeated hits ring over each other.
     const ring = ringing();
+    // The take stamps the press, read before the sound starts: a sound's first play can hold
+    // the page for a moment, and a hit stamped after it would sit late against the take's others.
+    const pressed = at ?? deps.now();
     // A tap on a looping sound stops it; a play counts once, as a key.
     const stopped = deps.tap(clip, { ring, kind: 'keys' });
-    takes.record(clip.id, stopped ? 'stop' : tapMode() ? 'loop' : 'hit', deps.now(), ring);
+    takes.record(clip.id, stopped ? 'stop' : tapMode() ? 'loop' : 'hit', pressed, ring);
     showRow(clip);
     if (!stopped) intoBeat(clip, earlier);
     return clip;
@@ -372,12 +376,15 @@ export function createDJ({ el, deps }) {
       }
       return true;
     }
+    // A take stamps the press itself: read here, before the first key's redraw below (about 70 ms in
+    // headless Chrome), which would put the first hit late against the rest (🥁 Make a beat snaps them).
+    const pressed = takes.rec() ? deps.now() : undefined;
     // The first key pressed shows a keyboard is there: the letters (and Q / D) come out.
     if (!keyboardSeen) { keyboardSeen = true; render(); }
     // Shift: "that one was meant a pill earlier", for recording into the beat.
     // A press that stopped a loop never loops it again on its repeats.
     const wasLooping = deps.isLooping?.(deck()[code]);
-    if (play(code, { earlier: e.shiftKey })) held.set(code, { at: now, looped: wasLooping });
+    if (play(code, { earlier: e.shiftKey, pressed })) held.set(code, { at: now, looped: wasLooping });
     keyEl(code)?.classList.add('down');
     return true;
   }
@@ -492,7 +499,7 @@ export function createDJ({ el, deps }) {
   let gridSpeakers = null;   // the grid's speakers and their loudness popover (renderGrid draws them)
   let gridMenus = null;      // the rows' menus, each opened by its emoji (overflow.js)
   // The takes themselves (recording, the take card, replay, the Takes list) are dj-takes.js.
-  const takes = createTakes({ el, deps, deck, light, lightTiles, showRec, lineMs: LINE_MS });
+  const takes = createTakes({ el, deps, deck, light, lightTiles, showRec, lineMs: LINE_MS, clickBpm: () => (clickWanted ? deps.seq.tempo() : null) });
   const { stopReplay } = takes;
   // The big count-in over the keys: 1, 2, 3, 4 (as many as the time
   // signature has beats), each in its own color, popping in on its beat.
