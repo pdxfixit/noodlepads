@@ -1653,6 +1653,20 @@ button.tempo-chip:focus-visible { outline: 3px solid var(--led); outline-offset:
 .song-sel-text { flex: 1 1 12em; min-width: 0; font-weight: 800; }
 .song-sel-tools { display: flex; flex: 1 1 auto; justify-content: flex-end; gap: 8px; }
 .song-sel-tools .seq-tool { min-width: 52px; min-height: 48px; }
+/* Five keys (➖ ➕ ✏️ 🗑️ ✕) on the narrowest phones: 44 px each, a smaller gap, so the bar stays inside the panel. */
+@media (max-width: 360px) {
+  .song-sel-tools { gap: 4px; }
+  .song-sel-tools .seq-tool, .song-sel-tools .bar-close { min-width: 44px; padding-inline: 0; }
+}
+/* ✏️ on a beat used more than once: how many times, then Edit it or Edit a copy, a full row under the tools. */
+.song-edit-ask { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 6px 6px 0; }
+.song-edit-ask[hidden] { display: none; }
+.song-edit-ask-text { flex: 1 1 100%; font-weight: 800; }
+.song-edit-ask .seq-tool { flex: 1 1 9em; min-height: 48px; }
+/* "↩ Back to song" on Beats after a block's ✏️: a chip on its own line above the beat bar, in the bar's left edge. */
+.song-back { display: flex; margin: 0 0 8px; }
+.song-back[hidden] { display: none; }
+.song-back-chip { min-height: 44px; padding: 0 16px; border: 2px solid var(--led); border-radius: 22px; background: rgb(255 255 255 / 0.12); color: inherit; font: 800 1rem/1.1 var(--font-ui); cursor: pointer; }
 /* ➕ Add a lane and ↩️ Undo under the lanes, like + Add a row. */
 .song-foot { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
 .song-foot > * { min-height: 48px; }

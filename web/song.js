@@ -63,7 +63,9 @@ const blockCount = (song) => song.lanes.reduce((n, l) => n + l.blocks.length, 0)
 // undefined, save(song) (as the open song), close(personId) (nothing open),
 // songs: {list(personId), put(song), remove(id)} (every saved song),
 // songName(taken) (a fun name), soundLabel(name) (a label for the new pad),
-// addClip({label, blob}), beatColor(beat) (its chip's color), announce(text).
+// addClip({label, blob}), beatColor(beat) (its chip's color), announce(text),
+// editBeat(beatId, back) (✏️ on a block: opens the beat in 🥁 Beats; `back` is
+// {lane, block, x, y}, handed to restoreSelection when the person comes back).
 export function createSong(deps) {
   const { el, audio, meter, seq, engine } = deps;
   let song = null;
@@ -86,6 +88,7 @@ export function createSong(deps) {
   let picked = null;         // the beat picked in the strip, to drop on a lane
   let sel = null;            // the selected block: {lane, block}
   let removeAsked = false;
+  let editAsked = null;      // "lane:block" of the block whose ✏️ is asking Edit it or Edit a copy
   let armTimer = 0;
   let undoSteps = [];        // the song before each edit, for ↩️ Undo
   const cursor = new Map();  // lane -> the bar the keyboard is on
@@ -478,6 +481,15 @@ export function createSong(deps) {
     el.selText.textContent = `${lane.emoji} ${beatName(block.beatId)} · plays ${timesWords(block.times)}`;
     el.less.disabled = block.times <= 1;
     el.more.disabled = block.times >= maxTimes(lane, sel.block, stepsOf);
+    // ✏️ opens this block's beat in 🥁 Beats; a beat the song uses more than once asks first.
+    const uses = usesOf(block.beatId);
+    el.edit.disabled = !pickableById(block.beatId);
+    el.edit.setAttribute('aria-label', `Edit ${beatName(block.beatId)} in 🥁 Beats`);
+    const asking = editAsked === `${sel.lane}:${sel.block}` && uses > 1;
+    if (!asking) editAsked = null;
+    el.editAsk.hidden = !asking;
+    el.edit.setAttribute('aria-expanded', String(asking));
+    el.editAskText.textContent = `Used ${uses}× in this song`;
     el.remove.textContent = removeAsked ? 'Remove?' : '🗑️';
     el.remove.classList.toggle('armed', removeAsked);
     el.remove.setAttribute('aria-label', removeAsked ? `Tap again to take ${beatName(block.beatId)} off ${lane.name}` : `Take ${beatName(block.beatId)} off ${lane.name}`);
@@ -564,6 +576,44 @@ export function createSong(deps) {
     stop();
     edit(() => { song.lanes[sel.lane] = nextLane; });
     render();
+  }
+
+  // How many blocks, on any lane, play this beat.
+  const usesOf = (beatId) => song.lanes.reduce((n, l) => n + l.blocks.filter((b) => b.beatId === beatId).length, 0);
+
+  // ✏️ on the selected block: its beat opens in 🥁 Beats at once when only this block
+  // plays it; else a question first (Edit it changes every block, Edit a copy only this one).
+  function editSelected() {
+    if (!sel) return;
+    const block = song.lanes[sel.lane].blocks[sel.block];
+    if (!pickableById(block.beatId)) return;
+    if (usesOf(block.beatId) <= 1) { openForEdit(block.beatId); return; }
+    editAsked = editAsked ? null : `${sel.lane}:${sel.block}`;
+    renderSelection();
+  }
+  function editCopy() {
+    if (!sel) return;
+    const block = song.lanes[sel.lane].blocks[sel.block];
+    const copyId = seq.copySaved(block.beatId);
+    if (!copyId) return;
+    stop();
+    edit(() => { block.beatId = copyId; });
+    openForEdit(copyId);
+  }
+  // Hands the beat to the app, with where to come back to.
+  function openForEdit(beatId) {
+    editAsked = null;
+    const back = { lane: sel.lane, block: sel.block, x: el.lanes.scrollLeft, y: window.scrollY };
+    stop();
+    deps.editBeat?.(beatId, back);
+  }
+  // Back from 🥁 Beats: the same block selected, the lanes and page scrolled as they were.
+  function restoreSelection(back) {
+    if (!back || !song) return;
+    const lane = song.lanes[back.lane];
+    if (lane?.blocks[back.block]) select(back.lane, back.block);
+    el.lanes.scrollLeft = back.x ?? 0;
+    window.scrollTo(0, back.y ?? 0);
   }
 
   function removeSelected() {
@@ -756,6 +806,9 @@ export function createSong(deps) {
   el.less.addEventListener('click', () => changeTimes(-1));
   el.more.addEventListener('click', () => changeTimes(1));
   el.remove.addEventListener('click', removeSelected);
+  el.edit.addEventListener('click', editSelected);
+  el.editIt.addEventListener('click', () => { const b = sel && song.lanes[sel.lane].blocks[sel.block]; if (b) openForEdit(b.beatId); });
+  el.editCopy.addEventListener('click', editCopy);
   el.selClose.addEventListener('click', () => {
     const li = sel?.lane;
     select(null);
@@ -1333,5 +1386,5 @@ export function createSong(deps) {
     return !!saved;
   }
 
-  return { setPerson, render, play, stop, playing, song: () => song, openSaved };
+  return { setPerson, render, play, stop, playing, song: () => song, openSaved, restoreSelection };
 }

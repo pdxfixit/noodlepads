@@ -352,6 +352,8 @@ function setScreen(name) {
   if (leftBeats) seq.stop();
   if (state.screen === 'song' && name !== 'song') song.stop();
   state.screen = name;
+  if (name !== 'beats') songBack = null;   // "↩ Back to song" lasts only while Beats stays open
+  showBack();
   if (leftBeats) seq.endLock();   // ⇆ unlocks with the screen
   for (const s of SCREENS) document.body.classList.toggle(`screen-${s}`, s === name);
   for (const b of el.screens.querySelectorAll('[data-screen]')) b.setAttribute('aria-pressed', String(b.dataset.screen === name));
@@ -625,7 +627,7 @@ function makeSequencer() {
     onHit: (clipId, ms) => { if (keysShow()) dj?.flashClip(clipId, ms); },
     onSteps: (shown) => { if (keysShow()) dj?.steps(shown); },
     // The keys panel draws the open beat only while it shows.
-    onBeatChange: () => { if (keysShow()) dj?.renderGrid(); song?.render(); },
+    onBeatChange: () => { if (songBack && seq.beat()?.id !== songBack.beatId) clearBack(); if (keysShow()) dj?.renderGrid(); song?.render(); },
     onPlay: () => song?.stop(),
     onGroovesOpen: () => showCard(),   // 🎧 From a song's card, for this person's level
     // ⇆ Move on or off: the ⇆ keys show it.
@@ -686,6 +688,31 @@ async function setClipEmoji(clipId, emoji) {
   dj?.renderGrid();
 }
 
+// A song block's ✏️ (song.js) opens its beat in 🥁 Beats and leaves a "↩ Back to
+// song" chip there. `songBack` is where the chip goes back to: the block, the
+// scroll, and the beat it came for. Any other way of leaving (another screen,
+// another beat opened) forgets it.
+let songBack = null;
+function showBack() {
+  $('#song-back').hidden = !(songBack && state.screen === 'beats');
+}
+function clearBack() {
+  songBack = null;
+  showBack();
+}
+function editBeatFromSong(beatId, back) {
+  if (!seq.openSaved(beatId)) return;
+  setScreen('beats');
+  songBack = { ...back, beatId };
+  showBack();
+}
+function backToSong() {
+  const back = songBack;
+  clearBack();
+  setScreen('song');
+  song.restoreSelection(back);
+}
+
 // Song mode: a person's song of saved beats, played and rendered by the beat maker.
 function makeSong() {
   const made = createSong({
@@ -702,6 +729,7 @@ function makeSong() {
       tempoRemove: $('#tempo-remove'), tempoBack: $('#tempo-back'), tempoDone: $('#tempo-done'),
       strip: $('#song-beats'), lanes: $('#song-lanes'),
       sel: $('#song-sel'), selText: $('#song-sel-text'), less: $('#song-less'), more: $('#song-more'), remove: $('#song-remove'), selClose: $('#song-sel-close'),
+      edit: $('#song-edit'), editAsk: $('#song-edit-ask'), editAskText: $('#song-edit-ask-text'), editIt: $('#song-edit-it'), editCopy: $('#song-edit-copy'),
       addLane: $('#song-add-lane'), stepUndo: $('#song-step-undo'),
       laneSheet: $('#lane-sheet'), laneTitle: $('#lane-title'), laneName: $('#lane-name'), laneGrid: $('#lane-grid'),
     },
@@ -725,6 +753,7 @@ function makeSong() {
     songs: songBook,
     songName: (taken) => songName(taken),
     announce: (text) => announce(text),
+    editBeat: (beatId, back) => editBeatFromSong(beatId, back),
     // The song's own name, unless a pad already has it; then a remix of it.
     soundLabel: (name) => {
       const taken = clipsFor(state.personId, { includeHidden: true }).map((c) => c.label);
@@ -737,6 +766,7 @@ function makeSong() {
   });
   // A beat deleted or renamed in 🗂️ Beats shows in the song when it closes.
   $('#library').addEventListener('close', () => made.render());
+  $('#song-back-go').addEventListener('click', backToSong);
   return made;
 }
 

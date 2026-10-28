@@ -2111,6 +2111,15 @@ export function createSequencer(deps) {
     trying: grooves.trying, putTrialAway: grooves.putTrialAway, keep, keepScratch, onScratch, sampling: () => grooves.sample()?.id ?? null, hearBeat: grooves.hearBeat, stopHearing: grooves.stopSample,
     // A beat in 🗂️ Beats opened by id (🎧 From a song's 🥁 Open part A); false when it is not there.
     openSaved: (id) => { const saved = library().find((b) => b.id === id); if (saved) openBeat(cleanPattern(saved, personId), { resume: false }); return !!saved; },
+    // A saved beat copied under a name of its own, for 🎼 Song's ✏️ Edit a copy: the copy's id, or null.
+    copySaved: (id) => {
+      const beat = library().find((b) => b.id === id);
+      if (!beat) return null;
+      const copy = { ...structuredClone(beat), id: newId('beat'), name: uniqueName(beat.name), created: Date.now(), saved: Date.now() };
+      delete copy.pinned;   // a copy is a new beat: not pinned
+      deps.library.put(copy);
+      return copy.id;
+    },
     lockChips, queuedBeat: () => (queued ? { ...queued } : null), openMixer, toggleSolo, setFx: setRowFx, setMaster, setMasterFx,
     openRoll, rollRow: () => roll?.row() ?? -1, clickOff,
     // ⇆ the lock, and the keys' grid's picker beside these rows' (dj.js).

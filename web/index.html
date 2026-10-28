@@ -98,6 +98,11 @@
       </div>
     </section>
 
+    <!-- Arrived from a song block's ✏️ (song.js): back to that song, the block still selected. Shown on Beats only. -->
+    <div class="song-back" id="song-back" hidden>
+      <button type="button" class="song-back-chip" id="song-back-go" aria-label="Back to song">↩ Back to song</button>
+    </div>
+
     <section class="seq" id="seq" aria-label="Beat maker" hidden>
       <div class="beat-bar doc-bar">
         <span class="beat-bar-icon" aria-hidden="true">🥁</span>
@@ -323,9 +328,16 @@
         <span class="song-sel-tools">
           <button type="button" class="seq-tool" id="song-less" aria-label="Play it one time fewer">➖</button>
           <button type="button" class="seq-tool" id="song-more" aria-label="Play it one more time">➕</button>
+          <button type="button" class="seq-tool" id="song-edit" aria-label="Edit this block's beat in 🥁 Beats">✏️</button>
           <button type="button" class="seq-tool" id="song-remove">🗑️</button>
           <button type="button" class="close bar-close" id="song-sel-close" aria-label="Done with this block">✕</button>
         </span>
+        <!-- ✏️ on a beat the song uses more than once asks first (the count), then Edit it or Edit a copy. -->
+        <div class="song-edit-ask" id="song-edit-ask" role="group" aria-label="Edit this beat" hidden>
+          <span class="song-edit-ask-text" id="song-edit-ask-text"></span>
+          <button type="button" class="seq-tool" id="song-edit-it">✏️ Edit it</button>
+          <button type="button" class="seq-tool" id="song-edit-copy">⧉ Edit a copy</button>
+        </div>
       </div>
       <div class="song-foot">
         <button type="button" class="seq-add" id="song-add-lane">➕ Add a lane</button>

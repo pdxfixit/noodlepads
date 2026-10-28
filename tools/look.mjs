@@ -402,6 +402,12 @@ const VIEWS = {
   playlist: { screen: 'song', js: PLAYLIST },
   'playlist-pick': { screen: 'song', js: `${PLAYLIST} chip(1).click();` },
   'playlist-select': { screen: 'song', js: `${PLAYLIST} ${q('#song-lanes [data-block="1:1"]')}` },
+  // ✏️ on the selected block's bar (a beat this song plays once, so it opens at once); song-edit-ask is a
+  // beat used 3 times, ✏️ tapped: "Used 3× in this song" with Edit it / Edit a copy; song-edit-back is
+  // Edit it chosen: 🥁 Beats with the "↩ Back to song" chip above the beat bar.
+  'song-edit': { screen: 'song', js: `${PLAYLIST} ${q('#song-lanes [data-block="2:0"]')}` },
+  'song-edit-ask': { screen: 'song', js: `${PLAYLIST} drop(1, 3, 0); ${q('#song-sel-close') + q('#song-lanes [data-block="1:1"]') + q('#song-edit')}` },
+  'song-edit-back': { screen: 'song', js: `${PLAYLIST} drop(1, 3, 0); ${q('#song-sel-close') + q('#song-lanes [data-block="1:1"]') + q('#song-edit') + q('#song-edit-it')} ${nap}` },
   'playlist-playing': { screen: 'song', js: `${PLAYLIST} ${q('#song-play')} await new Promise((r) => setTimeout(r, 2500));` },
   'playlist-lanes': { screen: 'song', js: `${PLAYLIST} ${q('#song-add-lane').repeat(4)}` },
   'playlist-lane': { screen: 'song', js: `${PLAYLIST} ${q('#song-lanes [data-lane-pick="1"]')}` },

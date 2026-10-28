@@ -54,7 +54,7 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 
 
-- **Toward a kid-sized music studio** (Ben, 2026-10-12; north star: ADR 0022). Done: pattern chips, mixer, four tabs, the piano roll, the playlist (ADR 0024). Next: Ben's call.
+- **Toward a kid-sized music studio** (Ben, 2026-10-12; north star: ADR 0022). Done: pattern chips, mixer, four tabs, the piano roll, the playlist (ADR 0024), ✏️ on a song block into Beats with ↩ Back to song (2026-10-28).
 
 Other work:
 
