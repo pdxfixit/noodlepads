@@ -8,7 +8,7 @@ triggers:
 aliases: [soundboard, noodle-pads]
 hide_checked_default: true
 created: 2026-09-27
-updated: 2026-10-12
+updated: 2026-10-28
 ---
 
 # Noodle Pads — to do
@@ -19,7 +19,15 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 - **Add the new cloud events to the telemetry runner** (2 min, on the Mac): in `../telemetry/events.toml` (the pdxfixit/telemetry repo beside this checkout) add `up` and `leave` under `noodlepads.cloud` (what `web/track-page.js` now sends in place of `put` and `offline`), then run `just test` in the main checkout, since `tests/telemetry.test.mjs` checks it only there.
 
-- **Record the spoken callouts** (10 min, when you like): six callouts are still macOS `say` voices, which may not be ours to share: "Oh yeah!", "Bruh.", "Nice!", "G G!", "Drop the beat!" and "Boom!" (list in `web/clips/kit/LICENSE-samples.txt`). The other 8 callouts, the Evil laugh and the Cackle are CC0 or CC BY recordings now (2026-10-27). Record your own (no names in them) and attach them in a chat; each file is one short clip.
+- **Listen to the 10 new voice clips** (CC0 or CC BY): the 8 callouts, the Evil laugh and the Cackle (2026-10-27). Then Craig records the last six, which are still macOS `say` voices and may not be ours to share: "Oh yeah!", "Bruh.", "Nice!", "G G!", "Drop the beat!" and "Boom!" (list in `web/clips/kit/LICENSE-samples.txt`). Attach each in a chat; each file is one short clip, no names in it.
+
+- **Isopix: set its name hashes** (in the isopix repo, TODO "The owner does"): run `just names-secret`, then `gh secret set ISOPIX_NAME_HASHES`.
+
+- **Isopix: approve the history rewrite** (in the isopix repo): it is ready and verified; say yes and the force-push goes.
+
+- **Cloud session setup**: add `f=/home/user/noodlepads/tools/cloud_setup.sh; [ -f "$f" ] && bash "$f" || true` to the cloud environment's setup script, or add a .claude SessionStart hook (`tools/cloud_setup.sh`, 6fadfb8).
+
+- **Telemetry: land the branch `land/noodlepads-cloud-actions`** from a session with `gh`.
 
 - **Read the mission and make it yours** (2 min): `AGENTS.md` → Mission, drafted from your interview answers (2026-10-26). Reword anything that isn't how you'd say it; the council checks every change against it.
 
@@ -62,11 +70,10 @@ Other work:
 
 - [ ] Move `skills/noodlepads-logs` to `~/src/skills/noodlepads-logs` and link it (the skills workspace convention); the recurrent routine's leg is now named `noodlepads-logs`, and its state file `~/.local/state/skills/noodlepads-logs.state.json`
 
-- **Council round 1, fixes in flight** (2026-10-26): Kids keyboard/tune/mic/sum; Live take Undo and audio clock, iOS silent switch, context resume, late pills; sync re-uploads edited audio and splits pushes by bytes; Worker caps, the PIN race, keys, shares deleted with a profile; `just test` fails on cut tests, deploy.yml version checks, the no-names self-test, stale deploy docs. Delete this line when they land.
+- **Council round 1, fixes in flight** (2026-10-26): Kids' keyboard and sum; Live take Undo and audio clock, iOS silent switch, context resume, late pills; sync re-uploads edited audio and splits pushes by bytes; shares deleted with a profile; deploy.yml version checks, stale deploy docs. Delete this line when they land.
 - **Apple voices out** (Ben, 2026-10-26), once Ben's recordings or another CC0 voice set arrive ("Ben does"): they replace the 6 Apple-voice clips that `web/clips/kit/LICENSE-samples.txt` lists (`tools/make_placeholders.py` `KIT_CALLOUTS`: oh-yeah, bruh, nice, gg, drop-the-beat, boom-word), and that file's Apple section goes. A CC0 voice that says the same words is better than a near word: no GitHub set searched on 2026-10-27 had "Oh yeah", "Nice", "Boom" or "Drop the beat" (Kenney's Voiceover Pack and Google's Speech Commands gave the other eight).
 - **Council round 1, next fixes** (each one approved by Ben, 2026-10-26). Most urgent first:
   1. Sound designer ✏️: add a loudness floor to `tools/test_preset_loudness.py` (8 presets sit 8–10 dB under the middle). (Roar, Heartbeat, Djembe, Djembe slap, Dhol and Dhol tik stay synthesized, decided 2026-10-27: see decisions.md.)
-  6. Audio engineer and sound designer: a soft clip after the limiter; 2–3 ms edge fades on recordings; seed the reverb noise; voice extremes that a phone can play.
 
 ### Offered, not approved
 

@@ -1,13 +1,13 @@
 # State
 
-Where things stand **now**. Present tense only: replace lines, never append history (`git log` holds that). Update it in the same commit whenever what is live or in flight changes. What a person has not tried yet (on a phone, by ear, by a kid) goes in the one list under [Waits on Ben](#waits-on-ben), not on each line.
+Where things stand **now**. Present tense only: replace lines, never append history (`git log` holds that). Update it in the same commit whenever what is live or in flight changes. What a person has not tried yet (on a phone, by ear, by a kid) goes in [Not yet tried by a person](#not-yet-tried-by-a-person), not on each line.
 
 ## Live
 
 - The app is Noodle Pads at https://noodlepads.com/ (ADR 0010), served by one Worker (`worker/`, the `/api` routes) and one D1 database, `noodle-pads` (ADR 0002). The old address is retired (ADR 0010). Manage the database with `just cloud-migrate`, `cloud-profiles`, `cloud-prune`, `cloud-reset-pin`, `cloud-sql`, `cloud-backup` and `cloud-db` (README "Running it yourself" lists every recipe).
 - Release 1.0 (CHANGELOG.md), from this repo, `pdxfixit/noodlepads` (public; the old repo is archived). The corner says when the live build went up ("Updated Oct 19, 9:27 PM", the device's time); About adds the release and the commit, a link to it on GitHub ("Updated Oct 20, 12:01 AM · 1.0.217 · f52728b"); the footer shows no release number. The release, `1.0.<commit count>`, lives in `web/version.js` (`just version`; CI, `just ship` and `just land` check it). The name is `noodlepads` in backups, beat files and downloads (older `noodle-pads` files still load); the browser database and the D1 database keep `noodle-pads`. The Cloudflare ids live in `~/.config/noodlepads/cloud.json`, not the repo.
-- noodlepads.com serves `main`: its `version.json` names the release and commit (`v1.0.215-4d5ef56`, flarepress `release=`) (`just deploy-verify` checks it; `just live` and `just doctor` compare it with `main`). GitHub deploys every push to `main` (`.github/workflows/deploy.yml`, ADR 0025: `just test`, the release checks, then the public flarepress action, with this repo's own token); `site/` is the site folder. Agents never deploy. GitHub runs `just test` on every push (`.github/workflows/test.yml`) and checks the live site daily (`just live-check`, `.github/workflows/live.yml`).
-- After each deploy, `just cloud-smoke` (the API) and `just cloud-e2e` (two devices syncing) check it live. `just cloud-prune --smoke` clears what a killed check left. The checks prove who they are with the secret `CHECKS_KEY` (`X-Checks-Key`); until Ben adds the GitHub secret (TODO.md, Ben does), the Worker has none and lets their ids pass on the id alone.
+- noodlepads.com serves `main`: its `version.json` names the release and commit (`v1.0.775-a050cee`, flarepress `release=`) (`just deploy-verify` checks it; `just live` and `just doctor` compare it with `main`). GitHub deploys every push to `main` (`.github/workflows/deploy.yml`, ADR 0025: `just test`, the release checks, then the public flarepress action, with this repo's own token); `site/` is the site folder. Agents never deploy. GitHub runs `just test` on every push (`.github/workflows/test.yml`) and checks the live site daily (`just live-check`, `.github/workflows/live.yml`).
+- After each deploy, `just cloud-smoke` (the API) and `just cloud-e2e` (two devices syncing) check it live. `just cloud-prune --smoke` clears what a killed check left. The checks prove who they are with `CHECKS_KEY` (`X-Checks-Key`): deploy.yml puts the GitHub secret into the Worker on each deploy; unset, the Worker lets the checks' ids pass on the id alone.
 - Feedback (Ben, 2026-10-19): ⚙️ Settings → About → Feedback, behind the grown-up sum at every level (`web/grown-up.js`, shared with 🧸 Kids' ⚙️), opens Send feedback, centered on every width (`web/feedback.js`); Send posts the text as typed to `POST /api/feedback`, flarepress's shared `handleFeedback` (vendored in `worker/events-worker.js`), into the shared R2 bucket `app-suggestions` (binding `FEEDBACK`, rate limit `FEEDBACK_LIMITER`); the telemetry runner's daily pull moves it to Ben's notes, kept 90 days. The public policy says so (privacy.pdxfixit.com/noodlepads).
 
 ## Built
@@ -73,6 +73,7 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 
 ## In flight
 
+- The live cloud-smoke step "wrong PINs at open do not lock the key" failed once, on the deploy of df56f43, and passed on the deploy after it (a050cee). An agent is checking the cause.
 - Fixing every bug found while mapping `docs/architecture/` (Ben, 2026-10-26: "fix all the bugs… every darn one"): every area has been through the council. The simplify survey (`docs/design/simplify.md`) is done.
 - The council's round 1 fixes (`docs/council.md`, ADR 0034; 22 seats, 10 of which blocked something) are on worktree branches (TODO "Agents do", Council round 1). Its questions for Ben are asked one at a time in the chat; the rest wait in `docs/questions.md`.
 - Pads and 🎤 Live go silent on Ben's phone (Chrome for Android): only the installed app, after a while; swiping it away and reopening brings the sound back. On Live the press is drawn by app code (`.down`), so the app never hears the touch there. Not reproduced here: 30 random 250-tap sessions, a freeze and thaw and a suspended AudioContext all play. Not testable here: real Android audio focus and the installed app's lifecycle (`Page.setWebLifecycleState` only approximates them). Live: a finger tap that plays nothing is logged as a `tap` entry saying how far it got (`web/tap-watch.js`; `just logs --digest` lists them), 📋 copies the device code in ⚙️ Settings, and `just taps` (CI and the deploy checks) taps Pads, Live and Kids with a finger in headless Chrome. Ben's phone has 📮 reports on; its device code is `26AW-5PAQ`. Next: read its `tap` entries (`telemetry.py pull`, then `just logs --digest` on the Mac), write the test that fails on that cause, fix it. The self-heal (a reload after silent taps) is held until the cause is known.
@@ -86,16 +87,22 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 
 ## Waits on Ben
 
-- Real sound clips (the spoken callouts among them) and the v2 voices question: `TODO.md` "Ben does".
-- Offers he has not answered: `TODO.md` "Offered, not approved".
-- 🎚️ Mixer: whether its sheet may scroll sideways.
+- Isopix: run `just names-secret` and `gh secret set ISOPIX_NAME_HASHES` (TODO "The owner does" in that repo).
+- Isopix history rewrite: ready and verified, waiting on Ben's OK to force-push.
+- The cloud session setup: add `f=/home/user/noodlepads/tools/cloud_setup.sh; [ -f "$f" ] && bash "$f" || true` to the cloud environment's setup script, or add a .claude SessionStart hook.
+- Telemetry: land branch `land/noodlepads-cloud-actions` from a session with `gh`.
+- Listen to the 10 new voice clips (CC0 or CC BY); Craig records the last six (Oh yeah, Bruh, Nice, G G, Drop the beat, Boom).
+- Old domain's DNS record (or drop that TODO line).
+
+## Not yet tried by a person
+
+Ben reports tries as he goes; none of these is a "Ben does" item. On a phone unless it says otherwise:
+
 - 🎧 From a song on real songs: Ben tries them next.
-- Not yet tried by a person. Ben reports tries as he goes; none of these is a "Ben does" item. On a phone unless it says otherwise:
   - **Heard:** 🔊 Even it out; 🗂️ See all's playing; the real recordings in the app; every preset's loudness; the ⚙️ Advanced sharps and flats; the row speakers; 🎹 the instruments (by anyone, anywhere); 💃 Grooves; 🎚️ Mixer; 🎼 Song; 🎹 the piano roll; 🔔 Let it ring; 👆 touch layouts; 🧸 Kids' pads, the mic's count and the tune; 🎧 From a song through a real tab or microphone.
   - **Tried by touch:** an empty beat row's ✕ going on one tap (a stray thumb, Undo for 8 s); 🎉 Play and 🛠️ Make; the beat bar; the scratch beat and song; 📌 pattern chips; ⇆ Move; Beats' control bar and row drags (and with a real mouse); ⌨️ Keys recording for feel; 🎼 Song; 🎹 the piano roll; ✏️ Layout; 👆 touch layouts; ▦ layout grids (with a real finger); notices; 👥 People and 👋 Who's playing now?; beat rows on the left; 🎧 From a song.
   - **By a kid:** 🧸 Kids (by a five-year-old); a new person's first steps; the four key rows on a real keyboard.
-  - **Elsewhere:** the play counts (`noodlepads.play`) from 🎤 Live's keys and 👆 tiles and a pad's loop, in the usage events from a real phone; pad skins on a tablet and under a finger; the app installed, and offline; ⌨️ Keys' playhead beside the click on a real device; ☁️ Open from the cloud's bar over a slow network, and the back gesture on Android and iOS Safari suspending its fetch; two real phones or tablets syncing; Feedback sent for real.
-  - **Elsewhere:** a real browser refusing a delete (another tab holding the database); the app loading on an older iPhone or iPad (Safari before 16.4: no regex lookbehind left, `tests/no-lookbehind.test.mjs`); pad skins on a tablet and under a finger; the app installed, and offline; ⌨️ Keys' playhead beside the click on a real device; ☁️ Open from the cloud's bar over a slow network, and the back gesture on Android and iOS Safari suspending its fetch; two real phones or tablets syncing; Feedback sent for real.
+  - **Elsewhere:** a real browser refusing a delete (another tab holding the database); the app loading on an older iPhone or iPad (Safari before 16.4: no regex lookbehind left, `tests/no-lookbehind.test.mjs`); the play counts (`noodlepads.play`) from 🎤 Live's keys and 👆 tiles and a pad's loop, in the usage events from a real phone; pad skins on a tablet and under a finger; the app installed, and offline; ⌨️ Keys' playhead beside the click on a real device; ☁️ Open from the cloud's bar over a slow network, and the back gesture on Android and iOS Safari suspending its fetch; two real phones or tablets syncing; Feedback sent for real.
 
 ## Known quirks
 
