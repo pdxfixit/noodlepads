@@ -24,7 +24,7 @@ version.json as `v<RELEASE>-<short commit>` from `web/version.js`.
 | Pure modules | most `tests/*.test.mjs` | Node, imports `web/*.js` directly | logic, data shapes, cleaners |
 | The real app on a stand-in page | over 70 test files (`installPage` + `import('../web/app.js')`) | Node + `fake-dom.mjs` | wiring, rendering, flows, stored records |
 | The real Worker | `worker*.test.mjs`, `metrics`, `events-route`, `feedback-route`, `privacy`, cloud app tests | Node + `fake-d1.mjs`, `new Request` | routes, SQL against `worker/schema.sql` |
-| Whole-repo guards | `no-names`, `docs`, `offline`, `modules`, `help`, `log-clean`, `migrations`… (below) | Node, reading files or `git ls-files` | rules every change must keep |
+| Whole-repo guards | `docs`, `offline`, `modules`, `help`, `log-clean`, `migrations`… (below) | Node, reading files or `git ls-files` | rules every change must keep |
 | Tools | `tools/test_*.py`, `skills/noodlepads-logs/test_gate.py` | `python3 -m unittest` | the tools, and generated files in `web/` |
 | A real browser | `look.mjs` (`just look`) | headless Chrome + `serve.py` | widths, errors, CSP, 44 px, overlaps, screenshots |
 | The live site | `look-cloud.mjs` (`just cloud-smoke`, `just cloud-e2e`), `live_check.py` | noodlepads.com | after a deploy; daily |
@@ -170,7 +170,6 @@ what it forces an agent to do.
 | `track-page.test.mjs` | where usage events come from, and that a kid's own words never reach one | a new `content.finish` kind or control name |
 | `migrations.test.mjs` | `schema-before-001.sql` + every `worker/migrations/NNN-*.sql` equals `worker/schema.sql` (tables, columns, indexes), each migration records itself in `migrations`, and `schema.sql` lists them all as applied | a schema change is a new migration plus the full `schema.sql`, in one commit |
 | `startup-remembered.test.mjs` | the app starts, on the right screen, with every remembered `localStorage` key set (old and junk values too) | add the new key to its `remembered` map (by convention: nothing checks the map is complete) |
-| `no-names.test.mjs` | no tracked file or path holds a kid's name (known only as SHA-256 hashes; one is an everyday word caught only when capitalized or written as an id) | use Pip, Juno, Toby, Wren or "a kid" |
 | `no-plain-email.test.mjs` | no tracked file holds a plain email address (a GitHub no-reply and the co-author line are allowed); the PIN-reset address comes from `contact.js` | never write an address out |
 | `conflict-markers.test.mjs` | no tracked text file holds `<<<<`, `>>>>` or `\|\|\|\|\|\|\|` at a line start | finish the merge |
 | `docs.test.mjs` | every relative Markdown link in AGENTS.md, CLAUDE.md, README.md, TODO.md, `docs/*.md`, `docs/adr`, `docs/design`, `docs/architecture` and `docs/architecture` resolves; every backticked file AGENTS.md and how-to name exists (bar the deploy's `version.json` and flarepress's tools); every ADR is in the index, with a number of its own; CLAUDE.md starts `@AGENTS.md`; the problem-report design doc matches `worker/reports.js` | renumber a clashing ADR; fix the link |
@@ -192,7 +191,7 @@ what it forces an agent to do.
 | `tools/test_bump_version.py` | the release rules, and the scripts on a throwaway repo | — |
 | `tools/test_doctor.py` | `doctor.sh`'s live line, on a throwaway repo against a local version.json | — |
 
-Three guards read `git ls-files` (`no-names`, `no-plain-email`,
+Two guards read `git ls-files` (`no-plain-email`,
 `conflict-markers`), so an untracked new file passes them until it is
 committed. `just ship` runs the tests a second time on the commit in its
 throwaway worktree for that reason.

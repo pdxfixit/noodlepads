@@ -87,7 +87,7 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 
 ## Waits on Ben
 
-- Isopix, on the Mac (its history was rewritten 2026-10-28): in the OLD isopix clone, before fetching, build its names secret from the old test with its names-secret recipe (`--from-commit 6e42f34`) into `~/.config/isopix/names.json` and `gh secret set ISOPIX_NAME_HASHES`; then move every isopix and noodlepads clone onto the new history (`git fetch origin && git checkout -B main origin/main`); then push the rewritten tag the session's proxy refused: `git push --force origin 999605f55f7a1926e3504b51dde7b1c4a2b986ea:refs/tags/v1.0.1`.
+- Isopix (optional; history rewritten 2026-10-28): push the rewritten tag the session could not: `git push --force origin 999605f55f7a1926e3504b51dde7b1c4a2b986ea:refs/tags/v1.0.1` in the isopix clone, after moving it onto the new history (`git fetch origin && git checkout -B main origin/main`, also in every noodlepads clone).
 - The cloud session setup: add `f=/home/user/noodlepads/tools/cloud_setup.sh; [ -f "$f" ] && bash "$f" || true` to the cloud environment's setup script, or add a .claude SessionStart hook.
 - Telemetry: land branch `land/noodlepads-cloud-actions` from a session with `gh`.
 

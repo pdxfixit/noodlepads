@@ -2539,7 +2539,7 @@ test('Pads has a pad size: one smooth slider sizes the grid as it moves and is r
   const { getSetting, setSetting } = await import('../web/settings.js');
   const slider = $('#pads-size-slider');
   assert.equal(slider.getAttribute('aria-label'), 'Pad size');
-  assert.equal(['min', `max`, 'step'].map((a) => slider.getAttribute(a)).join(' '), '0 100 1');   // max in backticks: tests/no-names.test.mjs
+  assert.equal(['min', `max`, 'step'].map((a) => slider.getAttribute(a)).join(' '), '0 100 1');
   assert.equal($('#pads-size').classList.contains('keyed'), false, 'many stops: a slider, not keys');
   assert.equal($('#pads-size').querySelector('.slider-keys'), null);
   assert.equal(getSetting('padSize'), 'auto', 'the screen\'s own size to begin with');

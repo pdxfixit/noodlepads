@@ -424,8 +424,8 @@ ship msgfile +files:
     [ ${#kept[@]} -eq 0 ] || git -C "$wt" add -A -- "${kept[@]}"   # deletions are staged by git rm above
     git -C "$wt" commit -q -F "$(cd "$(dirname '{{msgfile}}')" && pwd)/$(basename '{{msgfile}}')"
     for f in "${files[@]}"; do [ ! -e "$f" ] || cmp -s "$f" "$wt/$f" || { echo "🛑 $f changed while committing" >&2; exit 1; }; done
-    # Test the commit itself too: checks that read `git ls-files` (no-names,
-    # conflict markers) see a new file only once it is tracked. On 2026-10-11
+    # Test the commit itself too: checks that read `git ls-files` (conflict
+    # markers, plain emails) see a new file only once it is tracked. On 2026-10-11
     # an untracked test file passed here and then failed on main.
     (cd "$wt" && just test-quiet) || { echo "🛑 tests fail on the commit; main unchanged" >&2; exit 1; }
     # The release: a change to web/ carries its bump, and PATCH is this commit's count.

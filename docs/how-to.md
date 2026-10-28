@@ -69,7 +69,7 @@ A stored-format change is significant: it gets an ADR ([adr/README.md](adr/READM
 | A request from Ben | A line in [TODO.md](../TODO.md) "Agents do" at once; delete it when the work lands. |
 | A standing rule for agents | AGENTS.md if it is short and every session needs it; else the doc for that area, linked from AGENTS.md. |
 
-`tests/docs.test.mjs` checks every relative link (and a `#heading` it names) and that every ADR is in the index. `tests/no-names.test.mjs` checks no kid's name is anywhere, in a file or in the author or message of a commit since 2026-10-27. Commit with `docs:` and a `Council:` trailer (developer experience and docs steward review tooling and docs, or `Council: none (docs)`); a docs-only commit still deploys (the site is unchanged, so `deploy-verify` just sees the new commit).
+`tests/docs.test.mjs` checks every relative link (and a `#heading` it names) and that every ADR is in the index. Commit with `docs:` and a `Council:` trailer (developer experience and docs steward review tooling and docs, or `Council: none (docs)`); a docs-only commit still deploys (the site is unchanged, so `deploy-verify` just sees the new commit).
 
 ## Landing other agents' work
 

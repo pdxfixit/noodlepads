@@ -19,7 +19,7 @@ The one list. **Ben does** is what only Ben can do: tries, decisions, recordings
 
 - **Add the new cloud events to the telemetry runner** (2 min, on the Mac): in `../telemetry/events.toml` (the pdxfixit/telemetry repo beside this checkout) add `up` and `leave` under `noodlepads.cloud` (what `web/track-page.js` now sends in place of `put` and `offline`), then run `just test` in the main checkout, since `tests/telemetry.test.mjs` checks it only there.
 
-- **Isopix: names secret and its one tag** (5 min, on the Mac; its history was rewritten 2026-10-28): in the OLD isopix clone, before fetching, run its names-secret recipe with `--from-commit 6e42f34` into `~/.config/isopix/names.json`, then `gh secret set ISOPIX_NAME_HASHES -R pdxfixit/isopix < ~/.config/isopix/names.json`. Then move every isopix and noodlepads clone onto the new history (`git fetch origin && git checkout -B main origin/main`), and push the tag the session could not: `git push --force origin 999605f55f7a1926e3504b51dde7b1c4a2b986ea:refs/tags/v1.0.1` (in the isopix clone).
+- **Isopix: its one old tag** (optional, 2 min, on the Mac; its history was rewritten 2026-10-28): push the rewritten tag the session could not: `git push --force origin 999605f55f7a1926e3504b51dde7b1c4a2b986ea:refs/tags/v1.0.1` in the isopix clone, after moving it onto the new history (`git fetch origin && git checkout -B main origin/main`, also in every noodlepads clone).
 
 - **Isopix: approve the history rewrite** (in the isopix repo): it is ready and verified; say yes and the force-push goes.
 
