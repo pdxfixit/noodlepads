@@ -52,6 +52,7 @@ import { TICK_MS, lookahead } from './beat-engine.js';
 import { merge3, sameContent, canon } from './merge3.js';
 import { createChooser } from './beat-chooser.js';
 import { createGrooves } from './beat-grooves.js';
+import { landed } from './landed.js';
 import { createLibrary } from './beat-library.js';
 
 const ARM_MS = 3000;                   // how long a Clear? or Remove? waits for its second tap
@@ -314,6 +315,7 @@ export function createSequencer(deps) {
     const id = newId('beat');
     deps.library.put({ ...cleanPattern(scratch, personId), id, name, created: now, saved: now });
     logEvent('beat', { action: 'keep', groove: !!groove });
+    landed('[data-beat-open]');
     return { id, name };
   }
 
@@ -374,6 +376,7 @@ export function createSequencer(deps) {
     const name = uniqueName(`${cutName(stored.name || SCRATCH_NAME, MAX_NAME - 9)} (synced)`, null);
     deps.library.put({ ...structuredClone(stored), id: newId('beat'), name, created: stored.created ?? Date.now(), saved: Date.now() });
     logEvent('beat', { action: 'keep', groove: false });
+    landed('[data-beat-open]');
     showBanner(`Another device changed this beat too. Its version is kept as “${name}” in 🗂️ Beats.`);
     return { record: mine, merged: false };
   }
@@ -396,6 +399,7 @@ export function createSequencer(deps) {
     save();
     if (old) deps.library.remove(old.id);
     logEvent('beat', { action: 'keep', groove: !!groove });
+    landed('[data-beat-open]');
     render();
     deps.onBeatChange?.();
     if (!quiet) deps.announce?.(`Kept as “${name}” in 🗂️ Beats. Your scratch beat is empty again.`);

@@ -11,6 +11,7 @@ import { takeName, soundName, cutName, MAX_NAME } from './names.js';
 import { openDialog, setupDialog } from './dialogs.js';
 import { showBanner } from './ui.js';
 import { logEvent } from './log.js';
+import { landed } from './landed.js';
 import { renderTake } from './share-render.js';
 import { beatFromTake } from './take-beat.js';
 
@@ -72,6 +73,7 @@ export function createTakes({ el, deps, deck, light, lightTiles, showRec, lineMs
       ...(bpm ? { bpm } : {}),
     };
     deps.saveTake(lastTake);
+    landed('#dj-takes-open');
     showTake(lastTake);
     deps.announce?.(`Saved ${lastTake.name}, ${Math.round(lastTake.duration)} seconds.`);
   }

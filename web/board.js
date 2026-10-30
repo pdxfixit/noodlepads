@@ -3,6 +3,7 @@
 
 import { state, persist } from './state.js';
 import { getSetting } from './settings.js';
+import { landed } from './landed.js';
 import {
   mergePeople, colorName as paletteColorName, padColor as paletteColor, clipsForPerson,
 } from './model.js';
@@ -85,5 +86,6 @@ export function nextClipColor(personId) {
 // browser refused, and the clip stays in memory for this visit).
 export function addClip(clip) {
   state.userClips.push(clip);
+  landed('#pads-tab');
   return persist('clips', clip);
 }

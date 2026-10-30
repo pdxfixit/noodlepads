@@ -44,6 +44,7 @@ opens with a comment saying what it owns. How the app behaves is in
   - `track-page.js`: where the events come from: lifecycle, screens, dialogs, one click listener for every control (named without a kid's words), content, settings, errors and speed; the browser family on `app.open`, `to` on `screen.view`, and `noodlepads.level` once a load
   - `usage.js`: the usage switch (`sendUsage`) as the counting modules read it; imports nothing, so the Worker can import them
   - `overflow.js`: a row's menu (`moreMenu`): on Beats and ⌨️ Keys a row's emoji opens it, listing the row's buttons marked `data-more-word` (🔄 Change sound or 🖼️ Change picture, 🔔 🧹 ✕, and ↑ ↓ on Beats) as icon + word; a tap there taps the real button
+  - `landed.js`: the one-time glow on the button of the collection something was just kept in (🗂️ Beats, 🗂️ Songs, 🎬 Takes, 🔊 Pads), `.landed` in `styles.css`
   - `lines.js`: lines of controls that stay on one line, giving way step by step as room runs out (the toolbar, the beat bar, the beat's bars · time signature · swing), 🎤 Live's bar folding into its ⋯ (`foldLine`), and keys for a slider with five stops or fewer (Tone, On the beat's note lengths), falling back to the slider when they don't fit
   - `tempo-key.js`: on a phone, each control bar's tempo folded into one key (the number over ▾) that opens it as a line of its own under the bar; Beats, ⌨️ Keys, 🎤 Live's click and 🎼 Song each keep their own tempo controls inside it
   - `mix.js`: ➕ Mix with another sound (pure: two sounds in, one out)

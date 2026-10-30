@@ -6009,3 +6009,13 @@ body[data-hints~="mixer"] [data-mixer]::before {
 }
 /* 🔄 Sync now and 🔗 Share… side by side in a profile sheet's ☁️ part. */
 #profile-cloud-tools:not([hidden]) { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* ✨ Landed (web/landed.js): the button of the collection something was just kept in glows once, as a pressed pad does. */
+@keyframes landed-glow {
+  0% { box-shadow: 0 0 0 0 rgb(255 229 138 / 0.9); }
+  35% { box-shadow: 0 0 18px 5px rgb(255 229 138 / 0.85), inset 0 0 0 3px #FFE58A; }
+  100% { box-shadow: 0 0 0 0 rgb(255 229 138 / 0); }
+}
+.landed.landed { animation: landed-glow 0.65s ease-out 1; }
+@media (prefers-reduced-motion: reduce) {
+  .landed.landed { animation: none; box-shadow: inset 0 0 0 3px #FFE58A; }
+}

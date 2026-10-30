@@ -29,6 +29,7 @@ import { tempoKey } from './tempo-key.js';
 import { encodeWav, normalize, audioFileFrames, audioView, audioFileName, AUDIO_RING_SECONDS } from './wav.js';
 import { COMMON_BPMS, tempoStops, stopFor, outputDelay } from './beat.js';
 import { logEvent } from './log.js';
+import { landed } from './landed.js';
 import { createAudioSaver } from './download.js';
 import { showBanner } from './ui.js';
 import { countPlay } from './play-count.js';
@@ -175,6 +176,7 @@ export function createSong(deps) {
       const now = Date.now();
       deps.songs.put({ ...structuredClone(old), id: newId('song'), name: kept, created: now, saved: now });
       logEvent('song', { action: 'keep' });
+      landed('#song-open');
     }
     if (old) deps.songs.remove(old.id);
     openSong(null);
@@ -250,6 +252,7 @@ export function createSong(deps) {
     save();
     if (old) deps.songs.remove(old.id);
     logEvent('song', { action: 'keep' });
+    landed('#song-open');
     render();
     deps.announce?.(`Kept as “${name}” in 🗂️ Songs. Your scratch song is empty again.`);
   }
