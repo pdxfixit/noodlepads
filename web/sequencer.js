@@ -40,7 +40,7 @@ import { playheadSpans, createBars } from './playhead.js';
 import { fitLine } from './lines.js';
 import { pillHolds } from './finger.js';
 import { encodeWav, normalize, audioPasses, audioFileFrames, audioView, audioFileName, AUDIO_RING_SECONDS } from './wav.js';
-import { BAR_CHOICES, BEAT_BAR_STEPS, COMMON_BPMS, DEFAULT_BPM, MAX_BPM, MAX_ROWS, MAX_SWING, MIN_BPM, RING_MS, STEPS_PER_BEAT, SIGNATURES, audible, barSteps, chipBeats, cleanPattern, cleanRow, holdPill, isPinned, moveItem, multiplyRows, outputDelay, pillTarget, planHits, retimeAt, rowSlot, stepSeconds, stepsHeard, stopFor, tapPill, tempoStops, typedBpm } from './beat.js';
+import { BAR_CHOICES, BEAT_BAR_STEPS, COMMON_BPMS, DEFAULT_BPM, MAX_BPM, MAX_ROWS, MAX_SWING, MIN_BPM, RING_MS, STEPS_PER_BEAT, SIGNATURES, audible, barSteps, chipBeats, cleanPattern, cleanRow, grooveBeat, holdPill, isPinned, moveItem, multiplyRows, outputDelay, pillTarget, planHits, retimeAt, rowSlot, stepSeconds, stepsHeard, stopFor, tapPill, tempoStops, typedBpm } from './beat.js';
 import { cleanFx, silencedBySolo, createMixer } from './mixer.js';
 import { addNote } from './notes.js';
 import { createRoll } from './roll.js';
@@ -288,12 +288,22 @@ export function createSequencer(deps) {
     stop();   // first: a recording ending saves its hits into the beat it was in
     offerUndo(null);
     const old = scratchSaved();
-    const kept = hasHits(old) ? keepAside(old).name : null;
+    const kept = hasHits(old) && !isUntouchedGroove(old) ? keepAside(old).name : null;
     if (old) deps.library.remove(old.id);
     openBeat(null, { resume: false });
     logEvent('beat', { action: 'new' });
     if (kept) showBanner(`Kept as “${kept}” in 🗂️ Beats. A blank scratch beat.`);
     else deps.announce?.('A blank scratch beat.');
+  }
+  // A scratch that is still exactly the groove it was loaded from has nothing
+  // of its own: the groove is one tap away in 💃 Grooves, so 🆕 New lets it go
+  // rather than filling 🗂️ Beats with copies.
+  function isUntouchedGroove(scratch) {
+    const g = grooveOf(scratch);
+    if (!g) return false;
+    const fresh = grooveBeat(g, personId, (id) => !!deps.clipById(id));
+    const bare = (b) => canon({ ...cleanPattern(b, personId), id: undefined, name: '' });
+    return bare(scratch) === bare(fresh);
   }
   // The stored scratch, put in 🗂️ Beats as a beat of its own, named
   // after its groove or with a fun name. Its id and name.

@@ -91,11 +91,30 @@ test('🆕 New over a scratch with hits: it joins 🗂️ Beats as it was, a lin
   assert.equal(hasUndo(), false, 'nothing was lost: no Undo');
 });
 
-test('🆕 New with a named beat open over a groove in the scratch: the groove is kept under its name, the named beat as it was', () => {
-  const named = mine()[0];
+// A groove nobody changed is the same as the one in 💃 Grooves: New lets it go.
+test('🆕 New over a groove nobody changed: nothing is kept; change one pill and it is', () => {
+  const before = new Set(mine().map((b) => b.id));
+  const load = () => {
+    $('#seq-grooves').dispatch('click');
+    $('#groove-list').querySelector('[data-groove="four"]').dispatch('click');
+  };
+  load();
+  assert.equal(name(), 'Four on the floor (scratch)');
+  bar().querySelector('[data-beat-new]').dispatch('click');
+  assert.equal(scratch(), undefined, 'the scratch is blank');
+  assert.equal(added(before).length, 0, 'nothing joins 🗂️ Beats');
+  assert.notEqual($('#banner-text').textContent.slice(0, 8), 'Kept as ', 'and no line says it was kept');
+  load();
+  rows()[0].querySelectorAll('.pill')[1].dispatch('click');
+  bar().querySelector('[data-beat-new]').dispatch('click');
+  assert.equal(added(before).length, 1, 'one pill changed: it is kept');
+  assert.match(added(before)[0].name, /Four on the floor/);
+});
+
+test('🆕 New with a named beat open over an unchanged groove in the scratch: the groove goes, the named beat is as it was', () => {
+  const named = mine().find((b) => !/Four on the floor/.test(b.name));
   $('#seq-grooves').dispatch('click');
   $('#groove-list').querySelector('[data-groove="four"]').dispatch('click');
-  assert.equal(name(), 'Four on the floor (scratch)');
   bar().querySelector('[data-beat-open]').dispatch('click');
   $('#lib-list').children.find((li) => li.querySelector('.lib-name').textContent === named.name).querySelector('[data-load]').dispatch('click');
   assert.equal(name(), named.name, 'the named beat is open; the groove waits in the scratch');
@@ -104,10 +123,7 @@ test('🆕 New with a named beat open over a groove in the scratch: the groove i
   bar().querySelector('[data-beat-new]').dispatch('click');
   assert.equal(name(), 'Scratch beat');
   assert.equal(scratch(), undefined);
-  const kept = added(before);
-  assert.equal(kept.length, 1, 'the scratch it was not showing is kept too');
-  assert.match(kept[0].name, /Four on the floor/, 'named after its groove, as 💾 Keep names it');
-  assert.ok(hitsOf(kept[0]) > 0);
+  assert.equal(added(before).length, 0, 'the unchanged groove is not kept');
   assert.equal(JSON.stringify(state.savedBeats.find((b) => b.id === named.id)), was, `“${named.name}” is as it was`);
   assert.equal(hasUndo(), false);
 });
