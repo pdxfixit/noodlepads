@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drafts and Undo</title>
+<!-- Mockup for docs/design/drafts.md: ↩️ Undo / ↪️ Redo and a kept beat's draft
+     (💾 Save, ⏪ Put back) on 🥁 Beats and 🎼 Song, at a 375 px phone.
+     Drawn by hand with the app's colors, fonts and sizes (44 px targets). -->
+<style>
+@font-face { font-family: "Anybody"; src: url("../../web/fonts/anybody-latin.woff2") format("woff2"); font-weight: 100 900; font-stretch: 50% 150%; }
+@font-face { font-family: "Atkinson Hyperlegible Next"; src: url("../../web/fonts/atkinson-next-latin.woff2") format("woff2"); font-weight: 200 800; }
+:root {
+  --board: #1F3FA8; --bed: color-mix(in srgb, var(--board) 24%, #141318); --deck: color-mix(in srgb, var(--bed) 62%, black);
+  --ink: #1C1740; --chalk: #ECEAF2; --chalk-edge: #A9A5BA; --led: #FFE58A;
+  --ui: "Atkinson Hyperlegible Next", system-ui, sans-serif; --display: "Anybody", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px; background: var(--board); color: #fff; font: 600 15px/1.4 var(--ui); }
+h1 { font: 900 2rem/1 var(--display); margin: 0 0 6px; }
+h2 { font: 800 1.25rem/1.2 var(--ui); margin: 32px 0 4px; }
+p.note { max-width: 72ch; margin: 4px 0 12px; color: rgb(255 255 255 / 0.88); }
+.row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+figure { margin: 0; width: 375px; }
+figcaption { font-weight: 800; margin-bottom: 6px; min-height: 3.2em; }
+figcaption small { display: block; font-weight: 600; opacity: 0.85; }
+.phone { padding: 12px 16px; background: color-mix(in srgb, var(--board) 85%, black); border-radius: 18px; }
+.panel { background: var(--bed); border-radius: 22px; overflow: hidden; }
+.head { padding: 10px; background: color-mix(in srgb, var(--bed) 80%, white 6%); margin: 10px; border-radius: 16px; display: grid; gap: 8px; }
+.line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.deck { display: grid; gap: 10px; padding: 12px; background: var(--deck); border-top: 1px solid rgb(255 255 255 / 0.1); border-bottom: 3px solid rgb(255 255 255 / 0.25); }
+.icon { flex: none; width: 36px; text-align: center; font-size: 1.5rem; }
+.name { flex: 1 1 auto; min-width: 0; font: 800 1.1rem/1 var(--ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.name i { font-style: normal; color: var(--led); }
+.name small { display: block; font: 700 0.75rem/1.2 var(--ui); color: var(--led); margin-top: 3px; }
+button { font: inherit; color: inherit; }
+.sq, .word { flex: none; height: 44px; border: 2px solid rgb(255 255 255 / 0.55); border-radius: 12px; background: transparent; }
+.sq { width: 44px; padding: 0; font-size: 1.2rem; }
+.sq.dim { opacity: 0.35; }
+.sq.save { background: var(--led); border-color: var(--led); color: var(--ink); }
+.word { padding: 0 10px; font: 800 0.95rem/1 var(--ui); white-space: nowrap; }
+.word.fill { flex: 1 1 0; }
+.word.save { background: var(--led); border-color: var(--led); color: var(--ink); }
+.play { flex: 1 1 auto; height: 52px; border: 0; border-radius: 12px; background: var(--led); color: var(--ink); font: 800 1.05rem/1 var(--ui); box-shadow: 0 5px 0 color-mix(in srgb, var(--led) 50%, black); white-space: nowrap; }
+.tempo { flex: none; width: 48px; height: 52px; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; font: 800 1rem/1 var(--ui); }
+.pair { display: flex; gap: 0; flex: none; }
+.pair .sq:first-child { border-radius: 12px 0 0 12px; border-right-width: 1px; }
+.pair .sq:last-child { border-radius: 0 12px 12px 0; border-left-width: 1px; }
+.rows { padding: 12px; display: grid; gap: 8px; }
+.r { display: flex; gap: 6px; align-items: center; }
+.r b { width: 36px; font-size: 1.4rem; text-align: center; }
+.r i { width: 30px; height: 40px; border-radius: 8px; background: rgb(255 255 255 / 0.12); }
+.r i.on { background: var(--led); }
+.r i.new { background: var(--led); outline: 3px solid #fff; }
+.chip { display: flex; gap: 8px; padding: 0 10px 10px; }
+.chip > span { flex: 1; text-align: center; padding: 10px 6px; border: 2px solid rgb(255 255 255 / 0.5); border-radius: 22px; font-weight: 800; }
+.chip > span.lit { border-color: var(--led); color: var(--led); }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--led); margin-left: 4px; vertical-align: middle; }
+.back { display: flex; gap: 8px; padding: 10px; background: color-mix(in srgb, var(--led) 18%, var(--bed)); border-radius: 16px; margin: 10px; }
+.list { padding: 10px; display: grid; gap: 8px; }
+.list div { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: rgb(255 255 255 / 0.08); font-weight: 800; }
+.list div small { margin-left: auto; font-weight: 700; color: var(--led); }
+</style>
+</head>
+<body>
+<h1>Drafts and Undo</h1>
+<p class="note">Ben, 2026-11-04: a stray tap must not change a kept beat or song, and nothing in progress is lost in a crash. Edits to a kept beat go into a draft that saves on every tap. The kept beat changes only on 💾 Save. ⏪ Put back throws the draft away. Leaving never asks. ↩️ Undo and ↪️ Redo cover every change. The scratch beat stays as it is today (💾 Keep).</p>
+
+<h2>🥁 Beats</h2>
+<div class="row">
+  <figure>
+    <figcaption>1 · Today<small>Every tap writes straight into "Mega Rocket". No Undo for a tap.</small></figcaption>
+    <div class="phone"><div class="panel">
+      <div class="head">
+        <div class="line"><button class="word fill">💃 Grooves</button><button class="word fill">⌨️ Keys</button><button class="word fill">🗂️ Beats</button></div>
+        <div class="line"><span class="icon">🥁</span><span class="name">Mega Rocket</span><button class="sq">✏️</button><button class="sq">🆕</button></div>
+      </div>
+      <div class="chip"><span class="lit">1 Mega Rocket</span><span>2 Cosmic Robot</span></div>
+      <div class="deck">
+        <div class="line"><button class="play">▶ Play</button><button class="tempo">100<br>▾</button><button class="sq" style="height:52px">⏲️</button></div>
+      </div>
+      <div class="rows"><div class="r"><b>🦶</b><i class="on"></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i></div><div class="r"><b>👏</b><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i class="on"></i></div></div>
+    </div></div>
+  </figure>
+
+  <figure>
+    <figcaption>2 · Proposed, nothing changed yet<small>↩️ ↪️ join the play line, faint until there is something to undo or redo.</small></figcaption>
+    <div class="phone"><div class="panel">
+      <div class="head">
+        <div class="line"><button class="word fill">💃 Grooves</button><button class="word fill">⌨️ Keys</button><button class="word fill">🗂️ Beats</button></div>
+        <div class="line"><span class="icon">🥁</span><span class="name">Mega Rocket</span><button class="sq">✏️</button><button class="sq">🆕</button></div>
+      </div>
+      <div class="chip"><span class="lit">1 Mega Rocket</span><span>2 Cosmic Robot</span></div>
+      <div class="deck">
+        <div class="line"><button class="play">▶ Play</button><span class="pair"><button class="sq dim" style="height:52px">↩️</button><button class="sq dim" style="height:52px">↪️</button></span><button class="tempo">100<br>▾</button><button class="sq" style="height:52px">⏲️</button></div>
+      </div>
+      <div class="rows"><div class="r"><b>🦶</b><i class="on"></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i></div><div class="r"><b>👏</b><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i class="on"></i></div></div>
+    </div></div>
+  </figure>
+
+  <figure>
+    <figcaption>3 · Proposed, after a stray tap<small>The draft is saved already. ✏️ turns into 💾 Save (where the scratch has 💾 Keep), ⏪ Put back comes in beside it, and the name says "changed". ↩️ lights up.</small></figcaption>
+    <div class="phone"><div class="panel">
+      <div class="head">
+        <div class="line"><button class="word fill">💃 Grooves</button><button class="word fill">⌨️ Keys</button><button class="word fill">🗂️ Beats</button></div>
+        <div class="line"><span class="icon">🥁</span><span class="name">Mega Rocket<small>changed</small></span><button class="sq save">💾</button><button class="sq">⏪</button><button class="sq">🆕</button></div>
+      </div>
+      <div class="chip"><span class="lit">1 Mega Rocket <span class="dot"></span></span><span>2 Cosmic Robot</span></div>
+      <div class="deck">
+        <div class="line"><button class="play">▶ Play</button><span class="pair"><button class="sq" style="height:52px">↩️</button><button class="sq dim" style="height:52px">↪️</button></span><button class="tempo">100<br>▾</button><button class="sq" style="height:52px">⏲️</button></div>
+      </div>
+      <div class="rows"><div class="r"><b>🦶</b><i class="on"></i><i></i><i></i><i class="new"></i><i class="on"></i><i></i><i></i></div><div class="r"><b>👏</b><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i class="on"></i></div></div>
+    </div></div>
+  </figure>
+</div>
+<p class="note">Wider screens: the name line has room, so 💾 Save and ⏪ Put back show their words ("💾 Save · ⏪ Put back"), as 💾 Keep does today. 💾 Save glows 🗂️ Beats, as Keep does. ⏪ Put back asks first (red "Put back?", then a second tap), with ↩️ Undo after it. Ctrl/Cmd+Z and Shift+Ctrl/Cmd+Z undo and redo.</p>
+
+<h2>The draft waits: 🗂️ Beats, and back from 🎼 Song</h2>
+<div class="row">
+  <figure>
+    <figcaption>4 · 🗂️ Beats<small>A beat with a draft waiting has a dot and says so. Opening it opens the draft.</small></figcaption>
+    <div class="phone"><div class="panel">
+      <div class="list">
+        <div>🥁 Mega Rocket <small>● changed</small></div>
+        <div>🥁 Cosmic Robot</div>
+        <div>🥁 Sleepy Squid (Ska version)</div>
+      </div>
+    </div></div>
+  </figure>
+  <figure>
+    <figcaption>5 · ✏️ from a 🎼 Song block, after a change<small>The chip offers the save on the way back. ↩ Back to song leaves the draft waiting; the song plays the kept beat.</small></figcaption>
+    <div class="phone"><div class="panel">
+      <div class="back"><button class="word fill save">💾 Save</button><button class="word fill">↩ Back to song</button></div>
+      <div class="head">
+        <div class="line"><span class="icon">🥁</span><span class="name">Mega Rocket<small>changed</small></span><button class="sq save">💾</button><button class="sq">⏪</button><button class="sq">🆕</button></div>
+      </div>
+    </div></div>
+  </figure>
+</div>
+
+<h2>🎼 Song</h2>
+<div class="row">
+  <figure>
+    <figcaption>6 · Today<small>Song's ↩️ Undo lives in a block's sheet, for the visit only.</small></figcaption>
+    <div class="phone"><div class="panel">
+      <div class="head">
+        <div class="line"><span class="icon">🎼</span><span class="name">Road Trip</span><button class="sq">✏️</button></div>
+        <div class="line"><button class="word fill">🆕 New</button><button class="word fill">🗂️ Songs</button></div>
+      </div>
+      <div class="deck"><div class="line"><button class="play">▶ Play song</button><button class="tempo">100<br>▾</button></div></div>
+    </div></div>
+  </figure>
+  <figure>
+    <figcaption>7 · Proposed, after a change<small>The same as Beats: 💾 ⏪ on the name line, ↩️ ↪️ on the play line.</small></figcaption>
+    <div class="phone"><div class="panel">
+      <div class="head">
+        <div class="line"><span class="icon">🎼</span><span class="name">Road Trip<small>changed</small></span><button class="sq save">💾</button><button class="sq">⏪</button></div>
+        <div class="line"><button class="word fill">🆕 New</button><button class="word fill">🗂️ Songs</button></div>
+      </div>
+      <div class="deck"><div class="line"><button class="play">▶ Play song</button><span class="pair"><button class="sq" style="height:52px">↩️</button><button class="sq dim" style="height:52px">↪️</button></span><button class="tempo">100<br>▾</button></div></div>
+    </div></div>
+  </figure>
+</div>
+</body>
+</html>
