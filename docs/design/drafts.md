@@ -1,6 +1,6 @@
 # Drafts and Undo: a kept beat or song changes only on 💾 Save
 
-**Status: proposed, council round 1 done** (2026-11-04); waiting on Ben's answer on where 🗑️ Throw away changes sits (below). Mockup: [drafts-mockup.html](drafts-mockup.html) (open it from a checkout; it loads the app's fonts from `web/fonts/`).
+**Status: accepted, to build** (2026-11-04, [ADR 0036](../adr/0036-drafts.md)); council round 1 done. Ben chose A below. Mockup: [drafts-mockup.html](drafts-mockup.html) (open it from a checkout; it loads the app's fonts from `web/fonts/`).
 
 Ben, 2026-11-04: "if there's a user made changes they don't mean to, like say one loads a groove, and they tap around on accident and then try to exit away, that's committing all the changes that they might not want." Then: "I want to be able to have the content saved in the event of a catastrophe … we don't want the saved file altered any more than we want to lose the work in progress." He chose the draft model (A), Save on the way back to 🎼 Song (1), and the same model for Song (1).
 
@@ -69,7 +69,7 @@ All 22 seats on the mockup and this plan: no block, 22 ✏️. Folded in:
 - **Android**: system Back leaves without asking, the draft waiting; from a beat opened from a song block it goes back to the song.
 - **Checks**: `just look` views for a draft (`beat-draft`, `beat-draft-back`, `lib-draft`) at 320 to 3440 and `--height 680`; a test that a stray tap leaves the kept record byte for byte; `cloud-e2e` syncs a draft and checks the kept beat unchanged; docs/formats.md, docs/architecture/, guide.md, Help lines, a decisions row and an ADR with each step.
 
-## For Ben
+## Decided: where 🗑️ Throw away changes sits (Ben chose A)
 
 Where 🗑️ Throw away changes sits, given the 320 px name line (🥁 · name · 💾 · 🗑️ · 🆕 leaves the name about 70 px, "Mega Roc…"):
 
