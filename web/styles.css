@@ -669,7 +669,7 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
 /* ↩️ Undo · ↪️ Redo beside ▶ Play (ADR 0036): two keys with a gap, so a slip
    onto ↪️ is less likely; faint with nothing to undo or redo. */
 .beat-undo { display: flex; flex: none; gap: 6px; }
-.beat-undo-btn:disabled { opacity: 0.35; cursor: default; }
+.beat-undo-btn[aria-disabled="true"] { opacity: 0.4; border-style: dashed; cursor: default; }
 /* Tap tempo on Beat Builder's ⏲️: "keep tapping…", then "👆 96", for a moment. */
 .seq-click.tapping { width: auto; padding: 0 10px; font-size: 0.95rem; white-space: nowrap; }
 @media (max-width: 899px) {

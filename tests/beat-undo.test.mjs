@@ -24,6 +24,7 @@ before(async () => {
 });
 
 const undo = () => $('[data-beat-undo]');
+const off = (b) => b.getAttribute('aria-disabled') === 'true';
 const redo = () => $('[data-beat-redo]');
 const rows = () => $('#seq-rows').children.filter((c) => c.classList.contains('seq-row'));
 const pill = (r, s) => rows()[r].querySelectorAll('.pill')[s];
@@ -34,17 +35,17 @@ const playing = () => $('#seq-play').getAttribute('aria-pressed') === 'true';
 
 test('a pill tap on a kept beat: ↩️ turns it off again, and the kept beat is as it was; ↪️ turns it back on', () => {
   newBeatWithRow(page);
-  assert.equal(undo().disabled, true, 'nothing to undo on a beat just opened');
-  assert.equal(redo().disabled, true);
+  assert.equal(off(undo()), true, 'nothing to undo on a beat just opened');
+  assert.equal(off(redo()), true);
   const was = JSON.stringify(stored().rows);
   pill(0, 2).dispatch('click');
   assert.equal(lit(0, 2), true);
-  assert.equal(undo().disabled, false);
+  assert.equal(off(undo()), false);
   undo().dispatch('click');
   assert.equal(lit(0, 2), false, 'the pill is off again');
   assert.equal(JSON.stringify(stored().rows), was, 'and the stored beat is as it was');
-  assert.equal(undo().disabled, true, 'back at the beat as opened');
-  assert.equal(redo().disabled, false);
+  assert.equal(off(undo()), true, 'back at the beat as opened');
+  assert.equal(off(redo()), false);
   redo().dispatch('click');
   assert.equal(lit(0, 2), true, '↪️ turns it back on');
   assert.equal(stored().rows[0].steps[2], true);
@@ -68,7 +69,7 @@ test('steps go back one at a time, a tempo change and a row added too; a new cha
   redo().dispatch('click');
   assert.equal(lit(0, 0), true);
   pill(0, 5).dispatch('click');
-  assert.equal(redo().disabled, true, 'a new change ends Redo');
+  assert.equal(off(redo()), true, 'a new change ends Redo');
 });
 
 test('Ctrl+Z and Shift+Ctrl+Z (Cmd too) step back and forward; never in a text field', () => {
@@ -108,12 +109,12 @@ test('each beat keeps its own steps for the visit: back on a beat, its Undo is s
   const first = name();
   pill(0, 6).dispatch('click');
   newBeatWithRow(page);
-  assert.equal(undo().disabled, true, 'a new beat has none');
+  assert.equal(off(undo()), true, 'a new beat has none');
   const bar = document.querySelectorAll('.beat-bar')[0];
   bar.querySelector('[data-beat-open]').dispatch('click');
   $('#lib-list').children.find((li) => li.querySelector('.lib-name')?.textContent === first).querySelector('[data-load]').dispatch('click');
   assert.equal(name(), first);
-  assert.equal(undo().disabled, false, 'back on the first beat: its step is there');
+  assert.equal(off(undo()), false, 'back on the first beat: its step is there');
   undo().dispatch('click');
   assert.equal(lit(0, 6), false);
 });
@@ -136,4 +137,41 @@ test('⌨️ Keys on: Ctrl+Z undoes there too (its bar has no ↩️ yet); 🎤 
   assert.equal(live.defaultPrevented, false, '🎤 Live: no beat to undo');
   $('#beats-toggle').dispatch('click');
   assert.equal(lit(0, 7), false, 'the beat is as it was left');
+});
+
+test('a removed row brought back by the banner Undo is a step back: ↪️ removes it again, ↩️ goes on back', () => {
+  newBeatWithRow(page);
+  pill(0, 1).dispatch('click');
+  $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click');
+  pill(1, 4).dispatch('click');
+  rows()[1].querySelector('[data-remove]').dispatch('click');
+  rows()[1].querySelector('[data-remove]').dispatch('click');
+  assert.equal(rows().length, 1);
+  $('#banner-action').dispatch('click');
+  assert.equal(rows().length, 2, 'the banner puts the row back');
+  assert.equal(off(redo()), false, 'and that was a step back: ↪️ can take it out again');
+  undo().dispatch('click');
+  assert.equal(lit(1, 4), false, 'the next ↩️ goes on back: the pill on the second row');
+  redo().dispatch('click');
+  redo().dispatch('click');
+  assert.equal(rows().length, 1, '↪️ twice: the row is out again');
+});
+
+test('a middle row put back while playing: every row is there and the beat plays on', async () => {
+  newBeatWithRow(page);
+  for (let i = 0; i < 2; i++) { $('#seq-add').dispatch('click'); $('#chooser-ok').dispatch('click'); }
+  for (let r = 0; r < 3; r++) pill(r, r).dispatch('click');
+  $('#seq-play').dispatch('click');
+  await page.settle();
+  rows()[1].querySelector('[data-remove]').dispatch('click');
+  rows()[1].querySelector('[data-remove]').dispatch('click');
+  assert.equal(rows().length, 2);
+  undo().dispatch('click');
+  assert.equal(rows().length, 3, 'the middle row is back');
+  assert.deepEqual([0, 1, 2].map((r) => lit(r, r)), [true, true, true], 'with its pill, in its place');
+  assert.equal(playing(), true);
+  await page.settle();
+  assert.equal(playing(), true, 'and the beat plays on past the next tick');
+  $('#seq-play').dispatch('click');
+  await page.settle();
 });

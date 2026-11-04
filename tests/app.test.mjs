@@ -1836,12 +1836,12 @@ test('⏲️ Click track: emoji-only by Play on Beats; on 🎤 Live, on its cont
   assert.equal($('#dj-beat-click').getAttribute('aria-pressed'), 'true', 'one click setting for DJ: on in both places');
   $('#dj-beat-click').dispatch('click');
   assert.equal($('#dj-beat-click').getAttribute('aria-pressed'), 'false');
-  // The control bar reads ▶ Play · ● Record · tempo (its key on a phone) · ⏲️, then the bars, as on Beats.
+  // The control bar reads ▶ Play · ● Record · tempo (its key on a phone) · ⏲️, then the bars, as on Beats, whose ▶ Play has ↩️ ↪️ after it (ADR 0036).
   // With Keys, .beat-run (▶ Play · ● Record) and .beat-more lay out as if not there.
   const flat = (e) => e.children.flatMap((c) => (/\bbeat-(run|more)\b/.test(c.className) ? flat(c) : [c]));
   const order = (root) => flat(root.querySelector('.beat-go')).filter((c) => !c.hidden).map((c) => c.className.split(' ')[0]);
   assert.deepEqual(order($('.dj-bar')).slice(0, 5), ['seq-play', 'dj-rec', 'tempo-key', 'beat-tempo', 'seq-click']);
-  assert.deepEqual(order($('#seq-deck')), ['seq-play', 'tempo-key', 'beat-tempo', 'seq-click']);
+  assert.deepEqual(order($('#seq-deck')), ['seq-play', 'beat-undo', 'tempo-key', 'beat-tempo', 'seq-click']);
   assert.ok($('.dj-bar').querySelector('.beat-shape').contains($('#dj-bars')) && $('#seq-deck').querySelector('.beat-shape').contains($('#seq-bars')));
   $('#live-tab').dispatch('click');
   assert.equal($('#dj-click').hidden, false, 'Live has its own ⏲️ on its bar');

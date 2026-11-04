@@ -208,6 +208,7 @@ export function createSequencer(deps) {
   // whole pass is one step, told when the chips unlock.
   const history = createHistory();
   let stepping = false;   // a step back or forward is being saved: not a change of its own
+  let bannerUndo = false; // a banner's ↩️ Undo is being saved: a step back if it lands on one
   const snap = () => canon(cleanPattern(pattern, personId));
   function seenNow() {
     if (pattern) history.seen(pattern.id, snap());
@@ -375,7 +376,7 @@ export function createSequencer(deps) {
     doc = { pattern, seen: record };
     if (merged) render();
     if (merged) history.seen(pattern.id, snap());
-    else if (!stepping && !chipsLocked) history.changed(pattern.id, snap());
+    else if (!stepping && !chipsLocked) history.changed(pattern.id, snap(), { undoing: bannerUndo });
     showUndo();
     deps.setOpen(personId, isScratch(pattern) ? null : pattern);
     // A named scratch keeps itself once it has a row: after the change that
@@ -1280,6 +1281,10 @@ export function createSequencer(deps) {
   }
 
   function undoRemove() {
+    bannerUndo = true;
+    try { putBack(); } finally { bannerUndo = false; }
+  }
+  function putBack() {
     // Pills slid or turned off with a mouse (pill-select.js): the rows as they were.
     if (undo?.copy && undo.pattern === pattern) {
       const { copy } = undo;
@@ -2092,18 +2097,23 @@ export function createSequencer(deps) {
     if (text === null) return;
     const was = pattern;
     const next = { ...cleanPattern(JSON.parse(text), personId), id: was.id };
-    if (playing()) {
-      const same = next.rows.length === was.rows.length
-        && next.rows.every((r, i) => r.clipId === was.rows[i].clipId && r.rate === was.rows[i].rate);
-      if (!same) {
-        for (let i = was.rows.length - 1; i >= 0; i--) run.removeRow(i);
-        next.rows.forEach((_, i) => run.insertRow(i));
-      }
-      for (const r of next.rows) prepare(deps.clipById(r.clipId));
-    }
     offerUndo(null);   // a banner's Undo was for the beat as it was
     pattern = next;
     retime(was.bpm);
+    if (playing()) {
+      // The rows the same at the start and the end keep their clocks and
+      // ringing sounds; only those between go and come back.
+      const key = (r) => `${r.clipId}|${r.rate}`;
+      const a = was.rows;
+      const b = next.rows;
+      let head = 0;
+      while (head < a.length && head < b.length && key(a[head]) === key(b[head])) head++;
+      let tail = 0;
+      while (tail < a.length - head && tail < b.length - head && key(a[a.length - 1 - tail]) === key(b[b.length - 1 - tail])) tail++;
+      for (let i = a.length - 1 - tail; i >= head; i--) run.removeRow(i);
+      for (let i = head; i < b.length - tail; i++) run.insertRow(i);
+      for (const r of b) prepare(deps.clipById(r.clipId));
+    }
     stepping = true;
     try { save(); } finally { stepping = false; }
     showTempo();
@@ -2112,11 +2122,13 @@ export function createSequencer(deps) {
     deps.onTempo?.();
     deps.announce?.(back ? 'Undone.' : 'Redone.');
   }
-  // The buttons: faint with nothing to undo or redo, and while ⌨️ Keys records.
+  // The buttons: faint with nothing to undo or redo, and while ⌨️ Keys
+  // records. `aria-disabled`, not `disabled`, so the last ↩️ keeps the focus
+  // it was pressed with (a disabled button drops it to the page).
   function showUndo() {
     const can = pattern && !chipsLocked ? history.can(pattern.id) : { undo: false, redo: false };
-    for (const b of el.undoButtons ?? []) b.disabled = !can.undo;
-    for (const b of el.redoButtons ?? []) b.disabled = !can.redo;
+    for (const b of el.undoButtons ?? []) b.setAttribute('aria-disabled', String(!can.undo));
+    for (const b of el.redoButtons ?? []) b.setAttribute('aria-disabled', String(!can.redo));
   }
   for (const b of el.undoButtons ?? []) b.addEventListener('click', () => step(true));
   for (const b of el.redoButtons ?? []) b.addEventListener('click', () => step(false));

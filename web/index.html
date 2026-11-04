@@ -123,8 +123,8 @@
           <button type="button" class="seq-play" id="seq-play" data-icon="▶" aria-pressed="false">▶ Play</button>
           <!-- ↩️ Undo · ↪️ Redo: every change to the open beat, for the visit (ADR 0036). Faint with nothing to undo or redo. -->
           <div class="beat-undo" role="group" aria-label="Undo and redo">
-            <button type="button" class="seq-click beat-undo-btn" data-beat-undo aria-label="Undo the last change to this beat" title="↩️ Undo" disabled>↩️</button>
-            <button type="button" class="seq-click beat-undo-btn" data-beat-redo aria-label="Redo the change you undid" title="↪️ Redo" disabled>↪️</button>
+            <button type="button" class="seq-click beat-undo-btn" data-beat-undo aria-label="Undo the last change to this beat" title="↩️ Undo (Ctrl+Z)" aria-disabled="true">↩️</button>
+            <button type="button" class="seq-click beat-undo-btn" data-beat-redo aria-label="Redo the change you undid" title="↪️ Redo (Shift+Ctrl+Z)" aria-disabled="true">↪️</button>
           </div>
           <!-- On a phone the tempo is one key that opens it as a line of its own (tempo-key.js). -->
           <button type="button" class="tempo-key" id="seq-tempo-key" aria-expanded="false" aria-controls="seq-tempo" aria-label="Tempo 100 BPM: tap to change it"><span class="tempo-key-num">100</span><span class="tempo-key-open" aria-hidden="true">▾</span></button>
