@@ -60,6 +60,8 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 Other work:
 
+- [ ] **Beats: undo and save safety** (Ben, 2026-11-04; asking his answers in chat first). Every change saves into the open beat at once, a kept beat too, with no way back; a pill tap has no Undo; a groove loaded over a scratch with hits loses that scratch once its 8 s Undo fades (🆕 New keeps it aside). Keep autosave; add a way back.
+
 - [ ] About 2026-11-16: remove the no-op `POST /api/profiles/:id/uses` route (`takeUses` in `worker/cloud.js`, its route line and `tests/metrics.test.mjs`'s test), and `forget('uses')`/`forget('visits')` in `web/app.js startUsage` if no old copy is left (ADR 0027).
 
 - [ ] Move `skills/noodlepads-logs` to `~/src/skills/noodlepads-logs` and link it (the skills workspace convention); the recurrent routine's leg is now named `noodlepads-logs`, and its state file `~/.local/state/skills/noodlepads-logs.state.json`
