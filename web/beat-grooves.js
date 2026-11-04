@@ -239,15 +239,20 @@ export function createGrooves(shared, { thumbnail }) {
   // The groove into the scratch, which opens. With ⌨️ Keys on it opens
   // stopped ("opening a groove in the beat builder should open stopped"),
   // and ▶ Play plays it behind the keys; on Beats a beat playing carries on.
-  // A scratch with hits is replaced, so the line says so, with Undo (Keys
-  // off) or ↩️ Beat (Keys on).
+  // A scratch with hits of its own is kept first, as 🆕 New keeps it
+  // (Ben, 2026-11-04: work must never be lost once an Undo fades): it joins
+  // 🗂️ Beats under the name 💾 Keep would give it, and the line says so. A
+  // scratch that is still an untouched groove is just replaced, and the line
+  // says that. Undo (Keys off) or ↩️ Beat (Keys on) puts it all back.
   function loadGroove(g) {
     const old = scratchSaved();
+    const kept = hasHits(old) && !shared.isUntouchedGroove(old) ? shared.keepAside(old) : null;
     const was = {
       before: structuredClone(shared.pattern),
       scratchBefore: old ? structuredClone(old) : null,
       groove: g.name,
-      replaced: hasHits(old),
+      replaced: hasHits(old) && !kept,
+      kept,
     };
     const resume = shared.slot !== 'dj' && playing();
     shared.queued = null;
@@ -258,13 +263,14 @@ export function createGrooves(shared, { thumbnail }) {
     render();
     deps.onBeatChange?.();
     if (resume) play();
-    logEvent('beat', { action: 'groove', replaced: was.replaced });
+    logEvent('beat', { action: 'groove', replaced: was.replaced || !!kept });
     if (shared.slot !== 'dj') offerUndo({ ...was, pattern: shared.pattern });
   }
   // Undo of a groove loaded: the scratch as it was, and the beat that was
   // open before (the scratch, or a beat in 🗂️ Beats).
   function undoLoad(was) {
     shared.loaded = null;
+    if (was.kept) deps.library.remove(was.kept.id);   // it is the scratch again
     if (was.scratchBefore) deps.library.put(was.scratchBefore);
     else if (scratchSaved()) deps.library.remove(scratchSaved().id);
     const back = was.before && !isScratch(was.before) && library().find((b) => b.id === was.before.id);
@@ -291,7 +297,7 @@ export function createGrooves(shared, { thumbnail }) {
   // and nothing has changed it yet: `trying()`. ↩️ Beat there is the
   // groove's Undo (putTrialAway). Recording onto it or changing it ends the
   // line; the groove stays in the scratch.
-  const trying = () => (shared.loaded && onScratch() ? { groove: shared.loaded.groove, replaced: shared.loaded.replaced } : null);
+  const trying = () => (shared.loaded && onScratch() ? { groove: shared.loaded.groove, replaced: shared.loaded.replaced, kept: shared.loaded.kept?.name ?? null } : null);
   function putTrialAway() {
     if (!shared.loaded) return;
     stop();

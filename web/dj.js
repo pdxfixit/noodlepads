@@ -639,7 +639,8 @@ export function createDJ({ el, deps }) {
       el.trying.hidden = !trying || !!beatRec;
       if (trying) {
         const name = trying.groove;
-        const was = trying.replaced ? `“${name}” replaced your scratch beat. ` : '';
+        const was = trying.kept ? `Your scratch beat is kept as “${trying.kept}” in 🗂️ Beats. `
+          : trying.replaced ? `“${name}” replaced your scratch beat. ` : '';
         el.tryingText.textContent = deps.seq.playing()
           ? `💃 ${was}“${name}” is playing. Play along, or ● Record to add your hits.`
           : `💃 ${was}“${name}”: ▶ Play to hear it behind you, or ● Record to add your hits on top.`;

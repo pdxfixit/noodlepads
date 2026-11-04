@@ -111,6 +111,25 @@ test('🆕 New over a groove nobody changed: nothing is kept; change one pill an
   assert.match(added(before)[0].name, /Four on the floor/);
 });
 
+// A groove loaded over a scratch with hits of its own keeps that scratch
+// first, as 🆕 New does (Ben, 2026-11-04): before, it lived only in the 8 s
+// Undo, and was gone once the banner faded.
+test('💃 a groove over a scratch with hits: the scratch joins 🗂️ Beats first; Undo takes the copy back out', () => {
+  fillScratch();
+  const was = JSON.stringify(scratch().rows);
+  const before = new Set(mine().map((b) => b.id));
+  $('#seq-grooves').dispatch('click');
+  $('#groove-list').querySelector('[data-groove="ska"]').dispatch('click');
+  assert.equal(name(), 'Ska (scratch)', 'the groove is in the scratch');
+  const kept = added(before);
+  assert.equal(kept.length, 1, 'the scratch joins 🗂️ Beats');
+  assert.equal(JSON.stringify(kept[0].rows), was, 'with its hits, as it was');
+  assert.equal($('#banner-text').textContent, `Kept your scratch beat as “${kept[0].name}” in 🗂️ Beats. “Ska” is in the scratch now.`);
+  $('#banner-action').dispatch('click');
+  assert.equal(added(before).length, 0, 'Undo takes the copy back out');
+  assert.equal(JSON.stringify(scratch().rows), was, 'and the scratch is as it was');
+});
+
 test('🆕 New with a named beat open over an unchanged groove in the scratch: the groove goes, the named beat is as it was', () => {
   const named = mine().find((b) => !/Four on the floor/.test(b.name));
   $('#seq-grooves').dispatch('click');

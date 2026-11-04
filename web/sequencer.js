@@ -1245,6 +1245,7 @@ export function createSequencer(deps) {
     const text = next.copy ? next.text
       : next.level ? `${levelState(next.level.at).name} loudness ${percent(rowLevel(pattern.rows[next.level.at]))} %.`
       : 'before' in next && next.added !== undefined ? `Added ${next.added} ${next.added === 1 ? 'hit' : 'hits'} from “${next.groove}”.`
+      : 'before' in next && next.kept ? `Kept your scratch beat as “${next.kept.name}” in 🗂️ Beats. “${next.groove}” is in the scratch now.`
       : 'before' in next && next.replaced ? `“${next.groove}” replaced your scratch beat.`
       : 'before' in next ? `Loaded “${next.groove}” into your scratch beat.`
       : `Removed row ${next.at + 1}${clip ? ` (${clip.label})` : ''}.`;
@@ -1887,7 +1888,7 @@ export function createSequencer(deps) {
   // way they change the beat maker. Pass this object to nothing else.
   const shared = {
     el, deps, audio, engine, playing, prepare, prepareBeats, render, save, play, stop, snapshot: () => snapshot(), bar, library, offerUndo, onScratch, scratchSaved,
-    beatPlan, letGo, openBeat, showChips, closeEverywhere, freshName, uniqueName, audioSaver, openRoll,
+    beatPlan, letGo, openBeat, showChips, closeEverywhere, freshName, uniqueName, audioSaver, openRoll, keepAside, isUntouchedGroove,
     get pattern() { return pattern; }, set pattern(v) { pattern = v; },
     get loaded() { return loaded; }, set loaded(v) { loaded = v; },
     set queued(v) { queued = v; },
