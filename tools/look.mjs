@@ -347,6 +347,8 @@ const VIEWS = {
   'chooser-row': { screen: 'beats', js: q('.beat-bar [data-beat-new]') + ADD_ROW + q('.seq-row [data-pick]') },
   // Pattern chips: six beats made with 🆕 New, + Add a row and 💾 Keep (the newest open), then the chips' line.
   'beat-chips': { screen: 'beats', js: KEEP_NEW.repeat(6) },
+  // ↩️ Undo · ↪️ Redo lit (ADR 0036): a kept beat, a pill tapped twice, then one Undo, so both can be pressed.
+  'beat-undo': { screen: 'beats', js: KEEP_NEW + `for (const i of [0, 2]) document.querySelectorAll('#seq-rows .pill')[i]?.click();` + q('[data-beat-undo]') },
   // beat-chips with the two oldest beats 📌 pinned in 🗂️ Beats (each only if not pinned yet), Open closed again.
   'beat-pins': { screen: 'beats', js: KEEP_NEW.repeat(6) + q('.beat-bar [data-beat-open]')
     + `for (const b of [...document.querySelectorAll('#lib-list [data-pin]')].slice(-2).reverse()) if (b.getAttribute('aria-pressed') !== 'true') b.click();`
@@ -671,6 +673,16 @@ const children = [];
 process.on('exit', () => { for (const c of children) { try { c.kill('SIGKILL'); } catch { /* already gone */ } } });
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => process.exit(130));
 
+// Is the dev server answering? Its reply is read to the end: a reply left
+// unread while serve.py closed the connection tripped an assert inside Node's
+// fetch (undici `assert(!this.paused)`), which no try catches, and killed the
+// run before any screenshot (2026-11-04, Node 22).
+async function serverUp(url) {
+  const r = await fetch(url);
+  await r.arrayBuffer();
+  return r.ok;
+}
+
 // The dev server, unless a URL was given.
 let base = opts.url;
 if (!base) {
@@ -678,7 +690,7 @@ if (!base) {
   const server = spawn('python3', [path.join(ROOT, 'tools/serve.py'), String(port)], { stdio: 'ignore' });
   children.push(server);
   base = `http://localhost:${port}/`;
-  await waitFor('the dev server', async () => (await fetch(base)).ok);
+  await waitFor('the dev server', () => serverUp(base));
 }
 
 const chrome = await launchChrome();
@@ -986,7 +998,7 @@ async function taps(argv) {
     const port = await freePort();
     children.push(spawn('python3', [path.join(ROOT, 'tools/serve.py'), String(port)], { stdio: 'ignore' }));
     base = `http://localhost:${port}/`;
-    await waitFor('the dev server', async () => (await fetch(base)).ok);
+    await waitFor('the dev server', () => serverUp(base));
   }
   const chrome = await launchChrome();
   const { send, listeners } = await connect(await chrome.page());
