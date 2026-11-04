@@ -54,6 +54,7 @@ import { createChooser } from './beat-chooser.js';
 import { createGrooves } from './beat-grooves.js';
 import { landed } from './landed.js';
 import { createLibrary } from './beat-library.js';
+import { createHistory } from './undo-history.js';
 
 const ARM_MS = 3000;                   // how long a Clear? or Remove? waits for its second tap
 const UNDO_MS = 8000;                  // how long a removed row can be brought back
@@ -200,6 +201,18 @@ export function createSequencer(deps) {
   // into it with it, and the open beats are read again when it stops. A
   // sync used to stop the beat mid-recording (Ben, 2026-10-12).
   let readAgain = false;
+  // ↩️ Undo · ↪️ Redo (ADR 0036): what the open beat was before each change,
+  // per beat, for the visit. `save` tells it every change; a beat read from
+  // storage (opened, switched to, synced) is `seen` instead, so Undo never
+  // takes back what another device or tab did. While ⌨️ Keys records, the
+  // whole pass is one step, told when the chips unlock.
+  const history = createHistory();
+  let stepping = false;   // a step back or forward is being saved: not a change of its own
+  const snap = () => canon(cleanPattern(pattern, personId));
+  function seenNow() {
+    if (pattern) history.seen(pattern.id, snap());
+    showUndo();
+  }
   // A groove just loaded into the scratch (beat-grooves.js pickGroove), until the
   // beat changes: {groove, replaced, before, scratchBefore}, or null. The
   // keys view shows a line for it with ↩️ Beat (beat-grooves.js undoLoad).
@@ -218,6 +231,7 @@ export function createSequencer(deps) {
     doc = fromStore();
     if (doc.link) { pattern = doc.pattern; save(); }
     pattern = slot === 'live' ? null : doc.pattern;
+    seenNow();
     render();
   }
 
@@ -275,6 +289,7 @@ export function createSequencer(deps) {
       else if (saved !== doc.seen) doc = { pattern: cleanPattern(saved, personId), seen: saved };
     }
     pattern = slot === 'live' ? null : doc?.pattern ?? null;
+    seenNow();
     render();
   }
 
@@ -359,6 +374,9 @@ export function createSequencer(deps) {
     if (merged) pattern = cleanPattern(record, personId);
     doc = { pattern, seen: record };
     if (merged) render();
+    if (merged) history.seen(pattern.id, snap());
+    else if (!stepping && !chipsLocked) history.changed(pattern.id, snap());
+    showUndo();
     deps.setOpen(personId, isScratch(pattern) ? null : pattern);
     // A named scratch keeps itself once it has a row: after the change that
     // gave it one has finished drawing.
@@ -519,6 +537,7 @@ export function createSequencer(deps) {
     const before = pattern;
     letGo((m) => m.p === before);   // rings out, then goes
     pattern = cleanPattern(saved, personId);
+    seenNow();
     save();
     run.restart(pattern.rows.length, at);
     clickNext = at;
@@ -533,6 +552,8 @@ export function createSequencer(deps) {
     if (chipsLocked === !!on) return;
     chipsLocked = !!on;
     if (on) queued = null;
+    if (!on && pattern) history.changed(pattern.id, snap());   // the pass, as one step
+    showUndo();
     showBeatBars();   // 💾 Keep waits too
     if (!on && wantedName) queueMicrotask(keep);   // so does a named scratch
   }
@@ -552,8 +573,8 @@ export function createSequencer(deps) {
     stop();
     loaded = null;
     wantedName = null;
-    if (next && !isScratch(next)) { pattern = next; save(); }
-    else { doc = scratchDoc(); pattern = doc.pattern; deps.setOpen(personId, null); }
+    if (next && !isScratch(next)) { pattern = next; seenNow(); save(); }
+    else { doc = scratchDoc(); pattern = doc.pattern; deps.setOpen(personId, null); seenNow(); }
     render();
     deps.onBeatChange?.();
     if (resume && was) play();
@@ -2058,6 +2079,60 @@ export function createSequencer(deps) {
     const p = shownPicker();
     if (b.dataset.movePick === 'all') p.all(); else if (b.dataset.movePick === 'none') p.clear(); else p.invert();
   });
+  // ── ↩️ Undo · ↪️ Redo (ADR 0036) ──
+  // A step goes through the same path as an edit: saved, drawn, and heard at
+  // the next look-ahead while the beat plays, which never stops for it. Pills,
+  // sounds and loudness change in place. When rows come or go, or a row's
+  // sound or speed is another, every row's sounds fade and each row rejoins
+  // on the grid (as a row added while playing does), so no clock runs on a
+  // row it no longer matches. A tempo step moves the clock as the slider does.
+  function step(back) {
+    if (!pattern || chipsLocked) return;
+    const text = back ? history.undo(pattern.id) : history.redo(pattern.id);
+    if (text === null) return;
+    const was = pattern;
+    const next = { ...cleanPattern(JSON.parse(text), personId), id: was.id };
+    if (playing()) {
+      const same = next.rows.length === was.rows.length
+        && next.rows.every((r, i) => r.clipId === was.rows[i].clipId && r.rate === was.rows[i].rate);
+      if (!same) {
+        for (let i = was.rows.length - 1; i >= 0; i--) run.removeRow(i);
+        next.rows.forEach((_, i) => run.insertRow(i));
+      }
+      for (const r of next.rows) prepare(deps.clipById(r.clipId));
+    }
+    offerUndo(null);   // a banner's Undo was for the beat as it was
+    pattern = next;
+    retime(was.bpm);
+    stepping = true;
+    try { save(); } finally { stepping = false; }
+    showTempo();
+    render();
+    deps.onBeatChange?.();
+    deps.onTempo?.();
+    deps.announce?.(back ? 'Undone.' : 'Redone.');
+  }
+  // The buttons: faint with nothing to undo or redo, and while ⌨️ Keys records.
+  function showUndo() {
+    const can = pattern && !chipsLocked ? history.can(pattern.id) : { undo: false, redo: false };
+    for (const b of el.undoButtons ?? []) b.disabled = !can.undo;
+    for (const b of el.redoButtons ?? []) b.disabled = !can.redo;
+  }
+  for (const b of el.undoButtons ?? []) b.addEventListener('click', () => step(true));
+  for (const b of el.redoButtons ?? []) b.addEventListener('click', () => step(false));
+  // Ctrl/Cmd+Z, and Shift+Ctrl/Cmd+Z or Ctrl+Y, on Beats (⌨️ Keys off or on,
+  // whose bar has no room for the buttons yet): never in a text field (the
+  // name keeps its own undo) or over a dialog.
+  document.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const k = e.key.toLowerCase();
+    if (k !== 'z' && k !== 'y') return;
+    if (e.target?.closest?.('input, textarea, select, [contenteditable]') || document.querySelector?.('dialog[open]')) return;
+    if (!pattern || slot === 'live' || ![...(el.beatBars ?? [])].some((b) => b.isConnected && !b.closest('[hidden]'))) return;
+    e.preventDefault();
+    step(k === 'z' && !e.shiftKey);
+  });
+
   function restore(copy) {
     const was = playing();
     stop();

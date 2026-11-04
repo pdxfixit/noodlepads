@@ -613,7 +613,7 @@ function makeSequencer() {
       chooser: $('#chooser'), chooserTitle: $('#chooser-title'), chooserGrid: $('#chooser-grid'),
       chooserOk: $('#chooser-ok'), chooserTools: $('#chooser-tools'), chooserMelody: $('#chooser-melody'),
       chooserRate: $('#chooser-rate'), tuneWho: $('#tune-who'), tuneWhoList: $('#tune-who-list'),
-      library: $('#library'), beatBars: document.querySelectorAll('.beat-bar'), chipLines: document.querySelectorAll('[data-beat-chips]'),
+      library: $('#library'), beatBars: document.querySelectorAll('.beat-bar'), undoButtons: document.querySelectorAll('[data-beat-undo]'), redoButtons: document.querySelectorAll('[data-beat-redo]'), chipLines: document.querySelectorAll('[data-beat-chips]'),
       mixer: $('#mixer'), mixerStrips: $('#mixer-strips'), mixerButtons: document.querySelectorAll('[data-mixer]'),
       libNote: $('#lib-note'), libList: $('#lib-list'), libEmpty: $('#lib-empty'),
       libSound: $('#lib-sound'), libAudio: $('#lib-audio'), libFile: $('#lib-file'), bars: $('#seq-bars'), sigs: $('#seq-sigs'),

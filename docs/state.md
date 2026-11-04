@@ -75,7 +75,7 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 
 ## In flight
 
-- Drafts and Undo (Ben, 2026-11-04; ADR 0036, `docs/design/drafts.md`): decided and through council round 1; being built in four pushes, starting with ↩️ Undo · ↪️ Redo on Beats. Live today: a groove loaded over a scratch with hits keeps that scratch in 🗂️ Beats first.
+- Drafts and Undo (Ben, 2026-11-04; ADR 0036, `docs/design/drafts.md`): decided and through council round 1; being built in four pushes. Live: a groove loaded over a scratch with hits keeps that scratch in 🗂️ Beats first; ↩️ Undo · ↪️ Redo beside ▶ Play on Beats (⌨️ Keys off; Ctrl/Cmd+Z with Keys on too), checked by tests and `just look beat-undo` at all nine widths and 680 px tall; how a step sounds while playing is not yet tried on a phone. Waiting on Ben: where ↩️ ↪️ go on ⌨️ Keys on's bar (on a phone it wrapped ✏️ to a third line, and at 900 px scrolled sideways). Next: step 2, hiding draft records.
 - The live cloud-smoke step "wrong PINs at open do not lock the key" failed once, on the deploy of df56f43, and passed on the deploy after it (a050cee). An agent is checking the cause.
 - Fixing every bug found while mapping `docs/architecture/` (Ben, 2026-10-26: "fix all the bugs… every darn one"): every area has been through the council. The simplify survey (`docs/design/simplify.md`) is done.
 - The council's round 1 (`docs/council.md`, ADR 0034; 22 seats, 10 of which blocked something): its fixes have landed on `main`; what is left is TODO "Agents do", Council round 1, next fixes. Its questions for Ben are asked one at a time in the chat; the rest wait in `docs/questions.md`.

@@ -337,10 +337,11 @@ A song from before lanes (only `slots`) becomes lane 1's blocks, back to back, a
 
 The person setting `advancedBeats` (true only at the Advanced level; `settings.js`). Read three ways: the sequencer caches it (`onSetting('advancedBeats')` → `render`); `song.js advanced()` reads `getSetting` each time and re-renders on change; the roll asks `deps.advanced()`. It turns on: row rates (`playMode`), choosing a signature, the old `timeSignature` fallback, ½ Half pills in the roll, groove card details, the chooser's speed keys, and 🎼 Tempo marks editing. Because `beatPlan` reads it, **a song or a share preview plays a beat by the level of the person playing it**, not the one who made it.
 
-### Undo, five kinds
+### Undo, six kinds
 
 | Undo | Where | Holds |
 |---|---|---|
+| Beats' ↩️ Undo · ↪️ Redo (ADR 0036) | `undo-history.js createHistory`, made once in `sequencer.js`; `save()` calls `history.changed` after every change, `seenNow()` calls `history.seen` where the beat is read from storage (`openBeat`, `switchNow`, `show`, `setPerson`, a merge in `save`); `step(back)` applies one, `showUndo` lights the buttons (`[data-beat-undo]`, `[data-beat-redo]`, Keys off only; Ctrl/Cmd+Z on Beats Keys off and on) | per beat id, for the visit: the beat before each change as `canon(cleanPattern(...))` text, at most 50. A ⌨️ Keys pass is one step (`lockChips(false)` tells it). A step while playing re-joins every row on the grid when rows came, went or changed sound or speed (`run.removeRow`/`insertRow`) and retimes for a tempo step |
 | Beats' banner Undo | `sequencer.js offerUndo` / `undoRemove`, shown by `ui.js showBanner` (8 s) | one of: a removed row `{row, at, pattern}`; a level `{level: {at, before}}`; a pill drag or delete `{copy, text}`; a groove added `{before, added}`; a groove loaded `{before, scratchBefore, …}`. Forgotten when `pattern` changes (`render`) |
 | ⌨️ Keys' own Undo | `dj.js`, through `seq.snapshot()` / `seq.restore()` / `seq.putLevel()` | a copy of the beat |
 | ↩️ Beat | `seq.putTrialAway` → `undoLoad` | a groove just loaded |

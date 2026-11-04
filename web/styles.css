@@ -666,6 +666,10 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
 /* The click track as one emoji key: lit while it ticks. */
 .seq-click { flex: none; width: 48px; min-height: 52px; padding: 0; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; color: #fff; font: 800 1.4rem/1 var(--font-ui); }
 .seq-click[aria-pressed="true"] { background: var(--led); border-color: var(--led); }
+/* ↩️ Undo · ↪️ Redo beside ▶ Play (ADR 0036): two keys with a gap, so a slip
+   onto ↪️ is less likely; faint with nothing to undo or redo. */
+.beat-undo { display: flex; flex: none; gap: 6px; }
+.beat-undo-btn:disabled { opacity: 0.35; cursor: default; }
 /* Tap tempo on Beat Builder's ⏲️: "keep tapping…", then "👆 96", for a moment. */
 .seq-click.tapping { width: auto; padding: 0 10px; font-size: 0.95rem; white-space: nowrap; }
 @media (max-width: 899px) {
@@ -693,6 +697,15 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
   .dj-bar > .beat-shape { flex: 1 1 100%; margin-left: 0; }
   .dj-bar > .beat-shape .seq-barsel { display: flex; flex: 1 0 auto; }
   .dj-bar > .beat-shape .seq-barsel button { flex: 1 0 auto; }
+}
+/* Beats with ↩️ ↪️ beside ▶ Play (ADR 0036) the same, up to 819 px: at
+   640–760 px ⏲️ ran under the bars. */
+@media (min-width: 601px) and (max-width: 819px) {
+  #seq-deck.beat-deck { flex-wrap: wrap; }
+  #seq-deck > .beat-go { flex: 1 1 100%; }
+  #seq-deck > .beat-shape { flex: 1 1 100%; margin-left: 0; }
+  #seq-deck > .beat-shape .seq-barsel { display: flex; flex: 1 0 auto; }
+  #seq-deck > .beat-shape .seq-barsel button { flex: 1 0 auto; }
 }
 /* The smallest phones: Play, ⏲️ and the number squeeze so the tempo keeps room. */
 @media (max-width: 400px) {
@@ -819,6 +832,14 @@ body.keys-on .dj-bar { position: sticky; top: calc(var(--head-h, 0px) - var(--de
 @container panel (max-width: 19.49rem) {
   .dj-bar .beat-go .seq-play { padding: 0; font-size: 0; }   /* over the narrowest phones' Play (below) */
   .dj-bar .beat-go .seq-play::before { content: attr(data-icon) / ""; font-size: 1.3rem; }
+}
+/* Beats with ↩️ ↪️ beside ▶ Play (ADR 0036): on the narrowest phones ▶ Play
+   gives up its word too, so ⏲️ stays on the line. */
+@container panel (max-width: 20.99rem) {
+  #seq-deck .beat-go .seq-play { min-width: 44px; padding: 0; font-size: 0; }
+  #seq-deck .beat-go .seq-play::before { content: attr(data-icon) / ""; font-size: 1.3rem; }
+  #seq-deck .beat-undo { gap: 4px; }
+  #seq-deck .beat-undo .seq-click { width: 44px; font-size: 1.2rem; }
 }
 /* Up to 760 px the line has no room for words: just 🔔 and ✏️, 48 px squares, as Beats' ✏️ on a phone. */
 @media (max-width: 760px) {
