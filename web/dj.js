@@ -32,7 +32,8 @@ import { createPillSelect } from './pill-select.js';
 import { moreMenu } from './overflow.js';
 import { follower, keepInView } from './follow.js';
 import { tempoKey } from './tempo-key.js';
-import { refitLines, foldLine } from './lines.js';
+import { beatMenu } from './beat-menu.js';
+import { foldLine } from './lines.js';
 
 const STOPS = tempoStops();   // the click track slider's positions (see sequencer.js)
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
@@ -552,12 +553,16 @@ export function createDJ({ el, deps }) {
   // ── Beats with ⌨️ Keys (once DJ's Beat Builder): hits land on the beat's grid, forgivingly ──
 
   let mode = 'free';   // 'free' on 🎤 Live, 'beat' on Beats with ⌨️ Keys (setMode)
-  // On a phone each tempo folds into one key (tempo-key.js): the keys view's (the beat's) and Live's (the click's).
+  // The keys view's 🎛️ key opens the beat's settings panel (beat-menu.js); on a phone Live's click tempo folds into one key (tempo-key.js).
+  let clickWanted = recall('dj-click') === '1';
+  const beatKey = el.tempoKey && el.setup ? beatMenu(el.tempoKey, el.setup, el.deck, {
+    bpm: () => deps.seq.beat()?.bpm ?? deps.seq.tempo(),
+    clicking: () => clickWanted,
+  }) : null;
   const tempoKeys = [
-    el.tempoKey && tempoKey(el.tempoKey, el.tempo, () => deps.seq.beat()?.bpm ?? deps.seq.tempo()),
+    beatKey,
     el.clickKey && tempoKey(el.clickKey, el.clickTempo, () => deps.seq.tempo()),
   ].filter(Boolean);
-  let clickWanted = recall('dj-click') === '1';
   // 🔔 Let it ring on Live (Ben, 2026-10-12: "a button for the whole session"):
   // on, every key's repeated hits ring over each other; off, a hit restarts
   // its sound. For this visit only: never saved, off again after a reload.
@@ -609,6 +614,7 @@ export function createDJ({ el, deps }) {
     showOverlap();
     if (mode === 'beat') renderGrid();
     showSetup();
+    if (mode !== 'beat') beatKey?.close();
     barMenu?.close();
     refold?.();   // what fits on the bar changes with the mode
   }
@@ -624,7 +630,8 @@ export function createDJ({ el, deps }) {
     const beat = builder && !!deps.seq.beat();
     el.grid.hidden = !beat;
     // The control bar as on Beats: ▶ Play, the tempo, ⏲️ and the bars, with a beat open.
-    for (const node of [el.setup, el.play, el.tempo, el.beatClick]) if (node) node.hidden = !beat;
+    for (const node of [el.setup, el.play, el.tempoKey, el.undoLine]) if (node) node.hidden = !beat;
+    if (!beat) beatKey?.close();
     // A new beat has no rows (Ben, 2026-10-11): a line points to the keys,
     // until the first hit lands (or while recording, when the keys are the point).
     if (el.noRows) el.noRows.hidden = !beat || !!beatRec || deps.seq.beat().rows.length > 0;
@@ -1193,16 +1200,20 @@ export function createDJ({ el, deps }) {
     const locked = countingIn();
     el.bpmSlider.disabled = locked;
     for (const b of el.bars.querySelectorAll('[data-bars]')) putAttr(b, 'aria-pressed', String(Number(b.dataset.bars) === beat.bars));
-    for (const b of [...el.tempo.querySelectorAll('button'), ...el.setup.querySelectorAll('button')]) b.disabled = b.closest('.beat-tempo') ? locked : !!beatRec;
+    for (const b of [...el.tempo.querySelectorAll('button'), ...el.setup.querySelectorAll('[data-mixer], [data-move-open], .edit-keys-open')]) b.disabled = b.closest('.beat-tempo') ? locked : !!beatRec;
     // The beat's shape can't change once hits are landing on its grid, so
-    // the bars and time signature go away while recording.
-    const shapeWas = `${el.bars.hidden}${el.sigs.hidden}`;
-    el.bars.hidden = !!beatRec;
+    // Bars, Feel and the time signature wait while recording: still there,
+    // dimmed and aria-disabled, their name saying why (Ben, 2026-11-05).
+    const near = [0, 33, 50].reduce((a, c) => (Math.abs(c - deps.seq.swing()) < Math.abs(a - deps.seq.swing()) ? c : a));
+    for (const b of el.swing.querySelectorAll('[data-swing]')) putAttr(b, 'aria-pressed', String(Number(b.dataset.swing) === near));
     for (const b of el.sigs.querySelectorAll('[data-sig]')) putAttr(b, 'aria-pressed', String(b.dataset.sig === deps.seq.signature()));
-    el.sigs.hidden = !deps.seq.advanced() || !!beatRec;
-    // The line's width stays the same when they come back, so nothing else
-    // tells it to fit them again (at 320 px ⇆ stuck out after a recording).
-    if (`${el.bars.hidden}${el.sigs.hidden}` !== shapeWas) refitLines();
+    const waits = !!beatRec;
+    for (const b of el.setup.querySelectorAll('[data-bars], [data-swing], [data-sig]')) {
+      b.dataset.name ??= b.getAttribute('aria-label') || b.textContent.trim();
+      putAttr(b, 'aria-disabled', String(waits));
+      putAttr(b, 'aria-label', waits ? `${b.dataset.name} (waits while recording)` : b.dataset.name);
+    }
+    el.sigs.hidden = !deps.seq.advanced();
   }
   // The click track's tempo slider (Live): Live's own tempo for the visit (no beat is open there), with
   // the same pull toward common tempos as the Beats slider.
@@ -1255,7 +1266,7 @@ export function createDJ({ el, deps }) {
   });
   el.clickBpm.addEventListener('change', () => deps.seq.setTempo(deps.seq.tempo()));
   el.deck.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-tempo-step], [data-bars], [data-sig]');
+    const b = e.target.closest('[data-tempo-step], [data-bars], [data-sig], [data-swing]');
     if (!b || !deps.seq.beat()) return;
     if (b.dataset.tempoStep ? countingIn() : beatRec) return;   // bars and signature wait for Stop
     const seq = deps.seq;
@@ -1266,6 +1277,7 @@ export function createDJ({ el, deps }) {
       if (next) seq.setTempo(next);
     } else if (b.dataset.bars) seq.setBars(Number(b.dataset.bars));
     else if (b.dataset.sig) seq.setSignature(b.dataset.sig);
+    else if (b.dataset.swing) seq.setSwing(b.dataset.swing);
     renderGrid();
     showSetup();
   });

@@ -5,9 +5,11 @@
 // line covers nothing, so the pads and rows under the bar keep playing while
 // it is open. Wider screens never show the key: their tempo stays in the bar.
 //
-// One for every bar (Beats, ⌨️ Keys, 🎤 Live's click, 🎼 Song). Each screen
-// keeps its own tempo controls inside `box`, and calls show() when its tempo
-// changes; this only opens, closes and names the key.
+// One for 🎤 Live's click and 🎼 Song. Each screen keeps its own tempo controls
+// inside `box`, and calls show() when its tempo changes; this only opens,
+// closes and names the key. 🥁 Beats (⌨️ Keys off and on) has beat-menu.js's
+// 🎛️ key and panel instead (docs/design/beat-menu.md, 2026-11-05): the tempo
+// is one part of a panel there, at every width, not a key of its own.
 
 export function tempoKey(key, box, bpm) {
   const num = key.querySelector('.tempo-key-num');

@@ -218,13 +218,24 @@ mode's own button (`.mode:not(.open) > :not(.mode-open), .mode.open >
 through `lines.js fitLine` (`fit-tight`, `fit-short`, `fit-stack`).
 `tests/four-tabs.test.mjs` guards the bar.
 
-### The tempo key (phones)
+### The 🎛️ key and the tempo key
 
-`tempo-key.js tempoKey(key, box, bpm)` is the one tempo key every control
-bar has on a phone: `#seq-tempo-key` (Beats, `sequencer.js`, box
-`#seq-tempo`), `#dj-tempo-key` and `#dj-click-key` (⌨️ Keys and 🎤 Live,
-`dj.js`, boxes `#dj-tempo` and `#dj-click-tempo`) and `#song-tempo-key`
-(`song.js`, box `#song-tempo-box`). It only opens and closes: the key's
+`beat-menu.js beatMenu(key, panel, deck, { bpm, clicking })` is 🥁 Beats' one
+settings key, at every width, ⌨️ Keys off (`sequencer.js`: `#seq-tempo-key`,
+panel `#seq-menu`, deck `#seq-deck`) and on (`dj.js`: `#dj-tempo-key`, panel
+`#dj-setup`, deck `.dj-bar`). It opens and closes the panel (the key's
+`aria-expanded`, `.menu-open` on the deck), on the key, Esc (`preventDefault`,
+focus back on the key) or a tap outside that is swallowed (capture listeners
+on the document, only while open; a dialog on top is not outside), and names
+the key ("Beat settings, tempo 100", plus ", click track on" with a dot while
+⏲️ is on). The panel holds the screens' own controls, moved and unchanged
+(tempo, ⏲️, Bars, Feel, signature, 🎚️, ⇆); nothing in it is stored.
+`tests/beat-menu.test.mjs` guards it. The panel in `#dj-setup` is hidden on
+🎤 Live, with the key and ↩️ ↪️.
+
+`tempo-key.js tempoKey(key, box, bpm)` is the tempo key 🎤 Live (`#dj-click-key`,
+`dj.js`, box `#dj-click-tempo`) and 🎼 Song (`#song-tempo-key`, `song.js`, box
+`#song-tempo-box`) have on a phone. It only opens and closes: the key's
 `aria-expanded`, the box's `.tempo-open`, Esc. Each screen keeps its own
 slider, ⌄ ⌃ and typed number inside the box, and calls `show()` from its
 tempo redraw (`showTempo`, `showSetup`, `renderTempoOpen`) so the key reads

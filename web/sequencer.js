@@ -21,7 +21,7 @@
 // at every level), which lets hits overlap, up to MAX_RINGING at once.
 
 import { openDialog, setupDialog } from './dialogs.js';
-import { tempoKey } from './tempo-key.js';
+import { beatMenu } from './beat-menu.js';
 import { newId, recall, remember, onePressOneClick } from './util.js';
 import { fadeStop } from './audio.js';
 import { getSetting, onSetting } from './settings.js';
@@ -119,7 +119,7 @@ export function createSequencer(deps) {
   const swingNow = () => (pattern ? pattern.swing || 0 : 0);   // every level plays a beat's swing (Ben, 2026-10-26)
   const STOPS = tempoStops();
   // Puts the slider and the number in step with the tempo (the open beat's, or the loose one).
-  let beatKey = null;   // on a phone, the tempo folded into one key (tempo-key.js)
+  let beatKey = null;   // the 🎛️ key and its panel (beat-menu.js)
   function showTempo({ slider = true } = {}) {
     beatKey?.show();
     if (slider) el.bpm.value = stopFor(shape().bpm, STOPS);
@@ -194,7 +194,7 @@ export function createSequencer(deps) {
   let doc = null;
   const LOOSE = { bpm: DEFAULT_BPM, bars: 1 };     // the click track's tempo while nothing is open (not saved)
   const shape = () => pattern ?? LOOSE;     // what the click and the clock follow
-  if (el.tempoKey && el.tempoBox) beatKey = tempoKey(el.tempoKey, el.tempoBox, () => shape().bpm);
+  if (el.tempoKey && el.menu && el.top) beatKey = beatMenu(el.tempoKey, el.menu, el.top, { bpm: () => shape().bpm, clicking: () => clickWanted });
 
   // The same person again (a cloud sync or a loaded backup redraws whoever
   // is showing): a beat playing carries on, and the keys view's recording
@@ -1623,12 +1623,16 @@ export function createSequencer(deps) {
     const near = SWING_KEYS.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a));
     for (const b of el.swing.querySelectorAll('[data-swing]')) b.setAttribute('aria-pressed', String(Number(b.dataset.swing) === near));
   }
-  el.swing.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-swing]');
-    if (!b || !pattern) return;
-    pattern.swing = Math.min(MAX_SWING, Number(b.dataset.swing));
+  // Feel, from either screen's panel (⌨️ Keys on has its own keys, wired in dj.js).
+  function setSwing(v) {
+    if (!pattern) return;
+    pattern.swing = Math.min(MAX_SWING, Number(v));
     showSwing();
     save();
+  }
+  el.swing.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-swing]');
+    if (b) setSwing(b.dataset.swing);
   });
   // Keys move one tempo at a time (ten with Page Up and Down), not one stop.
   el.bpm.addEventListener('keydown', (e) => {
@@ -1639,7 +1643,7 @@ export function createSequencer(deps) {
     setTempo(to);
   });
   // The chevrons (a phone's short line): to the next common tempo up or down.
-  el.bpm.closest('.tempo-box')?.addEventListener('click', (e) => {
+  el.bpm.closest('.beat-tempo')?.addEventListener('click', (e) => {
     const b = e.target.closest('[data-tempo-step]');
     if (!b) return;
     e.preventDefault();   // inside the label: no click passed on to the slider
@@ -2163,6 +2167,7 @@ export function createSequencer(deps) {
   function showClick() {
     if (!el.click) return;
     el.click.setAttribute('aria-pressed', String(clickWanted));
+    beatKey?.show();   // the 🎛️ key's dot
   }
   el.click?.addEventListener('click', () => {
     clickWanted = !clickWanted;
@@ -2213,7 +2218,7 @@ export function createSequencer(deps) {
     return !!saved;
   }
   return { setPerson, show, tempo: () => shape().bpm, render, play, stop, playing, grid, beatClock, rowFor, addRowFor, addSnaps, snapshot, restore, setClick, beat,
-    cyclePill, clearRow, dropRow, toggleRing, ringTool, openLibrary: lib.openLibrary, metronome, clickAt, setGrow, setTempo, setBars, setSignature, signature: () => sigOf(), advanced: () => advanced,
+    cyclePill, clearRow, dropRow, toggleRing, ringTool, openLibrary: lib.openLibrary, metronome, clickAt, setGrow, setTempo, setBars, setSignature, setSwing, swing: () => swingNow(), signature: () => sigOf(), advanced: () => advanced,
     beatPlan, prepareBeats, soundHit, endMix, thumbnail: lib.thumbnail, levelOf, setLevel, putLevel, toggleMute, levelState,
     trying: grooves.trying, putTrialAway: grooves.putTrialAway, keep, keepScratch, onScratch, sampling: () => grooves.sample()?.id ?? null, hearBeat: grooves.hearBeat, stopHearing: grooves.stopSample,
     // A beat in 🗂️ Beats opened by id (🎧 From a song's 🥁 Open part A); false when it is not there.

@@ -650,10 +650,10 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
 }
 
 /* The control bar, the same on Beats and in Beat Builder (Ben, 2026-10-12):
-   .beat-go holds ▶ Play (● Record in DJ), the tempo and ⏲️; .beat-shape the
-   bars (· time signature · swing). With room they share one line, the tempo
-   giving way first (it shrinks, then turns into ⌄ ⌃, see .tempo-box), then
-   the bars line (lines.js). On a phone the bars take a line of their own. */
+   .beat-go holds ▶ Play (● Record with ⌨️ Keys), ↩️ ↪️, ✏️ Layout (Keys) and
+   the 🎛️ key at its right end; .beat-menu is the panel that key opens under
+   the bar (the tempo, ⏲️, Bars, Feel, time signature, 🎚️, ⇆; beat-menu.js,
+   "The beat menu" below). 🎤 Live shares the keys view's bar. */
 .beat-deck { display: flex; flex-wrap: nowrap; align-items: center; gap: 12px; }
 .beat-go { display: flex; flex: 1 1 auto; align-items: center; gap: 12px; min-width: 0; }
 .beat-go .seq-play, .beat-go .dj-rec { flex: none; }
@@ -661,8 +661,6 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
    boxes that lay out as if they were not there, except on a phone, where
    the first line sticks on its own (below). */
 .beat-run, .beat-more { display: contents; }
-/* Its keys start at its left edge, so an overflow runs right, where lines.js measures it. */
-.beat-shape { display: flex; flex: 0 1 auto; flex-wrap: nowrap; align-items: center; gap: 12px; min-width: 0; margin-left: auto; }
 /* The click track as one emoji key: lit while it ticks. */
 .seq-click { flex: none; width: 48px; min-height: 52px; padding: 0; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; color: #fff; font: 800 1.4rem/1 var(--font-ui); }
 .seq-click[aria-pressed="true"] { background: var(--led); border-color: var(--led); }
@@ -679,40 +677,17 @@ body.reordering, body.reordering .pad { cursor: grabbing; }
   /* A phone: ▶ Play (● Record), the tempo and ⏲️ on the first line, the bars filling the next. */
   .beat-deck { flex-wrap: wrap; }
   .beat-go { flex: 1 1 100%; gap: 8px; }
-  .beat-shape { flex: 1 1 100%; margin-left: 0; }
-  .beat-shape .seq-barsel, .seq-shape > .seq-barsel { display: flex; flex: 1 0 auto; }
-  .beat-shape .seq-barsel button { flex: 1 0 auto; }   /* never narrower than its word */
   .beat-go .seq-play { width: 6.5rem; padding: 0 12px; }
   .beat-go .dj-rec { padding: 0 14px; }
   /* Beats with ⌨️ Keys has ● Record too: ▶ Play and ● Record share the room
      the tempo key, ⏲️ and ✏️ leave on the one line (Ben, 2026-10-26). */
   .beat-go:has(.seq-play:not([hidden]) + .dj-rec) :is(.seq-play, .dj-rec) { flex: 1 1 0; width: auto; min-width: 44px; }
 }
-/* Beats with ⌨️ Keys has ● Record too, so its bar runs out of room before a
-   phone's does: up to 879 px its bars take a line of their own, as on a phone
-   (at 610–850 px ⏲️ ran under the bars, and ⇆ Move stuck out). */
-@media (min-width: 601px) and (max-width: 879px) {
-  .dj-bar.beat-deck { flex-wrap: wrap; }
-  .dj-bar > .beat-go { flex: 1 1 100%; }
-  .dj-bar > .beat-shape { flex: 1 1 100%; margin-left: 0; }
-  .dj-bar > .beat-shape .seq-barsel { display: flex; flex: 1 0 auto; }
-  .dj-bar > .beat-shape .seq-barsel button { flex: 1 0 auto; }
-}
-/* Beats with ↩️ ↪️ beside ▶ Play (ADR 0036) the same, up to 819 px: at
-   640–760 px ⏲️ ran under the bars. */
-@media (min-width: 601px) and (max-width: 819px) {
-  #seq-deck.beat-deck { flex-wrap: wrap; }
-  #seq-deck > .beat-go { flex: 1 1 100%; }
-  #seq-deck > .beat-shape { flex: 1 1 100%; margin-left: 0; }
-  #seq-deck > .beat-shape .seq-barsel { display: flex; flex: 1 0 auto; }
-  #seq-deck > .beat-shape .seq-barsel button { flex: 1 0 auto; }
-}
 /* The smallest phones: Play, ⏲️ and the number squeeze so the tempo keeps room. */
 @media (max-width: 400px) {
   .beat-go .seq-play { width: 4.6rem; padding: 0 6px; font-size: 1rem; }
   .beat-go .dj-rec { padding: 0 10px; font-size: 1rem; }
   .beat-go .seq-click { width: 44px; font-size: 1.2rem; }
-  .beat-go .seq-bpm-num { font-size: 0.9rem; }
 }
 /* Beats' control bar scrolls up under the slim bar with its rows, at every
    width, the whole bar, and sticks there once it is all under it (its
@@ -733,15 +708,14 @@ body.keys-on .dj-bar { position: sticky; top: calc(var(--head-h, 0px) - var(--de
 @media (max-width: 600px) {
   body.keys-on .dj-bar { row-gap: 10px; }
 }
-/* Tap tempo's "keep tapping…" and "👆 96" (dj.js) are wider than ⏲️: from
-   601 px ⏲️ widens over the tempo's room for that moment, the tempo out of
-   sight, so the buttons after it stay put (on Beats with ⌨️ Keys it ran over
-   the bars from 761 px). On a phone ⏲️ keeps its size and says 👆, while the
-   tempo key shows the tempo the taps set (below). */
+/* Tap tempo's "keep tapping…" and "👆 96" (dj.js) are wider than ⏲️: on 🎤 Live
+   from 601 px ⏲️ widens over the tempo's room for that moment, the tempo out of
+   sight, so the buttons after it stay put. On a phone ⏲️ keeps its size and
+   says 👆, while the tempo key shows the tempo the taps set (below). In the
+   🎛️ panel (Beats) it just grows, with room to. */
 @media (min-width: 601px) {
   body.screen-live .dj-bar #dj-click.tapping { flex: 0 1 calc(16rem + 60px); font-size: 0.95rem; }   /* the tempo, a gap and ⏲️ */
   body.screen-live .dj-bar .beat-more:has(#dj-click.tapping) > #dj-click-tempo { display: none; }
-  body.keys-on .dj-bar .beat-more:has(#dj-beat-click.tapping) > #dj-tempo { display: none; }
 }
 @media (max-width: 600px) {
   .deck .seq-click.tapping { width: 44px; padding: 0; font-size: 0; }
@@ -790,7 +764,7 @@ body.keys-on .dj-bar { position: sticky; top: calc(var(--head-h, 0px) - var(--de
   .song-deck .tempo-key { flex: none; }
   .seq .beat-go .seq-play { flex: 1 1 auto; width: auto; }
   body.keys-on .dj-bar > .beat-go { display: flex; }
-  body.keys-on .dj-bar :is(.seq-play, .dj-rec) { flex: 1 1 auto; width: auto; min-width: 44px; }
+  body.keys-on .dj-bar :is(.seq-play, .dj-rec) { flex: 1 1 0; width: auto; min-width: 44px; }   /* from nothing, so ↩️ ↪️ ✏️ and the 🎛️ key keep their room on the one line */
   /* 🎤 Live on one line (Ben, 2026-10-26): ● Record filling the room, then the
      tempo key, ⏲️ 🔔 ✏️ 🎬 as 44 px keys, 6 px apart (it fits from 354 px;
      narrower, 🎬 and ✏️ fold into the ⋯). What is happening while recording
@@ -808,10 +782,10 @@ body.keys-on .dj-bar { position: sticky; top: calc(var(--head-h, 0px) - var(--de
    over 🎚️ and ⏲️ over ⇆ on Beats, ⏲️ over 🎚️ and ✏️ over ⇆ with ⌨️ Keys. */
 @media (max-width: 600px) {
   .beat-deck .beat-go .seq-click, .beat-deck .tempo-key { width: 48px; padding: 0; }
-  .beat-deck > :is(.beat-go, .beat-shape) { gap: 8px; }
+  .beat-deck > .beat-go { gap: 8px; }
 }
 @media (max-width: 359px) {
-  .beat-deck > :is(.beat-go, .beat-shape) { gap: 6px; }
+  .beat-deck > .beat-go { gap: 6px; }
 }
 @media (max-width: 600px) {
   body.screen-live .dj-bar > .beat-go { gap: 6px; }   /* 🎤 Live's one line needs every pixel */
@@ -833,11 +807,8 @@ body.keys-on .dj-bar { position: sticky; top: calc(var(--head-h, 0px) - var(--de
   .dj-bar .beat-go .seq-play { padding: 0; font-size: 0; }   /* over the narrowest phones' Play (below) */
   .dj-bar .beat-go .seq-play::before { content: attr(data-icon) / ""; font-size: 1.3rem; }
 }
-/* Beats with ↩️ ↪️ beside ▶ Play (ADR 0036): on the narrowest phones ▶ Play
-   gives up its word too, so ⏲️ stays on the line. */
+/* Beats with ↩️ ↪️ beside ▶ Play (ADR 0036): on the narrowest phones they sit 4 px apart and 44 px wide. */
 @container panel (max-width: 20.99rem) {
-  #seq-deck .beat-go .seq-play { min-width: 44px; padding: 0; font-size: 0; }
-  #seq-deck .beat-go .seq-play::before { content: attr(data-icon) / ""; font-size: 1.3rem; }
   #seq-deck .beat-undo { gap: 4px; }
   #seq-deck .beat-undo .seq-click { width: 44px; font-size: 1.2rem; }
 }
@@ -3104,24 +3075,76 @@ body.keys-on .touch-grid { height: max(320px, calc(100dvh - var(--head-h, 64px) 
 .touch-band.touch-cell .touch-name { font-size: 0.85rem; }
 .touch-block-empty { border: 2px dashed rgb(255 255 255 / 0.3); border-radius: 12px; }
 
-/* On Beats with ⌨️ Keys, ✏️ Layout sits on the control bar after 🎚️ (and
-   in the slim bar once scrolled); 🎤 Live's own is on its bar too (#dj-change, dj.js showMode). */
+/* On Beats with ⌨️ Keys, ✏️ Layout sits on the control bar before the 🎛️ key
+   (and in the slim bar once scrolled); 🎤 Live's own is on its bar too (#dj-change, dj.js showMode).
+   On the narrowest phones the bar has no room for it, so it is in the 🎛️ panel instead (#dj-change-bar). */
 .edit-keys-open { width: auto; padding: 0 10px; font: 800 1rem/1 var(--font-ui); white-space: nowrap; }
-/* After 🎚️ from 601 px; on a phone the bars' line is full, so after ⏲️. */
-#dj-change-tempo { display: none; }
-@media (max-width: 600px) {
-  #dj-change-bar { display: none; }
-  body.keys-on #dj-change-tempo { display: block; }   /* 🎤 Live has its own (#dj-change) */
-  /* A grid (Ben, 2026-10-19: "a bit more of a grid"): ⏲️ over 🎚️ and ✏️ over
-     ⇆, each 48 px, 8 px apart, both lines ending at the right edge. */
-  body.keys-on .dj-bar :is(#dj-beat-click, #dj-change-tempo) { width: 48px; padding: 0; }
-  body.keys-on #dj-change-tempo { font-size: 1.2rem; }   /* just ✏️ on a phone (dj.js) */
-  body.keys-on .dj-bar > .beat-shape { gap: 8px; }
-  body.keys-on .dj-bar > .beat-shape .mixer-open { margin-left: auto; }
+#dj-change-tempo, #dj-change-bar { display: none; }
+body.keys-on #dj-change-tempo { display: block; width: 48px; padding: 0; font-size: 1.2rem; }   /* just ✏️ (dj.js); 🎤 Live has its own (#dj-change) */
+@media (min-width: 601px) {
+  body.keys-on #dj-change-tempo { width: auto; padding: 0 12px; font-size: 1rem; }
+  body.keys-on #dj-change-tempo::after { content: " Layout" / ""; }
 }
-/* The narrowest phones: 6 px apart, so the bars' line fits (it ran 3 px over at 320). */
-@media (max-width: 359px) {
-  body.keys-on .dj-bar .beat-more, body.keys-on .dj-bar > .beat-shape { gap: 6px; }
+@media (max-width: 355px) {
+  body.keys-on #dj-change-tempo { display: none; }
+  #dj-change-bar { display: block; }
+}
+/* ── The beat menu (beat-menu.js; docs/design/beat-menu.md; Ben, 2026-11-05) ──
+   Beats' bar keeps what a kid taps while playing; the 🎛️ key at its right end
+   opens one panel under the bar with the rest: the tempo and ⏲️, Bars, Feel,
+   the time signature (Advanced), 🎚️ Mixer and ⇆ Move pills. The same at every
+   width; from 700 px its parts sit side by side. The panel is in the bar, so
+   the bar's wrapping and sticking carry it; closed, it is not drawn. */
+.beat-key { position: relative; display: grid; flex: none; width: 56px; min-height: 52px; margin-left: auto; place-content: center; justify-items: center; gap: 2px; padding: 0; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; color: #fff; }
+.beat-key-icon { font-size: 1.2rem; line-height: 1; }
+/* ⌨️ Keys on a phone: ▶ ● ↩️ ↪️ ✏️ 🎛️ on one line, the keys 44 px (↩️ ↪️ 4 px apart), the 🎛️ key 52, 6 px apart. Under 356 px ✏️ Layout is in the panel instead (below). */
+@media (max-width: 600px) {
+  body.keys-on .dj-bar > .beat-go { gap: 6px; }
+  body.keys-on .dj-bar .beat-undo { gap: 4px; }
+  body.keys-on .dj-bar :is(.beat-undo .seq-click, #dj-change-tempo) { width: 44px; font-size: 1.2rem; }
+  .beat-key { width: 52px; }
+}
+
+.beat-key-num { font: 800 0.95rem/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.beat-key[aria-expanded="true"] { background: var(--led); border-color: var(--led); color: var(--ink); }
+/* A dot while ⏲️ ticks, so a click that is on is never hidden by the closed panel. */
+.beat-key-dot { display: none; position: absolute; top: 3px; right: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--led); box-shadow: 0 0 0 2px #14131f; }
+.beat-key.click-on .beat-key-dot { display: block; }
+.beat-key[aria-expanded="true"] .beat-key-dot { background: var(--ink); box-shadow: none; }
+.beat-menu { display: none; }
+.beat-deck.menu-open { flex-wrap: wrap; row-gap: 10px; }
+.beat-deck.menu-open > .beat-menu { display: grid; flex: 1 1 100%; gap: 10px; min-width: 0; padding: 12px; border-radius: 14px; background: rgb(0 0 0 / 0.28); }
+.beat-menu-part { display: flex; flex-direction: column; align-items: stretch; gap: 4px; min-width: 0; }
+.beat-menu-part:has(> [hidden]) { display: none; }   /* the time signature, until Advanced */
+.beat-menu-lab { font: 800 0.8rem/1 var(--font-ui); opacity: 0.85; }
+.beat-menu .seq-barsel { display: flex; }
+.beat-menu .seq-barsel button { flex: 1 1 auto; min-width: 44px; min-height: 48px; padding: 0 8px; }
+@media (max-width: 359px) { .beat-menu .seq-barsel button { padding: 0 5px; font-size: 0.95rem; } }
+/* The chosen one shows a ✓ as well as yellow. */
+.beat-menu .seq-barsel button[aria-pressed="true"]::before { content: "✓ " / ""; font-size: 0.85em; }
+.beat-menu .seq-barsel button[aria-disabled="true"] { opacity: 0.45; cursor: default; }
+/* The tempo: 🐢 the slider 🐇, the number to type, and ⏲️. */
+.beat-menu-tempo { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.beat-menu .beat-tempo { flex: 1 1 12rem; min-width: 0; min-height: 0; flex-wrap: wrap; gap: 6px; }
+.beat-menu .beat-tempo input[type="range"] { display: block; flex: 1 1 3rem; min-width: 0; min-height: 44px; }
+.beat-menu .beat-tempo .seq-bpm-num, .beat-menu .beat-tempo .seq-bpm-type { margin-left: 0; }
+.beat-menu .beat-tempo .seq-bpm-num { min-width: 0; padding: 0 2px; font-size: 0.9rem; }
+.beat-menu .beat-tempo .seq-bpm-type { width: 5rem; }
+.beat-menu .tempo-step { display: grid; margin: 0; }
+.beat-menu .tempo-step::before { content: "🐢" / ""; position: static; width: auto; height: auto; margin: 0; border: 0; transform: none; font-size: 1.5rem; line-height: 1; }
+.beat-menu .tempo-step.up::before { content: "🐇" / ""; }
+.beat-menu .seq-click.tapping { width: auto; padding: 0 10px; font-size: 0.95rem; }
+.beat-menu .seq-click.tapping::after { content: none; }
+.beat-menu-tools { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+.beat-menu-tools :is(.mixer-open, .move-open)::after { content: " " attr(data-word) / ""; }
+.beat-menu-tools .seq-click { flex: 1 1 auto; width: auto; min-height: 48px; padding: 0 10px; font: 800 1rem/1 var(--font-ui); white-space: nowrap; }
+@media (min-width: 700px) {
+  .beat-deck.menu-open > .beat-menu { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 28px; }
+  .beat-menu-tempo { flex: 1 1 24rem; }
+  .beat-menu-tempo .seq-click:not(.tapping)::after { content: " " attr(data-word) / ""; }
+  .beat-menu-tempo .seq-click { width: auto; padding: 0 14px; font-size: 1rem; white-space: nowrap; }
+  .beat-menu .seq-barsel button { flex: 0 0 auto; min-width: 52px; padding: 0 14px; }
+  .beat-menu-tools .seq-click { flex: 0 0 auto; padding: 0 16px; }
 }
 /* Under the keys, only their colors (a legend, like the periodic table's):
    ⏲️, 🔔 Let it ring and ✏️ Layout are on the control bar (Ben, 2026-10-26). */

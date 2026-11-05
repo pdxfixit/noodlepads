@@ -126,42 +126,47 @@
             <button type="button" class="seq-click beat-undo-btn" data-beat-undo aria-label="Undo the last change to this beat" title="↩️ Undo (Ctrl+Z)" aria-disabled="true">↩️</button>
             <button type="button" class="seq-click beat-undo-btn" data-beat-redo aria-label="Redo the change you undid" title="↪️ Redo (Shift+Ctrl+Z)" aria-disabled="true">↪️</button>
           </div>
-          <!-- On a phone the tempo is one key that opens it as a line of its own (tempo-key.js). -->
-          <button type="button" class="tempo-key" id="seq-tempo-key" aria-expanded="false" aria-controls="seq-tempo" aria-label="Tempo 100 BPM: tap to change it"><span class="tempo-key-num">100</span><span class="tempo-key-open" aria-hidden="true">▾</span></button>
-          <div class="beat-tempo tempo-box" id="seq-tempo" role="group" aria-label="Tempo">
-            <button type="button" class="tempo-step down" data-tempo-step="-1" aria-label="Slower"></button>
-            <input type="range" id="seq-bpm" step="1" aria-label="Tempo">
-            <button type="button" class="seq-bpm-num" id="seq-bpm-out"></button>
-            <input type="number" class="seq-bpm-type" id="seq-bpm-type" inputmode="numeric" aria-label="Tempo in BPM" hidden>
-            <button type="button" class="tempo-step up" data-tempo-step="1" aria-label="Faster"></button>
-          </div>
-          <button type="button" class="seq-click" id="seq-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never saved." title="Click track: a tick on every beat to keep time">⏲️</button>
+          <!-- 🎛️ over the tempo opens the panel under the bar (beat-menu.js; docs/design/beat-menu.md). -->
+          <button type="button" class="beat-key" id="seq-tempo-key" aria-expanded="false" aria-controls="seq-menu" aria-label="Beat settings, tempo 100"><span class="beat-key-icon" aria-hidden="true">🎛️</span><span class="beat-key-num" aria-hidden="true">100</span><span class="beat-key-dot" aria-hidden="true"></span></button>
         </div>
-        <div class="beat-shape" id="seq-shape-line">
-          <div class="seq-barsel" id="seq-bars" role="group" aria-label="How many bars the beat is">
-            <button type="button" data-bars="1" aria-pressed="true" aria-label="1 bar">1<span class="bar-word"> bar</span></button>
-            <button type="button" data-bars="2" aria-pressed="false" aria-label="2 bars">2<span class="bar-word"> bars</span></button>
-            <button type="button" data-bars="4" aria-pressed="false" aria-label="4 bars">4 bars</button>
-            <select class="seq-pick" aria-label="Bars"></select>
+        <div class="beat-menu" id="seq-menu" role="group" aria-label="Beat settings">
+          <div class="beat-menu-part beat-menu-tempo">
+            <div class="beat-tempo" id="seq-tempo" role="group" aria-label="Tempo">
+              <button type="button" class="tempo-step down" data-tempo-step="-1" aria-label="Slower"></button>
+              <input type="range" id="seq-bpm" step="1" aria-label="Tempo">
+              <button type="button" class="tempo-step up" data-tempo-step="1" aria-label="Faster"></button>
+              <button type="button" class="seq-bpm-num" id="seq-bpm-out"></button>
+              <input type="number" class="seq-bpm-type" id="seq-bpm-type" inputmode="numeric" aria-label="Tempo in BPM" hidden>
+            </div>
+            <button type="button" class="seq-click" id="seq-click" data-word="Click track" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never saved." title="Click track: a tick on every beat to keep time">⏲️</button>
           </div>
-          <div class="seq-shape" id="seq-shape">
+          <div class="beat-menu-part"><span class="beat-menu-lab" aria-hidden="true">Bars</span>
+            <div class="seq-barsel" id="seq-bars" role="group" aria-label="How many bars the beat is">
+              <button type="button" data-bars="1" aria-pressed="true" aria-label="1 bar">1</button>
+              <button type="button" data-bars="2" aria-pressed="false" aria-label="2 bars">2</button>
+              <button type="button" data-bars="4" aria-pressed="false" aria-label="4 bars">4</button>
+            </div>
+          </div>
+          <div class="beat-menu-part" id="seq-shape"><span class="beat-menu-lab" aria-hidden="true">Feel</span>
+            <div class="seq-barsel seq-swing" id="seq-swing" role="group" aria-label="Feel: how much the beat swings" title="Feel: how much the beat swings">
+              <button type="button" data-swing="0" aria-pressed="true">Straight</button>
+              <button type="button" data-swing="33" aria-pressed="false">Swing</button>
+              <button type="button" data-swing="50" aria-pressed="false">Shuffle</button>
+            </div>
+          </div>
+          <div class="beat-menu-part"><span class="beat-menu-lab" aria-hidden="true">Time</span>
             <div class="seq-barsel seq-sigs" id="seq-sigs" hidden role="group" aria-label="Time signature: beats in a bar">
               <button type="button" data-sig="4/4" aria-pressed="true">4/4</button>
               <button type="button" data-sig="3/4" aria-pressed="false">3/4</button>
               <button type="button" data-sig="5/4" aria-pressed="false">5/4</button>
               <button type="button" data-sig="6/8" aria-pressed="false">6/8</button>
               <button type="button" data-sig="7/8" aria-pressed="false">7/8</button>
-              <select class="seq-pick" aria-label="Time signature"></select>
-            </div>
-            <div class="seq-barsel seq-swing" id="seq-swing" role="group" aria-label="Swing: how much the beat bounces" title="Swing: how much the beat bounces">
-              <button type="button" data-swing="0" aria-pressed="true">Straight</button>
-              <button type="button" data-swing="33" aria-pressed="false">Swing</button>
-              <button type="button" data-swing="50" aria-pressed="false">Shuffle</button>
-              <select class="seq-pick" aria-label="Swing"></select>
             </div>
           </div>
-          <button type="button" class="seq-click mixer-open" data-mixer aria-label="🎚️ Mixer: each row's loudness, mute, solo and effect" title="Mixer">🎚️</button>
-          <button type="button" class="seq-click move-open" data-move-open aria-pressed="false" aria-label="⇆ Lock the pills: tap and drag pick and slide them, and none turns on or off" title="⇆ Lock the pills, to pick and slide them">⇆</button>
+          <div class="beat-menu-part beat-menu-tools" id="seq-menu-tools">
+            <button type="button" class="seq-click mixer-open" data-mixer data-word="Mixer" aria-label="🎚️ Mixer: each row's loudness, mute, solo and effect" title="Mixer">🎚️</button>
+            <button type="button" class="seq-click move-open" data-move-open data-word="Move pills" aria-pressed="false" aria-label="⇆ Lock the pills: tap and drag pick and slide them, and none turns on or off" title="⇆ Lock the pills, to pick and slide them">⇆</button>
+          </div>
         </div>
       </div>
       <p class="seq-empty" id="seq-empty" hidden>This board has no sounds yet. Tap 🔊 Pads, then New sound.</p>
@@ -202,16 +207,12 @@
             <button type="button" class="dj-rec" id="dj-record" data-icon="●" aria-pressed="false">● Record</button>
           </div>
           <div class="beat-more">
-            <button type="button" class="tempo-key" id="dj-tempo-key" aria-expanded="false" aria-controls="dj-tempo" aria-label="Tempo 100 BPM: tap to change it"><span class="tempo-key-num">100</span><span class="tempo-key-open" aria-hidden="true">▾</span></button>
-            <div class="beat-tempo tempo-box" id="dj-tempo" role="group" aria-label="Tempo" hidden>
-              <button type="button" class="tempo-step down" data-tempo-step="-1" aria-label="Slower"></button>
-              <input type="range" id="dj-bpm-slider" step="1" aria-label="Tempo">
-              <button type="button" class="seq-bpm-num" id="dj-bpm" aria-label="Tempo 100 BPM. Tap to type a tempo.">100 BPM</button>
-              <input type="number" class="seq-bpm-type" id="dj-bpm-type" inputmode="numeric" aria-label="Tempo in BPM" hidden>
-              <button type="button" class="tempo-step up" data-tempo-step="1" aria-label="Faster"></button>
+            <!-- Beats with ⌨️ Keys: ↩️ Undo · ↪️ Redo (the same pair as Beats'), ✏️ Layout, then the 🎛️ key (last in this box)
+                 at the right end (beat-menu.js). On a narrow phone ✏️ Layout is in the panel instead (#dj-change-bar). Live shows none of them. -->
+            <div class="beat-undo" role="group" aria-label="Undo and redo" hidden>
+              <button type="button" class="seq-click beat-undo-btn" data-beat-undo aria-label="Undo the last change to this beat" title="↩️ Undo (Ctrl+Z)" aria-disabled="true">↩️</button>
+              <button type="button" class="seq-click beat-undo-btn" data-beat-redo aria-label="Redo the change you undid" title="↪️ Redo (Shift+Ctrl+Z)" aria-disabled="true">↪️</button>
             </div>
-            <button type="button" class="seq-click" id="dj-beat-click" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never recorded. Tap it three times in time to set the tempo." title="Click track: a tick on every beat to keep time" hidden>⏲️</button>
-            <!-- On a phone ✏️ Layout sits here, after ⏲️, as just ✏️: the bars' line has no room for it (Ben, 2026-10-19). -->
             <button type="button" class="seq-click edit-keys-open" id="dj-change-tempo" aria-label="✏️ Layout: how the pads are laid out" title="✏️ Layout">✏️</button>
             <!-- 🎤 Live's own, in the place Beats has its tempo and ⏲️ (Ben, 2026-10-26: the controls at the
                  top, so every view agrees): the click's tempo, kept in room while the click is off, and ⏲️. -->
@@ -230,27 +231,50 @@
             <button type="button" class="seq-tool" data-more-word="Takes" data-more-icon="🎬" id="dj-takes-open" data-icon="🎬" aria-label="🎬 Takes: everything you recorded">🎬 Takes</button>
             <!-- Where they don't fit, 🎬 Takes, ✏️ Layout and 🔔 Let it ring fold into this ⋯ (dj.js, lines.js foldLine; Ben, 2026-10-27). -->
             <button type="button" class="seq-click more-btn dj-more" id="dj-more" data-more="live" data-more-fold aria-haspopup="menu" aria-expanded="false" aria-label="More: what doesn't fit on the bar" title="More">⋯</button>
+            <!-- Last, so the 🎛️ key is at the right end of the bar whatever else shows. -->
+            <button type="button" class="beat-key" id="dj-tempo-key" aria-expanded="false" aria-controls="dj-setup" aria-label="Beat settings, tempo 100" hidden><span class="beat-key-icon" aria-hidden="true">🎛️</span><span class="beat-key-num" aria-hidden="true">100</span><span class="beat-key-dot" aria-hidden="true"></span></button>
           </div>
         </div>
-        <div class="beat-shape" id="dj-setup" role="group" aria-label="The beat: bars and time signature" hidden>
-          <div class="seq-barsel" id="dj-bars" role="group" aria-label="How many bars the beat is">
-            <button type="button" data-bars="1" aria-pressed="true" aria-label="1 bar">1<span class="bar-word"> bar</span></button>
-            <button type="button" data-bars="2" aria-pressed="false" aria-label="2 bars">2<span class="bar-word"> bars</span></button>
-            <button type="button" data-bars="4" aria-pressed="false" aria-label="4 bars">4 bars</button>
+        <div class="beat-menu" id="dj-setup" role="group" aria-label="Beat settings" hidden>
+          <div class="beat-menu-part beat-menu-tempo">
+            <div class="beat-tempo" id="dj-tempo" role="group" aria-label="Tempo">
+              <button type="button" class="tempo-step down" data-tempo-step="-1" aria-label="Slower"></button>
+              <input type="range" id="dj-bpm-slider" step="1" aria-label="Tempo">
+              <button type="button" class="tempo-step up" data-tempo-step="1" aria-label="Faster"></button>
+              <button type="button" class="seq-bpm-num" id="dj-bpm" aria-label="Tempo 100 BPM. Tap to type a tempo.">100 BPM</button>
+              <input type="number" class="seq-bpm-type" id="dj-bpm-type" inputmode="numeric" aria-label="Tempo in BPM" hidden>
+            </div>
+            <button type="button" class="seq-click" id="dj-beat-click" data-word="Click track" aria-pressed="false" aria-label="Click track: a tick on every beat to keep time. Never recorded. Tap it three times in time to set the tempo." title="Click track: a tick on every beat to keep time">⏲️</button>
           </div>
-          <div class="seq-barsel seq-sigs" id="dj-sigs" role="group" aria-label="Time signature: beats in a bar" hidden>
-            <button type="button" data-sig="4/4" aria-pressed="true">4/4</button>
-            <button type="button" data-sig="3/4" aria-pressed="false">3/4</button>
-            <button type="button" data-sig="5/4" aria-pressed="false">5/4</button>
-            <button type="button" data-sig="6/8" aria-pressed="false">6/8</button>
-            <button type="button" data-sig="7/8" aria-pressed="false">7/8</button>
-            <select class="seq-pick" aria-label="Time signature"></select>
+          <div class="beat-menu-part"><span class="beat-menu-lab" aria-hidden="true">Bars</span>
+            <div class="seq-barsel" id="dj-bars" role="group" aria-label="How many bars the beat is">
+              <button type="button" data-bars="1" aria-pressed="true" aria-label="1 bar">1</button>
+              <button type="button" data-bars="2" aria-pressed="false" aria-label="2 bars">2</button>
+              <button type="button" data-bars="4" aria-pressed="false" aria-label="4 bars">4</button>
+            </div>
           </div>
-          <button type="button" class="seq-click mixer-open" data-mixer aria-label="🎚️ Mixer: each row's loudness, mute, solo and effect" title="Mixer">🎚️</button>
-          <!-- ✏️ Layout, after 🎚️ on Beats' bar: opens the editor at once, whose top line picks ⌨️ Keys or 👆 Pads
-               (Ben, 2026-10-19); on a phone it sits after ⏲️ instead (#dj-change-tempo). 🎤 Live has its own (#dj-change). -->
-          <button type="button" class="seq-click edit-keys-open" id="dj-change-bar" aria-label="✏️ Layout: how the keys or pads are laid out" title="✏️ Layout: how the keys or pads are laid out">✏️ Layout</button>
-          <button type="button" class="seq-click move-open" data-move-open aria-pressed="false" aria-label="⇆ Lock the pills: tap and drag pick and slide them, and none turns on or off" title="⇆ Lock the pills, to pick and slide them">⇆</button>
+          <div class="beat-menu-part"><span class="beat-menu-lab" aria-hidden="true">Feel</span>
+            <div class="seq-barsel seq-swing" id="dj-swing" role="group" aria-label="Feel: how much the beat swings" title="Feel: how much the beat swings">
+              <button type="button" data-swing="0" aria-pressed="true">Straight</button>
+              <button type="button" data-swing="33" aria-pressed="false">Swing</button>
+              <button type="button" data-swing="50" aria-pressed="false">Shuffle</button>
+            </div>
+          </div>
+          <div class="beat-menu-part"><span class="beat-menu-lab" aria-hidden="true">Time</span>
+            <div class="seq-barsel seq-sigs" id="dj-sigs" role="group" aria-label="Time signature: beats in a bar" hidden>
+              <button type="button" data-sig="4/4" aria-pressed="true">4/4</button>
+              <button type="button" data-sig="3/4" aria-pressed="false">3/4</button>
+              <button type="button" data-sig="5/4" aria-pressed="false">5/4</button>
+              <button type="button" data-sig="6/8" aria-pressed="false">6/8</button>
+              <button type="button" data-sig="7/8" aria-pressed="false">7/8</button>
+            </div>
+          </div>
+          <div class="beat-menu-part beat-menu-tools">
+            <button type="button" class="seq-click mixer-open" data-mixer data-word="Mixer" aria-label="🎚️ Mixer: each row's loudness, mute, solo and effect" title="Mixer">🎚️</button>
+            <!-- ✏️ Layout here only on the narrowest phones, where the bar has no room for it (#dj-change-tempo is on the bar otherwise). -->
+            <button type="button" class="seq-click edit-keys-open" id="dj-change-bar" aria-label="✏️ Layout: how the keys or pads are laid out" title="✏️ Layout: how the keys or pads are laid out">✏️ Layout</button>
+            <button type="button" class="seq-click move-open" data-move-open data-word="Move pills" aria-pressed="false" aria-label="⇆ Lock the pills: tap and drag pick and slide them, and none turns on or off" title="⇆ Lock the pills, to pick and slide them">⇆</button>
+          </div>
         </div>
       </div>
       <p class="seq-empty" id="dj-no-rows" hidden>No rows yet. Tap ● Record and play the sounds below: each one you play gets a row.</p>

@@ -37,11 +37,11 @@ test('🔔 and ✏️ say their word from 761 px; just the emoji up to 760 px, a
 
 test('while tap tempo talks, ⏲️ takes over the tempo\'s room, so nothing after it moves', () => {
   assert.match(css, /body\.screen-live \.dj-bar \.beat-more:has\(#dj-click\.tapping\) > #dj-click-tempo \{ display: none; \}/);
-  assert.match(css, /body\.keys-on \.dj-bar \.beat-more:has\(#dj-beat-click\.tapping\) > #dj-tempo \{ display: none; \}/);
+  assert.match(css, /\.beat-menu \.seq-click\.tapping \{ width: auto; padding: 0 10px; font-size: 0\.95rem; \}/, 'in the 🎛️ panel (Beats) the tap tempo\'s words just fit, on a phone too');
 });
 
-test('Beats with ⌨️ Keys: its bars take a line of their own up to 879 px (at 761–850 ⏲️ ran under them and ⇆ stuck out)', () => {
-  assert.match(css, /@media \(min-width: 601px\) and \(max-width: 879px\) \{\n {2}\.dj-bar\.beat-deck \{ flex-wrap: wrap; \}/);
+test('Beats with ⌨️ Keys: the 🎛️ panel opens on a line of its own under the bar, at every width', () => {
+  assert.match(css, /\.beat-deck\.menu-open \{ flex-wrap: wrap; row-gap: 10px; \}\n\.beat-deck\.menu-open > \.beat-menu \{ display: grid; flex: 1 1 100%;/);
 });
 
 // Ben, 2026-10-27: "when there is the width available, it should be showing

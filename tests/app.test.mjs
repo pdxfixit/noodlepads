@@ -433,7 +433,7 @@ test('Beats shows the beat maker in place of the pads; 🆕 New starts with no r
   assert.equal(bar.querySelector('[data-beat-keep]').hidden, false);
   assert.equal(bar.querySelector('[data-beat-keep]').disabled, true, 'nothing to keep yet');
   assert.equal($('#seq-deck').hidden, false, 'Play and the tempo');
-  assert.equal($('#seq-shape-line').hidden, false, 'the bars');
+  assert.equal($('#seq-menu').hidden, false, 'the 🎛️ panel (the bars, feel and the tempo are in it)');
   assert.equal($('#seq-add').hidden, false, '+ Add a row');
   assert.equal(state.savedBeats.filter((b) => b.personId === 'pip').length, 0, 'and nothing joined the list');
   // 🆕 New opens a blank scratch (Ben, 2026-10-12): nothing joins the list.
@@ -1737,7 +1737,9 @@ test('Beats with ⌨️ Keys: tempo, bars and (with Advanced) time signature are
   keysOn(page);
   const setup = $('#dj-setup');
   assert.equal(setup.hidden, false);
-  const setupKeys = () => [...$('#dj-tempo').querySelectorAll('button'), ...setup.querySelectorAll('button')];
+  // The 🎛️ panel (docs/design/beat-menu.md): ⏲️ Click track is in it and keeps working while recording.
+  const setupKeys = () => [...$('#dj-tempo').querySelectorAll('button'), ...setup.querySelectorAll('button')].filter((b) => b !== $('#dj-beat-click'));
+  const waits = (b) => b.disabled || b.getAttribute('aria-disabled') === 'true';
   assert.equal($('#dj-bpm').textContent, '100 BPM');
   assert.equal($('#dj-sigs').hidden, true, 'the time signature needs Advanced, as on Beats');
   const slider = $('#dj-bpm-slider');
@@ -1768,13 +1770,18 @@ test('Beats with ⌨️ Keys: tempo, bars and (with Advanced) time signature are
   $('#dj-record').dispatch('click');
   await page.settle();
   assert.equal($('#dj-status').textContent, 'Get ready… 1', 'the count-in starts');
-  assert.ok(setupKeys().every((b) => b.disabled), 'no changes while hits land on the grid');
+  assert.deepEqual(setupKeys().filter((b) => !waits(b)).map((b) => b.id || b.className), [], 'no changes while hits land on the grid');
   assert.equal($('#dj-bpm-slider').disabled, true);
-  assert.equal($('#dj-bars').hidden, true, 'the bars go away while recording');
-  assert.equal($('#dj-sigs').hidden, true, 'and the time signature');
+  assert.equal($('#dj-bars').hidden, false, 'Bars stay in the panel while recording…');
+  assert.equal($('#dj-bars').querySelector('[data-bars="1"]').getAttribute('aria-disabled'), 'true', '…waiting, aria-disabled');
+  assert.match($('#dj-bars').querySelector('[data-bars="1"]').getAttribute('aria-label'), /waits while recording/, 'with their reason in the name');
+  assert.match($('#dj-sigs').querySelector('[data-sig="4/4"]').getAttribute('aria-label'), /waits while recording/, 'and the time signature');
+  assert.equal($('#dj-beat-click').disabled, false, '⏲️ is not a change to the grid');
+  $('#dj-bars').querySelector('[data-bars="1"]').dispatch('click');
+  assert.equal($('#dj-bars').querySelector('[data-bars="2"]').getAttribute('aria-pressed'), 'true', 'a tap on a waiting key does nothing');
   $('#dj-record').dispatch('click');
-  assert.ok(setupKeys().every((b) => !b.disabled));
-  assert.equal($('#dj-bars').hidden, false);
+  assert.ok(setupKeys().every((b) => !waits(b)));
+  assert.equal($('#dj-bars').querySelector('[data-bars="1"]').getAttribute('aria-label'), '1 bar', 'the name is whole again');
   $('#dj-sigs').querySelector('[data-sig="4/4"]').dispatch('click');
   $('#dj-bars').querySelector('[data-bars="1"]').dispatch('click');
   await setSetting('advancedBeats', false);
@@ -1785,7 +1792,8 @@ test('Beats with ⌨️ Keys: tempo, bars and (with Advanced) time signature are
 
 test('⏲️ Click track: emoji-only by Play on Beats; on 🎤 Live, on its control bar after its own tempo slider, and it ticks there', async () => {
   const { audio } = await import('../web/audio.js');
-  assert.ok($('#seq-deck').contains($('#seq-click')), 'on the sticky bar with Play and the tempo');
+  assert.ok($('#seq-deck').contains($('#seq-click')), 'in the sticky bar, in the 🎛️ panel (docs/design/beat-menu.md)');
+  assert.ok($('#seq-menu').contains($('#seq-click')) && !$('#seq-deck .beat-go').contains($('#seq-click')), 'not on the play line');
   assert.equal($('#seq-click').textContent, '⏲️');
   assert.match($('#seq-click').getAttribute('aria-label'), /^Click track/);
   assert.equal($('#dj-click').textContent, '⏲️', 'emoji only, as on Beats');
@@ -1836,16 +1844,21 @@ test('⏲️ Click track: emoji-only by Play on Beats; on 🎤 Live, on its cont
   assert.equal($('#dj-beat-click').getAttribute('aria-pressed'), 'true', 'one click setting for DJ: on in both places');
   $('#dj-beat-click').dispatch('click');
   assert.equal($('#dj-beat-click').getAttribute('aria-pressed'), 'false');
-  // The control bar reads ▶ Play · ● Record · tempo (its key on a phone) · ⏲️, then the bars, as on Beats, whose ▶ Play has ↩️ ↪️ after it (ADR 0036).
+  // The play line reads ▶ Play (· ● Record), ↩️ ↪️ (· ✏️ Layout), then the 🎛️ key at the right end; the tempo, ⏲️ and the bars are in its panel.
   // With Keys, .beat-run (▶ Play · ● Record) and .beat-more lay out as if not there.
   const flat = (e) => e.children.flatMap((c) => (/\bbeat-(run|more)\b/.test(c.className) ? flat(c) : [c]));
-  const order = (root) => flat(root.querySelector('.beat-go')).filter((c) => !c.hidden).map((c) => c.className.split(' ')[0]);
-  assert.deepEqual(order($('.dj-bar')).slice(0, 5), ['seq-play', 'dj-rec', 'tempo-key', 'beat-tempo', 'seq-click']);
-  assert.deepEqual(order($('#seq-deck')), ['seq-play', 'beat-undo', 'tempo-key', 'beat-tempo', 'seq-click']);
-  assert.ok($('.dj-bar').querySelector('.beat-shape').contains($('#dj-bars')) && $('#seq-deck').querySelector('.beat-shape').contains($('#seq-bars')));
+  const order = (root) => flat(root.querySelector('.beat-go')).filter((c) => !c.hidden && !/^(tempo-key|dj-status)|dj-more/.test(c.className)).map((c) => c.id || c.className.split(' ')[0]);
+  assert.deepEqual(order($('.dj-bar')), ['dj-play', 'dj-record', 'beat-undo', 'dj-change-tempo', 'dj-tempo-key']);
+  assert.deepEqual(order($('#seq-deck')), ['seq-play', 'beat-undo', 'seq-tempo-key']);
+  for (const [deck, ids] of [['.dj-bar', ['dj-tempo', 'dj-beat-click', 'dj-bars', 'dj-swing', 'dj-sigs']], ['#seq-deck', ['seq-tempo', 'seq-click', 'seq-bars', 'seq-swing', 'seq-sigs']]]) {
+    for (const id of ids) assert.ok($(deck).querySelector('.beat-menu').contains($(`#${id}`)), `${id} is in the panel`);
+  }
+  assert.ok(!$('.dj-bar').querySelector('.beat-shape') && !$('#seq-deck').querySelector('.beat-shape'), 'the bars line is gone');
   $('#live-tab').dispatch('click');
   assert.equal($('#dj-click').hidden, false, 'Live has its own ⏲️ on its bar');
-  assert.equal($('#dj-beat-click').hidden, true);
+  assert.equal($('#dj-setup').hidden, true, 'its ⏲️ is in the beat settings panel, which Live does not show');
+  assert.equal($('#dj-tempo-key').hidden, true, 'nor the 🎛️ key');
+  assert.equal($('.dj-bar .beat-undo').hidden, true, 'nor ↩️ ↪️');
   assert.equal($('#dj-play').hidden, true, 'Live has no ▶ Play');
   assert.equal($('#dj-click-tempo').hidden, false, 'Live keeps it');
   assert.equal(shown(), true);
@@ -1889,7 +1902,7 @@ test('Beats with ⌨️ Keys: the tempo waits out the count-in, then changes whi
   $('#dj-bpm-type').value = '140';
   $('#dj-bpm-type').dispatch('keydown', { key: 'Enter' });
   assert.equal($('#dj-bpm').textContent, '140 BPM');
-  assert.equal($('#dj-bars').hidden, true, 'the bars still wait for Stop');
+  assert.equal($('#dj-bars').querySelector('[data-bars="1"]').getAttribute('aria-disabled'), 'true', 'the bars still wait for Stop');
   // Pill 12 at 140 BPM: 4 new pills after pill 8. Counted from the start at
   // the new tempo it would be pill 15; at the old tempo, pill 11.
   ctx.currentTime = 903.65 + 4 * (60 / 140 / 4);

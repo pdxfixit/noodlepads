@@ -75,7 +75,15 @@ const TAKE_REC = `Object.defineProperty(BaseAudioContext.prototype, 'currentTime
 const LONG_NAME = (bar) => `${q(`${bar} [data-beat-new]`)} { const n = document.querySelector(${JSON.stringify(`${bar} [data-beat-name]`)});
   n.value = 'Wobbly Noodle Jamboree 9'; n.dispatchEvent(new Event('change')); } await new Promise((r) => setTimeout(r, 300));`;
 // ⇆ Move on, unless a wider shot of the same page already turned it on.
-const MOVE_OPEN = 'if (document.querySelector("#seq-deck [data-move-open]").getAttribute("aria-pressed") !== "true") document.querySelector("#seq-deck [data-move-open]").click(); await new Promise((r) => setTimeout(r, 100));';
+// The 🎛️ panel on Beats' bar (docs/design/beat-menu.md): opened or shut by script, only if it is not so
+// already (the widths share the page, and a click toggles). The key's id: #seq-tempo-key (⌨️ Keys off), #dj-tempo-key (on).
+const MENU = (key, open) => `{ const k = document.querySelector(${JSON.stringify(key)}); if ((k.getAttribute('aria-expanded') === 'true') !== ${open}) k.click(); } await new Promise((r) => setTimeout(r, 150));`;
+const MENU_OPEN = (key = '#seq-tempo-key') => MENU(key, true);
+const MENU_CLOSE = (key = '#seq-tempo-key') => MENU(key, false);
+// ⇆ Move on, unless a wider shot of the same page already turned it on: it is in the panel, so open that first, and put it away after.
+const MOVE_OPEN = MENU_OPEN() + 'if (document.querySelector("#seq-deck [data-move-open]").getAttribute("aria-pressed") !== "true") document.querySelector("#seq-deck [data-move-open]").click(); await new Promise((r) => setTimeout(r, 100));' + MENU_CLOSE();
+// Advanced off or on for a view that shows the time signature (the widths and views share storage).
+const ADVANCED = (on) => `(await import('/settings.js')).setSetting('advancedBeats', ${on}); await new Promise((r) => setTimeout(r, 200));`;
 const nap = 'await new Promise((r) => setTimeout(r, 150));';
 const SLOW = 'await new Promise((r) => setTimeout(r, 600));';   // past a double tap (people.js SLIP_MS)
 // Opens a kit group on Pads only if it is shut: the widths share localStorage.
@@ -348,6 +356,12 @@ const VIEWS = {
   // Pattern chips: six beats made with 🆕 New, + Add a row and 💾 Keep (the newest open), then the chips' line.
   'beat-chips': { screen: 'beats', js: KEEP_NEW.repeat(6) },
   // ↩️ Undo · ↪️ Redo lit (ADR 0036): a kept beat, a pill tapped twice, then one Undo, so both can be pressed.
+  // The 🎛️ panel open (docs/design/beat-menu.md): beat-menu is Beats (⌨️ Keys off) with two rows, builder-menu the same
+  // with ⌨️ Keys on, beat-menu-adv with Advanced on so the time signature shows. The key's dot (⏲️ on) is a state the
+  // widths would toggle, so it is checked by tests/beat-menu.test.mjs.
+  'beat-menu': { screen: 'beats', js: ADVANCED(false) + q('.beat-bar [data-beat-new]') + ADD_ROW.repeat(2) + MENU_OPEN() },
+  'builder-menu': { screen: 'beats', keys: true, js: ADVANCED(false) + q('#dj-beatbar [data-beat-new]') + MENU_OPEN('#dj-tempo-key') },
+  'beat-menu-adv': { screen: 'beats', js: ADVANCED(true) + q('.beat-bar [data-beat-new]') + ADD_ROW.repeat(2) + MENU_OPEN() },
   'beat-undo': { screen: 'beats', js: KEEP_NEW + `for (const i of [0, 2]) document.querySelectorAll('#seq-rows .pill')[i]?.click();` + q('[data-beat-undo]') },
   // beat-chips with the two oldest beats 📌 pinned in 🗂️ Beats (each only if not pinned yet), Open closed again.
   'beat-pins': { screen: 'beats', js: KEEP_NEW.repeat(6) + q('.beat-bar [data-beat-open]')
@@ -359,11 +373,11 @@ const VIEWS = {
     + q('#dj-beatbar [data-beat-keep]')).repeat(6) },
   // 🎚️ Mixer on a new beat with six rows (+ Add a row brings sounds not used yet), the second soloed;
   // beat-solo is the rows behind it after closing; builder-mixer is the keys view's after builder-rows.
-  mixer: { screen: 'beats', js: q('.beat-bar [data-beat-new]') + ADD_ROW.repeat(6) + q('#seq-shape-line [data-mixer]') + q('[data-solo="1"]') },
-  'beat-solo': { screen: 'beats', js: q('.beat-bar [data-beat-new]') + ADD_ROW.repeat(6) + q('#seq-shape-line [data-mixer]') + q('[data-solo="1"]') + q('#mixer [data-close]') },
+  mixer: { screen: 'beats', js: q('.beat-bar [data-beat-new]') + ADD_ROW.repeat(6) + MENU_OPEN() + q('#seq-menu-tools [data-mixer]') + q('[data-solo="1"]') },
+  'beat-solo': { screen: 'beats', js: q('.beat-bar [data-beat-new]') + ADD_ROW.repeat(6) + MENU_OPEN() + q('#seq-menu-tools [data-mixer]') + q('[data-solo="1"]') + q('#mixer [data-close]') + MENU_CLOSE() },
   'builder-mixer': { screen: 'beats', keys: true, js: q('#dj-beatbar [data-beat-new]') + BUILDER_REC + q('#dj-record')
     + `for (const [code, key] of [['KeyZ', 'z'], ['KeyQ', 'q']]) for (const type of ['keydown', 'keyup']) document.dispatchEvent(new KeyboardEvent(type, { code, key, bubbles: true }));`
-    + q('#dj-setup [data-mixer]') },
+    + MENU_OPEN('#dj-tempo-key') + q('#dj-setup [data-mixer]') },
   // 🎹 The piano roll (ADR 0023) on House's bass line (a groove's bass rows load as one tune row):
   // as it opens, with ♯ All notes, and playing (the playhead; needs the audio to start).
   'beat-tune': { screen: 'beats', js: ROLL_GROOVE },

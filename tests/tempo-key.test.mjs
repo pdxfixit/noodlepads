@@ -26,9 +26,8 @@ before(async () => {
   await page.settle();
 });
 
+// 🥁 Beats and ⌨️ Keys have the 🎛️ key and its panel instead (beat-menu.js; tests/beat-menu.test.mjs).
 const KEYS = [
-  ['#seq-tempo-key', 'seq-tempo'],          // 🥁 Beats
-  ['#dj-tempo-key', 'dj-tempo'],            // ⌨️ Keys
   ['#dj-click-key', 'dj-click-tempo'],      // 🎤 Live's click
   ['#song-tempo-key', 'song-tempo-box'],    // 🎼 Song
 ];
@@ -76,19 +75,19 @@ test('Esc that ends typing a number only ends the typing', () => {
   $(k).dispatch('click');
   $('#seq-bpm-out').dispatch('click');                     // tap the number: type one
   $('#seq-bpm-type').dispatch('keydown', { key: 'Escape' });
-  assert.equal(open(k), true, 'the tempo stays open');
+  assert.equal(open(k), true, 'the panel stays open');
   $(k).dispatch('click');
   assert.equal(open(k), false);
 });
 
-test('🥁 Beats and ⌨️ Keys: the key follows the beat\'s tempo', () => {
+test('🥁 Beats and ⌨️ Keys: the 🎛️ key follows the beat\'s tempo', () => {
   $('#beats-toggle').dispatch('click');
   $('#seq-bpm-out').dispatch('click');
   $('#seq-bpm-type').value = '120';
   $('#seq-bpm-type').dispatch('keydown', { key: 'Enter' });
-  assert.equal($('#seq-tempo-key').querySelector('.tempo-key-num').textContent, '120');
+  assert.equal($('#seq-tempo-key').querySelector('.beat-key-num').textContent, '120');
   keysOn(page);
-  assert.equal($('#dj-tempo-key').querySelector('.tempo-key-num').textContent, '120', 'the keys view\'s key reads the same beat');
+  assert.equal($('#dj-tempo-key').querySelector('.beat-key-num').textContent, '120', 'the keys view\'s key reads the same beat');
   keysOff(page);
 });
 
@@ -147,7 +146,7 @@ test('🎤 Live and ⌨️ Keys: a drag of the slider brings loops in line once,
     assert.equal(syncs, 0);
     beat.dispatch('change');
     assert.equal(syncs, 1);
-    assert.equal($('#dj-tempo-key').querySelector('.tempo-key-num').textContent, $('#dj-bpm').textContent.replace(' BPM', ''), 'the key read every step');
+    assert.equal($('#dj-tempo-key').querySelector('.beat-key-num').textContent, $('#dj-bpm').textContent.replace(' BPM', ''), 'the key read every step');
     keysOff(page);
   } finally {
     audio.syncLoops = real;
@@ -159,7 +158,7 @@ test('🎤 Live and ⌨️ Keys: a drag of the slider brings loops in line once,
 // keys-on live --widths 320,375,430,600` measures the columns); these pin the
 // rules. 🎤 Live at 320 px folds into its ⋯ instead of a second line (live-bar.test.mjs).
 test('the CSS: Beats\' keys on a grid, 🎤 Live on one line at 320 px, no dotted line under the tempo', () => {
-  assert.match(css, /@media \(max-width: 600px\) \{\n {2}\.beat-deck \.beat-go \.seq-click, \.beat-deck \.tempo-key \{ width: 48px; padding: 0; \}\n {2}\.beat-deck > :is\(\.beat-go, \.beat-shape\) \{ gap: 8px; \}/);
+  assert.match(css, /@media \(max-width: 600px\) \{\n {2}\.beat-deck \.beat-go \.seq-click, \.beat-deck \.tempo-key \{ width: 48px; padding: 0; \}\n {2}\.beat-deck > \.beat-go \{ gap: 8px; \}/);
   assert.doesNotMatch(css, /@container panel \(max-width: 18\.6rem\)/, 'no second line for 🎤 Live at 320 px');
   assert.doesNotMatch(css, /underline dotted/, 'no dotted line under the tempo');
 });

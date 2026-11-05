@@ -417,6 +417,9 @@ export function installPage({ hash = '', storage, manifest, firstSteps = false }
       if (!docListeners.has(type)) docListeners.set(type, []);
       docListeners.get(type).push(fn);
     },
+    removeEventListener(type, fn) {
+      docListeners.set(type, (docListeners.get(type) ?? []).filter((f) => f !== fn));
+    },
   };
   buildPage(head, body);
   const winListeners = new Map();

@@ -49,8 +49,8 @@ test('with ⌨️ Keys on, ✏️ Layout (the bar\'s) opens the keys\' view with
   keysOn(page);
   assert.ok(document.body.classList.contains('keys-on'));
   $('#ke-input').querySelector('[data-input="keys"]').dispatch('click');
-  assert.equal($('#dj-change').hidden, true, '🎤 Live\'s own ✏️ hides: the bar\'s is after 🎚️');
-  // Beats' control bar has it, after 🎚️, and the keys' foot has none:
+  assert.equal($('#dj-change').hidden, true, '🎤 Live\'s own ✏️ hides: the bar\'s is before 🎛️');
+  // Beats' control bar has it, before the 🎛️ key (in the panel on the narrowest phones), and the keys' foot has none:
   // one tap, the editor, no menu (Ben, 2026-10-19).
   assert.equal($('#dj-change-bar').textContent, '✏️ Layout');
   assert.equal($('#dj-change-bar').hasAttribute('aria-haspopup'), false);
@@ -60,11 +60,10 @@ test('with ⌨️ Keys on, ✏️ Layout (the bar\'s) opens the keys\' view with
   $('#keys-edit').close();
   assert.equal(document.querySelector('[data-pick-input], [data-pick-edit], .input-menu'), null, 'the old menu is gone');
   assert.equal(document.querySelector('#dj-input'), null, 'and the switch by the keys: it lives in ✏️ Layout');
-  assert.match(css, /@media \(max-width: 600px\) \{\n  #dj-change-bar \{ display: none; \}\n  body\.keys-on #dj-change-tempo \{ display: block; \}/, 'on a phone after ⏲️: the bars\' line is full');
-  // A grid on a phone (Ben, 2026-10-19): ⏲️ over 🎚️ and ✏️ over ⇆, each 48 px, the same gaps, both lines right-aligned.
-  assert.match(css, /body\.keys-on \.dj-bar :is\(#dj-beat-click, #dj-change-tempo\) \{ width: 48px; padding: 0; \}/);
-  assert.match(css, /body\.keys-on \.dj-bar > \.beat-shape \{ gap: 8px; \}\n  body\.keys-on \.dj-bar > \.beat-shape \.mixer-open \{ margin-left: auto; \}/);
-  assert.match(css, /body\.keys-on \.dj-bar \.beat-more, body\.keys-on \.dj-bar > \.beat-shape \{ gap: 6px; \}/, 'both lines alike on the narrowest');
+  // ✏️ Layout is on the play line, before the 🎛️ key; on the narrowest phones (under 356 px) it is in the panel instead.
+  assert.match(css, /body\.keys-on #dj-change-tempo \{ display: block; width: 48px; padding: 0; font-size: 1\.2rem; \}/);
+  assert.match(css, /@media \(max-width: 355px\) \{\n {2}body\.keys-on #dj-change-tempo \{ display: none; \}\n {2}#dj-change-bar \{ display: block; \}/);
+  assert.ok($('.dj-bar .beat-go').contains($('#dj-change-tempo')) && $('#dj-setup').contains($('#dj-change-bar')), 'on the bar, and in the panel for the narrowest phones');
 
   $('#ke-input').querySelector('[data-input="touch"]').dispatch('click');
   assert.equal($('#dj-change').hidden, true, 'whichever plays');

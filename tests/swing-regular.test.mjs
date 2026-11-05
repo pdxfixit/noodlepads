@@ -35,21 +35,32 @@ test('an old beat saved with Shuffle plays swung at Regular, on its eighths and 
   assert.deepEqual(times(plan(0, 0, 2, 4, 6)).slice(0, 4), [0, 0.25, 0.5, 0.75], 'straight stays straight');
 });
 
-test('on a phone the bars and swing share one row as pickers: each has a select twin that presses its key', async () => {
+// Bars and Feel are in the 🎛️ panel (docs/design/beat-menu.md), ⌨️ Keys off and on, and both
+// change the one open beat.
+test('Feel and Bars in the 🎛️ panel press their key, at Regular, with Keys off and on', async () => {
   const { document } = globalThis;
-  const pick = (id) => document.querySelector(`#${id} .seq-pick`);
+  const { keysOn, keysOff } = await import('./new-beat.mjs');
   document.querySelectorAll('.beat-bar')[0].querySelector('[data-beat-new]').dispatch('click');   // nothing is open until 🆕 New
   await page.settle();
-  assert.deepEqual(pick('seq-bars').querySelectorAll('option').map((o) => o.textContent), ['1 bar', '2 bars', '4 bars']);
-  assert.deepEqual(pick('seq-swing').querySelectorAll('option').map((o) => o.textContent), ['Straight', 'Swing', 'Shuffle']);
-  const swing = pick('seq-swing');
-  swing.value = '33';
-  swing.dispatch('change');
-  assert.equal(document.querySelector('#seq-swing [data-swing="33"]').getAttribute('aria-pressed'), 'true', 'the picker presses the key');
-  const bars = pick('seq-bars');
-  bars.value = '2';
-  bars.dispatch('change');
+  assert.equal(getSetting('advancedBeats'), false, 'Regular: Feel is there, the time signature is not');
+  assert.ok(document.querySelector('#seq-menu').contains(document.querySelector('#seq-swing')), 'Feel is in the panel');
+  assert.equal(document.querySelector('#seq-sigs').hidden, true);
+  document.querySelector('#seq-swing [data-swing="33"]').dispatch('click');
+  assert.equal(document.querySelector('#seq-swing [data-swing="33"]').getAttribute('aria-pressed'), 'true');
+  assert.equal(seq.swing(), 33, 'the beat\'s own field');
+  document.querySelector('#seq-bars [data-bars="2"]').dispatch('click');
   assert.equal(document.querySelector('#seq-bars [data-bars="2"]').getAttribute('aria-pressed'), 'true');
+  // ⌨️ Keys on: the same beat, with Feel on its own panel too (it had none before).
+  keysOn(page);
+  assert.ok(document.querySelector('#dj-setup').contains(document.querySelector('#dj-swing')));
+  assert.equal(document.querySelector('#dj-swing [data-swing="33"]').getAttribute('aria-pressed'), 'true', 'it shows the beat\'s Feel');
+  document.querySelector('#dj-swing [data-swing="50"]').dispatch('click');
+  assert.equal(seq.swing(), 50, 'Shuffle');
+  assert.equal(document.querySelector('#dj-swing [data-swing="50"]').getAttribute('aria-pressed'), 'true');
+  assert.equal(document.querySelector('#dj-swing [data-swing="33"]').getAttribute('aria-pressed'), 'false');
+  assert.equal(document.querySelector('#dj-bars [data-bars="2"]').getAttribute('aria-pressed'), 'true', 'and its Bars');
+  keysOff(page);
+  assert.equal(document.querySelector('#seq-swing [data-swing="50"]').getAttribute('aria-pressed'), 'true', 'Beats shows it too');
   document.querySelector('#seq-swing [data-swing="0"]').dispatch('click');
   document.querySelector('#seq-bars [data-bars="1"]').dispatch('click');
 });

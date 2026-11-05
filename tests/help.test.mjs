@@ -49,7 +49,7 @@ const MUST_MENTION = [
   // Beats
   '🆕 New', '🗂️ Beats', '🗂️ Songs', '🎧 Listen', '▶ Play', '⏲️', 'Straight', 'Swing', 'Shuffle', '4/4', '+ Add a row', 'loudness', '🧹?',
   'Who plays it?', '💃 Grooves', '📝 Into scratch', '➕ Add to this beat', '💾 Keep', '🔊 As a sound', '⬇️ Audio file', '📥 Load', '🔔 Let it ring', '🎹 Tune', '🎹 Add a tune', '♯ All notes', '½ Half pills', '🎚️ Mixer', 'All on',
-  '⌨️', '● Record', '↩️ Beat', 'tap to change it',
+  '⌨️', '● Record', '↩️ Beat', 'tap to change it', '🎛️',
   // Live
   '⏲️ Click track', 'keep tapping…', '✏️ Layout', '⌨️ Keys', '👆 Pads', '↺ Reset keys', '⭐ Save this layout', '⭐ Keys', '✕ Unpick all', '🎬 Takes',
   '🔊 Make a sound', 'Make another?', 'QWERTY', 'Dvorak', '+ Add a group', '+ more', '⭐ Layout', '🗑️ Take it out',

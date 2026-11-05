@@ -402,15 +402,11 @@ function setKeys(on) {
 }
 
 // Lines that stay on one line and give way step by step as room runs out
-// (lines.js): the toolbar, Beats' bars · time signature · swing, Beat
-// Builder's bars · time signature beside Record and the tempo, and the
-// Keyboard keys in Settings.
+// (lines.js): the toolbar, and the Keyboard keys in Settings. (Beats' bars,
+// feel and time signature are in the 🎛️ panel now: beat-menu.js.)
 function fitLines() {
   for (const sel of document.querySelectorAll('.seq-pick')) pickerFor(sel.closest('.seq-barsel'), sel);
   fitLine(document.querySelector('.toolbar'), ['fit-tight', 'fit-short', 'fit-stack']);
-  fitLine($('#seq-shape-line'), ['fit-tight', 'fit-short', 'fit-pick', 'fit-nosig'], $('#seq-deck'));
-  const deck = document.querySelector('.dj-bar');
-  fitLine(deck.querySelector('.beat-shape'), ['fit-tight', 'fit-short', 'fit-pick', 'fit-nosig'], deck);
   fitLine($('#groove-how'), ['fit-stack']);   // keeps its padding: stacks before it hugs the frame
 }
 
@@ -607,8 +603,8 @@ const touchShelf = shelf('touchLayouts', 'touchLayouts', { what: 'That touch lay
 function makeSequencer() {
   return createSequencer({
     el: {
-      play: $('#seq-play'), bpm: $('#seq-bpm'), bpmOut: $('#seq-bpm-out'), bpmType: $('#seq-bpm-type'), tempoKey: $('#seq-tempo-key'), tempoBox: $('#seq-tempo'),
-      rows: $('#seq-rows'), moveBar: $('#seq-move'), add: $('#seq-add'), addTune: $('#seq-add-tune'), roll: $('#roll'), top: $('#seq-deck'), controls: $('#seq-shape-line'), djPlay: $('#dj-play'),
+      play: $('#seq-play'), bpm: $('#seq-bpm'), bpmOut: $('#seq-bpm-out'), bpmType: $('#seq-bpm-type'), tempoKey: $('#seq-tempo-key'), tempoBox: $('#seq-tempo'), menu: $('#seq-menu'),
+      rows: $('#seq-rows'), moveBar: $('#seq-move'), add: $('#seq-add'), addTune: $('#seq-add-tune'), roll: $('#roll'), top: $('#seq-deck'), controls: $('#seq-menu'), djPlay: $('#dj-play'),
       empty: $('#seq-empty'), noRows: $('#seq-no-rows'),
       chooser: $('#chooser'), chooserTitle: $('#chooser-title'), chooserGrid: $('#chooser-grid'),
       chooserOk: $('#chooser-ok'), chooserTools: $('#chooser-tools'), chooserMelody: $('#chooser-melody'),
@@ -1022,7 +1018,7 @@ async function start() {
       takesOpen: $('#dj-takes-open'), takes: $('#takes'), pictures: $('#pictures'), picturesTitle: $('#pictures-title'), picturesGrid: $('#pictures-grid'), picturesNote: $('#pictures-note'), takesList: $('#takes-list'), takesEmpty: $('#takes-empty'),
       click: $('#dj-click'), overlap: $('#dj-overlap'), more: $('#dj-more'), beatClick: $('#dj-beat-click'), play: $('#dj-play'), tempo: $('#dj-tempo'), grid: $('#dj-grid'),
       size: $('#dj-size'), tempoKey: $('#dj-tempo-key'), clickKey: $('#dj-click-key'),
-      beatbar: $('#dj-beatbar'), count: $('#dj-count'), noRows: $('#dj-no-rows'), deck: $('.dj-bar'), setup: $('#dj-setup'), clickTempo: $('#dj-click-tempo'), clickBpm: $('#dj-click-bpm'), clickBpmOut: $('#dj-click-bpm-out'), bpm: $('#dj-bpm'), bpmType: $('#dj-bpm-type'), bpmSlider: $('#dj-bpm-slider'), bars: $('#dj-bars'), sigs: $('#dj-sigs') },
+      beatbar: $('#dj-beatbar'), count: $('#dj-count'), noRows: $('#dj-no-rows'), deck: $('.dj-bar'), setup: $('#dj-setup'), clickTempo: $('#dj-click-tempo'), clickBpm: $('#dj-click-bpm'), clickBpmOut: $('#dj-click-bpm-out'), bpm: $('#dj-bpm'), bpmType: $('#dj-bpm-type'), bpmSlider: $('#dj-bpm-slider'), bars: $('#dj-bars'), sigs: $('#dj-sigs'), swing: $('#dj-swing'), undoLine: document.querySelector('.dj-bar .beat-undo') },
     deps: {
       personId: () => state.personId,
       personColor: () => person(state.personId)?.color ?? '#333040',

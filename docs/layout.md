@@ -47,7 +47,8 @@ opens with a comment saying what it owns. How the app behaves is in
   - `overflow.js`: a row's menu (`moreMenu`): on Beats and ⌨️ Keys a row's emoji opens it, listing the row's buttons marked `data-more-word` (🔄 Change sound or 🖼️ Change picture, 🔔 🧹 ✕, and ↑ ↓ on Beats) as icon + word; a tap there taps the real button
   - `landed.js`: the one-time glow on the button of the collection something was just kept in (🗂️ Beats, 🗂️ Songs, 🎬 Takes, 🔊 Pads), `.landed` in `styles.css`
   - `lines.js`: lines of controls that stay on one line, giving way step by step as room runs out (the toolbar, the beat bar, the beat's bars · time signature · swing), 🎤 Live's bar folding into its ⋯ (`foldLine`), and keys for a slider with five stops or fewer (Tone, On the beat's note lengths), falling back to the slider when they don't fit
-  - `tempo-key.js`: on a phone, each control bar's tempo folded into one key (the number over ▾) that opens it as a line of its own under the bar; Beats, ⌨️ Keys, 🎤 Live's click and 🎼 Song each keep their own tempo controls inside it
+  - `tempo-key.js`: on a phone, 🎤 Live's click tempo and 🎼 Song's tempo folded into one key (the number over ▾) that opens it as a line of its own under the bar; each keeps its own tempo controls inside it
+  - `beat-menu.js`: 🥁 Beats' 🎛️ key (over the tempo, a dot while ⏲️ is on) and the panel it opens under the bar (tempo, ⏲️, Bars, Feel, time signature, 🎚️, ⇆), ⌨️ Keys off (`sequencer.js`) and on (`dj.js`); closes on the key, Esc or a tap outside that only closes
   - `mix.js`: ➕ Mix with another sound (pure: two sounds in, one out)
   - `pitch.js`: 🎵 Find its note (pure: samples in, a note out)
   - `synth.js`: ✨ Make one's sounds from nothing (pure: recipe in, samples out)
