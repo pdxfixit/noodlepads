@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beat settings menu</title>
+<!-- Mockup for docs/design/beat-menu.md: Beats' control bar with ↩️ ↪️ on the
+     play line and the tempo, bars, swing and the like in one menu under the
+     tempo key, ⌨️ Keys off and on, at a 375 px phone. Drawn by hand with the
+     app's colors, fonts and sizes (44 px targets). -->
+<style>
+@font-face { font-family: "Anybody"; src: url("../../web/fonts/anybody-latin.woff2") format("woff2"); font-weight: 100 900; font-stretch: 50% 150%; }
+@font-face { font-family: "Atkinson Hyperlegible Next"; src: url("../../web/fonts/atkinson-next-latin.woff2") format("woff2"); font-weight: 200 800; }
+:root {
+  --board: #1F3FA8; --bed: color-mix(in srgb, var(--board) 24%, #141318); --deck: color-mix(in srgb, var(--bed) 62%, black);
+  --ink: #1C1740; --chalk: #ECEAF2; --led: #FFE58A; --rec: #D8261F;
+  --ui: "Atkinson Hyperlegible Next", system-ui, sans-serif; --display: "Anybody", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px; background: var(--board); color: #fff; font: 600 15px/1.4 var(--ui); }
+h1 { font: 900 2rem/1 var(--display); margin: 0 0 6px; }
+h2 { font: 800 1.25rem/1.2 var(--ui); margin: 28px 0 4px; }
+p.note { max-width: 74ch; margin: 4px 0 12px; color: rgb(255 255 255 / 0.88); }
+.row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+figure { margin: 0; width: 375px; }
+figcaption { font-weight: 800; margin-bottom: 6px; min-height: 3.4em; }
+figcaption small { display: block; font-weight: 600; opacity: 0.85; }
+.phone { padding: 12px 16px; background: color-mix(in srgb, var(--board) 85%, black); border-radius: 18px; }
+.panel { background: var(--bed); border-radius: 22px; overflow: hidden; }
+.deck { display: grid; gap: 10px; padding: 12px; background: var(--deck); border-bottom: 3px solid rgb(255 255 255 / 0.25); }
+.line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+button { font: inherit; color: inherit; }
+.sq { flex: none; width: 44px; height: 52px; padding: 0; border: 2px solid rgb(255 255 255 / 0.55); border-radius: 12px; background: transparent; font-size: 1.2rem; }
+.sq.dim { opacity: 0.4; border-style: dashed; }
+.sq.on { background: var(--led); border-color: var(--led); color: var(--ink); }
+.play { flex: 1 1 auto; height: 52px; border: 0; border-radius: 12px; background: var(--led); color: var(--ink); font: 800 1.05rem/1 var(--ui); box-shadow: 0 5px 0 color-mix(in srgb, var(--led) 50%, black); white-space: nowrap; min-width: 44px; }
+.rec { flex: 1 1 auto; height: 52px; border: 0; border-radius: 12px; background: var(--chalk); color: var(--rec); font: 800 1.4rem/1 var(--ui); min-width: 44px; }
+.key { flex: none; width: 56px; height: 52px; border: 2px solid rgb(255 255 255 / 0.6); border-radius: 12px; background: transparent; font: 800 1rem/1.05 var(--ui); }
+.key.open { background: var(--led); border-color: var(--led); color: var(--ink); }
+.menu { display: grid; gap: 12px; padding: 12px; background: color-mix(in srgb, var(--deck) 70%, black); border-bottom: 3px solid rgb(255 255 255 / 0.25); }
+.menu .lab { font: 800 0.8rem/1 var(--ui); opacity: 0.8; text-transform: none; margin-bottom: -6px; }
+.seg { display: flex; gap: 0; }
+.seg button { flex: 1 1 0; height: 44px; border: 2px solid rgb(255 255 255 / 0.55); background: transparent; font-weight: 800; }
+.seg button + button { border-left-width: 0; }
+.seg button:first-child { border-radius: 12px 0 0 12px; }
+.seg button:last-child { border-radius: 0 12px 12px 0; }
+.seg button.on { background: var(--led); color: var(--ink); border-color: var(--led); }
+.tempo { display: flex; align-items: center; gap: 8px; }
+.tempo .slider { flex: 1; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--led) 0 33%, rgb(255 255 255 / 0.25) 33%); position: relative; }
+.tempo .slider::after { content: ""; position: absolute; left: 33%; top: 50%; width: 26px; height: 26px; margin: -13px; border-radius: 50%; background: #fff; }
+.tempo b { width: 64px; text-align: center; }
+.tools { display: flex; gap: 8px; }
+.tools button { flex: 1 1 0; height: 44px; border: 2px solid rgb(255 255 255 / 0.55); border-radius: 12px; background: transparent; font-weight: 800; }
+.rows { padding: 12px; display: grid; gap: 8px; }
+.r { display: flex; gap: 6px; align-items: center; }
+.r b { width: 36px; font-size: 1.4rem; text-align: center; }
+.r i { width: 30px; height: 40px; border-radius: 8px; background: rgb(255 255 255 / 0.12); }
+.r i.on { background: var(--led); }
+.keys { padding: 0 12px 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.keys i { height: 56px; border-radius: 12px; background: #C2410C; }
+</style>
+</head>
+<body>
+<h1>Beat settings menu</h1>
+<p class="note">Ben, 2026-11-05: "bars and tempo are rarely used; they could all be moved into a sub menu along with anything like it." The play line keeps what a kid taps while playing: ▶ Play, ● Record with ⌨️ Keys, ↩️ ↪️ and (Keys on) ✏️ Layout. The tempo key (100 ▾, as today) opens one panel under the bar holding the rest: the tempo with ⏲️ Click track, the bars, swing, the time signature (Advanced), 🎚️ Mixer and ⇆ Move. The bars line goes, so the rows start one line higher on every phone.</p>
+
+<h2>🥁 Beats, ⌨️ Keys off</h2>
+<div class="row">
+  <figure>
+    <figcaption>1 · Today<small>Two lines: the play line, then the bars, swing, 🎚️ and ⇆.</small></figcaption>
+    <div class="phone"><div class="panel">
+      <div class="deck">
+        <div class="line"><button class="play">▶ Play</button><button class="sq">↩️</button><button class="sq dim">↪️</button><button class="key">100<br>▾</button><button class="sq">⏲️</button></div>
+        <div class="line"><div class="seg" style="flex:1"><button class="on">1 bar ▾</button></div><div class="seg" style="flex:1.2"><button class="on">Straight ▾</button></div><button class="sq">🎚️</button><button class="sq">⇆</button></div>
+      </div>
+      <div class="rows"><div class="r"><b>🦶</b><i class="on"></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i></div><div class="r"><b>👏</b><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i class="on"></i></div></div>
+    </div></div>
+  </figure>
+  <figure>
+    <figcaption>2 · Proposed, closed<small>One line: ▶ Play, ↩️ ↪️, and the tempo key. Rows start a line higher.</small></figcaption>
+    <div class="phone"><div class="panel">
+      <div class="deck">
+        <div class="line"><button class="play">▶ Play</button><button class="sq">↩️</button><button class="sq dim">↪️</button><button class="key">100<br>▾</button></div>
+      </div>
+      <div class="rows"><div class="r"><b>🦶</b><i class="on"></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i></div><div class="r"><b>👏</b><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i class="on"></i></div></div>
+    </div></div>
+  </figure>
+  <figure>
+    <figcaption>3 · Proposed, the tempo key tapped<small>The panel opens under the bar (as the tempo's line does today). The key again, a tap outside or Esc closes it.</small></figcaption>
+    <div class="phone"><div class="panel">
+      <div class="deck">
+        <div class="line"><button class="play">▶ Play</button><button class="sq">↩️</button><button class="sq dim">↪️</button><button class="key open">100<br>▴</button></div>
+      </div>
+      <div class="menu">
+        <div class="lab">Tempo</div>
+        <div class="tempo"><span>🐢</span><span class="slider"></span><span>🐇</span><b>100</b><button class="sq">⏲️</button></div>
+        <div class="lab">Bars</div>
+        <div class="seg"><button class="on">1</button><button>2</button><button>4</button></div>
+        <div class="lab">Feel</div>
+        <div class="seg"><button class="on">Straight</button><button>Swing</button><button>Shuffle</button></div>
+        <div class="tools"><button>🎚️ Mixer</button><button>⇆ Move pills</button></div>
+      </div>
+      <div class="rows"><div class="r"><b>🦶</b><i class="on"></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i></div></div>
+    </div></div>
+  </figure>
+</div>
+
+<h2>🥁 Beats, ⌨️ Keys on</h2>
+<div class="row">
+  <figure>
+    <figcaption>4 · Today (with ↩️ ↪️ added, as tried)<small>✏️ falls to a third line; the bars take a line of their own.</small></figcaption>
+    <div class="phone"><div class="panel">
+      <div class="deck">
+        <div class="line"><button class="play">▶</button><button class="rec">●</button><button class="sq">↩️</button><button class="sq dim">↪️</button><button class="key">100<br>▾</button><button class="sq">⏲️</button></div>
+        <div class="line"><button class="sq">✏️</button></div>
+        <div class="line"><div class="seg" style="flex:1"><button class="on">1 bar</button><button>2 bars</button><button>4 bars</button></div><button class="sq">🎚️</button><button class="sq">⇆</button></div>
+      </div>
+      <div class="keys"><i></i><i></i><i></i><i></i></div>
+    </div></div>
+  </figure>
+  <figure>
+    <figcaption>5 · Proposed, closed<small>One line: ▶, ●, ↩️ ↪️, ✏️ Layout, the tempo key. ⏲️ (and its tap tempo) moves into the panel.</small></figcaption>
+    <div class="phone"><div class="panel">
+      <div class="deck">
+        <div class="line"><button class="play">▶</button><button class="rec">●</button><button class="sq">↩️</button><button class="sq dim">↪️</button><button class="sq">✏️</button><button class="key">100<br>▾</button></div>
+      </div>
+      <div class="keys"><i></i><i></i><i></i><i></i></div>
+    </div></div>
+  </figure>
+  <figure>
+    <figcaption>6 · Proposed, open<small>The same panel as Keys off. While ● Record records, bars and the time signature wait, as today.</small></figcaption>
+    <div class="phone"><div class="panel">
+      <div class="deck">
+        <div class="line"><button class="play">▶</button><button class="rec">●</button><button class="sq">↩️</button><button class="sq dim">↪️</button><button class="sq">✏️</button><button class="key open">100<br>▴</button></div>
+      </div>
+      <div class="menu">
+        <div class="lab">Tempo</div>
+        <div class="tempo"><span>🐢</span><span class="slider"></span><span>🐇</span><b>100</b><button class="sq">⏲️</button></div>
+        <div class="lab">Bars</div>
+        <div class="seg"><button class="on">1</button><button>2</button><button>4</button></div>
+        <div class="tools"><button>🎚️ Mixer</button><button>⇆ Move pills</button></div>
+      </div>
+      <div class="keys"><i></i><i></i><i></i><i></i></div>
+    </div></div>
+  </figure>
+</div>
+<p class="note">Wide screens: the same key and panel at every width, so Beats looks and works one way; from 900 px the panel's parts sit side by side on one line. 🎼 Song and 🎤 Live keep their bars as they are.</p>
+</body>
+</html>

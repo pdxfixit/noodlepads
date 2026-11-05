@@ -60,7 +60,7 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 Other work:
 
-- [ ] **Drafts and Undo** (Ben, 2026-11-04; ADR 0036, `docs/design/drafts.md`), one push each: 1. ↩️ Undo · ↪️ Redo on Beats (done with ⌨️ Keys off; Keys on's bar waits on Ben); 2. hide `beat-draft-`/`song-draft-` records only; 3. drafts on Beats (💾 → Save or 🗑️ Throw away changes); 4. drafts and Undo on Song.
+- [ ] **Drafts and Undo** (Ben, 2026-11-04; ADR 0036, `docs/design/drafts.md`), one push each: 1. ↩️ Undo · ↪️ Redo on Beats (done with ⌨️ Keys off); 1b. Beats' control bar (Keys off and on): ↩️ ↪️ on the play line, tempo, bars and the like into one menu (Ben, 2026-11-05: "bars and tempo are rarely used; they could all be moved into a sub menu along with anything like it"), mockup first; 2. hide `beat-draft-`/`song-draft-` records only; 3. drafts on Beats (💾 → Save or 🗑️ Throw away changes); 4. drafts and Undo on Song.
 
 - [ ] About 2026-11-16: remove the no-op `POST /api/profiles/:id/uses` route (`takeUses` in `worker/cloud.js`, its route line and `tests/metrics.test.mjs`'s test), and `forget('uses')`/`forget('visits')` in `web/app.js startUsage` if no old copy is left (ADR 0027).
 
