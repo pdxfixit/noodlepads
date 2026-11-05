@@ -3133,6 +3133,13 @@ body.keys-on #dj-change-tempo { display: block; width: 48px; padding: 0; font-si
 .beat-menu .tempo-step { display: grid; margin: 0; }
 .beat-menu .tempo-step::before { content: "🐢" / ""; position: static; width: auto; height: auto; margin: 0; border: 0; transform: none; font-size: 1.5rem; line-height: 1; }
 .beat-menu .tempo-step.up::before { content: "🐇" / ""; }
+/* Under 700 px the number is on the 🎛️ key already: the slider takes its room,
+   and ⏲️ stays on the tempo's line (as the phone's tempo line hid it too). */
+@media (max-width: 699px) {
+  .beat-menu-tempo { flex-wrap: nowrap; }
+  .beat-menu .beat-tempo { flex-wrap: nowrap; }
+  .beat-menu .beat-tempo .seq-bpm-num { display: none; }
+}
 .beat-menu .seq-click.tapping { width: auto; padding: 0 10px; font-size: 0.95rem; }
 .beat-menu .seq-click.tapping::after { content: none; }
 .beat-menu-tools { flex-direction: row; flex-wrap: wrap; gap: 8px; }
