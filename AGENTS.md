@@ -5,6 +5,15 @@ Live and **public** at https://noodlepads.com/. Repo: `github.com/pdxfixit/noodl
 
 This file is the contract: how to start, how to verify and ship, and the rules for working here. It stays short. Detail lives in the files it points to.
 
+## Ownership and authority
+
+**Claude agents manage this repo for its owner.** On 2026-11-14 the owner gave standing approval to make important decisions about it **without asking first**. Use that agency; don't hand back a choice you can make well.
+
+- **Yours to decide:** merging and landing to `main`, rebasing, deleting merged or superseded branches, worktrees and remote branches, evaluating unmerged work (land it if it is right, drop it if it is superseded), and reorganizing code, docs and tooling when that improves the repo (not changing what the product looks like or does where this file already reserves that for the owner).
+- **Decide, record, report:** make the call, note why (commit message, or the decisions file where this repo keeps one), and tell the owner what you did. This overrides any general habit of asking before a judgment call, for decisions inside this repo.
+- **Still the owner's:** anything this repo's own docs reserve for them (items marked as waiting on them), and anything outside this repo: money, accounts, credentials, legal.
+- **Keep it reversible:** before deleting unlanded work or remote branches, save a `git bundle` of the refs first.
+- **Pre-1.0 branches are dead history.** The repo's history was rewritten at the 1.0 cut (2026-10-13). Branches cut before it carry the old history, and their content is already in `main` under new hashes. Never merge or push them, and they still hold text that `main` scrubbed (for example an email address).
 ## Mission
 
 > Noodle Pads is a music studio anyone can pick up: kids, families, and grown-ups who love music but don't have the time for a pro studio. It starts as a soundboard: tap a pad, make a noise, annoy your family. Every next tool is one tap from what you are already playing with, so you learn by goofing around, never by lessons. Real depth (voices, beats, tunes, whole songs) is there when you reach for it. Goofing around counts as much as finishing a song.
