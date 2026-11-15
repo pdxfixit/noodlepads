@@ -13,7 +13,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const docs = ['AGENTS.md', 'README.md', 'docs/how-to.md', 'docs/deploy-cloudflare.md', 'docs/layout.md']
+const mdIn = (dir) => readdirSync(join(root, dir)).filter((f) => f.endsWith('.md')).map((f) => join(dir, f));
+const docs = ['AGENTS.md', ...mdIn('docs/agents'), 'README.md', 'docs/how-to.md', 'docs/deploy-cloudflare.md', 'docs/layout.md']
   .map((f) => readFileSync(join(root, f), 'utf8')).join('\n');
 
 // The recipes as just reads them. `just test` runs this, so just is there;
@@ -60,7 +61,7 @@ export function recipesNamed(text) {
 // history: they may name a recipe as it was.
 function liveDocs() {
   const md = (dir) => readdirSync(join(root, dir)).filter((f) => f.endsWith('.md')).map((f) => join(dir, f));
-  return ['AGENTS.md', 'README.md', 'TODO.md', ...md('docs'), ...md('docs/architecture')];
+  return ['AGENTS.md', 'README.md', 'TODO.md', ...md('docs'), ...md('docs/architecture'), ...md('docs/agents')];
 }
 
 // Recipes of other repos the docs name, with where they run.

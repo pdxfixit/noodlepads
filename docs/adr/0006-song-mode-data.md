@@ -10,7 +10,7 @@
 
 - A song is a list of saved beats, each played 1 to 4 times. It needs a home that survives a reload and travels in a backup.
 - Each person has one song, so the key is the person, like `patterns` (the open beat) and `decks`.
-- Stored formats are kept by users; old databases and backups must keep working (AGENTS.md "The code").
+- Stored formats are kept by users; old databases and backups must keep working (docs/agents/conventions.md "The code").
 
 ## Decision
 

@@ -263,7 +263,7 @@ The endpoint is public; anyone can POST to it, not only the app.
 
 ## 9. Privacy note
 
-For `README.md`, `AGENTS.md` § Privacy and the Help tab, once built:
+For `README.md`, `docs/agents/privacy.md` § Privacy and the Help tab, once built:
 
 > Problem reports are off unless someone turns them on, per device. When on, the app sends the soundboard's own website a record of what it did: buttons and features used, settings, errors, the browser, system and device type, and the screen size. It never sends sounds or recordings, and never sends any name: not people's, not sounds', not beats'. Names inside error messages are blanked before sending. Reports wait on the website for up to 14 days, and are copied to Ben's own computer. Only Ben can read them. The website does not keep your IP address.
 

@@ -270,7 +270,7 @@ the deploy. Nobody deploys an old checkout or runs `just deploy` for it.
    release, which the deploy's release check refuses), `just test`, and
    commit with a `fix:` message.
 3. Land it from the main checkout: `just land <sha>`. (A cloud session pushes
-   its branch, then fast-forwards `main`, as AGENTS.md says.) Never
+   its branch, then fast-forwards `main`, as `docs/agents/working-with-owner.md` says.) Never
    force-push `main`.
 4. Read the deploy run (`gh run list --limit 3`), then `just live`.
 

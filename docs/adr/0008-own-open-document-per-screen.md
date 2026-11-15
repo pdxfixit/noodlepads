@@ -10,7 +10,7 @@
 
 - The app made a beat (and a song) on its own for a new device, a new person, a first visit, and after the open one was deleted. Kids found empty beats they never made.
 - From 2026-10-11 DJ's Beat Builder kept a second open beat of its own, as `beatId` on the person's `decks` record. ADR 0017 folds Beat Builder into Beats as the ⌨️ Keys toggle, so Beats and its keys show one beat.
-- Stored formats are kept by users; old databases and backups must keep working (AGENTS.md "The code").
+- Stored formats are kept by users; old databases and backups must keep working (docs/agents/conventions.md "The code").
 
 ## Decision
 

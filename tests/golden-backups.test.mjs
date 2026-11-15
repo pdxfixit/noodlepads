@@ -3,7 +3,7 @@
 // version of the app must load each one with nothing dropped, and what loads
 // must match the stored summary beside it. A backup is kept by whoever made
 // it, so this is the test that stops a later change from quietly breaking
-// the old ones (ADR 0011; AGENTS.md "Stored formats are kept by users").
+// the old ones (ADR 0011; docs/agents/conventions.md "Stored formats are kept by users").
 //
 // A change that moves a summary on purpose (a beat stamped with its time
 // signature, ADR 0035) is a reviewed edit of the expected file:

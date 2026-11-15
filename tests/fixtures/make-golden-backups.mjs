@@ -2,7 +2,7 @@
 // Run once (`node tests/fixtures/make-golden-backups.mjs`); the zips are then
 // FIXED. Never regenerate one to make a test pass: a backup somebody saved is
 // kept by its owner, and every later copy of the app must keep loading it
-// (AGENTS.md "Stored formats are kept by users", ADR 0011).
+// (docs/agents/conventions.md "Stored formats are kept by users", ADR 0011).
 //
 // Each is what a copy of that format wrote: made-up people (Pip, Juno, Toby,
 // Wren), tiny sounds, and every store that format had. 1.0 has no groups or

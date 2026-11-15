@@ -288,7 +288,7 @@ Two new IndexedDB stores, one schema version. Settings stay in localStorage, as 
   - `takes`: id matches `/^take-[a-z0-9-]{1,48}$/`; `knownPerson`; `name` via `title(…, 24)`, else a generated name; `duration` 0–180; `events` an array cut to 10 000, each `t` 0–180, `clipId` a string up to 64 chars, `kind` from the four. Events are sorted by `t`. Cap 500 records.
   - Malformed records count toward "N items couldn't be used", as now.
 - **Settings:** none added. `dj-mode`, `dj-click`, `dj-labels` and `screen` are localStorage (`remember`/`recall`), wrapped in try/catch as today.
-- An ADR is due when this is built: it adds stored formats and backup fields ("a stored or backup format" in AGENTS.md).
+- An ADR is due when this is built: it adds stored formats and backup fields ("a stored or backup format" in docs/agents/conventions.md).
 
 ### Names
 

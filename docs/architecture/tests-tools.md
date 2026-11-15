@@ -2,8 +2,8 @@
 
 How the tests start the real app, what the stand-ins fake and where they lie,
 which tests guard the whole repo, how `just look` and the live checks drive a
-real Chrome, and how a commit becomes a labelled deploy. AGENTS.md "Verify"
-and "Ship" give the rules; this is the wiring under them.
+real Chrome, and how a commit becomes a labelled deploy. `docs/agents/verify.md`
+and `docs/agents/ship.md` give the rules; this is the wiring under them.
 
 **In one paragraph.** `just test` runs `node --check` on `web/`, `worker/` and `tools/*.mjs`,
 then `node --test` (every `*.test.mjs`, one process per file), then the
@@ -76,7 +76,7 @@ saw), `key`, `docEvent`, `winEvent` and `settle`.
 
 ### The stand-in page (`fake-dom.mjs`)
 
-What it provides, and how it differs from a browser. AGENTS.md "Verify"
+What it provides, and how it differs from a browser. `docs/agents/verify.md`
 lists the traps agents hit; this table is the whole surface.
 
 | Global | The stand-in | Not there, or different |
@@ -86,7 +86,7 @@ lists the traps agents hit; this table is the whole surface.
 | `querySelectorAll` | a `nodeList` that throws on array methods (`map`, `filter`, `indexOf`…) when called from a `web/` file, as a real NodeList would | tests may still use array methods on the result |
 | Elements | attributes, `dataset` (synced both ways), `classList`, `hidden`/`disabled`/`open` as attributes, `style.props` via `setProperty` | no layout: `getBoundingClientRect` is all zeros, `clientWidth` undefined unless a test sets it; `textContent` is a plain field (a parent's is not its children's text; nested spans on one line of `index.html` read `''`); `removeEventListener` does nothing, so removed handlers still fire |
 | Events | `dispatch(type, props)` runs the element's listeners, then its ancestors' (bubbling, `stopPropagation`); no capture phase | `el.click()` sends `detail: 0` (a keyboard click), `el.dispatch('click')` sends `detail: 1` (a pointer click). `pads.js`, `dj.js`, `chop.js`, `pill-select.js`, `sequencer.js` and `track-page.js` branch on `e.detail === 0`, so the two are not the same tap |
-| Dialogs | `showModal()` sets `open`; `close()` clears it and fires `close` at once | a browser fires `close` later, as its own task (AGENTS.md: patch `close` to dispatch in a `setTimeout`, as `profile-sheet.test.mjs` does) |
+| Dialogs | `showModal()` sets `open`; `close()` clears it and fires `close` at once | a browser fires `close` later, as its own task (`docs/agents/verify.md`: patch `close` to dispatch in a `setTimeout`, as `profile-sheet.test.mjs` does) |
 | `window` | `isSecureContext`, a silent `AudioContext` (gain, compressor, analyser, oscillator, `currentTime` a test may set), `addEventListener`/`removeEventListener` | no `createBufferSource`, no `decodeAudioData`: a clip never decodes, so tests that play replace `audio.start`, `audio.stop` or `audio.decode` |
 | `fetch` | `boards.json` from `manifest`; everything else 404 (version.json too, so the app is a "dev copy"; `tests/test-board.mjs` sounds point at `clips/test/*.wav`, which never load) | `console.error` is silenced by most app tests for those failures, so an app error is silent too |
 | `navigator` | `{}` | no `mediaDevices` (Record off), no `serviceWorker`, no `sendBeacon` |
@@ -172,10 +172,10 @@ what it forces an agent to do.
 | `startup-remembered.test.mjs` | the app starts, on the right screen, with every remembered `localStorage` key set (old and junk values too) | add the new key to its `remembered` map (by convention: nothing checks the map is complete) |
 | `no-plain-email.test.mjs` | no tracked file holds a plain email address (a GitHub no-reply and the co-author line are allowed); the PIN-reset address comes from `contact.js` | never write an address out |
 | `conflict-markers.test.mjs` | no tracked text file holds `<<<<`, `>>>>` or `\|\|\|\|\|\|\|` at a line start | finish the merge |
-| `docs.test.mjs` | every relative Markdown link in AGENTS.md, CLAUDE.md, README.md, TODO.md, `docs/*.md`, `docs/adr`, `docs/design`, `docs/architecture` and `docs/architecture` resolves; every backticked file AGENTS.md and how-to name exists (bar the deploy's `version.json` and flarepress's tools); every ADR is in the index, with a number of its own; CLAUDE.md starts `@AGENTS.md`; the problem-report design doc matches `worker/reports.js` | renumber a clashing ADR; fix the link |
+| `docs.test.mjs` | every relative Markdown link in AGENTS.md, CLAUDE.md, README.md, TODO.md, `docs/*.md`, `docs/adr`, `docs/design`, `docs/architecture` and `docs/agents` resolves; every backticked file AGENTS.md, `docs/agents/` and how-to name exists (bar the deploy's `version.json` and flarepress's tools); every ADR is in the index, with a number of its own; CLAUDE.md starts `@AGENTS.md`; the problem-report design doc matches `worker/reports.js` | renumber a clashing ADR; fix the link |
 | `architecture.test.mjs` | (since `22b41aa`; the first test is TODO until the area files land) every `web/` and `worker/` module is named in `docs/architecture/`; every backticked file and every backticked "file.js name" pair it cites exists; the ✅ claims (one AudioContext, the offline renders, the recorders, the schedulers) | update `docs/architecture/` in the same commit |
 | `question-cards.test.mjs` | every card in docs/questions.md has its own number | renumber |
-| `justfile.test.mjs` | every public recipe has a `just --list` line that does not start mid-sentence; every recipe is named in AGENTS.md, README.md, how-to, deploy-cloudflare or layout; every `just <recipe>` that AGENTS.md, README.md, TODO.md, `docs/*.md` and `docs/architecture/` name exists (`ELSEWHERE` lists other repos' recipes); every tool in `tools/` is named there; deploy runs flarepress's check, stamp and verify; `site.conf committed=` holds web, worker and site; `wrangler.toml` holds no ids; deploy.yml runs the tests and the release checks before the action and the live checks after | document the recipe or tool; fix a doc that names a gone recipe |
+| `justfile.test.mjs` | every public recipe has a `just --list` line that does not start mid-sentence; every recipe is named in AGENTS.md, `docs/agents/`, README.md, how-to, deploy-cloudflare or layout; every `just <recipe>` that AGENTS.md, README.md, TODO.md, `docs/*.md`, `docs/architecture/` and `docs/agents/` name exists (`ELSEWHERE` lists other repos' recipes); every tool in `tools/` is named there; deploy runs flarepress's check, stamp and verify; `site.conf committed=` holds web, worker and site; `wrangler.toml` holds no ids; deploy.yml runs the tests and the release checks before the action and the live checks after | document the recipe or tool; fix a doc that names a gone recipe |
 | `look-views.test.mjs` | `tools/look.mjs VIEWS` (through `--views PATH`): each view name taken once; `beat` is Beats, `dj` is Live; every `web/` export, `state` field, id, class and `data-` attribute the views and `look-cloud.mjs` name still exists; `look-cloud.mjs` loads | rename the new view; rename it in `tools/` too |
 | `tools/test_justfile.py` | every recipe has a doc; README "Running it yourself" names exactly the recipes; `test-quiet` prints only the failures and keeps the log | add the recipe to README |
 | `file-end.test.mjs` | a file that imports `fake-dom.mjs` ends by itself with the app's timers running; a file that cannot end fails naming itself (through `tools/node_tests.sh`); a file that imports `fake-dom.mjs` inside a test also imports it at its top | add `import './fake-dom.mjs'` at the top of the file |
@@ -442,7 +442,7 @@ apart. It does not check which commit is live.
 
 **From an agent's side:** `just ship` (main checkout) and `just land` push
 `main`; a cloud session pushes its branch, then fast-forwards `main`
-(AGENTS.md). Both local paths run the release checks; a direct
+(`docs/agents/working-with-owner.md`). Both local paths run the release checks; a direct
 `git push origin HEAD:main` runs only what CI runs.
 
 ## `just doctor` and `just serve`
@@ -520,7 +520,7 @@ them, once older than `TEST_GRACE_MS`, for `cloud-prune --smoke`.
 | No `web/` module but `app.js` and `sw.js` touches the page at import time | `modules.test.mjs` |
 | `MutationObserver` and `ResizeObserver` are always behind a `typeof` check | the app tests crash at start without it |
 | A test that starts the app awaits `app.js ready` | `app-ready.test.mjs` |
-| Compare stand-in elements with `assert.ok(a === b)`; a failing `assert.equal` prints the whole page and dies by SIGKILL | none (AGENTS.md) |
+| Compare stand-in elements with `assert.ok(a === b)`; a failing `assert.equal` prints the whole page and dies by SIGKILL | none (`docs/agents/verify.md`) |
 | `el.click()` is a keyboard click (`detail: 0`); `el.dispatch('click')` is a pointer click | none |
 | Removed listeners still fire on the stand-in (`removeEventListener` is a no-op on elements) | none |
 | A stand-in that sets long timers lives in `tests/fake-*.mjs`, or `settle()` will not wait for it | none |
@@ -543,8 +543,8 @@ them, once older than `TEST_GRACE_MS`, for `cloud-prune --smoke`.
 | Teach the fake IndexedDB a call | `fake-idb.mjs`, and the inline stand-ins if that call reaches them |
 | A new file in `web/` | `sw.js SHELL` (or `NOT_LOADED` in `offline.test.mjs`), docs/layout.md, `docs/architecture/` |
 | A new control | its `aria-label`, `help.js` and `MUST_MENTION`, 44 px or a `MEASURE` exemption, `just look` |
-| A new `just look` view | `look.mjs VIEWS` (and AGENTS.md if agents should know its name) |
-| A new recipe | `justfile` with a one-line comment or `[doc()]`, README "Running it yourself", and a mention in AGENTS.md, how-to or layout |
+| A new `just look` view | `look.mjs VIEWS` (and `docs/agents/verify.md` if agents should know its name) |
+| A new recipe | `justfile` with a one-line comment or `[doc()]`, README "Running it yourself", and a mention in AGENTS.md, `docs/agents/`, how-to or layout |
 | A new tool | `tools/`, a `tools/test_*.py`, docs/layout.md; a Node tool needs Ben's OK |
 | The release rule | `bump_version.py`, `version_bumped.sh`, `test.yml`, `land.conf`, the `ship` recipe, `test_bump_version.py` |
 | What the deploy runs | `deploy.yml` (and `justfile.test.mjs`, which pins its order), `site/site.conf`, `site/wrangler.toml` |

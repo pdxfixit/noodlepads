@@ -482,6 +482,7 @@ test('the policy is sent to the privacy site by `just policy`, which runs the pr
   assert.ok(!existsSync(new URL('../tools/policy.sh', import.meta.url)), 'the logic lives once, in the privacy repo');
   const justfile = readFileSync(new URL('../justfile', import.meta.url), 'utf8');
   assert.match(justfile, /^policy \*args:\n(?:.*\n)*?\s+exec bash "\$p\/tools\/send\.sh" noodlepads docs\/privacy-policy\.md "\$@"$/m);
-  const agents = readFileSync(new URL('../AGENTS.md', import.meta.url), 'utf8');
-  assert.match(agents, /docs\/privacy-policy\.md[^\n]*bump `updated:`[^\n]*`just policy`/, 'AGENTS.md says to run it');
+  // The rule sits in docs/agents/conventions.md (AGENTS.md keeps only the index to it).
+  const agents = readFileSync(new URL('../docs/agents/conventions.md', import.meta.url), 'utf8');
+  assert.match(agents, /docs\/privacy-policy\.md[^\n]*bump `updated:`[^\n]*`just policy`/, 'docs/agents/conventions.md says to run it');
 });

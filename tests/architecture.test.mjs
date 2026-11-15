@@ -34,7 +34,7 @@ function filesNamed(name) {
   return SEARCH.map((d) => `${d}/${name}`).filter((p) => existsSync(join(root, p)));
 }
 
-const FIX = 'Update docs/architecture/ in the same commit as the code (AGENTS.md, Conventions).';
+const FIX = 'Update docs/architecture/ in the same commit as the code (docs/agents/conventions.md).';
 
 // ── The doc names what exists ──
 

@@ -10,7 +10,7 @@
 
 - Version 8 kept one song per person in `songs`, keyed by person, with no id.
 - Ben wants songs to work like beats: one is open and saves itself; 🆕 New and 📂 Open (duplicate, delete) list the rest.
-- Stored formats are kept by users; old databases and backups must keep working (AGENTS.md "The code").
+- Stored formats are kept by users; old databases and backups must keep working (docs/agents/conventions.md "The code").
 
 ## Decision
 

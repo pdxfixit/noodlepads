@@ -10,7 +10,7 @@
 
 - DJ mode ([design](../design/dj-mode.md)) puts a sound on each of 30 keys. The default keys are computed, so a new recording joins the top row by itself.
 - A freestyle take must replay exactly and later become a sound. A rendered sound alone could not be edited or replayed with the keys lighting up.
-- Stored formats are kept by users; old databases and backups must keep working (AGENTS.md "The code").
+- Stored formats are kept by users; old databases and backups must keep working (docs/agents/conventions.md "The code").
 
 ## Decision
 

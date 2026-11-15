@@ -10,7 +10,7 @@
 
 - Presets already have fixed groups from boards.json (`kitGroups`, a kit sound's `group`). A kid's own sounds had none.
 - `orders` is one record per person, already in backups (`cleanBackup`) and cloud sync (`CLOUD_KINDS`, kept as an opaque JSON record by the Worker).
-- Stored formats are kept by users (AGENTS.md "The code"); a backup from 1.0 on must load in every newer copy (ADR 0011).
+- Stored formats are kept by users (docs/agents/conventions.md "The code"); a backup from 1.0 on must load in every newer copy (ADR 0011).
 
 ## Decision
 

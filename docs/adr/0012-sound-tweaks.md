@@ -9,7 +9,7 @@
 ## Context
 
 - The sheet stored a sound's voices and Shape it steps as a chain (`voice`, `amount`, `fx`), and Tweaks beside it. The two overlapped: Backwards twice played forwards, Stadium plus Echo was mush, Chipmunk plus Deeper stretched twice (the design doc's §1.4).
-- Stored formats are kept by users (AGENTS.md "The code").
+- Stored formats are kept by users (docs/agents/conventions.md "The code").
 
 ## Decision
 

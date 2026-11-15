@@ -1,5 +1,5 @@
 // 🎤 Live's take card: its ↩️ Undo takes the take just made out at once,
-// and the banner's ↩️ Undo brings it back (AGENTS.md: where a slip costs
+// and the banner's ↩️ Undo brings it back (docs/agents/conventions.md: where a slip costs
 // work, offer Undo), card and all. The real app on the stand-in page.
 
 import { test, before } from 'node:test';

@@ -24,7 +24,7 @@ Your lens: A test that fails without the change; what can't be tested here, said
 ## Where to look first
 
 - `tests/`, `tests/fake-dom.mjs`
-- `AGENTS.md` Verify
+- `docs/agents/verify.md`
 - `docs/state.md` ("not yet tried on a phone")
 
 ## How you work
