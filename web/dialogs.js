@@ -30,7 +30,8 @@ export function setupDialog(dialog, { beforeClose } = {}) {
     openers.delete(dialog);
     returns.delete(dialog);
     // Some browsers don't focus a button on click, so the opener can be the page itself.
-    const usable = opener && opener !== document.body && opener.isConnected;
+    // One no longer shown (+ New sound once the Pads band un-sticks) can't take it either.
+    const usable = opener && opener !== document.body && opener.isConnected && opener.getClientRects?.().length !== 0;
     const target = usable ? opener : returnTo?.();
     target?.focus({ preventScroll: true });
   });

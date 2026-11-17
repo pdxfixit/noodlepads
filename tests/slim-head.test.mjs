@@ -83,19 +83,27 @@ test('the styles: the header no longer sticks whole; the slim bar is fixed at th
   assert.match(css, /prefers-reduced-motion[\s\S]*animation: none !important/, 'the slide-in stops with reduced motion');
 });
 
-// Ben, 2026-11-17: ➕ New sound at the right of the Pads band, only once the
+// Ben, 2026-11-17: + New sound at the right of the Pads band, only once the
 // band is stuck at the top. To make room on a phone ❓ steps out first, as on
 // Beats' slim bar (mini-deck.test.mjs). Widths are checked with `just look
 // pads --wide --js 'scrollTo(0, 600)'`.
-test('➕ New sound is the last key in the Pads band, a named button, shown only in the slim band', () => {
+test('+ New sound is the last key in the Pads band, a named button, shown only in the slim band', () => {
   const html = web('index.html');
   const bar = html.slice(html.indexOf('id="pads-bar"'), html.indexOf('id="pads"'));
   const ids = [...bar.matchAll(/<button[^>]*id="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(ids, ['loop-toggle', 'edit-toggle', 'pads-new'], 'at the right, after ✏️ Edit');
-  assert.match(bar, /id="pads-new" aria-label="New sound" title="New sound">➕</);
+  assert.match(bar, /id="pads-new" aria-label="New sound" title="New sound">\+</);
   const css = web('styles.css');
   assert.match(css, /\.pads-bar \.pads-new \{ display: none; \}/, 'not at the top of the page');
   assert.match(css, /body\.head-slim\.screen-pads \.pads-bar \.pads-new \{ display: block; min-width: 48px;/, 'in the stuck band, a 48 px key like 🔁 and ✏️');
   const phone = css.match(/@media \(max-width: 419px\) \{([\s\S]*?)\n\}/)[1];
   assert.match(phone, /body\.head-slim\.screen-pads #help-open \{ display: none; \}/, '❓ gives way first');
+  // The ladder, widest first: each step was measured with `just look` so the
+  // three keys clear the left buttons; move one and measure them all again.
+  const hides = (px, what) => assert.match(css.match(new RegExp(`@media \\(max-width: ${px}px\\) \\{([\\s\\S]*?)\\n\\}`, 'g')).join('\n'), what, `${what} under ${px + 1} px`);
+  hides(719, /body\.head-slim\.screen-pads \.pads-size \{ display: none; \}/);
+  hides(599, /body\.head-slim\.screen-pads \.loop-word \{ position: absolute;/);
+  hides(529, /body\.head-slim\.screen-pads \.edit-more \{ position: absolute;/);
+  hides(469, /body\.head-slim\.screen-pads \.edit-word \{ position: absolute;/);
+  hides(359, /body\.head-slim\.screen-pads \.to-top \{ display: none; \}/);
 });

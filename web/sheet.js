@@ -298,7 +298,7 @@ export function openSheet(mode, clip = null, { returnToPad = null, returnTo = nu
   const first = mode === 'edit' ? el.label : el.recBtn.disabled ? el.fileInput : el.recBtn;
   openDialog(el.sheet, {
     focus: first,
-    returnTo: () => (returnToPad ? padFor(returnToPad) : returnTo ?? document.querySelector('#pads .pad-add')),
+    returnTo: () => (returnToPad ? padFor(returnToPad) : (returnTo?.getClientRects?.().length !== 0 && returnTo) || document.querySelector('#pads .pad-add')),
   });
   placeStickyRow();
   sheet.opened = sheetSignature();

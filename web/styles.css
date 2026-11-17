@@ -3908,7 +3908,7 @@ body.head-slim.screen-pads .title-tools { left: calc(max(var(--gutter), (100% - 
 /* ➕ New sound joins the band only once it is stuck, at its right (Ben,
    2026-11-17), as ✏️ Layout joins the slim bar on 🎤 Live. */
 .pads-bar .pads-new { display: none; }
-body.head-slim.screen-pads .pads-bar .pads-new { display: block; min-width: 48px; padding: 0 10px; }
+body.head-slim.screen-pads .pads-bar .pads-new { display: block; min-width: 48px; padding: 0 10px; font: 800 1.9rem/1 var(--font-ui); }   /* a white +, as on the dashed pad (➕ draws dim grey on the dark band) */
 /* 🎤 Live: scrolled, ✏️ Layout rides at the right of the slim bar, as Edit
    sounds does on Pads, so it is in reach while the rows scroll (Ben,
    2026-10-18). It is a twin of the one on Live's bar, which stays. Just ✏️ in

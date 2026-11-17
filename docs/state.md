@@ -98,6 +98,7 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 
 Ben reports tries as he goes; none of these is a "Ben does" item. On a phone unless it says otherwise:
 
+- 🔊 Pads' + New sound in the stuck band (2026-11-17): checked only with `just look` from 320 to 3440 px, never on a phone; not yet tried by touch, nor focus coming back to it on Safari.
 - 🎧 From a song on real songs: Ben tries them next.
   - **Heard:** 🔊 Even it out; 🗂️ See all's playing; the real recordings in the app; every preset's loudness; the ⚙️ Advanced sharps and flats; the row speakers; 🎹 the instruments (by anyone, anywhere); 💃 Grooves; 🎚️ Mixer; 🎼 Song; 🎹 the piano roll; 🔔 Let it ring; 👆 touch layouts; 🧸 Kids' pads, the mic's count and the tune; 🎧 From a song through a real tab or microphone; Heartbeat, Boom, Dhol and Kick (dusty) after the loudness floor remade them; Song's Echo dipping at a tempo mark; a beat made from a real 🎤 Live take.
   - **Tried by touch:** an empty beat row's ✕ going on one tap (a stray thumb, Undo for 8 s); 🎉 Play and 🛠️ Make; the beat bar; the scratch beat and song; 📌 pattern chips; ⇆ Move; Beats' control bar and row drags (and with a real mouse); ⌨️ Keys recording for feel; 🎼 Song; 🎹 the piano roll; ✏️ Layout; 👆 touch layouts; ▦ layout grids (with a real finger); notices; 👥 People and 👋 Who's playing now?; beat rows on the left; 🎧 From a song.

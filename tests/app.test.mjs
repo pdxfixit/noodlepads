@@ -264,7 +264,7 @@ test('New sound opens the sheet with Record off (no microphone here) and focus o
 
 // Ben, 2026-11-17: once the Pads band is stuck at the top, ➕ at its right
 // makes a new sound without scrolling back to the dashed New sound pad.
-test('➕ in the Pads band opens the New sound sheet, and focus comes back to ➕', () => {
+test('+ in the Pads band opens the New sound sheet, and focus comes back to it', () => {
   if (document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
   document.activeElement = document.body;   // as Safari leaves it: a tapped button is not focused
   $('#pads-new').dispatch('click');
