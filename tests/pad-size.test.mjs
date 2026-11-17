@@ -83,5 +83,5 @@ test('the size slider sits at the left of the pads\' dark top band, with a word 
   assert.match(css, /\.pads-bar:not\(\[hidden\]\) \+ \.pads \{ border-radius: 0 0 22px 22px;/, 'the band and the pads are one panel');
   assert.match(css, /\.pads-size \{[^}]*container: pad-size \/ inline-size;/);
   assert.match(css, /@container pad-size \(max-width: \d+px\) \{ \.pads-size-word \{ display: none; \} \}/, 'the word goes where the room is short');
-  assert.match(css, /@media \(max-width: 639px\) \{\s*body\.head-slim\.screen-pads \.pads-size \{ display: none; \}/, 'under 640 px it hides when the bar sticks (🔁 Loop needs the room)');
+  assert.match(css, /@media \(max-width: 719px\) \{\s*body\.head-slim\.screen-pads \.pads-size \{ display: none; \}/, 'under 720 px it hides when the bar sticks (🔁 Loop, ✏️ Edit and ➕ need the room)');
 });

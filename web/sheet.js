@@ -210,8 +210,9 @@ function showLink() {
 }
 
 // mode 'new', or 'edit' with the clip. `returnToPad` is the pad that gets
-// focus back when the sheet closes if the pad it came from was redrawn.
-export function openSheet(mode, clip = null, { returnToPad = null } = {}) {
+// focus back when the sheet closes if the pad it came from was redrawn;
+// `returnTo` is a control outside the pads that opened it (➕ in the band).
+export function openSheet(mode, clip = null, { returnToPad = null, returnTo = null } = {}) {
   audio.stopAll();
   const p = currentPerson();
   sheet.mode = mode;
@@ -297,7 +298,7 @@ export function openSheet(mode, clip = null, { returnToPad = null } = {}) {
   const first = mode === 'edit' ? el.label : el.recBtn.disabled ? el.fileInput : el.recBtn;
   openDialog(el.sheet, {
     focus: first,
-    returnTo: () => (returnToPad ? padFor(returnToPad) : document.querySelector('#pads .pad-add')),
+    returnTo: () => (returnToPad ? padFor(returnToPad) : returnTo ?? document.querySelector('#pads .pad-add')),
   });
   placeStickyRow();
   sheet.opened = sheetSignature();

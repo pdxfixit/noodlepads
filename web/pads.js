@@ -849,9 +849,20 @@ function initLoopSwitch() {
   show();
 }
 
+// ➕ New sound in the stuck band (styles.css shows it only there): the same
+// sheet as the dashed New sound pad, without scrolling back to it (Ben,
+// 2026-11-17). Focus comes back to ➕ when the sheet closes.
+function initNewButton() {
+  const button = document.querySelector('#pads-new');
+  button?.addEventListener('click', () => {
+    if (asking) { asking = null; renderPads(); }
+    openSheet('new', null, { returnTo: button });
+  });
+}
+
 // ── Events ─────────────────────────────────────────────────────────────
 
-// openSheet(mode, clip?, {returnToPad?}) opens the new/edit sound sheet;
+// openSheet(mode, clip?, {returnToPad?, returnTo?}) opens the new/edit sound sheet;
 // onPerson(id) switches to a person.
 export function initPads(hooks) {
   openSheet = hooks.openSheet;
@@ -864,6 +875,7 @@ export function initPads(hooks) {
   });
   initSize();
   initLoopSwitch();
+  initNewButton();
 
   // Group headers open and close their group (a kid's own, or the kit's);
   // focus stays on the header. ✏️ beside an own group's header edits it.

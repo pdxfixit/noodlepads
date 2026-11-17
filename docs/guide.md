@@ -73,7 +73,8 @@ outline takes no room, and the box takes the bed's own columns, so the pads keep
 each sound starts and makes each piece a new pad ("Baby Burp", "Burp Jr.").
 The **pad size slider** at the top left of the pads, on the panel's darker
 top band with 🔁 Loop and ✏️ Edit sounds at its right (as 🎤 Live's ● Record and 🎬
-Takes), says "Size" where it has the room and makes them smoothly
+Takes; once the band sticks at the top, ➕ New sound joins them at the very right,
+and under 420 px ❓ leaves the slim bar to make room), says "Size" where it has the room and makes them smoothly
 smaller (more on a line) or bigger (fewer). Its ends are the smallest and
 biggest pads this screen can show: as many 76 px pads as fill a line, and one
 whole-width pad on a phone (400 px on a wide screen). It is kept as the

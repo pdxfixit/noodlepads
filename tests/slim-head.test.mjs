@@ -69,7 +69,7 @@ test('the page: ⬆️ sits with ❓, ⚙️ and the person button; the board na
 // drops its word (✏️ alone, ✅ for Done), still heard by screen readers.
 test('the styles: on a phone\'s slim band ✏️ Edit drops its word, hidden only to the eye', () => {
   const css = web('styles.css');
-  const narrow = css.match(/@media \(max-width: 429px\) \{([\s\S]*?)\n\}/g).join('\n');
+  const narrow = css.match(/@media \(max-width: 469px\) \{([\s\S]*?)\n\}/g).join('\n');
   assert.match(narrow, /body\.head-slim\.screen-pads \.edit-word \{ position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset\(50%\);/);
   assert.doesNotMatch(narrow, /\.edit-word \{[^}]*display: none/, 'never display: none: the button keeps its name');
 });
@@ -81,4 +81,21 @@ test('the styles: the header no longer sticks whole; the slim bar is fixed at th
   assert.match(css, /body\.head-slim \{ --head-h:/);
   assert.match(css, /body\.head-slim\.screen-pads \{ --head-h:/, 'on Pads the Edit sounds band is the bar');
   assert.match(css, /prefers-reduced-motion[\s\S]*animation: none !important/, 'the slide-in stops with reduced motion');
+});
+
+// Ben, 2026-11-17: ➕ New sound at the right of the Pads band, only once the
+// band is stuck at the top. To make room on a phone ❓ steps out first, as on
+// Beats' slim bar (mini-deck.test.mjs). Widths are checked with `just look
+// pads --wide --js 'scrollTo(0, 600)'`.
+test('➕ New sound is the last key in the Pads band, a named button, shown only in the slim band', () => {
+  const html = web('index.html');
+  const bar = html.slice(html.indexOf('id="pads-bar"'), html.indexOf('id="pads"'));
+  const ids = [...bar.matchAll(/<button[^>]*id="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(ids, ['loop-toggle', 'edit-toggle', 'pads-new'], 'at the right, after ✏️ Edit');
+  assert.match(bar, /id="pads-new" aria-label="New sound" title="New sound">➕</);
+  const css = web('styles.css');
+  assert.match(css, /\.pads-bar \.pads-new \{ display: none; \}/, 'not at the top of the page');
+  assert.match(css, /body\.head-slim\.screen-pads \.pads-bar \.pads-new \{ display: block; min-width: 48px;/, 'in the stuck band, a 48 px key like 🔁 and ✏️');
+  const phone = css.match(/@media \(max-width: 419px\) \{([\s\S]*?)\n\}/)[1];
+  assert.match(phone, /body\.head-slim\.screen-pads #help-open \{ display: none; \}/, '❓ gives way first');
 });

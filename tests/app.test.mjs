@@ -262,6 +262,19 @@ test('New sound opens the sheet with Record off (no microphone here) and focus o
   $('#sheet').close();
 });
 
+// Ben, 2026-11-17: once the Pads band is stuck at the top, ➕ at its right
+// makes a new sound without scrolling back to the dashed New sound pad.
+test('➕ in the Pads band opens the New sound sheet, and focus comes back to ➕', () => {
+  if (document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+  document.activeElement = document.body;   // as Safari leaves it: a tapped button is not focused
+  $('#pads-new').dispatch('click');
+  assert.equal($('#sheet').open, true);
+  assert.equal($('#sheet-title').textContent, 'New sound for Pip');
+  assert.equal($('#clip-label').value, '', 'a new sound, not an edit');
+  $('#sheet').close();
+  assert.ok(document.activeElement === $('#pads-new'), 'not the dashed pad, which may be far down the page');
+});
+
 // 👥 People's line `i` opens that person's profile sheet (once: a second
 // call while it is open for them leaves it as it is).
 const profile = (i) => {
