@@ -202,7 +202,7 @@ test('nudgeSlider: − before the slider and + after it, named for it; a tap mov
 });
 
 // Ben, 2026-11-18: a ratio slider steps a semitone a tap, on a grid from normal.
-test('nudgeSlider: a ratio slider steps a semitone a tap; 12 taps are an octave, with no drift', () => {
+test('nudgeSlider: a ratio slider with notch 1/12 steps a semitone a tap; 12 taps are an octave, with no drift', () => {
   const { input } = sliderRow(Math.log2(0.05), 3, 0.01, 0);
   nudgeSlider(input, { notch: 1 / 12 });
   const up = input.parent.querySelector('[data-nudge="1"]');

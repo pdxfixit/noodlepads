@@ -549,8 +549,10 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   IndexedDB, so they stay on the device they were made on. Edit sounds →
   a sound's ✏️ → Download saves a copy.
 - **✏️ Edit sounds** (`pads.js`, `bulk.js`): each pad shows ✏️ (its sheet) and
-  🗑️ at its top right; a press on a pad held still for 700 ms (`EDIT_HOLD_MS`)
-  opens its sheet too, and one that moves drags it; 🗑️ deletes a sound made in the app (two taps, then
+  🗑️ at its top right. A press on a pad held still for 700 ms (`EDIT_HOLD_MS`)
+  opens its sheet too, with a dashed ring halfway; on a touch the pad first lifts
+  for a drag at 220 ms and the 700 ms counts from there, and the drag is let go
+  when the sheet opens. A move over 6 px is a drag, not a hold. 🗑️ deletes a sound made in the app (two taps, then
   Undo), hides a preset, and 👁 brings a hidden one back. Tapping pads selects
   them, as does the select circle at each pad's top left (always there in
   Edit sounds); every badge floats above the pad with a bold ring; a bar then

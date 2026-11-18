@@ -15,6 +15,8 @@ const notes = (n) => (n === 0 ? 'no change' : `${Math.abs(n)} note${Math.abs(n) 
 
 // A number a step holds. `log` sliders move evenly in ratio (½× to 2× is as
 // far as 1× to 4×), for speeds and frequencies.
+// A ratio slider (`log`) also names its `notch`: how far one − or + tap goes,
+// in doublings (lines.js nudged); tests/steps.test.mjs checks each has one.
 const num = (key, label, min, max, step, def, text, log = false) => ({ key, label, min, max, step, default: def, text, log });
 
 // Echo's 🥁 On the beat: how far apart, as note lengths of a beat (a quarter

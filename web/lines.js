@@ -192,7 +192,8 @@ export function keysForSlider(input, name = String) {
 
 // Where one − (dir -1) or + (dir 1) tap takes `value`: one step along, or,
 // with `notch`, to the next point of a notch grid counted from 0 (on a ratio
-// slider, normal: 1/12 is a semitone a tap, so 12 taps are an octave). The
+// slider, normal; each slider names its own in steps.js: 1/12 is a semitone,
+// so 12 taps are an octave, 0.1 a tenth of a doubling). The
 // slider holds a point on its nearest step, so a value within half a step of
 // one counts as on it, and steps never add up to a drift; from between two
 // points (a drag), a tap goes to the next one that way. Kept within min and

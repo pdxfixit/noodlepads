@@ -636,8 +636,10 @@ export function flash(pad) {
 const DRAG_SLOP = 6;
 const TOUCH_HOLD_MS = 220;
 // A hold this long that never moves opens the sound's sheet, as its ✏️ does
-// (Ben, 2026-11-18, Q1). A touch has lifted the pad by then; it is let go.
-// Outside Edit sounds a hold keeps looping a pad.
+// (Ben, 2026-11-18, Q1). On a touch it counts from the pad's lift (the lift
+// says "now move it", so a small hand gets its time to start); the pad is let
+// go when the sheet opens. Halfway, the pad shows a dashed ring (no motion),
+// so it never comes as a surprise. Outside Edit sounds a hold loops a pad.
 export const EDIT_HOLD_MS = 700;
 
 const drag = {
@@ -648,12 +650,14 @@ const drag = {
   active: false,
   hold: 0,
   edit: 0,          // the hold that opens the sheet
-  opened: false,    // a hold opened it: its release is no tap
+  cue: 0,           // its ring, halfway
+  openedBy: null,   // the pointer whose hold opened it: its release is no tap
   suppressClick: false,
 };
 
 // In Edit sounds a pad is dragged with its badges: its cell moves.
 function dragDown(e) {
+  drag.openedBy = null;   // a new press: whatever opened the sheet before has let go
   if (!state.editing || e.button !== 0 || drag.pad) return;
   if (e.target.closest('.pad-tools')) return;   // a badge is a tap, not a drag
   const pad = e.target.closest('.pad[data-id]');
@@ -665,17 +669,20 @@ function dragDown(e) {
     grabX: e.clientX - r.left, grabY: e.clientY - r.top, active: false,
   });
   if (e.pointerType === 'touch') drag.hold = setTimeout(() => startDrag(e), TOUCH_HOLD_MS);
-  drag.edit = setTimeout(holdOpens, EDIT_HOLD_MS);
+  const wait = (e.pointerType === 'touch' ? TOUCH_HOLD_MS : 0) + EDIT_HOLD_MS;
+  drag.edit = setTimeout(() => holdOpens(e.pointerId), wait);
+  drag.cue = setTimeout(() => drag.pad?.classList.add('hold-opening'), wait - EDIT_HOLD_MS / 2);
 }
 
 // A long, still hold in Edit sounds: the drag lets go and the sheet opens.
-function holdOpens() {
+function holdOpens(pointerId) {
   const id = drag.pad?.dataset.cell ?? drag.pad?.dataset.id;
   cancelDrag();
   const clip = findClip(id);
   if (!clip) return;
-  drag.opened = true;
-  if (asking) { asking = null; renderPads(); }
+  drag.openedBy = pointerId;
+  asking = null;
+  renderPads();   // a pad half slid aside on the lift goes back to the order kept
   navigator.vibrate?.(15);
   openSheet('edit', clip, { returnToPad: clip.id });
 }
@@ -698,7 +705,11 @@ const movingAt = (x, y) => {
 function dragMove(e) {
   if (!drag.pad || e.pointerId !== drag.pointerId) return;
   const moved = Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > DRAG_SLOP;
-  if (moved) clearTimeout(drag.edit);   // it moved: a drag, not a hold to open
+  if (moved) {   // it moved: a drag, not a hold to open
+    clearTimeout(drag.edit);
+    clearTimeout(drag.cue);
+    drag.pad.classList.remove('hold-opening');
+  }
   if (!drag.active) {
     if (!moved) return;
     if (e.pointerType === 'touch') { cancelDrag(); return; }  // a swipe, not a hold
@@ -744,8 +755,8 @@ function slide(change) {
 }
 
 async function dragUp(e) {
-  if (drag.opened) {   // a hold opened the sheet: the click that follows is no tap on the pad
-    drag.opened = false;
+  if (drag.openedBy !== null && e.pointerId === drag.openedBy) {   // a hold opened the sheet: the click that follows is no tap on the pad
+    drag.openedBy = null;
     drag.suppressClick = true;
     setTimeout(() => { drag.suppressClick = false; }, 0);
     return;
@@ -796,8 +807,9 @@ async function nudge(pad, by) {
 export function cancelDrag() {
   clearTimeout(drag.hold);
   clearTimeout(drag.edit);
+  clearTimeout(drag.cue);
   if (drag.pad) {
-    drag.pad.classList.remove('dragging');
+    drag.pad.classList.remove('dragging', 'hold-opening');
     drag.pad.style.translate = '';
   }
   document.body.classList.remove('reordering');
@@ -976,7 +988,7 @@ export function initPads(hooks) {
   el.pads.addEventListener('pointerdown', dragDown);
   window.addEventListener('pointermove', dragMove);
   window.addEventListener('pointerup', dragUp);
-  window.addEventListener('pointercancel', () => cancelDrag());
+  window.addEventListener('pointercancel', () => { cancelDrag(); drag.openedBy = null; });   // a touch the browser took: nothing waits for its release
   // Once a touch drag has started, the page must not scroll under it.
   window.addEventListener('touchmove', (e) => { if (drag.active) e.preventDefault(); }, { passive: false });
   onePressOneClick(el.pads, '.pad');   // a held Enter would toggle a loop on and off

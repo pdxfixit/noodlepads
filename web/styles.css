@@ -2578,6 +2578,9 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 }
 .slider-nudge:disabled { opacity: 0.45; }
 /* A held key repeats (hold-repeat.js): a long press picks no text and opens no menu. */
+/* ✏️ Edit sounds: halfway through a still hold that will open the pad's sheet
+   (pads.js EDIT_HOLD_MS), a dashed ring, with no motion. */
+.pad-cell.hold-opening > .pad { outline: 4px dashed #fff; outline-offset: -8px; }
 [data-hold-repeat] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
 dialog#sheet .slider-nudge:focus-visible { outline-color: var(--ink); }
 .amount.keyed:not(.fit-slider) > .slider-nudge { display: none; }

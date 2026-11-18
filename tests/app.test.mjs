@@ -292,24 +292,55 @@ test('+ hidden by the time the sheet closes: focus goes to the dashed New sound 
 // sound's sheet, as its ✏️ does; a hold that moves is a drag (or, on a touch
 // that moves at once, a scroll). Outside Edit sounds a hold loops a pad.
 test('Edit sounds: a long still hold on a pad opens its sheet; one that moves does not', async () => {
-  if (!document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
   const { EDIT_HOLD_MS } = await import('../web/pads.js');
   const kick = () => pads().find((p) => labelOf(p) === 'Kick');
-  kick().dispatch('pointerdown', { button: 0, pointerId: 3, pointerType: 'mouse', clientX: 10, clientY: 10 });
-  await new Promise((r) => setTimeout(r, EDIT_HOLD_MS + 50));
-  assert.equal($('#sheet').open, true, 'held still: its sheet opens');
-  assert.equal($('#clip-label').value, 'Kick');
-  page.winEvent('pointerup', { pointerId: 3 });
-  kick().dispatch('click');   // the click a browser sends on letting go
-  assert.equal(kick().getAttribute('aria-pressed'), 'false', 'and letting go chose nothing');
-  $('#sheet').close();
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const findAt = document.elementFromPoint;
+  document.elementFromPoint = () => null;   // the stand-in has no layout: a drag finds nothing under it
+  if (!document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+  try {
+    // A mouse held still: the sheet opens, and letting go chooses nothing.
+    kick().dispatch('pointerdown', { button: 0, pointerId: 3, pointerType: 'mouse', clientX: 10, clientY: 10 });
+    await wait(EDIT_HOLD_MS + 50);
+    assert.equal($('#sheet').open, true, 'held still: its sheet opens');
+    assert.equal($('#clip-label').value, 'Kick');
+    page.winEvent('pointerup', { pointerId: 3 });
+    kick().dispatch('click');   // the click a browser sends on letting go
+    assert.equal(kick().getAttribute('aria-pressed'), 'false', 'and letting go chose nothing');
+    $('#sheet').close();
 
-  kick().dispatch('pointerdown', { button: 0, pointerId: 4, pointerType: 'touch', clientX: 10, clientY: 10 });
-  page.winEvent('pointermove', { pointerId: 4, pointerType: 'touch', clientX: 10, clientY: 60 });   // a swipe: the page scrolls
-  await new Promise((r) => setTimeout(r, EDIT_HOLD_MS + 50));
-  assert.equal($('#sheet').open, false, 'moved: no sheet');
-  page.winEvent('pointerup', { pointerId: 4 });
-  $('#edit-toggle').dispatch('click');
+    // A finger held still: the pad lifts at 220 ms, a dashed ring shows halfway
+    // through the 700 ms after that, then the sheet opens and the pad is let go.
+    kick().dispatch('pointerdown', { button: 0, pointerId: 5, pointerType: 'touch', clientX: 10, clientY: 10 });
+    await wait(220 + EDIT_HOLD_MS / 2 + 60);
+    assert.ok(document.body.classList.contains('reordering'), 'lifted for a drag first');
+    assert.ok(kick().parent.classList.contains('hold-opening'), 'the ring shows');
+    assert.equal($('#sheet').open, false, 'not yet');
+    await wait(EDIT_HOLD_MS / 2 + 60);
+    assert.equal($('#sheet').open, true, 'then the sheet opens');
+    assert.ok(!document.body.classList.contains('reordering'), 'and the pad is let go');
+    // The browser takes the touch (pointercancel), and the sheet closes with Esc: no release ever comes.
+    page.winEvent('pointercancel', { pointerId: 5 });
+    $('#sheet').close();
+    kick().dispatch('pointerdown', { button: 0, pointerId: 6, pointerType: 'mouse', clientX: 10, clientY: 10 });
+    page.winEvent('pointerup', { pointerId: 6 });
+    kick().dispatch('click');
+    assert.equal(kick().getAttribute('aria-pressed'), 'true', 'the next tap still chooses: nothing was left waiting');
+    kick().dispatch('click');
+
+    // A move: a swipe on a touch (the page scrolls), a drag with a mouse.
+    for (const pointerType of ['touch', 'mouse']) {
+      kick().dispatch('pointerdown', { button: 0, pointerId: 4, pointerType, clientX: 10, clientY: 10 });
+      page.winEvent('pointermove', { pointerId: 4, pointerType, clientX: 10, clientY: 60, preventDefault() {} });
+      await wait(220 + EDIT_HOLD_MS + 50);
+      assert.equal($('#sheet').open, false, `${pointerType}, moved: no sheet`);
+      page.winEvent('pointerup', { pointerId: 4 });
+    }
+  } finally {
+    document.elementFromPoint = findAt;
+    if ($('#sheet').open) $('#sheet').close();
+    if (document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+  }
 });
 
 // Ben, 2026-11-18: every − and + that steps a value repeats while held.

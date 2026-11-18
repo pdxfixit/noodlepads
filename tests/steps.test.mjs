@@ -188,3 +188,13 @@ test('the reverb tails and the static are made without Math.random, and come out
     for (const id of ['stadium', 'walkie']) assert.ok((await applyVoice(src, id)).buffer, id);
   } finally { Math.random = random; }
 });
+
+// Ben, 2026-11-18: a ratio slider's − and + step its own notch (lines.js nudged):
+// with none, a tap would move 0.01 of a doubling and sound like nothing.
+test('every ratio slider names how far one − or + tap goes', () => {
+  for (const k of KINDS) {
+    for (const n of k.nums ?? []) if (n.log) assert.ok(n.notch > 0, `${k.id}: ${n.key} has a notch`);
+  }
+  assert.equal(kindById('stretch').nums[0].notch, 0.1, 'a tenth of a doubling: the pitch is kept');
+  assert.equal(kindById('ring').nums[0].notch, 1 / 12, 'a semitone: the robot tone is a note');
+});

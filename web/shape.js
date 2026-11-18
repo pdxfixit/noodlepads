@@ -12,9 +12,7 @@
 import { KINDS, kindById } from './steps.js';
 import { voiceById, amountText, stepLook } from './voices.js';
 import { fitLine, keysForSlider, nudgeSlider, KEYED_STEPS } from './lines.js';
-
 import { tweakByKey, tweakText, knobSay, knobMoved } from './tweaks.js';
-
 
 // What a slider shows for number spec `n` at value `v`, and back. Ratio
 // sliders (`log`) move evenly in ratio, so ½× sits as far from 1× as 2×.
