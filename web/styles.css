@@ -3914,7 +3914,7 @@ body.head-slim.screen-pads .title-tools { left: calc(max(var(--gutter), (100% - 
 @media (max-width: 429px) {
   body.head-slim.screen-pads .edit-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
-/* 🔁 Loop and ➕ New sound stay in the slim bar at every width, beside ✏️ Edit. To make room: 🔁's word goes
+/* 🔁 Loop and + New sound stay in the slim bar at every width, beside ✏️ Edit. To make room: 🔁's word goes
    under 600 px, Edit's "sounds" under 530 and its word under 470 (all three keys are icons then), ❓ steps out
    under 420 (as it is first to give way on Beats; it is back at the top), the buttons sit closer under 375,
    and under 360 px ⬆️ steps out (the page scrolls to the top by itself, and the title is still there). */
@@ -3941,7 +3941,7 @@ body.head-slim.screen-pads .title-tools { left: calc(max(var(--gutter), (100% - 
   body.head-slim.screen-pads .to-top { display: none; }
   body.head-slim.screen-pads .pads-bar { padding-left: calc(12px + 2 * 44px + 4px + 8px); }
 }
-/* ➕ New sound joins the band only once it is stuck, at its right (Ben,
+/* + New sound joins the band only once it is stuck, at its right (Ben,
    2026-11-17), as ✏️ Layout joins the slim bar on 🎤 Live. */
 .pads-bar .pads-new { display: none; }
 body.head-slim.screen-pads .pads-bar .pads-new { display: block; min-width: 48px; padding: 0 10px; font: 800 1.9rem/1 var(--font-ui); }   /* a white +, as on the dashed pad (➕ draws dim grey on the dark band) */

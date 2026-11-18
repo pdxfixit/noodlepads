@@ -374,7 +374,7 @@ just before a dialog opens: `tips.js` (the sound sheet's tip), `nudge.js`
 | `load-who` | `backup-ui.js` | |
 | `pin-dialog`, `remember-dialog`, `avatar-dialog`, `cloud-list`, `share-dialog`, `shared-dialog` | `cloud-ui.js` | `welcome.js` listens to `avatar-dialog` and `cloud-list` closing; `cloud-list` can't be closed while someone comes down or after a stop (`beforeClose`), and ▶ Play as them closes it then calls `app.js playAs` |
 | `bulk-dialog` | `bulk.js` | |
-| `sheet`, `sheet-warn` | `sheet.js` | |
+| `sheet`, `sheet-warn` | `sheet.js` | `openSheet(mode, clip, { returnToPad, returnTo })`: opened from the dashed New sound pad or the stuck Pads band's + (`#pads-new`, `pads.js` `initNewButton`); focus goes back to what opened it while it is shown (`dialogs.js` `isShown`). `sheet-warn` asks before closing with unsaved work: 💾 Save (keeps a ⭐ voice being named, then submits the form), Keep editing, Throw away |
 | `library`, `chooser`, `tune-who`, `grooves`, `mixer`, `roll` | `sequencer.js` (`mixer.js`, `roll.js` inside) | app.js looks them up for `createSequencer`; `listen-ui.js` also finds `grooves` |
 | `listen` | `listen-ui.js` | |
 | `lane-sheet`, `tempo-sheet`, `songs` | `song.js` | app.js looks them up |

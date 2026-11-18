@@ -312,7 +312,7 @@ function renderKeepEmoji() {
   }));
 }
 
-async function keepVoice() {
+export async function keepVoice() {
   if (!sheet.keep) return;
   const typed = el.keepName.value.trim();
   const editing = sheet.keep.id ? myVoices().find((v) => v.id === sheet.keep.id) : null;

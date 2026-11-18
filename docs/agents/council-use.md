@@ -10,5 +10,6 @@ How an agent convenes the review council and what to do with its findings. The c
 - **Brief them blind:** the change itself, never your reasoning or another seat's verdict. Run one round's seats in parallel.
 - **A block against one of Ben's rules goes to Ben**: asked at once while he is in the chat, else a question card batched up front. Blocked work waits on its branch; move to the next TODO item.
 - **Never a rollback:** a seat's finding on what is live is fixed forward, at once when the seat says it is urgent.
-- **Results go into the work** (code, tests, docs, decisions, ADRs). No council log. Each commit carries a `Council:` trailer naming the seats and their verdicts.
+- **Run them in parallel:** a session runs at most 20 agents at once, so start 20 in one message and the last two as the first finish. One brief file for all (the change, the diff's path, screenshots), so every seat reads the same thing.
+- **Results go into the work** (code, tests, docs, decisions, ADRs). No council log. Each commit carries a `Council:` trailer naming all 22 seats and their verdicts (➖ for nothing in a seat's lens); `just council-check` checks it.
 - **A confident finding is built now, not listed.** Medium- or high-confidence findings are done straight away; low-confidence ones, a clash with `docs/decisions.md`, or a new screen or control go to Ben, and only his yes puts them in TODO.md.

@@ -12,12 +12,13 @@ let pickerFor;
 let sliderStops;
 let keysForSlider;
 let nudgeSlider;
+let nudged;
 let showingKeys;
 let KEYED_STEPS;
 
 before(async () => {
   installPage();
-  ({ fitStep, fitLine, pickerFor, sliderStops, keysForSlider, nudgeSlider, showingKeys, KEYED_STEPS } = await import('../web/lines.js'));
+  ({ fitStep, fitLine, pickerFor, sliderStops, keysForSlider, nudgeSlider, nudged, showingKeys, KEYED_STEPS } = await import('../web/lines.js'));
 });
 
 test('fitStep takes the first step that fits, and the last when none does', () => {
@@ -208,4 +209,14 @@ test('nudgeSlider: a notch can be wider than the step (a slider that moves in ra
   input.value = '0.37';
   input.parent.querySelector('[data-nudge="-1"]').click();
   assert.equal(input.value, '0.27');
+});
+
+test('nudged: one notch along, landed on a step from min, kept within the ends', () => {
+  const range = { min: -4.3, max: 3, step: 0.1 };
+  assert.equal(nudged(0, 1, range), 0.1);
+  assert.equal(nudged(0, -1, range), -0.1);
+  assert.equal(nudged(2.95, 1, range), 3, 'never past max');
+  assert.equal(nudged(-4.3, -1, range), -4.3, 'never past min');
+  assert.equal(nudged(0.37, -1, { min: -4.32, max: 3, step: 0.01, notch: 0.1 }), 0.27, 'a wider notch, on a step');
+  assert.equal(nudged(1, 1, { min: 0, max: 8, step: 1 }), 2);
 });

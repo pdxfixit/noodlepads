@@ -59,3 +59,12 @@ test('every kind of change convenes all of the seats, however small', () => {
   for (const [, change, seats] of kinds) assert.equal(seats.trim(), 'All of them', change.trim());
   assert.match(table, /Every change gets the full council: all \d+ seats, however small/);
 });
+
+// Council (devex, 2026-11-18): the rule lives in four places; they must not drift apart.
+test('AGENTS.md, the how-to and the council how-to all say every change gets all the seats', () => {
+  const read = (f) => readFileSync(join(root, f), 'utf8');
+  assert.match(read('AGENTS.md'), /The full council reviews every change, however small/);
+  assert.match(read('docs/agents/council-use.md'), /Convene all 22 seats on every change, however small/);
+  assert.match(read('docs/how-to.md'), /Convene the full council:\*\* all 22 seats, on every change however small/);
+  assert.doesNotMatch(doc, /Council: none/, 'no trailer that names no seat');
+});

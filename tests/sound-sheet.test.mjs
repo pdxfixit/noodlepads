@@ -1601,3 +1601,43 @@ test('a held note with 8 echoes, dragged: the live loop peaks near where the sav
     await advanced(false);
   }
 });
+
+// Council (storage and sync, 2026-11-18): the question's 💾 Save keeps a ⭐ voice
+// being named too, as that form's own Save would, before it saves the sound.
+test('💾 Save in the question keeps a ⭐ voice being named, then saves and closes', async () => {
+  const { state } = await import('../web/state.js');
+  await advanced(false);
+  await openEditor();
+  chip('chipmunk').dispatch('click');
+  $('#keep-btn').dispatch('click');
+  $('#keep-name').value = 'Zing Zong';
+  closeX();
+  assert.equal($('#sheet-warn').open, true);
+  $('#sheet-warn-save').dispatch('click');
+  await page.settle();
+  assert.ok(state.myVoices.find((v) => v.name === 'Zing Zong'), 'the voice is kept, not lost');
+  assert.equal($('#sheet').open, false, 'and the sound saved');
+  await openEditor();   // back to plain, for the tests after
+  if (!$('#normal-btn').disabled) $('#normal-btn').dispatch('click');
+  $('#sheet-form').dispatch('submit');
+  await page.settle();
+});
+
+// Council (test and QA, 2026-11-18): − and + on an Advanced step's slider.
+test('+ on a step\'s slider moves the step one notch and says so, as a tap, not a drag', async () => {
+  await advanced(true);
+  await openPlain();
+  addStep('tone');
+  await page.settle();
+  const slider = () => stepRows()[0].querySelector('input[data-key]');
+  const was = Number(slider().value);
+  const said = slider().parent.querySelector('output').textContent;
+  slider().parent.querySelector('[data-nudge="1"]').dispatch('click');
+  await page.settle();
+  assert.equal(Number(slider().value), was + 0.05, 'one step of Muffled ↔ Bright');
+  assert.notEqual(slider().parent.querySelector('output').textContent, said, 'its words follow');
+  await new Promise((r) => setTimeout(r, 200));   // the sound plays once, 150 ms after the last tap
+  removeLayer(stepRows()[0].dataset.layer);
+  $('#sheet').close();
+  await advanced(false);
+});

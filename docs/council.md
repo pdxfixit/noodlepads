@@ -41,7 +41,7 @@ Opus seats carry the most risk, so they get the strongest model. The others run 
 | A stored format, backup, the cloud or what the public sees | All of them | On the plan; all of them again on the finished change |
 | Anything else: a fix, a restyle, docs, tooling | All of them | On the finished change |
 
-A seat whose lens the change doesn't touch says so in one line (✅, "nothing here for my lens", what it checked): that costs little, and it is how a change with a reach nobody expected gets caught.
+A seat whose lens the change doesn't touch says so in one line (➖, "nothing here for my lens", what it checked): that costs little, and it is how a change with a reach nobody expected gets caught.
 
 Seats advise throughout: a seat asked at the plan stage may say what it wants to see again on the finished change. Ben can convene any seat on anything.
 
@@ -76,13 +76,13 @@ Questions for Ben: one line each, only what the seat cannot decide
 
 Into the work itself: the code, its tests, the docs, `docs/decisions.md` rows Ben approves, and an ADR's "Council" note where the decision is big enough for an ADR. There is no council log. A medium- or high-confidence finding is built straight away, not parked in TODO.md. A low-confidence one, one that clashes with `docs/decisions.md`, or one that needs a new screen or control goes to Ben (a question in the chat, or a card when he is away), and only his yes lists it. Otherwise the list only grows.
 
-Each commit says which seats reviewed it, in one trailer line above `Co-Authored-By`:
+Each commit names every seat and its verdict, in one trailer line above `Co-Authored-By`:
 
 ```
-Council: privacy-safety ✅, kids-ux ✏️, audio-engineer ⛔→✅
+Council: privacy-safety ✅, kids-ux ✏️, audio-engineer ⛔→✅, android ➖, …
 ```
 
-A change no seat reviewed says `Council: none (fix)` or `Council: none (docs)`.
+✅ a pass, ✏️ changes asked for, ⛔ a block (⛔→✅ once lifted), ➖ nothing here for that seat's lens. There is no `none` trailer: every change gets all the seats. `just council-check [REV]` names any seat a commit's trailer leaves out.
 
 ## Guarding against drift
 
@@ -92,7 +92,7 @@ Every seat is the same kind of model wearing a different hat, so seats tend to a
 - **Evidence or it doesn't count.** A finding without a pointer is dropped. "Nothing to change" says what was checked.
 - **A mandatory biggest risk**, even on a pass.
 - **A model matched to the seat's weight** (the roster's Model column).
-- **The tripwire.** `just council-tripwire` reads the `Council:` trailers in git and names any seat with 10 ✅ in a row. A seat that only ever passes is either in the wrong rounds or has drifted: its prompt is rewritten, or it is proposed for a merge.
+- **The tripwire.** `just council-tripwire` reads the `Council:` trailers in git and names any seat with 10 ✅ in a row; ➖ (nothing for its lens) neither counts nor resets, so a seat a change never touches is not taken for drift. A seat that only ever passes is either in the wrong rounds or has drifted: its prompt is rewritten, or it is proposed for a merge.
 - **Spot checks.** Ben may ask for any seat's full answer, evidence included, on any round.
 - **Merges need Ben.** Any seat or agent may propose merging two seats that keep agreeing (the tripwire's list and their trailers are the evidence). Two seats merge only after Ben approves; then this roster, the agent files and `tests/council.test.mjs` change in one commit.
 

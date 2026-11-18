@@ -25,7 +25,7 @@ import { buildLive, tailOf, liveTrim, newStep, isLive, cleanStep, kindById } fro
 import { fromSlider, numsOf, sliderText } from './shape.js';
 import { setSetting, onSetting } from './settings.js';
 import { padFor, renderPads } from './pads.js';
-import { openDialog, setupDialog } from './dialogs.js';
+import { isShown, openDialog, setupDialog } from './dialogs.js';
 import { extensionFor, slug } from './util.js';
 import { soundName, cutName } from './names.js';
 import { MIX, cleanMix } from './mix.js';
@@ -40,7 +40,7 @@ import { NO_TWEAKS, cleanTweaks, fullTweaks, tweakText, tweakByKey, knobMoved, l
 import { voiceLine, hasClassicVoice } from './voice-knobs.js';
 import { emojiMore, withCurrent } from './emoji-more.js';
 import { el, sheet, live, parts, hooks, advanced, plainChain, sheetError, setStatus } from './sheet-state.js';
-import { closeKeep, closePalette, editable, knobMovedByHand, litFromKnobs, moveKnobs, placeStickyRow, renderFolds, renderLayerRows, renderVoiceChips, renderVoices, wireFolds, wireVoices } from './sheet-voices.js';
+import { closeKeep, closePalette, editable, keepVoice, knobMovedByHand, litFromKnobs, moveKnobs, placeStickyRow, renderFolds, renderLayerRows, renderVoiceChips, renderVoices, wireFolds, wireVoices } from './sheet-voices.js';
 import { hearMix, makeMix, openMix, renderMake, renderMix, renderStarters, wireMake } from './sheet-make.js';
 
 let emojiAll = null;   // the "…" full list under the Picture choices (emoji-more.js)
@@ -211,7 +211,7 @@ function showLink() {
 
 // mode 'new', or 'edit' with the clip. `returnToPad` is the pad that gets
 // focus back when the sheet closes if the pad it came from was redrawn;
-// `returnTo` is a control outside the pads that opened it (➕ in the band).
+// `returnTo` is a control outside the pads that opened it (+ in the band).
 export function openSheet(mode, clip = null, { returnToPad = null, returnTo = null } = {}) {
   audio.stopAll();
   const p = currentPerson();
@@ -298,7 +298,7 @@ export function openSheet(mode, clip = null, { returnToPad = null, returnTo = nu
   const first = mode === 'edit' ? el.label : el.recBtn.disabled ? el.fileInput : el.recBtn;
   openDialog(el.sheet, {
     focus: first,
-    returnTo: () => (returnToPad ? padFor(returnToPad) : (returnTo?.getClientRects?.().length !== 0 && returnTo) || document.querySelector('#pads .pad-add')),
+    returnTo: () => (returnToPad ? padFor(returnToPad) : isShown(returnTo) ? returnTo : document.querySelector('#pads .pad-add')),
   });
   placeStickyRow();
   sheet.opened = sheetSignature();
@@ -364,7 +364,7 @@ function askBeforeClosing() {
   const recording = isRecording();
   const sound = sheet.pending && sheet.mode === 'new';
   const canSave = !recording && (sheet.mode !== 'new' || !!sheet.pending);
-  el.warnSave.hidden = !canSave;
+  if (el.warnSave) el.warnSave.hidden = !canSave;   // an old cached page has none
   el.warnText.textContent = recording ? 'Throw away this recording?' : !canSave ? 'Throw away your changes?' : sound ? 'Save this sound?' : 'Save your changes?';
   el.warnSub.textContent = recording ? 'It is still recording.' : sound ? 'It is not saved yet.' : 'They are not saved yet.';
   openDialog(el.warn, { focus: el.warnKeep });
@@ -373,6 +373,7 @@ function askBeforeClosing() {
 
 function cleanupSheet() {
   if (el.warn.open) el.warn.close();
+  clearTimeout(nudgeTimer);
   clearInterval(playWatch);
   stopRecording({ discard: true });
   cut.close();
@@ -484,7 +485,10 @@ function rendered() {
 // The knobs (tweaks.js) and, with Advanced, the kid's own steps, as rows
 // (shape.js). A change plays the sound with it.
 
-const SPEED_PULL = 0.15;   // Slower ↔ faster snaps to normal this close to it (doublings)
+const SPEED_PULL = 0.15;
+// − and + taps closer together than this play once, after the last.
+const NUDGE_HEAR_MS = 150;
+let nudgeTimer = 0;   // Slower ↔ faster snaps to normal this close to it (doublings)
 const ARM_MS = 4000;       // how long a ✕ waits for its second tap
 let armTimer = 0;
 
@@ -1057,8 +1061,15 @@ export function initSheet() {
   setupDialog(el.warn);
   el.warnDrop.addEventListener('click', () => { el.warn.close(); closeSheet(); });
   // 💾 Save: the sheet's own Save, which closes it once saved, or keeps it
-  // open saying what went wrong.
-  el.warnSave.addEventListener('click', () => { el.warn.close(); el.form.dispatchEvent(new Event('submit', { cancelable: true })); });
+  // open saying what went wrong. A ⭐ voice being named is kept first, as
+  // its own Save it would; a name it can't take keeps its form open instead.
+  el.warnSave?.addEventListener('click', async () => {
+    el.warn.close();
+    if (sheet.keep) await keepVoice();
+    if (sheet.keep) return;
+    if (el.form.requestSubmit) el.form.requestSubmit();
+    else el.form.dispatchEvent(new Event('submit', { cancelable: true }));
+  });
   // Closing or reloading the tab with the sheet holding work asks the browser's own question.
   window.addEventListener('beforeunload', (e) => { if (sheetHasWork()) { e.preventDefault(); e.returnValue = ''; } });
   el.recBtn.addEventListener('click', () => {
@@ -1226,18 +1237,25 @@ function wireLayers() {
     if (e.nudge || showingKeys(input.closest('.amount'))) return;
     if (liveAt(i)) { if (live.on) moveLive(i); else startLive().then((ok) => ok && moveLive(i)); }
   });
+  // A run of quick − or + taps plays once, after the last one (lines.js
+  // nudgeSlider), so a slow phone renders one sound, not one a tap.
+  const hear = (e) => {
+    clearTimeout(nudgeTimer);
+    if (e.nudge) nudgeTimer = setTimeout(previewVoice, NUDGE_HEAR_MS);
+    else previewVoice();
+  };
   rows.addEventListener('change', (e) => {
     const knob = e.target.closest('input[data-layer-knob]');
     if (knob) {
       setKnob(knob.dataset.layerKnob, sheet.tweaks[knob.dataset.layerKnob]);
-      previewVoice();
+      hear(e);
       return;
     }
     const input = e.target.closest('input[data-key]');
     if (!input) return;
     const i = Number(input.dataset.i);
     if (live.on && liveAt(i)) endLive();
-    else previewVoice();
+    else hear(e);
   });
   // A step's grip: arrow keys move it up or down; dragging moves it to where
   // it is dropped, among the steps (the knobs keep their places).

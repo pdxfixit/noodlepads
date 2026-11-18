@@ -491,3 +491,7 @@ live-check *args:
 [doc("The council's tripwire: names any seat whose last N reviews (default 10) in the commits' Council: trailers were all a plain pass (docs/council.md)")]
 council-tripwire n="10":
     @python3 tools/council.py {{n}}
+
+[doc("Every change gets the full council: names the seats a commit's Council: trailer leaves out (docs/council.md)")]
+council-check rev="HEAD":
+    @python3 tools/council.py check {{rev}}

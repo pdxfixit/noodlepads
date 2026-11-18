@@ -7,6 +7,12 @@
 //
 // pickerFor() gives a group of latching keys a compact <select> twin for the
 // picker step: it shows the pressed key ("4/4 ▾") and a choice presses that key.
+//
+// A slider's own controls live here too: keysForSlider (a key per stop, when
+// there are five or fewer) and nudgeSlider (− and + either side). Both move the
+// slider and send it `input` then `change`; nudgeSlider marks each event
+// `nudge`, which sheet.js reads (a tap is not a drag: no snap to normal, no
+// live drag, one sound after a run of taps).
 
 const lines = [];
 
@@ -181,6 +187,16 @@ export function keysForSlider(input, name = String) {
 }
 
 // ── − and + beside a slider ──────────────────────────────────────────
+
+// Where one − (dir -1) or + (dir 1) tap takes `value`: a notch (`notch`, the
+// step unless given) along, landed on a step counted from min, kept within
+// min and max. Pure.
+export function nudged(value, dir, { min, max, step, notch }) {
+  const by = Number(notch) || step;
+  const v = Math.min(max, Math.max(min, min + Math.round((value + dir * by - min) / step) * step));
+  return Number(v.toFixed(6));
+}
+
 // Every Layers slider has − before it and + after it (Ben, 2026-11-18): a
 // tap moves it one notch (`notch`, its own step unless given) and sends it
 // `input` then `change`, each marked `nudge`, so whatever listens to the
@@ -209,12 +225,7 @@ export function nudgeSlider(input, { notch } = {}) {
     up.disabled = input.disabled || v >= Number(input.max) - 1e-9;
   };
   const tap = (dir) => {
-    const min = Number(input.min);
-    const max = Number(input.max);
-    const step = Number(input.step) || 1;
-    const by = Number(notch) || step;
-    const v = Math.min(max, Math.max(min, min + Math.round((Number(input.value) + dir * by - min) / step) * step));
-    input.value = String(Number(v.toFixed(6)));
+    input.value = String(nudged(Number(input.value), dir, { min: Number(input.min), max: Number(input.max), step: Number(input.step) || 1, notch }));
     for (const type of ['input', 'change']) {
       const e = new Event(type, { bubbles: true });
       e.nudge = true;

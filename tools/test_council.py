@@ -23,5 +23,28 @@ class Tripwire(unittest.TestCase):
         self.assertEqual(c.tripped(trailers, 12), [])
 
 
+    def test_not_mine_neither_counts_nor_resets(self):
+        # Ben, 2026-11-18: every seat sits on every change; ➖ is "nothing here for my lens".
+        self.assertEqual(c.streaks(["docs ➖", "docs ✅", "docs ➖", "docs ✅", "docs ✏️"]), {"docs": 2})
+        self.assertEqual(c.parse("android ➖"), [("android", "➖")])
+
+
+class FullCouncil(unittest.TestCase):
+    TABLE = "| A | `council-docs` | x | sonnet |\n| B | `council-android` | y | opus |\n"
+
+    def test_roster_reads_the_table(self):
+        self.assertEqual(c.roster(self.TABLE), ["docs", "android"])
+
+    def test_missing_names_the_seats_left_out(self):
+        self.assertEqual(c.missing("docs ✅, android ➖", ["docs", "android"]), [])
+        self.assertEqual(c.missing("docs ✅", ["docs", "android"]), ["android"])
+        self.assertEqual(c.missing("none (fix)", ["docs", "android"]), ["docs", "android"], "a none trailer leaves out every seat")
+
+    def test_the_real_roster_has_every_seat(self):
+        import pathlib
+        md = (pathlib.Path(__file__).parent.parent / "docs" / "council.md").read_text(encoding="utf-8")
+        self.assertEqual(len(c.roster(md)), 22)
+
+
 if __name__ == "__main__":
     unittest.main()

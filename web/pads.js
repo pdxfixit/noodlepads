@@ -849,7 +849,7 @@ function initLoopSwitch() {
   show();
 }
 
-// ➕ New sound in the stuck band (styles.css shows it only there): the same
+// + New sound in the stuck band (styles.css shows it only there): the same
 // sheet as the dashed New sound pad, without scrolling back to it (Ben,
 // 2026-11-17). Focus comes back to ➕ when the sheet closes.
 function initNewButton() {

@@ -31,7 +31,7 @@ export function setupDialog(dialog, { beforeClose } = {}) {
     returns.delete(dialog);
     // Some browsers don't focus a button on click, so the opener can be the page itself.
     // One no longer shown (+ New sound once the Pads band un-sticks) can't take it either.
-    const usable = opener && opener !== document.body && opener.isConnected && opener.getClientRects?.().length !== 0;
+    const usable = opener && opener !== document.body && opener.isConnected && isShown(opener);
     const target = usable ? opener : returnTo?.();
     target?.focus({ preventScroll: true });
   });
@@ -49,6 +49,10 @@ export function onDialogOpen(fn) {
 // What had focus when `dialog` opened: a dialog that takes over from another
 // (✏️ Layout's ⌨️ Keys | 👆 Pads) hands focus back there, not to the one closed.
 export const openerOf = (dialog) => openers.get(dialog);
+
+// Whether `el` is drawn, so it can take focus: not display: none, nor in a
+// part that is (a page without layout, the tests' stand-in, says yes).
+export const isShown = (el) => !!el && el.getClientRects?.().length !== 0;
 
 // Opens `dialog` as a modal. `focus` is the element to focus first (the
 // dialog's own first control otherwise); `returnTo()` finds where focus goes

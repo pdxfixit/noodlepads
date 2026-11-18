@@ -72,6 +72,34 @@ test('a ✨ sound remade and saved when storage refuses: the sheet stays open, a
   assert.equal(stored(clip.id).synth.length, 2.4, 'the Wind is stored');
 });
 
+// Council (storage and sync, 2026-11-18): the question's 💾 Save fails as the sheet's own does.
+test('💾 Save in the closing question when storage refuses: the sheet stays open, saying so, and the question is gone', async () => {
+  const { currentPerson } = await import('../web/board.js');
+  const { persist } = await import('../web/state.js');
+  const { renderPads } = await import('../web/pads.js');
+  const clip = { id: 'user-ask-1', personId: currentPerson().id, label: 'Bonk', emoji: '🔔', color: 'red', created: 2, blob: new Blob(['old']), mime: 'audio/wav', voice: 'normal' };
+  state.userClips.push(clip);
+  await persist('clips', clip);
+  renderPads();
+  audio.originals.set(clip.id, Promise.resolve(plain));
+  audio.originalTrims.set(clip.id, '');
+  await openPad(clip.id);
+  $('#clip-label').value = 'Bonk Bonk';
+  $('#sheet').querySelector('.close').dispatch('click');
+  assert.equal($('#sheet-warn').open, true);
+  idb.failCommit(1);
+  $('#sheet-warn-save').dispatch('click');
+  await page.settle();
+  assert.equal($('#sheet-warn').open, false, 'the question is gone');
+  assert.equal($('#sheet').open, true, 'the sheet stays, the work in it');
+  assert.match($('#sheet-error').textContent, /didn’t save/);
+  assert.equal($('#clip-label').value, 'Bonk Bonk');
+  $('#sheet-form').dispatch('submit');
+  await page.settle();
+  assert.equal($('#sheet').open, false);
+  assert.equal(stored(clip.id).label, 'Bonk Bonk', 'saved the second time');
+});
+
 test('a ➕ mix saved when storage refuses: no new pad in memory, and the sheet stays open', async () => {
   const { setSetting } = await import('../web/settings.js');
   await setSetting('advancedBeats', true);

@@ -275,6 +275,25 @@ test('+ in the Pads band opens the New sound sheet, and focus comes back to it',
   assert.ok(document.activeElement === $('#pads-new'), 'not the dashed pad, which may be far down the page');
 });
 
+// Council (test and QA, 2026-11-18): a + no longer shown (the band un-stuck
+// while the sheet was open) can't take focus back; the dashed pad does.
+test('+ hidden by the time the sheet closes: focus goes to the dashed New sound pad', () => {
+  const plus = $('#pads-new');
+  plus.focus();
+  plus.dispatch('click');
+  assert.equal($('#sheet').open, true);
+  plus.getClientRects = () => [];   // display: none, as at the top of the page
+  $('#sheet').close();
+  delete plus.getClientRects;
+  assert.ok(document.activeElement === pads().find((p) => p.classList.contains('pad-add')), 'the dashed pad, still on the page');
+});
+
+// Council (pre-reader, 2026-11-18): one picture, one meaning: the band's + is the dashed pad's +.
+test('the band\'s + is the same mark as the dashed New sound pad', () => {
+  const pad = pads().find((p) => p.classList.contains('pad-add'));
+  assert.equal($('#pads-new').textContent, pad.querySelector('.pad-emoji').textContent);
+});
+
 // 👥 People's line `i` opens that person's profile sheet (once: a second
 // call while it is open for them leaves it as it is).
 const profile = (i) => {

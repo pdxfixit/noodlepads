@@ -22,7 +22,7 @@ Step by step for the common jobs, so a fresh session never has to guess. [AGENTS
 6. **Look at it** if a kid would see it: `just look <screen or view>` (and `--wide` for layout), then read the screenshots. `just look --help` lists the views; the `VIEWS` table in `tools/look.mjs` says what each opens.
 7. **`just version`**, and commit `web/version.js` with the change: every change to `web/` bumps the release (PATCH is the commit count). `just ship`, `just land` and CI refuse one without it.
 8. **Docs in the same commit:** [guide.md](guide.md) if behavior changed ([layout.md](layout.md) for a new file); docs/state.md if what is live changed; the ❓ Help line (`web/help.js`) if a control's label changed.
-9. **Convene the full council:** all 22 seats, on every change however small ([council.md](council.md) "When it convenes"), briefed blind with the change itself. Fold what they find into the work, and add the `Council:` trailer, naming every seat, above `Co-Authored-By`.
+9. **Convene the full council:** all 22 seats, on every change however small ([council.md](council.md) "When it convenes"), briefed blind with the change itself. Fold what they find into the work, and add the `Council:` trailer, naming every seat, above `Co-Authored-By`; `just council-check` says if one is missing.
 10. **Ship it** from the main checkout: `just ship "$msg" <files…>`, with the message in a `mktemp` file. From a worktree: commit on your branch and report the commits.
 
 ## Flaky tests
@@ -69,7 +69,7 @@ A stored-format change is significant: it gets an ADR ([adr/README.md](adr/READM
 | A request from Ben | A line in [TODO.md](../TODO.md) "Agents do" at once; delete it when the work lands. |
 | A standing rule for agents | AGENTS.md if it is short and every session needs it; else the doc for that area, linked from AGENTS.md. |
 
-`tests/docs.test.mjs` checks every relative link (and a `#heading` it names) and that every ADR is in the index. Commit with `docs:` and a `Council:` trailer (developer experience and docs steward review tooling and docs, or `Council: none (docs)`); a docs-only commit still deploys (the site is unchanged, so `deploy-verify` just sees the new commit).
+`tests/docs.test.mjs` checks every relative link (and a `#heading` it names) and that every ADR is in the index. Commit with `docs:` and a `Council:` trailer naming all 22 seats (the full council reviews docs too; `just council-check`); a docs-only commit still deploys (the site is unchanged, so `deploy-verify` just sees the new commit).
 
 ## Landing other agents' work
 
