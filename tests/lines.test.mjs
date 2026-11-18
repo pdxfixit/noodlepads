@@ -11,12 +11,13 @@ let fitLine;
 let pickerFor;
 let sliderStops;
 let keysForSlider;
+let nudgeSlider;
 let showingKeys;
 let KEYED_STEPS;
 
 before(async () => {
   installPage();
-  ({ fitStep, fitLine, pickerFor, sliderStops, keysForSlider, showingKeys, KEYED_STEPS } = await import('../web/lines.js'));
+  ({ fitStep, fitLine, pickerFor, sliderStops, keysForSlider, nudgeSlider, showingKeys, KEYED_STEPS } = await import('../web/lines.js'));
 });
 
 test('fitStep takes the first step that fits, and the last when none does', () => {
@@ -167,4 +168,44 @@ test('a keyed row falls back to its slider when the keys do not fit', () => {
   fitLine(row, KEYED_STEPS);
   assert.equal(row.classList.contains('fit-slider'), true);
   assert.equal(showingKeys(row), false, 'the slider shows, so its events are drags');
+});
+
+// Ben, 2026-11-18: every Layers slider gets − and + (lines.js nudgeSlider).
+test('nudgeSlider: − before the slider and + after it, named for it; a tap moves one notch, marked, and stops at the ends', () => {
+  const { row, input } = sliderRow(-2, 2, 1, 1);
+  input.setAttribute('aria-label', 'Pitch');
+  const heard = [];
+  for (const type of ['input', 'change']) input.addEventListener(type, (e) => heard.push([type, input.value, e.nudge]));
+  const sync = nudgeSlider(input);
+  const [down, up] = [row.querySelector('[data-nudge="-1"]'), row.querySelector('[data-nudge="1"]')];
+  assert.ok(row.classList.contains('nudged'));
+  assert.equal(row.children.indexOf(down), row.children.indexOf(input) - 1, '− right before the slider');
+  assert.equal(row.children.indexOf(up), row.children.indexOf(input) + 1, '+ right after it');
+  assert.deepEqual([down.textContent, up.textContent], ['−', '+']);
+  assert.deepEqual([down.getAttribute('aria-label'), up.getAttribute('aria-label')], ['Pitch: down one', 'Pitch: up one']);
+  up.click();
+  assert.equal(input.value, '2');
+  assert.deepEqual(heard, [['input', '2', true], ['change', '2', true]], 'input then change, each marked as a tap');
+  assert.equal(up.disabled, true, 'faint at the top');
+  up.click();
+  assert.equal(input.value, '2', 'and does nothing there');
+  for (let i = 0; i < 4; i++) down.click();
+  assert.equal(input.value, '-2');
+  assert.equal(down.disabled, true, 'faint at the bottom');
+  input.value = '0';
+  input.disabled = true;
+  sync();
+  assert.ok(down.disabled && up.disabled, 'a disabled slider disables both');
+  nudgeSlider(input);
+  assert.equal(row.querySelectorAll('.slider-nudge').length, 2, 'run again, it replaces the two');
+});
+
+test('nudgeSlider: a notch can be wider than the step (a slider that moves in ratio), and lands on a step', () => {
+  const { input } = sliderRow(-4.32, 3, 0.01, 0);
+  nudgeSlider(input, { notch: 0.1 });
+  input.parent.querySelector('[data-nudge="1"]').click();
+  assert.equal(input.value, '0.1');
+  input.value = '0.37';
+  input.parent.querySelector('[data-nudge="-1"]').click();
+  assert.equal(input.value, '0.27');
 });

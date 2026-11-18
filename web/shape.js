@@ -11,7 +11,7 @@
 
 import { KINDS, kindById } from './steps.js';
 import { voiceById, amountText, stepLook } from './voices.js';
-import { fitLine, keysForSlider, KEYED_STEPS } from './lines.js';
+import { fitLine, keysForSlider, nudgeSlider, KEYED_STEPS } from './lines.js';
 import { tweakByKey, tweakText, knobSay, knobMoved } from './tweaks.js';
 
 // What a slider shows for number spec `n` at value `v`, and back. Ratio
@@ -106,6 +106,8 @@ export function renderLayers(list, rows, ctx) {
   const active = globalThis.document?.activeElement;
   const had = active && list.contains(active) ? {
     layer: active.closest?.('[data-layer]')?.dataset.layer, stop: active.dataset?.stop, tool: active.dataset?.mute ? 'mute' : active.dataset?.removeLayer ? 'remove' : null,
+    nudge: active.dataset?.nudge,
+    at: active.dataset?.nudge ? [...active.closest('[data-layer]').querySelectorAll('.amount')].indexOf(active.closest('.amount')) : -1,
   } : null;
   const { tweaks, muted, chain, ready, armed, canOpen, mutes = true } = ctx;
   const stepCount = rows.filter((r) => r.startsWith('step:')).length;
@@ -132,18 +134,26 @@ export function renderLayers(list, rows, ctx) {
       if (flags.length) ctl.append(make('div', { class: 'layer-flags' }, ...flags));
       if (parts.length || flags.length) li.append(ctl);
       // A few stops (Echoes 1–8, a note length): keys, with the slider as fallback.
-      for (const p of parts) if (!p.n.log) keysForSlider(p.input, p.n.keyText ?? String);
+      // Every slider has − and +; one that moves in ratio steps a tenth of a doubling.
+      for (const p of parts) {
+        if (!p.n.log) keysForSlider(p.input, p.n.keyText ?? String);
+        nudgeSlider(p.input, { notch: p.n.log ? 0.1 : undefined });
+      }
     } else if (row !== 'special') {
       const { ctl, input, say } = knobControl(row, tweaks, ready, look);
       li.append(make('div', { class: 'layer-ctl' }, ctl));
       keysForSlider(input, say);
+      nudgeSlider(input);
     }
     return li;
   }));
   for (const row of list.querySelectorAll('.keyed')) fitLine(row, KEYED_STEPS);
   if (!had?.layer) return;
   const card = list.querySelector(`[data-layer="${had.layer}"]`);
-  const again = had.stop !== undefined ? card?.querySelector(`[data-stop="${had.stop}"]`)
+  // − or + on the same slider; at its end (faint), the other one.
+  const nudges = had.nudge ? [...(card?.querySelectorAll('.amount') ?? [])][had.at]?.querySelectorAll('.slider-nudge') ?? [] : [];
+  const nudge = [...nudges].sort((a, b) => (b.dataset.nudge === had.nudge) - (a.dataset.nudge === had.nudge)).find((b) => !b.disabled);
+  const again = nudge ? nudge : had.stop !== undefined ? card?.querySelector(`[data-stop="${had.stop}"]`)
     : had.tool === 'mute' ? card?.querySelector('[data-mute]')
       : had.tool === 'remove' ? card?.querySelector('[data-remove-layer]') : card?.querySelector('button, input');
   again?.focus?.({ preventScroll: true });

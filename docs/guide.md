@@ -33,7 +33,10 @@ slides the knobs in **Layers** under it to where that voice puts them (the
 rows it moves glow, and any knob off normal keeps a blue outline), and the line under the voices says so ("Chipmunk is:
 higher +9, faster 1.74×"). Layers are one row per layer, top to bottom in the
 order they play, like Beats' rows: an emoji, a name, keys or a slider, 🔈 to
-mute it (it keeps its setting) and ✕ to take it out (two taps). Deeper ↔
+mute it (it keeps its setting) and ✕ to take it out (two taps). A slider has
+− and + either side, one notch a tap (`lines.js` `nudgeSlider`; a tap is not a
+drag, so Slower ↔ faster's snap to normal and a live step's drag skip it); on a
+narrow row its value sits above it. Deeper ↔
 higher, Slower ↔ faster, Warble, Softer ↔ louder and Echo are always there;
 **+ Add a layer** adds ⏪ Backwards, Muffled ↔ Bright, Robot, Crunch or
 Stutter (a voice that uses one adds it too), and with Advanced the kid's own

@@ -1198,7 +1198,8 @@ function wireLayers() {
     if (knob) {
       const k = knob.dataset.layerKnob;
       let v = knobValue(k, knob);
-      if (k === 'speed' && Math.abs(v) < SPEED_PULL) { v = 0; knob.value = '0'; }
+      // A drag snaps to normal near it; a − or + tap goes exactly one notch (lines.js nudgeSlider).
+      if (k === 'speed' && !e.nudge && Math.abs(v) < SPEED_PULL) { v = 0; knob.value = '0'; }
       sheet.tweaks = fullTweaks({ ...sheet.tweaks, [k]: v });
       if (!tweakByKey(k).flag) knob.parentElement.querySelector('output').textContent = tweakText(k, sheet.tweaks[k]);
       knob.closest('.layer-row')?.classList.toggle('changed', knobMoved(k, sheet.tweaks));
@@ -1213,8 +1214,8 @@ function wireLayers() {
     Object.assign(step, clean);
     const out = input.closest('.amount')?.querySelector('output');
     if (out) out.textContent = sliderText(step, n.key);
-    // A key is a tap, not a drag: the change that follows it renders the sound.
-    if (showingKeys(input.closest('.amount'))) return;
+    // A key, − or + is a tap, not a drag: the change that follows it renders the sound.
+    if (e.nudge || showingKeys(input.closest('.amount'))) return;
     if (liveAt(i)) { if (live.on) moveLive(i); else startLive().then((ok) => ok && moveLive(i)); }
   });
   rows.addEventListener('change', (e) => {

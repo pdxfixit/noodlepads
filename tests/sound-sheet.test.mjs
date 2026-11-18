@@ -216,6 +216,26 @@ test('a knob off normal is drawn as changed and stays marked, by voice or by han
   $('#sheet').close();
 });
 
+// Ben, 2026-11-18: − and + on every Layers slider; a tap is one notch.
+test('Layers: + on Slower ↔ faster moves one notch off normal, where a drag would snap back, and keeps focus', async () => {
+  await openEditor();
+  const up = () => knob('speed').parent.querySelector('[data-nudge="1"]');
+  assert.equal(knob('speed').value, '0');
+  up().focus();
+  up().dispatch('click');
+  await page.settle();
+  assert.equal(knob('speed').value, '0.1', 'one notch, not pulled back to normal');
+  assert.ok(layerRow('speed').classList.contains('changed'), 'the sound changed');
+  assert.ok(document.activeElement === up(), 'focus is on + again after the rows redraw');
+  knob('speed').parent.querySelector('[data-nudge="-1"]').dispatch('click');
+  await page.settle();
+  assert.equal(knob('speed').value, '0', 'and − takes it back');
+  assert.ok(layerRow('warble').querySelector('.slider-nudge'), 'a keyed row has them too, shown only if its keys fall back to the slider');
+  const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.amount\.keyed:not\(\.fit-slider\) > \.slider-nudge \{ display: none; \}/, 'hidden while its keys show');
+  $('#sheet').close();
+});
+
 // ── Closing with unsaved work asks first (Ben, 2026-10-16) ──
 const closeX = () => $('#sheet').querySelector('.close').dispatch('click');
 const cancelEsc = () => $('#sheet').dispatch('cancel');

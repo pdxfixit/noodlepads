@@ -98,6 +98,7 @@ Where things stand **now**. Present tense only: replace lines, never append hist
 
 Ben reports tries as he goes; none of these is a "Ben does" item. On a phone unless it says otherwise:
 
+- The sound sheet's − and + on Layers sliders (2026-11-18): checked with `just look` and the tests only; not yet tapped on a phone, nor heard (each tap renders and plays the sound, as a slider let go does).
 - 🔊 Pads' + New sound in the stuck band (2026-11-17): checked only with `just look` from 320 to 3440 px, never on a phone; not yet tried by touch, nor focus coming back to it on Safari.
 - 🎧 From a song on real songs: Ben tries them next.
   - **Heard:** 🔊 Even it out; 🗂️ See all's playing; the real recordings in the app; every preset's loudness; the ⚙️ Advanced sharps and flats; the row speakers; 🎹 the instruments (by anyone, anywhere); 💃 Grooves; 🎚️ Mixer; 🎼 Song; 🎹 the piano roll; 🔔 Let it ring; 👆 touch layouts; 🧸 Kids' pads, the mic's count and the tune; 🎧 From a song through a real tab or microphone; Heartbeat, Boom, Dhol and Kick (dusty) after the loudness floor remade them; Song's Echo dipping at a tempo mark; a beat made from a real 🎤 Live take.

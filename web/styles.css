@@ -2559,6 +2559,31 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 .amount.layer-amount { grid-template-columns: minmax(0, 1fr) minmax(6.5em, auto); padding: 4px 10px; }
 .amount.layer-amount.keyed:not(.fit-slider) { grid-template-columns: minmax(0, 1fr); padding: 0; background: transparent; }
 .layer-amount .slider-keys { min-width: 0; }
+/* − and + either side of every Layers slider (lines.js nudgeSlider; Ben,
+   2026-11-18): one notch a tap. Hidden with the slider where keys show. On a
+   narrow row the value sits over the slider, so the slider keeps its room. */
+.layer-ctl { container: layer-ctl / inline-size; }
+.slider-nudge {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 2px solid rgb(20 19 24 / 0.3);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  font: 800 1.4rem/1 var(--font-ui);
+}
+.slider-nudge:disabled { opacity: 0.45; }
+dialog#sheet .slider-nudge:focus-visible { outline-color: var(--ink); }
+.amount.keyed:not(.fit-slider) > .slider-nudge { display: none; }
+.amount.nudged > .slider-nudge[data-nudge="-1"] { grid-area: minus; }
+.amount.nudged > .slider-nudge[data-nudge="1"] { grid-area: plus; }
+.amount.nudged > input { grid-area: slider; }
+.amount.nudged > output { grid-area: out; }
+.amount.layer-amount.nudged:is(:not(.keyed), .fit-slider) { grid-template-columns: 44px minmax(0, 1fr) 44px; grid-template-areas: "out out out" "minus slider plus"; gap: 2px 8px; }
+@container layer-ctl (min-width: 360px) {
+  .amount.layer-amount.nudged:is(:not(.keyed), .fit-slider) { grid-template-columns: 44px minmax(0, 1fr) 44px minmax(6.5em, auto); grid-template-areas: "minus slider plus out"; }
+}
 .layer-flags { display: flex; flex-wrap: wrap; gap: 6px; }
 .layer-flags .shape-flag { margin: 0; }
 .layer-row.muted .layer-tile, .layer-row.muted .layer-name, .layer-row.muted .layer-ctl { opacity: 0.4; }
@@ -2596,6 +2621,10 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 .shape-amount span { grid-area: name; }
 .shape-amount output { grid-area: out; }
 .shape-amount input { grid-area: slider; }
+/* The value spreads left over the slider's end, never squeezing the slider:
+   it spans the third and fourth columns, the slider the second and third. */
+.amount.shape-amount.nudged:is(:not(.keyed), .fit-slider) { grid-template-columns: 44px minmax(0, 1fr) minmax(0, max-content) 44px; grid-template-areas: "name name out out" "minus slider slider plus"; gap: 2px 8px; }
+.amount.shape-amount.nudged > output { justify-self: end; }
 .shape-flag {
   min-height: 44px;
   margin: 6px 0 0;

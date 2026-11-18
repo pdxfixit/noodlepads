@@ -180,6 +180,57 @@ export function keysForSlider(input, name = String) {
   return sync;
 }
 
+// ── − and + beside a slider ──────────────────────────────────────────
+// Every Layers slider has − before it and + after it (Ben, 2026-11-18): a
+// tap moves it one notch (`notch`, its own step unless given) and sends it
+// `input` then `change`, each marked `nudge`, so whatever listens to the
+// slider handles a tap as it does a key. They go in the slider's row, which
+// gets `nudged`; a row showing keys hides them with its slider (styles.css).
+// Run it again after keysForSlider; it replaces the two. Returns the function
+// that sets them faint at the ends (for when code moves the slider).
+export function nudgeSlider(input, { notch } = {}) {
+  const row = input.parentElement;
+  for (const b of row.querySelectorAll('.slider-nudge')) b.remove();
+  row.classList.add('nudged');
+  const name = input.getAttribute('aria-label') || row.querySelector('span')?.textContent || '';
+  const key = (dir, text, said) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'slider-nudge';
+    b.dataset.nudge = String(dir);
+    b.textContent = text;
+    b.setAttribute('aria-label', `${name}: ${said}`);
+    b.addEventListener('click', () => tap(dir));
+    return b;
+  };
+  const sync = () => {
+    const v = Number(input.value);
+    down.disabled = input.disabled || v <= Number(input.min) + 1e-9;
+    up.disabled = input.disabled || v >= Number(input.max) - 1e-9;
+  };
+  const tap = (dir) => {
+    const min = Number(input.min);
+    const max = Number(input.max);
+    const step = Number(input.step) || 1;
+    const by = Number(notch) || step;
+    const v = Math.min(max, Math.max(min, min + Math.round((Number(input.value) + dir * by - min) / step) * step));
+    input.value = String(Number(v.toFixed(6)));
+    for (const type of ['input', 'change']) {
+      const e = new Event(type, { bubbles: true });
+      e.nudge = true;
+      input.dispatchEvent(e);
+    }
+    sync();
+  };
+  const down = key(-1, '−', 'down one');
+  const up = key(1, '+', 'up one');
+  input.insertAdjacentElement('beforebegin', down);
+  input.insertAdjacentElement('afterend', up);
+  input.addEventListener('input', sync);
+  sync();
+  return sync;
+}
+
 // Whether a keyed row is showing its keys (not fallen back to the slider):
 // then the slider is out of sight, and its events come from a key.
 export const showingKeys = (row) => !!row?.classList.contains('keyed') && !row.classList.contains('fit-slider');

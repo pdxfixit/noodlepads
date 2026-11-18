@@ -186,7 +186,8 @@ export class FakeElement {
   close() { this.open = false; this.dispatch('close'); }
   click() { this.dispatch('click', { detail: 0 }); }
   // A real Event sent by code (new Event('change', { bubbles: true })).
-  dispatchEvent(ev) { return !this.dispatch(ev.type).defaultPrevented; }
+  // An event's own fields (a mark like lines.js's `nudge`) reach the listeners, as in a browser.
+  dispatchEvent(ev) { const { type, ...own } = Object.fromEntries(Object.entries(ev)); return !this.dispatch(ev.type, own).defaultPrevented; }
 
   // Runs this element's handlers, then its ancestors' (bubbling), as a browser would.
   dispatch(type, props = {}) {
