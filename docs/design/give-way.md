@@ -1,6 +1,6 @@
 # Give-way order
 
-What gives way when a line of controls runs out of room, everywhere in the app. Ben, 2026-11-18: "set up a global pattern of order of operations for when buttons have to appear or disappear so that this question doesn't come up again and again but we have consistency across the app." The order lives in code as `web/give-way.js` (`GIVE_WAY`, `DOUBLES`); `tests/give-way.test.mjs` holds the bars to it.
+What gives way when a line of controls runs out of room, everywhere in the app. Ben, 2026-11-18: "set up a global pattern of order of operations for when buttons have to appear or disappear so that this question doesn't come up again and again but we have consistency across the app." Stage 4's order lives in code as `web/give-way.js` `DOUBLES`. `tests/give-way.test.mjs` holds the bars to the order: a new bar, or a bar brought into line, gets a test there (read its steps from `styles.css`, or its `STEPS` from JS, and check they come in this order). In v2, read the widths as window size classes in dp, and apply the same order when large text takes the room.
 
 ## The order
 
@@ -12,7 +12,7 @@ Every line takes these stages in this order, and never skips back:
 4. **Doubles.** Keys the screen also shows elsewhere step out, always in `DOUBLES` order: ❓ Help (back at the top of the screen), then ⬆️ back to the top (the page scrolls there itself), then ⚙️ Settings (the way to everything else, so last).
 5. **Fold.** What still doesn't fit folds into a ⋯ at the line's end, the least-used first.
 
-**Never gives way:** the screen's main action (▶ Play, ● Record, ✏️ Edit, + New sound) and the person's round button. They stay at every width, 44 px or more.
+**Never gives way:** the screen's main action (▶ Play, ● Record, ✏️ Edit sounds, + New sound) and the person's round button: they stay at every width, 44 px or more. A key that folds into ⋯ keeps its name there.
 
 ## How a line follows it
 

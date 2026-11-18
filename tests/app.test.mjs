@@ -288,6 +288,13 @@ test('+ hidden by the time the sheet closes: focus goes to the dashed New sound 
   assert.ok(document.activeElement === pads().find((p) => p.classList.contains('pad-add')), 'the dashed pad, still on the page');
 });
 
+// Ben, 2026-11-18: every − and + that steps a value repeats while held.
+test('a held − or + repeats on the tempo (Beats, 🎤 Live), 🎼 Song\'s tempo and passes', () => {
+  const steppers = [...document.querySelectorAll('[data-tempo-step]'), ...['#song-tempo-down', '#song-tempo-up', '#song-less', '#song-more'].map((id) => $(id))];
+  assert.ok(steppers.length >= 8, `found ${steppers.length}`);
+  for (const b of steppers) assert.equal(b.dataset.holdRepeat, '', b.id || b.className);
+});
+
 // Council (pre-reader, 2026-11-18): one picture, one meaning: the band's + is the dashed pad's +.
 test('the band\'s + is the same mark as the dashed New sound pad', () => {
   const pad = pads().find((p) => p.classList.contains('pad-add'));
@@ -2281,6 +2288,22 @@ test('🎼 Song: its own tab, Advanced or not; pick a beat, then tap a spot on a
   assert.deepEqual(blocksOn($, 0).map((b) => [b.bar, b.len]), [[0, 1], [1, 3], [4, 1]]);
   assert.equal($('#song-more').disabled, true, 'no room for a fourth');
   $('#song-less').dispatch('click');
+  assert.equal(blocksOn($, 0)[1].len, 2);
+  // Ben, 2026-11-18: a held ➕ keeps adding passes (hold-repeat.js); the hold
+  // is one change, so one ↩️ Undo takes it all back (council round 2).
+  $('#song-less').dispatch('click');
+  assert.equal(blocksOn($, 0)[1].len, 1);
+  const raf = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = (fn) => { fn(); return 1; };   // the stand-in never paints
+  $('#song-more').dispatch('pointerdown', { button: 0, clientX: 0, clientY: 0 });
+  await new Promise((r) => setTimeout(r, 900));   // 450 ms, then two steps 250 ms apart
+  page.winEvent('pointerup', {});
+  globalThis.requestAnimationFrame = raf;
+  assert.equal(blocksOn($, 0)[1].len, 3, 'held: up to where the next block starts');
+  assert.equal(songNow().lanes[0].blocks[1].times, 3, 'saved when let go');
+  $('#song-step-undo').dispatch('click');
+  assert.equal(blocksOn($, 0)[1].len, 1, 'one ↩️ Undo takes back the whole hold');
+  $('#song-more').dispatch('click');
   assert.equal(blocksOn($, 0)[1].len, 2);
   // A beat dropped on a block selects the block: nothing goes on top.
   dropBeat($, { lane: 0, bar: 2, name: first });

@@ -6,7 +6,13 @@ When Ben answers, record the answer in [decisions.md](decisions.md) (and an ADR 
 
 ## Open
 
-None. Ben's own open decision (how v2 does the voices) is in `TODO.md` "Ben does".
+### Q1. Hold a sound to open its editing?
+
+**Recommend:** keep a held pad as a loop, and in ✏️ Edit sounds let a hold open the sound's sheet only if it is a long hold that never moved (a drag still moves it), because a held pad looping is the app's first promise.
+Ben, 2026-11-18: "on sounds we can hold it to open the editing". A held pad loops (decisions.md "hold to loop"), and in ✏️ Edit sounds a hold starts a drag to reorder. Other ways: a double-tap opens it; or the ✏️ already on each pad in Edit sounds (and on hover) stays the way in.
+**Answer:**
+
+Ben's own open decision (how v2 does the voices) is in `TODO.md` "Ben does".
 
 ## Card template
 

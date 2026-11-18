@@ -233,6 +233,9 @@ test('Layers: + on Slower ↔ faster moves one notch off normal, where a drag wo
   knob('speed').parent.querySelector('[data-nudge="-1"]').dispatch('click');
   await page.settle();
   assert.equal(knob('speed').value, '0', 'and − takes it back');
+  // Council (accessibility, 2026-11-18): each key names its knob, and its tooltip says it can be held.
+  assert.equal(up().getAttribute('aria-label'), 'Slower ↔ faster: up one');
+  assert.equal(up().title, 'Up one; hold to keep going');
   assert.ok(layerRow('warble').querySelector('.slider-nudge'), 'a keyed row has them too, shown only if its keys fall back to the slider');
   const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
   assert.match(css, /\.amount\.keyed:not\(\.fit-slider\) > \.slider-nudge \{ display: none; \}/, 'hidden while its keys show');

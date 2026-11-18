@@ -6,13 +6,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { GIVE_WAY, DOUBLES } from '../web/give-way.js';
+import { DOUBLES } from '../web/give-way.js';
 import { STEPS } from '../web/mini-deck.js';
 
 const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
 
-test('the order is the five stages, and doubles go ❓, ⬆️, ⚙️', () => {
-  assert.deepEqual(GIVE_WAY, ['tight', 'compact', 'words', 'doubles', 'fold']);
+test('keys shown elsewhere step out ❓, ⬆️, then ⚙️', () => {
   assert.deepEqual(DOUBLES, ['help', 'top', 'settings']);
 });
 
@@ -49,4 +48,6 @@ test('🎤 Live: 🎬 Takes, first to fold, loses its word no later than 🔔 an
   const live = css.match(/@media \(max-width: (\d+)px\) \{\n  body\.screen-live \.dj-bar \.dj-word \{[\s\S]*?\n\}/);
   assert.ok(live, 'the Live words step');
   assert.match(live[0], /#dj-takes-open \{ padding: 0; font-size: 0; \}/, '🎬 goes with them');
+  const html = readFileSync(new URL('../web/index.html', import.meta.url), 'utf8');
+  assert.match(html, /id="dj-takes-open"[^>]*aria-label="🎬 Takes[^"]+"/, 'its name stays for screen readers when its word goes');
 });

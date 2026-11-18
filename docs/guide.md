@@ -36,11 +36,14 @@ order they play, like Beats' rows: an emoji, a name, keys or a slider, 🔈 to
 mute it (it keeps its setting) and ✕ to take it out (two taps). A slider has
 − and + either side, one step a tap (`lines.js` `nudgeSlider`); on an Advanced
 ratio slider (speed, How metal) a tap is a semitone, on a grid from normal, so
-12 taps are an octave. Held, they repeat (`hold-repeat.js`, after 450 ms, every
-90 ms). A tap is not a drag: Slower ↔ faster's snap to normal and a live step's
-drag skip it, and a run of quick taps plays the sound once, after the last. A
-knob's value sits beside its name, and its − slider + line has no box. Under 420 px of Layers a step's name takes its own line
-under its grip, picture and tools. Deeper ↔
+12 taps are an octave. The slider holds it on its nearest 0.01 of a doubling (a
+few cents off), and the next tap finds the semitone again by rounding, so steps
+never drift. Held, − and + repeat (`hold-repeat.js`): after 450 ms, three steps
+250 ms apart, then one every 90 ms, until the finger lifts or slides off. A tap
+is not a drag: Slower ↔ faster's snap to normal and a live step's drag skip it,
+and a run of taps plays the sound once, 150 ms after the last. A knob's value
+sits beside its name, and its − slider + line has no box. Under 420 px of
+Layers a step's name takes its own line under its grip, picture and tools. Deeper ↔
 higher, Slower ↔ faster, Warble, Softer ↔ louder and Echo are always there;
 **+ Add a layer** adds ⏪ Backwards, Muffled ↔ Bright, Robot, Crunch or
 Stutter (a voice that uses one adds it too), and with Advanced the kid's own

@@ -34,6 +34,7 @@ import { follower, keepInView } from './follow.js';
 import { tempoKey } from './tempo-key.js';
 import { beatMenu } from './beat-menu.js';
 import { foldLine } from './lines.js';
+import { holdStage } from './hold-repeat.js';
 
 const STOPS = tempoStops();   // the click track slider's positions (see sequencer.js)
 const ARM_MS = 3000;           // how long "Make another?" waits for its second tap
@@ -1265,6 +1266,7 @@ export function createDJ({ el, deps }) {
     if (bpm && bpm !== deps.seq.tempo()) { deps.seq.setTempo(bpm, { dragging: true }); showSetup(); }
   });
   el.clickBpm.addEventListener('change', () => deps.seq.setTempo(deps.seq.tempo()));
+  el.deck.addEventListener('holdend', () => { if (deps.seq.beat()) deps.seq.setTempo(deps.seq.tempo()); });
   el.deck.addEventListener('click', (e) => {
     const b = e.target.closest('[data-tempo-step], [data-bars], [data-sig], [data-swing]');
     if (!b || !deps.seq.beat()) return;
@@ -1274,7 +1276,7 @@ export function createDJ({ el, deps }) {
       // The chevrons (a short line): to the next common tempo up or down.
       const bpm = seq.beat().bpm;
       const next = Number(b.dataset.tempoStep) > 0 ? COMMON_BPMS.find((t) => t > bpm) : COMMON_BPMS.findLast((t) => t < bpm);
-      if (next) seq.setTempo(next);
+      if (next) seq.setTempo(next, { dragging: !!holdStage() });   // held: saved once, let go (below)
     } else if (b.dataset.bars) seq.setBars(Number(b.dataset.bars));
     else if (b.dataset.sig) seq.setSignature(b.dataset.sig);
     else if (b.dataset.swing) seq.setSwing(b.dataset.swing);

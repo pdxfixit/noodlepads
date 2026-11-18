@@ -55,6 +55,7 @@ import { createGrooves } from './beat-grooves.js';
 import { landed } from './landed.js';
 import { createLibrary } from './beat-library.js';
 import { createHistory } from './undo-history.js';
+import { holdStage } from './hold-repeat.js';
 
 const ARM_MS = 3000;                   // how long a Clear? or Remove? waits for its second tap
 const UNDO_MS = 8000;                  // how long a removed row can be brought back
@@ -1648,8 +1649,11 @@ export function createSequencer(deps) {
     if (!b) return;
     e.preventDefault();   // inside the label: no click passed on to the slider
     const next = Number(b.dataset.tempoStep) > 0 ? COMMON_BPMS.find((t) => t > pattern.bpm) : COMMON_BPMS.findLast((t) => t < pattern.bpm);
-    if (next) setTempo(next);
+    // Held, it is a drag (hold-repeat.js): it retimes as it goes, and saves
+    // once, one ↩️ Undo step, when the finger lifts.
+    if (next) setTempo(next, { dragging: !!holdStage() });
   });
+  el.bpm.closest('.beat-tempo')?.addEventListener('holdend', () => setTempo(pattern.bpm));
   // Tapping the number swaps it for a field to type a tempo into.
   el.bpmOut.addEventListener('click', () => {
     el.bpmType.value = pattern.bpm;

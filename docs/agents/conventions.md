@@ -17,6 +17,8 @@ Rules for the code, screens, decisions and docs, writing and tooling. Moved out 
 - **Settings are declared in `settings.js`** with a default and the allowed values. Backups carry them.
 - **Anything remembered in `localStorage` gets a line in `tests/startup-remembered.test.mjs`**, which starts the app with every remembered choice set. A remembered DJ mode once stopped the app starting (2026-10-11).
 - **Every control gets a tooltip** (Ben, 2026-10-12): `web/tooltips.js` adds one from its `aria-label` or text, so give an icon-only control an `aria-label`; write a `title` only when the tooltip should say more.
+- **A bar that runs out of room gives way in the app's one order** ([docs/design/give-way.md](../design/give-way.md); Ben, 2026-11-18): tight, compact, words, doubles (❓, ⬆️, ⚙️), fold; the main action and the person button never go. A new key takes its stage there, and the bar gets a check in `tests/give-way.test.mjs`.
+- **A − or + that steps a value repeats while held** (`web/hold-repeat.js`; Ben, 2026-11-18): wire each new one with `holdRepeat(button)`; a screen that keeps ↩️ Undo or saves treats a hold as one change (`holdStage()`, the `holdend` event), as 🎼 Song and Beats' tempo do.
 - **A new or renamed control gets its line in ❓ Help** (`web/help.js`). `tests/help.test.mjs` fails when Help draws a label the app no longer has. A feature still in flight can have its line written ahead, marked `soon` (hidden).
 - **Destructive actions ask first:** the first tap turns the button red and asks ("Remove?"), and the second tap does it. Where a slip costs work, offer Undo too.
 - Comments say what the code is for and why, in plain sentences, at the density of the file around them.

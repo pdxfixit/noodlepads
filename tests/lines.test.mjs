@@ -211,9 +211,12 @@ test('nudgeSlider: a ratio slider steps a semitone a tap; 12 taps are an octave,
     assert.ok(Math.abs(Number(input.value) - (i + 1) / 12) < 0.006, `tap ${i + 1} lands within a step of its semitone: ${input.value}`);
   }
   assert.equal(Math.round(Number(input.value) * 12), 12, 'an octave up');
-  input.value = '0.37';   // a drag between semitones
+  input.value = '0.37';   // a drag between semitones 4 and 5
   input.parent.querySelector('[data-nudge="-1"]').click();
-  assert.ok(Math.abs(Number(input.value) - 3 / 12) < 0.006, 'down to the semitone below the nearest one');
+  assert.ok(Math.abs(Number(input.value) - 4 / 12) < 0.006, `down to the semitone just below: ${input.value}`);
+  input.value = '0.37';
+  input.parent.querySelector('[data-nudge="1"]').click();
+  assert.ok(Math.abs(Number(input.value) - 5 / 12) < 0.006, `up to the semitone just above: ${input.value}`);
 });
 
 test('nudged: one notch along, landed on a step from min, kept within the ends', () => {

@@ -193,11 +193,18 @@ export function keysForSlider(input, name = String) {
 // Where one − (dir -1) or + (dir 1) tap takes `value`: one step along, or,
 // with `notch`, to the next point of a notch grid counted from 0 (on a ratio
 // slider, normal: 1/12 is a semitone a tap, so 12 taps are an octave). The
-// slider holds it on its nearest step, and the next tap finds its notch again
-// by rounding, so steps never add up to a drift. Kept within min and max. Pure.
+// slider holds a point on its nearest step, so a value within half a step of
+// one counts as on it, and steps never add up to a drift; from between two
+// points (a drag), a tap goes to the next one that way. Kept within min and
+// max. Pure.
 export function nudged(value, dir, { min, max, step, notch }) {
   const n = Number(notch);
-  const aim = n ? (Math.round(value / n) + dir) * n : value + dir * step;
+  let aim = value + dir * step;
+  if (n) {
+    const k = value / n;
+    const on = Math.abs(k - Math.round(k)) * n <= step / 2 + 1e-9;
+    aim = (on ? Math.round(k) + dir : dir > 0 ? Math.ceil(k) : Math.floor(k)) * n;
+  }
   const v = Math.min(max, Math.max(min, min + Math.round((aim - min) / step) * step));
   return Number(v.toFixed(6));
 }
@@ -221,6 +228,7 @@ export function nudgeSlider(input, { notch } = {}) {
     b.dataset.nudge = String(dir);
     b.textContent = text;
     b.setAttribute('aria-label', `${name}: ${said}`);
+    b.title = `${said[0].toUpperCase()}${said.slice(1)}; hold to keep going`;   // said where the keys are, not only in ❓ Help
     b.addEventListener('click', () => tap(dir));
     return b;
   };

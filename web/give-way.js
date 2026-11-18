@@ -1,4 +1,4 @@
-// The app's one give-way order (Ben, 2026-11-18: "a global pattern of order
+// The app's one give-way order, written out in docs/design/give-way.md (Ben, 2026-11-18: "a global pattern of order
 // of operations for when buttons have to appear or disappear … consistency
 // across the app"). Every line of controls that runs out of room gives way in
 // these stages, in this order, and never skips back (docs/design/give-way.md):
@@ -14,8 +14,6 @@
 //
 // Never: the screen's main action (▶ Play, ● Record, ✏️ Edit, + New sound)
 // and the person's round button stay at every width.
-
-export const GIVE_WAY = ['tight', 'compact', 'words', 'doubles', 'fold'];
 
 // Stage 4, in order: ❓ is back at the top of the screen; ⬆️ only scrolls
 // there; ⚙️ is the last, as it is the way to everything else (Ben,

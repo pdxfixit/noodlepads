@@ -47,6 +47,7 @@ import {
   MAX_SONG_SECONDS, beatSteps, cleanSong, linkSong, uniqueSongName, planSong, soundSong,
 } from './playlist.js';
 import { cutName, MAX_NAME } from './names.js';
+import { holdStage } from './hold-repeat.js';
 
 const TEMPO_STOPS = tempoStops(MIN_TEMPO, MAX_TEMPO);   // the slider's stops: Beats' pull toward common tempos
 const ARM_MS = 3000;                     // how long a Remove? waits for its second tap
@@ -206,11 +207,15 @@ export function createSong(deps) {
 
   // An edit to the song's tempo, tempo marks or lanes: kept for ↩️ Undo first.
   const snapshot = () => structuredClone({ tempo: song.tempo, tempos: tempoMarks(), lanes: song.lanes });
+  // A held ➖ or ➕ is one change (hold-repeat.js): its first step is the ↩️
+  // Undo step, the rest join it, and it saves once, when the finger lifts.
   function edit(change) {
-    undoSteps.push(snapshot());
-    if (undoSteps.length > MAX_UNDO) undoSteps.shift();
+    if (holdStage() !== 'more') {
+      undoSteps.push(snapshot());
+      if (undoSteps.length > MAX_UNDO) undoSteps.shift();
+    }
     change();
-    save();
+    if (!holdStage()) save();
   }
   function undoStep() {
     const before = undoSteps.pop();
@@ -808,6 +813,7 @@ export function createSong(deps) {
 
   el.less.addEventListener('click', () => changeTimes(-1));
   el.more.addEventListener('click', () => changeTimes(1));
+  for (const b of [el.less, el.more, el.tempoDown, el.tempoUp]) b?.addEventListener('holdend', save);   // a hold saves once, let go
   el.remove.addEventListener('click', removeSelected);
   el.edit.addEventListener('click', editSelected);
   el.editIt.addEventListener('click', () => { const b = sel && song.lanes[sel.lane].blocks[sel.block]; if (b) openForEdit(b.beatId); });
