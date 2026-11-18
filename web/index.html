@@ -1481,12 +1481,14 @@
     </form>
   </dialog>
 
-  <!-- Closing the sound sheet with unsaved work asks first (Ben, 2026-10-16): a modal over it, in the middle of the screen. Esc or a tap outside is Keep editing. -->
+  <!-- Closing the sound sheet with unsaved work asks first (Ben, 2026-10-16): a modal over it, in the middle of the screen. Esc or a tap outside is Keep editing.
+       💾 Save saves and closes, as the sheet's own Save does (Ben, 2026-11-18); hidden while recording, or with no sound yet to save. -->
   <dialog id="sheet-warn" class="np-dialog sheet-warn" aria-labelledby="sheet-warn-text">
     <div class="sheet-warn-body">
-      <h2 class="sheet-warn-title" id="sheet-warn-text">Throw away your changes?</h2>
+      <h2 class="sheet-warn-title" id="sheet-warn-text">Save your changes?</h2>
       <p class="sheet-warn-sub" id="sheet-warn-sub">They are not saved yet.</p>
-      <div class="sheet-warn-buttons">
+      <div class="sheet-warn-buttons sheet-warn-three">
+        <button type="button" class="chain-tool sheet-warn-save" id="sheet-warn-save">💾 Save</button>
         <button type="button" class="chain-tool" id="sheet-warn-keep" data-close>Keep editing</button>
         <button type="button" class="chain-tool sheet-warn-drop" id="sheet-warn-drop">Throw away</button>
       </div>

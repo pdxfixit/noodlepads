@@ -33,12 +33,15 @@ Opus seats carry the most risk, so they get the strongest model. The others run 
 
 ## When it convenes
 
+**Every change gets the full council: all 22 seats, however small** (Ben, 2026-11-18: "any change, even as small as we are doing, should go through the full council"). A one-line fix, a restyle, a doc and a tool change too. Never a hand-picked few: a trimmed round on 2026-11-17 missed wasted space on a phone that the whole council would have caught.
+
 | Change | Seats | When |
 |---|---|---|
-| A new screen, control, layout or kid-facing behavior | All of them | On the mockup or plan, before building; then the seats it touches on the finished change |
-| A stored format, backup, the cloud or what the public sees | Architect, storage and sync, privacy and safety, security, parent | On the plan; again on the finished change |
-| A fix or restyle inside an agreed design | The one or two seats it touches, or none | On the finished change |
-| Tooling and docs only | Developer experience, docs steward | On the finished change |
+| A new screen, control, layout or kid-facing behavior | All of them | On the mockup or plan, before building; all of them again on the finished change |
+| A stored format, backup, the cloud or what the public sees | All of them | On the plan; all of them again on the finished change |
+| Anything else: a fix, a restyle, docs, tooling | All of them | On the finished change |
+
+A seat whose lens the change doesn't touch says so in one line (✅, "nothing here for my lens", what it checked): that costs little, and it is how a change with a reach nobody expected gets caught.
 
 Seats advise throughout: a seat asked at the plan stage may say what it wants to see again on the finished change. Ben can convene any seat on anything.
 

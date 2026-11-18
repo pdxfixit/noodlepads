@@ -36,7 +36,7 @@ order they play, like Beats' rows: an emoji, a name, keys or a slider, 🔈 to
 mute it (it keeps its setting) and ✕ to take it out (two taps). A slider has
 − and + either side, one notch a tap (`lines.js` `nudgeSlider`; a tap is not a
 drag, so Slower ↔ faster's snap to normal and a live step's drag skip it); on a
-narrow row its value sits above it. Deeper ↔
+narrow row its value sits above it, and under 420 px of Layers a step's name takes its own line under its grip, picture and tools. Deeper ↔
 higher, Slower ↔ faster, Warble, Softer ↔ louder and Echo are always there;
 **+ Add a layer** adds ⏪ Backwards, Muffled ↔ Bright, Robot, Crunch or
 Stutter (a voice that uses one adds it too), and with Advanced the kid's own
@@ -53,7 +53,7 @@ exactly as before; ⤢ **Turn into knobs** is the kid's choice. The sound's
 name is the sheet's title (tap it to rename), and Voice and Layers
 fold under their headings. Closing the sheet (✕, a tap outside it, Esc, or
 closing the tab) with unsaved changes, a sound not yet saved, or a recording
-in progress asks first: **Keep editing** or **Throw away**. With Advanced on (Settings), ✂️ **Trim and edit** drags a sound's
+in progress asks first: **💾 Save** (saves and closes, as Save does; not while recording, nor on a new sound with no sound yet), **Keep editing** or **Throw away**, stacked. With Advanced on (Settings), ✂️ **Trim and edit** drags a sound's
 start and end in (same pad, Undo works), drags fades in from either end, and
 changes just a selected part (Backwards, Silence it, Louder, Quieter, Keep
 only this). On the sheet itself, beside 👂 Plain and at every level, on a

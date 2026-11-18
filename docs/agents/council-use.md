@@ -6,7 +6,7 @@ How an agent convenes the review council and what to do with its findings. The c
 
 22 review agents, each a personality with one lens, check every change against the mission and their own area ([docs/council.md](../council.md), [ADR 0034](../adr/0034-agent-council.md)). They are an authority: a seat's ⛔ block stops a feature or a deploy until the seat lifts it or Ben decides.
 
-- **Convene them by the change:** all seats on a new screen, control or layout (at the mockup, before building); the data seats on a stored format or the cloud; the one or two a fix touches. The table is in docs/council.md.
+- **Convene all 22 seats on every change, however small** (Ben, 2026-11-18). A new screen, control, layout or stored format gets them on the plan or mockup too, before building. Never trim the round to the seats you think it touches. The table is in docs/council.md.
 - **Brief them blind:** the change itself, never your reasoning or another seat's verdict. Run one round's seats in parallel.
 - **A block against one of Ben's rules goes to Ben**: asked at once while he is in the chat, else a question card batched up front. Blocked work waits on its branch; move to the next TODO item.
 - **Never a rollback:** a seat's finding on what is live is fixed forward, at once when the seat says it is urgent.

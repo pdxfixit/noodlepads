@@ -233,6 +233,8 @@ test('Layers: + on Slower ↔ faster moves one notch off normal, where a drag wo
   assert.ok(layerRow('warble').querySelector('.slider-nudge'), 'a keyed row has them too, shown only if its keys fall back to the slider');
   const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
   assert.match(css, /\.amount\.keyed:not\(\.fit-slider\) > \.slider-nudge \{ display: none; \}/, 'hidden while its keys show');
+  // Ben, 2026-11-18: under 420 px of Layers a step's name has its own line, not a sliver that wraps by letters.
+  assert.match(css, /@container \(max-width: 419px\) \{\n  \.layer-row\.layer-step \{ grid-template-areas: "grip tile \. tools" "name name name name" "ctl ctl ctl ctl"; \}/);
   $('#sheet').close();
 });
 
@@ -251,7 +253,8 @@ test('closing an untouched sheet never asks; closing one with changes asks, and 
   closeX();
   assert.equal($('#sheet').open, true, 'a changed knob: ✕ keeps the sheet open');
   assert.equal($('#sheet-warn').open, true, 'the question is a modal over the sheet');
-  assert.equal($('#sheet-warn-text').textContent, 'Throw away your changes?');
+  assert.equal($('#sheet-warn-text').textContent, 'Save your changes?');
+  assert.equal($('#sheet-warn-save').hidden, false, '💾 Save is offered');
   assert.equal(cancelEsc().defaultPrevented, true, 'Esc is held back too');
   $('#sheet-warn-keep').dispatch('click');
   assert.equal($('#sheet-warn').open, false, 'Keep editing closes the question');
@@ -306,9 +309,36 @@ test('a new sound that was made but not saved asks, in its own words; one with n
   await page.settle();
   closeX();
   assert.equal($('#sheet').open, true);
-  assert.equal($('#sheet-warn-text').textContent, 'Throw away this sound?');
+  assert.equal($('#sheet-warn-text').textContent, 'Save this sound?');
+  assert.equal($('#sheet-warn-save').hidden, false);
   $('#sheet-warn-drop').dispatch('click');
   assert.equal($('#sheet').open, false);
+});
+
+// Ben, 2026-11-18: the question offers 💾 Save as well as Keep editing and Throw away.
+test('💾 Save in the question saves and closes; only a new sheet with no sound yet leaves it out', async () => {
+  await openEditor();
+  chip('robot').dispatch('click');
+  closeX();
+  assert.equal($('#sheet-warn').open, true);
+  $('#sheet-warn-save').dispatch('click');
+  await page.settle();
+  assert.equal($('#sheet-warn').open, false, 'the question goes');
+  assert.equal($('#sheet').open, false, 'and the sheet, saved');
+  await openEditor();
+  assert.deepEqual(lit(), ['robot'], 'the voice was kept');
+  chip('robot').dispatch('click');   // back to plain, for the tests after
+  $('#sheet-form').dispatch('submit');
+  await page.settle();
+
+  if (document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+  $('#pads').children.find((p) => p.classList.contains('pad-add')).dispatch('click');
+  $('#clip-label').value = 'Zoop';
+  closeX();
+  assert.equal($('#sheet-warn').open, true, 'a name typed is work to lose');
+  assert.equal($('#sheet-warn-save').hidden, true, 'but with no sound there is nothing to save');
+  assert.equal($('#sheet-warn-text').textContent, 'Throw away your changes?');
+  $('#sheet-warn-drop').dispatch('click');
 });
 
 test('moving a knob by hand makes it your own; ↩️ Reset voice puts every knob back', async () => {

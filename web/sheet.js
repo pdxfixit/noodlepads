@@ -357,11 +357,15 @@ const sheetHasWork = () => el.sheet.open && (isRecording() || sheetSignature() !
 // ✕, a tap on the backdrop and Esc come here (dialogs.js): false keeps the
 // sheet open and asks in a modal over it, Keep editing focused so a stray
 // Enter keeps the work. Esc or a tap outside that modal is Keep editing too.
+// 💾 Save (Ben, 2026-11-18) is there whenever Save could store it: not while
+// recording, nor on a new sound with nothing recorded, chosen or made yet.
 function askBeforeClosing() {
   if (!sheetHasWork()) return true;
   const recording = isRecording();
   const sound = sheet.pending && sheet.mode === 'new';
-  el.warnText.textContent = recording ? 'Throw away this recording?' : sound ? 'Throw away this sound?' : 'Throw away your changes?';
+  const canSave = !recording && (sheet.mode !== 'new' || !!sheet.pending);
+  el.warnSave.hidden = !canSave;
+  el.warnText.textContent = recording ? 'Throw away this recording?' : !canSave ? 'Throw away your changes?' : sound ? 'Save this sound?' : 'Save your changes?';
   el.warnSub.textContent = recording ? 'It is still recording.' : sound ? 'It is not saved yet.' : 'They are not saved yet.';
   openDialog(el.warn, { focus: el.warnKeep });
   return false;
@@ -990,6 +994,7 @@ export function initSheet() {
     warnText: $('#sheet-warn-text'),
     warnSub: $('#sheet-warn-sub'),
     warnKeep: $('#sheet-warn-keep'),
+    warnSave: $('#sheet-warn-save'),
     warnDrop: $('#sheet-warn-drop'),
     keepEmoji: $('#keep-emoji'),
     keepSave: $('#keep-save'),
@@ -1051,6 +1056,9 @@ export function initSheet() {
   el.sheet.addEventListener('close', cleanupSheet);
   setupDialog(el.warn);
   el.warnDrop.addEventListener('click', () => { el.warn.close(); closeSheet(); });
+  // 💾 Save: the sheet's own Save, which closes it once saved, or keeps it
+  // open saying what went wrong.
+  el.warnSave.addEventListener('click', () => { el.warn.close(); el.form.dispatchEvent(new Event('submit', { cancelable: true })); });
   // Closing or reloading the tab with the sheet holding work asks the browser's own question.
   window.addEventListener('beforeunload', (e) => { if (sheetHasWork()) { e.preventDefault(); e.returnValue = ''; } });
   el.recBtn.addEventListener('click', () => {

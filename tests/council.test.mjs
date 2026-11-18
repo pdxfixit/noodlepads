@@ -49,3 +49,13 @@ test('each seat answers in the shape docs/council.md asks for, with a biggest ri
     assert.ok(text.includes('never edit a file, commit, push'), `${f} is read-only`);
   }
 });
+
+// Ben, 2026-11-18: "any change, even as small as we are doing, should go
+// through the full council". Every kind of change in the table gets every seat.
+test('every kind of change convenes all of the seats, however small', () => {
+  const table = doc.slice(doc.indexOf('## When it convenes'), doc.indexOf('## How a round runs'));
+  const kinds = [...table.matchAll(/^\| (?!Change \||---)([^|]+) \| ([^|]+) \| ([^|]+) \|$/gm)];
+  assert.ok(kinds.length >= 3, 'the table parses');
+  for (const [, change, seats] of kinds) assert.equal(seats.trim(), 'All of them', change.trim());
+  assert.match(table, /Every change gets the full council: all \d+ seats, however small/);
+});

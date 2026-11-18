@@ -2602,6 +2602,13 @@ dialog#sheet .slider-nudge:focus-visible { outline-color: var(--ink); }
 .layer-grip:disabled { opacity: 0.35; cursor: default; }
 .layer-row.dragging { opacity: 0.6; }
 .layer-row.drop-here { box-shadow: 0 -4px 0 var(--board); }
+/* Narrow (Ben, 2026-11-18: "more use of vertical space"): a step's name takes
+   a line of its own under its grip, picture and tools, rather than a sliver
+   between them that wraps a few letters a line. */
+@container (max-width: 419px) {
+  .layer-row.layer-step { grid-template-areas: "grip tile . tools" "name name name name" "ctl ctl ctl ctl"; }
+  .layer-row.layer-step > .layer-name { margin-top: 6px; }
+}
 /* Wide enough: the control sits beside the name, one line per layer. */
 @container (min-width: 560px) {
   .layer-row { grid-template-columns: auto auto minmax(8rem, 12rem) minmax(0, 1fr) auto; grid-template-areas: "grip tile name ctl tools"; }
@@ -4683,6 +4690,12 @@ dialog.np-dialog.sheet-warn {
 .sheet-warn-buttons { display: flex; gap: 10px; margin-top: 6px; }
 .sheet-warn-buttons .chain-tool { flex: 1 1 0; min-width: 0; }
 .sheet-warn-drop { border-color: #B3261E; background: #B3261E; color: #fff; }
+/* With 💾 Save (Ben, 2026-11-18) the three stack, full width, Save first in
+   the board color, so none is squeezed on a phone. */
+.sheet-warn-three { flex-direction: column; }
+.sheet-warn-three .chain-tool { flex: none; min-height: 48px; }
+.sheet-warn-save { border-color: var(--board); background: var(--board); color: #fff; }
+.sheet-warn-save[hidden] { display: none; }
 /* 🔑 Remember them here? (cloud-ui.js offerRemember): the same small modal,
    after a PIN opens someone; 🔑 Remember is the board color. */
 .remember-yes { border-color: var(--board); background: var(--board); color: #fff; }
