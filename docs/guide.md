@@ -34,10 +34,12 @@ rows it moves glow, and any knob off normal keeps a blue outline), and the line 
 higher +9, faster 1.74×"). Layers are one row per layer, top to bottom in the
 order they play, like Beats' rows: an emoji, a name, keys or a slider, 🔈 to
 mute it (it keeps its setting) and ✕ to take it out (two taps). A slider has
-− and + either side, one notch a tap (`lines.js` `nudgeSlider`). A tap is not a
-drag: Slower ↔ faster's snap to normal and a live step's drag skip it, and a run
-of quick taps plays the sound once, after the last. On a narrow row the value
-sits above the slider. Under 420 px of Layers a step's name takes its own line
+− and + either side, one step a tap (`lines.js` `nudgeSlider`); on an Advanced
+ratio slider (speed, How metal) a tap is a semitone, on a grid from normal, so
+12 taps are an octave. Held, they repeat (`hold-repeat.js`, after 450 ms, every
+90 ms). A tap is not a drag: Slower ↔ faster's snap to normal and a live step's
+drag skip it, and a run of quick taps plays the sound once, after the last. A
+knob's value sits beside its name, and its − slider + line has no box. Under 420 px of Layers a step's name takes its own line
 under its grip, picture and tools. Deeper ↔
 higher, Slower ↔ faster, Warble, Softer ↔ louder and Echo are always there;
 **+ Add a layer** adds ⏪ Backwards, Muffled ↔ Bright, Robot, Crunch or
@@ -79,9 +81,10 @@ each sound starts and makes each piece a new pad ("Baby Burp", "Burp Jr.").
 The **pad size slider** at the top left of the pads, on the panel's darker
 top band with 🔁 Loop and ✏️ Edit sounds at its right (as 🎤 Live's ● Record and 🎬
 Takes; once the band sticks at the top, ➕ New sound joins them at the very right,
-and to make room ✏️ Edit drops "sounds" under 530 px and "Edit" under 470,
-❓ leaves the slim bar under 420, and Pad size waits at the top of the page
-under 720), says "Size" where it has the room and makes them smoothly
+and to make room it gives way in the app's one order, `docs/design/give-way.md`:
+its spacing tightens under 720 px, Pad size waits at the top of the page under
+700, 🔁's word goes under 600, Edit's "sounds" under 530 and "Edit" under 470,
+❓ leaves the slim bar under 420 and ⬆️ under 360), says "Size" where it has the room and makes them smoothly
 smaller (more on a line) or bigger (fewer). Its ends are the smallest and
 biggest pads this screen can show: as many 76 px pads as fill a line, and one
 whole-width pad on a phone (400 px on a wide screen). It is kept as the

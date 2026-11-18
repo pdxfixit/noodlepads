@@ -60,6 +60,8 @@ Approved work, in order. Record a request here the moment Ben makes it; delete t
 
 Other work:
 
+- **Bring every bar into the one give-way order** (Ben, 2026-11-18; `docs/design/give-way.md`, from the survey of 19 bars that day). Still out of order: 🎤 Live's slim bar drops nothing and measures nothing; 🥁 Beats with ⌨️ Keys moves ✏️ Layout into 🎛️ at a fixed 356 px, not by measure; the Pads slim band and Live's words use fixed breakpoints where `fitLine` could measure; the Pads band hard-codes its left padding from the count of 44 px keys; the beat bar's `.fit-pick` / `.fit-nosig` / `.fit-short .bar-word` rules in `styles.css` are never applied (dead since the bars moved into 🎛️); decisions.md's 💃 Grooves row says "just 💃 under 560 px", but the beat bar's measured `fit-split` keeps its word on a row of its own.
+
 - [ ] **Drafts and Undo** (Ben, 2026-11-04; ADR 0036, `docs/design/drafts.md`), one push each: 1. ↩️ Undo · ↪️ Redo on Beats (done with ⌨️ Keys off); 1b. Beats' control bar (Keys off and on): ↩️ ↪️ on the play line, tempo, bars and the like into one menu (Ben, 2026-11-05: "bars and tempo are rarely used; they could all be moved into a sub menu along with anything like it"), mockup first; 2. hide `beat-draft-`/`song-draft-` records only; 3. drafts on Beats (💾 → Save or 🗑️ Throw away changes); 4. drafts and Undo on Song.
 
 - [ ] About 2026-11-16: remove the no-op `POST /api/profiles/:id/uses` route (`takeUses` in `worker/cloud.js`, its route line and `tests/metrics.test.mjs`'s test), and `forget('uses')`/`forget('visits')` in `web/app.js startUsage` if no old copy is left (ADR 0027).

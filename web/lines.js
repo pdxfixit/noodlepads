@@ -14,6 +14,8 @@
 // `nudge`, which sheet.js reads (a tap is not a drag: no snap to normal, no
 // live drag, one sound after a run of taps).
 
+import { holdRepeat } from './hold-repeat.js';
+
 const lines = [];
 
 // The first step (0 to steps) at which fitsAt(step) is true; the last step
@@ -188,12 +190,15 @@ export function keysForSlider(input, name = String) {
 
 // ── − and + beside a slider ──────────────────────────────────────────
 
-// Where one − (dir -1) or + (dir 1) tap takes `value`: a notch (`notch`, the
-// step unless given) along, landed on a step counted from min, kept within
-// min and max. Pure.
+// Where one − (dir -1) or + (dir 1) tap takes `value`: one step along, or,
+// with `notch`, to the next point of a notch grid counted from 0 (on a ratio
+// slider, normal: 1/12 is a semitone a tap, so 12 taps are an octave). The
+// slider holds it on its nearest step, and the next tap finds its notch again
+// by rounding, so steps never add up to a drift. Kept within min and max. Pure.
 export function nudged(value, dir, { min, max, step, notch }) {
-  const by = Number(notch) || step;
-  const v = Math.min(max, Math.max(min, min + Math.round((value + dir * by - min) / step) * step));
+  const n = Number(notch);
+  const aim = n ? (Math.round(value / n) + dir) * n : value + dir * step;
+  const v = Math.min(max, Math.max(min, min + Math.round((aim - min) / step) * step));
   return Number(v.toFixed(6));
 }
 
@@ -237,6 +242,8 @@ export function nudgeSlider(input, { notch } = {}) {
   const up = key(1, '+', 'up one');
   input.insertAdjacentElement('beforebegin', down);
   input.insertAdjacentElement('afterend', up);
+  holdRepeat(down);   // held, it keeps stepping (hold-repeat.js)
+  holdRepeat(up);
   input.addEventListener('input', sync);
   sync();
   return sync;

@@ -405,7 +405,7 @@ function openVoice() {
     const input = e.target.closest('input[data-layer-knob]');
     if (!input) return;
     byHand(input.dataset.layerKnob, value(input));
-    if (!tweakByKey(input.dataset.layerKnob).flag) input.parentElement.querySelector('output').textContent = tweakText(input.dataset.layerKnob, pick.knobs[input.dataset.layerKnob]);
+    if (!tweakByKey(input.dataset.layerKnob).flag) input.closest('.layer-row').querySelector('output').textContent = tweakText(input.dataset.layerKnob, pick.knobs[input.dataset.layerKnob]);
   });
   list.addEventListener('change', (e) => { if (e.target.closest('input[data-layer-knob]')) { draw(); hear(); } });
   list.addEventListener('click', (e) => {

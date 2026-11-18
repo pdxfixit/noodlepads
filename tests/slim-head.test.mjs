@@ -101,7 +101,7 @@ test('+ New sound is the last key in the Pads band, a named button, shown only i
   // The ladder, widest first: each step was measured with `just look` so the
   // three keys clear the left buttons; move one and measure them all again.
   const hides = (px, what) => assert.match(css.match(new RegExp(`@media \\(max-width: ${px}px\\) \\{([\\s\\S]*?)\\n\\}`, 'g')).join('\n'), what, `${what} under ${px + 1} px`);
-  hides(719, /body\.head-slim\.screen-pads \.pads-size \{ display: none; \}/);
+  hides(699, /body\.head-slim\.screen-pads \.pads-size \{ display: none; \}/);
   hides(599, /body\.head-slim\.screen-pads \.loop-word \{ position: absolute;/);
   hides(529, /body\.head-slim\.screen-pads \.edit-more \{ position: absolute;/);
   hides(469, /body\.head-slim\.screen-pads \.edit-word \{ position: absolute;/);

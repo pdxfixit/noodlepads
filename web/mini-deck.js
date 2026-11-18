@@ -8,13 +8,15 @@
 // ● Record and ✏️ Layout stay on the bar, a ▾ away, so ⬆️ has room (Ben,
 // 2026-10-25 and -27).
 //
-// The band never grows, so as it runs out of room things give way in Ben's
-// order (STEPS): ❓ (back at the top of the screen; Ben, 2026-10-25), then
-// ⬆️, then ⚙️. Each step is a class on <body>; styles.css says what it hides.
+// The band never grows, so as it runs out of room things give way in the
+// app's order (give-way.js DOUBLES): ❓ (back at the top of the screen; Ben,
+// 2026-10-25), then ⬆️, then ⚙️. Each step is a class on <body>; styles.css
+// says what it hides.
 
 import { fitStep } from './lines.js';
+import { DOUBLES } from './give-way.js';
 
-export const STEPS = ['tuck-nohelp', 'tuck-notop', 'tuck-nosettings'];
+export const STEPS = DOUBLES.map((d) => `tuck-no${d}`);
 
 // The bar is tucked when it has reached the place it sticks, on Beats, with
 // the header slim. Pure, for the tests: `top` is where the bar is on screen,

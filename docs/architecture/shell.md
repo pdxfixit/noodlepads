@@ -17,6 +17,8 @@ handful of classes and `data-*` attributes that JS sets on `<body>` and
 | File | Owns (state) | Called by | Calls / hears |
 |---|---|---|---|
 | `app.js` | `el` (page elements), `seq`, `song`, `dj`, `telemetry`, `page`; `keysOn`, `sides`, `grownUp`, `kidsVisit`, `closedSections`; writes `state.personId`, `state.screen`, `state.editing` | `index.html` (the only module `<script>`); tests import `ready`, `SCREENS`, `MODES`, `modeOf`, `sideOf`, `startScreen`, `screenHint`, `spaceStops`, `groupsForChooser` | every `create*`/`init*` (see [the composition root](#the-composition-root)); `onSetting` for `level`, `padSkin`, `advancedBeats`, the instrument picks, `sendUsage`; `onCloud` |
+| `hold-repeat.js` | none (each held button's timer lives in its closure) | `lines.js nudgeSlider` (Layers − and +), `app.js` (the tempo − and + on Beats and 🎤 Live, 🎼 Song's tempo and passes) | none: a step is the button's own `click()`, so the screen's click listener handles it |
+| `give-way.js` | none: `GIVE_WAY` and `DOUBLES`, constants | `mini-deck.js STEPS`; the order `styles.css` follows (`docs/design/give-way.md`, `tests/give-way.test.mjs`) | none |
 | `ui.js` | `showing` (the one banner), `lastNotice`, `home` (the banner's place in `index.html`), the `fading` WeakMap | almost every screen (`showNotice`, `announce`, `showBanner`, `fadeAway`) | `log.js logEvent` (every notice is logged) |
 | `dialogs.js` | `openers`, `returns` (focus to hand back), `openWatchers` | every module with a `<dialog>` (`setupDialog`, `openDialog`) | the watchers: `tips.js`, `nudge.js`, `track-page.js` (via `onDialogOpen`) |
 | `tooltips.js` | nothing but a queued set | `app.js watchTips`; `track-page.js` imports `CONTROLS` and `tipFor` | a `MutationObserver` on `<body>` |

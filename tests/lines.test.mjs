@@ -201,14 +201,19 @@ test('nudgeSlider: − before the slider and + after it, named for it; a tap mov
   assert.equal(row.querySelectorAll('.slider-nudge').length, 2, 'run again, it replaces the two');
 });
 
-test('nudgeSlider: a notch can be wider than the step (a slider that moves in ratio), and lands on a step', () => {
-  const { input } = sliderRow(-4.32, 3, 0.01, 0);
-  nudgeSlider(input, { notch: 0.1 });
-  input.parent.querySelector('[data-nudge="1"]').click();
-  assert.equal(input.value, '0.1');
-  input.value = '0.37';
+// Ben, 2026-11-18: a ratio slider steps a semitone a tap, on a grid from normal.
+test('nudgeSlider: a ratio slider steps a semitone a tap; 12 taps are an octave, with no drift', () => {
+  const { input } = sliderRow(Math.log2(0.05), 3, 0.01, 0);
+  nudgeSlider(input, { notch: 1 / 12 });
+  const up = input.parent.querySelector('[data-nudge="1"]');
+  for (let i = 0; i < 12; i++) {
+    up.click();
+    assert.ok(Math.abs(Number(input.value) - (i + 1) / 12) < 0.006, `tap ${i + 1} lands within a step of its semitone: ${input.value}`);
+  }
+  assert.equal(Math.round(Number(input.value) * 12), 12, 'an octave up');
+  input.value = '0.37';   // a drag between semitones
   input.parent.querySelector('[data-nudge="-1"]').click();
-  assert.equal(input.value, '0.27');
+  assert.ok(Math.abs(Number(input.value) - 3 / 12) < 0.006, 'down to the semitone below the nearest one');
 });
 
 test('nudged: one notch along, landed on a step from min, kept within the ends', () => {
@@ -217,6 +222,7 @@ test('nudged: one notch along, landed on a step from min, kept within the ends',
   assert.equal(nudged(0, -1, range), -0.1);
   assert.equal(nudged(2.95, 1, range), 3, 'never past max');
   assert.equal(nudged(-4.3, -1, range), -4.3, 'never past min');
-  assert.equal(nudged(0.37, -1, { min: -4.32, max: 3, step: 0.01, notch: 0.1 }), 0.27, 'a wider notch, on a step');
+  assert.equal(nudged(0, 1, { min: -4.32, max: 3, step: 0.01, notch: 1 / 12 }), 0.08, 'a semitone, held on the nearest step');
+  assert.equal(nudged(0.08, 1, { min: -4.32, max: 3, step: 0.01, notch: 1 / 12 }), 0.17, 'the next tap finds its semitone again');
   assert.equal(nudged(1, 1, { min: 0, max: 8, step: 1 }), 2);
 });

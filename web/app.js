@@ -73,6 +73,7 @@ import { fitLine, pickerFor, refitLines } from './lines.js';
 import { watchTips } from './tooltips.js';
 import { pickBackdrop, showBackdrop } from './backdrop.js';
 import { showSkin } from './skins.js';
+import { holdRepeat } from './hold-repeat.js';
 
 const GRILLE_DOTS = 15;
 const GRILLE_DOTS_LG = 24;
@@ -986,6 +987,9 @@ async function start() {
   document.querySelector('#people').addEventListener('click', (e) => { if (e.target.closest?.('[data-kids-open]')) enterKids(); });
   initFeedback();   // ⚙️ Settings → About → Feedback, behind the grown-up sum
   trackSlimHead();
+  // − and + that step a value repeat while held (hold-repeat.js; Ben, 2026-11-18):
+  // the tempo on Beats and 🎤 Live, 🎼 Song's tempo and a block's passes.
+  for (const b of document.querySelectorAll('[data-tempo-step], #song-tempo-down, #song-tempo-up, #song-less, #song-more')) holdRepeat(b);
   initMiniDeck();   // 🥁 Beats' play bar tucks into the slim bar at the top; its Esc listener runs before bindEvents' page keys (mini-deck.js)
   initHelp();
   initLogSend();

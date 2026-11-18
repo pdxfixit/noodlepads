@@ -208,7 +208,7 @@ export function moveKnobs(from, keys) {
     for (const { k, input } of sliders) {
       const v = from[k] + (sheet.tweaks[k] - from[k]) * ease;
       input.value = String(v);
-      if (input.isConnected) input.parentElement.querySelector('output').textContent = tweakText(k, t < 1 ? Math.round(v / Number(input.step)) * Number(input.step) : sheet.tweaks[k]);
+      if (input.isConnected) input.closest('.layer-row').querySelector('output').textContent = tweakText(k, t < 1 ? Math.round(v / Number(input.step)) * Number(input.step) : sheet.tweaks[k]);
     }
     if (t < 1) requestAnimationFrame(frame);
     else renderLayerRows();

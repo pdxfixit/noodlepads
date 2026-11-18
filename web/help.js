@@ -82,7 +82,7 @@ export const HELP = [
       { pic: [tool('🎲 Surprise me')], text: 'Picks voices for you. Keep it if you like it.' },
       { pic: [word('✦')], text: 'Clones, Walkie-talkie and Monster have a ✦ special part no knob can make. It shows as a layer of its own, with ✕ to take it out.' },
       { pic: [slider('Deeper ↔ higher', '5 notes deeper')], text: 'Layers: one row per knob, top to bottom in the order they play. Deeper ↔ higher still sounds like you, just lower or higher. Slower ↔ faster, Warble, Softer ↔ louder and Echo are always there. Move one and it is your own voice.' },
-      { pic: [tool('−'), slider('Deeper ↔ higher', '1 note higher'), tool('+')], text: '− and + either side of a slider move it one step a tap, and you hear it. A row with a few choices shows them as keys instead.' },
+      { pic: [tool('−'), slider('Deeper ↔ higher', '1 note higher'), tool('+')], text: '− and + either side of a slider move it one step a tap, and you hear it; press and keep pressing to keep going. A row with a few choices shows them as keys instead.' },
       { pic: [tool('+ Add a layer')], text: 'Adds another knob: Backwards, Muffled ↔ Bright, Robot, Crunch or Stutter. ✕ takes it out (tap twice). A voice that uses one adds it for you, and the rows it moves glow.' },
       { pic: [tool('🔈'), tool('🔇')], text: '🔈 mutes a layer: it keeps its setting but doesn’t play. 🔇 brings it back.' },
       { pic: [tool('⭐ Save voice')], text: 'Keeps the knobs as your own voice, with a name and a picture. It shows after the voices, goes with you to every device, and is in your backups.' },

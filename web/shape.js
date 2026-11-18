@@ -12,6 +12,9 @@
 import { KINDS, kindById } from './steps.js';
 import { voiceById, amountText, stepLook } from './voices.js';
 import { fitLine, keysForSlider, nudgeSlider, KEYED_STEPS } from './lines.js';
+
+// One semitone, as a share of a doubling: a − or + tap on a ratio slider.
+const SEMITONE = 1 / 12;
 import { tweakByKey, tweakText, knobSay, knobMoved } from './tweaks.js';
 
 // What a slider shows for number spec `n` at value `v`, and back. Ratio
@@ -125,7 +128,14 @@ export function renderLayers(list, rows, ctx) {
       if (tweakByKey(row)?.main) li.classList.add('layer-main');
       li.classList.toggle('changed', knobMoved(row, tweaks));
     }
-    li.append(make('span', { class: 'layer-tile', 'aria-hidden': 'true', text: look.emoji }), make('span', { class: 'layer-name', text: look.name }));
+    // A knob's value sits beside its name, so its slider has a line of its own
+    // (Ben, 2026-11-18: "value beside the name").
+    const knob = step === null && row !== 'special' ? knobControl(row, tweaks, ready, look) : null;
+    const name = make('span', { class: 'layer-name', text: look.name });
+    const value = knob?.ctl.querySelector('output');
+    value?.remove();
+    value?.classList.add('layer-value');
+    li.append(make('span', { class: 'layer-tile', 'aria-hidden': 'true', text: look.emoji }), value ? make('span', { class: 'layer-title' }, name, value) : name);
     const removable = row === 'special' || step !== null || !tweakByKey(row)?.main;
     li.append(tools(row, look, { muted: isMuted, mutes, removable, armed, ready, open: step !== null && canOpen?.(chain[step]) ? String(step) : null }));
     if (step !== null) {
@@ -134,13 +144,15 @@ export function renderLayers(list, rows, ctx) {
       if (flags.length) ctl.append(make('div', { class: 'layer-flags' }, ...flags));
       if (parts.length || flags.length) li.append(ctl);
       // A few stops (Echoes 1–8, a note length): keys, with the slider as fallback.
-      // Every slider has − and +; one that moves in ratio steps a tenth of a doubling.
+      // Every slider has − and +; one that moves in ratio steps a semitone a tap
+      // (Ben, 2026-11-18, with the producer and music educator seats: "the
+      // child's ear can tune and learn").
       for (const p of parts) {
         if (!p.n.log) keysForSlider(p.input, p.n.keyText ?? String);
-        nudgeSlider(p.input, { notch: p.n.log ? 0.1 : undefined });
+        nudgeSlider(p.input, { notch: p.n.log ? SEMITONE : undefined });
       }
-    } else if (row !== 'special') {
-      const { ctl, input, say } = knobControl(row, tweaks, ready, look);
+    } else if (knob) {
+      const { ctl, input, say } = knob;
       li.append(make('div', { class: 'layer-ctl' }, ctl));
       keysForSlider(input, say);
       nudgeSlider(input);

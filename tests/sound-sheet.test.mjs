@@ -225,6 +225,9 @@ test('Layers: + on Slower ↔ faster moves one notch off normal, where a drag wo
   up().dispatch('click');
   await page.settle();
   assert.equal(knob('speed').value, '0.1', 'one notch, not pulled back to normal');
+  // Ben, 2026-11-18: the value sits beside the name, not on a line above the slider.
+  assert.ok(layerRow('speed').querySelector('.layer-title').querySelector('.layer-value'), 'beside the name');
+  assert.equal(knob('speed').parent.querySelector('output'), null, 'not in the slider\'s line');
   assert.ok(layerRow('speed').classList.contains('changed'), 'the sound changed');
   assert.ok(document.activeElement === up(), 'focus is on + again after the rows redraw');
   knob('speed').parent.querySelector('[data-nudge="-1"]').dispatch('click');
@@ -347,7 +350,7 @@ test('moving a knob by hand makes it your own; ↩️ Reset voice puts every kno
   const pitch = knob('pitch');
   pitch.value = '-5';
   pitch.dispatch('input');
-  assert.equal(pitch.parentElement.querySelector('output').textContent, '5 notes deeper');
+  assert.equal(pitch.closest('.layer-row').querySelector('.layer-value').textContent, '5 notes deeper');
   pitch.dispatch('change');
   assert.deepEqual(lit(), [], 'Your own now');
   assert.equal($('#voice-line').textContent, '✏️ Your own voice. ⭐ Save voice saves it.');
@@ -369,7 +372,7 @@ test('Slower ↔ faster snaps to normal near the middle', async () => {
   speed.value = '0.1';
   speed.dispatch('input');
   assert.equal(speed.value, '0');
-  assert.equal(speed.parentElement.querySelector('output').textContent, 'normal');
+  assert.equal(speed.closest('.layer-row').querySelector('.layer-value').textContent, 'normal');
   $('#sheet').close();
 });
 
@@ -1079,7 +1082,7 @@ test('a knob plays the sound with it; saving stores only what moved; it comes ba
   const pitch = tweakInput('pitch');
   pitch.value = '-5';
   pitch.dispatch('input');
-  assert.equal(pitch.parentElement.querySelector('output').textContent, '5 notes deeper');
+  assert.equal(pitch.closest('.layer-row').querySelector('.layer-value').textContent, '5 notes deeper');
   assert.equal(calls.length, 0, 'dragging only changes the words');
   pitch.dispatch('change');
   await page.settle();

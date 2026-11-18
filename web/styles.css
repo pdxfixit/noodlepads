@@ -812,10 +812,14 @@ body.keys-on .dj-bar { position: sticky; top: calc(var(--head-h, 0px) - var(--de
   #seq-deck .beat-undo { gap: 4px; }
   #seq-deck .beat-undo .seq-click { width: 44px; font-size: 1.2rem; }
 }
-/* Up to 760 px the line has no room for words: just 🔔 and ✏️, 48 px squares, as Beats' ✏️ on a phone. */
+/* Up to 760 px the line has no room for words: just 🔔 and ✏️, 48 px squares, as Beats' ✏️ on a phone.
+   🎬 Takes loses its word with them: it is the first to fold into ⋯, so it never keeps its word
+   longer than the keys that stay (the app's give-way order, docs/design/give-way.md). */
 @media (max-width: 760px) {
   body.screen-live .dj-bar .dj-word { width: 48px; padding: 0; font-size: 1.2rem; }
   body.screen-live .dj-bar .dj-word::after { content: none; }
+  body.screen-live .dj-bar #dj-takes-open { padding: 0; font-size: 0; }
+  body.screen-live .dj-bar #dj-takes-open::before { content: attr(data-icon) / ""; font-size: 1.2rem; }
 }
 /* 601–760 px, one line: 8 px apart and the tempo's ⌄ ⌃ squeezed to their least, so a
    tap tempo's wide ⏲️ still leaves 🎬 Takes inside the bar (it ran 11 px over at 700). */
@@ -2562,7 +2566,6 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
 /* − and + either side of every Layers slider (lines.js nudgeSlider; Ben,
    2026-11-18): one notch a tap. Hidden with the slider where keys show. On a
    narrow row the value sits over the slider, so the slider keeps its room. */
-.layer-ctl { container: layer-ctl / inline-size; }
 .slider-nudge {
   min-width: 44px;
   min-height: 44px;
@@ -2574,16 +2577,22 @@ dialog#sheet .amount .slider-keys button:focus-visible { outline-color: var(--in
   font: 800 1.4rem/1 var(--font-ui);
 }
 .slider-nudge:disabled { opacity: 0.45; }
+/* A held key repeats (hold-repeat.js): a long press picks no text and opens no menu. */
+[data-hold-repeat] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
 dialog#sheet .slider-nudge:focus-visible { outline-color: var(--ink); }
 .amount.keyed:not(.fit-slider) > .slider-nudge { display: none; }
 .amount.nudged > .slider-nudge[data-nudge="-1"] { grid-area: minus; }
 .amount.nudged > .slider-nudge[data-nudge="1"] { grid-area: plus; }
 .amount.nudged > input { grid-area: slider; }
 .amount.nudged > output { grid-area: out; }
-.amount.layer-amount.nudged:is(:not(.keyed), .fit-slider) { grid-template-columns: 44px minmax(0, 1fr) 44px; grid-template-areas: "out out out" "minus slider plus"; gap: 2px 8px; }
-@container layer-ctl (min-width: 360px) {
-  .amount.layer-amount.nudged:is(:not(.keyed), .fit-slider) { grid-template-columns: 44px minmax(0, 1fr) 44px minmax(6.5em, auto); grid-template-areas: "minus slider plus out"; }
-}
+.amount.layer-amount.nudged:is(:not(.keyed), .fit-slider) { grid-template-columns: 44px minmax(0, 1fr) 44px; grid-template-areas: "minus slider plus"; gap: 8px; padding: 0; background: transparent; }   /* no box: the line is as tall as its keys, as a keyed row's */
+/* A knob's value beside its name (Ben, 2026-11-18), one line saved a card:
+   the name, then the value at the right, wrapping under it only when both
+   don't fit. A row showing its keys hides it: the lit key says it. */
+.layer-title { grid-area: name; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 8px; min-width: 0; }
+.layer-title > .layer-name { min-width: 0; }
+.layer-value { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.layer-row:has(.amount.keyed:not(.fit-slider)) .layer-value { display: none; }
 .layer-flags { display: flex; flex-wrap: wrap; gap: 6px; }
 .layer-flags .shape-flag { margin: 0; }
 .layer-row.muted .layer-tile, .layer-row.muted .layer-name, .layer-row.muted .layer-ctl { opacity: 0.4; }
@@ -3900,24 +3909,22 @@ body.head-slim .person-list { right: auto; left: 0; }   /* opens into the screen
 @keyframes head-slim-in { from { transform: translateY(-100%); } }
 
 /* Pads: the bar's buttons sit at the left of the Edit sounds band, so the
-   band's own things start after them. Where Pad size has no room beside
-   them (under 720 px, with 🔁, ✏️ and ➕), it waits at the top of the screen. */
+   band's own things start after them. As room runs out, things give way in
+   the app's one order (docs/design/give-way.md, web/give-way.js): 1 the
+   spacing tightens (under 720 px); 2 Pad size steps out (under 700; it waits
+   at the top of the page); 3 words go (🔁's under 600, Edit's "sounds" under
+   530, "Edit" under 470: the keys are icons, and screen readers still hear
+   their names); 4 what the page also shows elsewhere steps out, ❓ first
+   (under 420), then ⬆️ (under 360). 🔁 Loop, ✏️ Edit and + New sound never go. */
 body.head-slim.screen-pads .pads-bar { padding-left: calc(12px + 4 * 44px + 3 * 6px + 10px); border-radius: 0; }
 body.head-slim.screen-pads .title-tools { left: calc(max(var(--gutter), (100% - var(--max)) / 2 + var(--gutter)) + 12px); }
 @media (max-width: 719px) {
+  body.head-slim.screen-pads .title-tools { gap: 4px; }
+  body.head-slim.screen-pads .pads-bar { gap: 4px; padding-left: calc(12px + 4 * 44px + 3 * 4px + 8px); }
+}
+@media (max-width: 699px) {
   body.head-slim.screen-pads .pads-size { display: none; }
 }
-/* On a phone, ✏️ Edit sounds says ✏️ Edit beside them (screen readers
-   still hear "Edit sounds"); on the narrowest the buttons sit closer and
-   it drops its word too, ✏️ (✅ for Done) alone, rather than collide
-   with ⬆️ (Ben, 2026-10-19). */
-@media (max-width: 429px) {
-  body.head-slim.screen-pads .edit-more { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-}
-/* 🔁 Loop and + New sound stay in the slim bar at every width, beside ✏️ Edit. To make room: 🔁's word goes
-   under 600 px, Edit's "sounds" under 530 and its word under 470 (all three keys are icons then), ❓ steps out
-   under 420 (as it is first to give way on Beats; it is back at the top), the buttons sit closer under 375,
-   and under 360 px ⬆️ steps out (the page scrolls to the top by itself, and the title is still there). */
 @media (max-width: 599px) {
   body.head-slim.screen-pads .loop-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   body.head-slim.screen-pads .pads-bar .pads-loop { min-width: 48px; padding: 0 10px; }
@@ -3931,11 +3938,10 @@ body.head-slim.screen-pads .title-tools { left: calc(max(var(--gutter), (100% - 
 }
 @media (max-width: 419px) {
   body.head-slim.screen-pads #help-open { display: none; }
-  body.head-slim.screen-pads .pads-bar { padding-left: calc(12px + 3 * 44px + 2 * 6px + 10px); }
+  body.head-slim.screen-pads .pads-bar { padding-left: calc(12px + 3 * 44px + 2 * 4px + 8px); }
 }
 @media (max-width: 374px) {
   body.head-slim .title-tools { gap: 4px; }
-  body.head-slim.screen-pads .pads-bar { gap: 4px; padding-left: calc(12px + 3 * 44px + 2 * 4px + 8px); }
 }
 @media (max-width: 359px) {
   body.head-slim.screen-pads .to-top { display: none; }

@@ -1220,7 +1220,7 @@ function wireLayers() {
       // A drag snaps to normal near it; a − or + tap goes exactly one notch (lines.js nudgeSlider).
       if (k === 'speed' && !e.nudge && Math.abs(v) < SPEED_PULL) { v = 0; knob.value = '0'; }
       sheet.tweaks = fullTweaks({ ...sheet.tweaks, [k]: v });
-      if (!tweakByKey(k).flag) knob.parentElement.querySelector('output').textContent = tweakText(k, sheet.tweaks[k]);
+      if (!tweakByKey(k).flag) knob.closest('.layer-row').querySelector('output').textContent = tweakText(k, sheet.tweaks[k]);   // beside the name
       knob.closest('.layer-row')?.classList.toggle('changed', knobMoved(k, sheet.tweaks));
       return;
     }
