@@ -288,6 +288,30 @@ test('+ hidden by the time the sheet closes: focus goes to the dashed New sound 
   assert.ok(document.activeElement === pads().find((p) => p.classList.contains('pad-add')), 'the dashed pad, still on the page');
 });
 
+// Ben, 2026-11-18 (Q1): in Edit sounds a long hold that never moves opens the
+// sound's sheet, as its ✏️ does; a hold that moves is a drag (or, on a touch
+// that moves at once, a scroll). Outside Edit sounds a hold loops a pad.
+test('Edit sounds: a long still hold on a pad opens its sheet; one that moves does not', async () => {
+  if (!document.body.classList.contains('editing')) $('#edit-toggle').dispatch('click');
+  const { EDIT_HOLD_MS } = await import('../web/pads.js');
+  const kick = () => pads().find((p) => labelOf(p) === 'Kick');
+  kick().dispatch('pointerdown', { button: 0, pointerId: 3, pointerType: 'mouse', clientX: 10, clientY: 10 });
+  await new Promise((r) => setTimeout(r, EDIT_HOLD_MS + 50));
+  assert.equal($('#sheet').open, true, 'held still: its sheet opens');
+  assert.equal($('#clip-label').value, 'Kick');
+  page.winEvent('pointerup', { pointerId: 3 });
+  kick().dispatch('click');   // the click a browser sends on letting go
+  assert.equal(kick().getAttribute('aria-pressed'), 'false', 'and letting go chose nothing');
+  $('#sheet').close();
+
+  kick().dispatch('pointerdown', { button: 0, pointerId: 4, pointerType: 'touch', clientX: 10, clientY: 10 });
+  page.winEvent('pointermove', { pointerId: 4, pointerType: 'touch', clientX: 10, clientY: 60 });   // a swipe: the page scrolls
+  await new Promise((r) => setTimeout(r, EDIT_HOLD_MS + 50));
+  assert.equal($('#sheet').open, false, 'moved: no sheet');
+  page.winEvent('pointerup', { pointerId: 4 });
+  $('#edit-toggle').dispatch('click');
+});
+
 // Ben, 2026-11-18: every − and + that steps a value repeats while held.
 test('a held − or + repeats on the tempo (Beats, 🎤 Live), 🎼 Song\'s tempo and passes', () => {
   const steppers = [...document.querySelectorAll('[data-tempo-step]'), ...['#song-tempo-down', '#song-tempo-up', '#song-less', '#song-more'].map((id) => $(id))];

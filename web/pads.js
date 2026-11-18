@@ -635,6 +635,10 @@ export function flash(pad) {
 // swipe over the pads still scrolls the page.
 const DRAG_SLOP = 6;
 const TOUCH_HOLD_MS = 220;
+// A hold this long that never moves opens the sound's sheet, as its ✏️ does
+// (Ben, 2026-11-18, Q1). A touch has lifted the pad by then; it is let go.
+// Outside Edit sounds a hold keeps looping a pad.
+export const EDIT_HOLD_MS = 700;
 
 const drag = {
   pad: null,
@@ -643,6 +647,8 @@ const drag = {
   grabX: 0, grabY: 0, // pointer offset inside the pad
   active: false,
   hold: 0,
+  edit: 0,          // the hold that opens the sheet
+  opened: false,    // a hold opened it: its release is no tap
   suppressClick: false,
 };
 
@@ -659,6 +665,19 @@ function dragDown(e) {
     grabX: e.clientX - r.left, grabY: e.clientY - r.top, active: false,
   });
   if (e.pointerType === 'touch') drag.hold = setTimeout(() => startDrag(e), TOUCH_HOLD_MS);
+  drag.edit = setTimeout(holdOpens, EDIT_HOLD_MS);
+}
+
+// A long, still hold in Edit sounds: the drag lets go and the sheet opens.
+function holdOpens() {
+  const id = drag.pad?.dataset.cell ?? drag.pad?.dataset.id;
+  cancelDrag();
+  const clip = findClip(id);
+  if (!clip) return;
+  drag.opened = true;
+  if (asking) { asking = null; renderPads(); }
+  navigator.vibrate?.(15);
+  openSheet('edit', clip, { returnToPad: clip.id });
 }
 
 function startDrag(e) {
@@ -678,8 +697,9 @@ const movingAt = (x, y) => {
 
 function dragMove(e) {
   if (!drag.pad || e.pointerId !== drag.pointerId) return;
+  const moved = Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > DRAG_SLOP;
+  if (moved) clearTimeout(drag.edit);   // it moved: a drag, not a hold to open
   if (!drag.active) {
-    const moved = Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > DRAG_SLOP;
     if (!moved) return;
     if (e.pointerType === 'touch') { cancelDrag(); return; }  // a swipe, not a hold
     startDrag(e);
@@ -724,6 +744,12 @@ function slide(change) {
 }
 
 async function dragUp(e) {
+  if (drag.opened) {   // a hold opened the sheet: the click that follows is no tap on the pad
+    drag.opened = false;
+    drag.suppressClick = true;
+    setTimeout(() => { drag.suppressClick = false; }, 0);
+    return;
+  }
   if (!drag.pad || e.pointerId !== drag.pointerId) return;
   const wasActive = drag.active;
   cancelDrag();
@@ -769,6 +795,7 @@ async function nudge(pad, by) {
 
 export function cancelDrag() {
   clearTimeout(drag.hold);
+  clearTimeout(drag.edit);
   if (drag.pad) {
     drag.pad.classList.remove('dragging');
     drag.pad.style.translate = '';

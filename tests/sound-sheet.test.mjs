@@ -1647,3 +1647,30 @@ test('+ on a step\'s slider moves the step one notch and says so, as a tap, not 
   $('#sheet').close();
   await advanced(false);
 });
+
+// Ben, 2026-11-18: a − or + on a ratio slider steps its own notch: a tenth of a
+// doubling where the pitch is kept (Faster or slower, same voice), a semitone
+// on How metal, the robot tone's own note.
+test('a ratio slider\'s + steps its own notch: tenths on Faster or slower, semitones on How metal', async () => {
+  await advanced(true);
+  await openPlain();
+  addStep('stretch');
+  await page.settle();
+  const slider = () => stepRows()[0].querySelector('input[data-key]');
+  slider().value = '0';   // normal
+  slider().parent.querySelector('[data-nudge="1"]').dispatch('click');
+  await page.settle();
+  assert.ok(Math.abs(Number(slider().value) - 0.1) < 0.006, `a tenth of a doubling: ${slider().value}`);
+  removeLayer(stepRows()[0].dataset.layer);
+  addStep('ring');
+  await page.settle();
+  const metal = () => stepRows()[0].querySelector('input[data-key="metal"]');
+  metal().value = String(Math.log2(64));   // on a semitone grid point (six doublings)
+  metal().parent.querySelector('[data-nudge="1"]').dispatch('click');
+  await page.settle();
+  assert.ok(Math.abs(Number(metal().value) - (6 + 1 / 12)) < 0.006, `a semitone: ${metal().value}`);
+  removeLayer(stepRows()[0].dataset.layer);
+  await new Promise((r) => setTimeout(r, 200));
+  $('#sheet').close();
+  await advanced(false);
+});

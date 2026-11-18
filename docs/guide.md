@@ -34,11 +34,12 @@ rows it moves glow, and any knob off normal keeps a blue outline), and the line 
 higher +9, faster 1.74×"). Layers are one row per layer, top to bottom in the
 order they play, like Beats' rows: an emoji, a name, keys or a slider, 🔈 to
 mute it (it keeps its setting) and ✕ to take it out (two taps). A slider has
-− and + either side, one step a tap (`lines.js` `nudgeSlider`); on an Advanced
-ratio slider (speed, How metal) a tap is a semitone, on a grid from normal, so
-12 taps are an octave. The slider holds it on its nearest 0.01 of a doubling (a
-few cents off), and the next tap finds the semitone again by rounding, so steps
-never drift. Held, − and + repeat (`hold-repeat.js`): after 450 ms, three steps
+− and + either side, one step a tap (`lines.js` `nudgeSlider`). An Advanced
+ratio slider steps its own `notch` (`steps.js`) on a grid from normal: a tenth
+of a doubling on Faster or slower, same voice (the pitch is kept, as on the
+Slower ↔ faster knob), a semitone on How metal (12 taps an octave). The slider
+holds it on its nearest 0.01 of a doubling, and the next tap finds its grid
+point again by rounding, so steps never drift. Held, − and + repeat (`hold-repeat.js`): after 450 ms, three steps
 250 ms apart, then one every 90 ms, until the finger lifts or slides off. A tap
 is not a drag: Slower ↔ faster's snap to normal and a live step's drag skip it,
 and a run of taps plays the sound once, 150 ms after the last. A knob's value
@@ -548,7 +549,8 @@ and included in backups, `sendLogs` too; the device code is in localStorage
   IndexedDB, so they stay on the device they were made on. Edit sounds →
   a sound's ✏️ → Download saves a copy.
 - **✏️ Edit sounds** (`pads.js`, `bulk.js`): each pad shows ✏️ (its sheet) and
-  🗑️ at its top right; 🗑️ deletes a sound made in the app (two taps, then
+  🗑️ at its top right; a press on a pad held still for 700 ms (`EDIT_HOLD_MS`)
+  opens its sheet too, and one that moves drags it; 🗑️ deletes a sound made in the app (two taps, then
   Undo), hides a preset, and 👁 brings a hidden one back. Tapping pads selects
   them, as does the select circle at each pad's top left (always there in
   Edit sounds); every badge floats above the pad with a bold ring; a bar then

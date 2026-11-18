@@ -38,7 +38,9 @@ export const KINDS = [
   },
   {
     id: 'stretch', name: 'Faster or slower, same voice', emoji: '⏩',
-    nums: [num('speed', 'How much', 0.05, 8, 0.01, 1.5, (v) => (v >= 1 ? `${times(v)} faster` : `${times(1 / v)} slower`), true)],
+    // A − or + tap is a tenth of a doubling, as on the Slower ↔ faster knob: the
+    // pitch is kept, so a semitone would mean nothing here (Ben, 2026-11-18).
+    nums: [{ ...num('speed', 'How much', 0.05, 8, 0.01, 1.5, (v) => (v >= 1 ? `${times(v)} faster` : `${times(1 / v)} slower`), true), notch: 0.1 }],
     live: () => false,
   },
   {
@@ -197,7 +199,8 @@ export const KINDS = [
   },
   {
     id: 'ring', name: 'Robot', emoji: '🤖',
-    nums: [num('metal', 'How metal', 20, 600, 1, 60, (v) => `${Math.round(v)}`, true)],
+    // A − or + tap is a semitone: this is the robot tone's own note.
+    nums: [{ ...num('metal', 'How metal', 20, 600, 1, 60, (v) => `${Math.round(v)}`, true), notch: 1 / 12 }],
     live: () => true,
     tail: () => 0.02,
     build(ctx, input, s) {

@@ -15,8 +15,6 @@ import { fitLine, keysForSlider, nudgeSlider, KEYED_STEPS } from './lines.js';
 
 import { tweakByKey, tweakText, knobSay, knobMoved } from './tweaks.js';
 
-// One semitone, as a share of a doubling: a − or + tap on a ratio slider.
-const SEMITONE = 1 / 12;
 
 // What a slider shows for number spec `n` at value `v`, and back. Ratio
 // sliders (`log`) move evenly in ratio, so ½× sits as far from 1× as 2×.
@@ -145,12 +143,12 @@ export function renderLayers(list, rows, ctx) {
       if (flags.length) ctl.append(make('div', { class: 'layer-flags' }, ...flags));
       if (parts.length || flags.length) li.append(ctl);
       // A few stops (Echoes 1–8, a note length): keys, with the slider as fallback.
-      // Every slider has − and +; one that moves in ratio steps a semitone a tap
-      // (Ben, 2026-11-18, with the producer and music educator seats: "the
-      // child's ear can tune and learn").
+      // Every slider has − and +; a ratio slider's tap is its own `notch`
+      // (steps.js): a semitone where it is a note (How metal), a tenth of a
+      // doubling where the pitch is kept (Faster or slower, same voice).
       for (const p of parts) {
         if (!p.n.log) keysForSlider(p.input, p.n.keyText ?? String);
-        nudgeSlider(p.input, { notch: p.n.log ? SEMITONE : undefined });
+        nudgeSlider(p.input, { notch: p.n.notch });
       }
     } else if (knob) {
       const { ctl, input, say } = knob;
